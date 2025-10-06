@@ -1,9 +1,8 @@
 Medix - Hướng dẫn setup môi trường và chạy dự án
-================================================
+
 
 Yêu cầu chung
-- Git, Node.js >= 18, pnpm hoặc npm, .NET SDK 8.0, SQLite (tùy chọn, file db được tạo tự động)
-- Hệ điều hành: Windows/macOS/Linux
+- Git, Node.js >= 18, pnpm hoặc npm, .NET SDK 8.0- Hệ điều hành: Windows/macOS/Linux
 
 Cấu trúc dự án
 - backend/Medix.API: ASP.NET Core Web API (.NET 8)
@@ -23,7 +22,6 @@ Cấu trúc dự án
 - Swagger UI (dev): https://localhost:7123/swagger
 
 Ghi chú
-- Database SQLite sẽ tạo file medix.db cùng thư mục chạy.
 - Có sẵn controller GET /api/hello
 
 3) Frontend (Vite React TS)
@@ -54,4 +52,4 @@ Ghi chú
   # Cửa sổ 2
   cd frontend && npm run dev
 
-Hết.
+Hết phim, giờ dc ngủ rồi.

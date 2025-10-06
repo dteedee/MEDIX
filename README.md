@@ -1,0 +1,104 @@
+# 💻 Tech Stack:
+![C#](https://img.shields.io/badge/c%23-%23239120.svg?style=for-the-badge&logo=csharp&logoColor=white) ![.Net](https://img.shields.io/badge/.NET-5C2D91?style=for-the-badge&logo=.net&logoColor=white) ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB) ![MicrosoftSQLServer](https://img.shields.io/badge/Microsoft%20SQL%20Server-CC2927?style=for-the-badge&logo=microsoft%20sql%20server&logoColor=white) ![Figma](https://img.shields.io/badge/figma-%23F24E1E.svg?style=for-the-badge&logo=figma&logoColor=white) ![Canva](https://img.shields.io/badge/Canva-%2300C4CC.svg?style=for-the-badge&logo=Canva&logoColor=white) ![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white) ![Git](https://img.shields.io/badge/git-%23F05033.svg?style=for-the-badge&logo=git&logoColor=white) ![Postman](https://img.shields.io/badge/Postman-FF6C37?style=for-the-badge&logo=postman&logoColor=white) ![Swagger](https://img.shields.io/badge/-Swagger-%23Clojure?style=for-the-badge&logo=swagger&logoColor=white) ![Trello](https://img.shields.io/badge/Trello-%23026AA7.svg?style=for-the-badge&logo=Trello&logoColor=white)
+---
+🎯 Tổng Quan:
+---
+MEDIX là nền tảng y tế thông minh kết hợp trí tuệ nhân tạo (AI) để cung cấp dịch vụ chăm sóc sức khỏe toàn diện. Hệ thống kết nối bệnh nhân với bác sĩ chất lượng cao thông qua các tính năng tiên tiến như chẩn đoán AI, quản lý hồ sơ bệnh án điện tử (EMR), và đặt lịch hẹn thông minh.
+
+✨ Tính Năng Nổi Bật
+---
+🤖 AI Triage & Chẩn Đoán Thông Minh
+
+    Chatbot AI phân tích triệu chứng và đánh giá mức độ nghiêm trọng
+
+    Upload EMR (PDF, JPG, PNG) để AI phân tích tự động
+
+    Phân loại mức độ: Nhẹ/Vừa/Nặng/Khẩn cấp với khuyến nghị hành động
+
+    Đề xuất bác sĩ phù hợp dựa trên kết quả phân tích AI
+
+🎯 Quản Lý Lịch Hẹn Thông Minh
+
+    Đặt lịch trực tuyến với bác sĩ theo chuyên khoa
+
+    Lịch trình thời gian thực của bác sĩ
+
+    Nhắc hẹn tự động và hủy lịch với hoàn tiền 80%
+
+    Phòng khám ảo tích hợp sẵn
+
+💳 Hệ Thống Thanh Toán Toàn Diện
+
+    Ví MEDIX tích hợp nạp tiền
+
+    Đa dạng phương thức thanh toán (Ví điện tử, Thẻ ngân hàng)
+
+    Quản lý hoàn tiền và lịch sử giao dịch
+
+    Mã giảm giá và chương trình khuyến mãi
+
+📊 Quản Lý Hồ Sơ Sức Khỏe
+
+    EMR điện tử theo dõi toàn bộ lịch sử khám bệnh
+
+    Dòng thời gian y tế trực quan
+
+    Quản lý đơn thuốc và kế hoạch điều trị
+
+    Lưu trữ file y tế (X-quang, Xét nghiệm...)
+
+👥 Đối Tượng Người Dùng
+---
+🎯 Bệnh Nhân
+
+    Sử dụng AI để kiểm tra triệu chứng ban đầu
+
+    Đặt lịch hẹn với bác sĩ phù hợp
+
+    Quản lý hồ sơ sức khỏe cá nhân
+
+    Thanh toán và đánh giá dịch vụ
+
+👨‍⚕️ Bác Sĩ
+
+    Quản lý lịch làm việc và cuộc hẹn
+
+    Cập nhật hồ sơ bệnh án điện tử
+
+    Kê đơn thuốc số và theo dõi điều trị
+
+    Phân tích thu nhập và hiệu suất làm việc
+
+👨‍💼 Quản Lý (Manager)
+
+    Duyệt hồ sơ bác sĩ mới
+
+    Giám sát chất lượng dịch vụ
+
+    Quản lý phản hồi và khiếu nại
+
+    Phân tích báo cáo kinh doanh
+
+⚙️ Quản Trị Viên (Admin)
+
+    Quản lý người dùng và phân quyền
+
+    Giám sát hệ thống và bảo mật
+
+    Cấu hình tham số động
+
+    Theo dõi nhật ký hoạt động
+
+🚀 Cài Đặt & Chạy Ứng Dụng
+---
+Yêu cầu hệ thống
+
+    Frontend: ReactJS
+
+    Backend: .NET 8 Web API
+
+    Database: SQL Server
+
+🌍 Liên Hệ
+---
+Email: tungduongvbhp@gmail.com

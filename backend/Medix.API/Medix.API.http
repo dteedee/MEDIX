@@ -1,0 +1,10 @@
+### Medix API HTTP Requests
+
+@host = https://localhost:7123
+@httpHost = http://localhost:5123
+
+### Health test via HelloController
+GET {{httpHost}}/api/hello
+
+### Swagger (open in browser)
+# {{host}}/swagger

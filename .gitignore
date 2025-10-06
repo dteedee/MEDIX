@@ -1,0 +1,70 @@
+#-------------------------------------------------------------------
+# File .gitignore tối ưu cho dự án .NET + React
+# Dành cho IDE: Visual Studio và Visual Studio Code
+#-------------------------------------------------------------------
+
+# 1. Backend - .NET Core / Visual Studio
+#-------------------------------------------------------------------
+**/[Bb]in/
+**/[Oo]bj/
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.v11.suo
+*.v12.suo
+*.v14.suo
+*.v15.suo
+*.[Cc]ache
+*.[Ss]ettings.user
+*.[Bb]uild.user
+**/Properties/launchSettings.json
+
+# 2. Frontend - Node.js / Vite / React
+#-------------------------------------------------------------------
+**/node_modules/
+**/dist/
+**/build/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.env
+.env.local
+.env.*.local
+logs/
+*.log
+.cache/
+
+# 3. Visual Studio Code
+#-------------------------------------------------------------------
+.vscode/
+# !.vscode/extensions.json
+# !.vscode/launch.json
+# !.vscode/tasks.json
+# !.vscode/settings.json
+
+# 4. Files hệ điều hành
+#-------------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+
+# Linux
+*~
+
+# 5. Các file tạm khác
+#-------------------------------------------------------------------
+appsettings.json
+appsettings.Development.json
+
+

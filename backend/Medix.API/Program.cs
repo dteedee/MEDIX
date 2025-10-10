@@ -1,11 +1,9 @@
+using System;
 using Medix.API.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddDbContext<MedixContext>(
-    options => options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -14,8 +12,8 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Medix API", Version = "v1" });
 });
 
-//builder.Services.AddDbContext<AppDbContext>(options =>
-//    options.UseSqlite("Data Source=medix.db"));
+builder.Services.AddDbContext<MedixContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
 
 builder.Services.AddCors(options =>
 {
@@ -32,7 +30,13 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
+
 app.MapControllers();
 
-app.Run();
+app.MapGet("/", context =>
+{
+    context.Response.Redirect("/swagger");
+    return Task.CompletedTask;
+});
 
+app.Run();

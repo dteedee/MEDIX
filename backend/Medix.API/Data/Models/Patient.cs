@@ -29,7 +29,7 @@ public partial class Patient
 
     public DateTime UpdatedAt { get; set; }
 
-    public virtual ICollection<AisymptomAnalysis> AisymptomAnalyses { get; set; } = new List<AisymptomAnalysis>();
+    public virtual ICollection<AISymptomAnalysis> AISymptomAnalyses { get; set; } = new List<AISymptomAnalysis>();
 
     public virtual ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
 

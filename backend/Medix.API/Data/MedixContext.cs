@@ -16,7 +16,7 @@ public partial class MedixContext : DbContext
     {
     }
 
-    public virtual DbSet<AisymptomAnalysis> AisymptomAnalyses { get; set; }
+    public virtual DbSet<AISymptomAnalysis> AISymptomAnalyses { get; set; }
 
     public virtual DbSet<Appointment> Appointments { get; set; }
 
@@ -82,7 +82,7 @@ public partial class MedixContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<AisymptomAnalysis>(entity =>
+        modelBuilder.Entity<AISymptomAnalysis>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__AISympto__3214EC07B9D05D40");
 
@@ -106,11 +106,11 @@ public partial class MedixContext : DbContext
                 .HasMaxLength(500)
                 .HasColumnName("UploadedEMRUrl");
 
-            entity.HasOne(d => d.Patient).WithMany(p => p.AisymptomAnalyses)
+            entity.HasOne(d => d.Patient).WithMany(p => p.AISymptomAnalyses)
                 .HasForeignKey(d => d.PatientId)
                 .HasConstraintName("FK_AISymptomAnalysis_Patient");
 
-            entity.HasOne(d => d.RecommendedSpecialization).WithMany(p => p.AisymptomAnalyses)
+            entity.HasOne(d => d.RecommendedSpecialization).WithMany(p => p.AISymptomAnalyses)
                 .HasForeignKey(d => d.RecommendedSpecializationId)
                 .HasConstraintName("FK_AISymptomAnalysis_Specialization");
         });
@@ -126,7 +126,7 @@ public partial class MedixContext : DbContext
             entity.HasIndex(e => e.PaymentStatus, "IX_Appointments_Payment_Status").HasFilter("([PaymentStatus]='Pending')");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.AisymptomAnalysisId).HasColumnName("AISymptomAnalysisId");
+            entity.Property(e => e.AISymptomAnalysisId).HasColumnName("AISymptomAnalysisId");
             entity.Property(e => e.ConsultationFee).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.DiscountAmount).HasColumnType("decimal(18, 2)");
@@ -145,8 +145,8 @@ public partial class MedixContext : DbContext
             entity.Property(e => e.TransactionId).HasMaxLength(255);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(getutcdate())");
 
-            entity.HasOne(d => d.AisymptomAnalysis).WithMany(p => p.Appointments)
-                .HasForeignKey(d => d.AisymptomAnalysisId)
+            entity.HasOne(d => d.AISymptomAnalysis).WithMany(p => p.Appointments)
+                .HasForeignKey(d => d.AISymptomAnalysisId)
                 .HasConstraintName("FK_Appointments_AISymptomAnalysis");
 
             entity.HasOne(d => d.Doctor).WithMany(p => p.Appointments)

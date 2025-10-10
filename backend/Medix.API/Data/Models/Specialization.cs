@@ -17,7 +17,7 @@ public partial class Specialization
 
     public DateTime CreatedAt { get; set; }
 
-    public virtual ICollection<AisymptomAnalysis> AisymptomAnalyses { get; set; } = new List<AisymptomAnalysis>();
+    public virtual ICollection<AISymptomAnalysis> AISymptomAnalyses { get; set; } = new List<AISymptomAnalysis>();
 
     public virtual ICollection<Doctor> Doctors { get; set; } = new List<Doctor>();
 }

@@ -11,7 +11,7 @@ public partial class Appointment
 
     public Guid DoctorId { get; set; }
 
-    public Guid? AisymptomAnalysisId { get; set; }
+    public Guid? AISymptomAnalysisId { get; set; }
 
     public DateTime AppointmentStartTime { get; set; }
 
@@ -47,7 +47,7 @@ public partial class Appointment
 
     public DateTime UpdatedAt { get; set; }
 
-    public virtual AisymptomAnalysis? AisymptomAnalysis { get; set; }
+    public virtual AISymptomAnalysis? AISymptomAnalysis { get; set; }
 
     public virtual Doctor Doctor { get; set; } = null!;
 

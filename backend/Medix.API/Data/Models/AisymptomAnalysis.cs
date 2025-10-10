@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Medix.API.Data.Models;
 
-public partial class AisymptomAnalysis
+public partial class AISymptomAnalysis
 {
     public Guid Id { get; set; }
 

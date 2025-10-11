@@ -11,7 +11,7 @@ public partial class Appointment
 
     public Guid DoctorId { get; set; }
 
-    public Guid? AisymptomAnalysisId { get; set; }
+    public Guid? AISymptomAnalysisId { get; set; }
 
     public DateTime AppointmentStartTime { get; set; }
 
@@ -19,7 +19,7 @@ public partial class Appointment
 
     public int DurationMinutes { get; set; }
 
-    public string Status { get; set; } = null!;
+    public string StatusCode { get; set; } = null!;
 
     public decimal ConsultationFee { get; set; }
 
@@ -29,9 +29,9 @@ public partial class Appointment
 
     public decimal TotalAmount { get; set; }
 
-    public string PaymentStatus { get; set; } = null!;
+    public string PaymentStatusCode { get; set; } = null!;
 
-    public string? PaymentMethod { get; set; }
+    public string? PaymentMethodCode { get; set; }
 
     public string? TransactionId { get; set; }
 
@@ -47,7 +47,9 @@ public partial class Appointment
 
     public DateTime UpdatedAt { get; set; }
 
-    public virtual AisymptomAnalysis? AisymptomAnalysis { get; set; }
+    public virtual AISymptomAnalysis? AISymptomAnalysis { get; set; }
+
+    public virtual ICollection<AppointmentStatusHistory> AppointmentStatusHistories { get; set; } = new List<AppointmentStatusHistory>();
 
     public virtual Doctor Doctor { get; set; } = null!;
 
@@ -57,7 +59,13 @@ public partial class Appointment
 
     public virtual ICollection<PatientHealthReminder> PatientHealthReminders { get; set; } = new List<PatientHealthReminder>();
 
+    public virtual RefPaymentMethod? PaymentMethodCodeNavigation { get; set; }
+
+    public virtual RefPaymentStatus PaymentStatusCodeNavigation { get; set; } = null!;
+
     public virtual Review? Review { get; set; }
+
+    public virtual RefAppointmentStatus StatusCodeNavigation { get; set; } = null!;
 
     public virtual ICollection<WalletTransaction> WalletTransactions { get; set; } = new List<WalletTransaction>();
 }

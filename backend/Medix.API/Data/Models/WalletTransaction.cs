@@ -9,7 +9,7 @@ public partial class WalletTransaction
 
     public Guid WalletId { get; set; }
 
-    public string TransactionType { get; set; } = null!;
+    public string TransactionTypeCode { get; set; } = null!;
 
     public decimal Amount { get; set; }
 
@@ -28,6 +28,8 @@ public partial class WalletTransaction
     public DateTime CreatedAt { get; set; }
 
     public virtual Appointment? RelatedAppointment { get; set; }
+
+    public virtual RefWalletTransactionType TransactionTypeCodeNavigation { get; set; } = null!;
 
     public virtual Wallet Wallet { get; set; } = null!;
 }

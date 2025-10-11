@@ -17,6 +17,10 @@ public partial class DoctorSubscription
 
     public string Status { get; set; } = null!;
 
+    public DateTime CreatedAt { get; set; }
+
+    public DateTime UpdatedAt { get; set; }
+
     public virtual Doctor Doctor { get; set; } = null!;
 
     public virtual ServicePackage ServicePackage { get; set; } = null!;

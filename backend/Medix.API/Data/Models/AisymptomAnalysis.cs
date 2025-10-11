@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Medix.API.Data.Models;
 
-public partial class AisymptomAnalysis
+public partial class AISymptomAnalysis
 {
     public Guid Id { get; set; }
 
@@ -17,7 +17,7 @@ public partial class AisymptomAnalysis
 
     public string? Emrtext { get; set; }
 
-    public string SeverityLevel { get; set; } = null!;
+    public string SeverityLevelCode { get; set; } = null!;
 
     public string? PossibleConditions { get; set; }
 
@@ -36,4 +36,6 @@ public partial class AisymptomAnalysis
     public virtual Patient? Patient { get; set; }
 
     public virtual Specialization? RecommendedSpecialization { get; set; }
+
+    public virtual RefSeverityLevel SeverityLevelCodeNavigation { get; set; } = null!;
 }

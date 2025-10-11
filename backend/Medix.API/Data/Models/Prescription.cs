@@ -21,6 +21,8 @@ public partial class Prescription
 
     public string? Instructions { get; set; }
 
+    public DateTime CreatedAt { get; set; }
+
     public virtual MedicalRecord MedicalRecord { get; set; } = null!;
 
     public virtual MedicationDatabase? Medication { get; set; }

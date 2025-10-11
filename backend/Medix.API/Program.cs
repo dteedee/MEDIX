@@ -1,4 +1,4 @@
-using Medix.API.Models;
+using Medix.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 

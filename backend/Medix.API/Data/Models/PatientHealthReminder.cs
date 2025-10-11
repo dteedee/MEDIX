@@ -9,7 +9,7 @@ public partial class PatientHealthReminder
 
     public Guid PatientId { get; set; }
 
-    public string ReminderType { get; set; } = null!;
+    public string ReminderTypeCode { get; set; } = null!;
 
     public string Title { get; set; } = null!;
 
@@ -29,5 +29,9 @@ public partial class PatientHealthReminder
 
     public DateTime CreatedAt { get; set; }
 
+    public virtual Patient Patient { get; set; } = null!;
+
     public virtual Appointment? RelatedAppointment { get; set; }
+
+    public virtual RefReminderType ReminderTypeCodeNavigation { get; set; } = null!;
 }

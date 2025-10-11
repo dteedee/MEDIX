@@ -17,5 +17,11 @@ public partial class DoctorScheduleOverride
 
     public bool IsAvailable { get; set; }
 
+    public string? Reason { get; set; }
+
+    public DateTime CreatedAt { get; set; }
+
+    public DateTime UpdatedAt { get; set; }
+
     public virtual Doctor Doctor { get; set; } = null!;
 }

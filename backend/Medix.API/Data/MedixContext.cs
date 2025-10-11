@@ -16,6 +16,14 @@ public partial class MedixContext : DbContext
     {
     }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer("Server=DUCK;uid=sa;pwd=123;database=MEDIX-DB;TrustServerCertificate=True;");
+        }
+    }
+
     public virtual DbSet<AisymptomAnalysis> AisymptomAnalyses { get; set; }
 
     public virtual DbSet<Appointment> Appointments { get; set; }

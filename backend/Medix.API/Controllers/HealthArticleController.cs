@@ -1,7 +1,8 @@
 ﻿using Medix.API.DTOs;
-using Medix.API.Models;
+using Medix.API.Data.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Medix.API.Data;
 
 namespace Medix.API.Controllers
 {
@@ -128,12 +129,14 @@ namespace Medix.API.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Kiểm tra Slug đã tồn tại chưa
             var slugExists = await _context.HealthArticles.AnyAsync(a => a.Slug == dto.Slug);
             if (slugExists)
                 return Conflict("Slug đã tồn tại. Vui lòng chọn slug khác.");
 
-            // Tạo bài viết mới
+            var statusExists = await _context.RefArticleStatuses.AnyAsync(s => s.Code == dto.StatusCode);
+            if (!statusExists)
+                return BadRequest("StatusCode không hợp lệ.");
+
             var article = new HealthArticle
             {
                 Id = Guid.NewGuid(),
@@ -149,17 +152,15 @@ namespace Medix.API.Controllers
                 MetaTitle = dto.MetaTitle,
                 MetaDescription = dto.MetaDescription,
                 AuthorId = dto.AuthorId,
-                Status = dto.Status,
+                StatusCode = dto.StatusCode,
                 PublishedAt = dto.PublishedAt,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
 
-            // Lưu bài viết trước để tránh lỗi FK
             _context.HealthArticles.Add(article);
             await _context.SaveChangesAsync();
 
-            // Gán danh mục sau khi đã có Article.Id
             var categories = await _context.ContentCategories
                 .Where(c => dto.CategoryIds.Contains(c.Id))
                 .ToListAsync();
@@ -167,7 +168,6 @@ namespace Medix.API.Controllers
             article.Categories = categories;
             await _context.SaveChangesAsync();
 
-            // Trả về DTO để tránh vòng lặp JSON
             var result = new HealthArticlePublicDto
             {
                 Id = article.Id,
@@ -190,7 +190,39 @@ namespace Medix.API.Controllers
 
             return CreatedAtAction(nameof(GetById), new { id = article.Id }, result);
         }
+        [HttpGet("{id}/edit")]
+        public async Task<IActionResult> GetForEdit(Guid id)
+        {
+            var article = await _context.HealthArticles
+                .Include(a => a.Categories)
+                .Include(a => a.Author)
+                .Include(a => a.StatusCodeNavigation)
+                .FirstOrDefaultAsync(a => a.Id == id);
 
+            if (article == null)
+                return NotFound("Không tìm thấy bài viết.");
+
+            var dto = new HealthArticleUpdateDto
+            {
+                Title = article.Title,
+                Slug = article.Slug,
+                Summary = article.Summary,
+                Content = article.Content,
+                DisplayType = article.DisplayType,
+                ThumbnailUrl = article.ThumbnailUrl,
+                CoverImageUrl = article.CoverImageUrl,
+                IsHomepageVisible = article.IsHomepageVisible,
+                DisplayOrder = article.DisplayOrder,
+                MetaTitle = article.MetaTitle,
+                MetaDescription = article.MetaDescription,
+                AuthorId = article.AuthorId,
+                StatusCode = article.StatusCode,
+                PublishedAt = article.PublishedAt,
+                CategoryIds = article.Categories.Select(c => c.Id).ToList()
+            };
+
+            return Ok(dto);
+        }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] HealthArticleUpdateDto dto)
@@ -205,18 +237,19 @@ namespace Medix.API.Controllers
             if (article == null)
                 return NotFound("Không tìm thấy bài viết để cập nhật.");
 
-            // Kiểm tra Slug trùng với bài viết khác
             var slugExists = await _context.HealthArticles
                 .AnyAsync(a => a.Slug == dto.Slug && a.Id != id);
             if (slugExists)
                 return Conflict("Slug đã tồn tại. Vui lòng chọn slug khác.");
 
-            // Kiểm tra AuthorId có tồn tại
             var authorExists = await _context.Users.AnyAsync(u => u.Id == dto.AuthorId);
             if (!authorExists)
-                return BadRequest("AuthorId không hợp lệ. Người dùng không tồn tại.");
+                return BadRequest("AuthorId không hợp lệ.");
 
-            // Cập nhật dữ liệu
+            var statusExists = await _context.RefArticleStatuses.AnyAsync(s => s.Code == dto.StatusCode);
+            if (!statusExists)
+                return BadRequest("StatusCode không hợp lệ.");
+
             article.Title = dto.Title;
             article.Slug = dto.Slug;
             article.Summary = dto.Summary;
@@ -229,7 +262,7 @@ namespace Medix.API.Controllers
             article.MetaTitle = dto.MetaTitle;
             article.MetaDescription = dto.MetaDescription;
             article.AuthorId = dto.AuthorId;
-            article.Status = dto.Status;
+            article.StatusCode = dto.StatusCode;
             article.PublishedAt = dto.PublishedAt;
             article.UpdatedAt = DateTime.UtcNow;
 

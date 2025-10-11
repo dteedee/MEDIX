@@ -1,7 +1,8 @@
 ﻿using Medix.API.DTOs;
-using Medix.API.Models;
+using Medix.API.Data.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Medix.API.Data;
 
 namespace Medix.API.Controllers
 {

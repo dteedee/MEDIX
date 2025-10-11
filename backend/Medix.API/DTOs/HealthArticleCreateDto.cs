@@ -14,9 +14,8 @@
         public string? MetaTitle { get; set; }
         public string? MetaDescription { get; set; }
         public Guid AuthorId { get; set; }
-        public string Status { get; set; } = null!;
+        public string StatusCode { get; set; } = null!;
         public DateTime? PublishedAt { get; set; }
         public List<Guid> CategoryIds { get; set; } = new();
     }
-
 }

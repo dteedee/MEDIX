@@ -35,7 +35,7 @@ public partial class User
 
     public string? AvatarUrl { get; set; }
 
-    public bool IsActive { get; set; }
+    public byte Status { get; set; }
 
     public bool IsProfileCompleted { get; set; }
 

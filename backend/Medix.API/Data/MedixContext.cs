@@ -110,7 +110,7 @@ public partial class MedixContext : DbContext
     {
         modelBuilder.Entity<AISymptomAnalysis>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__AISympto__3214EC0708753B32");
+            entity.HasKey(e => e.Id).HasName("PK__AISympto__3214EC0719D5BC7F");
 
             entity.ToTable("AISymptomAnalysis");
 
@@ -120,7 +120,7 @@ public partial class MedixContext : DbContext
 
             entity.HasIndex(e => new { e.SeverityLevelCode, e.CreatedAt }, "IX_AISymptomAnalysis_Severity_Date");
 
-            entity.HasIndex(e => e.SessionId, "UQ__AISympto__C9F49291324FA81A").IsUnique();
+            entity.HasIndex(e => e.SessionId, "UQ__AISympto__C9F49291858026FF").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.ConfidenceScore).HasColumnType("decimal(5, 4)");
@@ -150,7 +150,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<Appointment>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Appointm__3214EC0788CCC37B");
+            entity.HasKey(e => e.Id).HasName("PK__Appointm__3214EC07238F54FD");
 
             entity.HasIndex(e => new { e.DoctorId, e.StatusCode, e.AppointmentStartTime }, "IX_Appointments_Doctor_Status_Date");
 
@@ -211,7 +211,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<AppointmentStatusHistory>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Appointm__3214EC07E1EBCA3C");
+            entity.HasKey(e => e.Id).HasName("PK__Appointm__3214EC079022660A");
 
             entity.ToTable("AppointmentStatusHistory");
 
@@ -243,7 +243,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<AuditLog>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__AuditLog__3214EC074510A904");
+            entity.HasKey(e => e.Id).HasName("PK__AuditLog__3214EC078EC805B5");
 
             entity.HasIndex(e => new { e.EntityType, e.EntityId, e.Timestamp }, "IX_AuditLogs_Entity_Date");
 
@@ -262,11 +262,11 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<Cmspage>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__CMSPages__3214EC07E41E57C3");
+            entity.HasKey(e => e.Id).HasName("PK__CMSPages__3214EC074EA65E72");
 
             entity.ToTable("CMSPages");
 
-            entity.HasIndex(e => e.PageSlug, "UQ__CMSPages__7D9ACA755D6160B9").IsUnique();
+            entity.HasIndex(e => e.PageSlug, "UQ__CMSPages__7D9ACA75716BC4F2").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
@@ -284,11 +284,11 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<ContentCategory>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__ContentC__3214EC07012FDD4E");
+            entity.HasKey(e => e.Id).HasName("PK__ContentC__3214EC07FF1AE895");
 
-            entity.HasIndex(e => e.Name, "UQ__ContentC__737584F6304C972B").IsUnique();
+            entity.HasIndex(e => e.Name, "UQ__ContentC__737584F66B665110").IsUnique();
 
-            entity.HasIndex(e => e.Slug, "UQ__ContentC__BC7B5FB6CE8A40D9").IsUnique();
+            entity.HasIndex(e => e.Slug, "UQ__ContentC__BC7B5FB6B927ECAE").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
@@ -305,7 +305,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<Doctor>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Doctors__3214EC07839F5B6C");
+            entity.HasKey(e => e.Id).HasName("PK__Doctors__3214EC07BF69D8B0");
 
             entity.HasIndex(e => new { e.ServiceTierId, e.IsVerified, e.IsAcceptingAppointments }, "IX_Doctors_ServiceTier_Verified");
 
@@ -313,9 +313,9 @@ public partial class MedixContext : DbContext
 
             entity.HasIndex(e => new { e.IsVerified, e.IsAcceptingAppointments }, "IX_Doctors_Verified_Active").HasFilter("([IsVerified]=(1) AND [IsAcceptingAppointments]=(1))");
 
-            entity.HasIndex(e => e.UserId, "UQ__Doctors__1788CC4D27A3CB81").IsUnique();
+            entity.HasIndex(e => e.UserId, "UQ__Doctors__1788CC4D763A054D").IsUnique();
 
-            entity.HasIndex(e => e.LicenseNumber, "UQ__Doctors__E889016677AC7A8F").IsUnique();
+            entity.HasIndex(e => e.LicenseNumber, "UQ__Doctors__E8890166EB7200E7").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.AverageRating).HasColumnType("decimal(3, 2)");
@@ -323,6 +323,7 @@ public partial class MedixContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.Education).HasMaxLength(1000);
             entity.Property(e => e.IsAcceptingAppointments).HasDefaultValue(true);
+            entity.Property(e => e.LicenseImageUrl).IsUnicode(false);
             entity.Property(e => e.LicenseNumber).HasMaxLength(100);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(getutcdate())");
 
@@ -342,7 +343,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<DoctorAdCampaign>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__DoctorAd__3214EC07A2C35F4A");
+            entity.HasKey(e => e.Id).HasName("PK__DoctorAd__3214EC07CAD94D9E");
 
             entity.HasIndex(e => new { e.Status, e.StartDate, e.EndDate }, "IX_DoctorAdCampaigns_Status_Date").HasFilter("([Status]='Active')");
 
@@ -365,7 +366,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<DoctorPerformanceMetric>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__DoctorPe__3214EC07496B035C");
+            entity.HasKey(e => e.Id).HasName("PK__DoctorPe__3214EC07C4999B9F");
 
             entity.HasIndex(e => new { e.DoctorId, e.MetricDate }, "IX_DoctorPerformanceMetrics_Doctor_Date");
 
@@ -386,7 +387,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<DoctorSalary>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__DoctorSa__3214EC075D78B224");
+            entity.HasKey(e => e.Id).HasName("PK__DoctorSa__3214EC07D6793F9D");
 
             entity.HasIndex(e => new { e.DoctorId, e.PeriodStartDate, e.PeriodEndDate }, "IX_DoctorSalaries_Doctor_Period");
 
@@ -410,7 +411,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<DoctorSchedule>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__DoctorSc__3214EC07F9A381A5");
+            entity.HasKey(e => e.Id).HasName("PK__DoctorSc__3214EC071FA1F525");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
@@ -424,7 +425,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<DoctorScheduleOverride>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__DoctorSc__3214EC077B4A0795");
+            entity.HasKey(e => e.Id).HasName("PK__DoctorSc__3214EC07790F247C");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
@@ -438,9 +439,9 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<DoctorServiceTier>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__DoctorSe__3214EC074C4E40F9");
+            entity.HasKey(e => e.Id).HasName("PK__DoctorSe__3214EC073702BBFE");
 
-            entity.HasIndex(e => e.Name, "UQ__DoctorSe__737584F6A33EDCED").IsUnique();
+            entity.HasIndex(e => e.Name, "UQ__DoctorSe__737584F6AC5AB0C1").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.ConsultationFeeMultiplier)
@@ -456,7 +457,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<DoctorSubscription>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__DoctorSu__3214EC07D9454363");
+            entity.HasKey(e => e.Id).HasName("PK__DoctorSu__3214EC0764C0E1DE");
 
             entity.HasIndex(e => new { e.Status, e.EndDate }, "IX_DoctorSubscriptions_Status_Date").HasFilter("([Status]='Active')");
 
@@ -478,13 +479,13 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<HealthArticle>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__HealthAr__3214EC0725A80B32");
+            entity.HasKey(e => e.Id).HasName("PK__HealthAr__3214EC0779EC21BC");
 
             entity.HasIndex(e => new { e.AuthorId, e.CreatedAt }, "IX_HealthArticles_Author_Date");
 
             entity.HasIndex(e => new { e.StatusCode, e.IsHomepageVisible, e.DisplayOrder }, "IX_HealthArticles_Status_Homepage").HasFilter("([StatusCode]='Published')");
 
-            entity.HasIndex(e => e.Slug, "UQ__HealthAr__BC7B5FB6FBD95A56").IsUnique();
+            entity.HasIndex(e => e.Slug, "UQ__HealthAr__BC7B5FB68CFB80B0").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CoverImageUrl).HasMaxLength(500);
@@ -524,18 +525,18 @@ public partial class MedixContext : DbContext
                         .HasConstraintName("FK_ArticleCategories_Article"),
                     j =>
                     {
-                        j.HasKey("ArticleId", "CategoryId").HasName("PK__ArticleC__3DF2E348969EB6EC");
+                        j.HasKey("ArticleId", "CategoryId").HasName("PK__ArticleC__3DF2E34843795214");
                         j.ToTable("ArticleCategories");
                     });
         });
 
         modelBuilder.Entity<MedicalRecord>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__MedicalR__3214EC073D7AAF6D");
+            entity.HasKey(e => e.Id).HasName("PK__MedicalR__3214EC07AC0BA5B9");
 
             entity.HasIndex(e => e.AppointmentId, "IX_MedicalRecords_Appointment");
 
-            entity.HasIndex(e => e.AppointmentId, "UQ__MedicalR__8ECDFCC39DD97CA2").IsUnique();
+            entity.HasIndex(e => e.AppointmentId, "UQ__MedicalR__8ECDFCC3BB821E80").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.ChiefComplaint).HasMaxLength(1000);
@@ -550,7 +551,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<MedicalRecordAttachment>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__MedicalR__3214EC07801356D7");
+            entity.HasKey(e => e.Id).HasName("PK__MedicalR__3214EC071FCDB129");
 
             entity.HasIndex(e => e.MedicalRecordId, "IX_MedicalRecordAttachments_MedicalRecord");
 
@@ -577,7 +578,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<MedicationDatabase>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Medicati__3214EC07A9682EB9");
+            entity.HasKey(e => e.Id).HasName("PK__Medicati__3214EC0753C891C6");
 
             entity.ToTable("MedicationDatabase");
 
@@ -593,7 +594,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<Notification>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Notifica__3214EC07B3CD51D2");
+            entity.HasKey(e => e.Id).HasName("PK__Notifica__3214EC0733D997A0");
 
             entity.HasIndex(e => new { e.UserId, e.IsRead, e.CreatedAt }, "IX_Notifications_User_Read");
 
@@ -610,15 +611,15 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<Patient>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Patients__3214EC07AA46CAD5");
+            entity.HasKey(e => e.Id).HasName("PK__Patients__3214EC0757F00101");
 
             entity.HasIndex(e => e.MedicalRecordNumber, "IX_Patients_MedicalRecordNumber");
 
             entity.HasIndex(e => e.UserId, "IX_Patients_User");
 
-            entity.HasIndex(e => e.UserId, "UQ__Patients__1788CC4D1AB4F532").IsUnique();
+            entity.HasIndex(e => e.UserId, "UQ__Patients__1788CC4D1C2C3BBA").IsUnique();
 
-            entity.HasIndex(e => e.MedicalRecordNumber, "UQ__Patients__8E549ED0DF4DE344").IsUnique();
+            entity.HasIndex(e => e.MedicalRecordNumber, "UQ__Patients__8E549ED065FA6A00").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.BloodTypeCode).HasMaxLength(5);
@@ -641,7 +642,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<PatientHealthReminder>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__PatientH__3214EC0743B03DC4");
+            entity.HasKey(e => e.Id).HasName("PK__PatientH__3214EC07A144B1D4");
 
             entity.HasIndex(e => new { e.PatientId, e.ScheduledDate }, "IX_PatientHealthReminders_Patient_Date").HasFilter("([IsCompleted]=(0))");
 
@@ -671,7 +672,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<Prescription>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Prescrip__3214EC07E75D5201");
+            entity.HasKey(e => e.Id).HasName("PK__Prescrip__3214EC07E7FED934");
 
             entity.HasIndex(e => e.MedicalRecordId, "IX_Prescriptions_MedicalRecord");
 
@@ -694,11 +695,11 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<Promotion>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Promotio__3214EC07E3CC9DCF");
+            entity.HasKey(e => e.Id).HasName("PK__Promotio__3214EC078B240364");
 
             entity.HasIndex(e => new { e.IsActive, e.StartDate, e.EndDate }, "IX_Promotions_Active_Date").HasFilter("([IsActive]=(1))");
 
-            entity.HasIndex(e => e.Code, "UQ__Promotio__A25C5AA74806F397").IsUnique();
+            entity.HasIndex(e => e.Code, "UQ__Promotio__A25C5AA71BD14BAA").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Code).HasMaxLength(50);
@@ -712,7 +713,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<RefAppointmentStatus>(entity =>
         {
-            entity.HasKey(e => e.Code).HasName("PK__RefAppoi__A25C5AA6BF150EDB");
+            entity.HasKey(e => e.Code).HasName("PK__RefAppoi__A25C5AA69D1F88AE");
 
             entity.ToTable("RefAppointmentStatus");
 
@@ -724,7 +725,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<RefArticleStatus>(entity =>
         {
-            entity.HasKey(e => e.Code).HasName("PK__RefArtic__A25C5AA60614BB67");
+            entity.HasKey(e => e.Code).HasName("PK__RefArtic__A25C5AA6F03EC7E2");
 
             entity.ToTable("RefArticleStatus");
 
@@ -736,7 +737,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<RefBloodType>(entity =>
         {
-            entity.HasKey(e => e.Code).HasName("PK__RefBlood__A25C5AA60DDA1379");
+            entity.HasKey(e => e.Code).HasName("PK__RefBlood__A25C5AA67734F70E");
 
             entity.Property(e => e.Code).HasMaxLength(5);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
@@ -746,7 +747,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<RefFileType>(entity =>
         {
-            entity.HasKey(e => e.Code).HasName("PK__RefFileT__A25C5AA6FA6357E0");
+            entity.HasKey(e => e.Code).HasName("PK__RefFileT__A25C5AA6DA4D8D4A");
 
             entity.Property(e => e.Code).HasMaxLength(20);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
@@ -756,7 +757,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<RefGender>(entity =>
         {
-            entity.HasKey(e => e.Code).HasName("PK__RefGende__A25C5AA6EFC83A4F");
+            entity.HasKey(e => e.Code).HasName("PK__RefGende__A25C5AA6939BEE5A");
 
             entity.Property(e => e.Code).HasMaxLength(10);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
@@ -766,7 +767,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<RefPaymentMethod>(entity =>
         {
-            entity.HasKey(e => e.Code).HasName("PK__RefPayme__A25C5AA68D13F33B");
+            entity.HasKey(e => e.Code).HasName("PK__RefPayme__A25C5AA6127F3AEB");
 
             entity.Property(e => e.Code).HasMaxLength(20);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
@@ -776,7 +777,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<RefPaymentStatus>(entity =>
         {
-            entity.HasKey(e => e.Code).HasName("PK__RefPayme__A25C5AA6FCB8976A");
+            entity.HasKey(e => e.Code).HasName("PK__RefPayme__A25C5AA68CA5D6F4");
 
             entity.ToTable("RefPaymentStatus");
 
@@ -788,7 +789,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<RefReminderType>(entity =>
         {
-            entity.HasKey(e => e.Code).HasName("PK__RefRemin__A25C5AA697B8E415");
+            entity.HasKey(e => e.Code).HasName("PK__RefRemin__A25C5AA6D9076352");
 
             entity.Property(e => e.Code).HasMaxLength(20);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
@@ -798,7 +799,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<RefRole>(entity =>
         {
-            entity.HasKey(e => e.Code).HasName("PK__RefRoles__A25C5AA6B54C2A51");
+            entity.HasKey(e => e.Code).HasName("PK__RefRoles__A25C5AA610CF02ED");
 
             entity.Property(e => e.Code).HasMaxLength(20);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
@@ -809,7 +810,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<RefSeverityLevel>(entity =>
         {
-            entity.HasKey(e => e.Code).HasName("PK__RefSever__A25C5AA6D80EA447");
+            entity.HasKey(e => e.Code).HasName("PK__RefSever__A25C5AA6FEF4392B");
 
             entity.Property(e => e.Code).HasMaxLength(20);
             entity.Property(e => e.ColorCode).HasMaxLength(10);
@@ -820,7 +821,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<RefWalletTransactionType>(entity =>
         {
-            entity.HasKey(e => e.Code).HasName("PK__RefWalle__A25C5AA6F318231A");
+            entity.HasKey(e => e.Code).HasName("PK__RefWalle__A25C5AA64B3E1BC8");
 
             entity.Property(e => e.Code).HasMaxLength(30);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
@@ -830,7 +831,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<RefreshToken>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__RefreshT__3214EC07BD325353");
+            entity.HasKey(e => e.Id).HasName("PK__RefreshT__3214EC077F541F45");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
@@ -843,13 +844,13 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<Review>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Reviews__3214EC07E7DF63C7");
+            entity.HasKey(e => e.Id).HasName("PK__Reviews__3214EC07E5D5FDA6");
 
             entity.HasIndex(e => e.AppointmentId, "IX_Reviews_Appointment");
 
             entity.HasIndex(e => new { e.Rating, e.Status }, "IX_Reviews_Rating_Status").HasFilter("([Status]='Approved')");
 
-            entity.HasIndex(e => e.AppointmentId, "UQ__Reviews__8ECDFCC3D05917CD").IsUnique();
+            entity.HasIndex(e => e.AppointmentId, "UQ__Reviews__8ECDFCC3FD5AE396").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.AdminResponse).HasMaxLength(2000);
@@ -867,7 +868,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<ServicePackage>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__ServiceP__3214EC0717445386");
+            entity.HasKey(e => e.Id).HasName("PK__ServiceP__3214EC076D503B46");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
@@ -879,7 +880,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<SiteBanner>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__SiteBann__3214EC07D0AE9FA3");
+            entity.HasKey(e => e.Id).HasName("PK__SiteBann__3214EC07DAA32833");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.BannerImageUrl).HasMaxLength(500);
@@ -891,9 +892,9 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<Specialization>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Speciali__3214EC0749F73BF5");
+            entity.HasKey(e => e.Id).HasName("PK__Speciali__3214EC0715D27EBA");
 
-            entity.HasIndex(e => e.Code, "UQ__Speciali__A25C5AA7F869A266").IsUnique();
+            entity.HasIndex(e => e.Code, "UQ__Speciali__A25C5AA7EB45B12D").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Code).HasMaxLength(50);
@@ -907,7 +908,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<SystemAnalytic>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__SystemAn__3214EC073E3E14E9");
+            entity.HasKey(e => e.Id).HasName("PK__SystemAn__3214EC07FE817288");
 
             entity.HasIndex(e => new { e.MetricDate, e.MetricType }, "IX_SystemAnalytics_Date_Type");
 
@@ -921,7 +922,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<SystemConfiguration>(entity =>
         {
-            entity.HasKey(e => e.ConfigKey).HasName("PK__SystemCo__4A306785603B2D29");
+            entity.HasKey(e => e.ConfigKey).HasName("PK__SystemCo__4A30678590C15854");
 
             entity.Property(e => e.ConfigKey).HasMaxLength(100);
             entity.Property(e => e.Category).HasMaxLength(50);
@@ -938,13 +939,13 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Users__3214EC07DC31EDF2");
+            entity.HasKey(e => e.Id).HasName("PK__Users__3214EC074D948F2F");
 
-            entity.HasIndex(e => e.IsActive, "IX_Users_Active");
+            entity.HasIndex(e => e.Status, "IX_Users_Active");
 
-            entity.HasIndex(e => new { e.EmailConfirmed, e.IsActive }, "IX_Users_Email_Confirmed").HasFilter("([EmailConfirmed]=(1))");
+            entity.HasIndex(e => new { e.EmailConfirmed, e.Status }, "IX_Users_Email_Confirmed").HasFilter("([EmailConfirmed]=(1))");
 
-            entity.HasIndex(e => e.GenderCode, "IX_Users_Gender").HasFilter("([IsActive]=(1))");
+            entity.HasIndex(e => e.GenderCode, "IX_Users_Gender").HasFilter("([Status]=(1))");
 
             entity.HasIndex(e => e.NormalizedEmail, "UK_Users_NormalizedEmail").IsUnique();
 
@@ -958,11 +959,11 @@ public partial class MedixContext : DbContext
             entity.Property(e => e.FullName).HasMaxLength(200);
             entity.Property(e => e.GenderCode).HasMaxLength(10);
             entity.Property(e => e.IdentificationNumber).HasMaxLength(50);
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.LockoutEnabled).HasDefaultValue(true);
             entity.Property(e => e.NormalizedEmail).HasMaxLength(256);
             entity.Property(e => e.NormalizedUserName).HasMaxLength(256);
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
+            entity.Property(e => e.Status).HasDefaultValue((byte)1);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.UserName).HasMaxLength(256);
 
@@ -973,7 +974,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<UserRole>(entity =>
         {
-            entity.HasKey(e => new { e.UserId, e.RoleCode }).HasName("PK__UserRole__DAEA0715446B4B11");
+            entity.HasKey(e => new { e.UserId, e.RoleCode }).HasName("PK__UserRole__DAEA0715A1420B36");
 
             entity.HasIndex(e => e.RoleCode, "IX_UserRoles_Role");
 
@@ -996,11 +997,11 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<Wallet>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Wallets__3214EC072F78DB34");
+            entity.HasKey(e => e.Id).HasName("PK__Wallets__3214EC07309AA23A");
 
             entity.HasIndex(e => e.UserId, "IX_Wallets_User").HasFilter("([IsActive]=(1))");
 
-            entity.HasIndex(e => e.UserId, "UQ__Wallets__1788CC4D05D8AFC7").IsUnique();
+            entity.HasIndex(e => e.UserId, "UQ__Wallets__1788CC4DBAD76322").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Balance).HasColumnType("decimal(18, 2)");
@@ -1019,7 +1020,7 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<WalletTransaction>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__WalletTr__3214EC0748158FE9");
+            entity.HasKey(e => e.Id).HasName("PK__WalletTr__3214EC07BA7F72EC");
 
             entity.HasIndex(e => e.RelatedAppointmentId, "IX_WalletTransactions_Appointment").HasFilter("([RelatedAppointmentId] IS NOT NULL)");
 

@@ -52,5 +52,11 @@ namespace Medix.API.Data.Repositories
             return await _context.Users
                 .AnyAsync(u => u.Email.ToLower() == email.ToLower());
         }
+        public async Task<User> SaveUserAsync(User user)
+        {
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return user;
+        }
     }
 }

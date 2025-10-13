@@ -17,6 +17,10 @@ public partial class ContentCategory
 
     public bool IsActive { get; set; }
 
+    public DateTime CreatedAt { get; set; }
+
+    public DateTime UpdatedAt { get; set; }
+
     public virtual ICollection<ContentCategory> InverseParent { get; set; } = new List<ContentCategory>();
 
     public virtual ContentCategory? Parent { get; set; }

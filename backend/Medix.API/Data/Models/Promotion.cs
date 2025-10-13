@@ -11,6 +11,8 @@ public partial class Promotion
 
     public string Name { get; set; } = null!;
 
+    public string? Description { get; set; }
+
     public string DiscountType { get; set; } = null!;
 
     public decimal DiscountValue { get; set; }

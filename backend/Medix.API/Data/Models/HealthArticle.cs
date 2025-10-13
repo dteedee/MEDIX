@@ -31,7 +31,7 @@ public partial class HealthArticle
 
     public Guid AuthorId { get; set; }
 
-    public string Status { get; set; } = null!;
+    public string StatusCode { get; set; } = null!;
 
     public int ViewCount { get; set; }
 
@@ -44,6 +44,8 @@ public partial class HealthArticle
     public DateTime UpdatedAt { get; set; }
 
     public virtual User Author { get; set; } = null!;
+
+    public virtual RefArticleStatus StatusCodeNavigation { get; set; } = null!;
 
     public virtual ICollection<ContentCategory> Categories { get; set; } = new List<ContentCategory>();
 }

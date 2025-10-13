@@ -25,9 +25,11 @@ public partial class User
 
     public string FullName { get; set; } = null!;
 
+    public string Role { get; set; } = "User";
+
     public DateOnly? DateOfBirth { get; set; }
 
-    public string? Gender { get; set; }
+    public string? GenderCode { get; set; }
 
     public string? IdentificationNumber { get; set; }
 
@@ -35,27 +37,29 @@ public partial class User
 
     public string? AvatarUrl { get; set; }
 
-    public string Role { get; set; } = null!;
-
-    public bool IsActive { get; set; }
+    public byte Status { get; set; }
 
     public bool IsProfileCompleted { get; set; }
 
-    public DateTimeOffset? LockoutEnd { get; set; }
+    public DateTime? LockoutEnd { get; set; }
 
     public bool LockoutEnabled { get; set; }
 
     public int AccessFailedCount { get; set; }
 
-    public DateTime CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public DateTime UpdatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    public virtual ICollection<AppointmentStatusHistory> AppointmentStatusHistories { get; set; } = new List<AppointmentStatusHistory>();
 
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 
     public virtual ICollection<Cmspage> Cmspages { get; set; } = new List<Cmspage>();
 
     public virtual Doctor? Doctor { get; set; }
+
+    public virtual RefGender? GenderCodeNavigation { get; set; }
 
     public virtual ICollection<HealthArticle> HealthArticles { get; set; } = new List<HealthArticle>();
 
@@ -66,6 +70,8 @@ public partial class User
     public virtual Patient? Patient { get; set; }
 
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+
+    public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 
     public virtual Wallet? Wallet { get; set; }
 }

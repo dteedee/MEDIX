@@ -15,6 +15,8 @@ public partial class Doctor
 
     public string LicenseNumber { get; set; } = null!;
 
+    public string LicenseImageUrl { get; set; } = null!;
+
     public string? Bio { get; set; }
 
     public string? Education { get; set; }

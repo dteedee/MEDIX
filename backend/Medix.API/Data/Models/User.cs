@@ -25,6 +25,8 @@ public partial class User
 
     public string FullName { get; set; } = null!;
 
+    public string Role { get; set; } = "User";
+
     public DateOnly? DateOfBirth { get; set; }
 
     public string? GenderCode { get; set; }
@@ -45,9 +47,9 @@ public partial class User
 
     public int AccessFailedCount { get; set; }
 
-    public DateTime CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public DateTime UpdatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public virtual ICollection<AppointmentStatusHistory> AppointmentStatusHistories { get; set; } = new List<AppointmentStatusHistory>();
 

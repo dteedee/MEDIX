@@ -1,56 +1,28 @@
-import React, { useState } from 'react';
-import { 
-  PersonalInfoSection, 
-  MedicalInfoSection, 
-  EmergencyContactSection, 
-  MedicalHistorySection 
+import React, { useState, useRef } from 'react';
+import {
+  PersonalInfoSection,
+  MedicalInfoSection,
+  EmergencyContactSection,
+  MedicalHistorySection
 } from '../components';
 import { emailVerificationService } from '../services';
+import { patientRegistrationApiService } from '../services/patientRegistrationApiService';
+import { FormData, PasswordStrength, initialFormData } from '../types/registrationTypes';
+import { 
+  validateEmail, 
+  validatePhone, 
+  validateIdNumber, 
+  validateForm, 
+  checkPasswordStrength,
+  handleInputChange as handleInputChangeUtil,
+  handleGenderChange
+} from '../utils/validationregisterPatient';
 import './RegistrationPage.css';
 
-interface FormData {
-  // Personal Info - matching RegisterDTO
-  email: string;
-  password: string;
-  confirmPassword: string; // for UI validation only
-  fullname: string;
-  phoneNumber: string;
-  gender: boolean | null; // true = male, false = female, null = other
-  identificationNumber: string;
-  address: string;
-  dateOfBirth: string;
-  
-  // Medical Info (not in DTO)
-  bloodType: string;
-  
-  // Emergency Contact (not in DTO)
-  emergencyContactName: string;
-  emergencyRelationship: string;
-  emergencyPhoneNumber: string;
-  
-  // Medical History (not in DTO)
-  chronicDiseases: string;
-  allergies: string;
-}
-
 export function RegistrationPage() {
-  const [formData, setFormData] = useState<FormData>({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    fullname: '',
-    phoneNumber: '',
-    gender: null,
-    identificationNumber: '',
-    address: '',
-    dateOfBirth: '',
-    bloodType: '',
-    emergencyContactName: '',
-    emergencyRelationship: '',
-    emergencyPhoneNumber: '',
-    chronicDiseases: '',
-    allergies: ''
-  });
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const emailCheckTimeoutRef = useRef<number | null>(null);
+  const idNumberCheckTimeoutRef = useRef<number | null>(null);
 
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [termsError, setTermsError] = useState(false);
@@ -58,9 +30,16 @@ export function RegistrationPage() {
   const [emailVerified, setEmailVerified] = useState(false);
   const [emailVerificationSent, setEmailVerificationSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
+  const [serverVerificationCode, setServerVerificationCode] = useState(''); // Lưu code từ server
+  const [isSendingVerificationCode, setIsSendingVerificationCode] = useState(false); // Để tránh double click
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [isResendingCode, setIsResendingCode] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState({
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailCheckCompleted, setEmailCheckCompleted] = useState(false);
+  const [isCheckingIdNumber, setIsCheckingIdNumber] = useState(false);
+  const [idNumberCheckCompleted, setIdNumberCheckCompleted] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({
     hasLowercase: false,
     hasUppercase: false,
     hasNumbers: false,
@@ -69,97 +48,169 @@ export function RegistrationPage() {
     score: 0
   });
 
-  // Real-time validation functions
-  const validateEmail = (email: string): string => {
-    if (!email) return '';
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email) ? '' : 'Email không hợp lệ';
+  // Hàm kiểm tra email có tồn tại không
+  const checkEmailExists = async (email: string) => {
+    if (!email || validateEmail(email)) {
+      setEmailCheckCompleted(false);
+      return;
+    }
+
+    setIsCheckingEmail(true);
+    try {
+      const result = await patientRegistrationApiService.checkEmailExists(email);
+      
+      if (result.success && result.data?.exists) {
+        // Email đã tồn tại
+        setErrors(prev => ({
+          ...prev,
+          email: 'Email này đã được sử dụng'
+        }));
+        setEmailCheckCompleted(false);
+      } else {
+        // Email chưa tồn tại - có thể tiến hành verification
+        setErrors(prev => ({
+          ...prev,
+          email: ''
+        }));
+        setEmailCheckCompleted(true);
+      }
+    } catch (error) {
+      console.error('Error checking email:', error);
+      setEmailCheckCompleted(false);
+    } finally {
+      setIsCheckingEmail(false);
+    }
   };
 
-  const validatePhone = (phone: string): string => {
-    if (!phone) return '';
-    const phoneRegex = /^[0-9]{10,11}$/;
-    return phoneRegex.test(phone.replace(/\s/g, '')) ? '' : 'Số điện thoại phải có 10-11 chữ số';
-  };
+  // Hàm kiểm tra số CCCD/CMND có tồn tại không
+  const checkIdNumberExists = async (idNumber: string) => {
+    if (!idNumber || validateIdNumber(idNumber)) {
+      setIdNumberCheckCompleted(false);
+      return;
+    }
 
-  const validateIdNumber = (idNumber: string): string => {
-    if (!idNumber) return '';
-    const idRegex = /^[0-9]{9,12}$/;
-    return idRegex.test(idNumber) ? '' : 'Số CCCD/CMND phải có 9-12 chữ số';
-  };
-
-  const checkPasswordStrength = (password: string) => {
-    const hasLowercase = /[a-z]/.test(password);
-    const hasUppercase = /[A-Z]/.test(password);
-    const hasNumbers = /[0-9]/.test(password);
-    const hasSpecialChars = /[?#@!$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
-    const isLongEnough = password.length >= 8;
-
-    let score = 0;
-    if (hasLowercase) score++;
-    if (hasUppercase) score++;
-    if (hasNumbers) score++;
-    if (hasSpecialChars) score++;
-    if (isLongEnough) score++;
-
-    setPasswordStrength({
-      hasLowercase,
-      hasUppercase,
-      hasNumbers,
-      hasSpecialChars,
-      isLongEnough,
-      score
-    });
-
-    return score >= 4;
+    setIsCheckingIdNumber(true);
+    try {
+      const result = await patientRegistrationApiService.checkIdNumberExists(idNumber);
+      
+      if (result.success && result.data?.exists) {
+        // ID number đã tồn tại
+        setErrors(prev => ({
+          ...prev,
+          identificationNumber: 'Số CCCD/CMND này đã được sử dụng'
+        }));
+        setIdNumberCheckCompleted(false);
+      } else {
+        // ID number chưa tồn tại - hợp lệ
+        setErrors(prev => ({
+          ...prev,
+          identificationNumber: ''
+        }));
+        setIdNumberCheckCompleted(true);
+      }
+    } catch (error) {
+      console.error('Error checking ID number:', error);
+      setIdNumberCheckCompleted(false);
+    } finally {
+      setIsCheckingIdNumber(false);
+    }
   };
 
   const handleEmailVerification = async () => {
     if (!formData.email || validateEmail(formData.email)) {
-      alert('Vui lòng nhập email hợp lệ trước khi xác nhận');
+      setErrors(prev => ({
+        ...prev,
+        email: 'Vui lòng nhập email hợp lệ trước khi xác nhận'
+      }));
+      return;
+    }
+
+    if (!emailCheckCompleted) {
+      setErrors(prev => ({
+        ...prev,
+        email: 'Vui lòng đợi kiểm tra email hoàn tất'
+      }));
       return;
     }
 
     try {
-      setEmailVerificationSent(true);
-      const result = await emailVerificationService.sendVerificationCode(formData.email);
+      setIsSendingVerificationCode(true); // Set loading state
+      // Clear any previous email errors
+      setErrors(prev => ({
+        ...prev,
+        email: ''
+      }));
       
-      if (result.success) {
-        alert(result.message || 'Mã xác nhận đã được gửi đến email của bạn');
+      const result = await emailVerificationService.sendVerificationCode(formData.email);
+
+      if (result.success && result.data?.verificationCode) {
+        // Chỉ set emailVerificationSent = true khi thành công
+        setEmailVerificationSent(true);
+        // Lưu verification code từ server để so sánh
+        setServerVerificationCode(String(result.data.verificationCode));
+        // Hiển thị success message (có thể thêm success state nếu cần)
       } else {
-        alert(result.error || 'Có lỗi xảy ra khi gửi email xác nhận');
+        // Hiển thị lỗi dưới field email thay vì alert
+        setErrors(prev => ({
+          ...prev,
+          email: result.error || 'Có lỗi xảy ra khi gửi email xác nhận'
+        }));
         setEmailVerificationSent(false);
       }
-      
+
     } catch (error) {
       console.error('Failed to send verification email:', error);
-      alert('Có lỗi xảy ra khi gửi email xác nhận. Vui lòng thử lại.');
+      // Hiển thị lỗi dưới field email thay vì alert
+      setErrors(prev => ({
+        ...prev,
+        email: 'Có lỗi xảy ra khi gửi email xác nhận. Vui lòng thử lại.'
+      }));
       setEmailVerificationSent(false);
+    } finally {
+      setIsSendingVerificationCode(false); // Clear loading state
     }
   };
 
   const handleVerifyCode = async () => {
     if (!verificationCode.trim()) {
-      alert('Vui lòng nhập mã xác nhận');
+      // Hiển thị lỗi dưới verification code field
+      setErrors(prev => ({
+        ...prev,
+        verificationCode: 'Vui lòng nhập mã xác nhận'
+      }));
       return;
     }
 
     try {
       setIsVerifyingCode(true);
-      const result = await emailVerificationService.verifyEmailCode(formData.email, verificationCode);
+      // Clear any previous verification code errors
+      setErrors(prev => ({
+        ...prev,
+        verificationCode: ''
+      }));
       
-      if (result.success) {
+      // So sánh với code từ server
+      if (verificationCode.trim() === serverVerificationCode.trim()) {
         setEmailVerified(true);
         setEmailVerificationSent(false);
         setVerificationCode('');
-        alert(result.message || 'Email đã được xác nhận thành công');
+        setServerVerificationCode(''); // Clear server code
+        // Success message có thể hiển thị trong UI component
       } else {
-        alert(result.error || 'Mã xác nhận không đúng hoặc đã hết hạn');
+        // Hiển thị lỗi dưới verification code field
+        setErrors(prev => ({
+          ...prev,
+          verificationCode: 'Mã xác nhận không đúng. Vui lòng kiểm tra lại.'
+        }));
       }
-      
+
     } catch (error) {
       console.error('Failed to verify email code:', error);
-      alert('Có lỗi xảy ra khi xác nhận mã. Vui lòng thử lại.');
+      // Hiển thị lỗi dưới verification code field
+      setErrors(prev => ({
+        ...prev,
+        verificationCode: 'Có lỗi xảy ra khi xác nhận mã. Vui lòng thử lại.'
+      }));
     } finally {
       setIsVerifyingCode(false);
     }
@@ -169,175 +220,196 @@ export function RegistrationPage() {
     try {
       setIsResendingCode(true);
       const result = await emailVerificationService.resendVerificationCode(formData.email);
-      
-      if (result.success) {
-        alert(result.message || 'Mã xác nhận mới đã được gửi đến email của bạn');
+
+      if (result.success && result.data?.verificationCode) {
+        // Cập nhật server verification code mới
+        setServerVerificationCode(String(result.data.verificationCode));
+        // Clear any previous errors
+        setErrors(prev => ({
+          ...prev,
+          email: ''
+        }));
       } else {
-        alert(result.error || 'Có lỗi xảy ra khi gửi lại email xác nhận');
+        // Hiển thị lỗi dưới email field
+        setErrors(prev => ({
+          ...prev,
+          email: result.error || 'Có lỗi xảy ra khi gửi lại email xác nhận'
+        }));
       }
-      
+
     } catch (error) {
       console.error('Failed to resend verification email:', error);
-      alert('Có lỗi xảy ra khi gửi lại email xác nhận. Vui lòng thử lại.');
+      // Hiển thị lỗi dưới email field
+      setErrors(prev => ({
+        ...prev,
+        email: 'Có lỗi xảy ra khi gửi lại email xác nhận. Vui lòng thử lại.'
+      }));
     } finally {
       setIsResendingCode(false);
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    // Handle gender conversion from string to boolean
-    let convertedValue: any = value;
-    if (field === 'gender') {
-      if (value === 'true') convertedValue = true;
-      else if (value === 'false') convertedValue = false;
-      else if (value === 'null') convertedValue = null;
-      else convertedValue = null; // default for empty
+  // Hàm để handle verification code change và clear error
+  const handleVerificationCodeChange = (code: string) => {
+    setVerificationCode(code);
+    // Clear verification code error khi user typing
+    if (errors.verificationCode) {
+      setErrors(prev => ({
+        ...prev,
+        verificationCode: ''
+      }));
     }
-
-    setFormData(prev => ({
-      ...prev,
-      [field]: convertedValue
-    }));
-    
-    // Real-time validation
-    let error = '';
-    
-    switch (field) {
-      case 'fullname':
-        if (value && value.trim().length < 2) {
-          error = 'Họ và tên phải có ít nhất 2 ký tự';
-        }
-        break;
-      case 'email':
-        error = validateEmail(value);
-        break;
-      case 'phoneNumber':
-        error = validatePhone(value);
-        break;
-      case 'identificationNumber':
-        error = validateIdNumber(value);
-        break;
-      case 'password':
-        checkPasswordStrength(value);
-        if (value && value.length < 8) {
-          error = 'Mật khẩu phải có ít nhất 8 ký tự';
-        } else if (value && passwordStrength.score < 3) {
-          error = 'Mật khẩu cần mạnh hơn';
-        }
-        // Also validate confirm password if it exists
-        if (formData.confirmPassword && value !== formData.confirmPassword) {
-          setErrors(prev => ({
-            ...prev,
-            confirmPassword: 'Mật khẩu xác nhận không khớp'
-          }));
-        } else if (formData.confirmPassword && value === formData.confirmPassword) {
-          setErrors(prev => ({
-            ...prev,
-            confirmPassword: ''
-          }));
-        }
-        break;
-      case 'confirmPassword':
-        if (value && value !== formData.password) {
-          error = 'Mật khẩu xác nhận không khớp';
-        }
-        break;
-      case 'emergencyPhoneNumber':
-        error = validatePhone(value);
-        break;
-    }
-    
-    // Update errors
-    setErrors(prev => ({
-      ...prev,
-      [field]: error
-    }));
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+  const handleInputChange = (field: string, value: string) => {
+    handleInputChangeUtil(field, value, formData, passwordStrength, setFormData, setErrors, setPasswordStrength);
+    
+    // Nếu là email field, reset email verification state và kiểm tra email
+    if (field === 'email') {
+      setEmailVerified(false);
+      setEmailVerificationSent(false);
+      setVerificationCode('');
+      setServerVerificationCode(''); // Reset server code
+      setEmailCheckCompleted(false);
+      
+      // Clear timeout trước đó
+      if (emailCheckTimeoutRef.current) {
+        clearTimeout(emailCheckTimeoutRef.current);
+      }
+      
+      // Debounce check email - chỉ check khi user ngừng nhập 1 giây
+      emailCheckTimeoutRef.current = window.setTimeout(() => {
+        checkEmailExists(value);
+      }, 1000);
+    }
+    
+    // Nếu là identificationNumber field, kiểm tra ID number
+    if (field === 'identificationNumber') {
+      setIdNumberCheckCompleted(false);
+      
+      // Clear timeout trước đó
+      if (idNumberCheckTimeoutRef.current) {
+        clearTimeout(idNumberCheckTimeoutRef.current);
+      }
+      
+      // Debounce check ID number - chỉ check khi user ngừng nhập 1 giây
+      idNumberCheckTimeoutRef.current = window.setTimeout(() => {
+        checkIdNumberExists(value);
+      }, 1000);
+    }
+  };
 
-    // Required field validation
-    if (!formData.fullname.trim()) newErrors.fullname = 'Họ và tên là bắt buộc';
-    else if (formData.fullname.trim().length < 2) newErrors.fullname = 'Họ và tên phải có ít nhất 2 ký tự';
-    
-    if (!formData.identificationNumber.trim()) newErrors.identificationNumber = 'Số CCCD/CMND là bắt buộc';
-    else {
-      const idError = validateIdNumber(formData.identificationNumber);
-      if (idError) newErrors.identificationNumber = idError;
-    }
-    
-    if (!formData.address.trim()) newErrors.address = 'Địa chỉ liên lạc là bắt buộc';
-    
-    if (!formData.email.trim()) newErrors.email = 'Email là bắt buộc';
-    else {
-      const emailError = validateEmail(formData.email);
-      if (emailError) newErrors.email = emailError;
-    }
-    
-    if (!formData.phoneNumber.trim()) newErrors.phoneNumber = 'Số điện thoại là bắt buộc';
-    else {
-      const phoneError = validatePhone(formData.phoneNumber);
-      if (phoneError) newErrors.phoneNumber = phoneError;
-    }
-    
-    if (!formData.password) newErrors.password = 'Mật khẩu là bắt buộc';
-    else if (formData.password.length < 8) newErrors.password = 'Mật khẩu phải có ít nhất 8 ký tự';
-    else if (passwordStrength.score < 3) newErrors.password = 'Mật khẩu không đủ mạnh';
-    
-    if (!formData.confirmPassword) newErrors.confirmPassword = 'Xác nhận mật khẩu là bắt buộc';
-    else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
-    
-    if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Ngày sinh là bắt buộc';
-    if (formData.gender === undefined) newErrors.gender = 'Giới tính là bắt buộc';
-    if (!formData.bloodType) newErrors.bloodType = 'Nhóm máu là bắt buộc';
-    if (!formData.emergencyContactName.trim()) newErrors.emergencyContactName = 'Họ tên người liên hệ là bắt buộc';
-    if (!formData.emergencyRelationship.trim()) newErrors.emergencyRelationship = 'Mối quan hệ là bắt buộc';
-    
-    if (!formData.emergencyPhoneNumber.trim()) newErrors.emergencyPhoneNumber = 'Số điện thoại liên hệ là bắt buộc';
-    else {
-      const emergencyPhoneError = validatePhone(formData.emergencyPhoneNumber);
-      if (emergencyPhoneError) newErrors.emergencyPhoneNumber = emergencyPhoneError;
-    }
-
+  const handleFormValidation = (): boolean => {
+    const newErrors = validateForm(formData, passwordStrength);
     setErrors(newErrors);
+    
+    // Nếu có lỗi, scroll đến field đầu tiên có lỗi
+    if (Object.keys(newErrors).length > 0) {
+      const firstErrorField = Object.keys(newErrors)[0];
+      const fieldElement = document.getElementById(firstErrorField);
+      if (fieldElement) {
+        fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        fieldElement.focus();
+      }
+    }
+    
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Không cần kiểm tra email và ID nữa vì đã được check tự động
+  const checkExistingData = async (): Promise<boolean> => {
+    // Email và ID number đã được check tự động, chỉ cần return true
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Kiểm tra điều khoản trước tiên
     if (!agreedToTerms) {
       setTermsError(true);
+      alert('Vui lòng đồng ý với Điều khoản dịch vụ và Chính sách bảo mật');
+      // Scroll đến phần điều khoản
+      const termsElement = document.querySelector('.terms-section');
+      if (termsElement) {
+        termsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
-    
+
     setTermsError(false);
-    
-    if (!validateForm()) {
-      alert('Vui lòng kiểm tra và điền đầy đủ thông tin');
+
+    // Kiểm tra validation form
+    if (!handleFormValidation()) {
+      const errorFields = Object.keys(errors);
+      const errorCount = errorFields.length;
+      const errorMessage = errorCount === 1 
+        ? 'Vui lòng điền đầy đủ thông tin bắt buộc'
+        : `Vui lòng kiểm tra và sửa ${errorCount} lỗi trong form`;
+      alert(errorMessage);
       return;
     }
-    
-    console.log('Form submitted successfully:', formData);
-    alert('Đăng ký thành công!');
-    // Here you would typically send the data to your backend API
-  };
 
-  // Helper function to convert boolean gender to string for UI
-  const getGenderForUI = (gender: boolean | null): 'male' | 'female' | 'other' | '' => {
-    if (gender === true) return 'male';
-    if (gender === false) return 'female';
-    if (gender === null) return 'other';
-    return '';
-  };
+    // Kiểm tra email đã được xác nhận chưa
+    if (!emailVerified) {
+      alert('Vui lòng xác nhận email trước khi đăng ký');
+      // Scroll đến email verification section
+      const emailElement = document.getElementById('email');
+      if (emailElement) {
+        emailElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
 
-  // Helper function to convert string gender from UI to boolean
-  const setGenderFromUI = (genderString: string) => {
-    if (genderString === 'male') return handleInputChange('gender', 'true');
-    if (genderString === 'female') return handleInputChange('gender', 'false');
-    if (genderString === 'other') return handleInputChange('gender', 'null');
-    return handleInputChange('gender', '');
+    setIsSubmitting(true);
+
+    try {
+      // Kiểm tra dữ liệu đã tồn tại chưa
+      const isDataValid = await checkExistingData();
+      if (!isDataValid) {
+        alert('Vui lòng kiểm tra lại thông tin. Email hoặc số CCCD/CMND đã được sử dụng.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Call API để đăng ký bệnh nhân
+      const result = await patientRegistrationApiService.registerPatient(formData);
+      
+      if (result.success) {
+        alert(result.message || 'Đăng ký thành công!');
+        console.log('Registration successful:', result.data);
+        
+        // Reset form sau khi đăng ký thành công
+        setFormData(initialFormData);
+        setErrors({});
+        setEmailVerified(false);
+        setEmailVerificationSent(false);
+        setVerificationCode('');
+        setServerVerificationCode(''); // Reset server code
+        setAgreedToTerms(false);
+        setPasswordStrength({
+          hasLowercase: false,
+          hasUppercase: false,
+          hasNumbers: false,
+          hasSpecialChars: false,
+          isLongEnough: false,
+          score: 0
+        });
+        
+        // Có thể redirect đến trang đăng nhập hoặc trang khác
+        // window.location.href = '/login';
+        
+      } else {
+        alert(result.error || 'Có lỗi xảy ra khi đăng ký. Vui lòng thử lại.');
+        console.error('Registration failed:', result.error);
+      }
+      
+    } catch (error) {
+      console.error('Unexpected error during registration:', error);
+      alert('Có lỗi không mong muốn xảy ra. Vui lòng thử lại sau.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -351,8 +423,8 @@ export function RegistrationPage() {
         <form onSubmit={handleSubmit}>
           <div className="form-layout">
             <div className="form-column left-column">
-              <PersonalInfoSection 
-                formData={formData} 
+              <PersonalInfoSection
+                formData={formData}
                 onInputChange={handleInputChange}
                 errors={errors}
                 emailVerified={emailVerified}
@@ -360,39 +432,34 @@ export function RegistrationPage() {
                 verificationCode={verificationCode}
                 isVerifyingCode={isVerifyingCode}
                 isResendingCode={isResendingCode}
+                isCheckingEmail={isCheckingEmail}
+                emailCheckCompleted={emailCheckCompleted}
+                isCheckingIdNumber={isCheckingIdNumber}
+                idNumberCheckCompleted={idNumberCheckCompleted}
+                isSendingVerificationCode={isSendingVerificationCode} // Thêm prop mới
                 onEmailVerification={handleEmailVerification}
                 onVerifyCode={handleVerifyCode}
                 onResendCode={handleResendCode}
-                onVerificationCodeChange={setVerificationCode}
+                onVerificationCodeChange={handleVerificationCodeChange}
                 passwordStrength={passwordStrength}
               />
             </div>
-            
+
             <div className="form-column right-column">
-              <MedicalInfoSection 
-                formData={{
-                  dateOfBirth: formData.dateOfBirth,
-                  gender: getGenderForUI(formData.gender),
-                  bloodType: formData.bloodType
-                }}
-                onInputChange={(field: string, value: string) => {
-                  if (field === 'gender') {
-                    setGenderFromUI(value);
-                  } else {
-                    handleInputChange(field, value);
-                  }
-                }}
-                errors={errors}
-              />
-              
-              <EmergencyContactSection 
-                formData={formData} 
+              <MedicalInfoSection
+                formData={formData}
                 onInputChange={handleInputChange}
                 errors={errors}
               />
-              
-              <MedicalHistorySection 
-                formData={formData} 
+
+              <EmergencyContactSection
+                formData={formData}
+                onInputChange={handleInputChange}
+                errors={errors}
+              />
+
+              <MedicalHistorySection
+                formData={formData}
                 onInputChange={handleInputChange}
                 errors={errors}
               />
@@ -413,15 +480,19 @@ export function RegistrationPage() {
                   }}
                 />
                 <span className="checkmark"></span>
-                Tôi đồng ý với{' '}
+                Tôi đồng ý với{' '} 
                 <a href="#" className="terms-link">Điều khoản dịch vụ</a> và{' '}
-                <a href="#" className="terms-link">Chính sách bảo mật</a> của MEDIX
+                <a href="#" className="terms-link">Chính sách bảo mật</a> của MEDIX 
               </label>
               {termsError && <span className="error-message">Vui lòng đồng ý với Điều khoản dịch vụ và Chính sách bảo mật</span>}
             </div>
 
-            <button type="submit" className="submit-button">
-              ĐĂNG KÝ TÀI KHOẢN
+            <button 
+              type="submit" 
+              className="submit-button"
+              disabled={isSubmitting || !emailVerified}
+            >
+              {isSubmitting ? 'ĐANG ĐĂNG KÝ...' : 'ĐĂNG KÝ TÀI KHOẢN'}
             </button>
 
             <div className="login-link">

@@ -1,11 +1,27 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Header.css';
 
 export function Header() {
+  const navigate = useNavigate();
+
+  const handleRegisterClick = () => {
+    navigate('/register');
+  };
+
+  const handleLoginClick = () => {
+    // Có thể navigate đến trang login sau này
+    console.log('Navigate to login page');
+  };
+
+  const handleLogoClick = () => {
+    navigate('/');
+  };
+
   return (
     <header className="header">
       <div className="header-container">
-        <div className="logo">
+        <div className="logo" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
           <h1 className="logo-text">MEDIX</h1>
           <p className="logo-subtitle">HỆ THỐNG Y TẾ THÔNG MINH ỨNG DỤNG AI</p>
         </div>
@@ -26,8 +42,8 @@ export function Header() {
         </div>
 
         <div className="header-actions">
-          <button className="login-btn">Đăng Nhập</button>
-          <button className="register-btn">Đăng Ký</button>
+          <button className="login-btn" onClick={handleLoginClick}>Đăng Nhập</button>
+          <button className="register-btn" onClick={handleRegisterClick}>Đăng Ký</button>
         </div>
       </div>
     </header>

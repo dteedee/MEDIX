@@ -1,11 +1,8 @@
 import React from 'react';
+import { FormData } from '../types/registrationTypes';
 
 interface EmergencyContactProps {
-  formData: {
-    emergencyContactName: string;
-    emergencyRelationship: string;
-    emergencyPhoneNumber: string;
-  };
+  formData: FormData;
   onInputChange: (field: string, value: string) => void;
   errors: Record<string, string>;
 }
@@ -23,6 +20,7 @@ export function EmergencyContactSection({ formData, onInputChange, errors }: Eme
           placeholder="Họ và tên"
           value={formData.emergencyContactName}
           onChange={(e) => onInputChange('emergencyContactName', e.target.value)}
+          onBlur={(e) => onInputChange('emergencyContactName', e.target.value)}
           className={errors.emergencyContactName ? 'error' : (formData.emergencyContactName && !errors.emergencyContactName ? 'success' : '')}
           required
         />
@@ -37,6 +35,7 @@ export function EmergencyContactSection({ formData, onInputChange, errors }: Eme
           placeholder="Mối quan hệ"
           value={formData.emergencyRelationship}
           onChange={(e) => onInputChange('emergencyRelationship', e.target.value)}
+          onBlur={(e) => onInputChange('emergencyRelationship', e.target.value)}
           className={errors.emergencyRelationship ? 'error' : (formData.emergencyRelationship && !errors.emergencyRelationship ? 'success' : '')}
           required
         />
@@ -51,6 +50,7 @@ export function EmergencyContactSection({ formData, onInputChange, errors }: Eme
           placeholder="Số điện thoại liên hệ khẩn cấp"
           value={formData.emergencyPhoneNumber}
           onChange={(e) => onInputChange('emergencyPhoneNumber', e.target.value)}
+          onBlur={(e) => onInputChange('emergencyPhoneNumber', e.target.value)}
           className={errors.emergencyPhoneNumber ? 'error' : (formData.emergencyPhoneNumber && !errors.emergencyPhoneNumber ? 'success' : '')}
           required
         />

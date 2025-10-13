@@ -1,4 +1,7 @@
+using Medix.API.Application.Services;
 using Medix.API.Data;
+using Medix.API.Data.Repositories;
+using Medix.API.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -13,6 +16,11 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Medix API", Version = "v1" });
 });
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IPatientRepository, PatientRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IPatientService, PatientService>();
 
 builder.Services.AddCors(options =>
 {

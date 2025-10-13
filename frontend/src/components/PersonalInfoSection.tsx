@@ -1,16 +1,8 @@
 import React from 'react';
+import { FormData, PasswordStrength } from '../types/registrationTypes';
 
 interface PersonalInfoProps {
-  formData: {
-    email: string;
-    password: string;
-    confirmPassword: string;
-    fullname: string;
-    phoneNumber: string;
-    identificationNumber: string;
-    address: string;
-    dateOfBirth: string;
-  };
+  formData: FormData;
   onInputChange: (field: string, value: string) => void;
   errors: Record<string, string>;
   emailVerified: boolean;
@@ -18,18 +10,16 @@ interface PersonalInfoProps {
   verificationCode: string;
   isVerifyingCode: boolean;
   isResendingCode: boolean;
+  isCheckingEmail: boolean;
+  emailCheckCompleted: boolean;
+  isCheckingIdNumber: boolean;
+  idNumberCheckCompleted: boolean;
+  isSendingVerificationCode: boolean; // Thêm loading state mới
   onEmailVerification: () => void;
   onVerifyCode: () => void;
   onResendCode: () => void;
   onVerificationCodeChange: (code: string) => void;
-  passwordStrength: {
-    hasLowercase: boolean;
-    hasUppercase: boolean;
-    hasNumbers: boolean;
-    hasSpecialChars: boolean;
-    isLongEnough: boolean;
-    score: number;
-  };
+  passwordStrength: PasswordStrength;
 }
 
 export function PersonalInfoSection({ 
@@ -41,6 +31,11 @@ export function PersonalInfoSection({
   verificationCode,
   isVerifyingCode,
   isResendingCode,
+  isCheckingEmail,
+  emailCheckCompleted,
+  isCheckingIdNumber,
+  idNumberCheckCompleted,
+  isSendingVerificationCode,
   onEmailVerification,
   onVerifyCode,
   onResendCode,
@@ -59,6 +54,10 @@ export function PersonalInfoSection({
           placeholder="Họ và tên của bạn"
           value={formData.fullname}
           onChange={(e) => onInputChange('fullname', e.target.value)}
+          onBlur={(e) => {
+            // Force validation on blur để hiện lại lỗi nếu field trống
+            onInputChange('fullname', e.target.value);
+          }}
           className={errors.fullname ? 'error' : (formData.fullname && !errors.fullname ? 'success' : '')}
           required
         />
@@ -67,15 +66,24 @@ export function PersonalInfoSection({
 
       <div className="form-group">
         <label htmlFor="identificationNumber" className="required">Số CCCD/CMND</label>
-        <input
-          type="text"
-          id="identificationNumber"
-          placeholder="Nhập số chứng minh thư của bạn"
-          value={formData.identificationNumber}
-          onChange={(e) => onInputChange('identificationNumber', e.target.value)}
-          className={errors.identificationNumber ? 'error' : (formData.identificationNumber && !errors.identificationNumber ? 'success' : '')}
-          required
-        />
+        <div className="input-with-status">
+          <input
+            type="text"
+            id="identificationNumber"
+            placeholder="Nhập số chứng minh thư của bạn"
+            value={formData.identificationNumber}
+            onChange={(e) => onInputChange('identificationNumber', e.target.value)}
+            onBlur={(e) => onInputChange('identificationNumber', e.target.value)}
+            className={errors.identificationNumber ? 'error' : (formData.identificationNumber && !errors.identificationNumber ? 'success' : '')}
+            required
+          />
+          {isCheckingIdNumber && (
+            <span className="checking-status">Đang kiểm tra...</span>
+          )}
+          {idNumberCheckCompleted && !errors.identificationNumber && formData.identificationNumber && (
+            <span className="success-status">✓ Số CCCD/CMND hợp lệ</span>
+          )}
+        </div>
         {errors.identificationNumber && <span className="error-message">{errors.identificationNumber}</span>}
       </div>
 
@@ -86,6 +94,7 @@ export function PersonalInfoSection({
           placeholder="Nhập địa chỉ liên lạc của bạn"
           value={formData.address}
           onChange={(e) => onInputChange('address', e.target.value)}
+          onBlur={(e) => onInputChange('address', e.target.value)}
           className={errors.address ? 'error' : (formData.address && !errors.address ? 'success' : '')}
           rows={3}
           required
@@ -102,16 +111,28 @@ export function PersonalInfoSection({
             placeholder="example@example.com"
             value={formData.email}
             onChange={(e) => onInputChange('email', e.target.value)}
+            onBlur={(e) => onInputChange('email', e.target.value)}
             className={errors.email ? 'error' : (formData.email && !errors.email ? 'success' : '')}
             required
           />
           <button
             type="button"
             onClick={onEmailVerification}
-            disabled={!formData.email || !!errors.email || emailVerificationSent}
-            className={`verify-email-btn ${emailVerified ? 'verified' : ''} ${emailVerificationSent ? 'sent' : ''}`}
+            disabled={
+              !formData.email || 
+              !!errors.email || 
+              emailVerificationSent || 
+              isCheckingEmail || 
+              !emailCheckCompleted ||
+              isSendingVerificationCode // Thêm điều kiện này
+            }
+            className={`verify-email-btn ${emailVerified ? 'verified' : ''} ${emailVerificationSent ? 'sent' : ''} ${isCheckingEmail ? 'checking' : ''} ${isSendingVerificationCode ? 'sending' : ''}`}
           >
-            {emailVerified ? '✓ Đã xác nhận' : emailVerificationSent ? 'Đã gửi' : 'Xác nhận'}
+            {isCheckingEmail ? 'Đang kiểm tra...' : 
+             isSendingVerificationCode ? 'Đang gửi...' :
+             emailVerified ? '✓ Đã xác nhận' : 
+             emailVerificationSent ? 'Đã gửi' : 
+             'Xác nhận'}
           </button>
         </div>
         {errors.email && <span className="error-message">{errors.email}</span>}
@@ -132,7 +153,7 @@ export function PersonalInfoSection({
                 placeholder="Nhập mã xác nhận 6 chữ số"
                 value={verificationCode}
                 onChange={(e) => onVerificationCodeChange(e.target.value)}
-                className="verification-code-input"
+                className={`verification-code-input ${errors.verificationCode ? 'error' : ''}`}
                 maxLength={6}
                 pattern="[0-9]{6}"
               />
@@ -145,6 +166,9 @@ export function PersonalInfoSection({
                 {isVerifyingCode ? 'Đang xác nhận...' : 'Xác nhận mã'}
               </button>
             </div>
+            {errors.verificationCode && (
+              <span className="error-message">{errors.verificationCode}</span>
+            )}
             <div className="resend-section">
               <span className="resend-text">Không nhận được mã? </span>
               <button
@@ -168,6 +192,7 @@ export function PersonalInfoSection({
           placeholder="0868585858"
           value={formData.phoneNumber}
           onChange={(e) => onInputChange('phoneNumber', e.target.value)}
+          onBlur={(e) => onInputChange('phoneNumber', e.target.value)}
           className={errors.phoneNumber ? 'error' : (formData.phoneNumber && !errors.phoneNumber ? 'success' : '')}
           required
         />
@@ -183,6 +208,7 @@ export function PersonalInfoSection({
             placeholder="••••••••••"
             value={formData.password}
             onChange={(e) => onInputChange('password', e.target.value)}
+            onBlur={(e) => onInputChange('password', e.target.value)}
             className={errors.password ? 'error' : (formData.password && !errors.password ? 'success' : '')}
             required
           />
@@ -243,6 +269,7 @@ export function PersonalInfoSection({
             placeholder="••••••••••"
             value={formData.confirmPassword}
             onChange={(e) => onInputChange('confirmPassword', e.target.value)}
+            onBlur={(e) => onInputChange('confirmPassword', e.target.value)}
             className={errors.confirmPassword ? 'error' : (formData.confirmPassword && !errors.confirmPassword ? 'success' : '')}
             required
           />

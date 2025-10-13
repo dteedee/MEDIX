@@ -1,16 +1,49 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { patientRegistrationApiService } from '../services/patientRegistrationApiService';
+import { BloodTypeDTO, FormData } from '../types/registrationTypes';
 
 interface MedicalInfoProps {
-  formData: {
-    dateOfBirth: string;
-    gender: 'male' | 'female' | 'other' | '';
-    bloodType: string;
-  };
+  formData: FormData;
   onInputChange: (field: string, value: string) => void;
   errors: Record<string, string>;
 }
 
+
+
 export function MedicalInfoSection({ formData, onInputChange, errors }: MedicalInfoProps) {
+  const [bloodTypes, setBloodTypes] = useState<BloodTypeDTO[]>([]);
+  const [isLoadingBloodTypes, setIsLoadingBloodTypes] = useState(false);
+
+  // Debug log để xem bloodTypes state
+  console.log('Current bloodTypes state:', bloodTypes);
+  console.log('bloodTypes length:', bloodTypes.length);
+
+  useEffect(() => {
+    const fetchBloodTypes = async () => {
+      setIsLoadingBloodTypes(true);
+      try {
+        console.log('Starting to fetch blood types...');
+        const response = await patientRegistrationApiService.getBloodTypes();
+        console.log('Blood types response:', response);
+        
+        if (response.success && response.data) {
+          console.log('Blood types data:', response.data);
+          console.log('Setting bloodTypes state with:', response.data);
+          setBloodTypes(response.data);
+        } else {
+          console.error('Failed to fetch blood types:', response.error);
+          console.error('Response status:', response);
+        }
+      } catch (error) {
+        console.error('Error fetching blood types:', error);
+      } finally {
+        setIsLoadingBloodTypes(false);
+      }
+    };
+
+    fetchBloodTypes();
+  }, []);
+
   return (
     <div className="form-section">
       <h2 className="section-title">Phần 2: Thông tin Y tế & EMR</h2>
@@ -23,6 +56,7 @@ export function MedicalInfoSection({ formData, onInputChange, errors }: MedicalI
           placeholder="mm/dd/yyyy"
           value={formData.dateOfBirth}
           onChange={(e) => onInputChange('dateOfBirth', e.target.value)}
+          onBlur={(e) => onInputChange('dateOfBirth', e.target.value)}
           className={errors.dateOfBirth ? 'error' : (formData.dateOfBirth && !errors.dateOfBirth ? 'success' : '')}
           required
         />
@@ -75,14 +109,28 @@ export function MedicalInfoSection({ formData, onInputChange, errors }: MedicalI
           id="bloodType"
           value={formData.bloodType}
           onChange={(e) => onInputChange('bloodType', e.target.value)}
+          onBlur={(e) => onInputChange('bloodType', e.target.value)}
           className={errors.bloodType ? 'error' : (formData.bloodType && !errors.bloodType ? 'success' : '')}
           required
         >
-          <option value="">Chọn nhóm máu</option>
-          <option value="A">Nhóm máu A</option>
-          <option value="B">Nhóm máu B</option>
-          <option value="AB">Nhóm máu AB</option>
-          <option value="O">Nhóm máu O</option>
+          <option key="empty" value="">
+            {isLoadingBloodTypes ? 'Đang tải...' : 'Chọn nhóm máu'}
+          </option>
+          {(() => {
+            console.log('About to map bloodTypes:', bloodTypes);
+            return bloodTypes.map((bloodType, index) => {
+              console.log(`Mapping bloodType ${index}:`, bloodType);
+              return (
+                <option 
+                  key={bloodType.code || `bloodtype-${index}`} 
+                  value={bloodType.code || ''}
+                  
+                >
+                  {bloodType.displayName}
+                </option>
+              );
+            });
+          })()}
         </select>
         {errors.bloodType && <span className="error-message">{errors.bloodType}</span>}
       </div>

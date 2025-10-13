@@ -137,15 +137,15 @@
 }
 
 .error-message {
-  color: #e74c3c;
-  font-size: 12px;
-  margin-top: 4px;
-  display: block;
-  font-weight: 500;
-  background-color: #fdf2f2;
-  padding: 4px 8px;
-  border-radius: 4px;
-  border-left: 3px solid #e74c3c;
+  color: #e74c3c !important;
+  font-size: 12px !important;
+  margin-top: 4px !important;
+  display: block !important;
+  font-weight: 500 !important;
+  background-color: #fdf2f2 !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  border-left: 3px solid #e74c3c !important;
 }
 
 .form-group textarea {
@@ -348,6 +348,47 @@
 .verify-email-btn.sent {
   background-color: #f39c12;
   border-color: #f39c12;
+}
+
+.verify-email-btn.checking {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  cursor: wait;
+}
+
+.verify-email-btn.checking:disabled {
+  opacity: 0.8;
+}
+
+/* Input with status styling */
+.input-with-status {
+  position: relative;
+}
+
+.input-with-status input {
+  padding-right: 120px; /* Để chỗ cho status text */
+}
+
+.checking-status {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #6c757d;
+  font-style: italic;
+  pointer-events: none;
+}
+
+.success-status {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #27ae60;
+  font-weight: 500;
+  pointer-events: none;
 }
 
 .email-verified-message {

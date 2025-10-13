@@ -1,10 +1,8 @@
 import React from 'react';
+import { FormData } from '../types/registrationTypes';
 
 interface MedicalHistoryProps {
-  formData: {
-    chronicDiseases: string;
-    allergies: string;
-  };
+  formData: FormData;
   onInputChange: (field: string, value: string) => void;
   errors: Record<string, string>;
 }

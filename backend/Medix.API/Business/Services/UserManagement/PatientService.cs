@@ -3,6 +3,7 @@ using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
+using AutoMapper;
 
 namespace Medix.API.Business.Services.UserManagement
 {
@@ -10,11 +11,13 @@ namespace Medix.API.Business.Services.UserManagement
     {
         private readonly IPatientRepository _patientRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IMapper _mapper;
 
-        public PatientService(IPatientRepository patientRepository, IUserRepository userRepository)
+        public PatientService(IPatientRepository patientRepository, IUserRepository userRepository, IMapper mapper)
         {
             _patientRepository = patientRepository;
             _userRepository = userRepository;
+            _mapper = mapper;
         }
 
         public async Task<PatientDTO> RegisterPatientAsync(PatientDTO patientDTO, Guid userId)
@@ -61,9 +64,9 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<PatientDTO?> GetByUserIdAsync(Guid userId)
         {
-            // TODO: Implement when repository method exists
-            await Task.Delay(1);
-            return null;
+           var result = await _patientRepository.GetByIdAsync(userId);
+         _mapper.Map<PatientDTO>(result);
+            return _mapper.Map<PatientDTO>(result);
         }
 
         public async Task<PatientDTO> UpdateAsync(Guid id, PatientDTO patientDTO)

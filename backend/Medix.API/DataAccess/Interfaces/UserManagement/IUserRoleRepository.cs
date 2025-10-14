@@ -7,7 +7,7 @@ namespace Medix.API.DataAccess.Interfaces.UserManagement
         Task<UserRole> CreateAsync(UserRole userRole);
         Task<UserRole?> GetAsync(Guid userId, string roleCode);
         Task<IEnumerable<UserRole>> GetAllAsync();
-        Task<UserRole?> GetByIdAsync(Guid userId);
+        Task<UserRole?> GetByUserIdAsync(Guid userId);
         Task<bool> DeleteAsync(Guid userId, string roleCode);
         Task<string> AssignRole(string role, Guid userId);
     }

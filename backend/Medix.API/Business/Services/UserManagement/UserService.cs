@@ -2,6 +2,7 @@ using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 using Medix.API.Business.Interfaces.UserManagement;
+using Medix.API.DataAccess.Repositories.UserManagement;
 // using Medix.API.Business.Util; // Removed for performance
 
 namespace Medix.API.Business.Services.UserManagement
@@ -21,7 +22,7 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<UserDto> RegisterUserAsync(RegisterRequestPatientDTO registerDto)
         {
-            string passwordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password); // Simple password hash
+            string passwordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
 
             User user = new User
             {
@@ -36,29 +37,35 @@ namespace Medix.API.Business.Services.UserManagement
                 DateOfBirth = registerDto.DateOfBirth,
                 GenderCode = registerDto.GenderCode,
                 IdentificationNumber = registerDto.IdentificationNumber,
+              
                 IsProfileCompleted = false,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                EmailConfirmed = true,
+                EmailConfirmed = false,
                 PhoneNumberConfirmed = false,
                 LockoutEnabled = false,
                 AccessFailedCount = 0
             };
 
             var savedUser = await _userRepository.CreateAsync(user);
-            // TODO: Fix when UserRoleRepository.CreateAsync is implemented
-            // await _userRoleRepository.CreateAsync(new UserRole { UserId = savedUser.Id, RoleCode = "Patient" });
+            var role = await _userRoleRepository.AssignRole("Patient", savedUser.Id);
 
-            return new UserDto
+            // Map User to UserDTO
+            var userDTO = new UserDto
             {
                 Id = savedUser.Id,
-                Email = savedUser.Email,
-                FullName = savedUser.FullName,
+           
                 PhoneNumber = savedUser.PhoneNumber,
-                Role = "Patient",
+                FullName = savedUser.FullName,
+                Email = savedUser.Email,
                 EmailConfirmed = savedUser.EmailConfirmed,
-                CreatedAt = savedUser.CreatedAt
+                DateOfBirth = savedUser.DateOfBirth,
+                Role = role,
+                CreatedAt = savedUser.CreatedAt,
+
             };
+
+            return userDTO;
         }
 
         public async Task<UserDto?> GetByIdAsync(Guid id)

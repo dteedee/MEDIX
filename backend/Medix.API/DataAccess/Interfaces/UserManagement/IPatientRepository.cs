@@ -5,5 +5,6 @@ namespace Medix.API.DataAccess.Interfaces.UserManagement
     public interface IPatientRepository
     {
         public Task<Patient> SavePatientAsync(Patient patient);
+        public Task<Patient?> GetByIdAsync(Guid userId);
     }
 }

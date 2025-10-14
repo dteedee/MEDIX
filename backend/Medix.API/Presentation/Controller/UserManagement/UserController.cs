@@ -53,6 +53,12 @@ namespace Medix.API.Presentation.Controller.UserManagement
             var created = await _userService.RegisterUserAsync(request);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
+        [HttpPut("{id}")]
+        public async Task<ActionResult> Update(Guid id, [FromBody] UserUpdateDto request)
+        {
+            var user = await _userService.UpdateAsync(id, request);
+            return Ok(user);
+        }
 
 
     }

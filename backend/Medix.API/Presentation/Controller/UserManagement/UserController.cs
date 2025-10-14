@@ -61,6 +61,15 @@ namespace Medix.API.Presentation.Controller.UserManagement
         }
 
 
+
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> Delete(Guid id)
+        {
+            var ok = await _userService.DeleteAsync(id);
+            if (!ok) return NotFound();
+            return Ok();
+        }
+
     }
 }
 

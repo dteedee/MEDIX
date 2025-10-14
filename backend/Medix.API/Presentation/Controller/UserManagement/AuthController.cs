@@ -214,8 +214,8 @@ namespace Medix.API.Presentation.Controller.UserManagement
         {
             try
             {
-                var context = HttpContext.RequestServices.GetRequiredService<Medix.API.Data.MedixContext>();
-                var userRepository = HttpContext.RequestServices.GetRequiredService<Medix.API.Data.Repositories.IUserRepository>();
+                var context = HttpContext.RequestServices.GetRequiredService<Medix.API.DataAccess.MedixContext>();
+                var userRepository = HttpContext.RequestServices.GetRequiredService<Medix.API.DataAccess.Interfaces.UserManagement.IUserRepository>();
                 
                 var results = new List<object>();
 
@@ -223,7 +223,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 var adminRole = await context.RefRoles.FirstOrDefaultAsync(r => r.Code == "Admin");
                 if (adminRole == null)
                 {
-                    adminRole = new Medix.API.Data.Models.RefRole
+                    adminRole = new Medix.API.Models.Enums.RefRole
                     {
                         Code = "Admin",
                         DisplayName = "Quản trị",
@@ -237,7 +237,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 var userRole = await context.RefRoles.FirstOrDefaultAsync(r => r.Code == "User");
                 if (userRole == null)
                 {
-                    userRole = new Medix.API.Data.Models.RefRole
+                    userRole = new Medix.API.Models.Enums.RefRole
                     {
                         Code = "User",
                         DisplayName = "Người dùng",
@@ -255,14 +255,14 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 var existingAdmin = await userRepository.GetByEmailAsync(adminEmail);
                 if (existingAdmin == null)
                 {
-                    var adminUser = new Medix.API.Data.Models.User
+                    var adminUser = new Medix.API.Models.Entities.User
                     {
                         Id = Guid.NewGuid(),
                         UserName = adminEmail,
                         NormalizedUserName = adminEmail.ToUpper(),
                         Email = adminEmail,
                         NormalizedEmail = adminEmail.ToUpper(),
-                        PasswordHash = Medix.API.Application.Util.PasswordHasher.HashPassword("Admin@123"),
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
                         FullName = "System Admin",
                         EmailConfirmed = true,
                         PhoneNumberConfirmed = false,
@@ -277,7 +277,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
                     await userRepository.CreateAsync(adminUser);
 
                     // Assign Admin role
-                    var adminUserRole = new Medix.API.Data.Models.UserRole
+                    var adminUserRole = new Medix.API.Models.Entities.UserRole
                     {
                         UserId = adminUser.Id,
                         RoleCode = "Admin",
@@ -307,14 +307,14 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 var existingUser = await userRepository.GetByEmailAsync(userEmail);
                 if (existingUser == null)
                 {
-                    var normalUser = new Medix.API.Data.Models.User
+                    var normalUser = new Medix.API.Models.Entities.User
                     {
                         Id = Guid.NewGuid(),
                         UserName = userEmail,
                         NormalizedUserName = userEmail.ToUpper(),
                         Email = userEmail,
                         NormalizedEmail = userEmail.ToUpper(),
-                        PasswordHash = Medix.API.Application.Util.PasswordHasher.HashPassword("User@123"),
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("User@123"),
                         FullName = "Medix User",
                         EmailConfirmed = true,
                         PhoneNumberConfirmed = false,
@@ -329,7 +329,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
                     await userRepository.CreateAsync(normalUser);
 
                     // Assign User role
-                    var normalUserRole = new Medix.API.Data.Models.UserRole
+                    var normalUserRole = new Medix.API.Models.Entities.UserRole
                     {
                         UserId = normalUser.Id,
                         RoleCode = "User",
@@ -359,14 +359,14 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 var existingTestUser = await userRepository.GetByEmailAsync(testEmail);
                 if (existingTestUser == null)
                 {
-                    var testUser = new Medix.API.Data.Models.User
+                    var testUser = new Medix.API.Models.Entities.User
                     {
                         Id = Guid.NewGuid(),
                         UserName = testEmail,
                         NormalizedUserName = testEmail.ToUpper(),
                         Email = testEmail,
                         NormalizedEmail = testEmail.ToUpper(),
-                        PasswordHash = Medix.API.Application.Util.PasswordHasher.HashPassword("string"),
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("string"),
                         FullName = "Test User",
                         EmailConfirmed = true,
                         PhoneNumberConfirmed = false,
@@ -381,7 +381,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
                     await userRepository.CreateAsync(testUser);
 
                     // Assign User role
-                    var testUserRole = new Medix.API.Data.Models.UserRole
+                    var testUserRole = new Medix.API.Models.Entities.UserRole
                     {
                         UserId = testUser.Id,
                         RoleCode = "User",

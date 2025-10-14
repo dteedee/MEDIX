@@ -1,12 +1,16 @@
 using Medix.API.DataAccess;
-using Medix.API.Application.Services;
-using Medix.API.Application.Profiles;
-using Medix.API.Data.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi.Models;
+using Medix.API.Business.Interfaces.UserManagement;
+using Medix.API.DataAccess.Interfaces.UserManagement;
+using Medix.API.Business.Interfaces.Community;
+using Medix.API.Business.Services.Community;
+using Medix.API.DataAccess.Repositories.UserManagement;
+using Medix.API.Business.Services.UserManagement;
 
 var builder = WebApplication.CreateBuilder(args);
 

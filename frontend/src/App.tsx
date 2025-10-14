@@ -1,20 +1,32 @@
-import { useEffect, useState } from 'react'
-import axios from 'axios'
+import React, { useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { Header, Footer } from './components'
+import { RegistrationPage  } from './pages'
+import { AdminDashboard } from './pages/AdminDashboard'
+import { PatientDashboard } from './pages/PatientDashboard'
+import { DoctorDashboard } from './pages/DoctorDashboard'
+import { ManagerDashboard } from './pages/ManageDashboard'
+
+import './App.css'
 
 export function App() {
-  const [message, setMessage] = useState<string>('Loading...')
-
-  useEffect(() => {
-    axios.get('/api/hello')
-      .then(r => setMessage(r.data.message ?? 'No message'))
-      .catch(() => setMessage('API not available yet'))
-  }, [])
-
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', padding: 24 }}>
-      <h1>Medix</h1>
-      <p>{message}</p>
-    </div>
+    <Router>
+      <div className="app">
+        <Header />
+        <main className="main-content">
+          <Routes>
+            <Route path="/" element={<PatientDashboard />} />
+            <Route path="/register" element={<RegistrationPage />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/patient" element={<PatientDashboard />} />
+            <Route path="/doctor" element={<DoctorDashboard />} />
+            <Route path="/manager" element={<ManagerDashboard />} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
+    </Router>
   )
 }
 

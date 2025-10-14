@@ -28,7 +28,6 @@ namespace Medix.API.Business.Services.UserManagement
                 new Claim(ClaimTypes.Name, user.FullName),
                 new Claim("fullName", user.FullName)
             };
-
             foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));

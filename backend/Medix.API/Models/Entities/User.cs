@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Medix.API.Models.Enums;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Medix.API.Models.Entities;
 
@@ -26,6 +27,8 @@ public partial class User
 
     public string FullName { get; set; } = null!;
 
+    // Role is determined via related UserRoles/RefRole, not a Users column
+    [NotMapped]
     public string Role { get; set; } = "User";
 
     public DateOnly? DateOfBirth { get; set; }

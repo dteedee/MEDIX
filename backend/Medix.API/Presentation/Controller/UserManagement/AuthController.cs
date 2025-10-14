@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Medix.API.Exceptions;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Models.DTOs;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medix.API.Presentation.Controller.UserManagement
 {
@@ -187,6 +188,235 @@ namespace Medix.API.Presentation.Controller.UserManagement
             {
                 _logger.LogError(ex, "Error during logout");
                 return StatusCode(500, new { message = "An error occurred during logout" });
+            }
+        }
+
+        [HttpGet("test-jwt")]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public IActionResult TestJwt()
+        {
+            var userId = GetCurrentUserId();
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            
+            return Ok(new 
+            { 
+                message = "JWT is working!",
+                userId = userId,
+                email = userEmail,
+                role = userRole,
+                claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList()
+            });
+        }
+
+        [HttpPost("seed-sample-users")]
+        public async Task<IActionResult> SeedSampleUsers()
+        {
+            try
+            {
+                var context = HttpContext.RequestServices.GetRequiredService<Medix.API.Data.MedixContext>();
+                var userRepository = HttpContext.RequestServices.GetRequiredService<Medix.API.Data.Repositories.IUserRepository>();
+                
+                var results = new List<object>();
+
+                // 1. Create roles if not exist
+                var adminRole = await context.RefRoles.FirstOrDefaultAsync(r => r.Code == "Admin");
+                if (adminRole == null)
+                {
+                    adminRole = new Medix.API.Data.Models.RefRole
+                    {
+                        Code = "Admin",
+                        DisplayName = "Quản trị",
+                        Description = "Quyền quản trị hệ thống",
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    context.RefRoles.Add(adminRole);
+                }
+
+                var userRole = await context.RefRoles.FirstOrDefaultAsync(r => r.Code == "User");
+                if (userRole == null)
+                {
+                    userRole = new Medix.API.Data.Models.RefRole
+                    {
+                        Code = "User",
+                        DisplayName = "Người dùng",
+                        Description = "Quyền người dùng tiêu chuẩn",
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    context.RefRoles.Add(userRole);
+                }
+
+                await context.SaveChangesAsync();
+
+                // 2. Create Admin User
+                var adminEmail = "admin@medix.local";
+                var existingAdmin = await userRepository.GetByEmailAsync(adminEmail);
+                if (existingAdmin == null)
+                {
+                    var adminUser = new Medix.API.Data.Models.User
+                    {
+                        Id = Guid.NewGuid(),
+                        UserName = adminEmail,
+                        NormalizedUserName = adminEmail.ToUpper(),
+                        Email = adminEmail,
+                        NormalizedEmail = adminEmail.ToUpper(),
+                        PasswordHash = Medix.API.Application.Util.PasswordHasher.HashPassword("Admin@123"),
+                        FullName = "System Admin",
+                        EmailConfirmed = true,
+                        PhoneNumberConfirmed = false,
+                        Status = 1,
+                        IsProfileCompleted = false,
+                        LockoutEnabled = false,
+                        AccessFailedCount = 0,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    await userRepository.CreateAsync(adminUser);
+
+                    // Assign Admin role
+                    var adminUserRole = new Medix.API.Data.Models.UserRole
+                    {
+                        UserId = adminUser.Id,
+                        RoleCode = "Admin",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    context.UserRoles.Add(adminUserRole);
+
+                    results.Add(new { 
+                        message = "Admin user created", 
+                        email = adminEmail, 
+                        password = "Admin@123",
+                        role = "Admin"
+                    });
+                }
+                else
+                {
+                    results.Add(new { 
+                        message = "Admin user already exists", 
+                        email = adminEmail, 
+                        password = "Admin@123",
+                        role = "Admin"
+                    });
+                }
+
+                // 3. Create Normal User
+                var userEmail = "user@medix.local";
+                var existingUser = await userRepository.GetByEmailAsync(userEmail);
+                if (existingUser == null)
+                {
+                    var normalUser = new Medix.API.Data.Models.User
+                    {
+                        Id = Guid.NewGuid(),
+                        UserName = userEmail,
+                        NormalizedUserName = userEmail.ToUpper(),
+                        Email = userEmail,
+                        NormalizedEmail = userEmail.ToUpper(),
+                        PasswordHash = Medix.API.Application.Util.PasswordHasher.HashPassword("User@123"),
+                        FullName = "Medix User",
+                        EmailConfirmed = true,
+                        PhoneNumberConfirmed = false,
+                        Status = 1,
+                        IsProfileCompleted = false,
+                        LockoutEnabled = false,
+                        AccessFailedCount = 0,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    await userRepository.CreateAsync(normalUser);
+
+                    // Assign User role
+                    var normalUserRole = new Medix.API.Data.Models.UserRole
+                    {
+                        UserId = normalUser.Id,
+                        RoleCode = "User",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    context.UserRoles.Add(normalUserRole);
+
+                    results.Add(new { 
+                        message = "Normal user created", 
+                        email = userEmail, 
+                        password = "User@123",
+                        role = "User"
+                    });
+                }
+                else
+                {
+                    results.Add(new { 
+                        message = "Normal user already exists", 
+                        email = userEmail, 
+                        password = "User@123",
+                        role = "User"
+                    });
+                }
+
+                // 4. Create Test User (for your original curl test)
+                var testEmail = "user@example.com";
+                var existingTestUser = await userRepository.GetByEmailAsync(testEmail);
+                if (existingTestUser == null)
+                {
+                    var testUser = new Medix.API.Data.Models.User
+                    {
+                        Id = Guid.NewGuid(),
+                        UserName = testEmail,
+                        NormalizedUserName = testEmail.ToUpper(),
+                        Email = testEmail,
+                        NormalizedEmail = testEmail.ToUpper(),
+                        PasswordHash = Medix.API.Application.Util.PasswordHasher.HashPassword("string"),
+                        FullName = "Test User",
+                        EmailConfirmed = true,
+                        PhoneNumberConfirmed = false,
+                        Status = 1,
+                        IsProfileCompleted = false,
+                        LockoutEnabled = false,
+                        AccessFailedCount = 0,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    await userRepository.CreateAsync(testUser);
+
+                    // Assign User role
+                    var testUserRole = new Medix.API.Data.Models.UserRole
+                    {
+                        UserId = testUser.Id,
+                        RoleCode = "User",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    context.UserRoles.Add(testUserRole);
+
+                    results.Add(new { 
+                        message = "Test user created", 
+                        email = testEmail, 
+                        password = "string",
+                        role = "User"
+                    });
+                }
+                else
+                {
+                    results.Add(new { 
+                        message = "Test user already exists", 
+                        email = testEmail, 
+                        password = "string",
+                        role = "User"
+                    });
+                }
+
+                await context.SaveChangesAsync();
+
+                return Ok(new { 
+                    message = "Sample users seeding completed", 
+                    results = results 
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating sample users");
+                return StatusCode(500, new { message = "Error creating sample users", error = ex.Message });
             }
         }
 

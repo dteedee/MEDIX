@@ -8,9 +8,11 @@ namespace Medix.API.Business.Interfaces.UserManagement
         Task<UserDto> RegisterUserAsync(RegisterRequestPatientDTO registerRequest);
         Task<UserDto?> GetByIdAsync(Guid id);
         Task<UserDto?> GetByEmailAsync(string email);
-        Task<UserDto> UpdateAsync(Guid id, UserDto userDto);
+        Task<UserDto> UpdateAsync(Guid id, UserUpdateDto userUpdateDto);
         Task<bool> DeleteAsync(Guid id);
         Task<IEnumerable<UserDto>> GetAllAsync();
+        Task<(int total, IEnumerable<UserDto> data)> GetPagedAsync(int page, int pageSize);
+        Task<(int total, IEnumerable<UserDto> data)> SearchByNameAsync(string keyword, int page, int pageSize);
         Task<bool> EmailExistsAsync(string email);
     }
 }

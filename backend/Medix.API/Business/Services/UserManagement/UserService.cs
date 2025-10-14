@@ -95,13 +95,16 @@ namespace Medix.API.Business.Services.UserManagement
             };
         }
 
-        public async Task<UserDto> UpdateAsync(Guid id, UserDto userDto)
+        public async Task<UserDto> UpdateAsync(Guid id, UserUpdateDto userUpdateDto)
         {
             var user = await _userRepository.GetByIdAsync(id);
             if (user == null) throw new ArgumentException("Không tìm thấy người dùng");
 
-            user.FullName = userDto.FullName;
-            user.PhoneNumber = userDto.PhoneNumber;
+            user.FullName = userUpdateDto.FullName;
+            user.PhoneNumber = userUpdateDto.PhoneNumber;
+            user.GenderCode = userUpdateDto.GenderCode;
+            user.IdentificationNumber = userUpdateDto.IdentificationNumber;
+            user.Address = userUpdateDto.Address;
             user.UpdatedAt = DateTime.UtcNow;
 
             var updatedUser = await _userRepository.UpdateAsync(user);
@@ -126,8 +129,7 @@ namespace Medix.API.Business.Services.UserManagement
         public async Task<IEnumerable<UserDto>> GetAllAsync()
         {
             // TODO: Fix when UserRepository.GetAllAsync is implemented
-            await Task.Delay(1); // Placeholder for async operation
-            var users = new List<User>(); // await _userRepository.GetAllAsync();
+            var users = await _userRepository.GetAllAsync();
             return users.Select(u => new UserDto
             {
                 Id = u.Id,
@@ -138,6 +140,47 @@ namespace Medix.API.Business.Services.UserManagement
                 EmailConfirmed = u.EmailConfirmed,
                 CreatedAt = u.CreatedAt
             });
+        }
+
+        public async Task<(int total, IEnumerable<UserDto> data)> GetPagedAsync(int page, int pageSize)
+        {
+            var (users, total) = await _userRepository.GetPagedAsync(page, pageSize);
+
+            var data = users.Select(u => new UserDto
+            {
+                Id = u.Id,
+                Email = u.Email,
+                FullName = u.FullName,
+                PhoneNumber = u.PhoneNumber,
+                Role = u.Role,
+                EmailConfirmed = u.EmailConfirmed,
+                CreatedAt = u.CreatedAt
+            });
+
+            return (total, data);
+        }
+
+        public async Task<(int total, IEnumerable<UserDto> data)> SearchByNameAsync(string keyword, int page, int pageSize)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return await GetPagedAsync(page, pageSize);
+            }
+
+            var (users, total) = await _userRepository.SearchByNameAsync(keyword, page, pageSize);
+
+            var data = users.Select(u => new UserDto
+            {
+                Id = u.Id,
+                Email = u.Email,
+                FullName = u.FullName,
+                PhoneNumber = u.PhoneNumber,
+                Role = u.Role,
+                EmailConfirmed = u.EmailConfirmed,
+                CreatedAt = u.CreatedAt
+            });
+
+            return (total, data);
         }
 
         public async Task<bool> EmailExistsAsync(string email)

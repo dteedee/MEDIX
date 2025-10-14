@@ -20,6 +20,8 @@ namespace Medix.API.Data.Repositories
         public async Task<User?> GetByEmailAsync(string email)
         {
             return await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.RoleCodeNavigation)
                 .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
         }
 

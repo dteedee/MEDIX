@@ -5,6 +5,7 @@ using Medix.API.Application.Services;
 using Medix.API.Application.Util;
 using Medix.API.Data.Models;
 using Medix.API.Data.Repositories;
+using System.Data;
 
 namespace Medix.API.Application.Services
 {
@@ -48,9 +49,10 @@ namespace Medix.API.Application.Services
             {
                 throw new UnauthorizedException("Invalid email or password");
             }
+			var roles = user.UserRoles.Select(ur => ur.RoleCode).ToList();
 
-            var accessToken = _jwtService.GenerateAccessToken(user);
-            var refreshToken = _jwtService.GenerateRefreshToken();
+			var accessToken = _jwtService.GenerateAccessToken(user, roles);
+			var refreshToken = _jwtService.GenerateRefreshToken();
 
             // Save refresh token to database
             var refreshTokenEntity = new RefreshToken
@@ -84,8 +86,9 @@ namespace Medix.API.Application.Services
             user.PasswordHash = PasswordHasher.HashPassword(registerRequest.Password);
 
             var createdUser = await _userRepository.CreateAsync(user);
+    var roles = createdUser.UserRoles.Select(ur => ur.RoleCode).ToList();
 
-            var accessToken = _jwtService.GenerateAccessToken(createdUser);
+    var accessToken = _jwtService.GenerateAccessToken(createdUser, roles);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
             // Save refresh token to database
@@ -206,10 +209,10 @@ namespace Medix.API.Application.Services
 
             // Revoke old refresh token
             await _refreshTokenRepository.RevokeTokenAsync(refreshTokenRequest.RefreshToken);
-
-            // Generate new tokens
-            var accessToken = _jwtService.GenerateAccessToken(user);
-            var newRefreshToken = _jwtService.GenerateRefreshToken();
+			var roles = user.UserRoles.Select(ur => ur.RoleCode).ToList();
+			// Generate new tokens
+			var accessToken = _jwtService.GenerateAccessToken(user, roles);
+			var newRefreshToken = _jwtService.GenerateRefreshToken();
 
             // Save new refresh token to database
             var newRefreshTokenEntity = new RefreshToken

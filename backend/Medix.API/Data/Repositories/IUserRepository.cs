@@ -10,5 +10,6 @@ namespace Medix.API.Data.Repositories
         Task<User> UpdateAsync(User user);
         Task<bool> DeleteAsync(Guid id);
         Task<bool> ExistsByEmailAsync(string email);
+        Task<UserRole> CreateUserRoleAsync(UserRole role);
     }
 }

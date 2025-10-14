@@ -52,5 +52,12 @@ namespace Medix.API.Data.Repositories
             return await _context.Users
                 .AnyAsync(u => u.Email.ToLower() == email.ToLower());
         }
+
+        public async Task<UserRole> CreateUserRoleAsync(UserRole role)
+        {
+            await _context.UserRoles.AddAsync(role);
+            await _context.SaveChangesAsync();
+            return role;
+        }
     }
 }

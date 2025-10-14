@@ -5,6 +5,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
 	<ItemGroup>
+		<PackageReference Include="CloudinaryDotNet" Version="1.27.5" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.13">
 			<PrivateAssets>all</PrivateAssets>

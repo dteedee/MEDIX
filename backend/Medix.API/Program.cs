@@ -1,4 +1,7 @@
+using Medix.API.Application.Services;
+using Medix.API.Application.Utils;
 using Medix.API.Data;
+using Medix.API.Data.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -16,6 +19,15 @@ builder.Services.AddSwaggerGen(c =>
 
 //builder.Services.AddDbContext<AppDbContext>(options =>
 //    options.UseSqlite("Data Source=medix.db"));
+
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IDoctorRepository, DoctorRepository>();
+builder.Services.AddScoped<ISpecializationRepository, SpecializationRepository>();
+
+builder.Services.AddScoped<IDoctorService, DoctorService>();
+builder.Services.AddScoped<ISpecializationService, SpecializationService>();
+
+builder.Services.AddSingleton<CloudinaryService>();
 
 builder.Services.AddCors(options =>
 {

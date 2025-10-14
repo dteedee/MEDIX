@@ -1,20 +1,22 @@
-import { useEffect, useState } from 'react'
-import axios from 'axios'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from "react-hot-toast";
+
+import { AuthProvider } from './contexts/AuthContext';
+import DoctorRegister from './pages/DoctorRegister';
 
 export function App() {
-  const [message, setMessage] = useState<string>('Loading...')
-
-  useEffect(() => {
-    axios.get('/api/hello')
-      .then(r => setMessage(r.data.message ?? 'No message'))
-      .catch(() => setMessage('API not available yet'))
-  }, [])
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', padding: 24 }}>
-      <h1>Medix</h1>
-      <p>{message}</p>
-    </div>
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen w-full">
+          <Toaster position="top-center" reverseOrder={false} toastOptions={{ duration: 4000 }} />
+          <Routes>
+            <Route path="/doctor/register" element={<DoctorRegister />} />
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
   )
 }
 

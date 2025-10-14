@@ -35,7 +35,15 @@ namespace Medix.API.Business.Services.Classification
                 ViewCount = a.ViewCount,
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt
+                UpdatedAt = a.UpdatedAt,
+                DisplayType = a.DisplayType,
+                Categories = a.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
             });
 
             return (total, data);
@@ -57,7 +65,15 @@ namespace Medix.API.Business.Services.Classification
                 ViewCount = a.ViewCount,
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt
+                UpdatedAt = a.UpdatedAt,
+                DisplayType = a.DisplayType,
+                Categories = a.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
             });
 
             return (total, data);
@@ -88,7 +104,14 @@ namespace Medix.API.Business.Services.Classification
                 DisplayType = article.DisplayType,
                 AuthorName = article.Author?.FullName ?? string.Empty,
                 CreatedAt = article.CreatedAt,
-                UpdatedAt = article.UpdatedAt
+                UpdatedAt = article.UpdatedAt,
+                Categories = article.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
             };
         }
 
@@ -120,7 +143,14 @@ namespace Medix.API.Business.Services.Classification
                 DisplayType = article.DisplayType,
                 AuthorName = article.Author?.FullName ?? string.Empty,
                 CreatedAt = article.CreatedAt,
-                UpdatedAt = article.UpdatedAt
+                UpdatedAt = article.UpdatedAt,
+                Categories = article.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
             };
         }
 
@@ -140,7 +170,15 @@ namespace Medix.API.Business.Services.Classification
                 ViewCount = a.ViewCount,
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt
+                UpdatedAt = a.UpdatedAt,
+                DisplayType = a.DisplayType,
+                Categories = a.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
             });
 
             return (total, data);
@@ -162,7 +200,14 @@ namespace Medix.API.Business.Services.Classification
                 ViewCount = a.ViewCount,
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt
+                UpdatedAt = a.UpdatedAt,
+                Categories = a.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
             });
         }
 

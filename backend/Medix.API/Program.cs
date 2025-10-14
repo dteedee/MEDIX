@@ -1,3 +1,4 @@
+using Medix.API.Configurations;
 using Medix.API.DataAccess;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,16 +7,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Minimal fast configuration
 builder.Services.AddDbContext<MedixContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
-
-builder.Services.AddControllers();
+builder.Services.ConfigureServices();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy => 
+    options.AddPolicy("AllowAll", policy =>
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
-
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.IncludeFields = true);
 var app = builder.Build();
 
 // Minimal fast pipeline

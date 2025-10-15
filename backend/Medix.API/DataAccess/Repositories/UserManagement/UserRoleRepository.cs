@@ -35,7 +35,7 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
                 .ToListAsync();
         }
 
-        public async Task<UserRole?> GetByUserIdAsync(Guid userId)
+        public async Task<UserRole?> GetByIdAsync(Guid userId)
         {
             return await _context.UserRoles
                 .Include(ur => ur.User)

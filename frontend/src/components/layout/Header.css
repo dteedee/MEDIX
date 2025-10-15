@@ -1,0 +1,106 @@
+:root{
+  --medix-blue:#0b61a8;
+  --medix-blue-dark:#0a4f8a;
+}
+
+.medix-header{
+  background: linear-gradient(180deg,var(--medix-blue) 0%, var(--medix-blue-dark) 100%);
+  color: #fff;
+  padding: 12px 20px;
+}
+
+.medix-header-inner{
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.medix-logo{
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.medix-logo-title{
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-size: 20px;
+}
+
+.medix-logo-sub{
+  font-size: 11px;
+  opacity: 0.95;
+  margin-top: 2px;
+}
+
+.medix-search{
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.search-pill{
+  width: 520px;
+  height: 38px;
+  background: #fff;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
+.search-input{
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  padding: 6px 8px;
+}
+
+.search-icon{
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #333;
+}
+
+.medix-actions{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar{
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logout-btn{
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+@media (max-width: 900px){
+  .search-pill{ width: 360px }
+}
+
+@media (max-width: 640px){
+  .medix-header-inner{ padding: 0 8px }
+  .search-pill{ width: 220px }
+  .medix-logo-sub{ display: none }
+}

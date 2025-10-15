@@ -12,7 +12,7 @@ namespace Medix.API.Business.Interfaces.UserManagement
         Task<bool> DeleteAsync(Guid id);
         Task<IEnumerable<UserDto>> GetAllAsync();
         Task<(int total, IEnumerable<UserDto> data)> GetPagedAsync(int page, int pageSize);
-        Task<(int total, IEnumerable<UserDto> data)> SearchByNameAsync(string keyword, int page, int pageSize);
+        Task<IEnumerable<UserDto>> SearchByNameAsync(string keyword);
         Task<bool> EmailExistsAsync(string email);
     }
 }

@@ -13,7 +13,7 @@ namespace Medix.API.DataAccess.Interfaces.UserManagement
         Task<User> SaveUserAsync(User user);
         Task<IEnumerable<User>> GetAllAsync();
         Task<(IEnumerable<User> Users, int TotalCount)> GetPagedAsync(int page, int pageSize);
-        Task<(IEnumerable<User> Users, int TotalCount)> SearchByNameAsync(string keyword, int page, int pageSize);
+        Task<IEnumerable<User>> SearchByNameAsync(string keyword);
         Task<UserRole> CreateUserRoleAsync(UserRole userRole);
     }
 }

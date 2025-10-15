@@ -78,21 +78,14 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
             return (users, total);
         }
 
-        public async Task<(IEnumerable<User> Users, int TotalCount)> SearchByNameAsync(string keyword, int page, int pageSize)
+        public async Task<IEnumerable<User>> SearchByNameAsync(string keyword)
         {
             keyword = keyword?.Trim() ?? string.Empty;
 
-            var query = _context.Users
+            return await _context.Users
                 .Where(u => !string.IsNullOrEmpty(u.FullName) && u.FullName.Contains(keyword))
-                .OrderByDescending(u => u.CreatedAt);
-
-            var total = await query.CountAsync();
-            var users = await query
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
+                .OrderByDescending(u => u.CreatedAt)
                 .ToListAsync();
-
-            return (users, total);
         }
 
         public async Task<UserRole> CreateUserRoleAsync(UserRole userRole)

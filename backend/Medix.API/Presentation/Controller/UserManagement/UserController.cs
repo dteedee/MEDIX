@@ -28,15 +28,10 @@ namespace Medix.API.Presentation.Controller.UserManagement
         }
 
         [HttpGet("search")]
-        public async Task<ActionResult> SearchByName([FromQuery] string keyword, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<ActionResult> SearchByName([FromQuery] string keyword)
         {
-            var (total, data) = await _userService.SearchByNameAsync(keyword, page, pageSize);
-            var response = new PagedResponse<UserDto>
-            {
-                Total = total,
-                Data = data
-            };
-            return Ok(response);
+            var users = await _userService.SearchByNameAsync(keyword);
+            return Ok(users);
         }
         [HttpGet("{id}")]
         public async Task<ActionResult> GetById(Guid id)

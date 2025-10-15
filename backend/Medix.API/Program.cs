@@ -27,6 +27,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
+// Serve static files from wwwroot (for uploaded files)
+app.UseStaticFiles();
+
+// Ensure uploads folder exists
+var uploadsPath = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+if (!System.IO.Directory.Exists(uploadsPath)) System.IO.Directory.CreateDirectory(uploadsPath);
 app.MapControllers();
 
 app.Run();

@@ -160,16 +160,16 @@ namespace Medix.API.Business.Services.UserManagement
             return (total, data);
         }
 
-        public async Task<(int total, IEnumerable<UserDto> data)> SearchByNameAsync(string keyword, int page, int pageSize)
+        public async Task<IEnumerable<UserDto>> SearchByNameAsync(string keyword)
         {
             if (string.IsNullOrWhiteSpace(keyword))
             {
-                return await GetPagedAsync(page, pageSize);
+                return Enumerable.Empty<UserDto>();
             }
 
-            var (users, total) = await _userRepository.SearchByNameAsync(keyword, page, pageSize);
+            var users = await _userRepository.SearchByNameAsync(keyword);
 
-            var data = users.Select(u => new UserDto
+            return users.Select(u => new UserDto
             {
                 Id = u.Id,
                 Email = u.Email,
@@ -179,8 +179,6 @@ namespace Medix.API.Business.Services.UserManagement
                 EmailConfirmed = u.EmailConfirmed,
                 CreatedAt = u.CreatedAt
             });
-
-            return (total, data);
         }
 
         public async Task<bool> EmailExistsAsync(string email)

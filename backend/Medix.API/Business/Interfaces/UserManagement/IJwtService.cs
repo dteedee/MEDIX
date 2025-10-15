@@ -8,6 +8,8 @@ namespace Medix.API.Business.Interfaces.UserManagement
         string GenerateRefreshToken();
         bool ValidateRefreshToken(string refreshToken);
         int GetUserIdFromToken(string token);
+        string GeneratePasswordResetToken(string email);
+        bool ValidatePasswordResetToken(string token, string email);
     }
 }
 

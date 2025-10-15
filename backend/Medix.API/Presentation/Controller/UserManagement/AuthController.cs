@@ -396,12 +396,54 @@ namespace Medix.API.Presentation.Controller.UserManagement
                         role = "User"
                     });
                 }
+
+                // 5. Create Requested Test User
+                var requestedEmail = "dungdoile1@gmail.com";
+                var existingRequestedUser = await userRepository.GetByEmailAsync(requestedEmail);
+                if (existingRequestedUser == null)
+                {
+                    var requestedUser = new Medix.API.Models.Entities.User
+                    {
+                        Id = Guid.NewGuid(),
+                        UserName = requestedEmail,
+                        NormalizedUserName = requestedEmail.ToUpper(),
+                        Email = requestedEmail,
+                        NormalizedEmail = requestedEmail.ToUpper(),
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("@12345Dung"),
+                        FullName = "Dung Do",
+                        EmailConfirmed = true,
+                        PhoneNumberConfirmed = false,
+                        Status = 1,
+                        IsProfileCompleted = false,
+                        LockoutEnabled = false,
+                        AccessFailedCount = 0,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    await userRepository.CreateAsync(requestedUser);
+
+                    var requestedUserRole = new Medix.API.Models.Entities.UserRole
+                    {
+                        UserId = requestedUser.Id,
+                        RoleCode = "User",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    context.UserRoles.Add(requestedUserRole);
+
+                    results.Add(new { 
+                        message = "Requested test user created", 
+                        email = requestedEmail, 
+                        password = "@12345Dung",
+                        role = "User"
+                    });
+                }
                 else
                 {
                     results.Add(new { 
-                        message = "Test user already exists", 
-                        email = testEmail, 
-                        password = "string",
+                        message = "Requested test user already exists", 
+                        email = requestedEmail, 
+                        password = "@12345Dung",
                         role = "User"
                     });
                 }

@@ -11,11 +11,13 @@ namespace Medix.API.Business.Services.UserManagement
     {
         private readonly IUserRepository _userRepository;
         private readonly IJwtService _jwtService;
+        private readonly IEmailService _emailService;
 
-        public AuthService(IUserRepository userRepository, IJwtService jwtService)
+        public AuthService(IUserRepository userRepository, IJwtService jwtService, IEmailService emailService)
         {
             _userRepository = userRepository;
             _jwtService = jwtService;
+            _emailService = emailService;
         }
 
         public async Task<AuthResponseDto> LoginAsync(LoginRequestDto loginRequest)
@@ -98,19 +100,65 @@ namespace Medix.API.Business.Services.UserManagement
             throw new NotImplementedException("Refresh token chưa được triển khai");
         }
 
-        public Task<bool> ForgotPasswordAsync(ForgotPasswordRequestDto forgotPasswordRequest)
+        public async Task<bool> ForgotPasswordAsync(ForgotPasswordRequestDto forgotPasswordRequest)
         {
-            throw new NotImplementedException("Forgot password chưa được triển khai");
+            var user = await _userRepository.GetByEmailAsync(forgotPasswordRequest.Email);
+            if (user == null)
+            {
+                // Do not reveal existence; still return true
+                return true;
+            }
+
+            var token = _jwtService.GeneratePasswordResetToken(user.Email);
+            await _emailService.SendPasswordResetEmailAsync(user.Email, token);
+            return true;
         }
 
-        public Task<bool> ResetPasswordAsync(ResetPasswordRequestDto resetPasswordRequest)
+        public async Task<bool> ResetPasswordAsync(ResetPasswordRequestDto resetPasswordRequest)
         {
-            throw new NotImplementedException("Reset password chưa được triển khai");
+            var isValid = _jwtService.ValidatePasswordResetToken(resetPasswordRequest.Token, resetPasswordRequest.Email);
+            if (!isValid)
+            {
+                throw new ValidationException(new Dictionary<string, string[]>
+                {
+                    { "Token", new[] { "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn" } }
+                });
+            }
+
+            var user = await _userRepository.GetByEmailAsync(resetPasswordRequest.Email);
+            if (user == null)
+            {
+                // Avoid user enumeration
+                return true;
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(resetPasswordRequest.Password);
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateAsync(user);
+            return true;
         }
 
-        public Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordRequestDto changePasswordRequest)
+        public async Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordRequestDto changePasswordRequest)
         {
-            throw new NotImplementedException("Change password chưa được triển khai");
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException("User not found");
+            }
+
+            var currentOk = BCrypt.Net.BCrypt.Verify(changePasswordRequest.CurrentPassword, user.PasswordHash);
+            if (!currentOk)
+            {
+                throw new ValidationException(new Dictionary<string, string[]>
+                {
+                    { "CurrentPassword", new[] { "Mật khẩu hiện tại không đúng" } }
+                });
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordRequest.NewPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateAsync(user);
+            return true;
         }
 
         public async Task<bool> LogoutAsync(Guid userId)

@@ -1,14 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import '../../styles/doctor-register.css'
+
+import { useEffect, useState } from 'react';
 import axios from 'axios';
-
-interface SpecializationDto {
-  id: string;
-  name: string;
-}
+import { SpecializationDto } from '../types/doctor.types';
 
 
 
-export const DoctorRegister: React.FC = () => {
+function DoctorRegister() {
     const [specializations, setSpecializations] = useState<SpecializationDto[]>([]);
     const [errors, setErrors] = useState<any>({});
 
@@ -273,3 +271,5 @@ export const DoctorRegister: React.FC = () => {
         </div>
     )
 }
+
+export default DoctorRegister;

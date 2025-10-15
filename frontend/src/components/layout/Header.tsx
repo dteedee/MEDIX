@@ -1,76 +1,59 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useState } from 'react';
+import '../../styles/header.css'
 
-export const Header: React.FC = () => {
-  const { isAuthenticated, user, logout } = useAuth();
+const Header = () => {
+    const token = null;
+    const [showDropdown, setShowDropdown] = useState(false);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
+    const toggleDropdown = () => setShowDropdown((prev) => !prev);
+    const handleLogout = () => {
+        // Your logout logic here
+        console.log("Logging out...");
+    };
 
-  return (
-    <header className="bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-6 md:justify-start md:space-x-10">
-          <div className="flex justify-start lg:w-0 lg:flex-1">
-            <Link to="/" className="text-2xl font-bold text-blue-600">
-              Medix
-            </Link>
-          </div>
-          
-          <nav className="hidden md:flex space-x-10">
-            {isAuthenticated && (
-              <>
-                <Link to="/dashboard" className="text-base font-medium text-gray-500 hover:text-gray-900">
-                  Dashboard
-                </Link>
-                <Link to="/ai-chat" className="text-base font-medium text-gray-500 hover:text-gray-900">
-                  AI Chat
-                </Link>
-              </>
-            )}
-          </nav>
 
-          <div className="hidden md:flex items-center justify-end md:flex-1 lg:w-0 space-x-4">
-            {isAuthenticated ? (
-              <>
-                <span className="text-sm text-gray-700">
-                  Xin chào, {user?.fullName}
-                </span>
-                <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                  {user?.role}
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="whitespace-nowrap text-base font-medium text-gray-500 hover:text-gray-900"
-                >
-                  Đăng xuất
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="whitespace-nowrap text-base font-medium text-gray-500 hover:text-gray-900"
-                >
-                  Đăng nhập
-                </Link>
-                <Link
-                  to="/register"
-                  className="ml-8 whitespace-nowrap inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  Đăng ký
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </header>
-  );
+    return (
+        <header>
+            <div className="top-bar">
+                <div className="logo">
+                    <a href='/' className="logo">
+                        MEDIX
+                        <small style={{ textTransform: 'uppercase' }}>Hệ thống y tế thông minh ứng dụng AI</small>
+                    </a>
+                </div>
+                <div className="search-bar">
+                    <input type="text" placeholder="Chuyên khoa, triệu chứng, tên bác sĩ..." />
+                    <button>🔍</button>
+                </div>
+                <div className="header-links">
+                    {token ? (
+                        <div className="dropdown">
+                            <img
+                                src="https://pbs.twimg.com/profile_images/1937117284725661696/8ppkq53g_400x400.jpg" // Replace with actual avatar URL
+                                alt="User avatar"
+                                className="rounded-circle dropdown-toggle"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                                style={{ width: '40px', height: '40px', cursor: 'pointer' }}
+                            />
+                            <ul className="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <button className="dropdown-item" onClick={handleLogout}>
+                                        Đăng xuất
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    ) : (
+                        <>
+                            <a href="#">Đăng nhập</a>
+                            <a href="#">Đăng ký</a>
+                        </>
+                    )}
+                </div>
+            </div>
+        </header>
+    );
 };
+
+export default Header;

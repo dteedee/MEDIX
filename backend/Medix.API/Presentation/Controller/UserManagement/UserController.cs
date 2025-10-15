@@ -16,12 +16,13 @@ namespace Medix.API.Presentation.Controller.UserManagement
             _userService = userService;
         }
 
+        [HttpGet("userinfo")]
         public async Task<IActionResult> GetUserInfoFromToken()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null)
             {
-                return null;
+                return Unauthorized();
             }
             var userId = Guid.Parse(userIdClaim.Value);
             var userInfo = await _userService.GetByIdAsync(userId);

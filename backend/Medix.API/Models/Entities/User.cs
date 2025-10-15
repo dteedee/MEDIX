@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using Medix.API.Models.Enums;
 
 namespace Medix.API.Models.Entities;
@@ -26,6 +27,7 @@ public partial class User
 
     public string FullName { get; set; } = null!;
 
+    [NotMapped]
     public string Role { get; set; } = "User";
 
     public DateOnly? DateOfBirth { get; set; }

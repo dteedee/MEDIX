@@ -9,74 +9,6 @@ body {
     line-height: 1.6;
 }
 
-/* Header */
-header {
-    background: #025FAE;
-    color: white;
-    padding: 15px 0;
-}
-
-.top-bar {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.logo {
-    font-size: 24px;
-    font-weight: bold;
-    text-align: center;
-}
-
-.logo small {
-    display: block;
-    font-size: 10px;
-    font-weight: normal;
-}
-
-.search-bar {
-    flex: 1;
-    max-width: 400px;
-    margin: 0 30px;
-    position: relative;
-}
-
-.search-bar input {
-    width: 100%;
-    padding: 10px 40px 10px 15px;
-    border: none;
-    border-radius: 25px;
-    outline: none;
-}
-
-.search-bar button {
-    position: absolute;
-    right: 5px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 5px 10px;
-}
-
-.header-links {
-    display: flex;
-    gap: 20px;
-    font-size: 14px;
-}
-
-.header-links a {
-    color: white;
-    text-decoration: none;
-    background-color: #0A375D;
-    border-radius: 18px;
-    padding: 3px;
-}
-
 nav {
     background: rgba(255, 255, 255, 0.1);
     margin-top: 10px;
@@ -363,10 +295,29 @@ nav {
     text-align: center;
 }
 
+.doctor-carousel-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.doctor-nav-button {
+    font-size: 1.5rem;
+    padding: 10px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: #333;
+}
+
 .doctors-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
+    grid-template-columns: repeat(4, auto);
+    /* keep card size natural */
+    justify-content: center;
+    align-items: center;
+    /* center the entire grid row */
     margin-bottom: 30px;
 }
 
@@ -376,6 +327,12 @@ nav {
     padding: 20px;
     text-align: center;
     color: white;
+    width: 200px;
+    /* or whatever size you want */
+}
+
+.doctor-card:not(:last-child) {
+    margin-right: 20px;
 }
 
 .doctor-photo {
@@ -480,70 +437,6 @@ nav {
     white-space: nowrap;
 }
 
-
-/* Footer */
-footer {
-    background: #025FAE;
-    color: white;
-    padding: 40px 20px 20px;
-    margin-top: 60px;
-}
-
-.footer-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 40px;
-    margin-bottom: 30px;
-}
-
-.footer-section h3 {
-    font-size: 16px;
-    margin-bottom: 15px;
-}
-
-.footer-section ul {
-    list-style: none;
-    padding: 0;
-}
-
-.footer-section a {
-    color: rgba(255, 255, 255, 0.8);
-    text-decoration: none;
-    font-size: 14px;
-    line-height: 2;
-}
-
-.footer-section a:hover {
-    color: white;
-}
-
-.social-icons {
-    display: flex;
-    gap: 15px;
-    margin-top: 20px;
-}
-
-.social-icon {
-    width: 35px;
-    height: 35px;
-    background: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #1e5a8e;
-    font-weight: bold;
-}
-
-.footer-bottom {
-    text-align: center;
-    padding-top: 20px;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    font-size: 14px;
-}
-
 @media (max-width: 768px) {
 
     .hero-content,
@@ -583,7 +476,7 @@ footer {
     z-index: 1000
 }
 
-.ai-bubble img{
+.ai-bubble img {
     width: 100%;
     border-radius: 50%;
 }
@@ -600,6 +493,8 @@ footer {
 }
 
 .carousel-img {
-  height: 300px;         /* Set a fixed height */
-  object-fit: cover;     /* Crop and scale to fill */
+    height: 300px;
+    /* Set a fixed height */
+    object-fit: cover;
+    /* Crop and scale to fill */
 }

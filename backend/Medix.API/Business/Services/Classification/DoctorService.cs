@@ -55,5 +55,10 @@ namespace Medix.API.Business.Services.Classification
                 return false;
             }
         }
+
+        public async Task<List<Doctor>> GetHomePageDoctorsAsync()
+        {
+            return await _doctorRepository.GetHomePageDoctorsAsync();
+        }
     }
 }

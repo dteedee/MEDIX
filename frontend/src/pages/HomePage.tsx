@@ -1,25 +1,51 @@
+import { useEffect, useState } from 'react';
 import '../styles/home.css'
+import { HomeMetadata } from '../types/home.types';
+import axios from 'axios';
+import HeaderTest from '../components/layout/Header';
+import Footer from '../components/layout/Footer';
 
 function HomePage() {
+
+    //get home page details
+    const [homeMetadata, setHomeMetadata] = useState<HomeMetadata>();
+
+    useEffect(() => {
+        axios.get('/api/home')
+            .then(response => {
+                setHomeMetadata(response.data);
+                console.log(response.data);
+            })
+            .catch(error => {
+                console.error('Error fething homepage data', error);
+            })
+    }, [])
+
+    //handle doctors sliding
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const doctorsPerPage = 4;
+
+    const visibleDoctors = homeMetadata?.displayedDoctors.slice(
+        currentIndex,
+        currentIndex + doctorsPerPage
+    );
+
+    const handlePrev = () => {
+        setCurrentIndex((prev) => Math.max(prev - doctorsPerPage, 0));
+    };
+
+    const handleNext = () => {
+        if (homeMetadata?.displayedDoctors) {
+            setCurrentIndex((prev) =>
+                Math.min(prev + doctorsPerPage, homeMetadata.displayedDoctors.length - doctorsPerPage)
+            );
+        }
+    };
+
+
     return (
         <div>
-            {/* Header */}
-            <header>
-                <div className="top-bar">
-                    <div className="logo">
-                        MEDIX
-                        <small style={{ textTransform: 'uppercase' }}>Hệ thống y tế thông minh ứng dụng AI</small>
-                    </div>
-                    <div className="search-bar">
-                        <input type="text" placeholder="Chuyên khoa, triệu chứng, tên bác sĩ..." />
-                        <button>🔍</button>
-                    </div>
-                    <div className="header-links">
-                        <a href="#">Đăng nhập</a>
-                        <a href="#">Đăng ký</a>
-                    </div>
-                </div>
-            </header>
+            <HeaderTest />
             <nav>
                 <ul className="nav-menu" style={{ justifyContent: 'center' }}>
                     <li><a href="#">Trang chủ</a></li>
@@ -67,16 +93,15 @@ function HomePage() {
                     </div>
                     <div id="carouselExampleAutoplaying" className="carousel slide" data-bs-ride="carousel">
                         <div className="carousel-inner">
-                            <div className="carousel-item active">
-                                <img src="https://4kwallpapers.com/images/wallpapers/manchester-united-7680x4320-17569.jpg"
-                                    className="d-block w-100 carousel-img" alt="..." />
-                            </div>
-                            <div className="carousel-item">
-                                <img src="https://pbs.twimg.com/media/Gpi8M8QWwAAP6x8?format=jpg&name=4096x4096" className="d-block w-100 carousel-img" alt="..." />
-                            </div>
-                            <div className="carousel-item">
-                                <img src="https://img.goodfon.com/original/1920x1200/0/c2/sebastian-vettel-wallpaper-f1.jpg" className="d-block w-100 carousel-img" alt="..." />
-                            </div>
+                            {homeMetadata?.bannerUrls.map((bannerUrl, index) => (
+                                <div className={`carousel-item${index === 0 ? ' active' : ''}`} key={index}>
+                                    <img
+                                        src={bannerUrl}
+                                        className="d-block w-100 carousel-img"
+                                        alt={`Banner ${index + 1}`}
+                                    />
+                                </div>
+                            ))}
                         </div>
                         <button className="carousel-control-prev" type="button" data-bs-target="#carouselExampleAutoplaying" data-bs-slide="prev">
                             <span className="carousel-control-prev-icon" aria-hidden="true" />
@@ -199,35 +224,32 @@ function HomePage() {
             {/* Doctors Section */}
             <section className="doctors">
                 <h2>ĐỘI NGŨ BÁC SĨ CỦA CHÚNG TÔI</h2>
-                <div className="doctors-grid">
-                    <div className="doctor-card">
-                        <div className="doctor-photo" />
-                        <h3>Hoàng Nam Thuận</h3>
-                        <p className="specialty">Bác sĩ - Nội tổng quát</p>
-                        <p className="specialty">10 năm kinh nghiệm</p>
-                        <div className="rating">★★★★★</div>
+                <div className="doctor-carousel-container">
+                    <button onClick={handlePrev} disabled={currentIndex === 0} className="doctor-nav-button">←</button>
+
+                    <div className="doctors-grid">
+                        {visibleDoctors?.map((doctor) => (
+                            <div className="doctor-card">
+                                <div className="doctor-photo">
+                                    <img className='doctor-photo' src={doctor.avatarUrl}></img>
+                                </div>
+                                <h3>{doctor.fullName}</h3>
+                                <p className="specialty">Bác sĩ - {doctor.specializationName}</p>
+                                <p className="specialty">{doctor.yearsOfExperience} năm kinh nghiệm</p>
+                                <div className="rating">
+                                    {'★'.repeat(Math.round(doctor.averageRating)) + '☆'.repeat(5 - Math.round(doctor.averageRating))}
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                    <div className="doctor-card">
-                        <div className="doctor-photo" />
-                        <h3>Phạm Xuân Ân</h3>
-                        <p className="specialty">Bác sĩ - Nhi khoa</p>
-                        <p className="specialty">12 năm kinh nghiệm</p>
-                        <div className="rating">★★★★★</div>
-                    </div>
-                    <div className="doctor-card">
-                        <div className="doctor-photo" />
-                        <h3>Hoàng Tiến Giáp</h3>
-                        <p className="specialty">Bác sĩ - Sản phụ khoa</p>
-                        <p className="specialty">8 năm kinh nghiệm</p>
-                        <div className="rating">★★★★★</div>
-                    </div>
-                    <div className="doctor-card">
-                        <div className="doctor-photo" />
-                        <h3>Phạm Nhật Dũng</h3>
-                        <p className="specialty">Bác sĩ - Tim mạch</p>
-                        <p className="specialty">15 năm kinh nghiệm</p>
-                        <div className="rating">★★★★★</div>
-                    </div>
+
+                    <button
+                        onClick={handleNext}
+                        disabled={currentIndex + doctorsPerPage >= homeMetadata?.displayedDoctors.length}
+                        className="doctor-nav-button">
+                        →
+                    </button>
+
                 </div>
                 <div className="view-all">
                     <button className="btn-view-all">XEM TẤT CẢ</button>
@@ -237,79 +259,22 @@ function HomePage() {
             <section className="knowledge">
                 <h2>KIẾN THỨC SỨC KHỎE HỮU ÍCH</h2>
                 <div className="knowledge-grid">
-                    <div className="knowledge-card">
-                        <div className="knowledge-image" />
-                        <div className="knowledge-content">
-                            <h5>Phòng bệnh tốt hơn chữa bệnh</h5>
-                            <p> Hãy chăm sóc sức khỏe của bạn từ hôm nay để có một tương lai khỏe
-                                mạnh và hạnh phúc.</p>
+                    {homeMetadata?.articles.map((article) => (
+                        <div className="knowledge-card">
+                            <img className="knowledge-image" src={article.thumbnailUrl} />
+                            <div className="knowledge-content">
+                                <h5>{article.title}</h5>
+                                <p> {article.summary}</p>
+                            </div>
+                            <div className="knowledge-footer">
+                                <p className="knowledge-date">📅{article.publishedAt}</p>
+                            </div>
                         </div>
-                        <div className="knowledge-footer">
-                            <p className="knowledge-date">📅14/06/2025</p>
-                        </div>
-                    </div>
-                    <div className="knowledge-card">
-                        <div className="knowledge-image" />
-                        <div className="knowledge-content">
-                            <h5>Phòng bệnh tốt hơn chữa bệnh</h5>
-                            <p>Chăm sóc sức khỏe tim mạch: Bí quyết để giữ cho tim bạn luôn khỏe mạnh qua chế độ ăn uống và tập
-                                luyện hợp lý.</p>
-                        </div>
-                        <div className="knowledge-footer">
-                            <p className="knowledge-date">📅14/06/2025</p>
-                        </div>
-                    </div>
-                    <div className="knowledge-card">
-                        <div className="knowledge-image" />
-                        <div className="knowledge-content">
-                            <h5>Phòng bệnh tốt hơn chữa bệnh</h5>
-                            <p>Dinh dưỡng cho sức khỏe: Những thực phẩm nên và không nên ăn để duy trì cơ thể khỏe mạnh.</p>
-                        </div>
-                        <div className="knowledge-footer">
-                            <p className="knowledge-date">📅14/06/2025</p>
-                        </div>
-                    </div>
+                    ))}
                 </div>
             </section>
-            {/* Footer */}
-            <footer>
-                <div className="footer-content">
-                    <div className="footer-section">
-                        <h3>MEDIX</h3>
-                        <p style={{ fontSize: '13px', lineHeight: '1.8' }}>Hệ thống y tế hàng đầu Việt Nam với tiêu chuẩn quốc tế</p>
-                        <div className="social-icons">
-                            <div className="social-icon">f</div>
-                            <div className="social-icon">in</div>
-                        </div>
-                    </div>
-                    <div className="footer-section">
-                        <h3>Về chúng tôi</h3>
-                        <ul>
-                            <li><a href="#">Trang chủ</a></li>
-                            <li><a href="#">Về chúng tôi</a></li>
-                            <li><a href="#">Bác sĩ</a></li>
-                            <li><a href="#">Bài viết sức khỏe</a></li>
-                        </ul>
-                    </div>
-                    <div className="footer-section">
-                        <h3>Dịch vụ</h3>
-                        <ul>
-                            <li><a href="#">Gói khám sức khỏe</a></li>
-                            <li><a href="#">AI chẩn đoán</a></li>
-                            <li><a href="#">Đặt lịch hẹn</a></li>
-                        </ul>
-                    </div>
-                    <div className="footer-section">
-                        <h3>Liên hệ</h3>
-                        <ul>
-                            <li><a>Email: Chamsockhachhangmedix@gmail.com</a></li>
-                        </ul>
-                    </div>
-                </div>
-                <div className="footer-bottom">
-                    <p>© 2025 MEDIX. All rights reserved.</p>
-                </div>
-            </footer>
+
+            <Footer />
 
             <div className="ai-bubble">
                 <img src="/images/medix-logo-mirrored.jpg" alt="Chat" />

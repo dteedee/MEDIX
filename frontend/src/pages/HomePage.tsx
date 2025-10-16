@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import '../styles/home.css'
 import { HomeMetadata } from '../types/home.types';
-import axios from 'axios';
 import HeaderTest from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
+import HomeService from '../services/homeService';
 
 function HomePage() {
 
@@ -11,14 +11,16 @@ function HomePage() {
     const [homeMetadata, setHomeMetadata] = useState<HomeMetadata>();
 
     useEffect(() => {
-        axios.get('/api/home')
-            .then(response => {
-                setHomeMetadata(response.data);
-                console.log(response.data);
-            })
-            .catch(error => {
-                console.error('Error fething homepage data', error);
-            })
+        const fetchMetadata = async () => {
+            try {
+                const data = await HomeService.getHomeMetadata();
+                setHomeMetadata(data);
+            } catch (error) {
+                console.error('Failed to fetch home metadata:', error);
+            }
+        };
+
+        fetchMetadata();
     }, [])
 
     //handle doctors sliding

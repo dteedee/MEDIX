@@ -17,5 +17,8 @@ namespace Medix.API.Models.DTOs
         public string Role { get; set; } = string.Empty;
         public bool EmailConfirmed { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateOnly? DateOfBirth { get; set; }
+        public string? GenderCode { get; set; }
+        public string? IdentificationNumber { get; set; }
     }
 }

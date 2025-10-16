@@ -1,29 +1,38 @@
 export interface UserDTO {
-  id: string
-  email: string
-  fullName?: string
-  phoneNumber?: string
-  role?: string
-  emailConfirmed?: boolean
-  createdAt?: string
-}
-
-export interface GetUsersResponse {
-  total: number
-  data: UserDTO[]
+  id: string;
+  email: string;
+  fullName?: string;
+  phoneNumber?: string;
+  role?: string; // Thường là vai trò chính, ví dụ: "PATIENT"
+  roles?: string[]; // Danh sách tất cả các vai trò
+  emailConfirmed?: boolean;
+  dateOfBirth?: string;
+  genderCode?: string;
+  identificationNumber?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateUserRequest {
-  email: string
-  fullName?: string
-  phoneNumber?: string
-  role?: string
-  password?: string
-  passwordConfirmation?: string
-  dateOfBirth?: string
-  identificationNumber?: string
-  genderCode?: string
-  emailConfirmed?: boolean
+  email: string;
+  fullName: string;
+  password?: string;
+  passwordConfirmation?: string;
+  phoneNumber?: string;
+  roleCodes: string[]; // Backend mong đợi một mảng các vai trò
+  dateOfBirth?: string;
+  genderCode?: string;
+  identificationNumber?: string;
 }
 
-export interface UpdateUserRequest extends Partial<CreateUserRequest> {}
+export interface UpdateUserRequest {
+  fullName?: string;
+  phoneNumber?: string;
+  roleCodes?: string[]; // Backend mong đợi một mảng các vai trò
+  emailConfirmed?: boolean;
+  password?: string;
+  passwordConfirmation?: string;
+  dateOfBirth?: string;
+  genderCode?: string;
+  identificationNumber?: string;
+}

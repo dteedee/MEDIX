@@ -36,6 +36,7 @@ namespace Medix.API.Business.Services.UserManagement
                 DateOfBirth = registerDto.DateOfBirth,
                 GenderCode = registerDto.GenderCode,
                 IdentificationNumber = registerDto.IdentificationNumber,
+                Role = "Patient", // Gán vai trò mặc định là Patient
                 IsProfileCompleted = false,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -55,9 +56,12 @@ namespace Medix.API.Business.Services.UserManagement
                 Email = savedUser.Email,
                 FullName = savedUser.FullName,
                 PhoneNumber = savedUser.PhoneNumber,
-                Role = "Patient",
+                Role = savedUser.Role, // Lấy vai trò từ đối tượng đã được lưu
                 EmailConfirmed = savedUser.EmailConfirmed,
-                CreatedAt = savedUser.CreatedAt
+                CreatedAt = savedUser.CreatedAt,
+                DateOfBirth = savedUser.DateOfBirth,
+                GenderCode = savedUser.GenderCode,
+                IdentificationNumber = savedUser.IdentificationNumber
             };
         }
 
@@ -74,7 +78,10 @@ namespace Medix.API.Business.Services.UserManagement
                 PhoneNumber = user.PhoneNumber,
                 Role = user.Role,
                 EmailConfirmed = user.EmailConfirmed,
-                CreatedAt = user.CreatedAt
+                CreatedAt = user.CreatedAt,
+                DateOfBirth = user.DateOfBirth,
+                GenderCode = user.GenderCode,
+                IdentificationNumber = user.IdentificationNumber
             };
         }
 
@@ -91,7 +98,10 @@ namespace Medix.API.Business.Services.UserManagement
                 PhoneNumber = user.PhoneNumber,
                 Role = user.Role,
                 EmailConfirmed = user.EmailConfirmed,
-                CreatedAt = user.CreatedAt
+                CreatedAt = user.CreatedAt,
+                DateOfBirth = user.DateOfBirth,
+                GenderCode = user.GenderCode,
+                IdentificationNumber = user.IdentificationNumber
             };
         }
 
@@ -100,11 +110,21 @@ namespace Medix.API.Business.Services.UserManagement
             var user = await _userRepository.GetByIdAsync(id);
             if (user == null) throw new ArgumentException("Không tìm thấy người dùng");
 
-            user.FullName = userUpdateDto.FullName;
-            user.PhoneNumber = userUpdateDto.PhoneNumber;
-            user.GenderCode = userUpdateDto.GenderCode;
-            user.IdentificationNumber = userUpdateDto.IdentificationNumber;
-            user.Address = userUpdateDto.Address;
+            // Chỉ cập nhật các trường nếu chúng được cung cấp giá trị mới
+            user.FullName = userUpdateDto.FullName ?? user.FullName;
+            user.PhoneNumber = userUpdateDto.PhoneNumber ?? user.PhoneNumber;
+            user.GenderCode = userUpdateDto.GenderCode ?? user.GenderCode;
+            user.IdentificationNumber = userUpdateDto.IdentificationNumber ?? user.IdentificationNumber;
+            user.DateOfBirth = userUpdateDto.DateOfBirth ?? user.DateOfBirth;
+            user.EmailConfirmed = userUpdateDto.EmailConfirmed ?? user.EmailConfirmed;
+
+            // Cập nhật vai trò nếu được cung cấp
+            if (userUpdateDto.RoleCodes != null && userUpdateDto.RoleCodes.Any())
+            {
+                user.Role = userUpdateDto.RoleCodes.First(); // Lấy vai trò đầu tiên từ mảng
+            }
+
+            user.Address = userUpdateDto.Address ?? user.Address;
             user.UpdatedAt = DateTime.UtcNow;
 
             var updatedUser = await _userRepository.UpdateAsync(user);
@@ -117,7 +137,10 @@ namespace Medix.API.Business.Services.UserManagement
                 PhoneNumber = updatedUser.PhoneNumber,
                 Role = updatedUser.Role,
                 EmailConfirmed = updatedUser.EmailConfirmed,
-                CreatedAt = updatedUser.CreatedAt
+                CreatedAt = updatedUser.CreatedAt,
+                GenderCode = updatedUser.GenderCode,
+                IdentificationNumber = updatedUser.IdentificationNumber,
+                DateOfBirth = updatedUser.DateOfBirth
             };
         }
 
@@ -144,7 +167,7 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<(int total, IEnumerable<UserDto> data)> GetPagedAsync(int page, int pageSize)
         {
-            var (users, total) = await _userRepository.GetPagedAsync(page, pageSize);
+            var (total, users) = await _userRepository.GetPagedAsync(page, pageSize);
 
             var data = users.Select(u => new UserDto
             {
@@ -154,7 +177,31 @@ namespace Medix.API.Business.Services.UserManagement
                 PhoneNumber = u.PhoneNumber,
                 Role = u.Role,
                 EmailConfirmed = u.EmailConfirmed,
-                CreatedAt = u.CreatedAt
+                CreatedAt = u.CreatedAt,
+                DateOfBirth = u.DateOfBirth,
+                GenderCode = u.GenderCode,
+                IdentificationNumber = u.IdentificationNumber
+            });
+
+            return (total, data);
+        }
+
+        public async Task<(int total, IEnumerable<UserDto> data)> SearchAsync(string keyword, int page, int pageSize)
+        {
+            var (total, users) = await _userRepository.SearchAsync(keyword, page, pageSize);
+
+            var data = users.Select(u => new UserDto
+            {
+                Id = u.Id,
+                Email = u.Email,
+                FullName = u.FullName,
+                PhoneNumber = u.PhoneNumber,
+                Role = u.Role,
+                EmailConfirmed = u.EmailConfirmed,
+                CreatedAt = u.CreatedAt,
+                DateOfBirth = u.DateOfBirth,
+                GenderCode = u.GenderCode,
+                IdentificationNumber = u.IdentificationNumber
             });
 
             return (total, data);

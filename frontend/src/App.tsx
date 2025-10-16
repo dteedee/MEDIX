@@ -3,13 +3,13 @@ import axios from 'axios'
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import BannerList from './pages/manager/BannerList'
-import UserList from './pages/manager/UserList'
+import UserList from './pages/admin/UserList'
 import ArticleList from './pages/manager/ArticleList'
 import CategoryList from './pages/manager/CategoryList'
 import CmsPageList from './pages/manager/CmsPageList'
 import ArticleEditPage from './pages/manager/ArticleEditPage'
 import CategoryEditPage from './pages/manager/CategoryEditPage'
-import UserEditPage from './pages/manager/UserEditPage'
+import UserEditPage from './pages/admin/UserEditPage'
 import BannerEditPage from './pages/manager/BannerEditPage'
 import CmsPageEditPage from './pages/manager/CmsPageEditPage'
 import {Header} from "./components/layout/Header";
@@ -59,7 +59,7 @@ export function App() {
               <Route path="/articles/:slug" element={<ArticleDetailPage />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/manager/banners" element={<BannerList />} />
-              <Route path="/manager/users" element={<UserList />} />
+              <Route path="/admin/users" element={<UserList />} />
               <Route path="/manager/articles" element={<ArticleList />} />
               <Route path="/manager/articles/new" element={<ArticleEditPage />} />
               <Route path="/manager/articles/edit/:id" element={<ArticleEditPage />} />
@@ -71,8 +71,8 @@ export function App() {
               <Route path="/manager/cms-pages" element={<CmsPageList />} />
               <Route path="/manager/cms-pages/new" element={<CmsPageEditPage />} />
               <Route path="/manager/cms-pages/edit/:id" element={<CmsPageEditPage />} />
-              <Route path="/manager/users/new" element={<UserEditPage />} />
-              <Route path="/manager/users/edit/:id" element={<UserEditPage />} />
+              <Route path="/admin/users/new" element={<UserEditPage />} />
+              <Route path="/admin/users/edit/:id" element={<UserEditPage />} />
             </Routes>
           </main>
         </div>

@@ -12,12 +12,12 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
   const [email, setEmail] = useState(user?.email ?? '')
   const [fullName, setFullName] = useState(user?.fullName ?? '')
   const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber ?? '')
-  const [role, setRole] = useState(user?.role ?? '')
+  const [role, setRole] = useState(user?.role ?? 'PATIENT') // Mặc định là PATIENT cho người dùng mới
   const [password, setPassword] = useState('')
   const [passwordConfirmation, setPasswordConfirmation] = useState('')
-  const [dateOfBirth, setDateOfBirth] = useState<string>('')
-  const [identificationNumber, setIdentificationNumber] = useState<string>('')
-  const [genderCode, setGenderCode] = useState<string>('')
+  const [dateOfBirth, setDateOfBirth] = useState<string>((user as any)?.dateOfBirth?.split('T')[0] ?? '')
+  const [identificationNumber, setIdentificationNumber] = useState<string>(user?.identificationNumber ?? '')
+  const [genderCode, setGenderCode] = useState<string>(user?.genderCode ?? '')
   const [emailConfirmed, setEmailConfirmed] = useState<boolean>(user?.emailConfirmed ?? false)
   const [saving, setSaving] = useState(false)
 
@@ -26,12 +26,12 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     setSaving(true)
     try {
       if (user) {
-        const payload: UpdateUserRequest = { fullName, phoneNumber, role, emailConfirmed, dateOfBirth, identificationNumber, genderCode }
+        const payload: UpdateUserRequest = { fullName, phoneNumber, roleCodes: [role], emailConfirmed, dateOfBirth, identificationNumber, genderCode }
         // Only send password fields if provided
         if (password) { (payload as any).password = password; (payload as any).passwordConfirmation = passwordConfirmation }
         await userService.update(user.id, payload)
       } else {
-        const payload: CreateUserRequest = { email, fullName, phoneNumber, role, password, passwordConfirmation, dateOfBirth, identificationNumber, genderCode }
+        const payload: CreateUserRequest = { email, fullName, phoneNumber, roleCodes: [role], password, passwordConfirmation, dateOfBirth, identificationNumber, genderCode }
         await userService.create(payload)
       }
       onSaved?.()
@@ -61,7 +61,12 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
 
       <div>
         <label>Role</label><br />
-        <input value={role} onChange={e => setRole(e.target.value)} style={{ width: '100%' }} />
+        <select value={role} onChange={e => setRole(e.target.value)} required style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}>
+          <option value="PATIENT">Patient</option>
+          <option value="DOCTOR">Doctor</option>
+          <option value="MANAGER">Manager</option>
+          <option value="ADMIN">Admin</option>
+        </select>
       </div>
 
       <div>
@@ -85,7 +90,12 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       </div>
       <div>
         <label>Gender Code</label><br />
-        <input value={genderCode} onChange={e => setGenderCode(e.target.value)} placeholder="M/F/OTHER..." style={{ width: '100%' }} />
+        <select value={genderCode} onChange={e => setGenderCode(e.target.value)} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}>
+          <option value="">-- GENDER --</option>
+          <option value="MALE">MALE</option>
+          <option value="FEMALE">FEMALE</option>
+          <option value="OTHER">OTHER</option>
+        </select>
       </div>
 
       <div>

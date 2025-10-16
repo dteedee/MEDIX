@@ -38,7 +38,7 @@ export default function Sidebar() {
         )}
  
 
-        <Link to="/manager/users" className="sidebar-link">Quản lý Người dùng</Link>
+        <Link to="/admin/users" className="sidebar-link">Quản lý Người dùng</Link>
         <Link to="/manager/categories" className="sidebar-link">Quản lý Danh mục</Link>
         <Link to="/manager/cms-pages" className="sidebar-link">Quản lý CMSpage</Link>
         <Link to="#" className="sidebar-link">Quản lý Phản hồi</Link>

@@ -13,10 +13,11 @@ function authHeader() {
 }
 
 export const articleService = {
-  list: async (page = 1, pageSize = 10, params?: { search?: string; status?: string }): Promise<{ items: ArticleDTO[]; total?: number }> => {
+  list: async (page = 1, pageSize = 10, params?: { search?: string; status?: string; slug?: string }): Promise<{ items: ArticleDTO[]; total?: number }> => {
     const query: any = { page, pageSize }
     if (params?.search) query.search = params.search
     if (params?.status) query.status = params.status
+    if (params?.slug) query.slug = params.slug
     const r = await axios.get(BASE, { params: query, headers: authHeader() })
     const data = r.data
 
@@ -75,6 +76,15 @@ export const articleService = {
   get: async (id: string): Promise<ArticleDTO> => {
     const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })
     return r.data
+  },
+  getBySlug: async (slug: string): Promise<ArticleDTO | null> => {
+    try {
+      const r = await axios.get(`${BASE}/slug/${encodeURIComponent(slug)}`, { headers: authHeader() })
+      return r.data
+    } catch (err: any) {
+      if (err?.response?.status === 404) return null
+      throw err
+    }
   },
   create: async (payload: CreateArticleRequest): Promise<ArticleDTO> => {
     const r = await axios.post(BASE, payload, { headers: authHeader() })

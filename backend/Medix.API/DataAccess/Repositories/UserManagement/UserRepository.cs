@@ -64,7 +64,7 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
             return await _context.Users.ToListAsync();
         }
 
-        public async Task<(IEnumerable<User> Users, int TotalCount)> GetPagedAsync(int page, int pageSize)
+        public async Task<(int total, IEnumerable<User> data)> GetPagedAsync(int page, int pageSize)
         {
             var query = _context.Users
                 .OrderByDescending(u => u.CreatedAt);
@@ -75,7 +75,27 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
                 .Take(pageSize)
                 .ToListAsync();
 
-            return (users, total);
+            return (total, users);
+        }
+
+        public async Task<(int total, IEnumerable<User> data)> SearchAsync(string keyword, int page, int pageSize)
+        {
+            var query = _context.Users.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                var k = keyword.Trim().ToLower();
+                query = query.Where(u => (u.FullName != null && u.FullName.ToLower().Contains(k)) ||
+                                         (u.Email != null && u.Email.ToLower().Contains(k)) ||
+                                         (u.PhoneNumber != null && u.PhoneNumber.Contains(k)));
+            }
+
+            var total = await query.CountAsync();
+            var users = await query.OrderByDescending(u => u.CreatedAt)
+                                   .Skip((page - 1) * pageSize)
+                                   .Take(pageSize)
+                                   .ToListAsync();
+            return (total, users);
         }
 
         public async Task<IEnumerable<User>> SearchByNameAsync(string keyword)

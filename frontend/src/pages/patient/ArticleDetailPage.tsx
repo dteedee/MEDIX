@@ -14,12 +14,9 @@ export default function ArticleDetailPage() {
     if (!slug) return
     const loadArticle = async () => {
       try {
-        // Assuming articleService has a method to get by slug, or we can adapt
-        // The third argument should be an options object. We use the slug as a search term.
-        const articles = await articleService.list(1, 1, { search: slug })
-        const found = articles.items[0]
-        if (found) {
-          setArticle(found)
+        const articleData = await articleService.getBySlug(slug);
+        if (articleData) {
+          setArticle(articleData);
         } else {
           setError('Article not found.')
         }
@@ -41,7 +38,13 @@ export default function ArticleDetailPage() {
       <article className="article-detail">
         <h1>{article.title}</h1>
         <div className="article-meta">Đăng ngày {new Date(article.publishedAt ?? article.createdAt!).toLocaleDateString()} bởi {article.authorName ?? 'MEDIX'}</div>
-        {article.coverImageUrl && <img src={article.coverImageUrl} alt={article.title} className="article-cover-image" />}
+        {(article.coverImageUrl || article.thumbnailUrl) && (
+          <img
+            src={article.coverImageUrl || article.thumbnailUrl}
+            alt={article.title}
+            className="article-cover-image"
+          />
+        )}
         <div className="article-content" dangerouslySetInnerHTML={{ __html: article.content ?? '' }} />
       </article>
     </div>

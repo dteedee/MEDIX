@@ -24,9 +24,9 @@ export default function UserEditPage() {
 
   const handleSave = () => {
     showToast(id ? 'Cập nhật người dùng thành công!' : 'Tạo người dùng thành công!')
-    navigate('/manager/users')
+    navigate('/admin/users')
   }
-  const handleCancel = () => navigate('/manager/users')
+  const handleCancel = () => navigate('/admin/users')
 
   if (loading) return <div>Loading...</div>
 

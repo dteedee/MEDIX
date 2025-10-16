@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import ReactDOM from 'react-dom';
-import '../components/ui/Toast.css';
+import './Toast.css';
 
 type ToastType = 'success' | 'error' | 'info';
 

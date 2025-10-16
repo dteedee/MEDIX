@@ -47,9 +47,8 @@ function DoctorRegister() {
             console.log(`${key}:`, value);
         }
         console.log(formData);
-        const plainObject = Object.fromEntries(formData.entries());
-        
-        try {
+
+        /* try {
             const response = await fetch('/api/doctor/register', {
                 method: 'POST',
                 body: formData,
@@ -66,9 +65,9 @@ function DoctorRegister() {
             }
         } catch (error) {
             console.error('Error submitting form:', error);
-        }
+        } */
 
-        /* setErrors({});
+        setErrors({});
         try {
             await DoctorService.registerDoctor(formData);
 
@@ -86,7 +85,7 @@ function DoctorRegister() {
             const errorData = error.response.data;
             setErrors(errorData.errors);
             console.log(errorData.errors);
-        } */
+        }
 
     };
 

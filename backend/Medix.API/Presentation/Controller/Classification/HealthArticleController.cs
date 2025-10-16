@@ -54,6 +54,16 @@ namespace Medix.API.Presentation.Controller.Classification
             return Ok(articles);
         }
 
+        [HttpGet("search")]
+        public async Task<ActionResult> SearchByName([FromQuery] string name, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest(new { Message = "Name query is required" });
+
+            var result = await _healthArticleService.SearchByNameAsync(name, page, pageSize);
+            return Ok(result);
+        }
+
         [HttpPost]
         public async Task<ActionResult> Create([FromBody] HealthArticleCreateDto request)
         {

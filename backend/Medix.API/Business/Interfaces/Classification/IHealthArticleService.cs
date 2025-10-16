@@ -14,6 +14,8 @@ namespace Medix.API.Business.Interfaces.Classification
 
         Task<(int total, IEnumerable<HealthArticlePublicDto> data)> GetByCategoryAsync(Guid categoryId, int page = 1, int pageSize = 10);
 
+    Task<(int total, IEnumerable<HealthArticlePublicDto> data)> SearchByNameAsync(string name, int page = 1, int pageSize = 10);
+
         Task<IEnumerable<HealthArticlePublicDto>> GetHomepageArticlesAsync(int limit = 5);
 
         Task<HealthArticlePublicDto> CreateAsync(HealthArticleCreateDto createDto);

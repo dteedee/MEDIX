@@ -211,6 +211,36 @@ namespace Medix.API.Business.Services.Classification
             });
         }
 
+        public async Task<(int total, IEnumerable<HealthArticlePublicDto> data)> SearchByNameAsync(string name, int page = 1, int pageSize = 10)
+        {
+            var (articles, total) = await _healthArticleRepository.SearchByNameAsync(name, page, pageSize);
+
+            var data = articles.Select(a => new HealthArticlePublicDto
+            {
+                Id = a.Id,
+                Title = a.Title,
+                Slug = a.Slug,
+                Summary = a.Summary,
+                CoverImageUrl = a.CoverImageUrl,
+                ThumbnailUrl = a.ThumbnailUrl,
+                StatusCode = a.StatusCode,
+                ViewCount = a.ViewCount,
+                AuthorName = a.Author?.FullName ?? string.Empty,
+                CreatedAt = a.CreatedAt,
+                UpdatedAt = a.UpdatedAt,
+                DisplayType = a.DisplayType,
+                Categories = a.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
+            });
+
+            return (total, data);
+        }
+
         public async Task<HealthArticlePublicDto> CreateAsync(HealthArticleCreateDto createDto)
         {
             var slugExists = await _healthArticleRepository.SlugExistsAsync(createDto.Slug);

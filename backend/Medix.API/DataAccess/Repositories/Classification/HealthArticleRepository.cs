@@ -96,6 +96,25 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .ToListAsync();
         }
 
+        public async Task<(IEnumerable<HealthArticle> Articles, int TotalCount)> SearchByNameAsync(string name, int page, int pageSize)
+        {
+            var query = _context.HealthArticles
+                .Where(a => a.StatusCode == "Published" &&
+                            (EF.Functions.Like(a.Title, $"%{name}%") || EF.Functions.Like(a.Summary, $"%{name}%")))
+                .Include(a => a.Author)
+                .Include(a => a.StatusCodeNavigation)
+                .Include(a => a.Categories)
+                .OrderByDescending(a => a.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var articles = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (articles, totalCount);
+        }
+
         public async Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null)
         {
             var query = _context.HealthArticles.Where(a => a.Slug == slug);

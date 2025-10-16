@@ -159,5 +159,23 @@ namespace Medix.API.Business.Services.Classification
 
             await _siteBannerRepository.ToggleActiveStatusAsync(id, isActive);
         }
+
+        public async Task<(int total, IEnumerable<SiteBannerDto> data)> SearchByNameAsync(string name, int page = 1, int pageSize = 10)
+        {
+            var (banners, total) = await _siteBannerRepository.SearchByNameAsync(name, page, pageSize);
+
+            var data = banners.Select(b => new SiteBannerDto
+            {
+                Id = b.Id,
+                BannerTitle = b.BannerTitle,
+                BannerImageUrl = b.BannerImageUrl,
+                BannerUrl = b.BannerUrl,
+                IsActive = b.IsActive,
+                DisplayOrder = b.DisplayOrder,
+                CreatedAt = b.CreatedAt
+            });
+
+            return (total, data);
+        }
     }
 }

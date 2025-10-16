@@ -21,5 +21,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task UpdateDisplayOrderAsync(Guid id, int displayOrder);
 
         Task ToggleActiveStatusAsync(Guid id, bool isActive);
+
+        Task<(int total, IEnumerable<SiteBannerDto> data)> SearchByNameAsync(string name, int page = 1, int pageSize = 10);
     }
 }

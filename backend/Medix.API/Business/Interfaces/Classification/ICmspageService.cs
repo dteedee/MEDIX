@@ -9,5 +9,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<CmspageDto> CreateAsync(CmspageCreateDto createDto);
         Task<CmspageDto> UpdateAsync(Guid id, CmspageUpdateDto updateDto);
         Task<bool> DeleteAsync(Guid id);
+
+        Task<(int total, IEnumerable<CmspageDto> data)> SearchByNameAsync(string name, int page = 1, int pageSize = 10);
     }
 }

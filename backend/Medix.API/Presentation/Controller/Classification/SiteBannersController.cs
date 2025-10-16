@@ -58,5 +58,15 @@ namespace Medix.API.Presentation.Controller.Classification
             await _siteBannerService.DeleteAsync(id);
             return Ok();
         }
+
+        [HttpGet("search")]
+        public async Task<ActionResult> SearchByName([FromQuery] string name, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest(new { Message = "Name query is required" });
+
+            var result = await _siteBannerService.SearchByNameAsync(name, page, pageSize);
+            return Ok(result);
+        }
     }
 }

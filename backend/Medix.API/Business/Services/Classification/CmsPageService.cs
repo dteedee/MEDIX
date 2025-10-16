@@ -152,5 +152,28 @@ namespace Medix.API.Business.Services.Classification
 
             return true;
         }
+
+        public async Task<(int total, IEnumerable<CmspageDto> data)> SearchByNameAsync(string name, int page = 1, int pageSize = 10)
+        {
+            var (pages, total) = await _cmspageRepository.SearchByNameAsync(name, page, pageSize);
+
+            var data = pages.Select(p => new CmspageDto
+            {
+                Id = p.Id,
+                PageTitle = p.PageTitle,
+                PageSlug = p.PageSlug,
+                PageContent = p.PageContent,
+                MetaTitle = p.MetaTitle,
+                MetaDescription = p.MetaDescription,
+                IsPublished = p.IsPublished,
+                PublishedAt = p.PublishedAt,
+                AuthorName = p.Author?.FullName ?? string.Empty,
+                ViewCount = p.ViewCount,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt
+            });
+
+            return (total, data);
+        }
     }
 }

@@ -145,5 +145,7 @@ namespace Medix.API.Business.Services.UserManagement
             var user = await _userRepository.GetByEmailAsync(email);
             return user != null;
         }
+
+        public async Task<bool> PhoneNumberExistsAsync(string phoneNumber) => await _userRepository.ExistsByPhoneNumberAsync(phoneNumber);
     }
 }

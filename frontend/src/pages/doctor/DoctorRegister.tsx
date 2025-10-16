@@ -3,8 +3,9 @@ import '../../styles/doctor-register.css'
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { SpecializationDto } from '../types/doctor.types';
-
-
+import Header from '../../components/layout/Header';
+import Footer from '../../components/layout/Footer';
+import Swal from 'sweetalert2';
 
 function DoctorRegister() {
     const [specializations, setSpecializations] = useState<SpecializationDto[]>([]);
@@ -59,6 +60,15 @@ function DoctorRegister() {
             if (response.ok) {
                 console.log('Registration successful');
                 setErrors({});
+                Swal.fire({
+                    title: 'Đăng ký thành công!',
+                    text: 'Bạn sẽ được chuyển về trang chủ',
+                    icon: 'success',
+                    confirmButtonText: 'OK',
+                }).then(() => {
+                    window.location.href = '/';
+                });
+
             } else {
                 console.error('Registration failed');
                 const errorData = await response.json();
@@ -72,6 +82,7 @@ function DoctorRegister() {
 
     return (
         <div>
+            <Header />
             <main className="main-container">
                 <div className="form-container">
                     <form id="registrationForm" encType='multipart/form-data' onSubmit={handleSubmit}>
@@ -90,6 +101,9 @@ function DoctorRegister() {
                                 <div className="form-group">
                                     <label className="form-label">Ngày sinh</label>
                                     <input type="date" className="form-input" placeholder="mm/dd/yyyy" name='dob' />
+                                    {errors.Dob?.[0] && (
+                                        <div className="text-danger">{errors.Dob[0]}</div>
+                                    )}
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Giới tính</label>
@@ -268,6 +282,7 @@ function DoctorRegister() {
                     </form>
                 </div>
             </main>
+            <Footer />
         </div>
     )
 }

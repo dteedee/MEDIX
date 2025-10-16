@@ -1,54 +1,118 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Medix.API.Application.DTOs.Doctor;
 using Medix.API.Business.Interfaces.Classification;
+using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.Community;
 using Medix.API.Models.DTOs.Doctor;
+using Medix.API.Models.Entities;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Medix.API.Presentation.Controller.Classification
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class DoctorController : ControllerBase
     {
         private readonly IDoctorService _doctorService;
         private readonly ISpecializationService _specializationService;
         private readonly CloudinaryService _cloudinaryService;
+        private readonly IUserService _userSerivce;
 
-        public DoctorController(IDoctorService doctorService, ISpecializationService specializationService, CloudinaryService cloudinaryService)
+        public DoctorController(IDoctorService doctorService, ISpecializationService specializationService,
+            CloudinaryService cloudinaryService, IUserService userService)
         {
             _doctorService = doctorService;
             _specializationService = specializationService;
             _cloudinaryService = cloudinaryService;
+            _userSerivce = userService;
         }
 
-        [HttpGet("specializations")]
-        public async Task<ActionResult> GetSpecializations()
+        [HttpGet("register-metadata")]
+        public async Task<IActionResult> Get()
         {
-            try
+            var specializations = await _specializationService.GetAllSpecializationsAsync();
+            var response = new DoctorRegisterMetadataDto
             {
-                var specializations = await _specializationService.GetAllAsync();
-                return Ok(specializations);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi khi lấy danh sách chuyên khoa", error = ex.Message });
-            }
+                Specializations = specializations.Select(s => new SpecializationDto
+                {
+                    Id = s.Id,
+                    Name = s.Name
+                }).ToList()
+            };
+            return Ok(response);
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult> RegisterDoctor([FromForm] DoctorRegisterRequest request)
+        public async Task<IActionResult> RegisterDoctor([FromForm] DoctorRegisterRequest request)
         {
-            try
+            await ValidateAsync(request);
+            if (!ModelState.IsValid)
             {
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
-
-                // TODO: Implement doctor registration logic
-                await Task.Delay(1); // Placeholder for async operation
-                return Ok(new { message = "Đăng ký bác sĩ thành công" });
+                return ValidationProblem(ModelState);
             }
-            catch (Exception ex)
+
+            User user = new User
             {
-                return StatusCode(500, new { message = "Lỗi khi đăng ký bác sĩ", error = ex.Message });
+                Id = Guid.NewGuid(),
+                UserName = request.FullName,
+                NormalizedUserName = request.FullName.ToUpper(),
+                Email = request.Email,
+                NormalizedEmail = request.Email.ToUpper(),
+                PasswordHash = "", // Password will be set later
+                PhoneNumber = request.PhoneNumber,
+                PhoneNumberConfirmed = false,
+                EmailConfirmed = false,
+                FullName = request.FullName,
+                DateOfBirth = request.Dob == null ? null : DateOnly.Parse(request.Dob),
+                GenderCode = request.GenderCode,
+                IdentificationNumber = request.IdentificationNumber,
+                Address = "", // Placeholder
+                Status = 2, // Assuming 2 means pending verification
+            };
+
+            var licenseImageUrl = await _cloudinaryService.UploadImageAsync(request.LicenseImage);
+
+            Doctor doctor = new Doctor
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                SpecializationId = Guid.Parse("247CAA7D-7FF2-4404-9A92-BCDF9C595290"), // Default specialization
+                LicenseNumber = request.LicenseNumber,
+                LicenseImageUrl = licenseImageUrl != null ? licenseImageUrl : "",
+                Bio = request.Bio,
+                Education = request.Education,
+                YearsOfExperience = (int)request.YearsOfExperience,
+                ConsultationFee = 0, // Default fee
+            };
+
+            UserRole userRole = new UserRole
+            {
+                UserId = user.Id,
+                RoleCode = "Doctor",
+            };
+
+            if (!await _doctorService.RegisterDoctorAsync(user, doctor, userRole))
+            {
+                return BadRequest(new { Message = "Registration failed" });
+            }
+
+            return Ok(new { Message = "Doctor registered successfully" });
+        }
+
+        private async Task ValidateAsync(DoctorRegisterRequest request)
+        {
+            if (await _userSerivce.EmailExistsAsync(request.Email))
+            {
+                ModelState.AddModelError("Email", "Email đã được sử dụng");
+            }
+
+            if (await _userSerivce.PhoneNumberExistsAsync(request.PhoneNumber))
+            {
+                ModelState.AddModelError("PhoneNumber", "Số điện thoại đã được sử dụng");
+            }
+
+            if (await _doctorService.LicenseNumberExistsAsync(request.LicenseNumber))
+            {
+                ModelState.AddModelError("LicenseNumber", "Số giấy phép hành nghề đã được sử dụng");
             }
         }
     }

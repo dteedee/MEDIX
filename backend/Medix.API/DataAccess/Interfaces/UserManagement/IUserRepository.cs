@@ -13,5 +13,6 @@ namespace Medix.API.DataAccess.Interfaces.UserManagement
         Task<User> SaveUserAsync(User user);
         Task<IEnumerable<User>> GetAllAsync();
         Task<UserRole> CreateUserRoleAsync(UserRole userRole);
+        Task<bool> ExistsByPhoneNumberAsync(string phoneNumber);
     }
 }

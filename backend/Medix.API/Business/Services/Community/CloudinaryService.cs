@@ -1,21 +1,46 @@
-using Microsoft.Extensions.Logging;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 
 namespace Medix.API.Business.Services.Community
 {
     public class CloudinaryService
     {
         private readonly ILogger<CloudinaryService> _logger;
+        private readonly IConfiguration _configuration;
+        private readonly Cloudinary _cloudinary;
 
-        public CloudinaryService(ILogger<CloudinaryService> logger)
+        public CloudinaryService(ILogger<CloudinaryService> logger, IConfiguration configuration)
         {
             _logger = logger;
+            _configuration = configuration;
+            var cloudName = _configuration["Cloudinary:CloudName"];
+            var apiKey = _configuration["Cloudinary:ApiKey"];
+            var apiSecret = _configuration["Cloudinary:ApiSecret"];
+
+            if (string.IsNullOrEmpty(cloudName) || string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
+            {
+                throw new InvalidOperationException("Cloudinary environment variables are not set properly.");
+            }
+
+            var account = new Account(cloudName, apiKey, apiSecret);
+            _cloudinary = new Cloudinary(account);
+            _configuration = configuration;
         }
 
-        public async Task<string> UploadImageAsync(Stream imageStream, string fileName)
+        public async Task<string?> UploadImageAsync(IFormFile? file)
         {
-            await Task.Delay(100);
-            _logger.LogWarning("CloudinaryService chưa được triển khai. Cần package CloudinaryDotNet.");
-            return $"https://placeholder.com/{fileName}";
+            if (file?.Length > 0)
+            {
+                await using var stream = file.OpenReadStream();
+                var uploadParams = new ImageUploadParams
+                {
+                    File = new FileDescription(file.FileName, stream),
+                    Transformation = new Transformation().Crop("fill").Gravity("face")
+                };
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                return uploadResult.SecureUrl.ToString();
+            }
+            return null;
         }
 
         public async Task<bool> DeleteImageAsync(string publicId)

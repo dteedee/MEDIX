@@ -6,5 +6,6 @@ namespace Medix.API.Business.Interfaces.Classification
     {
         Task<bool> RegisterDoctorAsync(User user, Doctor doctor, UserRole role);
         Task<List<Doctor>> GetHomePageDoctorsAsync();
+        Task<bool> LicenseNumberExistsAsync(string licenseNumber);
     }
 }

@@ -47,7 +47,7 @@ export const validateIdentificationNumber = (idNumber: string): boolean => {
 // Gender code validation matching backend
 export const validateGenderCode = (genderCode: string): boolean => {
   if (!genderCode) return true; // Optional field
-  return VALIDATION_RULES.GENDER_CODES.includes(genderCode);
+  return VALIDATION_RULES.GENDER_CODES.includes(genderCode as Gender);
 };
 
 // Date of birth validation

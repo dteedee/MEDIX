@@ -36,12 +36,31 @@ export class AuthService {
   async registerPatient(patientData: PatientRegistration): Promise<AuthResponse> {
     try {
       // Transform data to match backend RegistrationPayloadDTO structure
+      // Backend C# với [FromBody] sẽ tự động map camelCase → PascalCase
       const payload = {
-        RegisterRequest: patientData.registerRequest,
-        PatientDTO: patientData.patientDTO
+        registerRequest: {
+          email: patientData.registerRequest.email,
+          password: patientData.registerRequest.password,
+          passwordConfirmation: patientData.registerRequest.passwordConfirmation,
+          fullName: patientData.registerRequest.fullName,
+          phoneNumber: patientData.registerRequest.phoneNumber || null,
+          dateOfBirth: patientData.registerRequest.dateOfBirth || null,
+          identificationNumber: patientData.registerRequest.identificationNumber || null,
+          genderCode: patientData.registerRequest.genderCode || null,
+        },
+        patientDTO: {
+          bloodTypeCode: patientData.patientDTO.bloodTypeCode || null,
+          height: patientData.patientDTO.height || null,
+          weight: patientData.patientDTO.weight || null,
+          medicalHistory: patientData.patientDTO.medicalHistory || null,
+          allergies: patientData.patientDTO.allergies || null,
+          emergencyContactName: patientData.patientDTO.emergencyContactName || null,
+          emergencyContactPhone: patientData.patientDTO.emergencyContactPhone || null,
+          isActive: true, // Default to active
+        }
       };
       
-      const response = await apiClient.post<AuthResponse>('/register/registerPatient', payload);
+      const response = await apiClient.post<AuthResponse>('https://localhost:55883/api/register/registerPatient', payload);
       return response.data;
     } catch (error: any) {
       throw this.handleApiError(error);

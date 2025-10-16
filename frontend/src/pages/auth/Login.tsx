@@ -2,6 +2,23 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginRequest } from '../../types/auth.types';
+import { UserRole } from '../../types/common.types';
+
+// Helper function to get dashboard path based on role
+const getDashboardPath = (role: string): string => {
+  switch (role) {
+    case UserRole.ADMIN:
+      return '/app/admin';
+    case UserRole.MANAGER:
+      return '/app/manager';
+    case UserRole.DOCTOR:
+      return '/app/doctor/dashboard';
+    case UserRole.PATIENT:
+      return '/app/patient/dashboard';
+    default:
+      return '/app/dashboard';
+  }
+};
 
 const Login: React.FC = () => {
   const [formData, setFormData] = useState<LoginRequest>({
@@ -12,11 +29,11 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = (location.state as any)?.from?.pathname || '/dashboard';
+  const from = (location.state as any)?.from?.pathname;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -33,7 +50,13 @@ const Login: React.FC = () => {
     try {
       setIsLoading(true);
       await login(formData);
-      navigate(from, { replace: true });
+      
+      // Get user role from localStorage after successful login
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const dashboardPath = getDashboardPath(userData.role);
+      
+      // Navigate to role-specific dashboard or the original requested path
+      navigate(from || dashboardPath, { replace: true });
     } catch (err: any) {
       setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {

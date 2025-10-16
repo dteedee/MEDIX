@@ -11,11 +11,12 @@ namespace Medix.API.Business.Services.UserManagement
     {
         private readonly IUserRepository _userRepository;
         private readonly IJwtService _jwtService;
-
-        public AuthService(IUserRepository userRepository, IJwtService jwtService)
+        private readonly IUserRoleRepository userRoleRepository;
+        public AuthService(IUserRepository userRepository, IJwtService jwtService, IUserRoleRepository userRoleRepository)
         {
             _userRepository = userRepository;
             _jwtService = jwtService;
+            this.userRoleRepository = userRoleRepository;
         }
 
         public async Task<AuthResponseDto> LoginAsync(LoginRequestDto loginRequest)
@@ -23,8 +24,8 @@ namespace Medix.API.Business.Services.UserManagement
             var user = await _userRepository.GetByEmailAsync(loginRequest.Email);
             
             if (user != null && BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash))
-            {
-                var accessToken = _jwtService.GenerateAccessToken(user, new List<string> { user.Role });
+            {var role = await userRoleRepository.GetByIdAsync(user.Id);
+                var accessToken = _jwtService.GenerateAccessToken(user, new List<string> {role.RoleCode });
                 var refreshToken = _jwtService.GenerateRefreshToken();
 
                 return new AuthResponseDto
@@ -37,7 +38,7 @@ namespace Medix.API.Business.Services.UserManagement
                         Id = user.Id,
                         Email = user.Email,
                         FullName = user.FullName,
-                        Role = user.Role,
+                        Role = role.RoleCode,
                         EmailConfirmed = user.EmailConfirmed,
                         CreatedAt = user.CreatedAt
                     }

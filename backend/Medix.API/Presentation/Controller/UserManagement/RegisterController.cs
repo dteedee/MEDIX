@@ -3,7 +3,9 @@ using Medix.API.Business.Interfaces.Community;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess;
 using Medix.API.Models.DTOs;
+using Medix.API.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medix.API.Presentation.Controller.UserManagement
 {
@@ -47,16 +49,24 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
         }
         [HttpPost("sendEmailVerified")]
-        public async Task<String> SendEmailVerified([FromBody] string email)
+        public async Task<string> SendEmailVerified([FromBody] string email)
         {
             try
             {
-                // Generate 6-digit verification code
-                var verificationCode = new Random().Next(100000, 999999).ToString(); // Simple 6-digit code
+                var verificationCode = new Random().Next(100000, 999999).ToString();
 
-                // TODO: Store verification code in database with expiration time
+                // Lưu vào database
+                var entity = new EmailVerificationCode
+                {
+                    Email = email,
+                    Code = verificationCode,
+                    ExpirationTime = DateTime.UtcNow.AddMinutes(10), // Hết hạn sau 10 phút
+                    IsUsed = false
+                };
+                _context.EmailVerificationCodes.Add(entity);
+                await _context.SaveChangesAsync();
 
-                // Send email
+                // Gửi email
                 var result = await _emailService.SendVerificationCodeAsync(email, verificationCode);
                 return verificationCode;
             }
@@ -65,6 +75,41 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 Console.WriteLine($"Error in SendEmailVerified: {ex.Message}");
                 return null;
             }
+        }
+
+
+        [HttpPost("verifyEmailCode")]
+        public async Task<IActionResult> VerifyEmailCode([FromBody] EmailCodeVerifyRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Code))
+                return BadRequest(new { message = "Email và mã xác thực là bắt buộc" });
+
+            var codeEntity = await _context.EmailVerificationCodes
+                .Where(e => e.Email == request.Email && e.Code == request.Code)
+                .OrderByDescending(e => e.ExpirationTime)
+                .FirstOrDefaultAsync();
+
+            if (codeEntity == null)
+                return BadRequest(new { message = "Mã xác thực không đúng" });
+
+            if (codeEntity.IsUsed)
+                return BadRequest(new { message = "Mã xác thực đã được sử dụng" });
+
+            if (codeEntity.ExpirationTime < DateTime.UtcNow)
+                return BadRequest(new { message = "Mã xác thực đã hết hạn" });
+
+            // Đánh dấu đã sử dụng (nếu muốn)
+            codeEntity.IsUsed = true;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Xác thực thành công" });
+        }
+
+        // Request DTO
+        public class EmailCodeVerifyRequest
+        {
+            public string Email { get; set; }
+            public string Code { get; set; }
         }
 
         [HttpPost("resendEmailVerificationCode")]
@@ -101,7 +146,13 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
         [HttpPost("registerPatient")]
         public async Task<IActionResult> RegisterAsync([FromBody] RegistrationPayloadDTO registration)
-        {
+        { 
+            
+            if (_context.Users.Any(p => p.Email == registration.RegisterRequest.Email) || _context.Users.Any(d => d.Email == registration.RegisterRequest.Email))
+            {
+                ModelState.AddModelError("Email", "Email đã được sử dụng");
+                return BadRequest(ModelState);
+            }
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);

@@ -17,6 +17,8 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { ManageDashboard } from './pages/manager/ManageDashboard';
 import { DoctorRegister } from './pages/doctor/DoctorRegister';
 import { AIChatBot } from './pages/ai/AIChatBot';
+import { PatientDashboard } from './pages/patient/patientdashboard';
+import { PatientProfile } from './pages/patient/patientProfile';
 
 export function App() {
   return (
@@ -44,31 +46,31 @@ export function App() {
           <Route index element={<HomePage />} />
           
           {/* Main layout routes */}
-          <Route path="/app" element={<MainLayout />}>
+          <Route path="/app" element={<MainLayout />}> 
 
             {/* Protected routes */}
-            <Route path="/dashboard" element={
+            <Route path="dashboard" element={
               <ProtectedRoute>
                 <DashboardRedirect />
               </ProtectedRoute>
             } />
 
             {/* Admin routes */}
-            <Route path="/admin/*" element={
+            <Route path="admin/*" element={
               <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
                 <AdminDashboard />
               </ProtectedRoute>
             } />
 
             {/* Manager routes */}
-            <Route path="/manager/*" element={
+            <Route path="manager/*" element={
               <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
                 <ManageDashboard />
               </ProtectedRoute>
             } />
 
             {/* Doctor routes */}
-            <Route path="/doctor/*" element={
+            <Route path="doctor/*" element={
               <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
                 <Routes>
                   <Route index element={<Navigate to="dashboard" replace />} />
@@ -79,24 +81,25 @@ export function App() {
             } />
 
             {/* Patient routes */}
-            <Route path="/patient/*" element={
+            <Route path="patient/*" element={
               <ProtectedRoute requiredRoles={[UserRole.PATIENT]}>
                 <Routes>
                   <Route index element={<Navigate to="dashboard" replace />} />
-                  <Route path="dashboard" element={<div>Patient Dashboard</div>} />
+                  <Route path="dashboard" element={<PatientDashboard />} />
+                  <Route path="profile" element={<PatientProfile />} />
                 </Routes>
               </ProtectedRoute>
             } />
 
             {/* AI Chat Bot */}
-            <Route path="/ai-chat" element={
+            <Route path="ai-chat" element={
               <ProtectedRoute>
                 <AIChatBot />
               </ProtectedRoute>
             } />
 
             {/* Error routes */}
-            <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="unauthorized" element={<Unauthorized />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
@@ -111,13 +114,13 @@ const DashboardRedirect: React.FC = () => {
   
   switch (userRole) {
     case UserRole.ADMIN:
-      return <Navigate to="/admin" replace />;
+      return <Navigate to="/app/admin" replace />;
     case UserRole.MANAGER:
-      return <Navigate to="/manager" replace />;
+      return <Navigate to="/app/manager" replace />;
     case UserRole.DOCTOR:
-      return <Navigate to="/doctor" replace />;
+      return <Navigate to="/app/doctor" replace />;
     case UserRole.PATIENT:
-      return <Navigate to="/patient" replace />;
+      return <Navigate to="/app/patient" replace />;
     default:
       return <Navigate to="/" replace />;
   }

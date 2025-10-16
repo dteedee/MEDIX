@@ -16,6 +16,8 @@ export interface RegisterRequestPatient {
   genderCode?: string; // "Male", "Female", "Others"
 }
 
+
+
 export interface RegisterRequest {
   email: string;
   password: string;
@@ -49,6 +51,7 @@ export interface AuthResponse {
 export interface User {
   id: string;
   email: string;
+  userName: string;
   fullName: string;
   phoneNumber?: string;
   role: string;

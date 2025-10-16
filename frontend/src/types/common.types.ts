@@ -124,3 +124,8 @@ export const VALIDATION_RULES = {
     PATTERN: /^[0-9+\-\s\(\)]+$/,
   }
 } as const;
+
+export interface BloodTypeDTO {
+  code: string;
+  displayName: string;
+}

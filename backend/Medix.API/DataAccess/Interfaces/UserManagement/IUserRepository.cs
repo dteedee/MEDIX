@@ -4,7 +4,7 @@ namespace Medix.API.DataAccess.Interfaces.UserManagement
 {
     public interface IUserRepository
     {
-        Task<User?> GetByIdAsync(Guid id);
+        Task<User?> GetByIdAsync(Guid? id);
         Task<User?> GetByEmailAsync(string email);
         Task<User> CreateAsync(User user);
         Task<User> UpdateAsync(User user);
@@ -13,5 +13,6 @@ namespace Medix.API.DataAccess.Interfaces.UserManagement
         Task<User> SaveUserAsync(User user);
         Task<IEnumerable<User>> GetAllAsync();
         Task<UserRole> CreateUserRoleAsync(UserRole userRole);
+       
     }
 }

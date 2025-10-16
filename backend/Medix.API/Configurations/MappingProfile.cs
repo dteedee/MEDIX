@@ -18,6 +18,7 @@ namespace Medix.API.Configurations
             CreateMap<ContentCategory, ContentCategoryDTO>();
             CreateMap<HealthArticle, HealthArticlePublicDto>();
             CreateMap<SiteBanner, SiteBannerDto>();
+            CreateMap<User, UserBasicInfoDto>();
         }
     }
 }

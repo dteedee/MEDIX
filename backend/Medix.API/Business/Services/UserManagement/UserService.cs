@@ -11,6 +11,7 @@ namespace Medix.API.Business.Services.UserManagement
         private readonly IUserRoleRepository _userRoleRepository;
         private readonly IUserRepository _userRepository;
         private readonly IPatientRepository _patientRepository;
+   
 
         public UserService(IUserRepository userRepository, IPatientRepository patientRepository, IUserRoleRepository userRoleRepository)
         {
@@ -47,8 +48,8 @@ namespace Medix.API.Business.Services.UserManagement
 
             var savedUser = await _userRepository.CreateAsync(user);
             // TODO: Fix when UserRoleRepository.CreateAsync is implemented
-            // await _userRoleRepository.CreateAsync(new UserRole { UserId = savedUser.Id, RoleCode = "Patient" });
-
+        
+            await _userRoleRepository.AssignRole("Patient", savedUser.Id);
             return new UserDto
             {
                 Id = savedUser.Id,
@@ -144,6 +145,56 @@ namespace Medix.API.Business.Services.UserManagement
         {
             var user = await _userRepository.GetByEmailAsync(email);
             return user != null;
+        }
+
+        public async Task<UserBasicInfoDto> GetUserBasicInfo(Guid id)
+        {
+            var user = await _userRepository.GetByIdAsync(id);
+
+            if (user == null) throw new ArgumentException("Không tìm thấy người dùng");
+
+            return new UserBasicInfoDto
+            {
+                Id = user.Id,
+                username = user.UserName,
+                FullName = user.FullName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                dob = user.DateOfBirth,
+                address = user.Address
+            };
+        }
+
+        public async Task<UserBasicInfoDto> UpdateUserBasicInfo(UpdateUserDto updateDto)
+        {
+            var user = await _userRepository.GetByIdAsync(updateDto.Id);
+            if (user == null) throw new ArgumentException("Không tìm thấy người dùng");
+
+            if (updateDto.FullName != null)
+                user.FullName = updateDto.FullName;
+            if (updateDto.PhoneNumber != null)
+                user.PhoneNumber = updateDto.PhoneNumber;
+            if (updateDto.address != null)
+                user.Address = updateDto.address;
+            if (updateDto.dob != null)
+                user.DateOfBirth = updateDto.dob;
+            if (updateDto.Email != null)
+                user.Email = updateDto.Email;
+
+            user.UpdatedAt = DateTime.UtcNow;
+
+            var updatedUser = await _userRepository.UpdateAsync(user);
+
+            return new UserBasicInfoDto
+            {
+                Id = updatedUser.Id,
+                FullName = updatedUser.FullName,
+                Email = updatedUser.Email,
+                PhoneNumber = updatedUser.PhoneNumber,
+                address = updatedUser.Address,
+                dob = updatedUser.DateOfBirth,
+                CreatedAt = updatedUser.CreatedAt
+            };
         }
     }
 }

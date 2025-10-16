@@ -14,6 +14,15 @@ import {
     PatientRegistration
 } from '../types/auth.types';
 
+declare global {
+    interface ImportMetaEnv {
+        readonly VITE_GOOGLE_CLIENT_ID: string
+    }
+    interface ImportMeta {
+        readonly env: ImportMetaEnv
+    }
+}
+
 export class AuthService {
     async login(credentials: LoginRequest): Promise<AuthResponse> {
         try {
@@ -56,9 +65,17 @@ export class AuthService {
         }
     }
 
-    async resetPassword(data: ResetPasswordRequest): Promise<void> {
+    async resetPassword(data: { token: string; email: string; password: string; confirmPassword: string }): Promise<void> {
         try {
             await apiClient.post('/auth/reset-password', data);
+        } catch (error: any) {
+            throw this.handleApiError(error);
+        }
+    }
+
+    async changePassword(data: { currentPassword: string; newPassword: string }): Promise<void> {
+        try {
+            await apiClient.post('/auth/change-password', data);
         } catch (error: any) {
             throw this.handleApiError(error);
         }
@@ -70,6 +87,18 @@ export class AuthService {
             return response.data;
         } catch (error: any) {
             throw this.handleApiError(error);
+        }
+    }
+    async loginWithGoogle(idToken: string): Promise<AuthResponse> {
+        try {
+            const response = await apiClient.post<AuthResponse>('/auth/login-google', { idToken });
+            return response.data;
+        } catch (error: any) {
+            console.error('❌ Lỗi khi gọi /auth/login-google:', error?.response?.data || error);
+            if (error?.response?.data?.message?.includes('JWT must consist')) {
+                throw new Error('ID Token từ Google không hợp lệ. Kiểm tra Client ID hoặc cấu hình Google Console.');
+            }
+            throw new Error(error?.response?.data?.message || 'Đăng nhập Google thất bại.');
         }
     }
 

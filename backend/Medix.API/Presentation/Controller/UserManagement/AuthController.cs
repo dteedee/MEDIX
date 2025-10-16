@@ -4,6 +4,7 @@ using Medix.API.Exceptions;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
+using Medix.API.Models.DTOs;
 
 namespace Medix.API.Presentation.Controller.UserManagement
 {
@@ -25,13 +26,23 @@ namespace Medix.API.Presentation.Controller.UserManagement
         {
             try
             {
+                _logger.LogInformation("Login attempt for email: {Email} at {Time}", loginRequest?.Email, DateTime.UtcNow);
                 if (!ModelState.IsValid)
                 {
                     return BadRequest(ModelState);
                 }
 
-                var result = await _authService.LoginAsync(loginRequest);
-                return Ok(result);
+                try
+                {
+                    var result = await _authService.LoginAsync(loginRequest);
+                    _logger.LogInformation("Login success for email: {Email} at {Time}", loginRequest.Email, DateTime.UtcNow);
+                    return Ok(result);
+                }
+                catch (UnauthorizedException ex)
+                {
+                    _logger.LogWarning(ex, "Login failed for email: {Email} at {Time}", loginRequest.Email, DateTime.UtcNow);
+                    throw;
+                }
             }
             catch (UnauthorizedException ex)
             {
@@ -39,7 +50,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during login");
+                _logger.LogError(ex, "Unexpected error during login for email: {Email} at {Time}", loginRequest?.Email, DateTime.UtcNow);
                 return StatusCode(500, new { message = "An error occurred during login" });
             }
         }
@@ -65,6 +76,23 @@ namespace Medix.API.Presentation.Controller.UserManagement
             {
                 _logger.LogError(ex, "Error during registration");
                 return StatusCode(500, new { message = "An error occurred during registration" });
+            }
+        }
+
+        [HttpPost("login-google")]
+        public async Task<IActionResult> LoginWithGoogle([FromBody] GoogleLoginRequestDto request)
+        {
+            try
+            {
+                _logger.LogInformation("Google login attempt at {Time}", DateTime.UtcNow);
+                var result = await _authService.LoginWithGoogleAsync(request);
+                _logger.LogInformation("Google login success for email: {Email} at {Time}", result.User?.Email, DateTime.UtcNow);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Google login failed at {Time}", DateTime.UtcNow);
+                return StatusCode(500, new { message = "Đăng nhập Google thất bại" });
             }
         }
 
@@ -234,14 +262,14 @@ namespace Medix.API.Presentation.Controller.UserManagement
                     context.RefRoles.Add(adminRole);
                 }
 
-                var userRole = await context.RefRoles.FirstOrDefaultAsync(r => r.Code == "User");
+                var userRole = await context.RefRoles.FirstOrDefaultAsync(r => r.Code == "Patient");
                 if (userRole == null)
                 {
                     userRole = new Medix.API.Models.Enums.RefRole
                     {
-                        Code = "User",
-                        DisplayName = "Người dùng",
-                        Description = "Quyền người dùng tiêu chuẩn",
+                        Code = "Patient",
+                        DisplayName = "Bệnh nhân",
+                        Description = "Quyền người dùng bệnh nhân",
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow
                     };
@@ -302,8 +330,8 @@ namespace Medix.API.Presentation.Controller.UserManagement
                     });
                 }
 
-                // 3. Create Normal User
-                var userEmail = "user@medix.local";
+                // 3. Create Patient User
+                var userEmail = "patient@medix.local";
                 var existingUser = await userRepository.GetByEmailAsync(userEmail);
                 if (existingUser == null)
                 {
@@ -314,8 +342,8 @@ namespace Medix.API.Presentation.Controller.UserManagement
                         NormalizedUserName = userEmail.ToUpper(),
                         Email = userEmail,
                         NormalizedEmail = userEmail.ToUpper(),
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("User@123"),
-                        FullName = "Medix User",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("Patient@123"),
+                        FullName = "Medix Patient",
                         EmailConfirmed = true,
                         PhoneNumberConfirmed = false,
                         Status = 1,
@@ -328,29 +356,29 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
                     await userRepository.CreateAsync(normalUser);
 
-                    // Assign User role
+                    // Assign Patient role
                     var normalUserRole = new Medix.API.Models.Entities.UserRole
                     {
                         UserId = normalUser.Id,
-                        RoleCode = "User",
+                        RoleCode = "Patient",
                         CreatedAt = DateTime.UtcNow
                     };
                     context.UserRoles.Add(normalUserRole);
 
                     results.Add(new { 
-                        message = "Normal user created", 
+                        message = "Patient user created", 
                         email = userEmail, 
-                        password = "User@123",
-                        role = "User"
+                        password = "Patient@123",
+                        role = "Patient"
                     });
                 }
                 else
                 {
                     results.Add(new { 
-                        message = "Normal user already exists", 
+                        message = "Patient user already exists", 
                         email = userEmail, 
-                        password = "User@123",
-                        role = "User"
+                        password = "Patient@123",
+                        role = "Patient"
                     });
                 }
 
@@ -426,7 +454,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
                     var requestedUserRole = new Medix.API.Models.Entities.UserRole
                     {
                         UserId = requestedUser.Id,
-                        RoleCode = "User",
+                        RoleCode = "Patient",
                         CreatedAt = DateTime.UtcNow
                     };
                     context.UserRoles.Add(requestedUserRole);
@@ -435,7 +463,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
                         message = "Requested test user created", 
                         email = requestedEmail, 
                         password = "@12345Dung",
-                        role = "User"
+                        role = "Patient"
                     });
                 }
                 else
@@ -444,7 +472,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
                         message = "Requested test user already exists", 
                         email = requestedEmail, 
                         password = "@12345Dung",
-                        role = "User"
+                        role = "Patient"
                     });
                 }
 

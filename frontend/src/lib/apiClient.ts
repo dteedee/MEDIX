@@ -36,8 +36,22 @@ class ApiClient {
       (response: AxiosResponse) => response,
       async (error) => {
         const originalRequest = error.config;
+        if (!originalRequest) return Promise.reject(error);
 
+        const reqUrl = (originalRequest.url || '').toString();
+        const isAuthEndpoint =
+          reqUrl.includes('/auth/login') ||
+          reqUrl.includes('/auth/refresh-token') ||
+          reqUrl.includes('/auth/logout');
+
+        // If the failing request is an auth route (login/refresh) don't attempt refresh —
+        // let the caller receive the original 401 so UI can show the correct message.
         if (error.response?.status === 401 && !originalRequest._retry) {
+          if (isAuthEndpoint) {
+            this.handleLogout();
+            return Promise.reject(error); // propagate original 401/error to caller
+          }
+
           originalRequest._retry = true;
 
           try {

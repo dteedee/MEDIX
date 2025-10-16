@@ -1,14 +1,20 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import '../../styles/header.css'
 
 const Header = () => {
-    const token = null;
+    const navigate = useNavigate();
+    const { isAuthenticated, logout } = useAuth();
     const [showDropdown, setShowDropdown] = useState(false);
 
     const toggleDropdown = () => setShowDropdown((prev) => !prev);
-    const handleLogout = () => {
-        // Your logout logic here
-        console.log("Logging out...");
+    const handleLogout = async () => {
+        try {
+            await logout();
+        } finally {
+            navigate('/');
+        }
     };
 
 
@@ -26,7 +32,7 @@ const Header = () => {
                     <button>🔍</button>
                 </div>
                 <div className="header-links">
-                    {token ? (
+                    {isAuthenticated ? (
                         <div className="dropdown">
                             <img
                                 src="https://pbs.twimg.com/profile_images/1937117284725661696/8ppkq53g_400x400.jpg" // Replace with actual avatar URL
@@ -35,8 +41,9 @@ const Header = () => {
                                 data-bs-toggle="dropdown"
                                 aria-expanded="false"
                                 style={{ width: '40px', height: '40px', cursor: 'pointer' }}
+                                onClick={toggleDropdown}
                             />
-                            <ul className="dropdown-menu dropdown-menu-end">
+                            <ul className="dropdown-menu dropdown-menu-end" style={{ display: showDropdown ? 'block' : 'none' }}>
                                 <li>
                                     <button className="dropdown-item" onClick={handleLogout}>
                                         Đăng xuất
@@ -46,8 +53,8 @@ const Header = () => {
                         </div>
                     ) : (
                         <>
-                            <a href="#">Đăng nhập</a>
-                            <a href="#">Đăng ký</a>
+                            <a href="/login">Đăng nhập</a>
+                            <a href="/register">Đăng ký</a>
                         </>
                     )}
                 </div>

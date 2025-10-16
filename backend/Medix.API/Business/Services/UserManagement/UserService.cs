@@ -125,9 +125,7 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<IEnumerable<UserDto>> GetAllAsync()
         {
-            // TODO: Fix when UserRepository.GetAllAsync is implemented
-            await Task.Delay(1); // Placeholder for async operation
-            var users = new List<User>(); // await _userRepository.GetAllAsync();
+            var users = await _userRepository.GetAllAsync();
             return users.Select(u => new UserDto
             {
                 Id = u.Id,

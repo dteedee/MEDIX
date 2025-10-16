@@ -18,4 +18,9 @@ namespace Medix.API.Models.DTOs
         public bool EmailConfirmed { get; set; }
         public DateTime CreatedAt { get; set; }
     }
+
+    public class GoogleLoginRequestDto
+    {
+        public string IdToken { get; set; } = string.Empty;
+    }
 }

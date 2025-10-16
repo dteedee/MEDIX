@@ -1,7 +1,7 @@
 import axios from 'axios'
-import { ArticleDTO, CreateArticleRequest, UpdateArticleRequest } from '../types/article.types'
+import { SiteBannerDTO, CreateSiteBannerRequest, UpdateSiteBannerRequest } from '../types/siteBanner.types'
 
-const BASE = '/api/HealthArticle'
+const BASE = '/api/SiteBanners'
 
 function authHeader() {
   try {
@@ -12,8 +12,8 @@ function authHeader() {
   }
 }
 
-export const articleService = {
-  list: async (page = 1, pageSize = 10, search?: string): Promise<{ items: ArticleDTO[]; total: number }> => {
+export const siteBannerService = {
+  list: async (page = 1, pageSize = 10, search?: string): Promise<{ items: SiteBannerDTO[]; total: number }> => {
     const params: any = { page, pageSize };
     if (search) {
       params.search = search;
@@ -21,23 +21,19 @@ export const articleService = {
     const r = await axios.get(BASE, { params, headers: authHeader() });
     const data = r.data;
     // Backend returns a tuple (int total, IEnumerable<data>) which is serialized to { item1, item2 }
-    const items: ArticleDTO[] = data?.item2 ?? data?.data ?? [];
+    const items: SiteBannerDTO[] = data?.item2 ?? data?.data ?? [];
     const total: number = data?.item1 ?? data?.total ?? 0;
     return { items, total };
   },
-  get: async (id: string): Promise<ArticleDTO> => {
+  get: async (id: string): Promise<SiteBannerDTO> => {
     const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })
     return r.data
   },
-  getBySlug: async (slug: string): Promise<ArticleDTO> => {
-    const r = await axios.get(`${BASE}/slug/${slug}`, { headers: authHeader() });
-    return r.data;
-  },
-  create: async (payload: CreateArticleRequest): Promise<ArticleDTO> => {
+  create: async (payload: CreateSiteBannerRequest): Promise<SiteBannerDTO> => {
     const r = await axios.post(BASE, payload, { headers: authHeader() })
     return r.data
   },
-  update: async (id:string, payload: UpdateArticleRequest): Promise<ArticleDTO> => {
+  update: async (id:string, payload: UpdateSiteBannerRequest): Promise<SiteBannerDTO> => {
     const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() })
     return r.data
   },

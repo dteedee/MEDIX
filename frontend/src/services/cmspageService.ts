@@ -13,9 +13,17 @@ function authHeader() {
 }
 
 export const cmspageService = {
-  list: async (): Promise<CmsPageDTO[]> => {
-    const r = await axios.get(BASE, { headers: authHeader() })
-    return r.data as CmsPageDTO[]
+  list: async (page = 1, pageSize = 10, search?: string): Promise<{ items: CmsPageDTO[]; total: number }> => {
+    const params: any = { page, pageSize };
+    if (search) {
+      params.search = search;
+    }
+    const r = await axios.get(BASE, { params, headers: authHeader() });
+    const data = r.data;
+    // Backend returns a tuple (int total, IEnumerable<data>) which is serialized to { item1, item2 }
+    const items: CmsPageDTO[] = data?.item2 ?? [];
+    const total: number = data?.item1 ?? 0;
+    return { items, total };
   },
   get: async (id: string): Promise<CmsPageDTO> => {
     const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })

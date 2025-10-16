@@ -22,7 +22,9 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const [displayOrder, setDisplayOrder] = useState<number>(article?.displayOrder ?? 0)
   const [metaTitle, setMetaTitle] = useState(article?.metaTitle ?? '')
   const [metaDescription, setMetaDescription] = useState(article?.metaDescription ?? '')
-  const [authorId, setAuthorId] = useState('')
+  // TODO: Replace with actual logged-in user ID from AuthContext when available
+  // Use a REAL user ID from your database for development until auth is ready.
+  const [authorId, setAuthorId] = useState('1A2C1A65-7B00-415F-8164-4FC3C1054203') // <-- Replace with a valid user ID from your DB
   const [statusCode, setStatusCode] = useState(article?.statusCode ?? 'DRAFT')
   const [publishedAt, setPublishedAt] = useState<string>(article?.publishedAt ?? '')
   const [categoryIds, setCategoryIds] = useState<string[]>([])
@@ -81,9 +83,10 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         setDisplayOrder(typeof full.displayOrder === 'number' ? full.displayOrder : 0)
         setMetaTitle(full.metaTitle ?? '')
         setMetaDescription(full.metaDescription ?? '')
-        // best-effort: authorId may exist on API even if not in DTO
+        // best-effort: authorId may exist on API. If not, keep the hardcoded one.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setAuthorId((full as any)?.authorId ?? '')
+        const apiAuthorId = (full as any)?.authorId;
+        if (apiAuthorId) setAuthorId(apiAuthorId);
         setStatusCode(full.statusCode ?? 'DRAFT')
         setPublishedAt(full.publishedAt ?? '')
         setContent(full.content ?? '')
@@ -107,10 +110,19 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
     // Re-run when availableCategories changes to attempt name/slug matching
   }, [article?.id, availableCategories])
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // Auto-generate slug from title if slug is empty
+  useEffect(() => {
+    if (!slug && title) {
+      const generatedSlug = title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-');
+      setSlug(generatedSlug);
+    }
+  }, [title]);
+
+  const submit = async (e: React.FormEvent | null, overrideStatusCode?: string) => {
+    e?.preventDefault()
     setSaving(true)
     try {
+      const finalStatusCode = overrideStatusCode ?? statusCode;
       // Prevent saving base64 data URLs into DB columns (causes truncation error)
       if ((thumbnailUrl && thumbnailUrl.startsWith('data:')) || (coverImageUrl && coverImageUrl.startsWith('data:'))) {
         console.warn('Attempt to save data URL into DB blocked')
@@ -118,7 +130,12 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         setSaving(false)
         return
       }
-      const payload: CreateArticleRequest = {
+      if (categoryIds.length === 0) {
+        alert('Vui lòng chọn ít nhất một danh mục cho bài viết.')
+        setSaving(false)
+        return
+      }
+      const payload: CreateArticleRequest = { // Cast to any to allow `undefined` for optional fields
         title,
         slug,
         summary,
@@ -131,10 +148,10 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         metaTitle,
         metaDescription,
         authorId,
-        statusCode,
-        publishedAt,
+        statusCode: finalStatusCode,
+        publishedAt: publishedAt || undefined,
         categoryIds
-      }
+      } as any
       if (article) await articleService.update(article.id, payload)
       else await articleService.create(payload)
       onSaved?.()
@@ -209,10 +226,6 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         <textarea className="af-content" value={content} onChange={e => setContent(e.target.value)} placeholder="Nhập nội dung" />
 
         <div className="af-field">
-          <label>Tác giả (UUID)</label>
-          <input value={authorId} onChange={e => setAuthorId(e.target.value)} placeholder="Nhập authorId" />
-        </div>
-        <div className="af-field">
           <label>Thời điểm xuất bản</label>
           <input type="datetime-local" value={publishedAt ? new Date(publishedAt).toISOString().slice(0,16) : ''} onChange={e => setPublishedAt(e.target.value ? new Date(e.target.value).toISOString() : '')} />
         </div>
@@ -234,9 +247,9 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         </div>
 
         <div className="af-actions">
-          <button className="btn publish" type="submit" disabled={saving}>{saving ? 'Đang...' : 'Xuất bản'}</button>
+          <button className="btn publish" type="button" onClick={(e) => submit(e, 'PUBLISHED')} disabled={saving}>{saving ? 'Đang...' : 'Xuất bản'}</button>
           <button className="btn schedule" type="button" onClick={() => alert('Schedule - not implemented')}>Lên lịch</button>
-          <button className="btn draft" type="button" onClick={() => { setStatusCode('DRAFT'); submit(new Event('submit') as any) }}>Lưu bản nháp</button>
+          <button className="btn draft" type="button" onClick={(e) => submit(e, 'DRAFT')} disabled={saving}>Lưu bản nháp</button>
         </div>
       </div>
     </form>

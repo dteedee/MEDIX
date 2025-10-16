@@ -1,13 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { cmspageService } from '../../services/cmspageService'
 import { CmsPageDTO } from '../../types/cmspage.types'
-import CmsPageForm from '../../components/admin/CmsPageForm'
 import CmsPageDetails from '../../components/admin/CmsPageDetails'
+import { useToast } from '../../contexts/ToastContext'
 
 export default function CmsPageList() {
   const [items, setItems] = useState<CmsPageDTO[]>([])
-  const [editing, setEditing] = useState<CmsPageDTO | null>(null)
-  const [showForm, setShowForm] = useState(false)
   const [viewing, setViewing] = useState<CmsPageDTO | null>(null)
   const [search, setSearch] = useState('')
 
@@ -16,12 +15,17 @@ export default function CmsPageList() {
     setItems(r)
   }
 
+  const { showToast } = useToast()
+  const navigate = useNavigate()
   useEffect(() => { load() }, [])
 
-  const onCreate = () => { setEditing(null); setShowForm(true) }
-  const onEdit = (p: CmsPageDTO) => { setEditing(p); setShowForm(true) }
-  const onDelete = async (id: string) => { if (!confirm('Delete this page?')) return; await cmspageService.remove(id); await load() }
-  const onSaved = async () => { setShowForm(false); await load() }
+  const onCreate = () => navigate('/manager/cms-pages/new')
+  const onEdit = (p: CmsPageDTO) => navigate(`/manager/cms-pages/edit/${p.id}`)
+  const onDelete = async (id: string) => {
+    if (!confirm('Delete this page?')) return;
+    await cmspageService.remove(id);
+    showToast('Xóa trang thành công!')
+    await load() }
 
   const filtered = useMemo(() => {
     const k = search.trim().toLowerCase()
@@ -74,12 +78,6 @@ export default function CmsPageList() {
           </div>
         ))}
       </div>
-
-      {showForm && (
-        <div style={{ marginTop: 16, padding: 12, border: '1px solid #ccc' }}>
-          <CmsPageForm page={editing ?? undefined} onSaved={onSaved} onCancel={() => setShowForm(false)} />
-        </div>
-      )}
 
       {viewing && (
         <CmsPageDetails page={viewing} onClose={() => setViewing(null)} />

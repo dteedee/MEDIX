@@ -1,21 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { articleService } from '../../services/articleService'
 import { ArticleDTO } from '../../types/article.types'
-import ArticleForm from '../../components/admin/ArticleForm'
 import ArticleDetails from '../../components/admin/ArticleDetails'
+import { useToast } from '../../contexts/ToastContext'
 
 export default function ArticleList() {
   const [items, setItems] = useState<ArticleDTO[]>([])
   const [total, setTotal] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const [editing, setEditing] = useState<ArticleDTO | null>(null)
-  const [showForm, setShowForm] = useState(false)
   const [viewing, setViewing] = useState<ArticleDTO | null>(null)
 
   // filter/search UI
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all')
+  const { showToast } = useToast()
 
   const load = async () => {
     const r = await articleService.list(page, pageSize)
@@ -23,12 +23,16 @@ export default function ArticleList() {
     setTotal(r.total)
   }
 
+  const navigate = useNavigate()
   useEffect(() => { load() }, [page, pageSize])
 
-  const onCreate = () => { setEditing(null); setShowForm(true) }
-  const onEdit = (a: ArticleDTO) => { setEditing(a); setShowForm(true) }
-  const onDelete = async (id: string) => { if (!confirm('Delete this article?')) return; await articleService.remove(id); await load() }
-  const onSaved = async () => { setShowForm(false); await load() }
+  const onCreate = () => navigate('/manager/articles/new')
+  const onEdit = (a: ArticleDTO) => navigate(`/manager/articles/edit/${a.id}`)
+  const onDelete = async (id: string) => {
+    if (!confirm('Delete this article?')) return;
+    await articleService.remove(id);
+    showToast('Xóa bài viết thành công!')
+    await load() }
 
   const truncate = (s?: string, n = 120) => s && s.length > n ? s.slice(0, n).trim() + '...' : (s || '')
   const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString() : '-'
@@ -132,11 +136,6 @@ export default function ArticleList() {
         <button onClick={() => setPage(p => p + 1)} disabled={items.length < pageSize}>Next</button>
       </div>
 
-      {showForm && (
-        <div style={{ marginTop: 16, padding: 12, border: '1px solid #ccc' }}>
-          <ArticleForm article={editing ?? undefined} onSaved={onSaved} onCancel={() => setShowForm(false)} />
-        </div>
-      )}
       {viewing && (
         <ArticleDetails article={viewing} onClose={() => setViewing(null)} />
       )}

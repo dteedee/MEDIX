@@ -1,19 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { categoryService } from '../../services/categoryService'
 import { CategoryDTO } from '../../types/category.types'
-import CategoryForm from '../../components/admin/CategoryForm'
 import CategoryDetails from '../../components/admin/CategoryDetails'
+import { useToast } from '../../contexts/ToastContext'
 
 export default function CategoryList() {
   const [items, setItems] = useState<CategoryDTO[]>([])
   const [total, setTotal] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const [editing, setEditing] = useState<CategoryDTO | null>(null)
-  const [showForm, setShowForm] = useState(false)
   const [viewing, setViewing] = useState<CategoryDTO | null>(null)
   const [search, setSearch] = useState('')
 
+  const { showToast } = useToast()
+  const navigate = useNavigate()
   const load = async () => {
     const r = await categoryService.list(page, pageSize)
     setItems(r.items)
@@ -22,10 +23,13 @@ export default function CategoryList() {
 
   useEffect(() => { load() }, [page, pageSize])
 
-  const onCreate = () => { setEditing(null); setShowForm(true) }
-  const onEdit = (c: CategoryDTO) => { setEditing(c); setShowForm(true) }
-  const onDelete = async (id: string) => { if (!confirm('Delete this category?')) return; await categoryService.remove(id); await load() }
-  const onSaved = async () => { setShowForm(false); await load() }
+  const onCreate = () => navigate('/manager/categories/new')
+  const onEdit = (c: CategoryDTO) => navigate(`/manager/categories/edit/${c.id}`)
+  const onDelete = async (id: string) => {
+    if (!confirm('Delete this category?')) return;
+    await categoryService.remove(id);
+    showToast('Xóa danh mục thành công!')
+    await load() }
 
   const filtered = useMemo(() => {
     const k = search.trim().toLowerCase()
@@ -94,12 +98,6 @@ export default function CategoryList() {
         <span>Page: {page}</span>
         <button onClick={() => setPage(p => p + 1)} disabled={items.length < pageSize}>Next</button>
       </div>
-
-      {showForm && (
-        <div style={{ marginTop: 16, padding: 12, border: '1px solid #ccc' }}>
-          <CategoryForm category={editing ?? undefined} onSaved={onSaved} onCancel={() => setShowForm(false)} />
-        </div>
-      )}
 
       {viewing && <CategoryDetails category={viewing} onClose={() => setViewing(null)} />}
     </div>

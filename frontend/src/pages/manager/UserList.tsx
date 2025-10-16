@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { userService } from '../../services/userService'
 import { UserDTO } from '../../types/user.types'
-import UserForm from '../../components/admin/UserForm'
+import { useToast } from '../../contexts/ToastContext'
 
 export default function UserList() {
   const [users, setUsers] = useState<UserDTO[]>([])
@@ -9,12 +10,11 @@ export default function UserList() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
-  const [searching, setSearching] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [editing, setEditing] = useState<UserDTO | null>(null)
-  const [showForm, setShowForm] = useState(false)
   const searchRef = useRef<number | undefined>(undefined)
 
+  const { showToast } = useToast()
+  const navigate = useNavigate()
   const load = async () => {
     const r = await userService.list(page, pageSize, search)
     setUsers(r.items)
@@ -26,14 +26,13 @@ export default function UserList() {
   const onDelete = async (id: string) => {
     if (!confirm('Delete this user?')) return
     await userService.remove(id)
+    showToast('Xóa người dùng thành công!')
     // reload current page
     await load()
   }
 
-  const onCreate = () => {
-    setEditing(null)
-    setShowForm(true)
-  }
+  const onCreate = () => navigate('/manager/users/new')
+  const onEdit = (u: UserDTO) => navigate(`/manager/users/edit/${u.id}`)
 
   const onSearchChange = (v: string) => {
     setSearch(v)
@@ -41,18 +40,7 @@ export default function UserList() {
     searchRef.current = window.setTimeout(() => setPage(1), 300) as unknown as number
   }
 
-  const onEdit = (u: UserDTO) => {
-    setEditing(u)
-    setShowForm(true)
-  }
-
   const doSearch = () => {}
-
-  const onSaved = async () => {
-    setShowForm(false)
-    // refresh to reflect changes
-    await load()
-  }
 
   const filtered = useMemo(() => {
     const k = search.trim().toLowerCase()
@@ -131,12 +119,6 @@ export default function UserList() {
         <span>Page: {page}</span>
         <button onClick={() => setPage(p => p + 1)} disabled={users.length < pageSize}>Next</button>
       </div>
-
-      {showForm && (
-        <div style={{ marginTop: 16, padding: 12, border: '1px solid #ccc' }}>
-          <UserForm user={editing ?? undefined} onSaved={onSaved} onCancel={() => setShowForm(false)} />
-        </div>
-      )}
     </div>
   )
 }

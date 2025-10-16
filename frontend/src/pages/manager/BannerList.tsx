@@ -1,13 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { bannerService } from '../../services/bannerService'
 import { BannerDTO } from '../../types/banner.types'
-// BannerForm component lives under components/admin
-import BannerForm from '../../components/admin/BannerFormNew'
+import { useToast } from '../../contexts/ToastContext'
 
 export default function BannerList() {
   const [banners, setBanners] = useState<BannerDTO[]>([])
-  const [editing, setEditing] = useState<BannerDTO | null>(null)
-  const [showForm, setShowForm] = useState(false)
   const [total, setTotal] = useState<number | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
   const [errorDetailsVisible, setErrorDetailsVisible] = useState(false)
@@ -15,6 +13,7 @@ export default function BannerList() {
   const [pageSize, setPageSize] = useState(10)
 const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const { showToast } = useToast()
 
   const load = async () => {
     try {
@@ -43,12 +42,16 @@ const [search, setSearch] = useState('')
       setError(msg)
     }
   }
+  const navigate = useNavigate()
    useEffect(() => { load() }, [page, pageSize])
 
-  const onCreate = () => { setEditing(null); setShowForm(true) }
-  const onEdit = (b: BannerDTO) => { setEditing(b); setShowForm(true) }
-  const onDelete = async (id: string) => { if (!confirm('Delete this banner?')) return; await bannerService.remove(id); await load() }
-  const onSaved = async () => { setShowForm(false); await load() }
+  const onCreate = () => navigate('/manager/banners/new')
+  const onEdit = (b: BannerDTO) => navigate(`/manager/banners/edit/${b.id}`)
+  const onDelete = async (id: string) => {
+    if (!confirm('Delete this banner?')) return;
+    await bannerService.remove(id);
+    showToast('Xóa banner thành công!')
+    await load() }
 
   const truncate = (s?: string, n = 120) => s && s.length > n ? s.slice(0, n).trim() + '...' : (s || '')
 
@@ -134,11 +137,6 @@ const [search, setSearch] = useState('')
         <button onClick={() => setPage(p => p + 1)} disabled={typeof total === 'number' ? page >= Math.ceil(total / pageSize) : banners.length < pageSize}>Next</button>
       </div>
 
-      {showForm && (
-        <div style={{ marginTop: 16, padding: 12, border: '1px solid #ccc' }}>
-          <BannerForm banner={editing ?? undefined} onSaved={onSaved} onCancel={() => setShowForm(false)} />
-        </div>
-      )}
     </div>
   )
 

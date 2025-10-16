@@ -111,7 +111,7 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
 
         <div className="bf-field">
           <label>Link</label>
-          <input value={link} onChange={e => setLink(e.target.value)} />
+          <input value={link ?? ''} onChange={e => setLink(e.target.value)} />
         </div>
 
         <div className="bf-field">

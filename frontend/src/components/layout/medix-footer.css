@@ -1,0 +1,80 @@
+.medix-footer {
+    background-color: #0056b3;
+    color: #f0f0f0;
+    padding: 40px 0 0;
+    border-top: none;
+}
+
+.medix-footer__inner {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.medix-footer__section {
+    flex: 1;
+    min-width: 200px;
+    margin: 20px;
+}
+
+.medix-footer__section h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #ffffff;
+}
+
+.medix-footer__section p {
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.medix-footer__section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.medix-footer__section ul li {
+    margin-bottom: 10px;
+}
+
+.medix-footer__section ul li a {
+    text-decoration: none;
+    color: #e0e0e0;
+    transition: color 0.3s;
+}
+
+.medix-footer__section ul li a:hover {
+    color: #ffffff;
+}
+
+.medix-footer__social-icons {
+    display: flex;
+    margin-top: 15px;
+}
+
+.medix-footer__social-icon {
+    width: 30px;
+    height: 30px;
+    background-color: #ffffff;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    margin-right: 10px;
+    cursor: pointer;
+    text-decoration: none;
+    color: #0056b3;
+}
+
+.medix-footer__bottom {
+    text-align: center;
+    padding: 20px;
+    border-top: 1px solid #004a99;
+    margin-top: 20px;
+    font-size: 14px;
+    color: #c0c0c0;
+}

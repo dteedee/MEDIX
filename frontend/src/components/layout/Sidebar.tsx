@@ -33,6 +33,7 @@ export default function Sidebar() {
           <>
             <Link to="/manager/articles" className="sidebar-link sub">Quản lý Bài viết</Link>
             <Link to="/manager/banners" className="sidebar-link sub">Quản lý Banner</Link>
+            <Link to="/articles" className="sidebar-link sub" target="_blank">Xem trang bài viết</Link>
           </>
         )}
  

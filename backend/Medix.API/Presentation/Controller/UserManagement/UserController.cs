@@ -6,7 +6,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class UserController : ControllerBase
+    public class UserController : ControllerBase 
     {
         private readonly IUserService _userService;
 
@@ -67,5 +67,3 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
     }
 }
-
-

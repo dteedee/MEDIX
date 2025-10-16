@@ -120,6 +120,15 @@ class ApiClient {
     return this.client.post<T>(url, data, config);
   }
 
+  public postMultipart<T = any>(url: string, formData: FormData): Promise<AxiosResponse<T>> {
+    return this.client.post<T>(url, formData, {
+      headers: {
+        // Let Axios set the correct boundary automatically
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
+
   public put<T = any>(url: string, data?: any, config?: any): Promise<AxiosResponse<T>> {
     return this.client.put<T>(url, data, config);
   }

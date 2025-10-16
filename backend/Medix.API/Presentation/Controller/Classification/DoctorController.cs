@@ -53,8 +53,8 @@ namespace Medix.API.Presentation.Controller.Classification
             User user = new User
             {
                 Id = Guid.NewGuid(),
-                UserName = request.FullName,
-                NormalizedUserName = request.FullName.ToUpper(),
+                UserName = request.UserName,
+                NormalizedUserName = request.UserName.ToUpper(),
                 Email = request.Email,
                 NormalizedEmail = request.Email.ToUpper(),
                 PasswordHash = "", // Password will be set later
@@ -113,6 +113,16 @@ namespace Medix.API.Presentation.Controller.Classification
             if (await _doctorService.LicenseNumberExistsAsync(request.LicenseNumber))
             {
                 ModelState.AddModelError("LicenseNumber", "Số giấy phép hành nghề đã được sử dụng");
+            }
+
+            if (await _userSerivce.UserNameExistsAsync(request.UserName))
+            {
+                ModelState.AddModelError("UserName", "Tên đăng nhập đã được sử dụng");
+            }
+
+            if (await _userSerivce.IdentificationNumberExistsAsync(request.IdentificationNumber))
+            {
+                ModelState.AddModelError("IdentificationNumber", "Số CCCD/CMND đã được sử dụng");
             }
         }
     }

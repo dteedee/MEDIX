@@ -99,6 +99,13 @@ function DoctorRegister() {
                                     )}
                                 </div>
                                 <div className="form-group">
+                                    <label className="form-label">Tên đăng nhập <span className="required">*</span></label>
+                                    <input type="text" className="form-input" placeholder="drhao" name='userName' />
+                                    {errors.UserName?.[0] && (
+                                        <div className="text-danger">{errors.UserName[0]}</div>
+                                    )}
+                                </div>
+                                <div className="form-group">
                                     <label className="form-label">Ngày sinh</label>
                                     <input type="date" className="form-input" placeholder="mm/dd/yyyy" name='dob' />
                                     {errors.Dob?.[0] && (

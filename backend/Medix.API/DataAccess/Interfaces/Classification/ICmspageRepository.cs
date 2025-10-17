@@ -20,6 +20,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
 
         Task<bool> UserExistsAsync(Guid userId);
 
-        Task<(IEnumerable<Cmspage> Pages, int TotalCount)> SearchByNameAsync(string name, int page, int pageSize);
+        Task<(IEnumerable<Cmspage> Pages, int TotalCount)> GetPagedAsync(int page, int pageSize);
+        Task<IEnumerable<Cmspage>> SearchByNameAsync(string name);
     }
 }

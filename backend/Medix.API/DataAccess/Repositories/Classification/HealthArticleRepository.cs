@@ -96,7 +96,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .ToListAsync();
         }
 
-        public async Task<(IEnumerable<HealthArticle> Articles, int TotalCount)> SearchByNameAsync(string name, int page, int pageSize)
+        public async Task<IEnumerable<HealthArticle>> SearchByNameAsync(string name)
         {
             var query = _context.HealthArticles
                 .Where(a => a.StatusCode == "Published" &&
@@ -106,13 +106,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Include(a => a.Categories)
                 .OrderByDescending(a => a.CreatedAt);
 
-            var totalCount = await query.CountAsync();
-            var articles = await query
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            return (articles, totalCount);
+            return await query.ToListAsync();
         }
 
         public async Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null)

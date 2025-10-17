@@ -52,12 +52,17 @@ namespace Medix.API.Presentation.Controller.Classification
             return Ok();
         }
 
-        [HttpGet("search")]
-        public async Task<ActionResult> SearchByName([FromQuery] string? name, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        [HttpGet("paged")]
+        public async Task<ActionResult> GetPaged([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-           
+            var result = await _cmspageService.GetPagedAsync(page, pageSize);
+            return Ok(result);
+        }
 
-            var result = await _cmspageService.SearchByNameAsync(name, page, pageSize);
+        [HttpGet("search")]
+        public async Task<ActionResult> SearchByName([FromQuery] string? name)
+        {
+            var result = await _cmspageService.SearchByNameAsync(name);
             return Ok(result);
         }
     }

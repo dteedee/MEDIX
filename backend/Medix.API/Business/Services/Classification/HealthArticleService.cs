@@ -211,9 +211,9 @@ namespace Medix.API.Business.Services.Classification
             });
         }
 
-        public async Task<(int total, IEnumerable<HealthArticlePublicDto> data)> SearchByNameAsync(string name, int page = 1, int pageSize = 10)
+        public async Task<IEnumerable<HealthArticlePublicDto>> SearchByNameAsync(string name)
         {
-            var (articles, total) = await _healthArticleRepository.SearchByNameAsync(name, page, pageSize);
+            var articles = await _healthArticleRepository.SearchByNameAsync(name);
 
             var data = articles.Select(a => new HealthArticlePublicDto
             {
@@ -238,7 +238,7 @@ namespace Medix.API.Business.Services.Classification
                     .ToList()
             });
 
-            return (total, data);
+            return data;
         }
 
         public async Task<HealthArticlePublicDto> CreateAsync(HealthArticleCreateDto createDto)

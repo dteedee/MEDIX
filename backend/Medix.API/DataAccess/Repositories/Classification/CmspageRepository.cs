@@ -74,10 +74,9 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return await _context.Users.AnyAsync(u => u.Id == userId);
         }
 
-        public async Task<(IEnumerable<Cmspage> Pages, int TotalCount)> SearchByNameAsync(string name, int page, int pageSize)
+        public async Task<(IEnumerable<Cmspage> Pages, int TotalCount)> GetPagedAsync(int page, int pageSize)
         {
             var query = _context.Cmspages
-                .Where(p => EF.Functions.Like(p.PageTitle, $"%{name}%") || EF.Functions.Like(p.MetaTitle, $"%{name}%"))
                 .Include(p => p.Author)
                 .OrderByDescending(p => p.CreatedAt);
 
@@ -88,6 +87,15 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .ToListAsync();
 
             return (pages, totalCount);
+        }
+
+        public async Task<IEnumerable<Cmspage>> SearchByNameAsync(string name)
+        {
+            return await _context.Cmspages
+                .Where(p => EF.Functions.Like(p.PageTitle, $"%{name}%") || EF.Functions.Like(p.MetaTitle, $"%{name}%"))
+                .Include(p => p.Author)
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
         }
     }
 }

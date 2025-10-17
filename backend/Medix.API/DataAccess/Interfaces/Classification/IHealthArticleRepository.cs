@@ -14,7 +14,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
 
         Task<(IEnumerable<HealthArticle> Articles, int TotalCount)> GetByCategoryAsync(Guid categoryId, int page, int pageSize);
 
-    Task<(IEnumerable<HealthArticle> Articles, int TotalCount)> SearchByNameAsync(string name, int page, int pageSize);
+        Task<IEnumerable<HealthArticle>> SearchByNameAsync(string name);
 
         Task<IEnumerable<HealthArticle>> GetHomepageArticlesAsync(int limit);
 

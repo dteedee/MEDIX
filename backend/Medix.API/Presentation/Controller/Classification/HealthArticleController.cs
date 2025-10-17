@@ -55,11 +55,10 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpGet("search")]
-        public async Task<ActionResult> SearchByName([FromQuery] string? name, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<ActionResult> SearchByName([FromQuery] string? name)
         {
-            
-
-            var result = await _healthArticleService.SearchByNameAsync(name, page, pageSize);
+           
+            var result = await _healthArticleService.SearchByNameAsync(name);
             return Ok(result);
         }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import '../../styles/header.module.css'
+import styles from '../../styles/header.module.css'
 
 const Header = () => {
     const token = null;
@@ -14,20 +14,20 @@ const Header = () => {
 
     return (
         <header>
-            <div className="top-bar">
-                <div className="logo">
-                    <a href='/' className="logo">
+            <div className={styles["top-bar"]}>
+                <div className={styles["logo"]}>
+                    <a href='/' className={styles["logo"]}>
                         MEDIX
                         <small style={{ textTransform: 'uppercase' }}>Hệ thống y tế thông minh ứng dụng AI</small>
                     </a>
                 </div>
-                <div className="search-bar">
+                <div className={styles["search-bar"]}>
                     <input type="text" placeholder="Chuyên khoa, triệu chứng, tên bác sĩ..." />
                     <button>🔍</button>
                 </div>
-                <div className="header-links">
+                <div className={styles["header-links"]}>
                     {token ? (
-                        <div className="dropdown">
+                        <div className={styles["dropdown"]}>
                             <img
                                 src="https://pbs.twimg.com/profile_images/1937117284725661696/8ppkq53g_400x400.jpg" // Replace with actual avatar URL
                                 alt="User avatar"

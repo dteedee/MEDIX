@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import '../styles/home.css'
+import '../styles/home.module.css'
 import { HomeMetadata } from '../types/home.types';
 import HeaderTest from '../components/layout/Header';
 import Footer from '../components/layout/Footer';

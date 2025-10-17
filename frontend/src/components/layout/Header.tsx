@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import '../../styles/header.css'
+import '../../styles/header.module.css'
 
 const Header = () => {
     const token = null;

@@ -27,21 +27,30 @@ export default function CmsPageList() {
   const [pageSize, setPageSize] = useState(10)
   const [viewing, setViewing] = useState<CmsPageDTO | null>(null)
   const [search, setSearch] = useState('')
-
-  const load = async () => {
-    const r = await cmspageService.list(page, pageSize, search)
-    setItems(r.items)
-    setTotal(r.total)
-  }
+  const [isLoading, setIsLoading] = useState(false)
 
   const { showToast } = useToast()
+
+  const load = async () => {
+    setIsLoading(true)
+    try {
+      const r = await cmspageService.list(page, pageSize, search);
+      setItems(r.items)
+      setTotal(r.total)
+    } catch (err: any) {
+      console.error('Failed to load CMS pages', err)
+      showToast?.('Không thể tải dữ liệu trang. Vui lòng thử lại.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const navigate = useNavigate()
   
-  // Load data when page, pageSize, or search term changes
   useEffect(() => {
     load();
-  }, [page, pageSize, search]);
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize]);
   const onCreate = () => navigate('/manager/cms-pages/new')
   const onEdit = (p: CmsPageDTO) => navigate(`/manager/cms-pages/edit/${p.id}`)
   const onDelete = async (id: string) => {
@@ -90,13 +99,13 @@ export default function CmsPageList() {
             <input
               placeholder="Tìm theo tiêu đề hoặc slug..."
               value={search}
-              onChange={e => setSearch(e.target.value)} // Search will trigger useEffect
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); setPage(1); /* load() is now handled by useEffect */ } }}
+              onChange={e => setSearch(e.target.value)} 
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); setPage(1); load(); } }}
               style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
             />
           </div>
           <div>
-            <button onClick={() => { setPage(1); load(); /* Keep manual trigger for explicit action */ }} style={{ padding: '10px 20px', background: '#0455ebff', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer', width: '100%' }}>
+            <button onClick={() => { setPage(1); load(); }} style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer', width: '100%' }}>
               Tìm
             </button>
           </div>
@@ -141,7 +150,7 @@ export default function CmsPageList() {
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
             Trang trước
           </button>
-          <button onClick={() => setPage(p => p + 1)} disabled={items.length < pageSize} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: items.length < pageSize ? 0.6 : 1 }}>
+          <button onClick={() => setPage(p => p + 1)} disabled={page * pageSize >= total || isLoading} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: (page * pageSize >= total || isLoading) ? 0.6 : 1 }}>
             Trang sau
           </button>
         </div>

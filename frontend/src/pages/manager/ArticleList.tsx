@@ -33,16 +33,16 @@ export default function ArticleList() {
   const { showToast } = useToast()
 
   const load = async () => {
-    // Pass search term to the backend
     const r = await articleService.list(page, pageSize, search)
     setItems(r.items)
     setTotal(r.total)
   }
 
   const navigate = useNavigate()
-  // Load data when page or pageSize changes
+  
   useEffect(() => {
     load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize])
 
   const onCreate = () => navigate('/manager/articles/new')
@@ -98,7 +98,7 @@ export default function ArticleList() {
               placeholder="Tìm theo tiêu đề hoặc slug..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); setPage(1); load(); } }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); setPage(1); load(); } }}
               style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
             />
           </div>
@@ -180,7 +180,7 @@ export default function ArticleList() {
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
             Trang trước
           </button>
-          <button onClick={() => setPage(p => p + 1)} disabled={items.length < pageSize} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: items.length < pageSize ? 0.6 : 1 }}>
+          <button onClick={() => setPage(p => p + 1)} disabled={(total !== undefined) ? (page * pageSize >= (total ?? 0)) : (items.length < pageSize)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: (total !== undefined) ? (page * pageSize >= (total ?? 0) ? 0.6 : 1) : (items.length < pageSize ? 0.6 : 1) }}>
             Trang sau
           </button>
         </div>

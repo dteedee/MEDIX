@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { CmsPageDTO, CreateCmsPageRequest, UpdateCmsPageRequest } from '../types/cmspage.types'
+import { PagedResult } from '../types/common.types'
 
 const BASE = '/api/Cmspage'
 
@@ -13,16 +14,20 @@ function authHeader() {
 }
 
 export const cmspageService = {
-  list: async (page = 1, pageSize = 10, search?: string): Promise<{ items: CmsPageDTO[]; total: number }> => {
+  list: async (page = 1, pageSize = 10, search?: string): Promise<PagedResult<CmsPageDTO>> => {
+    // Redirect 'list' calls to the 'search' endpoint to ensure consistent pagination behavior.
+    // The 'search' endpoint handles empty keywords by returning all items.
+    return cmspageService.search(search ?? '', page, pageSize);
+  },
+  search: async (keyword: string, page = 1, pageSize = 10): Promise<PagedResult<CmsPageDTO>> => {
     const params: any = { page, pageSize };
-    if (search) {
-      params.search = search;
+    if (keyword && keyword.trim()) {
+      params.keyword = keyword.trim();
     }
-    const r = await axios.get(BASE, { params, headers: authHeader() });
+    const r = await axios.get(`${BASE}/search`, { params, headers: authHeader() });
     const data = r.data;
-    // Backend returns a tuple (int total, IEnumerable<data>) which is serialized to { item1, item2 }
-    const items: CmsPageDTO[] = data?.item2 ?? [];
-    const total: number = data?.item1 ?? 0;
+    const items: CmsPageDTO[] = data?.item2 ?? data?.items ?? [];
+    const total: number = data?.item1 ?? data?.total ?? 0;
     return { items, total };
   },
   get: async (id: string): Promise<CmsPageDTO> => {

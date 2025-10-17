@@ -30,7 +30,12 @@ export default function BannerList() {
   const navigate = useNavigate()
 
   const load = async () => {
-    const r = await siteBannerService.list(page, pageSize, search)
+    let r
+    if (search && search.trim()) {
+      r = await siteBannerService.search(search, page, pageSize)
+    } else {
+      r = await siteBannerService.list(page, pageSize)
+    }
     setItems(r.items)
     setTotal(r.total)
   }
@@ -157,7 +162,7 @@ export default function BannerList() {
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
             Trang trước
           </button>
-          <button onClick={() => setPage(p => p + 1)} disabled={items.length < pageSize} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: items.length < pageSize ? 0.6 : 1 }}>
+          <button onClick={() => setPage(p => p + 1)} disabled={(total !== undefined) ? (page * pageSize >= total) : (items.length < pageSize)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: (total !== undefined) ? (page * pageSize >= total ? 0.6 : 1) : (items.length < pageSize ? 0.6 : 1) }}>
             Trang sau
           </button>
         </div>

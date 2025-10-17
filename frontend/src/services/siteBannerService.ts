@@ -25,6 +25,16 @@ export const siteBannerService = {
     const total: number = data?.item1 ?? data?.total ?? 0;
     return { items, total };
   },
+  // Dedicated search endpoint
+  search: async (name: string | undefined, page = 1, pageSize = 10): Promise<{ items: SiteBannerDTO[]; total: number }> => {
+    const params: any = { page, pageSize };
+    if (name) params.name = name;
+    const r = await axios.get(`${BASE}/search`, { params, headers: authHeader() });
+    const data = r.data;
+    const items: SiteBannerDTO[] = data?.item2 ?? data?.data ?? [];
+    const total: number = data?.item1 ?? data?.total ?? 0;
+    return { items, total };
+  },
   get: async (id: string): Promise<SiteBannerDTO> => {
     const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })
     return r.data

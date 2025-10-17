@@ -30,7 +30,14 @@ export default function ArticleEditPage() {
 
   if (loading) return <div>Loading...</div>
 
+  const title = id ? 'Chỉnh sửa Bài viết' : 'Tạo Bài viết mới'
+
   return (
-    <ArticleForm article={article} onSaved={handleSave} onCancel={handleCancel} />
+    <div style={{ padding: 24, backgroundColor: '#f9fafb', minHeight: '100vh' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 style={{ margin: 0, fontSize: '1.875rem', fontWeight: 'bold', color: '#111827' }}>{title}</h1>
+      </div>
+      <ArticleForm article={article} onSaved={handleSave} onCancel={handleCancel} />
+    </div>
   )
 }

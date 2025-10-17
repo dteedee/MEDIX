@@ -70,5 +70,16 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
             await _context.SaveChangesAsync();
             return userRole;
         }
+
+        public async Task<bool> ExistsByPhoneNumberAsync(string phoneNumber)
+        {
+            return await _context.Users
+                .AnyAsync(u => u.PhoneNumber == phoneNumber);
+        }
+
+        public async Task<bool> ExistsByUserNameAsync(string userName) => await _context.Users
+            .AnyAsync(u => u.NormalizedUserName == userName.ToUpperInvariant());
+        public async Task<bool> ExistsByIdentificationNumberAsync(string identificationNumber) => await _context.Users
+            .AnyAsync(u => u.IdentificationNumber == identificationNumber);
     }
 }

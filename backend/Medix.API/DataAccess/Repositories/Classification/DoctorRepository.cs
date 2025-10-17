@@ -31,5 +31,10 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Include(d => d.Specialization)
                 .ToListAsync();
         }
+
+        public async Task<bool> LicenseNumberExistsAsync(string licenseNumber)
+        {
+            return await _context.Doctors.AnyAsync(d => d.LicenseNumber.ToLower() == licenseNumber.ToLower());
+        }
     }
 }

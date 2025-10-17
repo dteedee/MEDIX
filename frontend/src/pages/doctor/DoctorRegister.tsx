@@ -1,13 +1,14 @@
 import '../../styles/doctor-register.css'
 
 import { useEffect, useState } from 'react';
-import axios from 'axios';
-import { SpecializationDto } from '../types/doctor.types';
-
-
+import Header from '../../components/layout/Header';
+import Footer from '../../components/layout/Footer';
+import Swal from 'sweetalert2';
+import DoctorService from '../../services/doctorService';
+import { DoctorRegisterMetadata } from '../../types/doctor.types';
 
 function DoctorRegister() {
-    const [specializations, setSpecializations] = useState<SpecializationDto[]>([]);
+    const [metadata, setMetadata] = useState<DoctorRegisterMetadata>();
     const [errors, setErrors] = useState<any>({});
 
     //const [password, setPassword] = useState('');
@@ -25,13 +26,15 @@ function DoctorRegister() {
 
 
     useEffect(() => {
-        axios.get('/api/doctor/register-metadata')
-            .then(response => {
-                setSpecializations(response.data.specializations);
-            })
-            .catch(error => {
-                console.error('Error fetching specializations:', error);
-            });
+        const fetchMetadata = async () => {
+            try {
+                const data = await DoctorService.getMetadata();
+                setMetadata(data);
+            } catch (error) {
+                console.error('Failed to fetch metadata:', error);
+            }
+        }
+        fetchMetadata();
     }, []);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -43,14 +46,9 @@ function DoctorRegister() {
         for (const [key, value] of formData.entries()) {
             console.log(`${key}:`, value);
         }
+        console.log(formData);
 
-        /*
-        if (!hasMinLength || !hasUppercase || !hasNumber || !hasSymbol || !passwordsMatch) {
-            return;
-        }
-            */
-
-        try {
+        /* try {
             const response = await fetch('/api/doctor/register', {
                 method: 'POST',
                 body: formData,
@@ -67,11 +65,33 @@ function DoctorRegister() {
             }
         } catch (error) {
             console.error('Error submitting form:', error);
+        } */
+
+        setErrors({});
+        try {
+            await DoctorService.registerDoctor(formData);
+
+            console.log('Registration successful');
+            Swal.fire({
+                title: 'Đăng ký thành công!',
+                text: 'Bạn sẽ được chuyển về trang chủ',
+                icon: 'success',
+                confirmButtonText: 'OK',
+            }).then(() => {
+                window.location.href = '/';
+            });
+        } catch (error) {
+            console.error('Registration failed');
+            const errorData = error.response.data;
+            setErrors(errorData.errors);
+            console.log(errorData.errors);
         }
+
     };
 
     return (
         <div>
+            <Header />
             <main className="main-container">
                 <div className="form-container">
                     <form id="registrationForm" encType='multipart/form-data' onSubmit={handleSubmit}>
@@ -88,8 +108,18 @@ function DoctorRegister() {
                                     )}
                                 </div>
                                 <div className="form-group">
+                                    <label className="form-label">Tên đăng nhập <span className="required">*</span></label>
+                                    <input type="text" className="form-input" placeholder="drhao" name='userName' />
+                                    {errors.UserName?.[0] && (
+                                        <div className="text-danger">{errors.UserName[0]}</div>
+                                    )}
+                                </div>
+                                <div className="form-group">
                                     <label className="form-label">Ngày sinh</label>
                                     <input type="date" className="form-input" placeholder="mm/dd/yyyy" name='dob' />
+                                    {errors.Dob?.[0] && (
+                                        <div className="text-danger">{errors.Dob[0]}</div>
+                                    )}
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Giới tính</label>
@@ -201,7 +231,7 @@ function DoctorRegister() {
                                     <label className="form-label">Chuyên khoa <span className="required">*</span></label>
                                     <select className="form-select" name='specializationId'>
                                         <option value="">Chọn chuyên khoa</option>
-                                        {specializations.map(spec => (
+                                        {metadata?.specializations.map(spec => (
                                             <option key={spec.id} value={spec.id}>{spec.name}</option>
                                         ))}
                                     </select>
@@ -268,6 +298,7 @@ function DoctorRegister() {
                     </form>
                 </div>
             </main>
+            <Footer />
         </div>
     )
 }

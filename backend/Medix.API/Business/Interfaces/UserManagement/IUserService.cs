@@ -12,5 +12,8 @@ namespace Medix.API.Business.Interfaces.UserManagement
         Task<bool> DeleteAsync(Guid id);
         Task<IEnumerable<UserDto>> GetAllAsync();
         Task<bool> EmailExistsAsync(string email);
+        Task<bool> PhoneNumberExistsAsync(string phoneNumber);
+        Task<bool> UserNameExistsAsync(string userName);
+        Task<bool> IdentificationNumberExistsAsync(string identificationNumber);
     }
 }

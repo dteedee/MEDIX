@@ -60,5 +60,7 @@ namespace Medix.API.Business.Services.Classification
         {
             return await _doctorRepository.GetHomePageDoctorsAsync();
         }
+
+        public async Task<bool> LicenseNumberExistsAsync(string licenseNumber) => await _doctorRepository.LicenseNumberExistsAsync(licenseNumber);
     }
 }

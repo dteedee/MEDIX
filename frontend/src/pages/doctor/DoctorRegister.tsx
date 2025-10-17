@@ -1,4 +1,4 @@
-import '../../styles/doctor-register.module.css'
+import styles from '../../styles/doctor-register.module.css'
 
 import { useEffect, useState } from 'react';
 import Header from '../../components/layout/Header';
@@ -23,7 +23,6 @@ function DoctorRegister() {
     const hasSymbol = /[^A-Za-z0-9]/.test(password);
     const passwordsMatch = password && confirmPassword && password === confirmPassword;
     */
-
 
     useEffect(() => {
         const fetchMetadata = async () => {
@@ -92,82 +91,82 @@ function DoctorRegister() {
     return (
         <div>
             <Header />
-            <main className="main-container">
-                <div className="form-container">
+            <main className={styles["main-container"]}>
+                <div className={styles["form-container"]}>
                     <form id="registrationForm" encType='multipart/form-data' onSubmit={handleSubmit}>
                         {/* Row 1 */}
-                        <div className="form-row">
+                        <div className={styles["form-row"]}>
                             {/* Left Column: Personal Info & Login */}
-                            <div className="form-section">
-                                <h2 className="section-title">Phần 1: Thông tin cá nhân &amp; đăng nhập</h2>
-                                <div className="form-group">
-                                    <label className="form-label">Họ và tên <span className="required">*</span></label>
-                                    <input type="text" className="form-input" placeholder="Nguyễn Văn A" name='fullName' />
+                            <div className={styles["form-section"]}>
+                                <h2 className={styles["section-title"]}>Phần 1: Thông tin cá nhân &amp; đăng nhập</h2>
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Họ và tên <span className={styles["required"]}>*</span></label>
+                                    <input type="text" className={styles["form-input"]} placeholder="Nguyễn Văn A" name='fullName' />
                                     {errors.FullName?.[0] && (
-                                        <div className="text-danger">{errors.FullName[0]}</div>
+                                        <div className={styles["text-danger"]}>{errors.FullName[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Tên đăng nhập <span className="required">*</span></label>
-                                    <input type="text" className="form-input" placeholder="drhao" name='userName' />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Tên đăng nhập <span className={styles["required"]}>*</span></label>
+                                    <input type="text" className={styles["form-input"]} placeholder="drhao" name='userName' />
                                     {errors.UserName?.[0] && (
-                                        <div className="text-danger">{errors.UserName[0]}</div>
+                                        <div className={styles["text-danger"]}>{errors.UserName[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Ngày sinh</label>
-                                    <input type="date" className="form-input" placeholder="mm/dd/yyyy" name='dob' />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Ngày sinh</label>
+                                    <input type="date" className={styles["form-input"]} placeholder="mm/dd/yyyy" name='dob' />
                                     {errors.Dob?.[0] && (
-                                        <div className="text-danger">{errors.Dob[0]}</div>
+                                        <div className={styles["text-danger"]}>{errors.Dob[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Giới tính</label>
-                                    <div className="radio-group">
-                                        <div className="radio-option">
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Giới tính</label>
+                                    <div className={styles["radio-group"]}>
+                                        <div className={styles["radio-option"]}>
                                             <input type="radio" name="gender" id="male" defaultValue="Male" />
                                             <label htmlFor="male">Nam</label>
                                         </div>
-                                        <div className="radio-option">
+                                        <div className={styles["radio-option"]}>
                                             <input type="radio" name="gender" id="female" defaultValue="Female" />
                                             <label htmlFor="female">Nữ</label>
                                         </div>
-                                        <div className="radio-option">
+                                        <div className={styles["radio-option"]}>
                                             <input type="radio" name="gender" id="other" defaultValue="Other" />
                                             <label htmlFor="other">Khác</label>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Số CCCD/CMND <span className="required">*</span></label>
-                                    <input type="text" className="form-input" placeholder="Nhập số căn cước công dân 12 số"
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Số CCCD/CMND <span className={styles["required"]}>*</span></label>
+                                    <input type="text" className={styles["form-input"]} placeholder="Nhập số căn cước công dân 12 số"
                                         name='identificationNumber' />
                                     {errors.IdentificationNumber?.[0] && (
-                                        <div className="text-danger">{errors.IdentificationNumber[0]}</div>
+                                        <div className={styles["text-danger"]}>{errors.IdentificationNumber[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Email <span className="required">*</span></label>
-                                    <input type="text" name='email' className="form-input" placeholder="Email@example.com" />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Email <span className={styles["required"]}>*</span></label>
+                                    <input type="text" name='email' className={styles["form-input"]} placeholder="Email@example.com" />
                                     {errors.Email?.[0] && (
-                                        <div className="text-danger">{errors.Email[0]}</div>
+                                        <div className={styles["text-danger"]}>{errors.Email[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Số điện thoại <span className="required">*</span></label>
-                                    <input type="tel" name='phoneNumber' className="form-input" placeholder="09xxxxxxxx" />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Số điện thoại <span className={styles["required"]}>*</span></label>
+                                    <input type="tel" name='phoneNumber' className={styles["form-input"]} placeholder="09xxxxxxxx" />
                                     {errors.PhoneNumber?.[0] && (
-                                        <div className="text-danger">{errors.PhoneNumber[0]}</div>
+                                        <div className={styles["text-danger"]}>{errors.PhoneNumber[0]}</div>
                                     )}
                                 </div>
                                 {/* 
-                                <div className="form-group">
-                                    <label className="form-label">Mật khẩu</label>
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Mật khẩu</label>
                                     <input
                                         type="password"
                                         id="password"
                                         name="password"
-                                        className="form-input"
+                                        className={styles["form-input"]}
                                         placeholder="••••••••"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
@@ -204,12 +203,12 @@ function DoctorRegister() {
 
                                 </div>
 
-                                <div className="form-group">
-                                    <label className="form-label">Xác nhận mật khẩu</label>
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Xác nhận mật khẩu</label>
                                     <input
                                         type="password"
                                         id="confirmPassword"
-                                        className="form-input"
+                                        className={styles["form-input"]}
                                         placeholder="••••••••"
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
@@ -225,53 +224,53 @@ function DoctorRegister() {
                                 */}
                             </div>
                             {/* Right Column: Medical Info & Emergency Contact */}
-                            <div className="form-section">
-                                <h2 className="section-title">Phần 2: Thông tin bác sĩ</h2>
-                                <div className="form-group">
-                                    <label className="form-label">Chuyên khoa <span className="required">*</span></label>
-                                    <select className="form-select" name='specializationId'>
+                            <div className={styles["form-section"]}>
+                                <h2 className={styles["section-title"]}>Phần 2: Thông tin bác sĩ</h2>
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Chuyên khoa <span className={styles["required"]}>*</span></label>
+                                    <select className={styles["form-select"]} name='specializationId'>
                                         <option value="">Chọn chuyên khoa</option>
                                         {metadata?.specializations.map(spec => (
                                             <option key={spec.id} value={spec.id}>{spec.name}</option>
                                         ))}
                                     </select>
                                     {errors.SpecializationId?.[0] && (
-                                        <div className="text-danger">{errors.SpecializationId[0]}</div>
+                                        <div className={styles["text-danger"]}>{errors.SpecializationId[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Chứng chỉ làm việc <span className="required">*</span></label>
-                                    <input type="file" className="form-file" accept="image/*" name='licenseImage' />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Chứng chỉ làm việc <span className={styles["required"]}>*</span></label>
+                                    <input type="file" className={styles["form-file"]} accept="image/*" name='licenseImage' />
                                     {errors.LicenseImage?.[0] && (
-                                        <div className="text-danger">{errors.LicenseImage[0]}</div>
+                                        <div className={styles["text-danger"]}>{errors.LicenseImage[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Số chứng chỉ <span className="required">*</span></label>
-                                    <input type="text" name='licenseNumber' className="form-input" />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Số chứng chỉ <span className={styles["required"]}>*</span></label>
+                                    <input type="text" name='licenseNumber' className={styles["form-input"]} />
                                     {errors.LicenseNumber?.[0] && (
-                                        <div className="text-danger">{errors.LicenseNumber[0]}</div>
+                                        <div className={styles["text-danger"]}>{errors.LicenseNumber[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Thông tin bác sĩ</label>
-                                    <textarea className="form-input" name='bio' defaultValue={""} />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Thông tin bác sĩ</label>
+                                    <textarea className={styles["form-input"]} name='bio' defaultValue={""} />
                                     {errors.Bio?.[0] && (
-                                        <div className="text-danger">{errors.Bio[0]}</div>
+                                        <div className={styles["text-danger"]}>{errors.Bio[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Trình độ học vấn</label>
-                                    <textarea className="form-input" name='education' defaultValue={""} />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Trình độ học vấn</label>
+                                    <textarea className={styles["form-input"]} name='education' defaultValue={""} />
                                     {errors.Education?.[0] && (
-                                        <div className="text-danger">{errors.Education[0]}</div>
+                                        <div className={styles["text-danger"]}>{errors.Education[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Số năm kinh nghiệm <span className="required">*</span></label>
-                                    <input type="text" className="form-input" name='yearsOfExperience' />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Số năm kinh nghiệm <span className={styles["required"]}>*</span></label>
+                                    <input type="text" className={styles["form-input"]} name='yearsOfExperience' />
                                     {errors.YearsOfExperience?.[0] && (
-                                        <div className="text-danger">{errors.YearsOfExperience[0]}</div>
+                                        <div className={styles["text-danger"]}>{errors.YearsOfExperience[0]}</div>
                                     )}
                                 </div>
                             </div>
@@ -289,10 +288,10 @@ function DoctorRegister() {
                         </div>
                         */}
                         {/* Submit Button */}
-                        <div className="submit-section">
-                            <button type="submit" className="btn-submit">ĐĂNG KÝ TÀI KHOẢN</button>
-                            <div className="login-link-section">
-                                Bạn đã có tài khoản? <a href="#" className="login-link">Đăng nhập ngay</a>
+                        <div className={styles["submit-section"]}>
+                            <button type="submit" className={styles["btn-submit"]}>ĐĂNG KÝ TÀI KHOẢN</button>
+                            <div className={styles["login-link-section"]}>
+                                Bạn đã có tài khoản? <a href="#" className={styles["login-link"]}>Đăng nhập ngay</a>
                             </div>
                         </div>
                     </form>

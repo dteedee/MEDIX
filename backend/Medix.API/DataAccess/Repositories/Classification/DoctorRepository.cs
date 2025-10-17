@@ -36,5 +36,13 @@ namespace Medix.API.DataAccess.Repositories.Classification
         {
             return await _context.Doctors.AnyAsync(d => d.LicenseNumber.ToLower() == licenseNumber.ToLower());
         }
+
+        public async Task<Doctor?> GetDoctorByUserNameAsync(string userName)
+        {
+            return await _context.Doctors
+                .Include(d => d.User)
+                .Include(d => d.Specialization)
+                .FirstOrDefaultAsync(d => d.User.UserName.ToLower() == userName.ToLower());
+        }
     }
 }

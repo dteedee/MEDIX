@@ -6,6 +6,7 @@ import { MainLayout } from './components/layout/MainLayout';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import { UserRole } from './types/common.types';
 import DoctorRegister from './pages/doctor/DoctorRegister';
+import DoctorProfile from './pages/doctor/DoctorProfile';
 
 export function App() {
 
@@ -21,10 +22,13 @@ export function App() {
             {/* Main layout routes */}
             <Route path="/app" element={<MainLayout />} />
 
-            {/* Public route for doctor registration */}
-            <Route path="/doctor/register" element={
+            {/* Public doctor routes */}
+            <Route path="/doctor/*" element={
               <PublicRoute>
-                <DoctorRegister />
+                <Routes>
+                  <Route path="register" element={<DoctorRegister />} />
+                  <Route path="profile/:username" element={<DoctorProfile />} />
+                </Routes>
               </PublicRoute>
             } />
 

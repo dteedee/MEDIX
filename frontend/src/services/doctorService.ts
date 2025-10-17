@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { DoctorRegisterMetadata } from "../types/doctor.types";
+import { DoctorProfileDto, DoctorRegisterMetadata } from "../types/doctor.types";
 
 class DoctorService {
     async getMetadata(): Promise<DoctorRegisterMetadata> {
@@ -16,6 +16,16 @@ class DoctorService {
     async registerDoctor(payload: FormData): Promise<void> {
         console.log('Payload:', payload);
         await apiClient.postMultipart<any>('/doctor/register', payload);
+    }
+
+    async getDoctorProfile(userName: string | undefined): Promise<DoctorProfileDto> {
+        try {
+            const response = await apiClient.get<DoctorProfileDto>('doctor/profile/' + userName);
+            return response.data;
+        } catch (error: any) {
+            console.error('Get doctor profile data error: ', error);
+            throw this.handleApiError(error);
+        }
     }
 
     private handleApiError(error: any): Error {

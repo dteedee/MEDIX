@@ -7,5 +7,6 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task<Doctor> CreateDoctorAsync(Doctor doctor);
         Task<List<Doctor>> GetHomePageDoctorsAsync();
         Task<bool> LicenseNumberExistsAsync(string licenseNumber);
+        Task<Doctor?> GetDoctorByUserNameAsync(string userName);
     }
 }

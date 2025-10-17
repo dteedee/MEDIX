@@ -15,6 +15,7 @@ namespace Medix.API.Business.Interfaces.UserManagement
         Task<UserBasicInfoDto> GetUserBasicInfo(Guid id);
 
         Task<UserBasicInfoDto> UpdateUserBasicInfo(UpdateUserDto updateDto);
+        Task<string> UpdateAvatarURL(string linkImage, Guid id);
 
     }
 }

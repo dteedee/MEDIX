@@ -39,6 +39,7 @@ namespace Medix.API.Business.Services.UserManagement
                 IdentificationNumber = registerDto.IdentificationNumber,
                 IsProfileCompleted = false,
                 CreatedAt = DateTime.UtcNow,
+                Address = registerDto.address,
                 UpdatedAt = DateTime.UtcNow,
                 EmailConfirmed = true,
                 PhoneNumberConfirmed = false,
@@ -104,6 +105,7 @@ namespace Medix.API.Business.Services.UserManagement
             user.FullName = userDto.FullName;
             user.PhoneNumber = userDto.PhoneNumber;
             user.UpdatedAt = DateTime.UtcNow;
+      
 
             var updatedUser = await _userRepository.UpdateAsync(user);
 
@@ -160,6 +162,7 @@ namespace Medix.API.Business.Services.UserManagement
                 FullName = user.FullName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
+                imageURL = user.AvatarUrl,
                 dob = user.DateOfBirth,
                 address = user.Address
             };
@@ -180,6 +183,8 @@ namespace Medix.API.Business.Services.UserManagement
                 user.DateOfBirth = updateDto.dob;
             if (updateDto.Email != null)
                 user.Email = updateDto.Email;
+            if (updateDto.username != null)
+                user.UserName = updateDto.username;
 
             user.UpdatedAt = DateTime.UtcNow;
 
@@ -188,6 +193,7 @@ namespace Medix.API.Business.Services.UserManagement
             return new UserBasicInfoDto
             {
                 Id = updatedUser.Id,
+                username = updatedUser.UserName,
                 FullName = updatedUser.FullName,
                 Email = updatedUser.Email,
                 PhoneNumber = updatedUser.PhoneNumber,
@@ -196,5 +202,23 @@ namespace Medix.API.Business.Services.UserManagement
                 CreatedAt = updatedUser.CreatedAt
             };
         }
+
+        public async Task<string?> UpdateAvatarURL(string linkImage, Guid id)
+        {
+            if (string.IsNullOrWhiteSpace(linkImage))
+                return null;
+
+            var user = await _userRepository.GetByIdAsync(id);
+            if (user == null)
+                return null;
+
+            user.AvatarUrl = linkImage;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userRepository.UpdateAsync(user);
+
+            return linkImage;
+        }
+
     }
 }

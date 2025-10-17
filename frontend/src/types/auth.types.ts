@@ -11,9 +11,10 @@ export interface RegisterRequestPatient {
   passwordConfirmation: string; // Match backend PasswordConfirmation
   fullName: string;
   phoneNumber?: string;
+  address?: string; // Match backend address field
   dateOfBirth?: string; // DateOnly from backend
   identificationNumber?: string;
-  genderCode?: string; // "Male", "Female", "Others"
+  genderCode?: string; // "Male", "Female", "Other"
 }
 
 

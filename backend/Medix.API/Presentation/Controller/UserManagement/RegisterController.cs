@@ -117,15 +117,12 @@ namespace Medix.API.Presentation.Controller.UserManagement
         {
             try
             {
-                // Sinh m� x�c nh?n m?i
+          
                 var newCode = new Random().Next(100000, 999999).ToString();
 
-                // TODO: Luu m� x�c nh?n m?i v�o database c�ng th?i gian h?t h?n (n?u c?n)
-
-                // G?i email m� x�c nh?n m?i
                 var result = await _emailService.SendVerificationCodeAsync(email, newCode);
 
-                // Tr? v? m� m?i (ho?c true/false n?u kh�ng mu?n tr? m� v? client)
+       
                 return newCode;
             }
             catch (Exception ex)
@@ -145,7 +142,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
 
         [HttpPost("registerPatient")]
-        public async Task<IActionResult> RegisterAsync([FromBody] RegistrationPayloadDTO registration)
+        public async Task<IActionResult> RegisterAsync([FromBody] RegistrationPayloadDTO  registration)
         { 
             
             if (_context.Users.Any(p => p.Email == registration.RegisterRequest.Email) || _context.Users.Any(d => d.Email == registration.RegisterRequest.Email))

@@ -56,10 +56,17 @@ export const validateDateOfBirth = (dateOfBirth: string): boolean => {
   
   const date = new Date(dateOfBirth);
   const now = new Date();
-  const age = now.getFullYear() - date.getFullYear();
   
-  // Must be a valid date and person must be between 0 and 150 years old
-  return !isNaN(date.getTime()) && age >= 0 && age <= 150;
+  // Calculate age more accurately considering month and day
+  let age = now.getFullYear() - date.getFullYear();
+  const monthDiff = now.getMonth() - date.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
+    age--;
+  }
+  
+  // Must be a valid date, person must be at least 18 years old and not more than 150 years old
+  return !isNaN(date.getTime()) && age >= 18 && age <= 150;
 };
 
 // Comprehensive form validation
@@ -101,7 +108,7 @@ export const validatePatientRegistrationForm = (formData: any): ValidationErrors
   }
 
   if (formData.dateOfBirth && !validateDateOfBirth(formData.dateOfBirth)) {
-    errors.dateOfBirth = ['Ngày sinh không hợp lệ'];
+    errors.dateOfBirth = ['Bạn phải đủ 18 tuổi để đăng ký'];
   }
 
   if (formData.genderCode && !validateGenderCode(formData.genderCode)) {

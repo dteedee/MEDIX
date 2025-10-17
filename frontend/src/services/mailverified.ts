@@ -78,11 +78,21 @@ export const emailVerificationService = {
         code: code
       });
       
-      return {
-        success: true,
-        data: response.data,
-        message: response.data.message || 'Xác thực thành công'
-      };
+      // Kiểm tra trường Status trong response
+      if (response.data.Status === true) {
+        return {
+          success: true,
+          data: response.data,
+          message: response.data.message || 'Xác thực thành công'
+        };
+      } else {
+        // Nếu Status không phải true, trả về lỗi
+        return {
+          success: false,
+          error: 'Mã code đang sai',
+          data: response.data
+        };
+      }
     } catch (error: any) {
       console.error('Error verifying email code:', error);
       

@@ -44,6 +44,7 @@ export class AuthService {
           passwordConfirmation: patientData.registerRequest.passwordConfirmation,
           fullName: patientData.registerRequest.fullName,
           phoneNumber: patientData.registerRequest.phoneNumber || null,
+          address: patientData.registerRequest.address || null,
           dateOfBirth: patientData.registerRequest.dateOfBirth || null,
           identificationNumber: patientData.registerRequest.identificationNumber || null,
           genderCode: patientData.registerRequest.genderCode || null,
@@ -59,6 +60,9 @@ export class AuthService {
           isActive: true, // Default to active
         }
       };
+      
+      // Debug log the final payload
+      console.log('Final payload being sent to backend:', JSON.stringify(payload, null, 2));
       
       const response = await apiClient.post<AuthResponse>('https://localhost:55883/api/register/registerPatient', payload);
       return response.data;

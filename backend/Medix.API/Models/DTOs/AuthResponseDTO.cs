@@ -1,3 +1,5 @@
+﻿using System.ComponentModel.DataAnnotations;
+
 namespace Medix.API.Models.DTOs
 {
     public class AuthResponseDto
@@ -24,6 +26,7 @@ namespace Medix.API.Models.DTOs
         public string? username { get; set; } = string.Empty;
         public string? FullName { get; set; } = string.Empty;
         public string? Email { get; set; } = string.Empty;
+        public string? imageURL { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
         public string? address { get; set; }
         public DateOnly? dob { get; set; }
@@ -35,11 +38,15 @@ namespace Medix.API.Models.DTOs
     public class UpdateUserDto
     {
         public Guid? Id { get; set; }
+        public string? username { get; set; } = string.Empty;
         public string? FullName { get; set; } = string.Empty;
+        [EmailAddress]
         public string? Email { get; set; } = string.Empty;
+        [Phone(ErrorMessage ="Số diện thoại không hơp lệ")]
         public string? PhoneNumber { get; set; } 
         public string? address { get; set; }
         public DateOnly? dob { get; set; }
+       
     }
 
 }

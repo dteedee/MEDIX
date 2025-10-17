@@ -38,8 +38,11 @@ export default function CategoryEditPage() {
 
   const pageTitle = id ? 'Chỉnh sửa Danh mục' : 'Tạo danh mục mới'
 
+  const title = id ? 'Chỉnh sửa Danh mục' : 'Tạo Danh mục mới'
+
   return (
     <div style={{ padding: 24, backgroundColor: '#f9fafb', minHeight: '100vh' }}>
+<<<<<<< HEAD
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1 style={{ margin: 0, fontSize: '1.875rem', fontWeight: 'bold', color: '#111827' }}>
@@ -64,6 +67,12 @@ export default function CategoryEditPage() {
       <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 24 }}>
         <CategoryForm category={category} onSaved={handleSave} onCancel={handleCancel} />
       </div>
+=======
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 style={{ margin: 0, fontSize: '1.875rem', fontWeight: 'bold', color: '#111827' }}>{title}</h1>
+      </div>
+      <CategoryForm category={category} onSaved={handleSave} onCancel={handleCancel} />
+>>>>>>> NEW-Manager-User
     </div>
   )
 }

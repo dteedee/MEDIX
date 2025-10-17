@@ -38,8 +38,11 @@ export default function BannerEditPage() {
 
   const pageTitle = id ? 'Chỉnh sửa Banner' : 'Tạo banner mới'
 
+  const title = id ? 'Chỉnh sửa Banner' : 'Tạo Banner mới'
+
   return (
     <div style={{ padding: 24, backgroundColor: '#f9fafb', minHeight: '100vh' }}>
+<<<<<<< HEAD
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1 style={{ margin: 0, fontSize: '1.875rem', fontWeight: 'bold', color: '#111827' }}>
@@ -54,6 +57,12 @@ export default function BannerEditPage() {
       <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 24 }}>
         <BannerForm banner={banner} onSaved={handleSave} onCancel={handleCancel} />
       </div>
+=======
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 style={{ margin: 0, fontSize: '1.875rem', fontWeight: 'bold', color: '#111827' }}>{title}</h1>
+      </div>
+      <BannerForm banner={banner} onSaved={handleSave} onCancel={handleCancel} />
+>>>>>>> NEW-Manager-User
     </div>
   )
 }

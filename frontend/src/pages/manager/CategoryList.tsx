@@ -5,7 +5,18 @@ import { CategoryDTO } from '../../types/category.types'
 import CategoryDetails from '../../components/admin/CategoryDetails'
 import { useToast } from '../../contexts/ToastContext'
 
+<<<<<<< HEAD
 // Icons
+=======
+// SVG Icons for actions
+const ViewIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+>>>>>>> NEW-Manager-User
 const EditIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -19,7 +30,10 @@ const DeleteIcon = () => (
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
   </svg>
 );
+<<<<<<< HEAD
 
+=======
+>>>>>>> NEW-Manager-User
 export default function CategoryList() {
   const [items, setItems] = useState<CategoryDTO[]>([])
   const [total, setTotal] = useState<number | undefined>(undefined)
@@ -75,6 +89,7 @@ export default function CategoryList() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1 style={{ margin: 0, fontSize: '1.875rem', fontWeight: 'bold', color: '#111827' }}>Quản lý Danh mục</h1>
+<<<<<<< HEAD
         <button 
           onClick={onCreate} 
           style={{ 
@@ -83,6 +98,16 @@ export default function CategoryList() {
             color: '#fff', 
             borderRadius: 8, 
             border: 'none', 
+=======
+        <button
+          onClick={onCreate}
+          style={{
+            padding: '10px 20px',
+            background: '#2563eb',
+            color: '#fff',
+            borderRadius: 8,
+            border: 'none',
+>>>>>>> NEW-Manager-User
             fontWeight: 600,
             cursor: 'pointer',
             display: 'flex',
@@ -98,6 +123,7 @@ export default function CategoryList() {
       {/* Filter Section */}
       <div style={{ marginBottom: 24, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 20 }}>
         <div style={{ display: 'flex', gap: 16, alignItems: 'end' }}>
+<<<<<<< HEAD
           <div style={{ flex: '1 1 300px' }}>
             <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Tìm kiếm</label>
             <input
@@ -105,12 +131,25 @@ export default function CategoryList() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSearch() } }}
+=======
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Tìm kiếm</label>
+            <input
+              placeholder="Tìm theo tên, slug hoặc mô tả..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+>>>>>>> NEW-Manager-User
               style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
             />
           </div>
           <div>
+<<<<<<< HEAD
             <button onClick={handleSearch} style={{ padding: '10px 20px', background: '#0455ebff', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer', width: '100%' }}>
               Tìm
+=======
+            <button onClick={() => setSearch('')} style={{ padding: '10px 20px', background: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
+              Xóa
+>>>>>>> NEW-Manager-User
             </button>
           </div>
         </div>
@@ -121,6 +160,7 @@ export default function CategoryList() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ backgroundColor: '#f9fafb' }}>
             <tr>
+<<<<<<< HEAD
               <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>Tên danh mục</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>Slug</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>Danh mục cha</th>
@@ -136,6 +176,24 @@ export default function CategoryList() {
                 <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{c.parentName ?? '-'}</td>
                 <td style={{ padding: '16px' }}>{pill(c.isActive)}</td>
                 <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
+=======
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tên danh mục</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Slug</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mô tả</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trạng thái</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((c) => (
+              <tr key={c.id} style={{ borderTop: '1px solid #e5e7eb' }}>
+                <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14 }}>{c.name}</td>
+                <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{c.slug}</td>
+                <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{c.description}</td>
+                <td style={{ padding: '16px' }}>{pill(c.isActive)}</td>
+                <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <button onClick={() => setViewing(c)} title="Xem" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
+>>>>>>> NEW-Manager-User
                   <button onClick={() => onEdit(c)} title="Sửa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
                   <button onClick={() => onDelete(c.id)} title="Xóa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><DeleteIcon /></button>
                 </td>
@@ -143,6 +201,34 @@ export default function CategoryList() {
             ))}
           </tbody>
         </table>
+<<<<<<< HEAD
+=======
+      </div>
+
+      {/* Pagination */}
+      <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#4b5563', fontSize: 14 }}>
+        <div>
+          Hiển thị {filtered.length} trên tổng số {total ?? 0} kết quả
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label htmlFor="pageSize" style={{ fontSize: 14 }}>Số mục:</label>
+            <select id="pageSize" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}>
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
+              Trang trước
+            </button>
+            <button onClick={() => setPage(p => p + 1)} disabled={items.length < pageSize} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: items.length < pageSize ? 0.6 : 1 }}>
+              Trang sau
+            </button>
+          </div>
+        </div>
+>>>>>>> NEW-Manager-User
       </div>
 
       {/* Pagination */}

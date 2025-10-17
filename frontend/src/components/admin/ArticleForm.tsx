@@ -3,6 +3,7 @@ import { ArticleDTO, CreateArticleRequest } from '../../types/article.types'
 import { categoryService } from '../../services/categoryService'
 import { CategoryDTO } from '../../types/category.types'
 import { articleService } from '../../services/articleService'
+import { useToast } from '../../contexts/ToastContext'
 
 interface Props {
   article?: ArticleDTO
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function ArticleForm({ article, onSaved, onCancel }: Props) {
+  const { showToast } = useToast()
   const [title, setTitle] = useState(article?.title ?? '')
   const [slug, setSlug] = useState(article?.slug ?? '')
   const [summary, setSummary] = useState(article?.summary ?? '')
@@ -154,6 +156,10 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
       if (article) await articleService.update(article.id, payload)
       else await articleService.create(payload)
       onSaved?.()
+    } catch (error) {
+      console.error('Error saving article:', error)
+      // Giả định lỗi là do slug trùng lặp theo yêu cầu.
+      showToast('Slug không được phép trùng', 'error')
     } finally {
       setSaving(false)
     }

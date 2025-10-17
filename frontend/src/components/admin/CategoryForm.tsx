@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { CategoryDTO, CreateCategoryRequest } from '../../types/category.types'
 import { categoryService } from '../../services/categoryService'
+import { useToast } from '../../contexts/ToastContext'
 
 interface Props {
   category?: CategoryDTO
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function CategoryForm({ category, onSaved, onCancel }: Props) {
+  const { showToast } = useToast()
   const [name, setName] = useState(category?.name ?? '')
   const [slug, setSlug] = useState(category?.slug ?? '')
   const [description, setDescription] = useState(category?.description ?? '')
@@ -31,6 +33,11 @@ export default function CategoryForm({ category, onSaved, onCancel }: Props) {
       if (category) await categoryService.update(category.id, payload)
       else await categoryService.create(payload)
       onSaved?.()
+    } catch (error) {
+      console.error('Error saving category:', error)
+      // Giả định lỗi là do slug trùng lặp theo yêu cầu.
+      // Trong thực tế, bạn nên kiểm tra mã lỗi từ server để hiển thị thông báo chính xác hơn.
+      showToast('Slug không được phép trùng', 'error')
     } finally { setSaving(false) }
   }
 

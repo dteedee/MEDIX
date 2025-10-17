@@ -36,6 +36,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IUserRoleRepository, UserRoleRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IArticleRepository, ArticleRepitory>();
+            services.AddScoped<IReviewRepository, ReviewRepository>();
         }
 
         private static void RegisterServices(IServiceCollection services)

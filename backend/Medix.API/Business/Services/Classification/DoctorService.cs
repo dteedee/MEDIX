@@ -3,6 +3,7 @@ using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.Entities;
+using Medix.API.Models.DTOs.Doctor;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -10,13 +11,16 @@ namespace Medix.API.Business.Services.Classification
     {
         private readonly IDoctorRepository _doctorRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IReviewRepository _reviewRepository;
         private readonly MedixContext _context;
 
-        public DoctorService(IDoctorRepository doctorRepository, IUserRepository userRepository, MedixContext context)
+        public DoctorService(IDoctorRepository doctorRepository, IUserRepository userRepository,
+            MedixContext context, IReviewRepository reviewRepository)
         {
             _doctorRepository = doctorRepository;
             _userRepository = userRepository;
             _context = context;
+            _reviewRepository = reviewRepository;
         }
 
         public async Task<bool> RegisterDoctorAsync(User user, Doctor doctor, UserRole role)
@@ -62,5 +66,45 @@ namespace Medix.API.Business.Services.Classification
         }
 
         public async Task<bool> LicenseNumberExistsAsync(string licenseNumber) => await _doctorRepository.LicenseNumberExistsAsync(licenseNumber);
+
+        public async Task<DoctorProfileDto?> GetDoctorProfileByUserNameAsync(string userName)
+        {
+            var doctor = await _doctorRepository.GetDoctorByUserNameAsync(userName);
+            if (doctor == null) { return null; }
+            var reviews = await _reviewRepository.GetReviewsByDoctorAsync(doctor.Id);
+            int[] ratingByStar = new int[5];
+            foreach (var review in reviews)
+            {
+                if (review.Rating >= 1 && review.Rating <= 5)
+                {
+                    ratingByStar[review.Rating - 1]++;
+                }
+            }
+
+            var profileDto = new DoctorProfileDto
+            {
+                FullName = doctor.User.FullName,
+                AverageRating = reviews.Count > 0
+                    ? Math.Round((decimal)reviews.Average(r => r.Rating), 1)
+                    : 0,
+                Specialization = doctor.Specialization.Name,
+                Biography = doctor.Bio,
+                AvatarUrl = doctor.User.AvatarUrl,
+                NumberOfReviews = reviews.Count,
+                RatingByStar = ratingByStar,
+            };
+
+            profileDto.Reviews = reviews.OrderByDescending(r => r.CreatedAt)
+                .Select(r => new ReviewDto
+                {
+                    Rating = r.Rating,
+                    Comment = r.Comment,
+                    Date = r.CreatedAt.ToString("dd/MM/yyyy"),
+                })
+                .Take(4)
+                .ToList();
+
+            return profileDto;
+        }
     }
 }

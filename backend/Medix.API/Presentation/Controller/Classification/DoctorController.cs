@@ -125,5 +125,18 @@ namespace Medix.API.Presentation.Controller.Classification
                 ModelState.AddModelError("IdentificationNumber", "Số CCCD/CMND đã được sử dụng");
             }
         }
+
+        [HttpGet("profile/{username}")]
+        public async Task<IActionResult> GetDoctorProfile(string username)
+        {
+            var profileDto = await _doctorService.GetDoctorProfileByUserNameAsync(username);
+
+            if (profileDto == null)
+            {
+                return NotFound(new { Message = "Doctor not found" });
+            }
+
+            return Ok(profileDto);
+        }
     }
 }

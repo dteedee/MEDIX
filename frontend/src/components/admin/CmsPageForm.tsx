@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { CmsPageDTO, CreateCmsPageRequest } from '../../types/cmspage.types'
 import { cmspageService } from '../../services/cmspageService'
+import { useToast } from '../../contexts/ToastContext'
 
 interface Props { page?: CmsPageDTO; onSaved?: () => void; onCancel?: () => void }
 
 export default function CmsPageForm({ page, onSaved, onCancel }: Props) {
+  const { showToast } = useToast();
   const [title, setTitle] = useState(page?.pageTitle ?? '')
   const [slug, setSlug] = useState(page?.pageSlug ?? '')
   const [content, setContent] = useState(page?.pageContent ?? '')
@@ -33,7 +35,14 @@ export default function CmsPageForm({ page, onSaved, onCancel }: Props) {
       if (page) await cmspageService.update(page.id, payload as any)
       else await cmspageService.create(payload)
       onSaved?.()
-    } finally { setSaving(false) }
+    } catch (error) {
+      console.error('Error saving CMS page:', error);
+      // Theo yêu cầu, hiển thị thông báo này cho bất kỳ lỗi lưu nào.
+      // Trong một ứng dụng thực tế, bạn nên kiểm tra `error.response` để phân biệt các loại lỗi cụ thể.
+      showToast('Slug không được phép trùng', 'error');
+    } finally {
+      setSaving(false)
+    }
   }
 
   // Prefill with latest when editing

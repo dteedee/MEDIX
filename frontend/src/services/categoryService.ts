@@ -28,10 +28,6 @@ export const categoryService = {
     const total = data?.item1
     return { items, total }
   },
-  search: async (keyword: string): Promise<CategoryDTO[]> => {
-    const r = await axios.get(`${BASE}/search`, { params: { keyword }, headers: authHeader() });
-    return r.data;
-  },
   get: async (id: string): Promise<CategoryDTO> => {
     const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })
     return r.data

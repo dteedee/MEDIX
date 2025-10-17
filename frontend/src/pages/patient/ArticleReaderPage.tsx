@@ -7,18 +7,14 @@ import './ArticleReader.css'
 export default function ArticleReaderPage() {
   const [articles, setArticles] = useState<ArticleDTO[]>([])
   const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(1)
-  const [pageSize] = useState(10) // 1 featured + 9 grid items
-  const [total, setTotal] = useState(0)
 
   useEffect(() => {
     const loadArticles = async () => {
-      setLoading(true)
       try {
         // Fetch only published articles
-        const response = await articleService.list(page, pageSize, 'PUBLISHED')
-        setArticles(response.items)
-        setTotal(response.total ?? 0)
+        const response = await articleService.list(1, 50) // Fetch more to filter
+        const published = response.items.filter((a: ArticleDTO) => a.statusCode === 'PUBLISHED')
+        setArticles(published)
       } catch (error) {
         console.error("Failed to load articles", error)
       } finally {
@@ -26,13 +22,12 @@ export default function ArticleReaderPage() {
       }
     }
     loadArticles()
-  }, [page, pageSize])
+  }, [])
 
   if (loading) return <div className="article-reader-container">Đang tải...</div>
 
   const featuredArticle = articles[0]
-  const otherArticles = articles.slice(1, pageSize)
-  const totalPages = Math.ceil(total / pageSize)
+  const otherArticles = articles.slice(1)
 
   return (
     <div className="article-reader-container">
@@ -59,16 +54,6 @@ export default function ArticleReaderPage() {
             </div>
           </Link>
         ))}
-      </div>
-
-      <div className="pagination-controls">
-        <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>
-          Trang trước
-        </button>
-        <span>Trang {page} / {totalPages > 0 ? totalPages : 1}</span>
-        <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}>
-          Trang sau
-        </button>
       </div>
     </div>
   )

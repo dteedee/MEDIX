@@ -14,7 +14,7 @@ export default function ArticleDetailPage() {
     if (!slug) return
     const loadArticle = async () => {
       try {
-        const articleData = await articleService.getBySlug(slug); // This will now work
+        const articleData = await articleService.getBySlug(slug);
         if (articleData) {
           setArticle(articleData);
         } else {

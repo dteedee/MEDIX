@@ -1,12 +1,8 @@
-import React, { useState, useEffect } from 'react'
-import { ArticleDTO, CreateArticleRequest, UpdateArticleRequest } from '../../types/article.types'
+import React, { useEffect, useState } from 'react'
+import { ArticleDTO, CreateArticleRequest } from '../../types/article.types'
+import { categoryService } from '../../services/categoryService'
 import { CategoryDTO } from '../../types/category.types'
 import { articleService } from '../../services/articleService'
-<<<<<<< HEAD
-import { categoryService } from '../../services/categoryService'
-import './AdminForm.css'
-=======
->>>>>>> NEW-Manager-User
 
 interface Props {
   article?: ArticleDTO
@@ -15,105 +11,149 @@ interface Props {
 }
 
 export default function ArticleForm({ article, onSaved, onCancel }: Props) {
-  const [formData, setFormData] = useState({
-    title: '',
-    slug: '',
-    summary: '',
-    content: '',
-    thumbnailUrl: '',
-    coverImageUrl: '',
-    statusCode: 'DRAFT',
-    categoryIds: [] as string[],
-  })
-  const [allCategories, setAllCategories] = useState<CategoryDTO[]>([])
+  const [title, setTitle] = useState(article?.title ?? '')
+  const [slug, setSlug] = useState(article?.slug ?? '')
+  const [summary, setSummary] = useState(article?.summary ?? '')
+  const [thumbnailUrl, setThumbnailUrl] = useState(article?.thumbnailUrl ?? '')
+  const [coverImageUrl, setCoverImageUrl] = useState(article?.coverImageUrl ?? '')
+  const [displayType, setDisplayType] = useState(article?.displayType ?? 'STANDARD')
+  const [isHomepageVisible, setIsHomepageVisible] = useState<boolean>(article?.isHomepageVisible ?? false)
+  const [displayOrder, setDisplayOrder] = useState<number>(article?.displayOrder ?? 0)
+  const [metaTitle, setMetaTitle] = useState(article?.metaTitle ?? '')
+  const [metaDescription, setMetaDescription] = useState(article?.metaDescription ?? '')
+  // TODO: Replace with actual logged-in user ID from AuthContext when available
+  // Use a REAL user ID from your database for development until auth is ready.
+  const [authorId, setAuthorId] = useState('1A2C1A65-7B00-415F-8164-4FC3C1054203') // <-- Replace with a valid user ID from your DB
+  const [statusCode, setStatusCode] = useState(article?.statusCode ?? 'DRAFT')
+  const [publishedAt, setPublishedAt] = useState<string>(article?.publishedAt ?? '')
+  const [categoryIds, setCategoryIds] = useState<string[]>([])
+  const [content, setContent] = useState(article?.content ?? '')
   const [saving, setSaving] = useState(false)
-  const [errors, setErrors] = useState<Partial<Record<keyof typeof formData, string>>>({})
-  const isEditMode = Boolean(article?.id)
+  const fileRef = React.createRef<HTMLInputElement>()
+  const [availableCategories, setAvailableCategories] = useState<CategoryDTO[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(false)
+
+  const onSelectFile = () => {
+    fileRef.current?.click()
+  }
+
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    try {
+      const url = await articleService.uploadImage(f)
+      setThumbnailUrl(url)
+    } catch (err) {
+      console.error('Upload failed', err)
+      alert('Upload failed')
+    }
+  }
 
   useEffect(() => {
-    let isMounted = true;
-    async function loadData() {
-      // Load categories for selection
-      const categoriesResponse = await categoryService.list(1, 200);
-      if (!isMounted) return;
-      const loadedCategories = categoriesResponse.items;
-      setAllCategories(loadedCategories);
-
-      if (article) {
-        const articleCategoryNames = article.categories?.map(c => c.name) ?? [];
-        const articleCategoryIds = loadedCategories
-          .filter(c => articleCategoryNames.includes(c.name))
-          .map(c => c.id);
-
-        setFormData({
-          title: article.title ?? '',
-          slug: article.slug ?? '',
-          summary: article.summary ?? '',
-          content: article.content ?? '',
-          thumbnailUrl: article.thumbnailUrl ?? '',
-          coverImageUrl: article.coverImageUrl ?? '',
-          statusCode: article.statusCode ?? 'DRAFT',
-          categoryIds: articleCategoryIds,
-        });
+    const loadCategories = async () => {
+      setLoadingCategories(true)
+      try {
+        const r = await categoryService.list(1, 1000)
+        setAvailableCategories(r.items ?? [])
+      } finally {
+        setLoadingCategories(false)
       }
     }
+    loadCategories()
+  }, [])
 
-    loadData();
+  const toggleCategory = (id: string) => {
+    setCategoryIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
 
-    return () => {
-      isMounted = false;
-    };
-  }, [article]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target
-
-    if (type === 'select-multiple') {
-      const options = (e.target as HTMLSelectElement).options
-      const selectedIds: string[] = []
-      for (let i = 0; i < options.length; i++) {
-        if (options[i].selected) {
-          selectedIds.push(options[i].value)
+  // When editing, load the latest article data and prefill fields
+  useEffect(() => {
+    const loadArticle = async () => {
+      if (!article?.id) return
+      try {
+        const full = await articleService.get(article.id)
+        setTitle(full.title ?? '')
+        setSlug(full.slug ?? '')
+        setSummary(full.summary ?? '')
+        setThumbnailUrl(full.thumbnailUrl ?? '')
+        setCoverImageUrl(full.coverImageUrl ?? '')
+        setDisplayType(full.displayType ?? 'STANDARD')
+        setIsHomepageVisible(Boolean(full.isHomepageVisible))
+        setDisplayOrder(typeof full.displayOrder === 'number' ? full.displayOrder : 0)
+        setMetaTitle(full.metaTitle ?? '')
+        setMetaDescription(full.metaDescription ?? '')
+        // best-effort: authorId may exist on API. If not, keep the hardcoded one.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const apiAuthorId = (full as any)?.authorId;
+        if (apiAuthorId) setAuthorId(apiAuthorId);
+        setStatusCode(full.statusCode ?? 'DRAFT')
+        setPublishedAt(full.publishedAt ?? '')
+        setContent(full.content ?? '')
+        // Preselect categories: prefer categoryIds from API if available, otherwise map names/slugs
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const apiCategoryIds: string[] | undefined = (full as any)?.categoryIds
+        if (Array.isArray(apiCategoryIds) && apiCategoryIds.length > 0) {
+          setCategoryIds(apiCategoryIds)
+        } else if (Array.isArray(full.categories) && full.categories.length > 0) {
+          const names = full.categories.map(c => (c.slug ?? c.name)?.toLowerCase?.() ?? '')
+          const matched = availableCategories
+            .filter(c => names.includes((c.slug ?? c.name)?.toLowerCase?.() ?? ''))
+            .map(c => c.id)
+          if (matched.length > 0) setCategoryIds(matched)
         }
+      } catch {
+        // ignore; keep initial values
       }
-      setFormData(prev => ({ ...prev, [name]: selectedIds }))
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }))
     }
-  }
+    loadArticle()
+    // Re-run when availableCategories changes to attempt name/slug matching
+  }, [article?.id, availableCategories])
 
-  const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof typeof formData, string>> = {}
-    if (!formData.title.trim()) newErrors.title = 'Tiêu đề là bắt buộc.'
-    if (!formData.slug.trim()) newErrors.slug = 'Đường dẫn (slug) là bắt buộc.'
-    if (formData.thumbnailUrl) {
-      try { new URL(formData.thumbnailUrl) } catch (_) { newErrors.thumbnailUrl = 'URL ảnh thu nhỏ không hợp lệ.' }
+  // Auto-generate slug from title if slug is empty
+  useEffect(() => {
+    if (!slug && title) {
+      const generatedSlug = title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-');
+      setSlug(generatedSlug);
     }
-    if (formData.coverImageUrl) {
-      try { new URL(formData.coverImageUrl) } catch (_) { newErrors.coverImageUrl = 'URL ảnh bìa không hợp lệ.' }
-    }
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+  }, [title]);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validateForm()) return
+  const submit = async (e: React.FormEvent | null, overrideStatusCode?: string) => {
+    e?.preventDefault()
     setSaving(true)
     try {
-      const payload = { ...formData }
-      if (isEditMode) {
-        await articleService.update(article!.id, payload as UpdateArticleRequest)
-      } else {
-        // TODO: Cần lấy authorId của người dùng đang đăng nhập
-        const createPayload = { ...payload, authorId: '1A2C1A65-7B00-415F-8164-4FC3C1054203' } // ID User tạm thời
-        await articleService.create(createPayload as CreateArticleRequest)
+      const finalStatusCode = overrideStatusCode ?? statusCode;
+      // Prevent saving base64 data URLs into DB columns (causes truncation error)
+      if ((thumbnailUrl && thumbnailUrl.startsWith('data:')) || (coverImageUrl && coverImageUrl.startsWith('data:'))) {
+        console.warn('Attempt to save data URL into DB blocked')
+        alert('Upload failed earlier so the image is a local data URL. The server likely returned 404 for the upload endpoint.\n\nDo not save data URLs into the database. Please ensure the backend upload endpoint is available so images are stored and a remote URL is returned.')
+        setSaving(false)
+        return
       }
+      if (categoryIds.length === 0) {
+        alert('Vui lòng chọn ít nhất một danh mục cho bài viết.')
+        setSaving(false)
+        return
+      }
+      const payload: CreateArticleRequest = { // Cast to any to allow `undefined` for optional fields
+        title,
+        slug,
+        summary,
+        content,
+        displayType,
+        thumbnailUrl,
+        coverImageUrl,
+        isHomepageVisible,
+        displayOrder,
+        metaTitle,
+        metaDescription,
+        authorId,
+        statusCode: finalStatusCode,
+        publishedAt: publishedAt || undefined,
+        categoryIds
+      } as any
+      if (article) await articleService.update(article.id, payload)
+      else await articleService.create(payload)
       onSaved?.()
-    } catch (error: any) {
-      const serverErrors = error?.response?.data?.errors;
-      if (serverErrors) setErrors(serverErrors);
-      console.error("Failed to save article:", error)
     } finally {
       setSaving(false)
     }
@@ -151,73 +191,6 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   }
 
   return (
-<<<<<<< HEAD
-    <form onSubmit={submit}>
-      <div className="form-grid">
-        <div className="form-group">
-          <label htmlFor="title" className="form-label">Tiêu đề</label>
-          <input id="title" name="title" type="text" className={`form-input ${errors.title ? 'is-invalid' : ''}`} value={formData.title} onChange={handleChange} />
-          {errors.title && <div className="form-error">{errors.title}</div>}
-        </div>
-        <div className="form-group">
-          <label htmlFor="slug" className="form-label">Đường dẫn (Slug)</label>
-          <input id="slug" name="slug" type="text" className={`form-input ${errors.slug ? 'is-invalid' : ''}`} value={formData.slug} onChange={handleChange} />
-          {errors.slug && <div className="form-error">{errors.slug}</div>}
-        </div>
-        <div className="form-group" style={{ gridColumn: 'span 2' }}>
-          <label htmlFor="summary" className="form-label">Tóm tắt</label>
-          <textarea id="summary" name="summary" className={`form-input ${errors.summary ? 'is-invalid' : ''}`} value={formData.summary} onChange={handleChange} rows={3}></textarea>
-          {errors.summary && <div className="form-error">{errors.summary}</div>}
-        </div>
-        <div className="form-group" style={{ gridColumn: 'span 2' }}>
-          <label htmlFor="content" className="form-label">Nội dung</label>
-          <textarea id="content" name="content" className={`form-input ${errors.content ? 'is-invalid' : ''}`} value={formData.content} onChange={handleChange} rows={10}></textarea>
-          {errors.content && <div className="form-error">{errors.content}</div>}
-        </div>
-        <div className="form-group">
-          <label htmlFor="thumbnailUrl" className="form-label">Ảnh thu nhỏ (Thumbnail URL)</label>
-          <input id="thumbnailUrl" name="thumbnailUrl" type="url" className={`form-input ${errors.thumbnailUrl ? 'is-invalid' : ''}`} value={formData.thumbnailUrl} onChange={handleChange} />
-          {errors.thumbnailUrl && <div className="form-error">{errors.thumbnailUrl}</div>}
-        </div>
-        <div className="form-group">
-          <label htmlFor="coverImageUrl" className="form-label">Ảnh bìa (Cover URL)</label>
-          <input id="coverImageUrl" name="coverImageUrl" type="url" className={`form-input ${errors.coverImageUrl ? 'is-invalid' : ''}`} value={formData.coverImageUrl} onChange={handleChange} />
-          {errors.coverImageUrl && <div className="form-error">{errors.coverImageUrl}</div>}
-        </div>
-        <div className="form-group">
-          <label htmlFor="categoryIds" className="form-label">Danh mục</label>
-          <select
-            id="categoryIds"
-            name="categoryIds"
-            multiple
-            className="form-select"
-            value={formData.categoryIds}
-            onChange={handleChange}
-            style={{ height: '150px' }}
-          >
-            {allCategories.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="form-group">
-          <label htmlFor="statusCode" className="form-label">Trạng thái</label>
-          <select id="statusCode" name="statusCode" className="form-select" value={formData.statusCode} onChange={handleChange}>
-            <option value="DRAFT">Bản nháp</option>
-            <option value="PUBLISHED">Xuất bản</option>
-            <option value="ARCHIVED">Lưu trữ</option>
-          </select>
-        </div>
-
-        <div className="form-actions">
-          <button type="button" className="form-button form-button-secondary" onClick={onCancel} disabled={saving}>
-            Hủy
-          </button>
-          <button type="submit" className="form-button form-button-primary" disabled={saving}>
-            {saving ? 'Đang lưu...' : 'Lưu'}
-          </button>
-        </div>
-=======
     <form onSubmit={(e) => submit(e)} style={formContainerStyle}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '32px' }}>
         {/* Left Column */}
@@ -315,7 +288,6 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         <button type="submit" disabled={saving} style={{ ...buttonStyle, background: saving ? '#9ca3af' : '#2563eb', color: '#fff' }}>
           {saving ? 'Đang lưu...' : 'Lưu & Xuất bản'}
         </button>
->>>>>>> NEW-Manager-User
       </div>
     </form>
   )

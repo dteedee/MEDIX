@@ -151,7 +151,7 @@ export default function UserList() {
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ padding: 9, width: '100%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} />
           </div>
           <div>
-            <button onClick={() => load()} style={{ padding: '10px 20px', background: '#0455ebff', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer', width: '100%' }}>Tìm</button>
+            <button onClick={() => load()} style={{ padding: '10px 20px', background: '#1f2937', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer', width: '100%' }}>Tìm</button>
           </div>
         </div>
       </div>

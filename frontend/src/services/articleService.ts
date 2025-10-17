@@ -13,35 +13,159 @@ function authHeader() {
 }
 
 export const articleService = {
-  list: async (page = 1, pageSize = 10, search?: string): Promise<{ items: ArticleDTO[]; total: number }> => {
-    const params: any = { page, pageSize };
-    if (search) {
-      params.search = search;
+  list: async (page = 1, pageSize = 10, params?: { search?: string; status?: string; slug?: string }): Promise<{ items: ArticleDTO[]; total?: number }> => {
+    const query: any = { page, pageSize }
+    if (params?.search) query.search = params.search
+    if (params?.status) query.status = params.status
+    if (params?.slug) query.slug = params.slug
+    const r = await axios.get(BASE, { params: query, headers: authHeader() })
+    const data = r.data
+
+    // If backend returns an array directly
+    if (Array.isArray(data)) {
+      const items: ArticleDTO[] = data.map((x: any) => ({
+        id: x.id,
+        title: x.title,
+        slug: x.slug,
+        summary: x.summary,
+        content: x.content,
+        thumbnailUrl: x.thumbnailUrl,
+        coverImageUrl: x.coverImageUrl,
+        metaTitle: x.metaTitle,
+        metaDescription: x.metaDescription,
+        statusCode: x.statusCode,
+        authorName: x.authorName,
+        publishedAt: x.publishedAt,
+        viewCount: x.viewCount,
+        likeCount: x.likeCount,
+        isHomepageVisible: x.isHomepageVisible,
+        displayOrder: x.displayOrder,
+        displayType: x.displayType,
+        createdAt: x.createdAt,
+        updatedAt: x.updatedAt,
+        categories: x.categories
+      }))
+      return { items, total: items.length }
     }
-    const r = await axios.get(BASE, { params, headers: authHeader() });
-    const data = r.data;
-    // Backend returns a tuple (int total, IEnumerable<data>) which is serialized to { item1, item2 }
-    const items: ArticleDTO[] = data?.item2 ?? data?.data ?? [];
-    const total: number = data?.item1 ?? data?.total ?? 0;
-    return { items, total };
+
+    const items: ArticleDTO[] = data?.item2?.map((x: any) => ({
+      id: x.id,
+      title: x.title,
+      slug: x.slug,
+      summary: x.summary,
+      content: x.content,
+      thumbnailUrl: x.thumbnailUrl,
+      coverImageUrl: x.coverImageUrl,
+      metaTitle: x.metaTitle,
+      metaDescription: x.metaDescription,
+      statusCode: x.statusCode,
+      authorName: x.authorName,
+      publishedAt: x.publishedAt,
+      viewCount: x.viewCount,
+      likeCount: x.likeCount,
+      isHomepageVisible: x.isHomepageVisible,
+      displayOrder: x.displayOrder,
+      displayType: x.displayType,
+      createdAt: x.createdAt,
+      updatedAt: x.updatedAt,
+      categories: x.categories
+    })) ?? []
+    const total = data?.item1
+    return { items, total }
   },
   get: async (id: string): Promise<ArticleDTO> => {
     const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })
     return r.data
   },
-  getBySlug: async (slug: string): Promise<ArticleDTO> => {
-    const r = await axios.get(`${BASE}/slug/${slug}`, { headers: authHeader() });
-    return r.data;
+  getBySlug: async (slug: string): Promise<ArticleDTO | null> => {
+    try {
+      const r = await axios.get(`${BASE}/slug/${encodeURIComponent(slug)}`, { headers: authHeader() })
+      return r.data
+    } catch (err: any) {
+      if (err?.response?.status === 404) return null
+      throw err
+    }
   },
   create: async (payload: CreateArticleRequest): Promise<ArticleDTO> => {
     const r = await axios.post(BASE, payload, { headers: authHeader() })
     return r.data
   },
-  update: async (id:string, payload: UpdateArticleRequest): Promise<ArticleDTO> => {
+  update: async (id: string, payload: UpdateArticleRequest): Promise<ArticleDTO> => {
     const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() })
     return r.data
   },
   remove: async (id: string): Promise<void> => {
     await axios.delete(`${BASE}/${id}`, { headers: authHeader() })
+  }
+  ,
+  /**
+   * Upload an image file.
+   * @param file File to upload
+   * @param endpoint optional upload endpoint (defaults to /api/File/Upload)
+   * Returns the uploaded file URL as string. The function attempts to normalize common response shapes.
+   */
+  uploadImage: async (file: File, endpoint = '/api/File/Upload'): Promise<string> => {
+    const form = new FormData()
+    form.append('file', file)
+    try {
+      const r = await axios.post(endpoint, form, { headers: { ...(authHeader() ?? {}), 'Content-Type': 'multipart/form-data' } })
+      const data = r.data
+
+  // Try common fields for returned URL/path. Backend commonly returns { url: '...' }.
+  // Normalize relative paths by prepending the current origin so the caller always gets an absolute URL.
+  const tryGet = (obj: any) => {
+    if (!obj) return undefined
+    if (typeof obj === 'string') return obj
+    return obj.url ?? obj.fileUrl ?? obj.path ?? obj.filePath ?? obj.location ?? obj.file ?? obj.filename ?? obj.name
+  }
+
+  const candidates = [
+    tryGet(data),
+    tryGet(data?.data),
+    tryGet(data?.result),
+    tryGet(data?.payload)
+  ]
+
+      for (const c of candidates) {
+        if (typeof c === 'string' && c) {
+          // If server returned a relative path like '/uploads/..', make it absolute.
+          if (c.startsWith('/')) {
+            try {
+              return window.location.origin + c
+            } catch {
+              return c // fallback if window is not available for some reason
+            }
+          }
+          return c
+        }
+      }
+
+  // last resort: return raw data if it's a string
+  if (typeof data === 'string') return data
+
+  throw new Error('Unexpected upload response shape; please provide example response so mapping can be adjusted')
+    } catch (err: any) {
+      // If server returns 404 or endpoint not found, fallback to base64 data URL so UI still displays the image.
+      const status = err?.response?.status
+      if (status === 404 || err?.code === 'ERR_NETWORK' || err?.message?.includes('Network Error')) {
+        // convert file to data URL
+        const toDataUrl = (f: File) => new Promise<string>((res, rej) => {
+          const reader = new FileReader()
+          reader.onload = () => res(reader.result as string)
+          reader.onerror = () => rej(new Error('Failed to read file'))
+          reader.readAsDataURL(f)
+        })
+        try {
+          const dataUrl = await toDataUrl(file)
+          console.warn('Upload endpoint not found; using data URL fallback for preview')
+          return dataUrl
+        } catch (e) {
+          throw new Error('Upload failed and fallback conversion also failed')
+        }
+      }
+
+      // rethrow other errors for visibility
+      throw err
+    }
   }
 }

@@ -107,5 +107,14 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task<List<SiteBanner>> GetRunningBannersAsync()
+        {
+            var today = DateTime.UtcNow.Date;
+            return await _context.SiteBanners
+                .Where(b => b.IsActive && b.StartDate <= today && today <= b.EndDate)
+                .OrderBy(b => b.DisplayOrder)
+                .ToListAsync();
+        }
     }
 }

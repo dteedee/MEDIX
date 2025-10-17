@@ -1,4 +1,4 @@
-import '../styles/doctor-register.css'
+import '../../styles/doctor-register.css'
 
 import { useEffect, useState } from 'react';
 import axios from 'axios';

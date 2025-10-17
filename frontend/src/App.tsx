@@ -1,20 +1,40 @@
-import { useEffect, useState } from 'react'
-import axios from 'axios'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
+import { AuthProvider } from './contexts/AuthContext';
+import HomePage from './pages/HomePage';
+import { MainLayout } from './components/layout/MainLayout';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { UserRole } from './types/common.types';
+import DoctorRegister from './pages/doctor/DoctorRegister';
 
 export function App() {
-  const [message, setMessage] = useState<string>('Loading...')
-
-  useEffect(() => {
-    axios.get('/api/hello')
-      .then(r => setMessage(r.data.message ?? 'No message'))
-      .catch(() => setMessage('API not available yet'))
-  }, [])
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', padding: 24 }}>
-      <h1>Medix</h1>
-      <p>{message}</p>
-    </div>
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen w-full">
+          {/* Prioritize Toaster position from develop */}
+          <Routes>
+            {/* Home page - standalone layout */}
+            <Route index element={<HomePage />} />
+
+            {/* Main layout routes */}
+            <Route path="/app" element={<MainLayout />} />
+
+            {/* Doctor routes */}
+            <Route path="/doctor/*" element={
+              <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
+                <Routes>
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<div>Doctor Dashboard</div>} />
+                  <Route path="register" element={<DoctorRegister />} />
+                </Routes>
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
   )
 }
 

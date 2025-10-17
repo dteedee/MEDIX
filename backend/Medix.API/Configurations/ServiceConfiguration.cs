@@ -35,6 +35,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IPatientRepository, PatientRepository>();
             services.AddScoped<IUserRoleRepository, UserRoleRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<IArticleRepository, ArticleRepitory>();
         }
 
         private static void RegisterServices(IServiceCollection services)
@@ -51,6 +52,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IJwtService, JwtService>();
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<CloudinaryService>();
+            services.AddScoped<IArticleService, ArticleService>();
         }
     }
 }

@@ -159,5 +159,11 @@ namespace Medix.API.Business.Services.Classification
 
             await _siteBannerRepository.ToggleActiveStatusAsync(id, isActive);
         }
+
+        public async Task<List<SiteBanner>> GetHomePageBanners()
+        {
+            var banners = await _siteBannerRepository.GetRunningBannersAsync();
+            return banners.Take(5).ToList();
+        }
     }
 }

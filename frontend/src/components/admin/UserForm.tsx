@@ -9,34 +9,38 @@ interface Props {
 }
 
 export default function UserForm({ user, onSaved, onCancel }: Props) {
+  const isEditMode = !!user;
+
   const [fullName, setFullName] = useState(user?.fullName ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
   const [password, setPassword] = useState('')
   const [passwordConfirmation, setPasswordConfirmation] = useState('')
   const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber ?? '')
-  const [role, setRole] = useState(user?.role ?? 'PATIENT') // Mặc định là PATIENT cho người dùng mới
   const [dateOfBirth, setDateOfBirth] = useState<string>((user as any)?.dateOfBirth?.split('T')[0] ?? '')
   const [identificationNumber, setIdentificationNumber] = useState<string>(user?.identificationNumber ?? '')
   const [genderCode, setGenderCode] = useState<string>(user?.genderCode ?? '')
-  const [emailConfirmed, setEmailConfirmed] = useState<boolean>(user?.emailConfirmed ?? false)
+  const [role, setRole] = useState(user?.role ?? 'PATIENT')
+  const [lockoutEnabled, setLockoutEnabled] = useState<boolean>(user?.lockoutEnabled ?? false)
   const [saving, setSaving] = useState(false)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Basic password confirmation validation
-    if (!user && password !== passwordConfirmation) {
+    if (!isEditMode && password !== passwordConfirmation) {
       alert("Mật khẩu xác nhận không khớp!");
       return;
     }
     setSaving(true)
     try {
-      if (user) {
-        const payload: UpdateUserRequest = { fullName, phoneNumber, roleCodes: [role], emailConfirmed, dateOfBirth, identificationNumber, genderCode }
-        // Only send password fields if provided
-        if (password) { (payload as any).password = password; (payload as any).passwordConfirmation = passwordConfirmation }
+      if (isEditMode && user) {
+        // Khi chỉnh sửa, chỉ cập nhật vai trò và trạng thái xác thực
+        const payload = { 
+          roleCodes: [role],
+          lockoutEnabled: lockoutEnabled
+        }
         await userService.update(user.id, payload)
       } else {
-        const payload: CreateUserRequest = { email, fullName, phoneNumber, roleCodes: [role], password, passwordConfirmation, dateOfBirth, identificationNumber, genderCode }
+        // Khi tạo mới, chỉ cần email, mật khẩu và vai trò
+        const payload: CreateUserRequest = { fullName, email, password, passwordConfirmation, roleCodes: [role], phoneNumber, dateOfBirth, identificationNumber, genderCode }
         await userService.create(payload)
       }
       onSaved?.()
@@ -44,8 +48,6 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       setSaving(false)
     }
   }
-
-  const isEditMode = !!user;
 
   // --- CSS Styles --- (Updated for a cleaner look)
   const formContainerStyle: React.CSSProperties = {
@@ -82,16 +84,15 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       <div style={gridStyle}>
         <div>
           <label style={labelStyle}>Họ và tên</label>
-          <input value={fullName} onChange={e => setFullName(e.target.value)} required style={inputStyle} />
+          <input value={fullName} onChange={e => setFullName(e.target.value)} required disabled={isEditMode} style={{...inputStyle, background: isEditMode ? '#f3f4f6' : '#fff'}} />
         </div>
         <div>
           <label style={labelStyle}>Email</label>
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} required={!isEditMode} disabled={isEditMode} style={{...inputStyle, background: isEditMode ? '#f3f4f6' : '#fff'}} />
         </div>
-        <div>
-          <label style={labelStyle}>Số điện thoại</label>
-          <input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} style={inputStyle} />
-        </div>
+        {!isEditMode && (
+          <div><label style={labelStyle}>Số điện thoại</label><input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} style={inputStyle} /></div>
+        )}
         <div>
           <label style={labelStyle}>Vai trò</label>
           <select value={role} onChange={e => setRole(e.target.value)} required style={inputStyle}>
@@ -101,40 +102,44 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
             <option value="ADMIN">Quản trị</option>
           </select>
         </div>
-        <div>
-          <label style={labelStyle}>Mật khẩu {isEditMode ? '(để trống nếu không đổi)' : ''}</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} required={!isEditMode} style={inputStyle} />
-        </div>
         {!isEditMode && (
+          <>
+            <div>
+              <label style={labelStyle}>Mật khẩu</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Xác nhận mật khẩu</label>
+              <input type="password" value={passwordConfirmation} onChange={e => setPasswordConfirmation(e.target.value)} required style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Ngày sinh</label>
+              <input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Số CMND/CCCD</label>
+              <input value={identificationNumber} onChange={e => setIdentificationNumber(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Giới tính</label>
+              <select value={genderCode} onChange={e => setGenderCode(e.target.value)} style={inputStyle}>
+                <option value="">-- Chọn giới tính --</option>
+                <option value="MALE">Nam</option>
+                <option value="FEMALE">Nữ</option>
+                <option value="OTHER">Khác</option>
+              </select>
+            </div>
+          </>
+        )}
+        {isEditMode && (
           <div>
-            <label style={labelStyle}>Xác nhận mật khẩu</label>
-            <input type="password" value={passwordConfirmation} onChange={e => setPasswordConfirmation(e.target.value)} required style={inputStyle} />
+            <label style={labelStyle}>Trạng thái tài khoản</label>
+            <div style={{ display: 'flex', alignItems: 'center', height: '42px' }}>
+              <input type="checkbox" id="lockoutEnabled" checked={lockoutEnabled} onChange={e => setLockoutEnabled(e.target.checked)} style={{ marginRight: 8, width: 16, height: 16, cursor: 'pointer' }} />
+              <label htmlFor="lockoutEnabled" style={{ fontSize: 14, color: '#4b5563', cursor: 'pointer' }}>Khóa tài khoản</label>
+            </div>
           </div>
         )}
-        <div>
-          <label style={labelStyle}>Ngày sinh</label>
-          <input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} style={inputStyle} />
-        </div>
-        <div>
-          <label style={labelStyle}>Số CMND/CCCD</label>
-          <input value={identificationNumber} onChange={e => setIdentificationNumber(e.target.value)} style={inputStyle} />
-        </div>
-        <div>
-          <label style={labelStyle}>Giới tính</label>
-          <select value={genderCode} onChange={e => setGenderCode(e.target.value)} style={inputStyle}>
-            <option value="">-- Chọn giới tính --</option>
-            <option value="MALE">Nam</option>
-            <option value="FEMALE">Nữ</option>
-            <option value="OTHER">Khác</option>
-          </select>
-        </div>
-        <div>
-          <label style={labelStyle}>Trạng thái</label>
-          <div style={{ display: 'flex', alignItems: 'center', height: '42px' }}>
-            <input type="checkbox" id="emailConfirmed" checked={emailConfirmed} onChange={e => setEmailConfirmed(e.target.checked)} style={{ marginRight: 8, width: 16, height: 16, cursor: 'pointer' }} />
-            <label htmlFor="emailConfirmed" style={{ fontSize: 14, color: '#4b5563', cursor: 'pointer' }}>Đã xác thực email</label>
-          </div>
-        </div>
       </div>
 
       <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>

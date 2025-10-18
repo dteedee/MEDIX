@@ -248,12 +248,12 @@ export default function BannerList() {
             </select>
           </div>
           <div>
-            <button onClick={handleSearch} style={{ padding: '10px 20px', background: '#1f2937', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer' }}>
+            <button onClick={handleSearch} style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer' }}>
               Tìm
             </button>
           </div>
           <div>
-            <button onClick={() => { setSearch(''); setAppliedSearch(''); setStatusFilter('all'); setPage(1); }} style={{ padding: '10px 20px', background: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
+            <button onClick={() => { setSearch(''); setAppliedSearch(''); setStatusFilter('all'); setPage(1); }} style={{ padding: '10px 20px', background: '#fff', color: '#2563eb', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
               Xóa
             </button>
           </div>

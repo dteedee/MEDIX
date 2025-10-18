@@ -6,6 +6,7 @@ export interface UserDTO {
   role?: string; // Thường là vai trò chính, ví dụ: "PATIENT"
   roles?: string[]; // Danh sách tất cả các vai trò
   emailConfirmed?: boolean;
+  lockoutEnabled?: boolean;
   dateOfBirth?: string;
   genderCode?: string;
   identificationNumber?: string;
@@ -35,4 +36,5 @@ export interface UpdateUserRequest {
   dateOfBirth?: string;
   genderCode?: string;
   identificationNumber?: string;
+  lockoutEnabled?: boolean;
 }

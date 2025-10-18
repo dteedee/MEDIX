@@ -3,8 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { userService } from '../../services/userService'
 import { UserDTO } from '../../types/user.types'
 import { useToast } from '../../contexts/ToastContext'
+import UserDetails from '../../components/admin/UserDetails'
 
 // SVG Icons for actions
+const ViewIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
 const EditIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -12,10 +20,17 @@ const EditIcon = () => (
   </svg>
 );
 
-const DeleteIcon = () => (
+const LockIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#ef4444' }}>
-    <polyline points="3 6 5 6 21 6" />
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+  </svg>
+);
+
+const UnlockIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#22c55e' }}>
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+    <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
   </svg>
 );
 export default function UserList() {
@@ -25,10 +40,12 @@ export default function UserList() {
   const [pageSize, setPageSize] = useState(5)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'Admin' | 'Doctor' | 'Patient'>('all')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'locked' | 'unlocked'>('all')
   const [dateFrom, setDateFrom] = useState<string>('')
   const [dateTo, setDateTo] = useState<string>('')
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [viewing, setViewing] = useState<UserDTO | null>(null)
+  const [loadingDetails, setLoadingDetails] = useState(false)
   const searchRef = useRef<number | undefined>(undefined)
 
   const { showToast } = useToast()
@@ -37,25 +54,47 @@ export default function UserList() {
     const r = await userService.list(page, pageSize, search)
     setUsers(r.items)
     setTotal(r.total)
+    setLoading(false)
   }
 
-  useEffect(() => { load() }, [page, pageSize])
+  useEffect(() => {
+    load()
+  }, [page, pageSize])
 
   // Scroll to top on page or page size change
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [page, pageSize]);
 
-  const onDelete = async (id: string) => {
-    if (!confirm('Delete this user?')) return
-    await userService.remove(id)
-    showToast('Xóa người dùng thành công!')
-    // reload current page
+  const onToggleLockout = async (user: UserDTO) => {
+    const isCurrentlyLocked = (user as any).lockoutEnabled;
+    const actionText = isCurrentlyLocked ? 'mở khóa' : 'khóa';
+    if (!confirm(`Bạn có chắc muốn ${actionText} tài khoản này không?`)) return;
+
+    // Gọi API để cập nhật trạng thái khóa
+    await userService.update(user.id, { lockoutEnabled: !isCurrentlyLocked } as any);
+
+    showToast(`Đã ${actionText} tài khoản thành công!`);
     await load()
-  }
+  };
 
   const onCreate = () => navigate('/admin/users/new')
   const onEdit = (u: UserDTO) => navigate(`/admin/users/edit/${u.id}`)
+
+  const handleViewDetails = async (userId: string) => {
+    setLoadingDetails(true);
+    setViewing({ id: userId } as UserDTO); // Đặt tạm để modal mở ra
+    try {
+      const fullUser = await userService.get(userId);
+      setViewing(fullUser);
+    } catch (error) {
+      console.error("Failed to load user details:", error);
+      showToast('Không thể tải chi tiết người dùng', 'error');
+      setViewing(null); // Đóng modal nếu có lỗi
+    } finally {
+      setLoadingDetails(false);
+    }
+  }
 
   const onSearchChange = (v: string) => {
     setSearch(v)
@@ -67,11 +106,12 @@ export default function UserList() {
     const from = dateFrom ? new Date(dateFrom) : undefined
     const to = dateTo ? new Date(dateTo) : undefined
     return users.filter(u => {
-      // Lọc theo vai trò (client-side)
       const okRole = roleFilter === 'all' || (u.role?.toLowerCase() === roleFilter.toLowerCase())
-      // status (using emailConfirmed as proxy for active)
-      const okStatus = statusFilter === 'all' || (statusFilter === 'active' ? Boolean(u.emailConfirmed) : !u.emailConfirmed)
-      // date range on createdAt
+      
+      // Lọc trạng thái theo lockoutEnabled
+      const isLocked = (u as any).lockoutEnabled === true;
+      const okStatus = statusFilter === 'all' || (statusFilter === 'locked' ? isLocked : !isLocked);
+
       let okDate = true
       if (from || to) {
         const created = u.createdAt ? new Date(u.createdAt) : undefined
@@ -79,13 +119,13 @@ export default function UserList() {
       }
       return okRole && okStatus && okDate
     })
-  }, [users, roleFilter, statusFilter, dateFrom, dateTo])
+  }, [users, roleFilter, statusFilter, dateFrom, dateTo]);
 
-  const pill = (v?: boolean) => {
-    const on = Boolean(v)
-    const text = on ? 'Đã xác thực' : 'Chưa'
-    const bg = on ? '#e7f9ec' : '#fff7e6'
-    const color = on ? '#16a34a' : '#b45309'
+  const pill = (lockoutEnabled?: boolean) => {
+    const isLocked = Boolean(lockoutEnabled)
+    const text = isLocked ? 'Đang khóa' : 'Hoạt động'
+    const bg = isLocked ? '#fee2e2' : '#e7f9ec'
+    const color = isLocked ? '#dc2626' : '#16a34a'
     return <span style={{ background: bg, color, padding: '6px 10px', borderRadius: 16, fontSize: 12 }}>{text}</span>
   }
 
@@ -122,11 +162,11 @@ export default function UserList() {
           <div style={{ flex: '2 1 200px' }}>
             <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Tìm kiếm</label>
             <input
-              placeholder="Tên, email, SĐT..."
+              placeholder="Tìm kiếm theo tên..."
               value={search}
               onChange={e => onSearchChange(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); load() } }}
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
+              style={{ width: '80%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
             />
           </div>
           <div style={{ flex: '1 1 150px' }}>
@@ -143,53 +183,70 @@ export default function UserList() {
             <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Trạng thái</label>
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} style={{ padding: 10, width: '100%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}>
               <option value="all">Tất cả</option>
-              <option value="active">Đã xác thực</option>
-              <option value="inactive">Chưa xác thực</option>
+              <option value="unlocked">Hoạt động</option>
+              <option value="locked">Đang khóa</option>
             </select>
           </div>
           <div style={{ flex: '1 1 150px' }}>
             <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Từ ngày</label>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ padding: 9, width: '100%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} />
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ padding: 9, width: '80%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} />
           </div>
           <div style={{ flex: '1 1 150px' }}>
             <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Đến ngày</label>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ padding: 9, width: '100%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} />
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ padding: 9, width: '80%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} />
           </div>
           <div>
-            <button onClick={() => load()} style={{ padding: '10px 20px', background: '#1f2937', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer', width: '100%' }}>Tìm</button>
+            <button onClick={() => load()} style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer', width: '100%' }}>Tìm</button>
           </div>
         </div>
       </div>
 
       {/* Table */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead style={{ backgroundColor: '#f9fafb' }}>
-            <tr>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Họ và tên</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vai trò</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ngày đăng kí</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trạng thái</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((u, index) => (
-              <tr key={u.id} style={{ borderTop: '1px solid #e5e7eb' }}>
-                <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14 }}>{u.fullName ?? '-'}</td>
-                <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.role ?? '-'}</td>
-                <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.email}</td>
-                <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}</td>
-                <td style={{ padding: '16px' }}>{pill(u.emailConfirmed)}</td>
-                <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
-                  <button onClick={() => onEdit(u)} title="Sửa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
-                  <button onClick={() => onDelete(u.id)} title="Xóa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><DeleteIcon /></button>
-                </td>
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflowX: 'auto' }}>
+        {filtered.length > 0 ? (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ backgroundColor: '#f9fafb' }}>
+              <tr>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '50px' }}>STT</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Họ và tên</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vai trò</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ngày đăng kí</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trạng thái</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thao tác</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((u, index) => (
+                <tr key={u.id} style={{ borderTop: '1px solid #e5e7eb' }}>
+                  <td style={{ padding: '12px 16px', color: '#4b5563', fontSize: 14, textAlign: 'center' }}>
+                    {(page - 1) * pageSize + index + 1}
+                  </td>
+                  <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14 }}>{u.fullName ?? '-'}</td>
+                  <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.role ?? '-'}</td>
+                  <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.email}</td>
+                  <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}</td>
+                  <td style={{ padding: '16px' }}>{pill((u as any).lockoutEnabled)}</td>
+                  <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <button onClick={() => handleViewDetails(u.id)} title="Xem chi tiết" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
+                    <button onClick={() => onEdit(u)} title="Sửa vai trò" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
+                    <button onClick={() => onToggleLockout(u)} title={(u as any).lockoutEnabled ? 'Mở khóa' : 'Khóa'} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
+                      {(u as any).lockoutEnabled ? <UnlockIcon /> : <LockIcon />}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : !loading ? (
+          <div style={{ padding: '48px 16px', textAlign: 'center', color: '#6b7280', fontSize: 14 }}>
+            Không tìm thấy kết quả
+          </div>
+        ) : (
+          <div style={{ padding: '48px 16px', textAlign: 'center', color: '#6b7280', fontSize: 14 }}>
+            Đang tải dữ liệu...
+          </div>
+        ) }
       </div>
 
       {/* Pagination */}
@@ -216,6 +273,10 @@ export default function UserList() {
           </button>
         </div>
       </div>
+
+      {viewing && (
+        <UserDetails user={viewing} onClose={() => setViewing(null)} isLoading={loadingDetails} />
+      )}
     </div>
   )
 }

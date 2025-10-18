@@ -57,5 +57,19 @@ export const categoryService = {
   },
   remove: async (id: string): Promise<void> => {
     await axios.delete(`${BASE}/${id}`, { headers: authHeader() })
+  },
+  checkUniqueness: async (field: 'slug' | 'name', value: string, excludeId?: string): Promise<void> => {
+    const params = new URLSearchParams()
+    params.append('field', field)
+    params.append('value', value)
+    if (excludeId) {
+      params.append('excludeId', excludeId)
+    }
+    // This endpoint should be implemented in the backend.
+    // It is expected to return a 2xx status code if the value is unique,
+    // and a 4xx status code (e.g., 409 Conflict) if it's not.
+    // The `axios` call will automatically throw an error for 4xx/5xx responses,
+    // which is caught in the CategoryForm component.
+    await axios.get(`${BASE}/check-uniqueness`, { params, headers: authHeader() })
   }
 }

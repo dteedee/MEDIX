@@ -18,6 +18,8 @@ export default function CategoryForm({ category, onSaved, onCancel }: Props) {
   const [parentId, setParentId] = useState<string | null>(category?.parentId ?? null)
   const [saving, setSaving] = useState(false)
   const [allCategories, setAllCategories] = useState<CategoryDTO[]>([])
+  const [errors, setErrors] = useState<{ slug?: string, name?: string }>({})
+  const [validating, setValidating] = useState<{ slug?: boolean, name?: boolean }>({})
 
   useEffect(() => { // load simple list for parent selection
     let mounted = true
@@ -25,19 +27,62 @@ export default function CategoryForm({ category, onSaved, onCancel }: Props) {
     return () => { mounted = false }
   }, [])
 
+  const validateName = async (nameToValidate: string) => {
+    // Bỏ qua nếu name không thay đổi hoặc rỗng
+    if (!nameToValidate || nameToValidate === category?.name) {
+      setErrors(prev => ({ ...prev, name: undefined }));
+      return;
+    }
+
+    setValidating(prev => ({ ...prev, name: true }));
+    setErrors(prev => ({ ...prev, name: undefined })); // Xóa lỗi cũ
+    try {
+      await categoryService.checkUniqueness('name', nameToValidate, category?.id);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || `Tên danh mục này đã tồn tại. Vui lòng chọn một tên khác.`;
+      setErrors(prev => ({ ...prev, name: message }));
+    } finally {
+      setValidating(prev => ({ ...prev, name: false }));
+    }
+  };
+
+  const validateSlug = async (slugToValidate: string) => {
+    // Bỏ qua nếu slug không thay đổi hoặc rỗng
+    if (!slugToValidate || slugToValidate === category?.slug) {
+      setErrors(prev => ({ ...prev, slug: undefined }));
+      return;
+    }
+
+    setValidating(prev => ({ ...prev, slug: true }));
+    setErrors(prev => ({ ...prev, slug: undefined })); // Xóa lỗi cũ
+    try {
+      // Giả định service có hàm checkUniqueness, bạn cần tự thêm vào
+      // Hàm này sẽ throw lỗi nếu slug đã tồn tại
+      await categoryService.checkUniqueness('slug', slugToValidate, category?.id);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || `Slug này đã tồn tại. Vui lòng chọn một slug khác.`;
+      setErrors(prev => ({ ...prev, slug: message }));
+    } finally {
+      setValidating(prev => ({ ...prev, slug: false }));
+    }
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (errors.slug || errors.name) {
+      // Lỗi đã được hiển thị inline, không cần toast ở đây.
+      return;
+    }
     setSaving(true)
     try {
       const payload: CreateCategoryRequest = { name, slug, description, isActive, parentId }
       if (category) await categoryService.update(category.id, payload)
       else await categoryService.create(payload)
       onSaved?.()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving category:', error)
-      // Giả định lỗi là do slug trùng lặp theo yêu cầu.
-      // Trong thực tế, bạn nên kiểm tra mã lỗi từ server để hiển thị thông báo chính xác hơn.
-      showToast('Slug không được phép trùng', 'error')
+      const message = error?.response?.data?.message || 'Đã xảy ra lỗi khi lưu. Vui lòng thử lại.';
+      showToast(message, 'error')
     } finally { setSaving(false) }
   }
 
@@ -71,16 +116,42 @@ export default function CategoryForm({ category, onSaved, onCancel }: Props) {
     gap: '24px',
   }
 
+  const errorTextStyle: React.CSSProperties = {
+    color: '#ef4444',
+    fontSize: 13,
+    marginTop: 6,
+  }
+
+  const validatingTextStyle: React.CSSProperties = {
+    color: '#6b7280',
+    fontSize: 13,
+    marginTop: 6,
+  }
+
   return (
     <form onSubmit={submit} style={formContainerStyle}>
       <div style={gridStyle}>
         <div>
           <label style={labelStyle}>Tên danh mục</label>
-          <input value={name} onChange={e => setName(e.target.value)} required style={inputStyle} />
+          <input 
+            value={name} 
+            onChange={e => { setName(e.target.value); if (errors.name) setErrors(prev => ({ ...prev, name: undefined })); }} 
+            required 
+            onBlur={(e) => validateName(e.target.value)}
+            style={{...inputStyle, borderColor: errors.name ? '#ef4444' : '#d1d5db'}} />
+            {validating.name && <div style={validatingTextStyle}>Đang kiểm tra...</div>}
+            {errors.name && <div style={errorTextStyle}>{errors.name}</div>}
         </div>
         <div>
           <label style={labelStyle}>Đường dẫn (Slug)</label>
-          <input value={slug} onChange={e => setSlug(e.target.value)} style={inputStyle} />
+          <input 
+            value={slug} 
+            onChange={e => { setSlug(e.target.value); if (errors.slug) setErrors(prev => ({ ...prev, slug: undefined })); }} 
+            onBlur={(e) => validateSlug(e.target.value)}
+            style={{...inputStyle, borderColor: errors.slug ? '#ef4444' : '#d1d5db'}} 
+          />
+          {validating.slug && <div style={validatingTextStyle}>Đang kiểm tra...</div>}
+          {errors.slug && <div style={errorTextStyle}>{errors.slug}</div>}
         </div>
         <div style={{ gridColumn: '1 / -1' }}>
           <label style={labelStyle}>Mô tả</label>

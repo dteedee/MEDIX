@@ -139,7 +139,7 @@ export default function CategoryList() {
 
   const pill = (active?: boolean) => {
     const isOn = Boolean(active)
-    const text = isOn ? 'Đang hoạt động' : 'Ngừng'
+    const text = isOn ? 'Đang hoạt động' : 'Ngừng hoạt động'
     const bg = isOn ? '#e7f9ec' : '#fee2e2'
     const color = isOn ? '#16a34a' : '#dc2626'
     return <span style={{ background: bg, color, padding: '6px 10px', borderRadius: 16, fontSize: 12 }}>{text}</span>
@@ -293,7 +293,7 @@ export default function CategoryList() {
       >
         <option value="all">Tất cả</option>
         <option value="active">Đang hoạt động</option>
-        <option value="inactive">Ngừng</option>
+        <option value="inactive">Ngừng hoạt động</option>
       </select>
     </div>
 
@@ -359,17 +359,27 @@ export default function CategoryList() {
                   <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14 }}>{c.name}</td>
                   <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{c.slug}</td>
                   <td style={{ padding: '16px', color: '#4b5563', fontSize: 14, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.description}</td>
-                  <td style={{ padding: '16px' }}>{pill(c.isActive)}</td>
-                  <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <button onClick={() => setViewing(c)} title="Xem" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
-                    <button onClick={() => onEdit(c)} title="Sửa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
+                  <td style={{ padding: '16px' }}>
                     <select
                       value={c.isActive ? 'active' : 'inactive'}
                       onChange={(e) => handleStatusChange(c, e.target.value === 'active')}
-                      style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, background: '#fff' }}>
-                      <option value="active">Hoạt động</option>
-                      <option value="inactive">Ngừng</option>
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: 6,
+                        border: '1px solid',
+                        borderColor: c.isActive ? '#6ee7b7' : '#fca5a5',
+                        fontSize: 13,
+                        background: c.isActive ? '#d1fae5' : '#fee2e2',
+                        color: c.isActive ? '#065f46' : '#991b1b',
+                        fontWeight: 500,
+                      }}>
+                      <option value="active">Đang hoạt động</option>
+                      <option value="inactive">Ngừng hoạt động</option>
                     </select>
+                  </td>
+                  <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <button onClick={() => setViewing(c)} title="Xem" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
+                    <button onClick={() => onEdit(c)} title="Sửa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
                   </td>
                 </tr>
               ))}

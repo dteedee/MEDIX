@@ -22,7 +22,7 @@ export default function UserList() {
   const [users, setUsers] = useState<UserDTO[]>([])
   const [total, setTotal] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(5)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'Admin' | 'Doctor' | 'Patient'>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
@@ -191,6 +191,16 @@ export default function UserList() {
       <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#4b5563', fontSize: 14 }}>
         <div>
           Hiển thị {filtered.length} trên tổng số {total ?? 0} kết quả
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label htmlFor="pageSize" style={{ fontSize: 14 }}>Số mục:</label>
+            <select id="pageSize" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}>
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={15}>15</option>
+            </select>
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>

@@ -255,22 +255,36 @@ namespace Medix.API.Business.Services.Classification
                 });
             }
 
-            var titleExists = await _healthArticleRepository.TitleExistsAsync(createDto.Title);
-            if (titleExists)
+            // Normalize current vs new values and skip checks when unchanged to avoid false-positive duplicates
+            string Normalize(string? s) => string.IsNullOrWhiteSpace(s) ? string.Empty : s.Trim().ToLowerInvariant();
+
+            var currentTitleNorm = Normalize(article.Title);
+            var newTitleNorm = Normalize(updateDto.Title);
+            if (currentTitleNorm != newTitleNorm)
             {
-                throw new ValidationException(new Dictionary<string, string[]>
+                var titleExists = await _healthArticleRepository.TitleExistsAsync(updateDto.Title, id);
+                if (titleExists)
                 {
-                    { "Title", new[] { "Article title already exists" } }
-                });
+                    throw new ValidationException(new Dictionary<string, string[]>
+                    {
+                        { "Title", new[] { "Article title already exists" } }
+                    });
+                }
             }
 
-            var authorExists = await _healthArticleRepository.UserExistsAsync(createDto.AuthorId);
-            if (!authorExists)
+            var currentSlugNorm = Normalize(article.Slug);
+            var newSlugNorm = Normalize(updateDto.Slug);
+            if (currentSlugNorm != newSlugNorm)
             {
-                throw new ValidationException(new Dictionary<string, string[]>
+                var slugExists = await _healthArticleRepository.SlugExistsAsync(updateDto.Slug, id);
+                if (slugExists)
                 {
-                    { "AuthorId", new[] { "Author does not exist" } }
-                });
+                    throw new ValidationException(new Dictionary<string, string[]>
+                    {
+                        { "Slug", new[] { "Article slug already exists" } }
+                    });
+                }
+            }
             }
 
             var article = new HealthArticle

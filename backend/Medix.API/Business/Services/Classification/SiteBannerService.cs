@@ -115,7 +115,28 @@ namespace Medix.API.Business.Services.Classification
             {
                 throw new NotFoundException("Banner not found");
             }
-
+            // If DTO includes date range fields (start/end), validate them here. If not present, this is a no-op.
+            try
+            {
+                var startProp = updateDto.GetType().GetProperty("StartDate");
+                var endProp = updateDto.GetType().GetProperty("EndDate");
+                if (startProp != null && endProp != null)
+                {
+                    var startVal = startProp.GetValue(updateDto) as DateTime?;
+                    var endVal = endProp.GetValue(updateDto) as DateTime?;
+                    if (startVal.HasValue && endVal.HasValue && endVal.Value < startVal.Value)
+                    {
+                        throw new ValidationException(new Dictionary<string, string[]>
+                        {
+                            { "DateRange", new[] { "EndDate must be equal or later than StartDate." } }
+                        });
+                    }
+                }
+            }
+            catch
+            {
+                // reflection-based check is best-effort; ignore reflection errors here
+            }
             banner.BannerTitle = updateDto.BannerTitle;
             banner.BannerImageUrl = updateDto.BannerImageUrl;
             banner.BannerUrl = updateDto.BannerUrl;

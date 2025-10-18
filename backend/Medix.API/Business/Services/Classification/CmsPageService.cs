@@ -109,13 +109,20 @@ namespace Medix.API.Business.Services.Classification
                 throw new NotFoundException("Page not found");
             }
 
-            var slugExists = await _cmspageRepository.SlugExistsAsync(updateDto.PageSlug, id);
-            if (slugExists)
+            string Normalize(string? s) => string.IsNullOrWhiteSpace(s) ? string.Empty : s.Trim().ToLowerInvariant();
+
+            var currentSlugNorm = Normalize(page.PageSlug);
+            var newSlugNorm = Normalize(updateDto.PageSlug);
+            if (currentSlugNorm != newSlugNorm)
             {
-                throw new ValidationException(new Dictionary<string, string[]>
+                var slugExists = await _cmspageRepository.SlugExistsAsync(updateDto.PageSlug, id);
+                if (slugExists)
                 {
-                    { "PageSlug", new[] { "Page slug already exists" } }
-                });
+                    throw new ValidationException(new Dictionary<string, string[]>
+                    {
+                        { "PageSlug", new[] { "Page slug already exists" } }
+                    });
+                }
             }
 
             var authorExists = await _cmspageRepository.UserExistsAsync(updateDto.AuthorId);

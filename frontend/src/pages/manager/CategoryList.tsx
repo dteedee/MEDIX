@@ -28,32 +28,88 @@ const DeleteIcon = () => (
 );
 export default function CategoryList() {
   const [items, setItems] = useState<CategoryDTO[]>([])
-  const [total, setTotal] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(5)
   const [viewing, setViewing] = useState<CategoryDTO | null>(null)
+
+  // Search and suggestion state
   const [search, setSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [suggestions, setSuggestions] = useState<CategoryDTO[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const searchContainerRef = React.useRef<HTMLDivElement>(null)
 
   const { showToast } = useToast()
   const navigate = useNavigate()
-  const load = async (currentPage = page, currentSearch = search) => {
-    // Pass search term to the service. The service will handle which API to call.
-    const r = await categoryService.list(currentPage, pageSize, currentSearch.trim())
+
+  const load = async () => {
+    // Fetch all items for client-side filtering
+    const r = await categoryService.list(1, 9999)
     setItems(r.items)
-    setTotal(r.total)
   }
 
-  useEffect(() => { load() }, [page, pageSize])
+  useEffect(() => {
+    load()
+  }, [])
 
   // Scroll to top on page or page size change
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [page, pageSize]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleSearch = () => {
     setPage(1); // Reset to first page on new search
-    load(1, search);
+    setAppliedSearch(search);
+    setShowSuggestions(false);
   }
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    if (value.trim()) {
+      const filteredSuggestions = items.filter(item =>
+        item.name.toLowerCase().includes(value.toLowerCase()) ||
+        (item.slug && item.slug.toLowerCase().includes(value.toLowerCase()))
+      ).slice(0, 5);
+      setSuggestions(filteredSuggestions);
+      setShowSuggestions(filteredSuggestions.length > 0);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: CategoryDTO) => {
+    setSearch(suggestion.name);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setAppliedSearch(suggestion.name);
+  };
+
+  const processedItems = useMemo(() => {
+    let filtered = [...items];
+
+    if (statusFilter !== 'all') {
+      const isActive = statusFilter === 'active';
+      filtered = filtered.filter(item => item.isActive === isActive);
+    }
+
+    if (!appliedSearch.trim()) return filtered;
+    const searchTerm = appliedSearch.toLowerCase();
+    return filtered.filter(item => item.name.toLowerCase().includes(searchTerm) || (item.slug && item.slug.toLowerCase().includes(searchTerm)) || (item.description && item.description.toLowerCase().includes(searchTerm)));
+  }, [items, appliedSearch, statusFilter]);
 
   const onCreate = () => navigate('/manager/categories/new')
   const onEdit = (c: CategoryDTO) => navigate(`/manager/categories/edit/${c.id}`)
@@ -71,6 +127,11 @@ export default function CategoryList() {
     const color = isOn ? '#16a34a' : '#dc2626'
     return <span style={{ background: bg, color, padding: '6px 10px', borderRadius: 16, fontSize: 12 }}>{text}</span>
   }
+
+  // Frontend Pagination
+  const totalItems = processedItems.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const paginatedItems = processedItems.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div style={{ padding: 24, backgroundColor: '#f9fafb', minHeight: '100vh' }}>
@@ -97,66 +158,211 @@ export default function CategoryList() {
         </button>
       </div>
 
-      {/* Filter Section */}
-      <div style={{ marginBottom: 24, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 20 }}>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'end' }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Tìm kiếm</label>
-            <input
-              placeholder="Tìm theo tên, slug hoặc mô tả..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
-            />
-          </div>
-          <div>
-            <button onClick={handleSearch} style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer' }}>
-              Tìm
-            </button>
-          </div>
-          <div>
-            <button onClick={() => { setSearch(''); load(1, ''); }} style={{ padding: '10px 20px', background: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
-              Xóa
-            </button>
-          </div>
+     {/* Filter Section */}
+<div
+  style={{
+    marginBottom: 24,
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    padding: 20,
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      gap: 16,
+      alignItems: "end",
+      flexWrap: "wrap", // giúp responsive nếu thu nhỏ
+    }}
+  >
+    {/* Ô tìm kiếm */}
+    <div
+      ref={searchContainerRef}
+      style={{
+        flex: "2 1 300px",
+        position: "relative",
+        minWidth: 250,
+      }}
+    >
+      <label
+        style={{
+          fontSize: 14,
+          color: "#4b5563",
+          marginBottom: 6,
+          display: "block",
+        }}
+      >
+        Tìm kiếm
+      </label>
+      <input
+        placeholder="Tìm theo tên..."
+        value={search}
+        onChange={(e) => handleSearchChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSearch();
+        }}
+        style={{
+          width: "70%",
+          padding: "10px 12px",
+          border: "1px solid #d1d5db",
+          borderRadius: 8,
+          fontSize: 14,
+        }}
+      />
+      {showSuggestions && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            right: 0,
+            background: "#fff",
+            border: "1px solid #e5e7eb",
+            borderRadius: "0 0 8px 8px",
+            zIndex: 10,
+            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+            marginTop: "-1px",
+          }}
+        >
+          {suggestions.map((suggestion) => (
+            <div
+              key={suggestion.id}
+              onClick={() => handleSuggestionClick(suggestion)}
+              style={{
+                padding: "10px 12px",
+                cursor: "pointer",
+                fontSize: 14,
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = "#f9fafb")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "transparent")
+              }
+            >
+              {suggestion.name}
+            </div>
+          ))}
         </div>
-      </div>
+      )}
+    </div>
+
+    {/* Ô lọc trạng thái */}
+    <div style={{ flex: "1 1 200px", minWidth: 180 }}>
+      <label
+        style={{
+          fontSize: 14,
+          color: "#4b5563",
+          marginBottom: 6,
+          display: "block",
+        }}
+      >
+        Trạng thái
+      </label>
+      <select
+        value={statusFilter}
+        onChange={(e) => {
+          setStatusFilter(e.target.value as any);
+          setPage(1);
+        }}
+        style={{
+          padding: 10,
+          width: "100%",
+          border: "1px solid #d1d5db",
+          borderRadius: 8,
+          fontSize: 14,
+        }}
+      >
+        <option value="all">Tất cả</option>
+        <option value="active">Đang hoạt động</option>
+        <option value="inactive">Ngừng</option>
+      </select>
+    </div>
+
+    {/* Nút hành động */}
+    <div style={{ display: "flex", gap: 8 }}>
+      <button
+        onClick={handleSearch}
+        style={{
+          padding: "10px 20px",
+          background: "#2563eb",
+          color: "#fff",
+          borderRadius: 8,
+          border: "none",
+          fontWeight: 500,
+          cursor: "pointer",
+        }}
+      >
+        Tìm
+      </button>
+      <button
+        onClick={() => {
+          setSearch("");
+          setAppliedSearch("");
+          setStatusFilter("all");
+          setPage(1);
+        }}
+        style={{
+          padding: "10px 20px",
+          background: "#fff",
+          color: "#374151",
+          borderRadius: 8,
+          border: "1px solid #d1d5db",
+          fontWeight: 500,
+          cursor: "pointer",
+        }}
+      >
+        Xóa
+      </button>
+    </div>
+  </div>
+</div>
 
       {/* Table */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead style={{ backgroundColor: '#f9fafb' }}>
-            <tr>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tên danh mục</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Slug</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mô tả</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trạng thái</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((c) => (
-              <tr key={c.id} style={{ borderTop: '1px solid #e5e7eb' }}>
-                <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14 }}>{c.name}</td>
-                <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{c.slug}</td>
-                <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{c.description}</td>
-                <td style={{ padding: '16px' }}>{pill(c.isActive)}</td>
-                <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
-                  <button onClick={() => setViewing(c)} title="Xem" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
-                  <button onClick={() => onEdit(c)} title="Sửa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
-                  <button onClick={() => onDelete(c.id)} title="Xóa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><DeleteIcon /></button>
-                </td>
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflowX: 'auto' }}>
+        {paginatedItems.length > 0 ? (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ backgroundColor: '#f9fafb' }}>
+              <tr>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '50px' }}>STT</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tên danh mục</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Slug</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mô tả</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trạng thái</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thao tác</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {paginatedItems.map((c, index) => (
+                <tr key={c.id} style={{ borderTop: '1px solid #e5e7eb' }}>
+                  <td style={{ padding: '12px 16px', color: '#4b5563', fontSize: 14, textAlign: 'center' }}>
+                    {(page - 1) * pageSize + index + 1}
+                  </td>
+                  <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14 }}>{c.name}</td>
+                  <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{c.slug}</td>
+                  <td style={{ padding: '16px', color: '#4b5563', fontSize: 14, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.description}</td>
+                  <td style={{ padding: '16px' }}>{pill(c.isActive)}</td>
+                  <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <button onClick={() => setViewing(c)} title="Xem" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
+                    <button onClick={() => onEdit(c)} title="Sửa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
+                    <button onClick={() => onDelete(c.id)} title="Xóa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><DeleteIcon /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div style={{ padding: '48px 16px', textAlign: 'center', color: '#6b7280', fontSize: 14 }}>
+            Không tìm thấy kết quả
+          </div>
+        )}
       </div>
 
       {/* Pagination */}
       <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#4b5563', fontSize: 14 }}>
         <div>
-          Hiển thị {items.length} trên tổng số {total ?? 0} kết quả
+          Hiển thị {paginatedItems.length} trên tổng số {totalItems} kết quả
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -171,7 +377,7 @@ export default function CategoryList() {
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
               Trang trước
             </button>
-            <button onClick={() => setPage(p => p + 1)} disabled={items.length < pageSize} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: items.length < pageSize ? 0.6 : 1 }}>
+            <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page >= totalPages ? 0.6 : 1 }}>
               Trang sau
             </button>
           </div>

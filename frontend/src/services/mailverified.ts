@@ -73,31 +73,45 @@ export const emailVerificationService = {
   // Xác thực mã email code
   verifyEmailCode: async (email: string, code: string) => {
     try {
+      console.log('Sending verification request:', { email, code }); // Debug log
+      
       const response = await apiClient.post('api/register/verifyEmailCode', {
         email: email,
         code: code
       });
       
-      // Kiểm tra trường Status trong response
-      if (response.data.Status === true) {
+      console.log('Verification response:', response.data); // Debug log
+      
+      // Backend trả về HTTP 200 với { message: "Xác thực thành công" } khi thành công
+      if (response.status === 200) {
         return {
           success: true,
           data: response.data,
           message: response.data.message || 'Xác thực thành công'
         };
       } else {
-        // Nếu Status không phải true, trả về lỗi
         return {
           success: false,
-          error: 'Mã code đang sai',
+          error: response.data?.message || 'Mã xác thực không đúng',
           data: response.data
         };
       }
     } catch (error: any) {
       console.error('Error verifying email code:', error);
+      console.error('Error details:', error.response?.data);
       
-      // Lấy message từ backend nếu có
-      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi xác thực mã';
+      // Backend trả về BadRequest (400) với { message: "..." } khi có lỗi
+      if (error.response?.status === 400) {
+        const errorMessage = error.response.data?.message || 'Mã xác thực không hợp lệ';
+        return {
+          success: false,
+          error: errorMessage,
+          status: error.response?.status
+        };
+      }
+      
+      // Các lỗi khác (network, 500, etc.)
+      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi xác thực mã, vui lòng thử lại';
       
       return {
         success: false,

@@ -94,6 +94,7 @@ export const PatientRegister: React.FC = () => {
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
+  const [resendEndTime, setResendEndTime] = useState<number | null>(null);
 
   // Email and ID validation states
   const [emailExists, setEmailExists] = useState(false);
@@ -152,13 +153,59 @@ export const PatientRegister: React.FC = () => {
     console.log('formData.genderCode changed to:', formData.genderCode, 'Type:', typeof formData.genderCode);
   }, [formData.genderCode]);
 
-  // Countdown timer for resend button
+  // Countdown timer for resend button - sử dụng timestamp để tránh bị pause khi tab inactive
   useEffect(() => {
-    if (resendCountdown > 0) {
-      const timer = setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
-      return () => clearTimeout(timer);
+    let intervalId: NodeJS.Timeout;
+
+    if (resendEndTime) {
+      const updateCountdown = () => {
+        const now = Date.now();
+        const remaining = Math.max(0, Math.ceil((resendEndTime - now) / 1000));
+        
+        if (remaining > 0) {
+          setResendCountdown(remaining);
+        } else {
+          setResendCountdown(0);
+          setResendEndTime(null);
+        }
+      };
+
+      // Update immediately
+      updateCountdown();
+      
+      // Update every 100ms for better accuracy
+      intervalId = setInterval(updateCountdown, 100);
+    } else {
+      setResendCountdown(0);
     }
-  }, [resendCountdown]);
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [resendEndTime]);
+
+  // Handle visibility change để update countdown khi user quay lại tab
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && resendEndTime) {
+        const now = Date.now();
+        const remaining = Math.max(0, Math.ceil((resendEndTime - now) / 1000));
+        setResendCountdown(remaining);
+        
+        if (remaining <= 0) {
+          setResendEndTime(null);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [resendEndTime]);
 
   // Auto-check email exists when user finishes typing
   useEffect(() => {
@@ -299,7 +346,7 @@ export const PatientRegister: React.FC = () => {
       if (result.success && result.data) {
         // Không cần lưu serverVerificationCode nữa vì verify qua API
         setEmailVerificationSent(true);
-        setResendCountdown(60); // 60 seconds countdown
+        setResendEndTime(Date.now() + 60000); // 60 seconds từ bây giờ
         setError('');
         // Show success message in UI instead of alert
       } else {
@@ -326,15 +373,20 @@ export const PatientRegister: React.FC = () => {
       // Gọi API verify email code
       const result = await emailVerificationService.verifyEmailCode(formData.email, verificationCode);
       
+      console.log('Verification result:', result); // Debug log
+      
       if (result.success) {
         setEmailVerified(true);
-        setError('');
- 
+        setError(''); // Clear error
+        // Có thể thêm success message nếu cần
+        console.log('Email verification successful!');
       } else {
         // Hiển thị thông báo lỗi khi mã code sai
         setError(result.error || 'Mã xác nhận không đúng. Vui lòng kiểm tra lại.');
+        console.log('Verification failed:', result.error);
       }
     } catch (error) {
+      console.error('Verification error:', error);
       setError('Có lỗi xảy ra khi xác thực mã. Vui lòng thử lại.');
     } finally {
       setIsVerifyingCode(false);
@@ -347,14 +399,18 @@ export const PatientRegister: React.FC = () => {
 
     setIsCheckingEmail(true);
     setError('');
+    // Ẩn thông báo success cũ khi bấm resend
+    setEmailVerificationSent(false);
 
     try {
       const result = await emailVerificationService.resendVerificationCode(formData.email);
       
       if (result.success && result.data) {
         // Không cần lưu serverVerificationCode nữa vì verify qua API
-        setResendCountdown(60);
+        setResendEndTime(Date.now() + 60000);
         setError('');
+        // Hiển thị lại thông báo success mới
+        setEmailVerificationSent(true);
       } else {
         setError(result.error || 'Không thể gửi lại mã xác nhận');
       }

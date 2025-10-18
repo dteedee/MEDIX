@@ -117,8 +117,26 @@ namespace Medix.API.Presentation.Controller.UserManagement
         {
             try
             {
-          
+                var now = DateTime.UtcNow;
+                var activeCodes = await _context.EmailVerificationCodes
+                    .Where(e => e.Email == email && !e.IsUsed && e.ExpirationTime > now)
+                    .ToListAsync();
+
+                foreach (var code in activeCodes)
+                {
+                    code.IsUsed = true;
+                }
+                await _context.SaveChangesAsync();
                 var newCode = new Random().Next(100000, 999999).ToString();
+                var entity = new EmailVerificationCode
+                {
+                    Email = email,
+                    Code = newCode,
+                    ExpirationTime = DateTime.UtcNow.AddMinutes(10), // Hết hạn sau 10 phút
+                    IsUsed = false
+                };
+                _context.EmailVerificationCodes.Add(entity);
+                await _context.SaveChangesAsync();
 
                 var result = await _emailService.SendVerificationCodeAsync(email, newCode);
 

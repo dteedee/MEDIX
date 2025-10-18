@@ -28,17 +28,26 @@ const DeleteIcon = () => (
 );
 export default function CmsPageList() {
   const [items, setItems] = useState<CmsPageDTO[]>([])
+  const [total, setTotal] = useState<number | undefined>(undefined)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(5)
   const [viewing, setViewing] = useState<CmsPageDTO | null>(null)
   const [search, setSearch] = useState('')
 
-  const load = async () => {
-    const r = await cmspageService.list()
-    setItems(r)
+  const load = async (currentPage = page, currentSearch = search) => {
+    const r = await cmspageService.list(currentPage, pageSize, currentSearch.trim())
+    setItems(r.items)
+    setTotal(r.total)
   }
 
   const { showToast } = useToast()
   const navigate = useNavigate()
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [page, pageSize])
+
+  const handleSearch = () => {
+    setPage(1); // Reset to first page on new search
+    load(1, search);
+  }
 
   const onCreate = () => navigate('/manager/cms-pages/new')
   const onEdit = (p: CmsPageDTO) => navigate(`/manager/cms-pages/edit/${p.id}`)
@@ -46,13 +55,8 @@ export default function CmsPageList() {
     if (!confirm('Delete this page?')) return;
     await cmspageService.remove(id);
     showToast('Xóa trang thành công!')
-    await load() }
-
-  const filtered = useMemo(() => {
-    const k = search.trim().toLowerCase()
-    if (!k) return items
-    return items.filter(p => (p.pageTitle ?? '').toLowerCase().includes(k) || (p.pageSlug ?? '').toLowerCase().includes(k))
-  }, [items, search])
+    await load() 
+  }
 
   const pill = (p: CmsPageDTO) => {
     const text = p.isPublished ? 'Đang hoạt động' : 'Nháp'
@@ -95,11 +99,17 @@ export default function CmsPageList() {
               placeholder="Tìm theo tiêu đề hoặc slug..."
               value={search}
               onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
               style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
             />
           </div>
           <div>
-            <button onClick={() => setSearch('')} style={{ padding: '10px 20px', background: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
+            <button onClick={handleSearch} style={{ padding: '10px 20px', background: '#1f2937', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer' }}>
+              Tìm
+            </button>
+          </div>
+          <div>
+            <button onClick={() => { setSearch(''); load(1, ''); }} style={{ padding: '10px 20px', background: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
               Xóa
             </button>
           </div>
@@ -119,7 +129,7 @@ export default function CmsPageList() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p) => (
+            {items.map((p) => (
               <tr key={p.id} style={{ borderTop: '1px solid #e5e7eb' }}>
                 <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14 }}>{p.pageTitle}</td>
                 <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{p.pageSlug}</td>
@@ -136,19 +146,28 @@ export default function CmsPageList() {
         </table>
       </div>
 
-      {/* Pagination (Simple) */}
+      {/* Pagination */}
       <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#4b5563', fontSize: 14 }}>
         <div>
-          Hiển thị {filtered.length} trên tổng số {items.length} kết quả
+          Hiển thị {items.length} trên tổng số {total ?? 0} kết quả
         </div>
-        {/* Placeholder for future pagination controls */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button disabled style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'not-allowed', opacity: 0.6 }}>
-            Trang trước
-          </button>
-          <button disabled style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'not-allowed', opacity: 0.6 }}>
-            Trang sau
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label htmlFor="pageSize" style={{ fontSize: 14 }}>Số mục:</label>
+            <select id="pageSize" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}>
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={15}>15</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
+              Trang trước
+            </button>
+            <button onClick={() => setPage(p => p + 1)} disabled={items.length < pageSize} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: items.length < pageSize ? 0.6 : 1 }}>
+              Trang sau
+            </button>
+          </div>
         </div>
       </div>
 

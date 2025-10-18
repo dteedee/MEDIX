@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { userService } from '../../services/userService'
-import { UserDTO } from '../../types/user.types'
+import { UserDTO, UpdateUserRequest } from '../../types/user.types'
 import { useToast } from '../../contexts/ToastContext'
 import UserDetails from '../../components/admin/UserDetails'
 
@@ -20,6 +20,14 @@ const EditIcon = () => (
   </svg>
 );
 
+const SortIcon = ({ direction }: { direction?: 'asc' | 'desc' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', marginLeft: 4, color: direction ? '#111827' : '#9ca3af' }}>
+    {/* Up-arrow for 'asc' */}
+    {direction === 'asc' && <path d="M18 15l-6-6-6 6" />}
+    {/* Down-arrow for 'desc' */}
+    {direction === 'desc' && <path d="M6 9l6 6 6-6" />}
+  </svg>
+);
 const LockIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#ef4444' }}>
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
@@ -46,6 +54,9 @@ export default function UserList() {
   const [loading, setLoading] = useState(true)
   const [viewing, setViewing] = useState<UserDTO | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
+  // sorting
+  const [sortBy, setSortBy] = useState('createdAt')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const searchRef = useRef<number | undefined>(undefined)
 
   const { showToast } = useToast()
@@ -66,17 +77,33 @@ export default function UserList() {
     window.scrollTo(0, 0);
   }, [page, pageSize]);
 
-  const onToggleLockout = async (user: UserDTO) => {
-    const isCurrentlyLocked = (user as any).lockoutEnabled;
-    const actionText = isCurrentlyLocked ? 'mở khóa' : 'khóa';
+  const handleStatusChange = async (userToUpdate: UserDTO, newStatus: boolean) => {
+    if (userToUpdate.lockoutEnabled === newStatus) return;
+
+    const actionText = newStatus ? 'khóa' : 'mở khóa';
     if (!confirm(`Bạn có chắc muốn ${actionText} tài khoản này không?`)) return;
 
-    // Gọi API để cập nhật trạng thái khóa
-    await userService.update(user.id, { lockoutEnabled: !isCurrentlyLocked } as any);
+    try {
+      // Tạo payload sạch chỉ với các trường mà API update mong đợi
+      const payload: Partial<UpdateUserRequest> = {
+        lockoutEnabled: newStatus,
+      };
+      await userService.update(userToUpdate.id, payload);
+      showToast(`Đã ${actionText} tài khoản thành công.`);
+      await load();
+    } catch (error) {
+      showToast('Không thể cập nhật trạng thái tài khoản.', 'error');
+    }
+  }
 
-    showToast(`Đã ${actionText} tài khoản thành công!`);
-    await load()
-  };
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortDirection('desc'); // Default to descending
+    }
+  }
 
   const onCreate = () => navigate('/admin/users/new')
   const onEdit = (u: UserDTO) => navigate(`/admin/users/edit/${u.id}`)
@@ -102,7 +129,7 @@ export default function UserList() {
 
   const doSearch = () => {}
 
-  const filtered = useMemo(() => {
+  const processedItems = useMemo(() => {
     const from = dateFrom ? new Date(dateFrom) : undefined
     const to = dateTo ? new Date(dateTo) : undefined
     return users.filter(u => {
@@ -119,7 +146,18 @@ export default function UserList() {
       }
       return okRole && okStatus && okDate
     })
-  }, [users, roleFilter, statusFilter, dateFrom, dateTo]);
+    .sort((a, b) => {
+      if (sortBy === 'createdAt') {
+        const valA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const valB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      }
+      // Add other sortable columns here if needed
+      return 0;
+    });
+  }, [users, roleFilter, statusFilter, dateFrom, dateTo, sortBy, sortDirection]);
 
   const pill = (lockoutEnabled?: boolean) => {
     const isLocked = Boolean(lockoutEnabled)
@@ -128,8 +166,6 @@ export default function UserList() {
     const color = isLocked ? '#dc2626' : '#16a34a'
     return <span style={{ background: bg, color, padding: '6px 10px', borderRadius: 16, fontSize: 12 }}>{text}</span>
   }
-
-  // Removed Avatar column per design update
 
     return (
     <div style={{ padding: 24, backgroundColor: '#f9fafb', minHeight: '100vh' }}>
@@ -203,7 +239,7 @@ export default function UserList() {
 
       {/* Table */}
       <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflowX: 'auto' }}>
-        {filtered.length > 0 ? (
+        {processedItems.length > 0 ? (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead style={{ backgroundColor: '#f9fafb' }}>
               <tr>
@@ -211,13 +247,13 @@ export default function UserList() {
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Họ và tên</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vai trò</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ngày đăng kí</th>
+                <th onClick={() => handleSort('createdAt')} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer' }}>Ngày đăng kí <SortIcon direction={sortBy === 'createdAt' ? sortDirection : undefined} /></th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trạng thái</th>
                 <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((u, index) => (
+              {processedItems.map((u, index) => (
                 <tr key={u.id} style={{ borderTop: '1px solid #e5e7eb' }}>
                   <td style={{ padding: '12px 16px', color: '#4b5563', fontSize: 14, textAlign: 'center' }}>
                     {(page - 1) * pageSize + index + 1}
@@ -226,13 +262,27 @@ export default function UserList() {
                   <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.role ?? '-'}</td>
                   <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.email}</td>
                   <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}</td>
-                  <td style={{ padding: '16px' }}>{pill((u as any).lockoutEnabled)}</td>
+                  <td style={{ padding: '16px' }}>
+                    <select
+                      value={u.lockoutEnabled ? 'locked' : 'unlocked'}
+                      onChange={(e) => handleStatusChange(u, e.target.value === 'locked')}
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: 6,
+                        border: '1px solid',
+                        borderColor: u.lockoutEnabled ? '#fca5a5' : '#6ee7b7',
+                        fontSize: 13,
+                        background: u.lockoutEnabled ? '#fee2e2' : '#d1fae5',
+                        color: u.lockoutEnabled ? '#991b1b' : '#065f46',
+                        fontWeight: 500,
+                      }}>
+                      <option value="unlocked">Hoạt động</option>
+                      <option value="locked">Khóa</option>
+                    </select>
+                  </td>
                   <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
                     <button onClick={() => handleViewDetails(u.id)} title="Xem chi tiết" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
                     <button onClick={() => onEdit(u)} title="Sửa vai trò" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
-                    <button onClick={() => onToggleLockout(u)} title={(u as any).lockoutEnabled ? 'Mở khóa' : 'Khóa'} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
-                      {(u as any).lockoutEnabled ? <UnlockIcon /> : <LockIcon />}
-                    </button>
                   </td>
                 </tr>
               ))}
@@ -252,7 +302,7 @@ export default function UserList() {
       {/* Pagination */}
       <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#4b5563', fontSize: 14 }}>
         <div>
-          Hiển thị {filtered.length} trên tổng số {total ?? 0} kết quả
+          Hiển thị {processedItems.length} trên tổng số {total ?? 0} kết quả
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

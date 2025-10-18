@@ -30,7 +30,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const [categoryIds, setCategoryIds] = useState<string[]>(article?.categoryIds ?? [])
   const [content, setContent] = useState(article?.content ?? '')
   const [saving, setSaving] = useState(false)
-  const [errors, setErrors] = useState<{ title?: string; slug?: string }>({})
+  const [errors, setErrors] = useState<{ title?: string; slug?: string; displayOrder?: string }>({})
   const [validating, setValidating] = useState<{ title?: boolean; slug?: boolean }>({})
   const fileRef = React.createRef<HTMLInputElement>()
 
@@ -158,6 +158,10 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
 
   const submit = async (e: React.FormEvent | null, overrideStatusCode?: string) => {
     e?.preventDefault()
+    if (errors.displayOrder || errors.slug || errors.title) {
+      alert('Vui lòng sửa các lỗi được hiển thị trước khi lưu.');
+      return;
+    }
     setErrors({}) // Reset errors on new submission
     setSaving(true)
     try {
@@ -302,7 +306,22 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
 
           <div>
             <label style={labelStyle}>Thứ tự hiển thị</label>
-            <input type="number" value={displayOrder} onChange={e => setDisplayOrder(Number(e.target.value))} style={inputStyle} />
+            <input 
+              type="number" 
+              value={displayOrder} 
+              onChange={e => {
+                const num = Number(e.target.value);
+                setDisplayOrder(num);
+                if (num < 0) {
+                  setErrors(prev => ({ ...prev, displayOrder: 'Thứ tự hiển thị phải lớn hơn hoặc bằng 0.' }));
+                } else {
+                  setErrors(prev => ({ ...prev, displayOrder: undefined }));
+                }
+              }} 
+              style={{...inputStyle, borderColor: errors.displayOrder ? '#ef4444' : '#d1d5db'}}
+              min="0"
+            />
+            {errors.displayOrder && <div style={errorTextStyle}>{errors.displayOrder}</div>}
           </div>
         </div>
 

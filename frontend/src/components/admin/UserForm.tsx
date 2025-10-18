@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { UserDTO, CreateUserRequest, UpdateUserRequest } from '../../types/user.types'
 import { userService } from '../../services/userService'
+import { useToast } from '../../contexts/ToastContext'
 
 interface Props {
   user?: UserDTO
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function UserForm({ user, onSaved, onCancel }: Props) {
+  const { showToast } = useToast()
   const isEditMode = !!user;
 
   const [fullName, setFullName] = useState(user?.fullName ?? '')
@@ -49,6 +51,20 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     }
   }
 
+  const handleResetPassword = async () => {
+    if (!user?.id) return;
+
+    if (confirm(`Bạn có chắc muốn gửi email đặt lại mật khẩu cho người dùng "${user.fullName || user.email}" không?`)) {
+      try {
+        // Giả định service có hàm này, bạn cần thêm nó vào userService.ts
+        await (userService as any).sendResetPasswordEmail(user.id);
+        showToast('Yêu cầu đặt lại mật khẩu đã được gửi thành công!', 'success');
+      } catch (error) {
+        console.error('Failed to send password reset email:', error);
+        showToast('Không thể gửi yêu cầu đặt lại mật khẩu.', 'error');
+      }
+    }
+  };
   // --- CSS Styles --- (Updated for a cleaner look)
   const formContainerStyle: React.CSSProperties = {
     background: '#fff',
@@ -143,6 +159,18 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       </div>
 
       <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+        {isEditMode && (
+          <button type="button" onClick={handleResetPassword} style={{
+            padding: '10px 20px',
+            backgroundColor: '#f97316',
+            color: '#fff',
+            borderRadius: 8,
+            border: 'none',
+            fontWeight: 600,
+            cursor: 'pointer',
+            marginRight: 'auto' // Đẩy nút này sang trái
+          }}>Đặt lại mật khẩu</button>
+        )}
         <button type="button" onClick={onCancel} style={{
           padding: '10px 20px',
           backgroundColor: '#fff',

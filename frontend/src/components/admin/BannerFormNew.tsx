@@ -32,6 +32,7 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
   const [endDateLocal, setEndDateLocal] = useState<string>(isoToLocalInput(banner ? (banner as any).endDate : undefined))
   const [saving, setSaving] = useState(false)
   const fileRef = React.createRef<HTMLInputElement>()
+  const [errors, setErrors] = useState<{ order?: string }>({})
 
   const onSelectFile = () => fileRef.current?.click()
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,6 +49,10 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (errors.order) {
+      alert('Vui lòng sửa lỗi ở trường Thứ tự hiển thị trước khi lưu.');
+      return;
+    }
     setSaving(true)
     try {
       const toIso = (local?: string) => local ? new Date(local).toISOString() : undefined
@@ -117,6 +122,12 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
     gap: '24px',
   }
 
+  const errorTextStyle: React.CSSProperties = {
+    color: '#ef4444',
+    fontSize: 13,
+    marginTop: 6,
+  }
+
   return (
     <form onSubmit={submit} style={formContainerStyle}>
       <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '32px' }}>
@@ -152,7 +163,35 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
           </div>
           <div>
             <label style={labelStyle}>Thứ tự hiển thị</label>
-            <input type="number" value={order ?? ''} onChange={e => setOrder(e.target.value ? Number(e.target.value) : undefined)} style={inputStyle} />
+            <input 
+              type="number" 
+              value={order ?? ''} 
+              onChange={e => {
+                const value = e.target.value;
+                if (value === '') {
+                  setOrder(undefined);
+                  setErrors(prev => ({ ...prev, order: undefined }));
+                } else {
+                  const num = Number(value);
+                  setOrder(num);
+                  if (num < 0) {
+                    setErrors(prev => ({ ...prev, order: 'Thứ tự hiển thị phải lớn hơn hoặc bằng 0.' }));
+                  } else {
+                    setErrors(prev => ({ ...prev, order: undefined }));
+                  }
+                }
+              }} 
+              style={{...inputStyle, borderColor: errors.order ? '#ef4444' : '#d1d5db'}} 
+              min="0"
+              max="9999"
+              onKeyDown={(e) => {
+                // Chặn các ký tự không phải là số, trừ các phím điều khiển
+                if (['-', '+', 'e', 'E', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                  e.preventDefault();
+                }
+              }}
+            />
+            {errors.order && <div style={errorTextStyle}>{errors.order}</div>}
           </div>
           <div>
             <label style={labelStyle}>Trạng thái</label>

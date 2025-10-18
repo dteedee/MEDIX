@@ -36,8 +36,12 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
         public async Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null)
         {
-            var query = _context.Cmspages.Where(p => p.PageSlug == slug);
-            
+            if (string.IsNullOrWhiteSpace(slug))
+                return false;
+
+            var normalized = slug.Trim().ToLowerInvariant();
+            var query = _context.Cmspages.Where(p => p.PageSlug != null && p.PageSlug.ToLower() == normalized);
+
             if (excludeId.HasValue)
                 query = query.Where(p => p.Id != excludeId.Value);
 

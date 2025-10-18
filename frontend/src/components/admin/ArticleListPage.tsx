@@ -8,7 +8,7 @@ export default function ArticleListPage() {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [loading, setLoading] = useState(false)
-  const pageSize = 9 // 3x3 grid
+  const pageSize = 5
 
   const loadArticles = async (pageNum: number) => {
     if (loading) return

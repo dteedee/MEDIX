@@ -13,12 +13,19 @@ function authHeader() {
 }
 
 export const articleService = {
-  list: async (page = 1, pageSize = 10, params?: { search?: string; status?: string; slug?: string }): Promise<{ items: ArticleDTO[]; total?: number }> => {
-    const query: any = { page, pageSize }
-    if (params?.search) query.search = params.search
-    if (params?.status) query.status = params.status
-    if (params?.slug) query.slug = params.slug
-    const r = await axios.get(BASE, { params: query, headers: authHeader() })
+  list: async (page = 1, pageSize = 10, params?: { keyword?: string; status?: string; slug?: string }): Promise<{ items: ArticleDTO[]; total?: number }> => {
+    const query: any = { page, pageSize };
+    let url = BASE;
+
+    if (params?.keyword && params.keyword.trim()) {
+      url = `${BASE}/search`;
+      // API for Article search uses 'name' parameter as requested
+      query.name = params.keyword;
+    }
+    if (params?.status) query.status = params.status;
+    if (params?.slug) query.slug = params.slug;
+
+    const r = await axios.get(url, { params: query, headers: authHeader() });
     const data = r.data
 
     // If backend returns an array directly

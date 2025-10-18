@@ -13,10 +13,24 @@ function authHeader() {
 }
 
 export const categoryService = {
-  list: async (page = 1, pageSize = 10): Promise<{ items: CategoryDTO[]; total?: number }> => {
-    const r = await axios.get(BASE, { params: { page, pageSize }, headers: authHeader() })
-    const data = r.data
-    const items: CategoryDTO[] = data?.item2?.map((x: any) => ({
+  list: async (page = 1, pageSize = 10, keyword?: string): Promise<{ items: CategoryDTO[]; total?: number }> => {
+    const params: any = { page, pageSize };
+    let url = BASE;
+
+    if (keyword && keyword.trim()) {
+      url = `${BASE}/search`;
+      params.keyword = keyword;
+    }
+
+    const r = await axios.get(url, { params, headers: authHeader() });
+    const data = r.data;
+
+    // Handle multiple response shapes from backend (direct array, or paged object)
+    const rawItems = Array.isArray(data)
+      ? data
+      : data?.data ?? data?.item2 ?? [];
+
+    const items: CategoryDTO[] = (rawItems || []).map((x: any) => ({
       id: x.id,
       name: x.name,
       slug: x.slug,
@@ -24,8 +38,9 @@ export const categoryService = {
       isActive: x.isActive,
       parentId: x.parentId,
       parentName: x.parentName
-    })) ?? []
-    const total = data?.item1
+    }));
+
+    const total = data?.total ?? data?.item1 ?? (Array.isArray(data) ? data.length : undefined);
     return { items, total }
   },
   get: async (id: string): Promise<CategoryDTO> => {

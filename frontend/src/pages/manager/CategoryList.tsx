@@ -30,19 +30,25 @@ export default function CategoryList() {
   const [items, setItems] = useState<CategoryDTO[]>([])
   const [total, setTotal] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(5)
   const [viewing, setViewing] = useState<CategoryDTO | null>(null)
   const [search, setSearch] = useState('')
 
   const { showToast } = useToast()
   const navigate = useNavigate()
-  const load = async () => {
-    const r = await categoryService.list(page, pageSize)
+  const load = async (currentPage = page, currentSearch = search) => {
+    // Pass search term to the service. The service will handle which API to call.
+    const r = await categoryService.list(currentPage, pageSize, currentSearch.trim())
     setItems(r.items)
     setTotal(r.total)
   }
 
   useEffect(() => { load() }, [page, pageSize])
+
+  const handleSearch = () => {
+    setPage(1); // Reset to first page on new search
+    load(1, search);
+  }
 
   const onCreate = () => navigate('/manager/categories/new')
   const onEdit = (c: CategoryDTO) => navigate(`/manager/categories/edit/${c.id}`)
@@ -50,13 +56,8 @@ export default function CategoryList() {
     if (!confirm('Delete this category?')) return;
     await categoryService.remove(id);
     showToast('Xóa danh mục thành công!')
-    await load() }
-
-  const filtered = useMemo(() => {
-    const k = search.trim().toLowerCase()
-    if (!k) return items
-    return items.filter(c => (c.name ?? '').toLowerCase().includes(k) || (c.slug ?? '').toLowerCase().includes(k) || (c.description ?? '').toLowerCase().includes(k))
-  }, [items, search])
+    await load() 
+  }
 
   const pill = (active?: boolean) => {
     const isOn = Boolean(active)
@@ -100,11 +101,17 @@ export default function CategoryList() {
               placeholder="Tìm theo tên, slug hoặc mô tả..."
               value={search}
               onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
               style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
             />
           </div>
           <div>
-            <button onClick={() => setSearch('')} style={{ padding: '10px 20px', background: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
+            <button onClick={handleSearch} style={{ padding: '10px 20px', background: '#1f2937', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer' }}>
+              Tìm
+            </button>
+          </div>
+          <div>
+            <button onClick={() => { setSearch(''); load(1, ''); }} style={{ padding: '10px 20px', background: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
               Xóa
             </button>
           </div>
@@ -124,7 +131,7 @@ export default function CategoryList() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((c) => (
+            {items.map((c) => (
               <tr key={c.id} style={{ borderTop: '1px solid #e5e7eb' }}>
                 <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14 }}>{c.name}</td>
                 <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{c.slug}</td>
@@ -144,7 +151,7 @@ export default function CategoryList() {
       {/* Pagination */}
       <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#4b5563', fontSize: 14 }}>
         <div>
-          Hiển thị {filtered.length} trên tổng số {total ?? 0} kết quả
+          Hiển thị {items.length} trên tổng số {total ?? 0} kết quả
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -152,7 +159,7 @@ export default function CategoryList() {
             <select id="pageSize" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}>
               <option value={5}>5</option>
               <option value={10}>10</option>
-              <option value={25}>25</option>
+              <option value={15}>15</option>
             </select>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>

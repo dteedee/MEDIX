@@ -109,11 +109,23 @@ export default function ArticleDetails({ article, onClose }: Props) {
               <p style={{ ...valueStyle, fontSize: 16, fontWeight: 600, margin: 0 }}>{article.title}</p>
             </div>
 
-            {/* Image */}
-            {article.thumbnailUrl && (
+            {/* Images */}
+            {(article.thumbnailUrl || article.coverImageUrl) && (
               <div style={fullWidthItem}>
-                <span style={labelStyle}>Ảnh đại diện</span>
-                <img src={article.thumbnailUrl} alt={article.title} style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, objectFit: 'cover', border: '1px solid #e5e7eb' }} />
+                <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                  {article.thumbnailUrl && (
+                    <div style={{ flex: 1 }}>
+                      <span style={labelStyle}>Ảnh đại diện</span>
+                      <img src={article.thumbnailUrl} alt="Ảnh đại diện" style={{ width: '100%', height: 'auto', maxHeight: 250, borderRadius: 8, objectFit: 'cover', border: '1px solid #e5e7eb' }} />
+                    </div>
+                  )}
+                  {article.coverImageUrl && (
+                    <div style={{ flex: 1 }}>
+                      <span style={labelStyle}>Ảnh bìa</span>
+                      <img src={article.coverImageUrl} alt="Ảnh bìa" style={{ width: '100%', height: 'auto', maxHeight: 250, borderRadius: 8, objectFit: 'cover', border: '1px solid #e5e7eb' }} />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

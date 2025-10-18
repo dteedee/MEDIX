@@ -160,7 +160,11 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         metaDescription,
         authorId,
         statusCode: finalStatusCode,
-        publishedAt: publishedAt ? new Date(publishedAt).toISOString() : undefined,
+        // If status is PUBLISHED and no date is set, publish now.
+        // Otherwise, use the selected date.
+        publishedAt: finalStatusCode === 'PUBLISHED' && !publishedAt 
+          ? new Date().toISOString() 
+          : (publishedAt ? new Date(publishedAt).toISOString() : undefined),
         categoryIds
       }
       if (article) await articleService.update(article.id, payload)

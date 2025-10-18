@@ -23,42 +23,33 @@ export default function BannerList() {
   const [banners, setBanners] = useState<BannerDTO[]>([])
   const [total, setTotal] = useState<number | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
-  const [errorDetailsVisible, setErrorDetailsVisible] = useState(false)
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-const [search, setSearch] = useState('')
+  const [pageSize, setPageSize] = useState(5)
+  const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const { showToast } = useToast()
 
-  const load = async () => {
+  const load = async (currentPage = page, currentSearch = search, currentStatus = statusFilter) => {
     try {
       setError(null)
-      const r = await bannerService.list(page, pageSize)
+      const params = { keyword: currentSearch, status: currentStatus };
+      const r = await bannerService.list(currentPage, pageSize, params)
       setBanners(r.items)
       setTotal(r.total)
-      if (!r.items || r.items.length === 0) {
-        console.debug('BannerList: API returned no items', { page, pageSize, raw: r })
-      }
     } catch (err) {
       console.error('BannerList: failed to load banners', err)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const anyErr: any = err
-      let msg = 'Failed to load banners'
-      if (anyErr?.response) {
-        const status = anyErr.response.status
-        const statusText = anyErr.response.statusText
-        msg += `: ${status} ${statusText}`
-        setError(JSON.stringify(anyErr.response.data ?? anyErr.response, null, 2))
-      } else {
-        msg += `: ${anyErr?.message ?? String(anyErr)}`
-        setError(String(anyErr))
-      }
-      // also keep a short message for display/title
+      const msg = anyErr?.response?.data?.title ?? anyErr?.message ?? 'Failed to load banners'
       setError(msg)
     }
   }
   const navigate = useNavigate()
-   useEffect(() => { load() }, [page, pageSize])
+  useEffect(() => { load() }, [page, pageSize, statusFilter])
+
+  const handleSearch = () => {
+    setPage(1); // Reset to first page on new search
+    load(1, search, statusFilter);
+  }
 
   const onCreate = () => navigate('/manager/banners/new')
   const onEdit = (b: BannerDTO) => navigate(`/manager/banners/edit/${b.id}`)
@@ -66,18 +57,8 @@ const [search, setSearch] = useState('')
     if (!confirm('Delete this banner?')) return;
     await bannerService.remove(id);
     showToast('Xóa banner thành công!')
-    await load() }
-
-  const filtered = useMemo(() => {
-    let arr = banners
-    if (search.trim()) {
-      const k = search.toLowerCase()
-      arr = arr.filter(b => (b.title ?? '').toLowerCase().includes(k) || (b.link ?? '').toLowerCase().includes(k))
-    }
-    if (statusFilter === 'active') arr = arr.filter(b => b.isActive)
-    if (statusFilter === 'inactive') arr = arr.filter(b => !b.isActive)
-    return arr
-  }, [banners, search, statusFilter])
+    await load() 
+  }
 
   const pill = (active?: boolean) => {
     const isOn = Boolean(active)
@@ -85,6 +66,15 @@ const [search, setSearch] = useState('')
     const bg = isOn ? '#e7f9ec' : '#fee2e2'
     const color = isOn ? '#16a34a' : '#dc2626'
     return <span style={{ background: bg, color, padding: '6px 10px', borderRadius: 16, fontSize: 12, fontWeight: 500 }}>{text}</span>
+  }
+  
+  if (error) {
+    return (
+      <div style={{ padding: 24, color: 'red' }}>
+        <h2>Error loading banners</h2>
+        <pre>{error}</pre>
+      </div>
+    )
   }
 
   return (
@@ -110,6 +100,7 @@ const [search, setSearch] = useState('')
               placeholder="Tìm theo tiêu đề hoặc link..."
               value={search}
               onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
               style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
             />
           </div>
@@ -122,7 +113,12 @@ const [search, setSearch] = useState('')
             </select>
           </div>
           <div>
-            <button onClick={() => setSearch('')} style={{ padding: '10px 20px', background: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
+            <button onClick={handleSearch} style={{ padding: '10px 20px', background: '#1f2937', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer' }}>
+              Tìm
+            </button>
+          </div>
+          <div>
+            <button onClick={() => { setSearch(''); setStatusFilter('all'); load(1, '', 'all'); }} style={{ padding: '10px 20px', background: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
               Xóa
             </button>
           </div>
@@ -143,7 +139,7 @@ const [search, setSearch] = useState('')
             </tr>
           </thead>
           <tbody>
-            {filtered.map((b) => (
+            {banners.map((b) => (
               <tr key={b.id} style={{ borderTop: '1px solid #e5e7eb' }}>
                 <td style={{ padding: '12px 16px' }}>
                   <div style={{ width: 100, height: 56, background: '#f0f2f5', borderRadius: 6, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -167,7 +163,7 @@ const [search, setSearch] = useState('')
       {/* Pagination */}
       <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#4b5563', fontSize: 14 }}>
         <div>
-          Hiển thị {filtered.length} trên tổng số {total ?? 0} kết quả
+          Hiển thị {banners.length} trên tổng số {total ?? 0} kết quả
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -175,7 +171,7 @@ const [search, setSearch] = useState('')
             <select id="pageSize" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}>
               <option value={5}>5</option>
               <option value={10}>10</option>
-              <option value={25}>25</option>
+              <option value={15}>15</option>
             </select>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>

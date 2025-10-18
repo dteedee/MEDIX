@@ -21,8 +21,7 @@ namespace Medix.API.Models.DTOs.HealthArticle
         public string Content { get; set; } = null!;
 
         [Required(ErrorMessage = "DisplayType is required.")]
-        [RegularExpression("^(normal|featured|highlight)$",
-            ErrorMessage = "DisplayType must be one of: normal, featured, highlight.")]
+       
         public string DisplayType { get; set; } = null!;
 
         [Url(ErrorMessage = "ThumbnailUrl must be a valid URL.")]
@@ -46,8 +45,7 @@ namespace Medix.API.Models.DTOs.HealthArticle
         public Guid AuthorId { get; set; }
 
         [Required(ErrorMessage = "StatusCode is required.")]
-        [RegularExpression("^(draft|pending|published|archived)$",
-            ErrorMessage = "Invalid status code.")]
+        
         public string StatusCode { get; set; } = null!;
 
         public DateTime? PublishedAt { get; set; }

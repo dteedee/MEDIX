@@ -254,37 +254,13 @@ namespace Medix.API.Business.Services.Classification
                     { "Slug", new[] { "Article slug already exists" } }
                 });
             }
-
-            // Normalize current vs new values and skip checks when unchanged to avoid false-positive duplicates
-            string Normalize(string? s) => string.IsNullOrWhiteSpace(s) ? string.Empty : s.Trim().ToLowerInvariant();
-
-            var currentTitleNorm = Normalize(article.Title);
-            var newTitleNorm = Normalize(updateDto.Title);
-            if (currentTitleNorm != newTitleNorm)
+            var titleExists = await _healthArticleRepository.TitleExistsAsync(createDto.Title);
+            if (titleExists)
             {
-                var titleExists = await _healthArticleRepository.TitleExistsAsync(updateDto.Title, id);
-                if (titleExists)
+                throw new ValidationException(new Dictionary<string, string[]>
                 {
-                    throw new ValidationException(new Dictionary<string, string[]>
-                    {
-                        { "Title", new[] { "Article title already exists" } }
-                    });
-                }
-            }
-
-            var currentSlugNorm = Normalize(article.Slug);
-            var newSlugNorm = Normalize(updateDto.Slug);
-            if (currentSlugNorm != newSlugNorm)
-            {
-                var slugExists = await _healthArticleRepository.SlugExistsAsync(updateDto.Slug, id);
-                if (slugExists)
-                {
-                    throw new ValidationException(new Dictionary<string, string[]>
-                    {
-                        { "Slug", new[] { "Article slug already exists" } }
-                    });
-                }
-            }
+                    { "Title", new[] { "Article title already exists" } }
+                });
             }
 
             var article = new HealthArticle
@@ -340,21 +316,35 @@ namespace Medix.API.Business.Services.Classification
             {
                 throw new NotFoundException("Article not found");
             }
-            var titleExists = await _healthArticleRepository.TitleExistsAsync(updateDto.Title);
-            if (titleExists)
+            // Normalize current vs new values and skip checks when unchanged to avoid false-positive duplicates
+            string Normalize(string? s) => string.IsNullOrWhiteSpace(s) ? string.Empty : s.Trim().ToLowerInvariant();
+
+            var currentTitleNorm = Normalize(article.Title);
+            var newTitleNorm = Normalize(updateDto.Title);
+            if (currentTitleNorm != newTitleNorm)
             {
-                throw new ValidationException(new Dictionary<string, string[]>
+                var titleExists = await _healthArticleRepository.TitleExistsAsync(updateDto.Title, id);
+                if (titleExists)
                 {
-                    { "Title", new[] { "Article title already exists" } }
-                });
+                    throw new ValidationException(new Dictionary<string, string[]>
+                    {
+                        { "Title", new[] { "Article title already exists" } }
+                    });
+                }
             }
-            var slugExists = await _healthArticleRepository.SlugExistsAsync(updateDto.Slug, id);
-            if (slugExists)
+
+            var currentSlugNorm = Normalize(article.Slug);
+            var newSlugNorm = Normalize(updateDto.Slug);
+            if (currentSlugNorm != newSlugNorm)
             {
-                throw new ValidationException(new Dictionary<string, string[]>
+                var slugExists = await _healthArticleRepository.SlugExistsAsync(updateDto.Slug, id);
+                if (slugExists)
                 {
-                    { "Slug", new[] { "Article slug already exists" } }
-                });
+                    throw new ValidationException(new Dictionary<string, string[]>
+                    {
+                        { "Slug", new[] { "Article slug already exists" } }
+                    });
+                }
             }
 
           

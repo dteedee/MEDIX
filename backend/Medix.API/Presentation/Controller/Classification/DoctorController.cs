@@ -3,6 +3,7 @@ using Medix.API.Application.DTOs.Doctor;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.Community;
+using Medix.API.Business.Validators;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -146,5 +147,143 @@ namespace Medix.API.Presentation.Controller.Classification
 
             return prev;
         }
+
+        [HttpGet("profile/{username}")]
+        public async Task<IActionResult> GetDoctorProfile(string username)
+        {
+            var profileDto = await _doctorService.GetDoctorProfileByUserNameAsync(username);
+
+            if (profileDto == null)
+            {
+                return NotFound(new { Message = "Doctor not found" });
+            }
+
+            return Ok(profileDto);
+        }
+
+        [HttpGet("profile/details")]
+        public async Task<IActionResult> GetDoctorProfilesDetails()
+        {
+            var userId = "5383719A-63AC-43D9-8FC7-D6F99C83A9C2"; // Example doctor ID
+            var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userId));
+            if (doctor == null)
+            {
+                return NotFound(new { Message = "Doctor not found" });
+            }
+
+            return Ok(new
+            {
+                doctor.User.UserName,
+                doctor.User.Email,
+                doctor.User.AvatarUrl,
+                doctor.User.PhoneNumber,
+                doctor.User.FullName,
+                doctor.User.DateOfBirth,
+                doctor.User.Address,
+                doctor.Education,
+                doctor.Bio,
+                doctor.YearsOfExperience,
+                doctor.ConsultationFee,
+            });
+        }
+
+        [HttpPut("profile/update")]
+        public async Task<IActionResult> UpdateDoctorProfile([FromBody] DoctorProfileUpdateRequest request)
+        {
+            var userId = Guid.Parse("5383719A-63AC-43D9-8FC7-D6F99C83A9C2"); // Example doctor ID
+            var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
+            if (doctor == null)
+            {
+                return NotFound(new { Message = "Doctor not found" });
+            }
+
+            var result = await _doctorService.UpdateDoctorProfileAsync(doctor, request);
+            if (!result)
+            {
+                return StatusCode(500, new { Message = "An error occurred while updating the profile" });
+            }
+            return Ok(new { Message = "Profile updated successfully" });
+        }
+
+        [HttpPut("profile/update-avatar")]
+        public async Task<IActionResult> UpdateDoctorAvatar([FromForm] UpdateAvatarRequest req)
+        {
+            var userId = Guid.Parse("5383719A-63AC-43D9-8FC7-D6F99C83A9C2"); // Example doctor ID
+            var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
+            if (doctor == null)
+            {
+                return NotFound(new { Message = "Doctor not found" });
+            }
+            var avatarUrl = await _cloudinaryService.UploadImageAsync(req.Avatar);
+            if (avatarUrl == null)
+            {
+                return StatusCode(500, new { Message = "Failed to upload avatar image" });
+            }
+            doctor.User.AvatarUrl = avatarUrl;
+            var updatedUser = await _userSerivce.UpdateUserAsync(doctor.User);
+            if (updatedUser == null)
+            {
+                return StatusCode(500, new { Message = "An error occurred while updating the avatar" });
+            }
+            return Ok(new { Message = "Avatar updated successfully", AvatarUrl = avatarUrl });
+        }
+
+        [HttpPut("profile/update-password")]
+        public async Task<IActionResult> UpdateDoctorPassword([FromBody] PasswordUpdatePresenter pre)
+        {
+            var userId = Guid.Parse("5383719A-63AC-43D9-8FC7-D6F99C83A9C2"); // Example doctor ID
+            var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
+            if (doctor == null)
+            {
+                return NotFound(new { Message = "Doctor not found" });
+            }
+
+            var req = _mapper.Map<PasswordUpdateRequest>(pre);
+            var validationResults = new List<ValidationResult>();
+            var context = new ValidationContext(req, null, null);
+
+            Validator.TryValidateObject(req, context, validationResults, true);
+            ValidateNewPassword(validationResults, req, doctor.User.PasswordHash);
+            if (validationResults.Any())
+            {
+                return BadRequest(validationResults);
+            }
+
+            Console.WriteLine(doctor.User.PasswordHash);
+            Console.WriteLine(req.NewPassword);
+            doctor.User.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+            var updatedUser = await _userSerivce.UpdateUserAsync(doctor.User);
+            if (updatedUser == null)
+            {
+                return StatusCode(500, new { Message = "An error occurred while updating the password" });
+            }
+
+            return Ok(new { Message = "Password updated successfully" });
+        }
+
+        private List<ValidationResult> ValidateNewPassword(List<ValidationResult> prevResult, PasswordUpdateRequest req, string oldPassword)
+        {
+            if (req.NewPassword == oldPassword)
+            {
+                prevResult.Add(new ValidationResult("Mật khẩu mới không được trùng với mật khẩu hiện tại", new[] { "NewPassword" }));
+            }
+
+            if (req.NewPassword != req.ConfirmNewPassword)
+            {
+                prevResult.Add(new ValidationResult("Mật khẩu không khớp", new[] { "ConfirmNewPassword" }));
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, oldPassword))
+            {
+                prevResult.Add(new ValidationResult("Mật khẩu cũ không đúng", new[] { "CurrentPassword" }));
+            }
+            return prevResult;
+        }
+    }
+
+    public class UpdateAvatarRequest
+    {
+        [ImageFile]
+        public IFormFile? Avatar { get; set; }
     }
 }

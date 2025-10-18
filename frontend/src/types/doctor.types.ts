@@ -25,6 +25,8 @@ export interface DoctorProfileDto{
 }
 
 export interface DoctorProfileDetails{
+  userName: string;
+  email: string;
   avatarUrl: string;
   phoneNumber: string;
   fullName: string;

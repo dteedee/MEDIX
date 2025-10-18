@@ -17,9 +17,6 @@ namespace Medix.API.Models.DTOs.Doctor
         [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại phải bắt đầu bằng 0 và gồm 10 chữ số")]
         public string PhoneNumber { get; set; } = null!;
 
-        [MaxLength(500, ErrorMessage = "Địa chỉ không được vượt quá 500 ký tự")]
-        public string? Address { get; set; }
-
         [MaxLength(1000, ErrorMessage = "Tiểu sử không được vượt quá 1000 ký tự")]
         public string? Bio { get; set; }
 

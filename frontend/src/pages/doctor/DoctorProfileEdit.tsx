@@ -12,6 +12,8 @@ function DoctorProfileEdit() {
     const [profileDetails, setProfileDetails] = useState<DoctorProfileDetails>();
     const [errors, setErrors] = useState<any>({});
 
+    const [formData, setFormData] = useState<any>({});
+
     const [uploadStatus, setUploadStatus] = useState<'success' | 'error' | null>(null);
     const [uploadMessage, setUploadMessage] = useState('');
 
@@ -155,6 +157,67 @@ function DoctorProfileEdit() {
         }
     }
 
+    const validateField = (name: string, value: string) => {
+        const newErrors: Record<string, string[]> = {};
+
+        switch (name) {
+            case 'fullName':
+                if (!value.trim()) {
+                    newErrors.FullName = ['Vui lòng nhập họ và tên'];
+                } else {
+                    newErrors.FullName = [''];
+                }
+                break;
+
+            case 'dob':
+                if (!value) {
+                    newErrors.birthdate = []; // No error if left empty
+                } else {
+                    const birthYear = new Date(value).getFullYear();
+                    const currentYear = new Date().getFullYear();
+                    const age = currentYear - birthYear;
+
+                    if (age < 25) {
+                        newErrors.Dob = ['Bạn phải đủ 25 tuổi để đăng ký'];
+                    } else if (age > 150) {
+                        newErrors.Dob = ['Ngày sinh không hợp lệ'];
+                    } else {
+                        newErrors.Dob = [];
+                    }
+                }
+                break;
+
+            case 'phoneNumber':
+                if (!value.trim()) {
+                    newErrors.PhoneNumber = ['Vui lòng nhập số điện thoại'];
+                } else if (!/^0\d{9}$/.test(value)) {
+                    newErrors.PhoneNumber = ['Số điện thoại phải bắt đầu bằng 0 và gồm 10 chữ số'];
+                } else {
+                    newErrors.PhoneNumber = [];
+                }
+                break;
+
+            case 'yearsOfExperience':
+                const years = Number(value);
+                if (!value.trim()) {
+                    newErrors.YearsOfExperience = ['Vui lòng nhập số năm kinh nghiệm'];
+                } else if (isNaN(years) || years < 1 || years > 50) {
+                    newErrors.YearsOfExperience = ['Số năm kinh nghiệm không hợp lệ'];
+                } else {
+                    newErrors.YearsOfExperience = [];
+                }
+                break;
+        }
+
+        setErrors((prev: any) => ({ ...prev, ...newErrors }));
+    }
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData((prev: any) => ({ ...prev, [name]: value }));
+        validateField(name, value);
+    };
+
     return (
         <>
             <Header />
@@ -193,11 +256,37 @@ function DoctorProfileEdit() {
                         {/* Profile Form */}
                         <form className={styles["profile-form"]} onSubmit={handleSubmit}>
                             <div className={styles["form-row"]}>
+                                <label className={styles["form-label"]}>Email</label>
+                                <div className={styles["form-input-group"]}>
+                                    <input
+                                        type="text"
+                                        className={styles["form-input-disabled"]}
+                                        defaultValue={profileDetails?.email}
+                                        disabled />
+                                </div>
+                            </div>
+                            <div className={styles["form-row"]}>
+                                <label className={styles["form-label"]}>Tên đăng nhập</label>
+                                <div className={styles["form-input-group"]}>
+                                    <input
+                                        type="text"
+                                        className={styles["form-input-disabled"]}
+                                        defaultValue={profileDetails?.userName}
+                                        disabled />
+                                </div>
+                            </div>
+                            <div className={styles["form-row"]}>
                                 <label className={styles["form-label"]}>Họ và tên</label>
                                 <div className={styles["form-input-group"]}>
                                     <input
                                         type="text"
-                                        className={styles["form-input"]}
+                                        className={`${styles["form-input"]} form-control ${errors.FullName?.[0]
+                                            ? 'is-invalid'
+                                            : formData.fullName?.trim()
+                                                ? 'is-valid'
+                                                : ''
+                                            }`}
+                                        onChange={handleChange}
                                         defaultValue={profileDetails?.fullName}
                                         name="fullName" />
                                     {errors.FullName?.[0] && (
@@ -208,7 +297,14 @@ function DoctorProfileEdit() {
                             <div className={styles["form-row"]}>
                                 <label className={styles["form-label"]}>Ngày sinh</label>
                                 <div className={styles["form-input-group"]}>
-                                    <input type="date" className={styles["form-input"]}
+                                    <input type="date"
+                                        className={`${styles["form-input"]} form-control ${errors.Dob?.[0]
+                                            ? 'is-invalid'
+                                            : formData.dob?.trim()
+                                                ? 'is-valid'
+                                                : ''
+                                            }`}
+                                        onChange={handleChange}
                                         defaultValue={profileDetails?.dateOfBirth} name='dob' />
                                     {errors.Dob?.[0] && (
                                         <div className={styles["form-error"]}>{errors.Dob[0]}</div>
@@ -218,28 +314,28 @@ function DoctorProfileEdit() {
                             <div className={styles["form-row"]}>
                                 <label className={styles["form-label"]}>Số điện thoại</label>
                                 <div className={styles["form-input-group"]}>
-                                    <input type="text" className={styles["form-input"]} defaultValue={profileDetails?.phoneNumber}
+                                    <input
+                                        onInput={(e) => {
+                                            const target = e.target as HTMLInputElement;
+                                            if (target.value.length > 10) {
+                                                target.value = target.value.slice(0, 10);
+                                            }
+                                        }}
+                                        type="number"
+                                        className={`${styles["form-input"]} form-control ${errors.PhoneNumber?.[0]
+                                            ? 'is-invalid'
+                                            : formData.phoneNumber?.trim()
+                                                ? 'is-valid'
+                                                : ''
+                                            }`}
+                                        onChange={handleChange}
+                                        defaultValue={profileDetails?.phoneNumber}
                                         name='phoneNumber' />
                                     {errors.PhoneNumber?.[0] && (
                                         <div className={styles["form-error"]}>{errors.PhoneNumber[0]}</div>
                                     )}
                                 </div>
                             </div>
-                            <div className={styles["form-row"]}>
-                                <label className={styles["form-label"]}>Địa chỉ</label>
-                                <div className={styles["form-input-group"]}>
-                                    <input
-                                        type="text"
-                                        className={styles["form-input"]}
-                                        defaultValue={profileDetails?.address}
-                                        name="Address"
-                                    />
-                                    {errors.Address?.[0] && (
-                                        <div className={styles["form-error"]}>{errors.Address[0]}</div>
-                                    )}
-                                </div>
-                            </div>
-
                             <div className={styles["form-row"]}>
                                 <label className={styles["form-label"]}>Tiểu sử</label>
                                 <div className={styles["form-input-group"]}>
@@ -275,7 +371,13 @@ function DoctorProfileEdit() {
                                 <div className={styles["form-input-group"]}>
                                     <input
                                         type="text"
-                                        className={styles["form-input"]}
+                                        className={`${styles["form-input"]} form-control ${errors.YearsOfExperience?.[0]
+                                            ? 'is-invalid'
+                                            : formData.yearsOfExperience?.trim()
+                                                ? 'is-valid'
+                                                : ''
+                                            }`}
+                                        onChange={handleChange}
                                         defaultValue={profileDetails?.yearsOfExperience}
                                         name="yearsOfExperience"
                                     />

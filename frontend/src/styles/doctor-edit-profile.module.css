@@ -111,9 +111,18 @@ body {
     border: 1px solid #d1d5db;
     border-radius: 6px;
     font-size: 14px;
-    background: #e5e7eb;
     outline: none;
     transition: border-color 0.3s;
+}
+
+.form-input-disabled{
+    padding: 12px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s;
+    background: #e5e7eb;
 }
 
 .form-error {

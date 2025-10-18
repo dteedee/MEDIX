@@ -6,8 +6,8 @@ import { MainLayout } from './components/layout/MainLayout';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import { UserRole } from './types/common.types';
 import DoctorRegister from './pages/doctor/DoctorRegister';
-import DoctorProfile from './pages/doctor/DoctorProfile';
 import DoctorProfileEdit from './pages/doctor/DoctorProfileEdit';
+import DoctorDetails from './pages/doctor/DoctorDetails';
 
 export function App() {
 
@@ -28,7 +28,7 @@ export function App() {
               <PublicRoute>
                 <Routes>
                   <Route path="register" element={<DoctorRegister />} />
-                  <Route path="profile/:username" element={<DoctorProfile />} />
+                  <Route path="details/:username" element={<DoctorDetails />} />
                   <Route path="profile/edit" element={<DoctorProfileEdit />} />
                 </Routes>
               </PublicRoute>

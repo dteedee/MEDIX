@@ -1,13 +1,13 @@
 import { useParams } from "react-router-dom";
 
-import styles from '../../styles/doctor-profile.module.css'
+import styles from '../../styles/doctor-details.module.css'
 import { useEffect, useState } from "react";
 import doctorService from "../../services/doctorService";
 import { DoctorProfileDto } from "../../types/doctor.types";
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 
-function DoctorProfile() {
+function DoctorDetails() {
     const [profileData, setProfileData] = useState<DoctorProfileDto>();
     const [activeTabIndex, setActiveTabIndex] = useState(0);
 
@@ -138,4 +138,4 @@ function DoctorProfile() {
     )
 }
 
-export default DoctorProfile;
+export default DoctorDetails;

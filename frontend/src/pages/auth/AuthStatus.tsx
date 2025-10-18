@@ -1,31 +1,61 @@
-import React from 'react';
-import { useLocation, Link } from 'react-router-dom';
-import { Card } from '../../components/ui/Card';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { authService } from '../../services/authService';
 import { Button } from '../../components/ui/Button';
 
 const AuthStatus: React.FC = () => {
-  const { search } = useLocation();
-  const params = new URLSearchParams(search);
-  const status = params.get('status'); // success | failure
-  const method = params.get('method'); // email | google
-  const message = status === 'success' ? 'Đăng nhập thành công' : 'Đăng nhập thất bại';
+  const navigate = useNavigate();
+  const [user, setUser] = useState<any | null>(null);
+
+  useEffect(() => {
+    const raw = localStorage.getItem('currentUser');
+    if (!raw) {
+      // nếu không có user -> quay về homepage (chưa login)
+      navigate('/');
+      return;
+    }
+    try {
+      setUser(JSON.parse(raw));
+    } catch {
+      navigate('/');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // ignore logout errors, still clear local data
+    } finally {
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('rememberEmail');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('expiresAt');
+      // apiClient.clearTokens() được gọi trong authService.logout() nếu có
+      // notify others
+      window.dispatchEvent(new Event('authChanged'));
+      navigate('/');
+    }
+  };
+
+  if (!user) return null;
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center p-6">
-      <Card className="w-full max-w-md p-8 text-center">
-        <h1 className={`text-2xl font-semibold mb-2 ${status === 'success' ? 'text-green-700' : 'text-red-700'}`}>{message}</h1>
-        <p className="text-sm text-gray-600 mb-6">Phương thức: {method ?? 'không xác định'}</p>
-        <div className="space-y-3">
-          <Link to="/">
-            <Button className="w-full">Về trang chủ</Button>
-          </Link>
-          {status !== 'success' && (
-            <Link to="/login">
-              <Button className="w-full" variant="outline">Thử đăng nhập lại</Button>
-            </Link>
-          )}
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="max-w-md w-full p-6 border rounded shadow">
+        <h2 className="text-2xl font-semibold mb-4">Xin chào, {user.fullName}</h2>
+        <p className="mb-4">Role: <strong>{user.role}</strong></p>
+        <div className="flex gap-3">
+          <Button onClick={handleLogout} className="bg-red-600 hover:bg-red-700">
+            Đăng xuất
+          </Button>
+          <Button onClick={() => navigate('/')} variant="secondary">
+            Về trang chủ
+          </Button>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

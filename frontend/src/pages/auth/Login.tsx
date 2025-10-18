@@ -20,6 +20,20 @@ const Login: React.FC = () => {
   const errorTimerRef = useRef<number | null>(null);
   const successTimerRef = useRef<number | null>(null);
 
+  // prevent showing login page when already logged in
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    const currentUser = localStorage.getItem('currentUser');
+    if (token && currentUser) {
+      // already logged in -> go to homepage (which should show logged-in UI)
+      navigate('/');
+      return;
+    }
+    setCheckingAuth(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) {
       setGoogleError('Google Client ID chưa được cấu hình. Vui lòng thêm VITE_GOOGLE_CLIENT_ID vào .env');
@@ -93,17 +107,34 @@ const Login: React.FC = () => {
     setIsLoading(true);
     try {
       const response = await authService.login({ email, password });
+
+      // lưu tokens vào api client
       apiClient.setTokens(response.accessToken, response.refreshToken);
+
+      // lưu thông tin user + tokens vào localStorage để header và kiểm tra auth dùng
+      try {
+        localStorage.setItem('currentUser', JSON.stringify(response.user));
+        localStorage.setItem('accessToken', response.accessToken);
+        if (response.refreshToken) localStorage.setItem('refreshToken', response.refreshToken);
+        if (response.expiresAt) localStorage.setItem('expiresAt', response.expiresAt);
+      } catch {
+        // ignore storage errors
+      }
+
       if (rememberMe) {
         localStorage.setItem('rememberEmail', email);
       } else {
         localStorage.removeItem('rememberEmail');
       }
 
-      // show green success popup then navigate
+      // notify others (Header, other tabs)
+      window.dispatchEvent(new Event('authChanged'));
+
+      // show green success popup then navigate to welcome/home
       setSuccessMsg('Đăng nhập thành công');
-      // navigate after short delay so user sees popup
-      setTimeout(() => navigate('/'), 1200);
+
+      // delay nhỏ để người dùng thấy popup rồi chuyển đi
+      setTimeout(() => navigate('/'), 800);
     } catch (err: any) {
       const status = err?.response?.status;
       const message = err?.message || '';
@@ -131,6 +162,16 @@ const Login: React.FC = () => {
       const auth = await authService.loginWithGoogle(idToken);
       apiClient.setTokens(auth.accessToken, auth.refreshToken);
 
+      try {
+        localStorage.setItem('currentUser', JSON.stringify(auth.user));
+        localStorage.setItem('accessToken', auth.accessToken);
+        if (auth.refreshToken) localStorage.setItem('refreshToken', auth.refreshToken);
+        if (auth.expiresAt) localStorage.setItem('expiresAt', auth.expiresAt);
+      } catch {}
+
+      // notify header/other tabs
+      window.dispatchEvent(new Event('authChanged'));
+
       setSuccessMsg('Đăng nhập bằng Google thành công');
       setTimeout(() => navigate('/'), 1200);
     } catch (err: any) {
@@ -140,6 +181,11 @@ const Login: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  if (checkingAuth) {
+    // tránh flash UI khi đang kiểm tra auth
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

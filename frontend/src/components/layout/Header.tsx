@@ -1,66 +1,73 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import '../../styles/header.css'
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { authService } from '../../services/authService';
 
-const Header = () => {
-    const navigate = useNavigate();
-    const { isAuthenticated, logout } = useAuth();
-    const [showDropdown, setShowDropdown] = useState(false);
+const Header: React.FC = () => {
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState<any | null>(() => {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null;
+    return raw ? JSON.parse(raw) : null;
+  });
 
-    const toggleDropdown = () => setShowDropdown((prev) => !prev);
-    const handleLogout = async () => {
-        try {
-            await logout();
-        } finally {
-            navigate('/');
-        }
+  useEffect(() => {
+    const handleAuthChanged = () => {
+      const raw = localStorage.getItem('currentUser');
+      setCurrentUser(raw ? JSON.parse(raw) : null);
     };
 
+    // custom event from login/logout flows
+    window.addEventListener('authChanged', handleAuthChanged);
+    // storage event for cross-tab updates
+    window.addEventListener('storage', handleAuthChanged);
 
-    return (
-        <header>
-            <div className="top-bar">
-                <div className="logo">
-                    <a href='/' className="logo">
-                        MEDIX
-                        <small style={{ textTransform: 'uppercase' }}>Hệ thống y tế thông minh ứng dụng AI</small>
-                    </a>
-                </div>
-                <div className="search-bar">
-                    <input type="text" placeholder="Chuyên khoa, triệu chứng, tên bác sĩ..." />
-                    <button>🔍</button>
-                </div>
-                <div className="header-links">
-                    {isAuthenticated ? (
-                        <div className="dropdown">
-                            <img
-                                src="https://pbs.twimg.com/profile_images/1937117284725661696/8ppkq53g_400x400.jpg" // Replace with actual avatar URL
-                                alt="User avatar"
-                                className="rounded-circle dropdown-toggle"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false"
-                                style={{ width: '40px', height: '40px', cursor: 'pointer' }}
-                                onClick={toggleDropdown}
-                            />
-                            <ul className="dropdown-menu dropdown-menu-end" style={{ display: showDropdown ? 'block' : 'none' }}>
-                                <li>
-                                    <button className="dropdown-item" onClick={handleLogout}>
-                                        Đăng xuất
-                                    </button>
-                                </li>
-                            </ul>
-                        </div>
-                    ) : (
-                        <>
-                            <a href="/login">Đăng nhập</a>
-                            <a href="/register">Đăng ký</a>
-                        </>
-                    )}
-                </div>
-            </div>
-        </header>
-    );
+    return () => {
+      window.removeEventListener('authChanged', handleAuthChanged);
+      window.removeEventListener('storage', handleAuthChanged);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } finally {
+      // clear all local auth data
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('expiresAt');
+      localStorage.removeItem('rememberEmail');
+
+      // notify other parts of app (and tabs)
+      window.dispatchEvent(new Event('authChanged'));
+
+      setCurrentUser(null);
+      navigate('/');
+    }
+  };
+
+  return (
+    <header className="w-full bg-white shadow-sm">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div>
+          <Link to="/" className="font-bold text-lg">MEDIX</Link>
+        </div>
+
+        <nav className="flex items-center gap-4">
+          {currentUser ? (
+            <>
+              <span className="text-sm">Xin chào, {currentUser.fullName}</span>
+              <button onClick={handleLogout} className="text-sm text-red-600">Đăng xuất</button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="text-sm text-[#0A66C2]">Đăng nhập</Link>
+              <Link to="/register" className="text-sm text-[#0A66C2]">Đăng ký</Link>
+            </>
+          )}
+        </nav>
+      </div>
+    </header>
+  );
 };
 
 export default Header;

@@ -30,22 +30,29 @@ export default function ArticleList() {
   const [items, setItems] = useState<ArticleDTO[]>([])
   const [total, setTotal] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(5)
   const [viewing, setViewing] = useState<ArticleDTO | null>(null)
 
   // filter/search UI
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all')
+  const [statusFilter, setStatusFilter] = useState('all') // 'all', 'PUBLISHED', 'DRAFT'
   const { showToast } = useToast()
 
-  const load = async () => {
-    const r = await articleService.list(page, pageSize)
+  const load = async (currentPage = page, currentSearch = search, currentStatus = statusFilter) => {
+    const params: { keyword?: string; status?: string } = {};
+    if (currentSearch.trim()) {
+      params.keyword = currentSearch.trim();
+    }
+    if (currentStatus !== 'all') {
+      params.status = currentStatus;
+    }
+    const r = await articleService.list(currentPage, pageSize, params);
     setItems(r.items)
     setTotal(r.total)
   }
 
   const navigate = useNavigate()
-  useEffect(() => { load() }, [page, pageSize])
+  useEffect(() => { load() }, [page, pageSize, statusFilter])
 
   const onCreate = () => navigate('/manager/articles/new')
   const onEdit = (a: ArticleDTO) => navigate(`/manager/articles/edit/${a.id}`)
@@ -53,21 +60,15 @@ export default function ArticleList() {
     if (!confirm('Delete this article?')) return;
     await articleService.remove(id);
     showToast('Xóa bài viết thành công!')
-    await load() }
+    await load() 
+  }
+
+  const handleSearch = () => {
+    setPage(1); // Reset to first page on new search
+    load(1, search, statusFilter);
+  }
 
   const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString() : '-'
-
-  // client-side filtered view to mimic the admin mockup filters
-  const filtered = useMemo(() => {
-    let arr = items
-    if (search.trim()) {
-      const k = search.toLowerCase()
-      arr = arr.filter(a => (a.title ?? '').toLowerCase().includes(k) || (a.slug ?? '').toLowerCase().includes(k))
-    }
-    if (statusFilter === 'published') arr = arr.filter(a => (a.statusCode ?? '').toLowerCase().includes('publ'))
-    if (statusFilter === 'draft') arr = arr.filter(a => (a.statusCode ?? '').toLowerCase().includes('draft'))
-    return arr
-  }, [items, search, statusFilter])
 
   const pill = (statusCode?: string) => {
     const isPublished = (statusCode ?? '').toLowerCase().includes('publ');
@@ -100,19 +101,25 @@ export default function ArticleList() {
               placeholder="Tìm theo tiêu đề hoặc slug..."
               value={search}
               onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
               style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
             />
           </div>
           <div style={{ flex: '1 1 150px' }}>
             <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Trạng thái</label>
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} style={{ padding: 10, width: '100%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}>
-              <option value="all">Tất cả</option>
-              <option value="published">Đã xuất bản</option>
-              <option value="draft">Bản nháp</option>
+              <option value="all">Tất cả trạng thái</option>
+              <option value="PUBLISHED">Đã xuất bản</option>
+              <option value="DRAFT">Bản nháp</option>
             </select>
           </div>
           <div>
-            <button onClick={() => setSearch('')} style={{ padding: '10px 20px', background: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
+            <button onClick={handleSearch} style={{ padding: '10px 20px', background: '#1f2937', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer' }}>
+              Tìm
+            </button>
+          </div>
+          <div>
+            <button onClick={() => { setSearch(''); setStatusFilter('all'); load(1, '', 'all'); }} style={{ padding: '10px 20px', background: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
               Xóa
             </button>
           </div>
@@ -133,7 +140,7 @@ export default function ArticleList() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((a) => (
+            {items.map((a) => (
               <tr key={a.id} style={{ borderTop: '1px solid #e5e7eb' }}>
                 <td style={{ padding: '12px 16px' }}>
                   <div style={{ width: 100, height: 56, background: '#f0f2f5', borderRadius: 6, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -158,7 +165,7 @@ export default function ArticleList() {
       {/* Pagination */}
       <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#4b5563', fontSize: 14 }}>
         <div>
-          Hiển thị {filtered.length} trên tổng số {total ?? 0} kết quả
+          Hiển thị {items.length} trên tổng số {total ?? 0} kết quả
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -166,7 +173,7 @@ export default function ArticleList() {
             <select id="pageSize" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}>
               <option value={5}>5</option>
               <option value={10}>10</option>
-              <option value={25}>25</option>
+              <option value={15}>15</option>
             </select>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>

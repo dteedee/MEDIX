@@ -31,6 +31,9 @@ app.UseCors("AllowAll");
 // nhưng không còn cần thiết cho việc lưu trữ tệp tải lên.
 app.UseStaticFiles();
 
+// Global exception handling middleware (serialize ValidationException.Errors as JSON)
+app.UseMiddleware<Medix.API.Presentation.Middleware.ExceptionHandlingMiddleware>();
+
 app.MapControllers();
 
 app.Run();

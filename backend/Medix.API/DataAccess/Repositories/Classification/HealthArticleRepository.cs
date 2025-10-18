@@ -119,6 +119,16 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return await query.AnyAsync();
         }
 
+        public async Task<bool> TitleExistsAsync(string title, Guid? excludeId = null)
+        {
+            var query = _context.HealthArticles.Where(a => a.Title == title);
+
+            if (excludeId.HasValue)
+                query = query.Where(a => a.Id != excludeId.Value);
+
+            return await query.AnyAsync();
+        }
+
         public async Task<HealthArticle> CreateAsync(HealthArticle article)
         {
             _context.HealthArticles.Add(article);

@@ -5,6 +5,7 @@ using Medix.API.Exceptions;
 using Medix.API.Models.DTOs.HealthArticle;
 using Medix.API.Models.Entities;
 using Medix.API.Business.Helper;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -254,6 +255,15 @@ namespace Medix.API.Business.Services.Classification
                 });
             }
 
+            var titleExists = await _healthArticleRepository.TitleExistsAsync(createDto.Title);
+            if (titleExists)
+            {
+                throw new ValidationException(new Dictionary<string, string[]>
+                {
+                    { "Title", new[] { "Article title already exists" } }
+                });
+            }
+
             var authorExists = await _healthArticleRepository.UserExistsAsync(createDto.AuthorId);
             if (!authorExists)
             {
@@ -316,7 +326,14 @@ namespace Medix.API.Business.Services.Classification
             {
                 throw new NotFoundException("Article not found");
             }
-
+            var titleExists = await _healthArticleRepository.TitleExistsAsync(updateDto.Title);
+            if (titleExists)
+            {
+                throw new ValidationException(new Dictionary<string, string[]>
+                {
+                    { "Title", new[] { "Article title already exists" } }
+                });
+            }
             var slugExists = await _healthArticleRepository.SlugExistsAsync(updateDto.Slug, id);
             if (slugExists)
             {
@@ -325,6 +342,8 @@ namespace Medix.API.Business.Services.Classification
                     { "Slug", new[] { "Article slug already exists" } }
                 });
             }
+
+          
 
             var authorExists = await _healthArticleRepository.UserExistsAsync(updateDto.AuthorId);
             if (!authorExists)

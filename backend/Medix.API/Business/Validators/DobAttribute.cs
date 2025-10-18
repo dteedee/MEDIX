@@ -27,9 +27,9 @@ namespace Medix.API.Business.Validators
             var age = today.Year - dob.Year;
             if (dob > today.AddYears(-age)) age--; // adjust if birthday hasn't occurred yet this year
 
-            if (age < 18)
+            if (age < 25)
             {
-                return new ValidationResult($"Bạn phải đủ {18} tuổi để đăng ký");
+                return new ValidationResult($"Bạn phải đủ {25} tuổi để đăng ký");
             }
 
             if (age > 150)

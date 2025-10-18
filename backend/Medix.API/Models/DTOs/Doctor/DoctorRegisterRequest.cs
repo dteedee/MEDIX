@@ -15,7 +15,7 @@ namespace Medix.API.Application.DTOs.Doctor
         [Dob]
         public string? Dob { get; set; }
         public string? GenderCode { get; set; }
-        [Required(ErrorMessage = "Vui lòng nhập số CCCD/CMND")]
+        [Required(ErrorMessage = "Vui lòng nhập số CCCD")]
         [RegularExpression(@"^\d{12}$", ErrorMessage = "Số CCCD phải gồm đúng 12 chữ số")]
         public string IdentificationNumber { get; set; } = null!;
         [Required(ErrorMessage = "Vui lòng nhập email")]

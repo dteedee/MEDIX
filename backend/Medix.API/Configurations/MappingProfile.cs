@@ -1,4 +1,5 @@
 using AutoMapper;
+using Medix.API.Application.DTOs.Doctor;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.CMSPage;
 using Medix.API.Models.DTOs.ContentCategory;
@@ -20,6 +21,7 @@ namespace Medix.API.Configurations
             CreateMap<HealthArticle, HealthArticlePublicDto>();
             CreateMap<SiteBanner, SiteBannerDto>();
             CreateMap<PasswordUpdatePresenter, PasswordUpdateRequest>();
+            CreateMap<DoctorRegisterPresenter, DoctorRegisterRequest>();
         }
     }
 }

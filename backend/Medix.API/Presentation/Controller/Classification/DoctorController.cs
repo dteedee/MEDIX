@@ -3,11 +3,11 @@ using Medix.API.Application.DTOs.Doctor;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.Community;
-using Medix.API.Business.Validators;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Org.BouncyCastle.Ocsp;
 using System.ComponentModel.DataAnnotations;
 
 namespace Medix.API.Presentation.Controller.Classification
@@ -32,25 +32,6 @@ namespace Medix.API.Presentation.Controller.Classification
             _mapper = mapper;
         }
 
-        private List<ValidationResult> ValidateNewPassword(List<ValidationResult> prevResult, PasswordUpdateRequest req, string oldPassword)
-        {
-            if (req.NewPassword == oldPassword)
-            {
-                prevResult.Add(new ValidationResult("Mật khẩu mới không được trùng với mật khẩu hiện tại", new[] { "NewPassword" }));
-            }
-
-            if (req.NewPassword != req.ConfirmNewPassword)
-            {
-                prevResult.Add(new ValidationResult("Mật khẩu không khớp", new[] { "ConfirmNewPassword" }));
-            }
-
-            if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, oldPassword))
-            {
-                prevResult.Add(new ValidationResult("Mật khẩu cũ không đúng", new[] { "CurrentPassword" }));
-            }
-            return prevResult;
-        }
-
         [HttpGet("register-metadata")]
         public async Task<IActionResult> Get()
         {
@@ -67,12 +48,25 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> RegisterDoctor([FromForm] DoctorRegisterRequest request)
+        public async Task<IActionResult> RegisterDoctor([FromForm] DoctorRegisterPresenter presenter)
         {
-            await ValidateAsync(request);
-            if (!ModelState.IsValid)
+            var request = _mapper.Map<DoctorRegisterRequest>(presenter);
+            var validationResults = new List<ValidationResult>();
+            var context = new ValidationContext(request, null, null);
+
+            Validator.TryValidateObject(request, context, validationResults, true);
+            validationResults = await ValidateAsync(request, validationResults);
+            if (validationResults.Any())
             {
-                return ValidationProblem(ModelState);
+                var modelState = new ModelStateDictionary();
+                foreach (var validationResult in validationResults)
+                {
+                    foreach (var memberName in validationResult.MemberNames)
+                    {
+                        modelState.AddModelError(memberName, validationResult.ErrorMessage ?? "Invalid value");
+                    }
+                }
+                return ValidationProblem(modelState);
             }
 
             User user = new User
@@ -123,148 +117,34 @@ namespace Medix.API.Presentation.Controller.Classification
             return Ok(new { Message = "Doctor registered successfully" });
         }
 
-        private async Task ValidateAsync(DoctorRegisterRequest request)
+        private async Task<List<ValidationResult>> ValidateAsync(DoctorRegisterRequest request, List<ValidationResult> prev)
         {
-            if (await _userSerivce.EmailExistsAsync(request.Email))
+            if (request.Email != null && await _userSerivce.EmailExistsAsync(request.Email))
             {
-                ModelState.AddModelError("Email", "Email đã được sử dụng");
+                prev.Add(new ValidationResult("Email đã được sử dụng", new[] { "Email" }));
             }
 
-            if (await _userSerivce.PhoneNumberExistsAsync(request.PhoneNumber))
+            if (request.PhoneNumber != null && await _userSerivce.PhoneNumberExistsAsync(request.PhoneNumber))
             {
-                ModelState.AddModelError("PhoneNumber", "Số điện thoại đã được sử dụng");
+                prev.Add(new ValidationResult("Số điện thoại đã được sử dụng", new[] { "PhoneNumber" }));
             }
 
-            if (await _doctorService.LicenseNumberExistsAsync(request.LicenseNumber))
+            if (request.LicenseNumber != null && await _doctorService.LicenseNumberExistsAsync(request.LicenseNumber))
             {
-                ModelState.AddModelError("LicenseNumber", "Số giấy phép hành nghề đã được sử dụng");
+                prev.Add(new ValidationResult("Số giấy phép hành nghề đã được sử dụng", new[] { "LicenseNumber" }));
             }
 
-            if (await _userSerivce.UserNameExistsAsync(request.UserName))
+            if (request.UserName != null && await _userSerivce.UserNameExistsAsync(request.UserName))
             {
-                ModelState.AddModelError("UserName", "Tên đăng nhập đã được sử dụng");
+                prev.Add(new ValidationResult("Tên đăng nhập đã được sử dụng", new[] { "UserName" }));
             }
 
-            if (await _userSerivce.IdentificationNumberExistsAsync(request.IdentificationNumber))
+            if (request.IdentificationNumber != null && await _userSerivce.IdentificationNumberExistsAsync(request.IdentificationNumber))
             {
-                ModelState.AddModelError("IdentificationNumber", "Số CCCD/CMND đã được sử dụng");
+                prev.Add(new ValidationResult("Số CCCD/CMND đã được sử dụng", new[] { "IdentificationNumber" }));
             }
+
+            return prev;
         }
-
-        [HttpGet("profile/{username}")]
-        public async Task<IActionResult> GetDoctorProfile(string username)
-        {
-            var profileDto = await _doctorService.GetDoctorProfileByUserNameAsync(username);
-
-            if (profileDto == null)
-            {
-                return NotFound(new { Message = "Doctor not found" });
-            }
-
-            return Ok(profileDto);
-        }
-
-        [HttpGet("profile/details")]
-        public async Task<IActionResult> GetDoctorProfilesDetails()
-        {
-            var userId = "5383719A-63AC-43D9-8FC7-D6F99C83A9C2"; // Example doctor ID
-            var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userId));
-            if (doctor == null)
-            {
-                return NotFound(new { Message = "Doctor not found" });
-            }
-
-            return Ok(new
-            {
-                doctor.User.AvatarUrl,
-                doctor.User.PhoneNumber,
-                doctor.User.FullName,
-                doctor.User.DateOfBirth,
-                doctor.User.Address,
-                doctor.Education,
-                doctor.Bio,
-                doctor.YearsOfExperience,
-                doctor.ConsultationFee,
-            });
-        }
-
-        [HttpPut("profile/update")]
-        public async Task<IActionResult> UpdateDoctorProfile([FromBody] DoctorProfileUpdateRequest request)
-        {
-            var userId = Guid.Parse("5383719A-63AC-43D9-8FC7-D6F99C83A9C2"); // Example doctor ID
-            var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
-            if (doctor == null)
-            {
-                return NotFound(new { Message = "Doctor not found" });
-            }
-
-            var result = await _doctorService.UpdateDoctorProfileAsync(doctor, request);
-            if (!result)
-            {
-                return StatusCode(500, new { Message = "An error occurred while updating the profile" });
-            }
-            return Ok(new { Message = "Profile updated successfully" });
-        }
-
-        [HttpPut("profile/update-avatar")]
-        public async Task<IActionResult> UpdateDoctorAvatar([FromForm] UpdateAvatarRequest req)
-        {
-            var userId = Guid.Parse("5383719A-63AC-43D9-8FC7-D6F99C83A9C2"); // Example doctor ID
-            var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
-            if (doctor == null)
-            {
-                return NotFound(new { Message = "Doctor not found" });
-            }
-            var avatarUrl = await _cloudinaryService.UploadImageAsync(req.Avatar);
-            if (avatarUrl == null)
-            {
-                return StatusCode(500, new { Message = "Failed to upload avatar image" });
-            }
-            doctor.User.AvatarUrl = avatarUrl;
-            var updatedUser = await _userSerivce.UpdateUserAsync(doctor.User);
-            if (updatedUser == null)
-            {
-                return StatusCode(500, new { Message = "An error occurred while updating the avatar" });
-            }
-            return Ok(new { Message = "Avatar updated successfully", AvatarUrl = avatarUrl });
-        }
-
-        [HttpPut("profile/update-password")]
-        public async Task<IActionResult> UpdateDoctorPassword([FromBody] PasswordUpdatePresenter pre)
-        {
-            var userId = Guid.Parse("5383719A-63AC-43D9-8FC7-D6F99C83A9C2"); // Example doctor ID
-            var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
-            if (doctor == null)
-            {
-                return NotFound(new { Message = "Doctor not found" });
-            }
-
-            var req = _mapper.Map<PasswordUpdateRequest>(pre);
-            var validationResults = new List<ValidationResult>();
-            var context = new ValidationContext(req, null, null);
-
-            Validator.TryValidateObject(req, context, validationResults, true);
-            ValidateNewPassword(validationResults, req, doctor.User.PasswordHash);
-            if (validationResults.Any())
-            {
-                return BadRequest(validationResults);
-            }
-
-            Console.WriteLine(doctor.User.PasswordHash);
-            Console.WriteLine(req.NewPassword);
-            doctor.User.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
-            var updatedUser = await _userSerivce.UpdateUserAsync(doctor.User);
-            if (updatedUser == null)
-            {
-                return StatusCode(500, new { Message = "An error occurred while updating the password" });
-            }
-
-            return Ok(new { Message = "Password updated successfully" });
-        }
-    }
-    public class UpdateAvatarRequest
-    {
-        [ImageFile]
-        public IFormFile? Avatar { get; set; }
     }
 }

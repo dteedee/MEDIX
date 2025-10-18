@@ -294,11 +294,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
                     Hiển thị trang chủ
                   </label>
                 </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{...labelStyle, marginBottom: 4, fontSize: 12}}>Ngày xuất bản</label>
-                  <input type="datetime-local" value={publishedAt} onChange={e => setPublishedAt(e.target.value)} style={inputStyle} />
-                  <small style={{fontSize: 12, color: '#6b7280'}}>Để trống nếu muốn xuất bản ngay khi lưu.</small>
-                </div>
+               
             </div>
           </div>
           <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>

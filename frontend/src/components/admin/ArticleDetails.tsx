@@ -153,11 +153,7 @@ export default function ArticleDetails({ article, onClose }: Props) {
               <span style={valueStyle}>{(article as any).viewCount ?? 0} / {(article as any).likeCount ?? 0}</span>
             </div>
 
-            {/* Dates */}
-            <div style={detailItemStyle}>
-              <span style={labelStyle}>Ngày xuất bản</span>
-              <span style={valueStyle}>{fmtDate(article.publishedAt)}</span>
-            </div>
+           
             <div style={detailItemStyle}>
               <span style={labelStyle}>Ngày tạo</span>
               <span style={valueStyle}>{fmtDate(article.createdAt)}</span>

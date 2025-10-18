@@ -36,6 +36,8 @@ namespace Medix.API.Business.Services.Classification
                 ThumbnailUrl = a.ThumbnailUrl,
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
+                LikeCount = a.LikeCount,
+
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
@@ -66,6 +68,8 @@ namespace Medix.API.Business.Services.Classification
                 ThumbnailUrl = a.ThumbnailUrl,
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
+                LikeCount = a.LikeCount,
+
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
@@ -102,6 +106,8 @@ namespace Medix.API.Business.Services.Classification
                 MetaDescription = article.MetaDescription,
                 StatusCode = article.StatusCode,
                 ViewCount = article.ViewCount,
+                LikeCount = article.LikeCount,
+
                 IsHomepageVisible = article.IsHomepageVisible,
                 DisplayOrder = article.DisplayOrder,
                 DisplayType = article.DisplayType,
@@ -141,6 +147,8 @@ namespace Medix.API.Business.Services.Classification
                 MetaDescription = article.MetaDescription,
                 StatusCode = article.StatusCode,
                 ViewCount = article.ViewCount + 1, // Show incremented count
+                LikeCount = article.LikeCount,
+
                 IsHomepageVisible = article.IsHomepageVisible,
                 DisplayOrder = article.DisplayOrder,
                 DisplayType = article.DisplayType,
@@ -171,6 +179,8 @@ namespace Medix.API.Business.Services.Classification
                 ThumbnailUrl = a.ThumbnailUrl,
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
+                LikeCount = a.LikeCount,
+
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
@@ -201,6 +211,8 @@ namespace Medix.API.Business.Services.Classification
                 ThumbnailUrl = a.ThumbnailUrl,
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
+                LikeCount = a.LikeCount,
+
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
@@ -228,6 +240,8 @@ namespace Medix.API.Business.Services.Classification
                 ThumbnailUrl = a.ThumbnailUrl,
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
+                LikeCount = a.LikeCount,
+
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
@@ -276,6 +290,8 @@ namespace Medix.API.Business.Services.Classification
                 MetaDescription = createDto.MetaDescription,
                 StatusCode = createDto.StatusCode ?? "Draft",
                 ViewCount = 0,
+                LikeCount = 0,
+
                 IsHomepageVisible = createDto.IsHomepageVisible,
                 DisplayOrder = createDto.DisplayOrder,
                 DisplayType = createDto.DisplayType ?? "Standard",

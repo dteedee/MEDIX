@@ -1,193 +1,162 @@
-import React, { useState } from 'react'
-import { ArticleDTO } from '../../types/article.types'
-import { articleService } from '../../services/articleService'
+import React from 'react';
+import { ArticleDTO } from '../../types/article.types';
 
 interface Props {
-  article?: ArticleDTO
-  onClose?: () => void
+  article: ArticleDTO | null;
+  onClose: () => void;
 }
 
 export default function ArticleDetails({ article, onClose }: Props) {
-  if (!article) return null
-  const [thumb, setThumb] = useState(article.thumbnailUrl ?? '')
-  const fileRef = React.createRef<HTMLInputElement>()
+  if (!article) return null;
 
-  const onSelect = () => fileRef.current?.click()
-  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (!f) return
-    try {
-      const url = await articleService.uploadImage(f)
-      setThumb(url)
-    } catch (err) {
-      console.error(err)
-      alert('Upload failed')
-    }
-  }
+  // Check if we only have the ID (initial state before full data is loaded)
+  const isLoading = !article.title;
 
-  // --- CSS Styles (inspired by CmsPageDetails & CategoryDetails) ---
+  const fmtDate = (d?: string | null) => d ? new Date(d).toLocaleString('vi-VN') : 'Chưa có';
+
+  // --- Styles ---
   const overlayStyle: React.CSSProperties = {
     position: 'fixed',
-    inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '2rem',
     zIndex: 1000,
-  }
+  };
 
-  const containerStyle: React.CSSProperties = {
+  const modalStyle: React.CSSProperties = {
     background: '#fff',
-    padding: '28px',
     borderRadius: 12,
-    maxWidth: 1100,
-    width: '100%',
+    padding: '24px 28px',
+    width: '90%',
+    maxWidth: '800px',
     maxHeight: '90vh',
     overflowY: 'auto',
-    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
-    position: 'relative',
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    display: 'grid',
-    gridTemplateColumns: '350px 1fr',
-    gap: '32px',
-  }
+    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+  };
+
+  const headerStyle: React.CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px solid #e5e7eb',
+    paddingBottom: 16,
+    marginBottom: 24,
+  };
+
+  const titleStyle: React.CSSProperties = {
+    margin: 0,
+    fontSize: '1.25rem',
+    fontWeight: 600,
+    color: '#111827',
+  };
 
   const closeButtonStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: '16px',
-    right: '16px',
     background: 'transparent',
     border: 'none',
-    fontSize: '1.5rem',
+    fontSize: 24,
     cursor: 'pointer',
-    color: '#9ca3af',
-  }
+    color: '#6b7280',
+  };
 
-  const leftColumnStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
-  }
+  const contentGridStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '20px 28px',
+  };
 
-  const rightColumnStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    borderLeft: '1px solid #e5e7eb',
-    paddingLeft: '32px',
-  }
+  const detailItemStyle: React.CSSProperties = {
+    fontSize: 14,
+    lineHeight: 1.6,
+  };
 
-  const thumbContainerStyle: React.CSSProperties = {
-    width: '100%',
-    aspectRatio: '16/9',
-    background: '#f3f4f6',
-    borderRadius: 8,
-    overflow: 'hidden',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    border: '1px dashed #d1d5db',
-  }
-
-  const thumbImageStyle: React.CSSProperties = {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  }
-
-  const uploadButtonStyle: React.CSSProperties = {
-    width: '100%',
-    marginTop: 12,
-    padding: '10px',
-    border: '1px solid #d1d5db',
-    borderRadius: 8,
-    background: '#fff',
-    cursor: 'pointer',
-    fontWeight: 500,
-    fontSize: '14px',
-  }
-
-  const metaSectionStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-  }
-
-  const metaItemStyle: React.CSSProperties = {
-    fontSize: '14px',
-  }
-
-  const metaLabelStyle: React.CSSProperties = {
+  const labelStyle: React.CSSProperties = {
     display: 'block',
     color: '#6b7280',
     fontWeight: 500,
-    marginBottom: '4px',
-  }
+    marginBottom: 4,
+  };
 
-  const metaValueStyle: React.CSSProperties = {
-    color: '#111827',
-    lineHeight: 1.5,
-  }
+  const valueStyle: React.CSSProperties = {
+    color: '#1f2937',
+    wordBreak: 'break-word',
+  };
 
-  const contentHeaderStyle: React.CSSProperties = {
-    fontSize: '1.25rem',
-    fontWeight: 700,
-    color: '#111827',
-    marginTop: 0,
-    marginBottom: '24px',
-    borderBottom: '1px solid #e5e7eb',
-    paddingBottom: '16px',
-  }
-
-  const contentBodyStyle: React.CSSProperties = {
-    lineHeight: 1.7,
-    color: '#374151',
-    flexGrow: 1,
-    overflowY: 'auto',
-  }
+  const fullWidthItem: React.CSSProperties = {
+    ...detailItemStyle,
+    gridColumn: '1 / -1',
+  };
 
   return (
     <div style={overlayStyle} onClick={onClose}>
-      <div style={containerStyle} onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} style={closeButtonStyle} title="Đóng">&times;</button>
-
-        {/* Left Column */}
-        <div style={leftColumnStyle}>
-          <div>
-            <div style={thumbContainerStyle}>
-              {thumb ? <img src={thumb} alt={article.title} style={thumbImageStyle} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
-            </div>
-            <button style={uploadButtonStyle} onClick={onSelect}>Thay đổi ảnh</button>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
-          </div>
-
-          <div style={metaSectionStyle}>
-            <div style={metaItemStyle}>
-              <span style={metaLabelStyle}>Tiêu đề</span>
-              <div style={{...metaValueStyle, fontWeight: 600, fontSize: '16px'}}>{article.title}</div>
-            </div>
-            <div style={metaItemStyle}>
-              <span style={metaLabelStyle}>Đường dẫn (Slug)</span>
-              <div style={metaValueStyle}>{article.slug}</div>
-            </div>
-            <div style={metaItemStyle}>
-              <span style={metaLabelStyle}>Chuyên mục</span>
-              <div style={metaValueStyle}>{(article.categories ?? []).map(c => c.name).join(', ') || 'Chưa có'}</div>
-            </div>
-            <div style={metaItemStyle}>
-              <span style={metaLabelStyle}>Tóm tắt</span>
-              <div style={metaValueStyle}>{article.summary || 'Không có'}</div>
-            </div>
-          </div>
+      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+        <div style={headerStyle}>
+          <h2 style={titleStyle}>Chi tiết bài viết</h2>
+          <button onClick={onClose} style={closeButtonStyle}>&times;</button>
         </div>
 
-        {/* Right Column */}
-        <div style={rightColumnStyle}>
-          <h2 style={contentHeaderStyle}>Nội dung chi tiết</h2>
-          <div style={contentBodyStyle} dangerouslySetInnerHTML={{ __html: article.content ?? '<p>Không có nội dung.</p>' }} />
-        </div>
+        {isLoading ? (
+          <div style={{ padding: '40px 0', textAlign: 'center', color: '#6b7280' }}>Đang tải chi tiết...</div>
+        ) : (
+          <div style={contentGridStyle}>
+            {/* Title */}
+            <div style={fullWidthItem}>
+              <span style={labelStyle}>Tiêu đề</span>
+              <p style={{ ...valueStyle, fontSize: 16, fontWeight: 600, margin: 0 }}>{article.title}</p>
+            </div>
+
+            {/* Image */}
+            {article.thumbnailUrl && (
+              <div style={fullWidthItem}>
+                <span style={labelStyle}>Ảnh đại diện</span>
+                <img src={article.thumbnailUrl} alt={article.title} style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, objectFit: 'cover', border: '1px solid #e5e7eb' }} />
+              </div>
+            )}
+
+            {/* Summary */}
+            <div style={fullWidthItem}>
+              <span style={labelStyle}>Tóm tắt</span>
+              <p style={{ ...valueStyle, margin: 0 }}>{article.summary || 'Không có'}</p>
+            </div>
+
+            {/* Slug */}
+            <div style={detailItemStyle}>
+              <span style={labelStyle}>Slug</span>
+              <span style={valueStyle}>{article.slug || 'N/A'}</span>
+            </div>
+
+            {/* Author */}
+            <div style={detailItemStyle}>
+              <span style={labelStyle}>Tên tác giả</span>
+              <span style={valueStyle}>{article.authorName || 'N/A'}</span>
+            </div>
+
+            {/* View & Like Counts */}
+            <div style={detailItemStyle}>
+              <span style={labelStyle}>Lượt xem / Lượt thích</span>
+              <span style={valueStyle}>{(article as any).viewCount ?? 0} / {(article as any).likeCount ?? 0}</span>
+            </div>
+
+            {/* Dates */}
+            <div style={detailItemStyle}>
+              <span style={labelStyle}>Ngày xuất bản</span>
+              <span style={valueStyle}>{fmtDate(article.publishedAt)}</span>
+            </div>
+            <div style={detailItemStyle}>
+              <span style={labelStyle}>Ngày tạo</span>
+              <span style={valueStyle}>{fmtDate(article.createdAt)}</span>
+            </div>
+            <div style={detailItemStyle}>
+              <span style={labelStyle}>Cập nhật lần cuối</span>
+              <span style={valueStyle}>{fmtDate(article.updatedAt)}</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }

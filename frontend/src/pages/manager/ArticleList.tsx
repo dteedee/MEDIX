@@ -41,15 +41,20 @@ export default function ArticleList() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(5)
   const [viewing, setViewing] = useState<ArticleDTO | null>(null)
+  const [loadingDetails, setLoadingDetails] = useState(false)
   const [allCategories, setAllCategories] = useState<CategoryDTO[]>([])
 
   // filter/search UI
   const [search, setSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('') // State for the actual filtering
   const [statusFilter, setStatusFilter] = useState('all') // 'all', 'PUBLISHED', 'DRAFT'
+  const [categoryFilterIds, setCategoryFilterIds] = useState<string[]>([])
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [suggestions, setSuggestions] = useState<ArticleDTO[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
+  const categoryFilterRef = React.useRef<HTMLDivElement>(null)
   const searchContainerRef = React.useRef<HTMLDivElement>(null)
 
   // sorting
@@ -57,14 +62,9 @@ export default function ArticleList() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const { showToast } = useToast()
 
-  const load = async (keyword?: string) => {
-    const params: any = {};
-    const searchTerm = keyword !== undefined ? keyword : search;
-    if (searchTerm.trim()) {
-      params.keyword = searchTerm.trim();
-    }
-    // Fetch all items for frontend filtering/sorting, backend handles keyword search
-    const r = await articleService.list(1, 9999, params);
+  const load = async () => {
+    // Fetch all items once for frontend filtering
+    const r = await articleService.list(1, 9999);
     setItems(r.items)
   }
 
@@ -78,8 +78,15 @@ export default function ArticleList() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+      if (
+        searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)
+      ) {
         setShowSuggestions(false);
+      }
+      if (
+        categoryFilterRef.current && !categoryFilterRef.current.contains(event.target as Node)
+      ) {
+        setIsCategoryDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -102,9 +109,25 @@ export default function ArticleList() {
     await load()
   }
 
+  const handleViewDetails = async (articleId: string) => {
+    setLoadingDetails(true);
+    setViewing({ id: articleId } as ArticleDTO); // Set a temporary object to open the modal
+    try {
+      // Gọi service để lấy chi tiết đầy đủ của bài viết
+      const fullArticle = await articleService.get(articleId);
+      setViewing(fullArticle); // Update with full data
+    } catch (error) {
+      console.error("Failed to load article details:", error);
+      showToast('Không thể tải chi tiết bài viết', 'error');
+    } finally {
+      setLoadingDetails(false);
+    }
+  }
+
   const handleSearch = () => {
-    setPage(1); // Reset to first page on new search
-    load();
+    setPage(1);
+    setAppliedSearch(search); // Apply the search term for filtering
+    setShowSuggestions(false);
   }
 
   const handleSort = (column: string) => {
@@ -119,7 +142,8 @@ export default function ArticleList() {
   const handleSearchChange = (value: string) => {
     setSearch(value);
     if (value.trim()) {
-      const filteredSuggestions = items.filter(item =>
+      // Suggestions should be based on the full, unfiltered list
+      const filteredSuggestions = items.filter(item => 
         item.title.toLowerCase().includes(value.toLowerCase())
       ).slice(0, 5); // Show top 5 suggestions
       setSuggestions(filteredSuggestions);
@@ -134,7 +158,8 @@ export default function ArticleList() {
     setSearch(suggestion.title);
     setSuggestions([]);
     setShowSuggestions(false);
-    // No need to call handleSearch() as processedItems will re-evaluate
+    // Immediately apply the search when a suggestion is clicked
+    setAppliedSearch(suggestion.title);
   };
 
   const processedItems = useMemo(() => {
@@ -144,6 +169,13 @@ export default function ArticleList() {
     if (statusFilter !== 'all') {
       filtered = filtered.filter(item => item.statusCode === statusFilter);
     }
+    // Category filtering
+    if (categoryFilterIds.length > 0) {
+      filtered = filtered.filter(item =>
+        categoryFilterIds.some(filterId => (item.categoryIds ?? []).includes(filterId))
+      );
+    }
+
     if (dateFrom) {
       const fromDate = new Date(dateFrom);
       fromDate.setHours(0, 0, 0, 0);
@@ -171,11 +203,11 @@ export default function ArticleList() {
     });
 
     // 3. Search term filtering (after other filters)
-    if (search.trim()) {
-      return filtered.filter(item => item.title.toLowerCase().includes(search.toLowerCase()));
+    if (appliedSearch.trim()) {
+      return filtered.filter(item => item.title.toLowerCase().includes(appliedSearch.toLowerCase()));
     }
     return filtered;
-  }, [items, statusFilter, dateFrom, dateTo, sortBy, sortDirection, search]);
+  }, [items, statusFilter, categoryFilterIds, dateFrom, dateTo, sortBy, sortDirection, appliedSearch]);
 
   const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString() : '-'
 
@@ -253,10 +285,8 @@ export default function ArticleList() {
       <input
         placeholder="Tìm theo tiêu đề..."
         value={search}
-        onChange={(e) => handleSearchChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") handleSearch();
-        }}
+        onChange={e => handleSearchChange(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
         style={{
           width: "80%",
           padding: "10px 12px",
@@ -302,6 +332,8 @@ export default function ArticleList() {
         </div>
       )}
     </div>
+
+    
 
     {/* Trạng thái */}
     <div
@@ -424,13 +456,13 @@ export default function ArticleList() {
       <button
         onClick={() => {
           // Clear all filter states
-          handleSearchChange(''); // Use this to also clear suggestions
+          setSearch('');
+          setAppliedSearch('');
+          setCategoryFilterIds([]);
           setStatusFilter('all');
           setDateFrom('');
           setDateTo('');
           setPage(1);
-          // Reload all data from backend
-          load(''); // Pass empty string to ensure no keyword is used for the API call
         }}
         style={{
           padding: "10px 20px",
@@ -479,7 +511,7 @@ export default function ArticleList() {
                 <td style={{ padding: '16px' }}>{pill(a.statusCode)}</td>
                 <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{fmtDate(a.publishedAt ?? a.createdAt)}</td>
                 <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
-                  <button onClick={() => setViewing(a)} title="Xem" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
+                  <button onClick={() => handleViewDetails(a.id)} disabled={loadingDetails} title="Xem" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
                   <button onClick={() => onEdit(a)} title="Sửa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
                   <button onClick={() => onDelete(a.id)} title="Xóa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><DeleteIcon /></button>
                 </td>

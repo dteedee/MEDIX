@@ -27,17 +27,35 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   // Use a REAL user ID from your database for development until auth is ready.
   const [authorId, setAuthorId] = useState('1A2C1A65-7B00-415F-8164-4FC3C1054203') // <-- Replace with a valid user ID from your DB
   const [statusCode, setStatusCode] = useState(article?.statusCode ?? 'DRAFT')
-  const [publishedAt, setPublishedAt] = useState<string>(article?.publishedAt ?? '')
   const [categoryIds, setCategoryIds] = useState<string[]>(article?.categoryIds ?? [])
   const [content, setContent] = useState(article?.content ?? '')
   const [saving, setSaving] = useState(false)
   const fileRef = React.createRef<HTMLInputElement>()
+
+  // Helper to convert ISO string to a format suitable for datetime-local input
+  const isoToLocalInput = (iso?: string | null) => {
+    if (!iso) return ''
+    try {
+      const d = new Date(iso)
+      // Check for invalid date
+      if (isNaN(d.getTime())) return ''
+      const pad = (n: number) => n.toString().padStart(2, '0')
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    } catch (e) {
+      return ''
+    }
+  }
+
+  const [publishedAt, setPublishedAt] = useState<string>(isoToLocalInput(article?.publishedAt))
+
+  const coverFileRef = React.createRef<HTMLInputElement>()
   const [availableCategories, setAvailableCategories] = useState<CategoryDTO[]>([])
   const [loadingCategories, setLoadingCategories] = useState(false)
 
   const onSelectFile = () => {
     fileRef.current?.click()
   }
+  const onSelectCoverFile = () => coverFileRef.current?.click()
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -48,6 +66,19 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
     } catch (err) {
       console.error('Upload failed', err)
       alert('Upload failed')
+    }
+  }
+
+  const onCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    try {
+      // Re-use the same upload service
+      const url = await articleService.uploadImage(f)
+      setCoverImageUrl(url)
+    } catch (err) {
+      console.error('Cover image upload failed', err)
+      alert('Upload ảnh bìa thất bại')
     }
   }
 
@@ -83,9 +114,9 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
       setMetaTitle(article.metaTitle ?? '')
       setMetaDescription(article.metaDescription ?? '')
       setStatusCode(article.statusCode ?? 'DRAFT')
-      setPublishedAt(article.publishedAt ?? '')
+      setPublishedAt(isoToLocalInput(article.publishedAt))
       setContent(article.content ?? '')
-      // This is the key part for fixing the category selection
+      // This is the key part for fixing the category selection.
       setCategoryIds(article.categoryIds ?? [])
     }
   }, [article])
@@ -129,7 +160,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         metaDescription,
         authorId,
         statusCode: finalStatusCode,
-        publishedAt: publishedAt || undefined,
+        publishedAt: publishedAt ? new Date(publishedAt).toISOString() : undefined,
         categoryIds
       }
       if (article) await articleService.update(article.id, payload)
@@ -192,22 +223,15 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFileChange} />
 
           <div>
-            <label style={labelStyle}>Trạng thái & Hiển thị</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: '#f9fafb', padding: '16px', borderRadius: 8 }}>
-              <select value={statusCode} onChange={e => setStatusCode(e.target.value)} style={inputStyle}>
-                <option value="DRAFT">DRAFT</option>
-                <option value="PUBLISHED">PUBLISHED</option>
-              </select>
-              <select value={displayType} onChange={e => setDisplayType(e.target.value)} style={inputStyle}>
-                <option value="STANDARD">STANDARD</option>
-                <option value="FEATURED">FEATURED</option>
-              </select>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>
-                <input type="checkbox" checked={isHomepageVisible} onChange={e => setIsHomepageVisible(e.target.checked)} style={{ width: 16, height: 16 }} />
-                Hiển thị trang chủ
-              </label>
+            <label style={labelStyle}>Ảnh bìa (Cover Image)</label>
+            <div style={{ width: '100%', aspectRatio: '16/9', background: '#f0f2f5', borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', border: '1px dashed #d1d5db' }}>
+              {coverImageUrl ? <img src={coverImageUrl} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
             </div>
+            <button type="button" onClick={onSelectCoverFile} style={{ width: '100%', marginTop: 12, padding: '10px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 500 }}>
+              Tải ảnh bìa
+            </button>
           </div>
+          <input ref={coverFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onCoverFileChange} />
 
           <div>
             <label style={labelStyle}>Danh mục</label>
@@ -246,6 +270,33 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
             <label style={labelStyle}>Nội dung</label>
             <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Nhập nội dung bài viết..." style={{ ...inputStyle, minHeight: '300px', fontFamily: 'inherit' }} />
           </div>
+          
+
+          {/* Status & Display Section - MOVED HERE */}
+          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1rem' }}>Trạng thái & Hiển thị</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                <select value={statusCode} onChange={e => setStatusCode(e.target.value)} style={inputStyle}>
+                  <option value="DRAFT">Bản nháp (DRAFT)</option>
+                  <option value="PUBLISHED">Xuất bản (PUBLISHED)</option>
+                </select>
+                <select value={displayType} onChange={e => setDisplayType(e.target.value)} style={inputStyle}>
+                  <option value="STANDARD">Tiêu chuẩn (STANDARD)</option>
+                  <option value="FEATURED">Nổi bật (FEATURED)</option>
+                </select>
+                <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={isHomepageVisible} onChange={e => setIsHomepageVisible(e.target.checked)} style={{ width: 16, height: 16 }} />
+                    Hiển thị trang chủ
+                  </label>
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{...labelStyle, marginBottom: 4, fontSize: 12}}>Ngày xuất bản</label>
+                  <input type="datetime-local" value={publishedAt} onChange={e => setPublishedAt(e.target.value)} style={inputStyle} />
+                  <small style={{fontSize: 12, color: '#6b7280'}}>Để trống nếu muốn xuất bản ngay khi lưu.</small>
+                </div>
+            </div>
+          </div>
           <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
             <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1rem' }}>Cấu hình SEO</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
@@ -260,6 +311,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
             </div>
           </div>
         </div>
+        
       </div>
 
       {/* Actions */}
@@ -267,11 +319,9 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         <button type="button" onClick={onCancel} style={{ ...buttonStyle, background: '#fff', color: '#374151', border: '1px solid #d1d5db' }}>
           Hủy
         </button>
-        <button type="button" onClick={() => submit(null, 'DRAFT')} disabled={saving} style={{ ...buttonStyle, background: '#f9fafb', color: '#374151', border: '1px solid #d1d5db' }}>
-          {saving ? 'Đang lưu...' : 'Lưu bản nháp'}
-        </button>
+        
         <button type="submit" disabled={saving} style={{ ...buttonStyle, background: saving ? '#9ca3af' : '#2563eb', color: '#fff' }}>
-          {saving ? 'Đang lưu...' : 'Lưu & Xuất bản'}
+          {saving ? 'Đang lưu...' : 'Lưu'}
         </button>
       </div>
     </form>

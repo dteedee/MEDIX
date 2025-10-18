@@ -93,6 +93,7 @@ export const articleService = {
       publishedAt: x.publishedAt,
       viewCount: x.viewCount,
       likeCount: x.likeCount,
+
       isHomepageVisible: x.isHomepageVisible,
       displayOrder: x.displayOrder,
       displayType: x.displayType,
@@ -122,11 +123,16 @@ export const articleService = {
       metaDescription: x.metaDescription,
       statusCode: x.statusCode,
       authorName: x.authorName,
+      viewCount: x.viewCount,
+      likeCount: x.likeCount,
+      isHomepageVisible: x.isHomepageVisible,
+      displayOrder: x.displayOrder,
+      displayType: x.displayType,
       publishedAt: x.publishedAt,
       createdAt: x.createdAt,
       updatedAt: x.updatedAt,
       categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
-      categoryIds: x.categoryIds
+      categoryIds: x.categoryIds,
     };
     return article;
   },

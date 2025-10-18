@@ -1,17 +1,29 @@
 .article-reader-container {
     max-width: 1100px;
-    margin: 2rem auto;
-    padding: 0 1rem;
+    margin: 40px auto;
+    padding: 0 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .reader-main-title {
     font-size: 2.5rem;
+    font-weight: 700;
+    color: #111827;
     text-align: center;
-    margin-bottom: 2rem;
-    border-bottom: 3px solid #0056b3;
-    padding-bottom: 0.5rem;
-    color: #333;
+    margin: 0 0 16px 0;
+}
+
+.reader-main-subtitle {
+    font-size: 1.125rem;
+    color: #6b7280;
+    max-width: 600px;
+    margin: 0 auto 48px auto;
+    text-align: center;
+    line-height: 1.6;
+}
+
+.article-page-chunk {
+    margin-bottom: 48px;
 }
 
 .featured-article-link {
@@ -21,27 +33,30 @@
 
 .featured-article {
     display: flex;
-    gap: 1.5rem;
-    margin-bottom: 3rem;
+    flex-direction: column; /* Changed to column for horizontal layout */
+    gap: 24px;
+    margin-bottom: 32px;
     background-color: #f8f9fa;
-    border-radius: 8px;
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transition: transform 0.2s ease-in-out;
+    border: 1px solid #e5e7eb;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .featured-article:hover {
     transform: translateY(-5px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
 .featured-article img {
-    width: 50%;
-    height: 350px;
+    width: 100%; /* Image takes full width */
+    height: 400px; /* Fixed height for the image */
+    border-radius: 16px 16px 0 0; /* Rounded corners only at the top */
     object-fit: cover;
 }
 
 .featured-content {
-    padding: 1.5rem;
+    padding: 24px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -49,48 +64,78 @@
 
 .featured-content h2 {
     font-size: 2rem;
-    margin-bottom: 1rem;
+    font-weight: 700;
+    margin: 0 0 16px 0;
+    line-height: 1.3;
+    color: #111827;
 }
 
 .featured-content p {
-    font-size: 1rem;
-    color: #555;
+    font-size: 1.05rem;
+    color: #4b5563;
     line-height: 1.6;
 }
 
 .article-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 24px;
 }
 
 .article-card-link {
     text-decoration: none;
     color: inherit;
+    display: block;
 }
 
 .article-card {
     background: #fff;
-    border-radius: 8px;
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-    transition: box-shadow 0.2s ease-in-out;
+    border: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .article-card:hover {
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.08);
 }
 
-.article-card img {
+.article-card-image-wrapper {
     width: 100%;
-    height: 150px;
+    aspect-ratio: 16 / 9;
+    background-color: #f3f4f6;
+}
+
+.article-card-image {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
 }
 
-.article-card h3 {
+.article-card-content {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.article-card-category {
+    color: #2563eb;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.article-card-title {
     font-size: 1.1rem;
-    padding: 1rem;
+    font-weight: 600;
+    color: #1f2937;
     margin: 0;
+    flex-grow: 1;
 }
 
 /* Detail Page */
@@ -121,4 +166,42 @@
     font-size: 1.1rem;
     line-height: 1.8;
     color: #333;
+}
+
+/* Pagination */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+    margin-top: 48px;
+}
+
+.pagination-button {
+    padding: 12px 28px;
+    background-color: #2563eb;
+    color: #fff;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.pagination-button:not(:disabled):hover {
+    background-color: #1d4ed8;
+}
+
+.pagination-button:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.pagination-info {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #4b5563;
 }

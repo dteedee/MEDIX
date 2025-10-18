@@ -45,6 +45,11 @@ export default function CategoryList() {
 
   useEffect(() => { load() }, [page, pageSize])
 
+  // Scroll to top on page or page size change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [page, pageSize]);
+
   const handleSearch = () => {
     setPage(1); // Reset to first page on new search
     load(1, search);

@@ -28,6 +28,13 @@ const DeleteIcon = () => (
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
   </svg>
 );
+
+const SortIcon = ({ direction }: { direction?: 'asc' | 'desc' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', marginLeft: 4, color: direction ? '#111827' : '#9ca3af' }}>
+    {direction === 'asc' && <path d="M12 5l-7 7h14z" transform="rotate(180 12 12)" />}
+    {direction !== 'asc' && <path d="M12 5l-7 7h14z" />}
+  </svg>
+);
 export default function ArticleList() {
   const [items, setItems] = useState<ArticleDTO[]>([])
   const [total, setTotal] = useState<number | undefined>(undefined)
@@ -39,30 +46,52 @@ export default function ArticleList() {
   // filter/search UI
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all') // 'all', 'PUBLISHED', 'DRAFT'
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [suggestions, setSuggestions] = useState<ArticleDTO[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const searchContainerRef = React.useRef<HTMLDivElement>(null)
+
+  // sorting
+  const [sortBy, setSortBy] = useState('publishedAt')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const { showToast } = useToast()
 
-  const load = async (currentPage = page, currentSearch = search, currentStatus = statusFilter) => {
-    const params: { keyword?: string; status?: string } = {};
-    if (currentSearch.trim()) {
-      params.keyword = currentSearch.trim();
+  const load = async (keyword?: string) => {
+    const params: any = {};
+    const searchTerm = keyword !== undefined ? keyword : search;
+    if (searchTerm.trim()) {
+      params.keyword = searchTerm.trim();
     }
-    if (currentStatus !== 'all') {
-      params.status = currentStatus;
-    }
-    const r = await articleService.list(currentPage, pageSize, params);
+    // Fetch all items for frontend filtering/sorting, backend handles keyword search
+    const r = await articleService.list(1, 9999, params);
     setItems(r.items)
-    setTotal(r.total)
   }
 
   const navigate = useNavigate()
   useEffect(() => {
-    // Ensure all categories are loaded first, then load articles.
-    // This prevents a race condition where articles render before category names are available for mapping.
     categoryService.list(1, 1000).then(res => {
       setAllCategories(res.items);
-      load(); // Now load articles
+      load();
     });
-  }, [page, pageSize, statusFilter])
+  }, []) // Load categories and all articles once on mount
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Scroll to top on page or page size change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [page, pageSize]);
 
   const onCreate = () => navigate('/manager/articles/new')
   const onEdit = (a: ArticleDTO) => navigate(`/manager/articles/edit/${a.id}`)
@@ -70,13 +99,83 @@ export default function ArticleList() {
     if (!confirm('Delete this article?')) return;
     await articleService.remove(id);
     showToast('Xóa bài viết thành công!')
-    await load() 
+    await load()
   }
 
   const handleSearch = () => {
     setPage(1); // Reset to first page on new search
-    load(1, search, statusFilter);
+    load();
   }
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortDirection('asc');
+    }
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    if (value.trim()) {
+      const filteredSuggestions = items.filter(item =>
+        item.title.toLowerCase().includes(value.toLowerCase())
+      ).slice(0, 5); // Show top 5 suggestions
+      setSuggestions(filteredSuggestions);
+      setShowSuggestions(filteredSuggestions.length > 0);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: ArticleDTO) => {
+    setSearch(suggestion.title);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    // No need to call handleSearch() as processedItems will re-evaluate
+  };
+
+  const processedItems = useMemo(() => {
+    let filtered = [...items];
+
+    // 1. Filtering
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(item => item.statusCode === statusFilter);
+    }
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(item => {
+        const itemDate = new Date(item.publishedAt ?? item.createdAt!);
+        return itemDate >= fromDate;
+      });
+    }
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(item => {
+        const itemDate = new Date(item.publishedAt ?? item.createdAt!);
+        return itemDate <= toDate;
+      });
+    }
+
+    // 2. Sorting
+    filtered.sort((a, b) => {
+      const valA = a.publishedAt ?? a.createdAt!;
+      const valB = b.publishedAt ?? b.createdAt!;
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    // 3. Search term filtering (after other filters)
+    if (search.trim()) {
+      return filtered.filter(item => item.title.toLowerCase().includes(search.toLowerCase()));
+    }
+    return filtered;
+  }, [items, statusFilter, dateFrom, dateTo, sortBy, sortDirection, search]);
 
   const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString() : '-'
 
@@ -95,6 +194,11 @@ export default function ArticleList() {
     return (article.categoryIds || []).map(id => allCategories.find(c => c.id === id)?.name).filter(Boolean).join(', ');
   };
 
+  // Frontend Pagination
+  const totalItems = processedItems.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const paginatedItems = processedItems.slice((page - 1) * pageSize, page * pageSize);
+
   return (
     <div style={{ padding: 24, backgroundColor: '#f9fafb', minHeight: '100vh' }}>
       {/* Header */}
@@ -110,61 +214,267 @@ export default function ArticleList() {
       </div>
 
       {/* Filter Section */}
-      <div style={{ marginBottom: 24, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 20 }}>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'end', flexWrap: 'wrap' }}>
-          <div style={{ flex: '2 1 200px' }}>
-            <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Tìm kiếm</label>
-            <input
-              placeholder="Tìm theo tiêu đề hoặc slug..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
-            />
-          </div>
-          <div style={{ flex: '1 1 150px' }}>
-            <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Trạng thái</label>
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} style={{ padding: 10, width: '100%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}>
-              <option value="all">Tất cả trạng thái</option>
-              <option value="PUBLISHED">Đã xuất bản</option>
-              <option value="DRAFT">Bản nháp</option>
-            </select>
-          </div>
-          <div>
-            <button onClick={handleSearch} style={{ padding: '10px 20px', background: '#1f2937', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer' }}>
-              Tìm
-            </button>
-          </div>
-          <div>
-            <button onClick={() => { setSearch(''); setStatusFilter('all'); load(1, '', 'all'); }} style={{ padding: '10px 20px', background: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
-              Xóa
-            </button>
-          </div>
+     <div
+  style={{
+    marginBottom: 24,
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    padding: 20,
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      gap: 16,
+      alignItems: "end",
+      flexWrap: "wrap",
+    }}
+  >
+    {/* Ô tìm kiếm */}
+    <div
+      ref={searchContainerRef}
+      style={{
+        flex: "3 1 300px",
+        minWidth: 260,
+        position: "relative",
+      }}
+    >
+      <label
+        style={{
+          fontSize: 14,
+          color: "#4b5563",
+          marginBottom: 6,
+          display: "block",
+        }}
+      >
+        Tìm kiếm
+      </label>
+      <input
+        placeholder="Tìm theo tiêu đề..."
+        value={search}
+        onChange={(e) => handleSearchChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSearch();
+        }}
+        style={{
+          width: "80%",
+          padding: "10px 12px",
+          border: "1px solid #d1d5db",
+          borderRadius: 8,
+          fontSize: 14,
+        }}
+      />
+      {showSuggestions && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            right: 0,
+            background: "#fff",
+            border: "1px solid #e5e7eb",
+            borderRadius: "0 0 8px 8px",
+            zIndex: 10,
+            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+            marginTop: "-1px",
+          }}
+        >
+          {suggestions.map((suggestion) => (
+            <div
+              key={suggestion.id}
+              onClick={() => handleSuggestionClick(suggestion)}
+              style={{
+                padding: "10px 12px",
+                cursor: "pointer",
+                fontSize: 14,
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = "#f9fafb")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "transparent")
+              }
+            >
+              {suggestion.title}
+            </div>
+          ))}
         </div>
-      </div>
+      )}
+    </div>
+
+    {/* Trạng thái */}
+    <div
+      style={{
+        flex: "1 1 180px",
+        minWidth: 160,
+      }}
+    >
+      <label
+        style={{
+          fontSize: 14,
+          color: "#4b5563",
+          marginBottom: 6,
+          display: "block",
+        }}
+      >
+        Trạng thái
+      </label>
+      <select
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value as any)}
+        style={{
+          padding: 10,
+          width: "100%",
+          border: "1px solid #d1d5db",
+          borderRadius: 8,
+          fontSize: 14,
+        }}
+      >
+        <option value="all">Tất cả trạng thái</option>
+        <option value="PUBLISHED">Đã xuất bản</option>
+        <option value="DRAFT">Bản nháp</option>
+      </select>
+    </div>
+
+    {/* Từ ngày */}
+    <div
+      style={{
+        flex: "1 1 160px",
+        minWidth: 120,
+      }}
+    >
+      <label
+        style={{
+          fontSize: 14,
+          color: "#4b5563",
+          marginBottom: 6,
+          display: "block",
+        }}
+      >
+        Từ ngày
+      </label>
+      <input
+        type="date"
+        value={dateFrom}
+        onChange={(e) => setDateFrom(e.target.value)}
+        style={{
+          padding: 9,
+          width: "80%",
+          border: "1px solid #d1d5db",
+          borderRadius: 8,
+          fontSize: 14,
+        }}
+      />
+    </div>
+
+    {/* Đến ngày */}
+    <div
+      style={{
+        flex: "1 1 160px",
+        minWidth: 120,
+      }}
+    >
+      <label
+        style={{
+          fontSize: 14,
+          color: "#4b5563",
+          marginBottom: 6,
+          display: "block",
+        }}
+      >
+        Đến ngày
+      </label>
+      <input
+        type="date"
+        value={dateTo}
+        onChange={(e) => setDateTo(e.target.value)}
+        style={{
+          padding: 9,
+          width: "80%",
+          border: "1px solid #d1d5db",
+          borderRadius: 8,
+          fontSize: 14,
+        }}
+      />
+    </div>
+
+    {/* Nút thao tác */}
+    <div
+      style={{
+        display: "flex",
+        gap: 8,
+        flex: "0 0 auto",
+      }}
+    >
+      <button
+        onClick={handleSearch}
+        style={{
+          padding: "10px 20px",
+          background: "#1b68d5ff",
+          color: "#fff",
+          borderRadius: 8,
+          border: "none",
+          fontWeight: 500,
+          cursor: "pointer",
+        }}
+      >
+        Tìm
+      </button>
+      <button
+        onClick={() => {
+          // Clear all filter states
+          handleSearchChange(''); // Use this to also clear suggestions
+          setStatusFilter('all');
+          setDateFrom('');
+          setDateTo('');
+          setPage(1);
+          // Reload all data from backend
+          load(''); // Pass empty string to ensure no keyword is used for the API call
+        }}
+        style={{
+          padding: "10px 20px",
+          background: "#fff",
+          color: "#2563eb",
+          borderRadius: 8,
+          border: "1px solid #d1d5db",
+          fontWeight: 500,
+          cursor: "pointer",
+        }}
+      >
+        Xóa
+      </button>
+    </div>
+  </div>
+</div>
+
 
       {/* Table */}
       <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
           <thead style={{ backgroundColor: '#f9fafb' }}>
             <tr>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '50px' }}>STT</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '120px' }}>Ảnh</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tiêu đề</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Danh mục</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trạng thái</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ngày đăng</th>
+              <th onClick={() => handleSort('publishedAt')} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer' }}>Ngày đăng <SortIcon direction={sortBy === 'publishedAt' ? sortDirection : undefined} /></th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((a) => (
+            {paginatedItems.map((a, index) => (
               <tr key={a.id} style={{ borderTop: '1px solid #e5e7eb' }}>
+                <td style={{ padding: '12px 16px', color: '#4b5563', fontSize: 14, textAlign: 'center' }}>
+                  {(page - 1) * pageSize + index + 1}
+                </td>
                 <td style={{ padding: '12px 16px' }}>
                   <div style={{ width: 100, height: 56, background: '#f0f2f5', borderRadius: 6, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {a.thumbnailUrl ? <img src={a.thumbnailUrl} alt={a.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 12, color: '#6b7280' }}>No Image</span>}
                   </div>
                 </td>
-                <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14, maxWidth: 300 }}>{a.title}</td>
+                <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14, maxWidth: 250 }}>{a.title}</td>
                 <td style={{ padding: '16px', color: '#4b5563', fontSize: 14, maxWidth: 200 }}>{getCategoryNames(a)}</td>
                 <td style={{ padding: '16px' }}>{pill(a.statusCode)}</td>
                 <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{fmtDate(a.publishedAt ?? a.createdAt)}</td>
@@ -182,7 +492,7 @@ export default function ArticleList() {
       {/* Pagination */}
       <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#4b5563', fontSize: 14 }}>
         <div>
-          Hiển thị {items.length} trên tổng số {total ?? 0} kết quả
+          Hiển thị {paginatedItems.length} trên tổng số {totalItems} kết quả
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -197,7 +507,7 @@ export default function ArticleList() {
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
               Trang trước
             </button>
-            <button onClick={() => setPage(p => p + 1)} disabled={items.length < pageSize} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: items.length < pageSize ? 0.6 : 1 }}>
+            <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page >= totalPages ? 0.6 : 1 }}>
               Trang sau
             </button>
           </div>

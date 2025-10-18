@@ -41,6 +41,11 @@ export default function UserList() {
 
   useEffect(() => { load() }, [page, pageSize])
 
+  // Scroll to top on page or page size change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [page, pageSize]);
+
   const onDelete = async (id: string) => {
     if (!confirm('Delete this user?')) return
     await userService.remove(id)

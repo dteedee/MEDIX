@@ -22,22 +22,9 @@ import Sidebar from './components/layout/Sidebar'
 
 
 export function App() {
-  const [message, setMessage] = useState<string>('Loading...')
+  
   useEffect(() => {
-    axios.get('/api/hello')
-      .then(r => setMessage(r.data.message ?? 'No message'))
-      .catch((err) => {
-        // show detailed message for easier debugging in dev
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyErr: any = err
-        if (anyErr?.response) {
-          setMessage(`API error: ${anyErr.response.status} ${anyErr.response.statusText}`)
-          console.debug('App: /api/hello response', anyErr.response)
-        } else {
-          setMessage('API not available yet')
-          console.debug('App: /api/hello error', anyErr)
-        }
-      })
+  
   }, [])
 
   return (
@@ -47,8 +34,6 @@ export function App() {
         <div style={{ display: 'flex', fontFamily: 'system-ui, sans-serif' }}>
           <Sidebar />
           <main style={{ flex: 1, padding: 24 }}>
-            <h1>Medix</h1>
-            <p>{message}</p>
             {/* <nav style={{ marginBottom: 12 }}>
               <Link to="/">Home</Link> | <Link to="/admin">Admin</Link> | <Link to="/admin/banners">Banners</Link> | <Link to="/admin/users">Users</Link> | <Link to="/admin/articles">Articles</Link>
              <Link to="/admin/categories">Categories</Link> | <Link to="/admin/cms-pages">CMS Pages</Link>

@@ -35,6 +35,7 @@ export default function ArticleReaderPage() {
   // Load initial articles on component mount
   useEffect(() => {
     loadArticles(page);
+    window.scrollTo(0, 0);
   }, [page])
 
   // Show a loading indicator only on the initial page load

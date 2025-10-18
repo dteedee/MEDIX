@@ -155,11 +155,30 @@ export default function BannerList() {
 
   const onCreate = () => navigate('/manager/banners/new')
   const onEdit = (b: BannerDTO) => navigate(`/manager/banners/edit/${b.id}`)
-  const onDelete = async (id: string) => {
-    if (!confirm('Delete this banner?')) return;
-    await bannerService.remove(id);
-    showToast('Xóa banner thành công!')
-    await load()
+  const handleStatusChange = async (bannerToUpdate: BannerDTO, newStatus: boolean) => {
+    if (bannerToUpdate.isActive === newStatus) return;
+
+    const actionText = newStatus ? 'kích hoạt' : 'ngừng hoạt động';
+    if (!confirm(`Bạn có chắc muốn ${actionText} banner này không?`)) {
+      return;
+    }
+
+    try {
+      // Tạo payload với các trường mà backend mong đợi
+      const payload: any = {
+        bannerTitle: bannerToUpdate.title ?? '',
+        bannerImageUrl: bannerToUpdate.imageUrl ?? null,
+        bannerUrl: bannerToUpdate.link ?? null,
+        displayOrder: bannerToUpdate.order ?? 0,
+        isActive: newStatus,
+      };
+
+      await bannerService.update(bannerToUpdate.id, payload);
+      showToast(`Đã ${actionText} banner thành công.`);
+      await load();
+    } catch (error) {
+      showToast('Không thể cập nhật trạng thái banner.', 'error');
+    }
   }
 
   const pill = (active?: boolean) => {
@@ -292,12 +311,28 @@ export default function BannerList() {
                       <a href={b.link} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>{b.link}</a>
                     </td>
                     <td style={{ padding: '16px', color: '#4b5563', fontSize: 14, textAlign: 'center' }}>{b.order ?? '-'}</td>
-                    <td style={{ padding: '16px' }}>{pill(b.isActive)}</td>
+                    <td style={{ padding: '16px' }}>
+                      <select
+                        value={b.isActive ? 'active' : 'inactive'}
+                        onChange={(e) => handleStatusChange(b, e.target.value === 'active')}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: 6,
+                          border: '1px solid',
+                          borderColor: b.isActive ? '#6ee7b7' : '#fca5a5',
+                          fontSize: 13,
+                          background: b.isActive ? '#d1fae5' : '#fee2e2',
+                          color: b.isActive ? '#065f46' : '#991b1b',
+                          fontWeight: 500,
+                        }}>
+                        <option value="active">Đang hoạt động</option>
+                        <option value="inactive">Ngừng</option>
+                      </select>
+                    </td>
                     <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{fmtDate(b.createdAt)}</td>
                     <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
                       <button onClick={() => setViewing(b)} title="Xem" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
                       <button onClick={() => onEdit(b)} title="Sửa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
-                      <button onClick={() => onDelete(b.id)} title="Xóa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><DeleteIcon /></button>
                     </td>
                   </tr>
                 ))}

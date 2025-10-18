@@ -1,6 +1,7 @@
 export interface HomePageDoctor {
     avatarUrl: string;
     fullName: string;
+    userName: string;
     specializationName: string;
     yearsOfExperience: number;
     averageRating: number;

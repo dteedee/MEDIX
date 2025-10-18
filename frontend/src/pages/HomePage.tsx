@@ -71,21 +71,18 @@ function HomePage() {
                         <p>Đội ngũ giáo sư, bác sĩ đầu ngành – Công nghệ<br />AI tiên tiến – Dịch vụ chăm sóc cá nhân hóa</p>
                         <div className={styles["features-box"]}>
                             <div className={styles["feature-item"]}>
-                                <span>🤖</span>
                                 <div>
                                     <strong>AI chẩn đoán</strong><br />
                                     <small>Tư vấn và giải đáp các vấn đề của bạn</small>
                                 </div>
                             </div>
                             <div className={styles["feature-item"]}>
-                                <span>📅</span>
                                 <div>
                                     <strong>Đặt lịch hẹn</strong><br />
                                     <small>Đặt lịch hẹn nhanh chóng, tiện lợi</small>
                                 </div>
                             </div>
                             <div className={styles["feature-item"]}>
-                                <span>👨‍⚕️</span>
                                 <div>
                                     <strong>Tìm bác sĩ</strong><br />
                                     <small>Tìm chuyên gia nhanh chóng</small>
@@ -203,23 +200,20 @@ function HomePage() {
                     <div className={styles["step"]}>
                         <div className={styles["step-circle"]}>01</div>
                         <div className={styles["step-icon"]}>⏰</div>
-                        <h3>STEP 1</h3>
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed pulvinar risus blandit et varius quam
-                            sagittis. Fusce rutrum odio vitae magna.</p>
+                        <h3>Tra cứu triệu chứng với AI</h3>
+                        <p>Bạn chỉ cần nhập các triệu chứng đang gặp phải — hệ thống AI sẽ phân tích và đưa ra gợi ý ban đầu về tình trạng sức khỏe, giúp bạn hiểu rõ hơn trước khi gặp bác sĩ.</p>
                     </div>
                     <div className={styles["step"]}>
                         <div className={styles["step-circle"]}>02</div>
                         <div className={styles["step-icon"]}>⭐</div>
-                        <h3>STEP 2</h3>
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed pulvinar risus blandit et varius quam
-                            sagittis. Fusce rutrum odio vitae magna.</p>
+                        <h3>Đăng ký tài khoản cá nhân</h3>
+                        <p>Việc tạo tài khoản giúp bạn lưu trữ lịch sử khám bệnh, thông tin cá nhân và dễ dàng quản lý các cuộc hẹn trong tương lai. Quá trình đăng ký nhanh chóng, bảo mật và hoàn toàn miễn phí.</p>
                     </div>
                     <div className={styles["step"]}>
                         <div className={styles["step-circle"]}>03</div>
                         <div className={styles["step-icon"]}>💡</div>
-                        <h3>STEP 3</h3>
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed pulvinar risus blandit et varius quam
-                            sagittis. Fusce rutrum odio vitae magna.</p>
+                        <h3>Đặt lịch hẹn với bác sĩ chuyên khoa</h3>
+                        <p>Sau khi có thông tin ban đầu, bạn có thể chọn bác sĩ phù hợp và đặt lịch khám trực tuyến ngay trên hệ thống. Lịch hẹn được xác nhận nhanh chóng, giúp bạn tiết kiệm thời gian và chủ động chăm sóc sức khỏe.</p>
                     </div>
                 </div>
             </section>
@@ -231,7 +225,7 @@ function HomePage() {
 
                     <div className={styles["doctors-grid"]}>
                         {visibleDoctors?.map((doctor) => (
-                            <div className={styles["doctor-card"]}>
+                            <a href={`/doctor/details/${doctor.userName}`} className={styles["doctor-card"]}>
                                 <div className={styles["doctor-photo"]}>
                                     <img className={styles['doctor-photo']} src={doctor.avatarUrl}></img>
                                 </div>
@@ -241,7 +235,7 @@ function HomePage() {
                                 <div className={styles["rating"]}>
                                     {'★'.repeat(Math.round(doctor.averageRating)) + '☆'.repeat(5 - Math.round(doctor.averageRating))}
                                 </div>
-                            </div>
+                            </a>
                         ))}
                     </div>
 
@@ -256,9 +250,9 @@ function HomePage() {
                 <div className={styles["view-all"]}>
                     <button className={styles["btn-view-all"]}>XEM TẤT CẢ</button>
                 </div>
-            </section>
+            </section >
             {/* Knowledge Section */}
-            <section className={styles["knowledge"]}>
+            < section className={styles["knowledge"]} >
                 <h2>KIẾN THỨC SỨC KHỎE HỮU ÍCH</h2>
                 <div className={styles["knowledge-grid"]}>
                     {homeMetadata?.articles.map((article) => (
@@ -274,7 +268,7 @@ function HomePage() {
                         </div>
                     ))}
                 </div>
-            </section>
+            </section >
 
             <Footer />
 
@@ -283,7 +277,7 @@ function HomePage() {
                 <div className={styles['status-indicator-sm']}></div>
             </div>
 
-        </div>
+        </div >
     )
 }
 

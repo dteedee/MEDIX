@@ -190,15 +190,40 @@ export default function CmsPageList() {
 
   const onCreate = () => navigate('/manager/cms-pages/new')
   const onEdit = (p: CmsPageDTO) => navigate(`/manager/cms-pages/edit/${p.id}`)
-  const onDelete = async (id: string) => {
-    if (!confirm('Delete this page?')) return;
-    await cmspageService.remove(id);
-    showToast('Xóa trang thành công!')
-    await load() 
+  
+  const handleStatusChange = async (pageToUpdate: CmsPageDTO, newStatus: boolean) => {
+    // Prevent update if status is already the same
+    if (pageToUpdate.isPublished === newStatus) return;
+
+    const actionText = newStatus ? 'xuất bản' : 'ngừng xuất bản';
+    if (!confirm(`Bạn có chắc muốn ${actionText} trang này không?`)) {
+      return; 
+    }
+
+    try {
+      // Tạo payload sạch chỉ với các trường mà API update mong đợi
+      const payload = {
+        pageTitle: pageToUpdate.pageTitle,
+        pageSlug: pageToUpdate.pageSlug,
+        pageContent: pageToUpdate.pageContent,
+        metaTitle: pageToUpdate.metaTitle,
+        metaDescription: pageToUpdate.metaDescription,
+        authorId: '1A2C1A65-7B00-415F-8164-4FC3C1054203', // Sử dụng authorId mặc định
+        isPublished: newStatus,
+        publishedAt: newStatus ? new Date().toISOString() : undefined,
+      };
+
+      await cmspageService.update(pageToUpdate.id, payload as any);
+      showToast(`Đã ${actionText} trang thành công.`);
+      await load(); // Tải lại danh sách để cập nhật UI
+    } catch (error) {
+      console.error("Failed to update page status:", error);
+      showToast('Không thể cập nhật trạng thái trang.', 'error');
+    }
   }
 
   const pill = (p: CmsPageDTO) => {
-    const text = p.isPublished ? 'Đang hoạt động' : 'Nháp'
+    const text = p.isPublished ? 'Đang hoạt động' : 'Ngừng hoạt động';
     const bg = p.isPublished ? '#e7f9ec' : '#fff7e6'
     const color = p.isPublished ? '#16a34a' : '#b45309'
     return <span style={{ background: bg, color, padding: '6px 10px', borderRadius: 16, fontSize: 12 }}>{text}</span>
@@ -290,7 +315,7 @@ export default function CmsPageList() {
             <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value as any); setPage(1); }} style={{ padding: 10, width: '100%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}>
               <option value="all">Tất cả</option>
               <option value="published">Đang hoạt động</option>
-              <option value="draft">Nháp</option>
+              <option value="draft">Ngừng hoạt động</option>
             </select>
           </div>
           <div style={{ flex: '1 1 150px' }}>
@@ -340,12 +365,28 @@ export default function CmsPageList() {
                   <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14 }}>{p.pageTitle}</td>
                   <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{p.pageSlug}</td>
                   <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{p.authorName ?? '-'}</td>
-                  <td style={{ padding: '16px' }}>{pill(p)}</td>
+                  <td style={{ padding: '16px' }}>
+                    <select 
+                      value={p.isPublished ? 'published' : 'draft'} 
+                      onChange={(e) => handleStatusChange(p, e.target.value === 'published')}
+                      style={{ 
+                        padding: '4px 8px', 
+                        borderRadius: 6, 
+                        border: '1px solid',
+                        borderColor: p.isPublished ? '#6ee7b7' : '#fca5a5',
+                        fontSize: 13, 
+                        background: p.isPublished ? '#d1fae5' : '#fee2e2',
+                        color: p.isPublished ? '#065f46' : '#991b1b',
+                        fontWeight: 500,
+                      }}>
+                      <option value="published">Đang hoạt động</option>
+                      <option value="draft">Ngừng hoạt động</option>
+                    </select>
+                  </td>
                   <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{fmtDate((p as any).createdAt)}</td>
                   <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
                     <button onClick={() => handleViewDetails(p.id)} disabled={loadingDetails} title="Xem" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
                     <button onClick={() => onEdit(p)} title="Sửa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
-                    <button onClick={() => onDelete(p.id)} title="Xóa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><DeleteIcon /></button>
                   </td>
                 </tr>
               ))}

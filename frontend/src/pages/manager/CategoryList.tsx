@@ -113,11 +113,28 @@ export default function CategoryList() {
 
   const onCreate = () => navigate('/manager/categories/new')
   const onEdit = (c: CategoryDTO) => navigate(`/manager/categories/edit/${c.id}`)
-  const onDelete = async (id: string) => {
-    if (!confirm('Delete this category?')) return;
-    await categoryService.remove(id);
-    showToast('Xóa danh mục thành công!')
-    await load() 
+  const handleStatusChange = async (categoryToUpdate: CategoryDTO, newStatus: boolean) => {
+    if (categoryToUpdate.isActive === newStatus) return;
+
+    const actionText = newStatus ? 'kích hoạt' : 'ngừng hoạt động';
+    if (!confirm(`Bạn có chắc muốn ${actionText} danh mục này không?`)) {
+      return;
+    }
+
+    try {
+      const payload = {
+        name: categoryToUpdate.name ?? '',
+        slug: categoryToUpdate.slug ?? '',
+        description: categoryToUpdate.description ?? '',
+        parentId: categoryToUpdate.parentId ?? null,
+        isActive: newStatus,
+      } as any; // Sử dụng as any để bỏ qua kiểm tra kiểu dữ liệu nghiêm ngặt tạm thời
+      await categoryService.update(categoryToUpdate.id, payload);
+      showToast(`Đã ${actionText} danh mục thành công.`);
+      await load();
+    } catch (error) {
+      showToast('Không thể cập nhật trạng thái danh mục.', 'error');
+    }
   }
 
   const pill = (active?: boolean) => {
@@ -346,7 +363,13 @@ export default function CategoryList() {
                   <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
                     <button onClick={() => setViewing(c)} title="Xem" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
                     <button onClick={() => onEdit(c)} title="Sửa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
-                    <button onClick={() => onDelete(c.id)} title="Xóa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><DeleteIcon /></button>
+                    <select
+                      value={c.isActive ? 'active' : 'inactive'}
+                      onChange={(e) => handleStatusChange(c, e.target.value === 'active')}
+                      style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, background: '#fff' }}>
+                      <option value="active">Hoạt động</option>
+                      <option value="inactive">Ngừng</option>
+                    </select>
                   </td>
                 </tr>
               ))}

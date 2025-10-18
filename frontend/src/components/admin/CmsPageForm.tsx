@@ -139,7 +139,7 @@ export default function CmsPageForm({ page, onSaved, onCancel }: Props) {
           <label style={labelStyle}>Trạng thái</label>
           <div style={{ display: 'flex', alignItems: 'center', height: '42px' }}>
             <input type="checkbox" id="isPublished" checked={isPublished} onChange={e => setIsPublished(e.target.checked)} style={{ marginRight: 8, width: 16, height: 16, cursor: 'pointer' }} />
-            <label htmlFor="isPublished" style={{ fontSize: 14, color: '#4b5563', cursor: 'pointer' }}>Xuất bản</label>
+            <label htmlFor="isPublished" style={{ fontSize: 14, color: '#4b5563', cursor: 'pointer' }}>Hoạt động</label>
           </div>
         </div>
       </div>

@@ -23,3 +23,15 @@ export interface DoctorProfileDto{
   ratingByStar: number[];
   reviews: ReviewDto[];
 }
+
+export interface DoctorProfileDetails{
+  avatarUrl: string;
+  phoneNumber: string;
+  fullName: string;
+  dateOfBirth: string;
+  address: string;
+  education: string;
+  bio: string;
+  yearsOfExperience: number;
+  consultationFee: string;
+}

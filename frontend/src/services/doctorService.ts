@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { DoctorProfileDto, DoctorRegisterMetadata } from "../types/doctor.types";
+import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata } from "../types/doctor.types";
 
 class DoctorService {
     async getMetadata(): Promise<DoctorRegisterMetadata> {
@@ -26,6 +26,30 @@ class DoctorService {
             console.error('Get doctor profile data error: ', error);
             throw this.handleApiError(error);
         }
+    }
+
+    async getDoctorProfileDetails(): Promise<DoctorProfileDetails> {
+        try {
+            const response = await apiClient.get<DoctorProfileDetails>('doctor/profile/details');
+            return response.data;
+        }
+        catch (error: any) {
+            console.error('Get doctor profile details error:', error);
+            throw this.handleApiError(error);
+        }
+    }
+
+    async updateDoctorProfile(payload: FormData): Promise<void> {
+        await apiClient.put<any>('doctor/profile/update', payload);
+    }
+
+    async updateAvatar(payload: FormData): Promise<any> {
+        const response = await apiClient.putMultipart<any>('doctor/profile/update-avatar', payload);
+        return response.data;
+    }
+
+    async updatePassword(payload: FormData): Promise<any>{
+        await apiClient.put('doctor/profile/update-password', payload);
     }
 
     private handleApiError(error: any): Error {

@@ -9,5 +9,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<List<Doctor>> GetHomePageDoctorsAsync();
         Task<bool> LicenseNumberExistsAsync(string licenseNumber);
         Task<DoctorProfileDto?> GetDoctorProfileByUserNameAsync(string userName);
+        Task<Doctor?> GetDoctorByUserIdAsync(Guid userId);
+        Task<bool> UpdateDoctorProfileAsync(Doctor existingDoctor, DoctorProfileUpdateRequest req);
     }
 }

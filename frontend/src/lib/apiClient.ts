@@ -133,6 +133,15 @@ class ApiClient {
     return this.client.put<T>(url, data, config);
   }
 
+  public putMultipart<T = any>(url: string, formData: FormData): Promise<AxiosResponse<T>> {
+    return this.client.put<T>(url, formData, {
+      headers: {
+        // Let Axios set the correct boundary automatically
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
+
   public delete<T = any>(url: string, config?: any): Promise<AxiosResponse<T>> {
     return this.client.delete<T>(url, config);
   }

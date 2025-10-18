@@ -152,5 +152,10 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<bool> IdentificationNumberExistsAsync(string identificationNumber) => await _userRepository.ExistsByIdentificationNumberAsync(identificationNumber);
 
+        public async Task<User> UpdateUserAsync(User user)
+        {
+            return await _userRepository.UpdateAsync(user);
+        }
+
     }
 }

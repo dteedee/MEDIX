@@ -44,5 +44,19 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Include(d => d.Specialization)
                 .FirstOrDefaultAsync(d => d.User.UserName.ToLower() == userName.ToLower());
         }
+
+        public async Task<Doctor?> GetDoctorByUserIdAsync(Guid userId)
+        {
+            return await _context.Doctors
+                .Include(d => d.User)
+                .FirstOrDefaultAsync(d => d.User.Id == userId);
+        }
+
+        public async Task<Doctor> UpdateDoctorAsync(Doctor doctor)
+        {
+            _context.Doctors.Update(doctor);
+            await _context.SaveChangesAsync();
+            return doctor;
+        }
     }
 }

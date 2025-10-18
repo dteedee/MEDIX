@@ -15,5 +15,6 @@ namespace Medix.API.Business.Interfaces.UserManagement
         Task<bool> PhoneNumberExistsAsync(string phoneNumber);
         Task<bool> UserNameExistsAsync(string userName);
         Task<bool> IdentificationNumberExistsAsync(string identificationNumber);
+        Task<User> UpdateUserAsync(User user);
     }
 }

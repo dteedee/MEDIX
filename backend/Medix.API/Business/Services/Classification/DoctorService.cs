@@ -106,5 +106,29 @@ namespace Medix.API.Business.Services.Classification
 
             return profileDto;
         }
+
+        public async Task<Doctor?> GetDoctorByUserIdAsync(Guid userId)
+        {
+            return await _doctorRepository.GetDoctorByUserIdAsync(userId);
+        }
+
+        public async Task<bool> UpdateDoctorProfileAsync(Doctor existingDoctor, DoctorProfileUpdateRequest req)
+        {
+            existingDoctor.User.FullName = req.FullName;
+            existingDoctor.User.DateOfBirth = req.Dob == null ? null : DateOnly.Parse(req.Dob);
+            if (existingDoctor.User.PhoneNumber != req.PhoneNumber)
+            {
+                existingDoctor.User.PhoneNumber = req.PhoneNumber;
+                existingDoctor.User.PhoneNumberConfirmed = false;
+            }
+            existingDoctor.User.Address = req.Address;
+            existingDoctor.Bio = req.Bio;
+            existingDoctor.Education = req.Education;
+            existingDoctor.YearsOfExperience = (int)(req.YearsOfExperience == null ? 0 : req.YearsOfExperience);
+            existingDoctor.ConsultationFee = req.ConsultationFee == null ? 0 : req.ConsultationFee.Value;
+
+            var updatedDoctor = await _doctorRepository.UpdateDoctorAsync(existingDoctor);
+            return updatedDoctor != null;
+        }
     }
 }

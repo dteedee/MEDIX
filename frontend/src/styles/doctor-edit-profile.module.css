@@ -1,0 +1,200 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
+}
+
+/* Main Layout */
+.main-container {
+    display: flex;
+    min-height: calc(100vh - 200px);
+}
+
+/* Content Area */
+.content {
+    flex: 1;
+    padding: 50px 80px;
+    background: #fafafa;
+}
+
+.profile-container {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+/* Profile Avatar */
+.profile-avatar-section {
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.profile-avatar {
+    width: 200px;
+    height: 200px;
+    background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+    border-radius: 50%;
+    margin: 0 auto 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatar-icon {
+    font-size: 80px;
+    color: #64748b;
+}
+
+.upload-avatar-btn {
+    background: #0066b3;
+    color: white;
+    border: none;
+    padding: 10px 28px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.upload-avatar-btn:hover {
+    background: #0055a0;
+}
+
+/* Form */
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.form-row {
+    display: flex;
+    align-items: flex-start;
+    /* align label to top */
+    gap: 20px;
+}
+
+.form-label {
+    flex: 0 0 150px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1a1a1a;
+    text-align: right;
+    padding-top: 12px;
+    /* aligns with input padding */
+}
+
+.form-input-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-input {
+    padding: 12px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: #e5e7eb;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.form-error {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #dc3545;
+    /* Bootstrap's text-danger color */
+}
+
+.form-input:focus {
+    border-color: #0066b3;
+    background: white;
+}
+
+.form-input:disabled {
+    background: #e5e7eb;
+    color: #4a4a4a;
+    cursor: not-allowed;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 40px;
+}
+
+.btn {
+    padding: 12px 35px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: #0066b3;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0055a0;
+}
+
+.btn-secondary {
+    background: #0066b3;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #0055a0;
+}
+
+@media (max-width: 1024px) {
+    .main-container {
+        flex-direction: column;
+    }
+
+    .content {
+        padding: 30px 20px;
+    }
+
+    .form-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .form-label {
+        text-align: left;
+    }
+}
+
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+}

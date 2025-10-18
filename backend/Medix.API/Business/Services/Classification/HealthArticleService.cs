@@ -11,11 +11,13 @@ namespace Medix.API.Business.Services.Classification
     public class HealthArticleService : IHealthArticleService
     {
         private readonly IHealthArticleRepository _healthArticleRepository;
+        private readonly IContentCategoryRepository _contentCategoryRepository;
         private readonly IMapper _mapper;
 
-        public HealthArticleService(IHealthArticleRepository healthArticleRepository, IMapper mapper)
+        public HealthArticleService(IHealthArticleRepository healthArticleRepository, IContentCategoryRepository contentCategoryRepository, IMapper mapper)
         {
             _healthArticleRepository = healthArticleRepository;
+            _contentCategoryRepository = contentCategoryRepository;
             _mapper = mapper;
         }
 
@@ -282,6 +284,26 @@ namespace Medix.API.Business.Services.Classification
                 UpdatedAt = DateTime.UtcNow
             };
 
+            // Attach categories if provided
+            if (createDto.CategoryIds != null && createDto.CategoryIds.Any())
+            {
+                var distinctIds = createDto.CategoryIds.Distinct().ToList();
+                var categories = await _contentCategoryRepository.GetAllActiveAsync();
+                var matched = categories.Where(c => distinctIds.Contains(c.Id)).ToList();
+
+                if (matched.Count != distinctIds.Count)
+                {
+                    var missing = distinctIds.Except(matched.Select(c => c.Id)).ToList();
+                    throw new ValidationException(new Dictionary<string, string[]>
+                    {
+                        { "CategoryIds", new[] { $"Some categories not found: {string.Join(',', missing)}" } }
+                    });
+                }
+
+                foreach (var cat in matched)
+                    article.Categories.Add(cat);
+            }
+
             await _healthArticleRepository.CreateAsync(article);
 
             return await GetByIdAsync(article.Id) ?? throw new MedixException("Failed to retrieve created article");
@@ -327,6 +349,28 @@ namespace Medix.API.Business.Services.Classification
             article.DisplayType = updateDto.DisplayType;
             article.AuthorId = updateDto.AuthorId;
             article.UpdatedAt = DateTime.UtcNow;
+
+            // Update categories if provided
+            if (updateDto.CategoryIds != null)
+            {
+                var distinctIds = updateDto.CategoryIds.Distinct().ToList();
+                var categories = await _contentCategoryRepository.GetAllActiveAsync();
+                var matched = categories.Where(c => distinctIds.Contains(c.Id)).ToList();
+
+                if (matched.Count != distinctIds.Count)
+                {
+                    var missing = distinctIds.Except(matched.Select(c => c.Id)).ToList();
+                    throw new ValidationException(new Dictionary<string, string[]>
+                    {
+                        { "CategoryIds", new[] { $"Some categories not found: {string.Join(',', missing)}" } }
+                    });
+                }
+
+                // Replace article categories with requested set
+                article.Categories.Clear();
+                foreach (var cat in matched)
+                    article.Categories.Add(cat);
+            }
 
             await _healthArticleRepository.UpdateAsync(article);
 

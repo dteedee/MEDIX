@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ArticleDTO, CreateArticleRequest, UpdateArticleRequest } from '../types/article.types'
+import { categoryService } from './categoryService'
 
 const BASE = '/api/HealthArticle'
 
@@ -11,6 +12,19 @@ function authHeader() {
     return undefined
   }
 }
+
+// Helper to fetch all categories once and cache them for mapping
+const categoryCache = {
+  promise: null as Promise<{ items: any[], total?: number }> | null,
+  fetchAll: function() {
+    if (!this.promise) {
+      // Fetch a large number to get all categories, assuming less than 1000
+      this.promise = categoryService.list(1, 1000);
+    }
+    return this.promise;
+  }
+};
+
 
 export const articleService = {
   list: async (page = 1, pageSize = 10, params?: { keyword?: string; status?: string; slug?: string }): Promise<{ items: ArticleDTO[]; total?: number }> => {
@@ -27,6 +41,9 @@ export const articleService = {
 
     const r = await axios.get(url, { params: query, headers: authHeader() });
     const data = r.data
+
+    // Fetch all categories to map names from IDs
+    const allCategories = (await categoryCache.fetchAll()).items;
 
     // If backend returns an array directly
     if (Array.isArray(data)) {
@@ -50,11 +67,17 @@ export const articleService = {
         displayType: x.displayType,
         createdAt: x.createdAt,
         updatedAt: x.updatedAt,
-        categories: x.categories
+        // If categories are not fully populated, map them from the cache
+        categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
+        categoryIds: x.categoryIds
       }))
       return { items, total: items.length }
     }
 
+    const rawItems = data?.item2 ?? [];
+    const total = data?.item1;
+
+    // Map raw items to DTOs
     const items: ArticleDTO[] = data?.item2?.map((x: any) => ({
       id: x.id,
       title: x.title,
@@ -75,14 +98,37 @@ export const articleService = {
       displayType: x.displayType,
       createdAt: x.createdAt,
       updatedAt: x.updatedAt,
-      categories: x.categories
+      // If categories are not fully populated, map them from the cache
+      categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
+      categoryIds: x.categoryIds
     })) ?? []
-    const total = data?.item1
     return { items, total }
   },
   get: async (id: string): Promise<ArticleDTO> => {
     const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })
-    return r.data
+    const x = r.data;
+
+    // Also enrich with categories on single-get
+    const allCategories = (await categoryCache.fetchAll()).items;
+    const article: ArticleDTO = {
+      id: x.id,
+      title: x.title,
+      slug: x.slug,
+      summary: x.summary,
+      content: x.content,
+      thumbnailUrl: x.thumbnailUrl,
+      coverImageUrl: x.coverImageUrl,
+      metaTitle: x.metaTitle,
+      metaDescription: x.metaDescription,
+      statusCode: x.statusCode,
+      authorName: x.authorName,
+      publishedAt: x.publishedAt,
+      createdAt: x.createdAt,
+      updatedAt: x.updatedAt,
+      categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
+      categoryIds: x.categoryIds
+    };
+    return article;
   },
   getBySlug: async (slug: string): Promise<ArticleDTO | null> => {
     try {
@@ -94,11 +140,11 @@ export const articleService = {
     }
   },
   create: async (payload: CreateArticleRequest): Promise<ArticleDTO> => {
-    const r = await axios.post(BASE, payload, { headers: authHeader() })
+    const r = await axios.post(BASE, { ...payload }, { headers: authHeader() })
     return r.data
   },
   update: async (id: string, payload: UpdateArticleRequest): Promise<ArticleDTO> => {
-    const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() })
+    const r = await axios.put(`${BASE}/${id}`, { ...payload }, { headers: authHeader() })
     return r.data
   },
   remove: async (id: string): Promise<void> => {

@@ -24,23 +24,24 @@ export interface ArticleDTO {
   createdAt?: string
   updatedAt?: string
   categories?: ArticleCategory[]
+  categoryIds?: string[]
 }
 
 export interface CreateArticleRequest {
   title: string
   slug: string
-  summary: string
-  content: string
+  summary?: string
+  content?: string
   displayType: string
-  thumbnailUrl: string
-  coverImageUrl: string
+  thumbnailUrl?: string
+  coverImageUrl?: string
   isHomepageVisible: boolean
   displayOrder: number
-  metaTitle: string
-  metaDescription: string
+  metaTitle?: string
+  metaDescription?: string
   authorId: string
   statusCode: string
-  publishedAt: string
+  publishedAt?: string
   categoryIds: string[]
 }
 

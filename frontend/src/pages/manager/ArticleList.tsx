@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { articleService } from '../../services/articleService'
 import { ArticleDTO } from '../../types/article.types'
 import ArticleDetails from '../../components/admin/ArticleDetails'
+import { categoryService } from '../../services/categoryService'
+import { CategoryDTO } from '../../types/category.types'
 import { useToast } from '../../contexts/ToastContext'
 
 // SVG Icons for actions
@@ -32,6 +34,7 @@ export default function ArticleList() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(5)
   const [viewing, setViewing] = useState<ArticleDTO | null>(null)
+  const [allCategories, setAllCategories] = useState<CategoryDTO[]>([])
 
   // filter/search UI
   const [search, setSearch] = useState('')
@@ -52,7 +55,14 @@ export default function ArticleList() {
   }
 
   const navigate = useNavigate()
-  useEffect(() => { load() }, [page, pageSize, statusFilter])
+  useEffect(() => {
+    // Ensure all categories are loaded first, then load articles.
+    // This prevents a race condition where articles render before category names are available for mapping.
+    categoryService.list(1, 1000).then(res => {
+      setAllCategories(res.items);
+      load(); // Now load articles
+    });
+  }, [page, pageSize, statusFilter])
 
   const onCreate = () => navigate('/manager/articles/new')
   const onEdit = (a: ArticleDTO) => navigate(`/manager/articles/edit/${a.id}`)
@@ -77,6 +87,13 @@ export default function ArticleList() {
     const color = isPublished ? '#16a34a' : '#b45309';
     return <span style={{ background: bg, color, padding: '6px 10px', borderRadius: 16, fontSize: 12, fontWeight: 500 }}>{text}</span>;
   }
+
+  const getCategoryNames = (article: ArticleDTO) => {
+    if (article.categories?.length) {
+      return article.categories.map(c => c.name).join(', ');
+    }
+    return (article.categoryIds || []).map(id => allCategories.find(c => c.id === id)?.name).filter(Boolean).join(', ');
+  };
 
   return (
     <div style={{ padding: 24, backgroundColor: '#f9fafb', minHeight: '100vh' }}>
@@ -148,7 +165,7 @@ export default function ArticleList() {
                   </div>
                 </td>
                 <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14, maxWidth: 300 }}>{a.title}</td>
-                <td style={{ padding: '16px', color: '#4b5563', fontSize: 14, maxWidth: 200 }}>{(a.categories || []).map(c => c.name).join(', ')}</td>
+                <td style={{ padding: '16px', color: '#4b5563', fontSize: 14, maxWidth: 200 }}>{getCategoryNames(a)}</td>
                 <td style={{ padding: '16px' }}>{pill(a.statusCode)}</td>
                 <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{fmtDate(a.publishedAt ?? a.createdAt)}</td>
                 <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>

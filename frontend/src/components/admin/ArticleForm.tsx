@@ -28,7 +28,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const [authorId, setAuthorId] = useState('1A2C1A65-7B00-415F-8164-4FC3C1054203') // <-- Replace with a valid user ID from your DB
   const [statusCode, setStatusCode] = useState(article?.statusCode ?? 'DRAFT')
   const [publishedAt, setPublishedAt] = useState<string>(article?.publishedAt ?? '')
-  const [categoryIds, setCategoryIds] = useState<string[]>([])
+  const [categoryIds, setCategoryIds] = useState<string[]>(article?.categoryIds ?? [])
   const [content, setContent] = useState(article?.content ?? '')
   const [saving, setSaving] = useState(false)
   const fileRef = React.createRef<HTMLInputElement>()
@@ -68,48 +68,27 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
     setCategoryIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
 
-  // When editing, load the latest article data and prefill fields
+  // When the article prop changes (e.g., data is loaded by the parent page),
+  // update the form's internal state to reflect the new data.
   useEffect(() => {
-    const loadArticle = async () => {
-      if (!article?.id) return
-      try {
-        const full = await articleService.get(article.id)
-        setTitle(full.title ?? '')
-        setSlug(full.slug ?? '')
-        setSummary(full.summary ?? '')
-        setThumbnailUrl(full.thumbnailUrl ?? '')
-        setCoverImageUrl(full.coverImageUrl ?? '')
-        setDisplayType(full.displayType ?? 'STANDARD')
-        setIsHomepageVisible(Boolean(full.isHomepageVisible))
-        setDisplayOrder(typeof full.displayOrder === 'number' ? full.displayOrder : 0)
-        setMetaTitle(full.metaTitle ?? '')
-        setMetaDescription(full.metaDescription ?? '')
-        // best-effort: authorId may exist on API. If not, keep the hardcoded one.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const apiAuthorId = (full as any)?.authorId;
-        if (apiAuthorId) setAuthorId(apiAuthorId);
-        setStatusCode(full.statusCode ?? 'DRAFT')
-        setPublishedAt(full.publishedAt ?? '')
-        setContent(full.content ?? '')
-        // Preselect categories: prefer categoryIds from API if available, otherwise map names/slugs
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const apiCategoryIds: string[] | undefined = (full as any)?.categoryIds
-        if (Array.isArray(apiCategoryIds) && apiCategoryIds.length > 0) {
-          setCategoryIds(apiCategoryIds)
-        } else if (Array.isArray(full.categories) && full.categories.length > 0) {
-          const names = full.categories.map(c => (c.slug ?? c.name)?.toLowerCase?.() ?? '')
-          const matched = availableCategories
-            .filter(c => names.includes((c.slug ?? c.name)?.toLowerCase?.() ?? ''))
-            .map(c => c.id)
-          if (matched.length > 0) setCategoryIds(matched)
-        }
-      } catch {
-        // ignore; keep initial values
-      }
+    if (article) {
+      setTitle(article.title ?? '')
+      setSlug(article.slug ?? '')
+      setSummary(article.summary ?? '')
+      setThumbnailUrl(article.thumbnailUrl ?? '')
+      setCoverImageUrl(article.coverImageUrl ?? '')
+      setDisplayType(article.displayType ?? 'STANDARD')
+      setIsHomepageVisible(Boolean(article.isHomepageVisible))
+      setDisplayOrder(typeof article.displayOrder === 'number' ? article.displayOrder : 0)
+      setMetaTitle(article.metaTitle ?? '')
+      setMetaDescription(article.metaDescription ?? '')
+      setStatusCode(article.statusCode ?? 'DRAFT')
+      setPublishedAt(article.publishedAt ?? '')
+      setContent(article.content ?? '')
+      // This is the key part for fixing the category selection
+      setCategoryIds(article.categoryIds ?? [])
     }
-    loadArticle()
-    // Re-run when availableCategories changes to attempt name/slug matching
-  }, [article?.id, availableCategories])
+  }, [article])
 
   // Auto-generate slug from title if slug is empty
   useEffect(() => {
@@ -136,7 +115,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         setSaving(false)
         return
       }
-      const payload: CreateArticleRequest = { // Cast to any to allow `undefined` for optional fields
+      const payload: CreateArticleRequest = {
         title,
         slug,
         summary,
@@ -152,7 +131,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         statusCode: finalStatusCode,
         publishedAt: publishedAt || undefined,
         categoryIds
-      } as any
+      }
       if (article) await articleService.update(article.id, payload)
       else await articleService.create(payload)
       onSaved?.()
@@ -216,12 +195,12 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
             <label style={labelStyle}>Trạng thái & Hiển thị</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: '#f9fafb', padding: '16px', borderRadius: 8 }}>
               <select value={statusCode} onChange={e => setStatusCode(e.target.value)} style={inputStyle}>
-                <option value="DRAFT">Bản nháp</option>
-                <option value="PUBLISHED">Đã xuất bản</option>
+                <option value="DRAFT">DRAFT</option>
+                <option value="PUBLISHED">PUBLISHED</option>
               </select>
               <select value={displayType} onChange={e => setDisplayType(e.target.value)} style={inputStyle}>
-                <option value="STANDARD">Chuẩn</option>
-                <option value="FEATURED">Nổi bật</option>
+                <option value="STANDARD">STANDARD</option>
+                <option value="FEATURED">FEATURED</option>
               </select>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>
                 <input type="checkbox" checked={isHomepageVisible} onChange={e => setIsHomepageVisible(e.target.checked)} style={{ width: 16, height: 16 }} />

@@ -30,6 +30,8 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const [categoryIds, setCategoryIds] = useState<string[]>(article?.categoryIds ?? [])
   const [content, setContent] = useState(article?.content ?? '')
   const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState<{ title?: string; slug?: string }>({})
+  const [validating, setValidating] = useState<{ title?: boolean; slug?: boolean }>({})
   const fileRef = React.createRef<HTMLInputElement>()
 
   // Helper to convert ISO string to a format suitable for datetime-local input
@@ -129,8 +131,34 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
     }
   }, [title]);
 
+  const validateField = async (field: 'title' | 'slug', value: string) => {
+    // Don't validate if the value hasn't changed from the initial value, or if it's empty
+    if (value === (article?.[field] ?? '') || !value) {
+      return
+    }
+
+    setValidating(prev => ({ ...prev, [field]: true }))
+    setErrors(prev => ({ ...prev, [field]: undefined })) // Clear previous error
+
+    try {
+      // We assume articleService has a new method for this.
+      // You will need to implement this in your service and the corresponding backend endpoint.
+      await articleService.checkUniqueness(field, value, article?.id)
+    } catch (error: any) {
+      const message = error?.response?.data?.message || `Giá trị này không được phép trùng.`
+      setErrors(prev => ({ ...prev, [field]: message }))
+    } finally {
+      setValidating(prev => ({ ...prev, [field]: false }))
+    }
+  }
+
+  // Store initial values to compare on blur
+  const initialTitle = React.useRef(article?.title ?? '').current;
+  const initialSlug = React.useRef(article?.slug ?? '').current;
+
   const submit = async (e: React.FormEvent | null, overrideStatusCode?: string) => {
     e?.preventDefault()
+    setErrors({}) // Reset errors on new submission
     setSaving(true)
     try {
       const finalStatusCode = overrideStatusCode ?? statusCode;
@@ -169,11 +197,21 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
       }
       if (article) await articleService.update(article.id, payload)
       else await articleService.create(payload)
+      showToast(article ? 'Cập nhật bài viết thành công!' : 'Tạo bài viết thành công!')
       onSaved?.()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving article:', error)
-      // Giả định lỗi là do slug trùng lặp theo yêu cầu.
-      showToast('Slug không được phép trùng', 'error')
+      // Xử lý lỗi từ server và hiển thị inline
+      const serverErrors = error?.response?.data?.errors
+      if (serverErrors) {
+        const newErrors: { title?: string; slug?: string } = {}
+        if (serverErrors.Title) newErrors.title = serverErrors.Title[0]
+        if (serverErrors.Slug) newErrors.slug = serverErrors.Slug[0]
+        setErrors(newErrors)
+      } else {
+        // Fallback cho các lỗi không xác định
+        showToast('Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.', 'error')
+      }
     } finally {
       setSaving(false)
     }
@@ -209,6 +247,18 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
     fontWeight: 600,
     cursor: 'pointer',
   }
+  const errorTextStyle: React.CSSProperties = {
+    color: '#ef4444',
+    fontSize: 13,
+    marginTop: 6,
+  }
+
+  const validatingTextStyle: React.CSSProperties = {
+    color: '#6b7280',
+    fontSize: 13,
+    marginTop: 6,
+  }
+
 
   return (
     <form onSubmit={(e) => submit(e)} style={formContainerStyle}>
@@ -260,11 +310,30 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
             <label style={labelStyle}>Tiêu đề bài viết</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} required style={inputStyle} />
+            <input
+              value={title}
+              onChange={e => {
+                setTitle(e.target.value)
+                if (errors.title) setErrors(prev => ({ ...prev, title: undefined }))
+              }}
+              required
+              onBlur={(e) => validateField('title', e.target.value)}
+              style={{ ...inputStyle, borderColor: errors.title ? '#ef4444' : '#d1d5db' }}
+            />
+            {errors.title && <div style={errorTextStyle}>{errors.title}</div>}
+            {validating.title && <div style={validatingTextStyle}>Đang kiểm tra...</div>}
           </div>
           <div>
             <label style={labelStyle}>Đường dẫn (Slug)</label>
-            <input value={slug} onChange={e => setSlug(e.target.value)} placeholder="Tự động tạo nếu để trống" style={inputStyle} />
+            <input value={slug} onChange={e => {
+              setSlug(e.target.value)
+              if (errors.slug) setErrors(prev => ({ ...prev, slug: undefined }))
+            }}
+            onBlur={(e) => validateField('slug', e.target.value)}
+            placeholder="Tự động tạo nếu để trống"
+            style={{ ...inputStyle, borderColor: errors.slug ? '#ef4444' : '#d1d5db' }} />
+            {errors.slug && <div style={errorTextStyle}>{errors.slug}</div>}
+            {validating.slug && <div style={validatingTextStyle}>Đang kiểm tra...</div>}
           </div>
           <div>
             <label style={labelStyle}>Tóm tắt</label>

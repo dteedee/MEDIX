@@ -23,7 +23,6 @@ export default function ArticleEditPage() {
   }, [id])
 
   const handleSave = () => {
-    showToast(id ? 'Cập nhật bài viết thành công!' : 'Tạo bài viết thành công!')
     navigate('/manager/articles')
   }
   const handleCancel = () => navigate('/manager/articles')

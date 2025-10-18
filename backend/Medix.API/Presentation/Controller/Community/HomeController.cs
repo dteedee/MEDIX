@@ -19,7 +19,7 @@ namespace Medix.API.Presentation.Controller.Community
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetActiveBanners()
+        public async Task<IActionResult> GetHomeMetadata()
         {
             var banners = await _siteBannerService.GetHomePageBanners();
             var bannerUrls = banners.Select(b => b.BannerImageUrl).ToList();
@@ -29,6 +29,7 @@ namespace Medix.API.Presentation.Controller.Community
             {
                 d.User.AvatarUrl,
                 d.User.FullName,
+                d.User.UserName,
                 SpecializationName = d.Specialization.Name,
                 d.YearsOfExperience,
                 d.AverageRating,

@@ -52,7 +52,7 @@ nav {
 }
 
 .hero-text h1 {
-    font-size: 35px;
+    font-size: 32px;
     margin-bottom: 20px;
     color: #000;
     font-weight: bold;
@@ -78,7 +78,7 @@ nav {
     flex: 1;
     display: flex;
     gap: 10px;
-    font-size: 14px;
+    font-size: 16px;
     color: #333;
 }
 
@@ -328,6 +328,7 @@ nav {
     text-align: center;
     color: white;
     width: 200px;
+    text-decoration: none;
     /* or whatever size you want */
 }
 

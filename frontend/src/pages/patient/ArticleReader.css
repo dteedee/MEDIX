@@ -286,24 +286,6 @@
     gap: 6px;
     font-size: 0.9rem;
 }
-.like-button {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background-color: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    padding: 8px 16px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #4b5563;
-    transition: all 0.2s ease;
-}
-.like-button:hover, .like-button.liked {
-    background-color: #fee2e2;
-    border-color: #fca5a5;
-}
 .article-cover-image {
     width: 100%;
     max-height: 300px;
@@ -315,24 +297,6 @@
     font-size: 1.1rem;
     line-height: 1.8;
     color: #333;
-}
-.sticky-like-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    padding: 16px;
-    background: linear-gradient(to top, rgba(255,255,255,1), rgba(255,255,255,0));
-    pointer-events: none; /* Allow clicks to pass through the container */
-}
-
-.sticky-like-bar .like-button {
-    pointer-events: auto; /* Make the button clickable */
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    padding: 12px 24px;
-    font-size: 1rem;
 }
 
 /* Pagination */

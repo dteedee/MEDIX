@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { userService } from '../../services/userService'
 import { UserDTO, UpdateUserRequest } from '../../types/user.types'
 import { useToast } from '../../contexts/ToastContext'
@@ -54,6 +54,10 @@ export default function UserList() {
   const [loading, setLoading] = useState(true)
   const [viewing, setViewing] = useState<UserDTO | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
+  const [updatingIds, setUpdatingIds] = useState<Record<string, boolean>>({})
+  const updatingRef = useRef<Record<string, boolean>>({})
+  const debounceRef = useRef<Record<string, any>>({})
+  const lastToastRef = useRef<Record<string, number>>({})
   // sorting
   const [sortBy, setSortBy] = useState('createdAt')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
@@ -63,37 +67,107 @@ export default function UserList() {
   const navigate = useNavigate()
   const load = async () => {
     const r = await userService.list(page, pageSize, search)
-    setUsers(r.items)
+    console.debug('[UserList] loaded users', r.items)
+    // Normalize lock state to ensure UI reflects DB regardless of backend field names/formats
+    const normalized = (r.items || []).map(u => {
+      const any = u as any
+      let locked = false
+      if (u.lockoutEnabled === true) locked = true
+      if (any.isLocked === true) locked = true
+      if (any.locked === true) locked = true
+      if (any.isLockedOut === true) locked = true
+      const lockoutEndVal = any.lockoutEnd ?? any.lockout_end ?? any.lockEnd ?? any.lockedUntil
+      if (lockoutEndVal) {
+        try {
+          const ts = Date.parse(lockoutEndVal as any)
+          if (!isNaN(ts) && ts > Date.now()) locked = true
+          else if (isNaN(ts)) locked = true // treat truthy unparsable as locked
+        } catch {
+          locked = true
+        }
+      }
+      return { ...u, lockoutEnabled: locked }
+    })
+    console.debug('[UserList] normalized users', normalized)
+    setUsers(normalized)
     setTotal(r.total)
     setLoading(false)
   }
 
+  const location = useLocation()
+
+  // Load when page/pageSize changes and also when the route changes (so returning from edit reloads)
   useEffect(() => {
     load()
-  }, [page, pageSize])
+  }, [page, pageSize, location.pathname])
 
   // Scroll to top on page or page size change
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [page, pageSize]);
 
-  const handleStatusChange = async (userToUpdate: UserDTO, newStatus: boolean) => {
-    if (userToUpdate.lockoutEnabled === newStatus) return;
-
-    const actionText = newStatus ? 'khóa' : 'mở khóa';
-    if (!confirm(`Bạn có chắc muốn ${actionText} tài khoản này không?`)) return;
-
-    try {
-      // Tạo payload sạch chỉ với các trường mà API update mong đợi
-      const payload: Partial<UpdateUserRequest> = {
-        lockoutEnabled: newStatus,
-      };
-      await userService.update(userToUpdate.id, payload);
-      showToast(`Đã ${actionText} tài khoản thành công.`);
-      await load();
-    } catch (error) {
-      showToast('Không thể cập nhật trạng thái tài khoản.', 'error');
+  const handleStatusChange = (userToUpdate: UserDTO, newStatus: boolean) => {
+    // debounce rapid toggles per user (300ms)
+    if (debounceRef.current[userToUpdate.id]) {
+      clearTimeout(debounceRef.current[userToUpdate.id])
     }
+
+    debounceRef.current[userToUpdate.id] = setTimeout(async () => {
+      // Guard: ignore if same status or already updating for this user
+      const currentUser = (users.find(u => u.id === userToUpdate.id) as any) ?? userToUpdate
+      if (currentUser.lockoutEnabled === newStatus) return
+      if (updatingRef.current[userToUpdate.id]) {
+        console.debug('[UserList] update already in-flight for', userToUpdate.id)
+        return
+      }
+
+      // Mark in-flight synchronously via ref then update UI state
+      updatingRef.current[userToUpdate.id] = true
+      setUpdatingIds(prev => ({ ...prev, [userToUpdate.id]: true }))
+
+      // Optimistic UI: cập nhật ngay trong state
+      setUsers(prev => prev.map(u => u.id === userToUpdate.id ? { ...u, lockoutEnabled: newStatus } : u))
+
+      try {
+        const payload: Partial<UpdateUserRequest> = { lockoutEnabled: newStatus }
+        if (!newStatus) payload.lockoutEnd = null
+        console.debug('[UserList] update payload', userToUpdate.id, payload)
+        const resp = await userService.update(userToUpdate.id, payload)
+        console.debug('[UserList] update response', resp)
+        // reload list from server to get canonical DB state (handles backend using different fields/formats)
+        try {
+          await load()
+        } catch (err) {
+          console.debug('[UserList] reload after update failed', err)
+        }
+        // avoid duplicate toasts for the same user in short time
+        const now = Date.now()
+        const last = lastToastRef.current[userToUpdate.id] || 0
+        if (now - last > 2000) {
+          lastToastRef.current[userToUpdate.id] = now
+          showToast(newStatus ? 'Tài khoản đã bị khóa.' : 'Tài khoản đã được mở khóa.')
+        } else {
+          console.debug('[UserList] skipped duplicate toast for', userToUpdate.id)
+        }
+      } catch (error) {
+        // revert optimistic update
+        setUsers(prev => prev.map(u => u.id === userToUpdate.id ? { ...u, lockoutEnabled: userToUpdate.lockoutEnabled } : u))
+        showToast('Không thể cập nhật trạng thái tài khoản.', 'error')
+      } finally {
+        // clear ref and state
+        updatingRef.current[userToUpdate.id] = false
+        setUpdatingIds(prev => {
+          const copy = { ...prev }
+          delete copy[userToUpdate.id]
+          return copy
+        })
+        // clear debounce timer
+        if (debounceRef.current[userToUpdate.id]) {
+          clearTimeout(debounceRef.current[userToUpdate.id])
+          delete debounceRef.current[userToUpdate.id]
+        }
+      }
+    }, 300)
   }
 
   const handleSort = (column: string) => {
@@ -123,20 +197,51 @@ export default function UserList() {
     }
   }
 
-  const onSearchChange = (v: string) => {
-    setSearch(v)
-  }
+  const isLockedFor = (u?: UserDTO) => {
+    if (!u) return false
+    const any = u as any
+    // Common explicit boolean field from identity frameworks
+    if (u.lockoutEnabled === true) return true
+    if (any.isLocked === true) return true
+    if (any.locked === true) return true
+    if (any.isLockedOut === true) return true
 
-  const doSearch = () => {}
+    // Common variants for lockoutEnd from backend
+    const lockoutEndVal = any.lockoutEnd ?? any.lockout_end ?? any.lockEnd ?? any.lockedUntil
+    if (lockoutEndVal) {
+      try {
+        const ts = Date.parse(lockoutEndVal as any)
+        if (!isNaN(ts)) return ts > Date.now()
+        // If parsing failed but value is truthy, treat as locked
+        return true
+      } catch {
+        return true
+      }
+    }
+    return false
+  }
 
   const processedItems = useMemo(() => {
     const from = dateFrom ? new Date(dateFrom) : undefined
     const to = dateTo ? new Date(dateTo) : undefined
-    return users.filter(u => {
+    
+    // Bắt đầu với toàn bộ danh sách người dùng
+    let filteredUsers = [...users];
+
+    // Lọc theo từ khóa tìm kiếm (tên hoặc email)
+    if (search.trim()) {
+      const searchTerm = search.toLowerCase();
+      filteredUsers = filteredUsers.filter(u =>
+        (u.fullName && u.fullName.toLowerCase().includes(searchTerm)) ||
+        (u.email && u.email.toLowerCase().includes(searchTerm))
+      );
+    }
+
+    // Áp dụng các bộ lọc khác
+    return filteredUsers.filter(u => {
       const okRole = roleFilter === 'all' || (u.role?.toLowerCase() === roleFilter.toLowerCase())
-      
-      // Lọc trạng thái theo lockoutEnabled
-      const isLocked = (u as any).lockoutEnabled === true;
+      // Lọc trạng thái theo giá trị đã được chuẩn hóa `lockoutEnabled`
+      const isLocked = Boolean((u as any).lockoutEnabled)
       const okStatus = statusFilter === 'all' || (statusFilter === 'locked' ? isLocked : !isLocked);
 
       let okDate = true
@@ -157,7 +262,7 @@ export default function UserList() {
       // Add other sortable columns here if needed
       return 0;
     });
-  }, [users, roleFilter, statusFilter, dateFrom, dateTo, sortBy, sortDirection]);
+  }, [users, search, roleFilter, statusFilter, dateFrom, dateTo, sortBy, sortDirection]);
 
   const pill = (lockoutEnabled?: boolean) => {
     const isLocked = Boolean(lockoutEnabled)
@@ -165,6 +270,22 @@ export default function UserList() {
     const bg = isLocked ? '#fee2e2' : '#e7f9ec'
     const color = isLocked ? '#dc2626' : '#16a34a'
     return <span style={{ background: bg, color, padding: '6px 10px', borderRadius: 16, fontSize: 12 }}>{text}</span>
+  }
+
+  const getStatusStyle = (isLocked?: boolean): React.CSSProperties => {
+    const locked = Boolean(isLocked)
+    return {
+      padding: '6px 12px',
+      borderRadius: 16,
+      border: '1px solid',
+      borderColor: locked ? '#fca5a5' : '#6ee7b7',
+      background: locked ? '#fee2e2' : '#e7f9ec',
+      color: locked ? '#991b1b' : '#065f46',
+      fontWeight: 600,
+      cursor: 'pointer',
+      fontSize: 13,
+      appearance: 'none',
+    }
   }
 
     return (
@@ -200,8 +321,7 @@ export default function UserList() {
             <input
               placeholder="Tìm kiếm theo tên..."
               value={search}
-              onChange={e => onSearchChange(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); load() } }}
+              onChange={e => setSearch(e.target.value)}
               style={{ width: '80%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
             />
           </div>
@@ -230,9 +350,6 @@ export default function UserList() {
           <div style={{ flex: '1 1 150px' }}>
             <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Đến ngày</label>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ padding: 9, width: '80%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} />
-          </div>
-          <div>
-            <button onClick={() => load()} style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer', width: '100%' }}>Tìm</button>
           </div>
         </div>
       </div>
@@ -264,20 +381,16 @@ export default function UserList() {
                   <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}</td>
                   <td style={{ padding: '16px' }}>
                     <select
-                      value={u.lockoutEnabled ? 'locked' : 'unlocked'}
+                      value={((u as any).lockoutEnabled ? 'locked' : 'unlocked')}
                       onChange={(e) => handleStatusChange(u, e.target.value === 'locked')}
+                      disabled={Boolean(updatingIds[u.id])}
                       style={{
-                        padding: '4px 8px',
-                        borderRadius: 6,
-                        border: '1px solid',
-                        borderColor: u.lockoutEnabled ? '#fca5a5' : '#6ee7b7',
-                        fontSize: 13,
-                        background: u.lockoutEnabled ? '#fee2e2' : '#d1fae5',
-                        color: u.lockoutEnabled ? '#991b1b' : '#065f46',
-                        fontWeight: 500,
+                        ...getStatusStyle((u as any).lockoutEnabled),
+                        opacity: updatingIds[u.id] ? 0.6 : 1,
+                        cursor: updatingIds[u.id] ? 'not-allowed' : 'pointer'
                       }}>
                       <option value="unlocked">Hoạt động</option>
-                      <option value="locked">Khóa</option>
+                      <option value="locked">Đang khóa</option>
                     </select>
                   </td>
                   <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>

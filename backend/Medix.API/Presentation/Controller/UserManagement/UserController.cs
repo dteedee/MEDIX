@@ -40,23 +40,33 @@ namespace Medix.API.Presentation.Controller.UserManagement
         }
 
         // POST api/User - Tạo người dùng mới (dành cho admin)
-        // Lưu ý: Endpoint này khác với /api/Register/registerPatient
         [HttpPost]
         [ProducesResponseType(typeof(UserDto), 201)]
-        public async Task<IActionResult> CreateUser([FromBody] RegisterRequestPatientDTO request)
+        [ProducesResponseType(400)]
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserDTO request)
         {
-            // Tái sử dụng logic đăng ký nhưng có thể cần điều chỉnh trong tương lai
-            // để phân biệt rõ hơn giữa admin tạo user và user tự đăng ký.
-            var userDto = await _userService.RegisterUserAsync(request);
-            return CreatedAtAction(nameof(GetById), new { id = userDto.Id }, userDto);
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var userDto = await _userService.CreateUserAsync(request);
+                return CreatedAtAction(nameof(GetById), new { id = userDto.Id }, userDto);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while creating the user", error = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(UserDto), 200)]
         [ProducesResponseType(404)]
-        public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UserUpdateDto userUpdateDto)
+        public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserDTO updateUserDto)
         {
-            var updatedUser = await _userService.UpdateAsync(id, userUpdateDto);
+            var updatedUser = await _userService.UpdateAsync(id, updateUserDto);
             return Ok(updatedUser);
         }
 

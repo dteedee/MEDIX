@@ -20,5 +20,12 @@ namespace Medix.API.Models.DTOs
         public DateOnly? DateOfBirth { get; set; }
         public string? GenderCode { get; set; }
         public string? IdentificationNumber { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public string? Address { get; set; }
+        public string? AvatarUrl { get; set; }
+        public bool IsProfileCompleted { get; set; }
+        public DateTime? LockoutEnd { get; set; }
+        public bool LockoutEnabled { get; set; }
+        public int AccessFailedCount { get; set; }
     }
 }

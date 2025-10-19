@@ -95,41 +95,6 @@ export default function UserDetails({ user, onClose, isLoading }: Props) {
     gridColumn: '1 / -1',
   };
 
-  const renderUserDetails = () => {
-    if (isLoading) {
-      return <div style={{ padding: '40px 0', textAlign: 'center', color: '#6b7280' }}>Đang tải chi tiết...</div>;
-    }
-
-    const u = user as any; // Cast to any to access potential extra fields
-
-    return (
-      <div style={contentGridStyle}>
-        <div style={{ ...fullWidthItem, display: 'flex', alignItems: 'center', gap: 20 }}>
-          <img src={u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || user.email)}&background=random`} alt="Avatar" style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e5e7eb' }} />
-          <div>
-            <p style={{ ...valueStyle, fontSize: 18, fontWeight: 600, margin: 0 }}>{user.fullName || 'Chưa có tên'}</p>
-            <p style={{ ...valueStyle, color: '#6b7280', margin: '4px 0 0 0' }}>{user.email}</p>
-          </div>
-        </div>
-
-        <div style={detailItemStyle}><span style={labelStyle}>Họ và tên</span><span style={valueStyle}>{user.fullName || 'Chưa có'}</span></div>
-        <div style={detailItemStyle}><span style={labelStyle}>Tên đăng nhập (Email)</span><span style={valueStyle}>{user.email}</span></div>
-        <div style={detailItemStyle}><span style={labelStyle}>Số điện thoại</span><span style={valueStyle}>{user.phoneNumber || 'Chưa có'}</span></div>
-        <div style={detailItemStyle}><span style={labelStyle}>Vai trò</span><span style={valueStyle}>{user.role || 'Chưa có'}</span></div>
-        <div style={detailItemStyle}><span style={labelStyle}>Ngày sinh</span><span style={valueStyle}>{user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString('vi-VN') : 'Chưa có'}</span></div>
-        <div style={detailItemStyle}><span style={labelStyle}>Giới tính</span><span style={valueStyle}>{getGender(user.genderCode)}</span></div>
-        <div style={detailItemStyle}><span style={labelStyle}>Số CMND/CCCD</span><span style={valueStyle}>{user.identificationNumber || 'Chưa có'}</span></div>
-        <div style={detailItemStyle}><span style={labelStyle}>Trạng thái</span><span style={valueStyle}>{user.emailConfirmed ? 'Đã xác thực' : 'Chưa xác thực'}</span></div>
-        <div style={detailItemStyle}><span style={labelStyle}>Địa chỉ</span><span style={valueStyle}>{u.address || 'Chưa có'}</span></div>
-        <div style={detailItemStyle}><span style={labelStyle}>Tài khoản bị khóa</span><span style={valueStyle}>{u.lockoutEnabled ? 'Có' : 'Không'}</span></div>
-        <div style={detailItemStyle}><span style={labelStyle}>Khóa đến</span><span style={valueStyle}>{fmtDate(u.lockoutEnd)}</span></div>
-        <div style={detailItemStyle}><span style={labelStyle}>Số lần đăng nhập sai</span><span style={valueStyle}>{u.accessFailedCount ?? 0}</span></div>
-        <div style={detailItemStyle}><span style={labelStyle}>Ngày tạo</span><span style={valueStyle}>{fmtDate(user.createdAt)}</span></div>
-        <div style={detailItemStyle}><span style={labelStyle}>Cập nhật lần cuối</span><span style={valueStyle}>{fmtDate(user.updatedAt)}</span></div>
-      </div>
-    );
-  };
-
   return (
     <div style={overlayStyle} onClick={onClose}>
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
@@ -137,7 +102,40 @@ export default function UserDetails({ user, onClose, isLoading }: Props) {
           <h2 style={titleStyle}>Chi tiết Người dùng</h2>
           <button onClick={onClose} style={closeButtonStyle}>&times;</button>
         </div>
-        {renderUserDetails()}
+        {isLoading ? (
+          <div style={{ padding: '40px 0', textAlign: 'center', color: '#6b7280' }}>Đang tải chi tiết...</div>
+        ) : (
+          <div style={contentGridStyle}>
+            <div style={{ ...fullWidthItem, display: 'flex', alignItems: 'center', gap: 20 }}>
+              <img src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || user.userName || user.email)}&background=random`} alt="Avatar" style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e5e7eb' }} />
+              <div>
+                <p style={{ ...valueStyle, fontSize: 18, fontWeight: 600, margin: 0 }}>{user.fullName || 'Chưa có tên'}</p>
+                <p style={{ ...valueStyle, color: '#6b7280', margin: '4px 0 0 0' }}>{user.userName ? `@${user.userName}` : user.email}</p>
+              </div>
+            </div>
+
+            <div style={detailItemStyle}><span style={labelStyle}>Họ và tên</span><span style={valueStyle}>{user.fullName || 'Chưa có'}</span></div>
+            <div style={detailItemStyle}><span style={labelStyle}>Tên đăng nhập</span><span style={valueStyle}>{user.userName || 'Chưa có'}</span></div>
+            <div style={detailItemStyle}><span style={labelStyle}>Email</span><span style={valueStyle}>{user.email}</span></div>
+            <div style={detailItemStyle}><span style={labelStyle}>Số điện thoại</span><span style={valueStyle}>{user.phoneNumber || 'Chưa có'}</span></div>
+            <div style={detailItemStyle}><span style={labelStyle}>Vai trò</span><span style={valueStyle}>{user.role || 'Chưa có'}</span></div>
+            <div style={detailItemStyle}><span style={labelStyle}>Ngày sinh</span><span style={valueStyle}>{user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString('vi-VN') : 'Chưa có'}</span></div>
+            <div style={detailItemStyle}><span style={labelStyle}>Giới tính</span><span style={valueStyle}>{getGender(user.genderCode)}</span></div>
+            <div style={detailItemStyle}><span style={labelStyle}>Số CMND/CCCD</span><span style={valueStyle}>{user.identificationNumber || 'Chưa có'}</span></div>
+            <div style={detailItemStyle}><span style={labelStyle}>Email xác thực</span><span style={valueStyle}>{user.emailConfirmed ? 'Đã xác thực' : 'Chưa xác thực'}</span></div>
+            <div style={detailItemStyle}><span style={labelStyle}>Địa chỉ</span><span style={valueStyle}>{user.address || 'Chưa có'}</span></div>
+            <div style={detailItemStyle}>
+              <span style={labelStyle}>Tài khoản bị khóa</span>
+              <span style={{...valueStyle, color: user.lockoutEnabled ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                {user.lockoutEnabled ? 'Có' : 'Không'}
+              </span>
+            </div>
+            <div style={detailItemStyle}><span style={labelStyle}>Khóa đến</span><span style={valueStyle}>{fmtDate(user.lockoutEnd)}</span></div>
+            <div style={detailItemStyle}><span style={labelStyle}>Số lần đăng nhập sai</span><span style={valueStyle}>{user.accessFailedCount ?? 0}</span></div>
+            <div style={detailItemStyle}><span style={labelStyle}>Ngày tạo</span><span style={valueStyle}>{fmtDate(user.createdAt)}</span></div>
+            <div style={detailItemStyle}><span style={labelStyle}>Cập nhật lần cuối</span><span style={valueStyle}>{fmtDate(user.updatedAt)}</span></div>
+          </div>
+        )}
       </div>
     </div>
   );

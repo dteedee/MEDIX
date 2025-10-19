@@ -54,6 +54,12 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
                 .AnyAsync(u => u.NormalizedEmail == email.ToUpperInvariant());
         }
 
+        public async Task<User?> GetByUserNameAsync(string userName)
+        {
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.NormalizedUserName == userName.ToUpperInvariant());
+        }
+
         public async Task<User> SaveUserAsync(User user)
         {
             return await CreateAsync(user);

@@ -1,40 +1,40 @@
 export interface UserDTO {
   id: string;
   email: string;
+  userName?: string;
   fullName?: string;
   phoneNumber?: string;
+  address?: string;
+  avatarUrl?: string;
   role?: string; // Thường là vai trò chính, ví dụ: "PATIENT"
   roles?: string[]; // Danh sách tất cả các vai trò
   emailConfirmed?: boolean;
   lockoutEnabled?: boolean;
+  lockoutEnd?: string | null;
   dateOfBirth?: string;
   genderCode?: string;
   identificationNumber?: string;
   createdAt?: string;
   updatedAt?: string;
+  accessFailedCount?: number;
 }
 
 export interface CreateUserRequest {
-  email: string;
-  fullName: string;
-  password?: string;
-  passwordConfirmation?: string;
-  phoneNumber?: string;
-  roleCodes: string[]; // Backend mong đợi một mảng các vai trò
-  dateOfBirth?: string;
-  genderCode?: string;
-  identificationNumber?: string;
+  userName: string;
+  password: string;
+  role?: string;
 }
 
 export interface UpdateUserRequest {
   fullName?: string;
   phoneNumber?: string;
-  roleCodes?: string[]; // Backend mong đợi một mảng các vai trò
+  address?: string;
+  avatarUrl?: string;
+  role?: string;
   emailConfirmed?: boolean;
-  password?: string;
-  passwordConfirmation?: string;
   dateOfBirth?: string;
   genderCode?: string;
   identificationNumber?: string;
   lockoutEnabled?: boolean;
+  lockoutEnd?: string | null;
 }

@@ -49,4 +49,9 @@ namespace Medix.API.Models.DTOs
        
     }
 
+
+    public class GoogleLoginRequestDto
+    {
+        public string IdToken { get; set; } = string.Empty;
+    }
 }

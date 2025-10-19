@@ -77,10 +77,41 @@ namespace Medix.API.Business.Services.Community
             return true;
         }
 
-        public async Task<string> GenerateImageUrlAsync(string publicId, int width = 0, int height = 0)
+		public async Task<string> GenerateImageUrlAsync(string publicId, int width = 0, int height = 0)
+		{
+			await Task.Delay(50);
+			return $"https://placeholder.com/{width}x{height}/{publicId}";
+		}
+
+        public async Task<string> UploadImageAsyncFile(Stream imageStream, string fileName)
         {
-            await Task.Delay(50);
-            return $"https://placeholder.com/{width}x{height}/{publicId}";
+            try
+            {
+                var uploadParams = new ImageUploadParams
+                {
+                    File = new FileDescription(fileName, imageStream),
+                    PublicId = fileName,
+                    Overwrite = true,
+                    Folder = "user-avatars"
+                };
+
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+
+                if (uploadResult.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    return uploadResult.SecureUrl.ToString();
+                }
+                else
+                {
+                    _logger.LogError("Cloudinary upload failed: {0}", uploadResult.Error?.Message);
+                    return string.Empty;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception when uploading image to Cloudinary");
+                return string.Empty;
+            }
         }
     }
 }

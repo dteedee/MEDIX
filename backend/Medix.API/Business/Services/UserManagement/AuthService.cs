@@ -4,6 +4,8 @@ using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Exceptions;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
+using Google.Apis.Auth;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medix.API.Business.Services.UserManagement
 {
@@ -11,22 +13,51 @@ namespace Medix.API.Business.Services.UserManagement
     {
         private readonly IUserRepository _userRepository;
         private readonly IJwtService _jwtService;
-        private readonly IUserRoleRepository userRoleRepository;
-        public AuthService(IUserRepository userRepository, IJwtService jwtService, IUserRoleRepository userRoleRepository)
+        private readonly IEmailService _emailService;
+        private readonly IUserRoleRepository _userRoleRepository;
+        private readonly DataAccess.MedixContext _context;
+
+        public AuthService(
+            IUserRepository userRepository,
+            IJwtService jwtService,
+            IEmailService emailService,
+            IUserRoleRepository userRoleRepository,
+            DataAccess.MedixContext context)
         {
             _userRepository = userRepository;
             _jwtService = jwtService;
-            this.userRoleRepository = userRoleRepository;
+            _emailService = emailService;
+            _userRoleRepository = userRoleRepository;
+            _context = context;
         }
 
+        // =====================
+        // 🔹 LOGIN
+        // =====================
         public async Task<AuthResponseDto> LoginAsync(LoginRequestDto loginRequest)
         {
             var user = await _userRepository.GetByEmailAsync(loginRequest.Email);
-            
+
             if (user != null && BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash))
-            {var role = await userRoleRepository.GetByIdAsync(user.Id);
-                var accessToken = _jwtService.GenerateAccessToken(user, new List<string> {role.RoleCode });
+            {
+                // Lấy role từ bảng UserRoles (ưu tiên DB)
+                var roleEntity = await _userRoleRepository.GetByIdAsync(user.Id);
+                var roleCode = roleEntity?.RoleCode ?? user.Role ?? "Patient";
+
+                var accessToken = _jwtService.GenerateAccessToken(user, new List<string> { roleCode });
                 var refreshToken = _jwtService.GenerateRefreshToken();
+
+                // Lưu refresh token vào DB
+                var refreshEntity = new RefreshToken
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    Token = refreshToken,
+                    CreatedAt = DateTime.UtcNow,
+                    ExpiresAt = DateTime.UtcNow.AddDays(7)
+                };
+                _context.RefreshTokens.Add(refreshEntity);
+                await _context.SaveChangesAsync();
 
                 return new AuthResponseDto
                 {
@@ -38,7 +69,7 @@ namespace Medix.API.Business.Services.UserManagement
                         Id = user.Id,
                         Email = user.Email,
                         FullName = user.FullName,
-                        Role = role.RoleCode,
+                        Role = roleCode,
                         EmailConfirmed = user.EmailConfirmed,
                         CreatedAt = user.CreatedAt
                     }
@@ -48,6 +79,9 @@ namespace Medix.API.Business.Services.UserManagement
             throw new UnauthorizedException("Email hoặc mật khẩu không đúng");
         }
 
+        // =====================
+        // 🔹 REGISTER
+        // =====================
         public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto registerRequest)
         {
             var existingUser = await _userRepository.GetByEmailAsync(registerRequest.Email);
@@ -74,8 +108,23 @@ namespace Medix.API.Business.Services.UserManagement
 
             await _userRepository.CreateAsync(user);
 
-            var accessToken = _jwtService.GenerateAccessToken(user, new List<string> { user.Role });
+            // Mặc định gán vai trò Patient
+            await _userRoleRepository.AssignRole("Patient", user.Id);
+
+            var accessToken = _jwtService.GenerateAccessToken(user, new List<string> { "Patient" });
             var refreshToken = _jwtService.GenerateRefreshToken();
+
+            // Lưu refresh token
+            var refreshEntity = new RefreshToken
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Token = refreshToken,
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddDays(7)
+            };
+            _context.RefreshTokens.Add(refreshEntity);
+            await _context.SaveChangesAsync();
 
             return new AuthResponseDto
             {
@@ -87,37 +136,199 @@ namespace Medix.API.Business.Services.UserManagement
                     Id = user.Id,
                     Email = user.Email,
                     FullName = user.FullName,
-                    Role = user.Role,
+                    Role = "Patient",
                     EmailConfirmed = user.EmailConfirmed,
                     CreatedAt = user.CreatedAt
                 }
             };
         }
 
-        public Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequestDto refreshTokenRequest)
+        // =====================
+        // 🔹 REFRESH TOKEN
+        // =====================
+        public async Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequestDto refreshTokenRequest)
         {
-            throw new NotImplementedException("Refresh token chưa được triển khai");
+            var storedToken = await _context.RefreshTokens
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.Token == refreshTokenRequest.RefreshToken);
+
+            if (storedToken == null || storedToken.ExpiresAt < DateTime.UtcNow)
+            {
+                throw new UnauthorizedException("Refresh token không hợp lệ hoặc đã hết hạn");
+            }
+
+            var user = storedToken.User;
+            var roleEntity = await _userRoleRepository.GetByIdAsync(user.Id);
+            var roleCode = roleEntity?.RoleCode ?? user.Role ?? "Patient";
+
+            var newAccessToken = _jwtService.GenerateAccessToken(user, new List<string> { roleCode });
+            var newRefreshToken = _jwtService.GenerateRefreshToken();
+
+            _context.RefreshTokens.Remove(storedToken);
+
+            var newTokenEntity = new RefreshToken
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Token = newRefreshToken,
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddDays(7)
+            };
+
+            _context.RefreshTokens.Add(newTokenEntity);
+            await _context.SaveChangesAsync();
+
+            return new AuthResponseDto
+            {
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshToken,
+                ExpiresAt = DateTime.UtcNow.AddHours(1),
+                User = new UserDto
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    FullName = user.FullName,
+                    Role = roleCode,
+                    EmailConfirmed = user.EmailConfirmed,
+                    CreatedAt = user.CreatedAt
+                }
+            };
         }
 
-        public Task<bool> ForgotPasswordAsync(ForgotPasswordRequestDto forgotPasswordRequest)
+        // =====================
+        // 🔹 GOOGLE LOGIN
+        // =====================
+        public async Task<AuthResponseDto> LoginWithGoogleAsync(GoogleLoginRequestDto request)
         {
-            throw new NotImplementedException("Forgot password chưa được triển khai");
+            var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken);
+            var email = payload.Email;
+            var fullName = payload.Name ?? email;
+
+            var existingUser = await _userRepository.GetByEmailAsync(email);
+            if (existingUser == null)
+            {
+                var newUser = new User
+                {
+                    Id = Guid.NewGuid(),
+                    UserName = email,
+                    NormalizedUserName = email.ToUpperInvariant(),
+                    Email = email,
+                    NormalizedEmail = email.ToUpperInvariant(),
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
+                    FullName = fullName,
+                    EmailConfirmed = true,
+                    Status = 1,
+                    IsProfileCompleted = false,
+                    LockoutEnabled = false,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                await _userRepository.CreateAsync(newUser);
+                await _userRoleRepository.AssignRole("Patient", newUser.Id);
+
+                existingUser = newUser;
+                existingUser.Role = "Patient";
+            }
+            else if (string.IsNullOrEmpty(existingUser.Role))
+            {
+                var roleEntity = await _userRoleRepository.GetByIdAsync(existingUser.Id);
+                existingUser.Role = roleEntity?.RoleCode ?? "Patient";
+            }
+
+            var accessToken = _jwtService.GenerateAccessToken(existingUser, new List<string> { existingUser.Role });
+            var refreshToken = _jwtService.GenerateRefreshToken();
+
+            var refreshEntity = new RefreshToken
+            {
+                Id = Guid.NewGuid(),
+                UserId = existingUser.Id,
+                Token = refreshToken,
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddDays(7)
+            };
+
+            _context.RefreshTokens.Add(refreshEntity);
+            await _context.SaveChangesAsync();
+
+            return new AuthResponseDto
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                ExpiresAt = DateTime.UtcNow.AddHours(1),
+                User = new UserDto
+                {
+                    Id = existingUser.Id,
+                    Email = existingUser.Email,
+                    FullName = existingUser.FullName,
+                    Role = existingUser.Role,
+                    EmailConfirmed = true,
+                    CreatedAt = existingUser.CreatedAt
+                }
+            };
         }
 
-        public Task<bool> ResetPasswordAsync(ResetPasswordRequestDto resetPasswordRequest)
+        // =====================
+        // 🔹 PASSWORD MANAGEMENT
+        // =====================
+        public async Task<bool> ForgotPasswordAsync(ForgotPasswordRequestDto request)
         {
-            throw new NotImplementedException("Reset password chưa được triển khai");
+            var user = await _userRepository.GetByEmailAsync(request.Email);
+            if (user == null) return true;
+
+            var token = _jwtService.GeneratePasswordResetToken(user.Email);
+            await _emailService.SendPasswordResetEmailAsync(user.Email, token);
+            return true;
         }
 
-        public Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordRequestDto changePasswordRequest)
+        public async Task<bool> ResetPasswordAsync(ResetPasswordRequestDto request)
         {
-            throw new NotImplementedException("Change password chưa được triển khai");
+            var isValid = _jwtService.ValidatePasswordResetToken(request.Token, request.Email);
+            if (!isValid)
+            {
+                throw new ValidationException(new Dictionary<string, string[]>
+                {
+                    { "Token", new[] { "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn" } }
+                });
+            }
+
+            var user = await _userRepository.GetByEmailAsync(request.Email);
+            if (user == null) return true;
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateAsync(user);
+            return true;
         }
 
+        public async Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordRequestDto request)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+                throw new NotFoundException("User not found");
+
+            if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            {
+                throw new ValidationException(new Dictionary<string, string[]>
+                {
+                    { "CurrentPassword", new[] { "Mật khẩu hiện tại không đúng" } }
+                });
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateAsync(user);
+            return true;
+        }
+
+        // =====================
+        // 🔹 LOGOUT
+        // =====================
         public async Task<bool> LogoutAsync(Guid userId)
         {
-            // Simple logout implementation
-            await Task.Delay(1);
+            var tokens = _context.RefreshTokens.Where(r => r.UserId == userId);
+            _context.RefreshTokens.RemoveRange(tokens);
+            await _context.SaveChangesAsync();
             return true;
         }
     }

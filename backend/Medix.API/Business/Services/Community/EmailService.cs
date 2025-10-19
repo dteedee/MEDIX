@@ -20,14 +20,27 @@ namespace Medix.API.Business.Services.Community
 
         public async Task SendPasswordResetEmailAsync(string email, string resetToken)
         {
-            // In a real application, you would integrate with an email service like SendGrid, AWS SES, etc.
-            _logger.LogInformation($"Password reset email would be sent to {email} with token: {resetToken}");
+            var frontendBaseUrl = _configuration["PasswordReset:FrontendBaseUrl"] ?? "https://localhost:3000";
+            var resetLink = $"{frontendBaseUrl.TrimEnd('/')}/reset-password?token={Uri.EscapeDataString(resetToken)}&email={Uri.EscapeDataString(email)}";
 
-            // For development purposes, we'll just log the reset link
-            var resetLink = $"https://localhost:3000/reset-password?token={resetToken}&email={email}";
-            _logger.LogInformation($"Reset link: {resetLink}");
+            var subject = "Đặt lại mật khẩu Medix";
+            var body = $@"
+                <h2>Yêu cầu đặt lại mật khẩu</h2>
+                <p>Bạn hoặc ai đó đã yêu cầu đặt lại mật khẩu cho tài khoản: <strong>{System.Net.WebUtility.HtmlEncode(email)}</strong></p>
+                <p>Nhấp vào liên kết sau để đặt lại mật khẩu của bạn:</p>
+                <p><a href=""{resetLink}"">Đặt lại mật khẩu</a></p>
+                <p>Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>
+            ";
 
-            await Task.CompletedTask;
+            var sent = await SendEmailAsync(email, subject, body);
+            if (!sent)
+            {
+                _logger.LogWarning($"Failed to send password reset email to {email}. Reset link: {resetLink}");
+            }
+            else
+            {
+                _logger.LogInformation($"Password reset email sent to {email}.");
+            }
         }
 
         public async Task SendEmailVerificationAsync(string email, string verificationToken)

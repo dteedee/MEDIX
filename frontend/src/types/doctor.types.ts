@@ -34,13 +34,13 @@ export enum DoctorStatus {
   SUSPENDED = 'Suspended'
 }
 
-export interface Specialization {
+export interface SpecializationDto {
   id: string;
   name: string;
 }
 
 export interface DoctorRegisterMetadata{
-  specializations: Specialization[];
+  specializations: SpecializationDto[];
 }
 
 export interface ReviewDto{

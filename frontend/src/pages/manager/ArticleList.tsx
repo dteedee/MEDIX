@@ -124,12 +124,6 @@ export default function ArticleList() {
     }
   }
 
-  const handleSearch = () => {
-    setPage(1);
-    setAppliedSearch(search); // Apply the search term for filtering
-    setShowSuggestions(false);
-  }
-
   const handleSort = (column: string) => {
     if (sortBy === column) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -141,6 +135,9 @@ export default function ArticleList() {
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
+    setAppliedSearch(value); // Áp dụng tìm kiếm ngay khi người dùng nhập
+    setPage(1); // Reset về trang đầu tiên khi có tìm kiếm mới
+
     if (value.trim()) {
       // Suggestions should be based on the full, unfiltered list
       const filteredSuggestions = items.filter(item => 
@@ -158,7 +155,6 @@ export default function ArticleList() {
     setSearch(suggestion.title);
     setSuggestions([]);
     setShowSuggestions(false);
-    // Immediately apply the search when a suggestion is clicked
     setAppliedSearch(suggestion.title);
   };
 
@@ -286,7 +282,6 @@ export default function ArticleList() {
         placeholder="Tìm theo tiêu đề..."
         value={search}
         onChange={e => handleSearchChange(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
         style={{
           width: "80%",
           padding: "10px 12px",
@@ -439,20 +434,6 @@ export default function ArticleList() {
         flex: "0 0 auto",
       }}
     >
-      <button
-        onClick={handleSearch}
-        style={{
-          padding: "10px 20px",
-          background: "#1b68d5ff",
-          color: "#fff",
-          borderRadius: 8,
-          border: "none",
-          fontWeight: 500,
-          cursor: "pointer",
-        }}
-      >
-        Tìm
-      </button>
       <button
         onClick={() => {
           // Clear all filter states

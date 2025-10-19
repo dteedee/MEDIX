@@ -2,15 +2,18 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../../services/authService';
 import { apiClient } from '../../lib/apiClient';
+import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 const GOOGLE_CLIENT_ID = import.meta.env?.VITE_GOOGLE_CLIENT_ID as string | undefined;
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [googleError, setGoogleError] = useState<string | null>(null);
@@ -19,6 +22,15 @@ const Login: React.FC = () => {
 
   const errorTimerRef = useRef<number | null>(null);
   const successTimerRef = useRef<number | null>(null);
+
+  // Load remembered email on component mount
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem('rememberEmail');
+    if (rememberedEmail) {
+      setIdentifier(rememberedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) {
@@ -87,26 +99,58 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setGoogleError(null);
+    // Don't clear errors immediately - let them show until new result
+    // setError(null);
+    // setGoogleError(null);
 
     setIsLoading(true);
     try {
-      const response = await authService.login({ email: identifier, password });
-      apiClient.setTokens(response.accessToken, response.refreshToken);
+      // Use AuthContext.login so it updates central auth state, saves currentUser
+      await login({ email: identifier, password });
+
+      // remember email is still handled by this component
       if (rememberMe) {
         localStorage.setItem('rememberEmail', identifier);
       } else {
         localStorage.removeItem('rememberEmail');
       }
 
-      // show green success popup then navigate
+      // Clear any previous errors and show success
+      setError(null);
+      setGoogleError(null);
       setSuccessMsg('Đăng nhập thành công');
-      // navigate after short delay so user sees popup
-      setTimeout(() => navigate('/'), 1200);
+      // navigate to role-based dashboard after short delay
+      setTimeout(() => {
+        const userRole = localStorage.getItem('currentUser') ? 
+          JSON.parse(localStorage.getItem('currentUser')!).role : 'USER';
+        
+        switch (userRole) {
+          case 'ADMIN':
+          case 'Admin':
+            navigate('/app/admin');
+            break;
+          case 'MANAGER':
+          case 'Manager':
+            navigate('/app/manager');
+            break;
+          case 'DOCTOR':
+          case 'Doctor':
+            navigate('/app/doctor');
+            break;
+          case 'PATIENT':
+          case 'Patient':
+            navigate('/app/patient');
+            break;
+          default:
+            navigate('/app/dashboard');
+        }
+      }, 1200);
     } catch (err: any) {
       const status = err?.response?.status;
       const message = err?.message || '';
+      // Clear any previous success messages and show error
+      setSuccessMsg(null);
+      
       // If backend returned unauthorized -> show specific message for 5s
       if (status === 401 || message.includes('Email hoặc mật khẩu') || message.includes('Tên đăng nhập/Email hoặc mật khẩu') || message.toLowerCase().includes('unauthorized')) {
         setError('Sai tên đăng nhập/email hoặc mật khẩu, vui lòng kiểm tra lại');
@@ -129,12 +173,60 @@ const Login: React.FC = () => {
       setIsLoading(true);
       const idToken = response.credential;
       const auth = await authService.loginWithGoogle(idToken);
+      console.log('Google login response:', auth);
       apiClient.setTokens(auth.accessToken, auth.refreshToken);
 
+      // Ensure Header/Auth listeners pick up the new user
+      if (auth?.user) {
+        console.log('Google login user data:', auth.user);
+        localStorage.setItem('userData', JSON.stringify(auth.user));
+        localStorage.setItem('currentUser', JSON.stringify(auth.user));
+        window.dispatchEvent(new Event('authChanged'));
+      } else {
+        console.log('No user data in Google login response');
+      }
+
+      // Clear any previous errors and show success
+      setError(null);
+      setGoogleError(null);
+      console.log('Setting Google success message...');
       setSuccessMsg('Đăng nhập bằng Google thành công');
-      setTimeout(() => navigate('/'), 1200);
+      setTimeout(() => {
+        const currentUser = localStorage.getItem('currentUser');
+        console.log('Current user from localStorage:', currentUser);
+        const userRole = currentUser ? 
+          JSON.parse(currentUser).role : 'USER';
+        console.log('User role for redirect:', userRole);
+        
+        switch (userRole) {
+          case 'ADMIN':
+          case 'Admin':
+            console.log('Redirecting to /app/admin');
+            navigate('/app/admin');
+            break;
+          case 'MANAGER':
+          case 'Manager':
+            console.log('Redirecting to /app/manager');
+            navigate('/app/manager');
+            break;
+          case 'DOCTOR':
+          case 'Doctor':
+            console.log('Redirecting to /app/doctor');
+            navigate('/app/doctor');
+            break;
+          case 'PATIENT':
+          case 'Patient':
+            console.log('Redirecting to /app/patient');
+            navigate('/app/patient');
+            break;
+          default:
+            console.log('Redirecting to /app/dashboard');
+            navigate('/app/dashboard');
+        }
+      }, 1200);
     } catch (err: any) {
-      console.error('Google login error:', err);
+      // Clear any previous success messages and show error
+      setSuccessMsg(null);
       setGoogleError(err?.message || 'Đăng nhập Google thất bại.');
     } finally {
       setIsLoading(false);
@@ -165,24 +257,66 @@ const Login: React.FC = () => {
 
             {/* Error alert (red) */}
             {error && (
-              <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2" role="alert">
-                {error}
+              <div 
+                style={{
+                  marginBottom: '16px',
+                  fontSize: '14px',
+                  color: '#dc2626',
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '6px',
+                  padding: '12px',
+                  fontWeight: '500',
+                  zIndex: 9999,
+                  position: 'relative'
+                }}
+                role="alert"
+              >
+                ❌ {error}
               </div>
             )}
 
             {/* Google error */}
             {googleError && (
-              <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2" role="alert">
-                {googleError}
+              <div 
+                style={{
+                  marginBottom: '16px',
+                  fontSize: '14px',
+                  color: '#dc2626',
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '6px',
+                  padding: '12px',
+                  fontWeight: '500'
+                }}
+                role="alert"
+              >
+                ❌ {googleError}
               </div>
             )}
 
             {/* Success popup (green) */}
             {successMsg && (
-              <div className="mb-4 text-sm text-green-800 bg-green-50 border border-green-200 rounded p-2" role="status">
-                {successMsg}
+              <div 
+                style={{
+                  marginBottom: '16px',
+                  fontSize: '14px',
+                  color: '#166534',
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '6px',
+                  padding: '12px',
+                  fontWeight: '500',
+                  zIndex: 9999,
+                  position: 'relative'
+                }}
+                role="status"
+              >
+                ✅ {successMsg}
               </div>
             )}
+            {/* Debug: Show success state */}
+            {console.log('Success state in render:', successMsg)}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -190,7 +324,7 @@ const Login: React.FC = () => {
                 <Input
                   id="identifier"
                   type="text"
-                  placeholder="Tên đăng nhập hoặc Email@example.com"
+                  placeholder="Tên đăng nhập hoặc Email"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   required
@@ -198,14 +332,33 @@ const Login: React.FC = () => {
               </div>
               <div>
                 <label htmlFor="password" className="block text-sm mb-1">Mật khẩu</label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm">

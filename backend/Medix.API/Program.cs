@@ -103,7 +103,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // ================= APPLICATION SERVICES =================
-builder.Services.AddAutoMapper(cfg => cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
+// AutoMapper is already configured in ServiceConfiguration.cs
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IEmailService, EmailService>();

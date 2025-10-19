@@ -710,21 +710,6 @@ export const PatientRegister: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-blue-600 text-white py-4">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="text-2xl font-bold">MEDIX</Link>
-            <p className="text-blue-100">HỆ THỐNG Y TẾ THÔNG MINH ỨNG DỤNG AI</p>
-            <div className="flex space-x-4">
-              <Link to="/login" className="bg-transparent border border-white px-4 py-2 rounded hover:bg-white hover:text-blue-600 transition">
-                Đăng Nhập
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="registration-container">
         <form onSubmit={handleSubmit} className="registration-form">

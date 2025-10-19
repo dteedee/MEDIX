@@ -4,10 +4,9 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 import { authService } from '../../services/authService';
-import { emailVerificationService } from '../../services/mailverified';
 import registrationService from '../../services/registrationService';
 // @ts-ignore: allow importing CSS without type declarations
-import '../../style/RegistrationPage.css';
+import '../../style/ForgotPassword.css';
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -50,48 +49,68 @@ const ForgotPassword: React.FC = () => {
       return;
     }
 
-    setError('');
     setIsCheckingEmail(true);
-    setEmailExists(false);
+    setError('');
 
     try {
-      // First check if email exists in the system
+      // Check if email exists
       const checkRes = await registrationService.checkEmailExists(email);
+      
       if (!checkRes.success || !checkRes.data.exists) {
-        setEmailExists(true);
+        setError('Email không tồn tại trong hệ thống');
         setIsCheckingEmail(false);
         return;
       }
 
-      // If email exists, send forgot password OTP
-      await authService.forgotPassword({ email });
-      setEmailVerificationSent(true);
-      setResendCountdown(60); // 60 seconds countdown
-      setResendEndTime(Date.now() + 60000);
-    } catch (err: any) {
-      setError(err?.message || 'Có lỗi xảy ra khi kiểm tra email');
+      setEmailExists(true);
+
+      // Send verification code
+      const code = await authService.sendForgotPasswordCode(email);
+      
+      if (code) {
+        setEmailVerificationSent(true);
+        setResendCountdown(60); // 60 seconds countdown
+        setResendEndTime(Date.now() + 60000);
+        setError('');
+      } else {
+        setError('Không thể gửi mã xác thực. Vui lòng thử lại.');
+      }
+    } catch (error: any) {
+      console.error('Error sending verification code:', error);
+      setError(error.response?.data?.message || 'Có lỗi xảy ra khi gửi mã xác thực');
     } finally {
       setIsCheckingEmail(false);
     }
   };
 
-  // Verify the OTP code
+  // Verify the entered code
   const handleVerifyCode = async () => {
     if (!verificationCode) {
-      setError('Vui lòng nhập mã xác nhận');
+      setError('Vui lòng nhập mã xác thực');
       return;
     }
 
-    setError('');
+    if (verificationCode.length !== 6) {
+      setError('Mã xác thực phải có 6 chữ số');
+      return;
+    }
+
     setIsVerifyingCode(true);
+    setError('');
 
     try {
-      // For forgot password, we don't need to verify the code here
-      // Just redirect to reset password page with email and code
-      setEmailVerified(true);
-      navigate(`/reset-password?email=${encodeURIComponent(email)}&code=${encodeURIComponent(verificationCode)}`);
-    } catch (err: any) {
-      setError(err?.message || 'Không thể xác thực mã');
+      const result = await authService.verifyForgotPasswordCode(email, verificationCode);
+      
+      if (result.success) {
+        setEmailVerified(true);
+        // Navigate to reset password page with email and code
+        navigate(`/reset-password?email=${encodeURIComponent(email)}&code=${encodeURIComponent(verificationCode)}`);
+      } else {
+        setError(result.message || 'Mã xác thực không đúng');
+      }
+    } catch (error: any) {
+      console.error('Error verifying code:', error);
+      setError('Có lỗi xảy ra khi xác thực mã');
     } finally {
       setIsVerifyingCode(false);
     }
@@ -101,110 +120,93 @@ const ForgotPassword: React.FC = () => {
   const handleResendCode = async () => {
     if (resendCountdown > 0) return;
 
-    setError('');
-    setIsCheckingEmail(true);
-
     try {
-      await authService.forgotPassword({ email });
-      setResendCountdown(60);
-      setResendEndTime(Date.now() + 60000);
-    } catch (err: any) {
-      setError(err?.message || 'Có lỗi xảy ra khi gửi lại mã');
-    } finally {
-      setIsCheckingEmail(false);
+      const code = await authService.resendForgotPasswordCode(email);
+      
+      if (code) {
+        setResendCountdown(60);
+        setResendEndTime(Date.now() + 60000);
+        setError('');
+        setVerificationCode(''); // Clear the input field
+      } else {
+        setError('Không thể gửi lại mã xác thực');
+      }
+    } catch (error: any) {
+      console.error('Error resending code:', error);
+      setError('Có lỗi xảy ra khi gửi lại mã xác thực');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 p-4">
-      <div className="w-full max-w-3xl px-6 py-12">
-        <div className="mx-auto" style={{ width: '60%' }}>
-          <Card className="w-full p-8">
-            <div className="flex items-center justify-center mb-4">
-              <div className="p-3 bg-blue-600/10 rounded-full">📧</div>
-            </div>
-            <h1 className="text-2xl font-semibold text-center mb-1">Quên mật khẩu?</h1>
-            <p className="text-sm text-gray-500 text-center mb-6">Nhập email của bạn để nhận mã xác nhận.</p>
+    <div className="forgot-password-page">
+      <div className="forgot-password-container">
+        <Card className="forgot-password-card">
+          <div className="forgot-password-header">
+            <h1 className="forgot-password-title">Quên mật khẩu?</h1>
+            <p className="forgot-password-subtitle">
+              Nhập email của bạn để nhận mã xác nhận.
+            </p>
+          </div>
 
-            <div className="form-group">
-              <label className="required">Email</label>
-              <div className="email-input-group">
-                <input
-                  type="email"
-                  name="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email@example.com"
-                  disabled={emailVerified}
-                  className={emailVerified ? 'success' : emailExists ? 'error' : ''}
-                  style={emailExists ? { borderColor: '#e74c3c', backgroundColor: '#fdf2f2' } : {}}
-                />
-                {/* Hide button when verification code is sent but not yet verified */}
-                {!emailVerificationSent && (
-                  <button
-                    type="button"
+          <div className="forgot-password-form">
+            {/* Email Input Section */}
+            {!emailVerificationSent && (
+              <div className="email-input-section">
+                <div className="email-input-group">
+                  <Input
+                    type="email"
+                    placeholder="Email *"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (error) setError('');
+                    }}
+                    className="email-input"
+                  />
+                  <Button
                     onClick={handleSendVerificationCode}
-                    disabled={isCheckingEmail || emailVerified || !email || emailExists}
-                    className={`verify-email-btn ${emailVerified ? 'verified' : ''} ${isCheckingEmail ? 'checking' : ''}`}
+                    disabled={isCheckingEmail || !email}
+                    className="send-code-btn"
                   >
-                    {isCheckingEmail ? 'Đang kiểm tra...' : emailVerified ? '✓ Đã xác thực' : 'Gửi mã xác thực'}
-                  </button>
-                )}
-                {emailVerified && (
-                  <button
-                    type="button"
-                    disabled
-                    className="verify-email-btn verified"
-                  >
-                    ✓ Đã xác thực
-                  </button>
+                    {isCheckingEmail ? 'Đang gửi...' : 'Gửi mã xác thực'}
+                  </Button>
+                </div>
+
+                {/* Error message */}
+                {error && (
+                  <div className="error-message" style={{ 
+                    marginTop: '8px', 
+                    fontSize: '12px',
+                    padding: '8px 12px',
+                    borderLeft: '3px solid #e74c3c',
+                    backgroundColor: '#fdf2f2',
+                    color: '#e74c3c'
+                  }}>
+                    ❌ {error}
+                  </div>
                 )}
               </div>
-              {isCheckingEmail && (
-                <div className="mt-1">
-                  <span className="info-text" style={{ fontSize: '12px', color: '#6c757d' }}>
-                    Đang kiểm tra email...
-                  </span>
-                </div>
-              )}
-              {emailExists && (
-                <div className="error-message" style={{ 
-                  marginTop: '4px', 
-                  fontSize: '12px',
-                  padding: '8px 12px',
-                  borderLeft: '3px solid #e74c3c'
-                }}>
-                  ❌ Email này không tồn tại trong hệ thống. Vui lòng kiểm tra lại.
-                </div>
-              )}
-              {emailVerificationSent && !emailVerified && !emailExists && (
-                <div className="success-message" style={{ 
-                  marginTop: '4px', 
-                  fontSize: '12px',
-                  padding: '8px 12px',
-                  borderLeft: '3px solid #27ae60',
-                  backgroundColor: '#f8fff8',
-                  color: '#27ae60'
-                }}>
-                  ✅ Mã xác thực đã được gửi đến email của bạn!
-                </div>
-              )}
-              {emailVerified && !emailExists && (
-                <div className="email-verified-message" style={{ 
-                  marginTop: '4px', 
-                  fontSize: '12px',
-                  padding: '8px 12px',
-                  borderLeft: '3px solid #27ae60',
-                  backgroundColor: '#f8f9fa',
-                  color: '#27ae60'
-                }}>
-                  ✓ Email đã được xác thực
-                </div>
-              )}
-            </div>
+            )}
 
-            {/* Verification Code Section - Only show if email doesn't exist */}
-            {emailVerificationSent && !emailVerified && !emailExists && (
+            {/* Success message when email is sent */}
+            {emailVerificationSent && !emailVerified && emailExists && (
+              <div className="success-message" style={{
+                padding: '12px 16px',
+                backgroundColor: '#d4edda',
+                border: '1px solid #c3e6cb',
+                borderRadius: '4px',
+                color: '#155724',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                ✅ Mã xác thực đã được gửi đến email của bạn!
+              </div>
+            )}
+
+            {/* OTP Input Section */}
+            {emailVerificationSent && !emailVerified && emailExists && (
               <div className="verification-code-section">
                 <div className="verification-info">
                   <p className="info-text">
@@ -216,7 +218,7 @@ const ForgotPassword: React.FC = () => {
                   <input
                     type="text"
                     className="verification-code-input"
-                    placeholder="Nhập mã xác nhận"
+                    placeholder="Nhập mã"
                     value={verificationCode}
                     onChange={(e) => {
                       setVerificationCode(e.target.value);
@@ -265,11 +267,14 @@ const ForgotPassword: React.FC = () => {
               </div>
             )}
 
-            <div className="text-center mt-6">
-              <Link to="/login" className="text-sm text-gray-600 hover:text-blue-600">Quay lại đăng nhập</Link>
+            {/* Back to login link */}
+            <div className="forgot-password-footer">
+              <Link to="/login" className="back-to-login-link">
+                Quay lại đăng nhập
+              </Link>
             </div>
-          </Card>
-        </div>
+          </div>
+        </Card>
       </div>
     </div>
   );

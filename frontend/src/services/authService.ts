@@ -98,9 +98,28 @@ export class AuthService {
   }
 
   // ===================== FORGOT PASSWORD =====================
-  async forgotPassword(data: ForgotPasswordRequest): Promise<void> {
+  async sendForgotPasswordCode(email: string): Promise<string> {
     try {
-      await apiClient.post('/auth/forgot-password', data);
+      const response = await apiClient.post('/auth/sendForgotPasswordCode', email);
+      return response.data;
+    } catch (error: any) {
+      throw this.handleApiError(error);
+    }
+  }
+
+  async verifyForgotPasswordCode(email: string, code: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await apiClient.post('/auth/verifyForgotPasswordCode', { email, code });
+      return { success: true, message: response.data.message };
+    } catch (error: any) {
+      return { success: false, message: error.response?.data?.message || 'Lỗi xác thực mã' };
+    }
+  }
+
+  async resendForgotPasswordCode(email: string): Promise<string> {
+    try {
+      const response = await apiClient.post('/auth/resendForgotPasswordCode', email);
+      return response.data;
     } catch (error: any) {
       throw this.handleApiError(error);
     }

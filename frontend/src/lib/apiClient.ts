@@ -106,7 +106,20 @@ class ApiClient {
 
   // Token management
   private getAccessToken(): string | null {
-    return localStorage.getItem('accessToken');
+    const token = localStorage.getItem('accessToken');
+    const expiration = localStorage.getItem('tokenExpiration');
+    
+    // Check if token is expired
+    if (token && expiration) {
+      const expirationTime = parseInt(expiration);
+      if (Date.now() >= expirationTime) {
+        // Token expired, clear it
+        this.clearTokens();
+        return null;
+      }
+    }
+    
+    return token;
   }
 
   private getRefreshToken(): string | null {
@@ -116,11 +129,15 @@ class ApiClient {
   public setTokens(accessToken: string, refreshToken: string): void {
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
+    // Set token expiration time (30 minutes from now)
+    const expirationTime = Date.now() + (30 * 60 * 1000); // 30 minutes
+    localStorage.setItem('tokenExpiration', expirationTime.toString());
   }
 
   public clearTokens(): void {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('tokenExpiration');
   }
 
   private handleLogout(): void {

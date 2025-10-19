@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Medix.API.Exceptions;
 using Medix.API.Business.Interfaces.UserManagement;
+using Medix.API.Business.Interfaces.Community;
 using Medix.API.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
-using Medix.API.Models.DTOs;
+using Medix.API.DataAccess;
+using Medix.API.Business.Services.UserManagement;
 
 namespace Medix.API.Presentation.Controller.UserManagement
 {
@@ -14,11 +16,15 @@ namespace Medix.API.Presentation.Controller.UserManagement
     {
         private readonly IAuthService _authService;
         private readonly ILogger<AuthController> _logger;
+        private readonly IEmailService _emailService;
+        private readonly MedixContext _context;
 
-        public AuthController(IAuthService authService, ILogger<AuthController> logger)
+        public AuthController(IAuthService authService, ILogger<AuthController> logger, IEmailService emailService, MedixContext context)
         {
             _authService = authService;
             _logger = logger;
+            _emailService = emailService;
+            _context = context;
         }
 
         [HttpPost("login")]
@@ -96,23 +102,74 @@ namespace Medix.API.Presentation.Controller.UserManagement
             }
         }
 
-        [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto forgotPasswordRequest)
+        [HttpPost("sendForgotPasswordCode")]
+        public async Task<string> SendForgotPasswordCode([FromBody] string email)
         {
             try
             {
-                if (!ModelState.IsValid)
+                // Generate OTP using OTPManager
+                var verificationCode = OTPManager.GenerateOTP(email);
+
+                // Gửi email
+                var result = await _emailService.SendForgotPasswordCodeAsync(email, verificationCode);
+                
+                if (!result)
                 {
-                    return BadRequest(ModelState);
+                    Console.WriteLine($"Warning: Failed to send verification email to {email}");
                 }
 
-                await _authService.ForgotPasswordAsync(forgotPasswordRequest);
-                return Ok(new { message = "If the email exists, a password reset link has been sent" });
+                return verificationCode;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during forgot password");
-                return StatusCode(500, new { message = "An error occurred during forgot password" });
+                Console.WriteLine($"Error in SendForgotPasswordCode: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return null;
+            }
+        }
+
+        [HttpPost("verifyForgotPasswordCode")]
+        public async Task<IActionResult> VerifyForgotPasswordCode([FromBody] EmailCodeVerifyRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Code))
+                return BadRequest(new { message = "Email và mã xác thực là bắt buộc" });
+
+            // Verify OTP using OTPManager
+            var isValid = OTPManager.VerifyOTP(request.Email, request.Code);
+            
+            if (isValid)
+            {
+                return Ok(new { message = "Xác thực thành công" });
+            }
+            else
+            {
+                return BadRequest(new { message = "Mã xác thực không đúng hoặc đã hết hạn" });
+            }
+        }
+
+        [HttpPost("resendForgotPasswordCode")]
+        public async Task<string> ResendForgotPasswordCode([FromBody] string email)
+        {
+            try
+            {
+                // Generate new OTP using OTPManager (this will automatically invalidate the old one)
+                var newCode = OTPManager.GenerateOTP(email);
+
+                // Gửi email
+                var result = await _emailService.SendForgotPasswordCodeAsync(email, newCode);
+                
+                if (!result)
+                {
+                    Console.WriteLine($"Warning: Failed to send verification email to {email}");
+                }
+
+                return newCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in ResendForgotPasswordCode: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return null;
             }
         }
 
@@ -126,8 +183,27 @@ namespace Medix.API.Presentation.Controller.UserManagement
                     return BadRequest(ModelState);
                 }
 
-                await _authService.ResetPasswordAsync(resetPasswordRequest);
-                return Ok(new { message = "Password has been reset successfully" });
+                // First verify the OTP
+                var isOTPValid = OTPManager.VerifyOTP(resetPasswordRequest.Email, resetPasswordRequest.Code);
+                
+                if (!isOTPValid)
+                {
+                    return BadRequest(new { message = "Mã xác thực không đúng hoặc đã hết hạn" });
+                }
+
+                // Reset password
+                var result = await _authService.ResetPasswordAsync(resetPasswordRequest);
+                
+                if (result)
+                {
+                    // Mark OTP as used after successful password reset
+                    OTPManager.MarkOTPAsUsed(resetPasswordRequest.Email);
+                    return Ok(new { message = "Đặt lại mật khẩu thành công" });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Không thể đặt lại mật khẩu" });
+                }
             }
             catch (ValidationException ex)
             {
@@ -138,6 +214,13 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 _logger.LogError(ex, "Error during password reset");
                 return StatusCode(500, new { message = "An error occurred during password reset" });
             }
+        }
+
+        // Request DTO
+        public class EmailCodeVerifyRequest
+        {
+            public string Email { get; set; }
+            public string Code { get; set; }
         }
 
         [HttpPost("change-password")]

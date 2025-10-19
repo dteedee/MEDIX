@@ -9,7 +9,7 @@ interface Props {
   onCancel?: () => void
 }
 
-export default function CategoryForm({ category, onSaved, onCancel }: Props) {
+export default function CategoryForm({ category, onSaved, onCancel }: Props) { // eslint-disable-line
   const { showToast } = useToast()
   const [name, setName] = useState(category?.name ?? '')
   const [slug, setSlug] = useState(category?.slug ?? '')
@@ -17,9 +17,8 @@ export default function CategoryForm({ category, onSaved, onCancel }: Props) {
   const [isActive, setIsActive] = useState<boolean>(category?.isActive ?? true)
   const [parentId, setParentId] = useState<string | null>(category?.parentId ?? null)
   const [saving, setSaving] = useState(false)
-  const [allCategories, setAllCategories] = useState<CategoryDTO[]>([])
+  const [allCategories, setAllCategories] = useState<CategoryDTO[]>([]) // eslint-disable-line
   const [errors, setErrors] = useState<{ slug?: string, name?: string }>({})
-  const [validating, setValidating] = useState<{ slug?: boolean, name?: boolean }>({})
 
   useEffect(() => { // load simple list for parent selection
     let mounted = true
@@ -27,63 +26,50 @@ export default function CategoryForm({ category, onSaved, onCancel }: Props) {
     return () => { mounted = false }
   }, [])
 
-  const validateName = async (nameToValidate: string) => {
-    // Bỏ qua nếu name không thay đổi hoặc rỗng
-    if (!nameToValidate || nameToValidate === category?.name) {
-      setErrors(prev => ({ ...prev, name: undefined }));
-      return;
-    }
-
-    setValidating(prev => ({ ...prev, name: true }));
-    setErrors(prev => ({ ...prev, name: undefined })); // Xóa lỗi cũ
-    try {
-      await categoryService.checkUniqueness('name', nameToValidate, category?.id);
-    } catch (error: any) {
-      const message = error?.response?.data?.message || `Tên danh mục này đã tồn tại. Vui lòng chọn một tên khác.`;
-      setErrors(prev => ({ ...prev, name: message }));
-    } finally {
-      setValidating(prev => ({ ...prev, name: false }));
-    }
-  };
-
-  const validateSlug = async (slugToValidate: string) => {
-    // Bỏ qua nếu slug không thay đổi hoặc rỗng
-    if (!slugToValidate || slugToValidate === category?.slug) {
-      setErrors(prev => ({ ...prev, slug: undefined }));
-      return;
-    }
-
-    setValidating(prev => ({ ...prev, slug: true }));
-    setErrors(prev => ({ ...prev, slug: undefined })); // Xóa lỗi cũ
-    try {
-      // Giả định service có hàm checkUniqueness, bạn cần tự thêm vào
-      // Hàm này sẽ throw lỗi nếu slug đã tồn tại
-      await categoryService.checkUniqueness('slug', slugToValidate, category?.id);
-    } catch (error: any) {
-      const message = error?.response?.data?.message || `Slug này đã tồn tại. Vui lòng chọn một slug khác.`;
-      setErrors(prev => ({ ...prev, slug: message }));
-    } finally {
-      setValidating(prev => ({ ...prev, slug: false }));
+  const validateOnBlur = (field: 'name' | 'slug', value: string) => {
+    if (!value.trim()) {
+      const message = field === 'name' 
+        ? 'Tên danh mục không được để trống.' 
+        : 'Đường dẫn (Slug) không được để trống.';
+      setErrors(prev => ({ ...prev, [field]: message }));
     }
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (errors.slug || errors.name) {
-      // Lỗi đã được hiển thị inline, không cần toast ở đây.
+    // Xóa các lỗi cũ trước khi submit để xác thực lại từ đầu
+    setErrors({});
+
+    if (!name.trim() || !slug.trim()) {
+      showToast('Vui lòng điền đầy đủ các trường bắt buộc.', 'error');
       return;
     }
+
     setSaving(true)
     try {
       const payload: CreateCategoryRequest = { name, slug, description, isActive, parentId }
       if (category) await categoryService.update(category.id, payload)
       else await categoryService.create(payload)
       onSaved?.()
-    } catch (error: any) {
-      console.error('Error saving category:', error)
-      const message = error?.response?.data?.message || 'Đã xảy ra lỗi khi lưu. Vui lòng thử lại.';
-      showToast(message, 'error')
-    } finally { setSaving(false) }
+    } catch (err: any) {
+      console.error('Error saving category:', err)
+      // Kiểm tra xem lỗi có phải là đối tượng lỗi validation đã được xử lý từ service không
+      if (err.Name || err.Slug || err.ParentId) {
+        const newErrors: { name?: string, slug?: string } = {};
+        if (err.Name) newErrors.name = err.Name[0];
+        if (err.Slug) newErrors.slug = err.Slug[0];
+        // Bạn có thể thêm xử lý cho ParentId ở đây nếu cần
+        if (err.ParentId) {
+          showToast(`Lỗi Danh mục cha: ${err.ParentId[0]}`, 'error');
+        }
+        setErrors(newErrors);
+        showToast('Vui lòng kiểm tra lại các thông tin đã nhập.', 'error');
+      } else {
+        // Xử lý các lỗi chung khác
+        const message = err?.response?.data?.message || 'Đã xảy ra lỗi khi lưu. Vui lòng thử lại.';
+        showToast(message, 'error');
+      }
+    } finally { setSaving(false) } // eslint-disable-line
   }
 
   // --- CSS Styles --- (Adopted from UserForm for consistency)
@@ -122,35 +108,27 @@ export default function CategoryForm({ category, onSaved, onCancel }: Props) {
     marginTop: 6,
   }
 
-  const validatingTextStyle: React.CSSProperties = {
-    color: '#6b7280',
-    fontSize: 13,
-    marginTop: 6,
-  }
-
   return (
     <form onSubmit={submit} style={formContainerStyle}>
       <div style={gridStyle}>
         <div>
           <label style={labelStyle}>Tên danh mục</label>
           <input 
-            value={name} 
-            onChange={e => { setName(e.target.value); if (errors.name) setErrors(prev => ({ ...prev, name: undefined })); }} 
-            required 
-            onBlur={(e) => validateName(e.target.value)}
+            value={name}
+            onChange={e => { setName(e.target.value); if (errors.name) setErrors(prev => ({ ...prev, name: undefined })); }}
+            required
+            onBlur={e => validateOnBlur('name', e.target.value)}
             style={{...inputStyle, borderColor: errors.name ? '#ef4444' : '#d1d5db'}} />
-            {validating.name && <div style={validatingTextStyle}>Đang kiểm tra...</div>}
             {errors.name && <div style={errorTextStyle}>{errors.name}</div>}
         </div>
         <div>
           <label style={labelStyle}>Đường dẫn (Slug)</label>
           <input 
-            value={slug} 
-            onChange={e => { setSlug(e.target.value); if (errors.slug) setErrors(prev => ({ ...prev, slug: undefined })); }} 
-            onBlur={(e) => validateSlug(e.target.value)}
+            required
+            value={slug}
+            onChange={e => { setSlug(e.target.value); if (errors.slug) setErrors(prev => ({ ...prev, slug: undefined })); }}
             style={{...inputStyle, borderColor: errors.slug ? '#ef4444' : '#d1d5db'}} 
           />
-          {validating.slug && <div style={validatingTextStyle}>Đang kiểm tra...</div>}
           {errors.slug && <div style={errorTextStyle}>{errors.slug}</div>}
         </div>
         <div style={{ gridColumn: '1 / -1' }}>

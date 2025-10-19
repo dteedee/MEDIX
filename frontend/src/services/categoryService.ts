@@ -48,12 +48,32 @@ export const categoryService = {
     return r.data
   },
   create: async (payload: CreateCategoryRequest): Promise<CategoryDTO> => {
-    const r = await axios.post(BASE, payload, { headers: authHeader() })
-    return r.data
+    try {
+      const r = await axios.post(BASE, payload, { headers: authHeader() })
+      return r.data
+    } catch (error: any) {
+      if (error.response?.data?.errors) {
+        const backendErrors = error.response.data.errors;
+        console.error("Lỗi validation từ backend khi tạo danh mục:", JSON.stringify(backendErrors, null, 2));
+        // Ném lại đối tượng lỗi đã được chia nhỏ để component có thể xử lý
+        throw backendErrors;
+      }
+      // Ném lại các lỗi khác (mạng, server 500, etc.)
+      throw error;
+    }
   },
   update: async (id: string, payload: UpdateCategoryRequest): Promise<CategoryDTO> => {
-    const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() })
-    return r.data
+    try {
+      const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() });
+      return r.data;
+    } catch (error: any) {
+      if (error.response?.data?.errors) {
+        const backendErrors = error.response.data.errors;
+        console.error(`Lỗi validation từ backend khi cập nhật danh mục (ID: ${id}):`, JSON.stringify(backendErrors, null, 2));
+        throw backendErrors;
+      }
+      throw error;
+    }
   },
   remove: async (id: string): Promise<void> => {
     await axios.delete(`${BASE}/${id}`, { headers: authHeader() })

@@ -70,14 +70,11 @@ export default function CategoryList() {
     };
   }, []);
 
-  const handleSearch = () => {
-    setPage(1); // Reset to first page on new search
-    setAppliedSearch(search);
-    setShowSuggestions(false);
-  }
-
   const handleSearchChange = (value: string) => {
     setSearch(value);
+    setAppliedSearch(value); // Áp dụng tìm kiếm ngay khi người dùng nhập
+    setPage(1); // Reset về trang đầu tiên khi có tìm kiếm mới
+
     if (value.trim()) {
       const filteredSuggestions = items.filter(item =>
         item.name.toLowerCase().includes(value.toLowerCase()) ||
@@ -94,8 +91,8 @@ export default function CategoryList() {
   const handleSuggestionClick = (suggestion: CategoryDTO) => {
     setSearch(suggestion.name);
     setSuggestions([]);
+    setAppliedSearch(suggestion.name); // Áp dụng tìm kiếm ngay khi chọn
     setShowSuggestions(false);
-    setAppliedSearch(suggestion.name);
   };
 
   const processedItems = useMemo(() => {
@@ -106,9 +103,11 @@ export default function CategoryList() {
       filtered = filtered.filter(item => item.isActive === isActive);
     }
 
-    if (!appliedSearch.trim()) return filtered;
-    const searchTerm = appliedSearch.toLowerCase();
-    return filtered.filter(item => item.name.toLowerCase().includes(searchTerm) || (item.slug && item.slug.toLowerCase().includes(searchTerm)) || (item.description && item.description.toLowerCase().includes(searchTerm)));
+    if (appliedSearch.trim()) {
+      const searchTerm = appliedSearch.toLowerCase();
+      return filtered.filter(item => item.name.toLowerCase().includes(searchTerm) || (item.slug && item.slug.toLowerCase().includes(searchTerm)) || (item.description && item.description.toLowerCase().includes(searchTerm)));
+    }
+    return filtered;
   }, [items, appliedSearch, statusFilter]);
 
   const onCreate = () => navigate('/manager/categories/new')
@@ -216,9 +215,6 @@ export default function CategoryList() {
         placeholder="Tìm theo tên..."
         value={search}
         onChange={(e) => handleSearchChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") handleSearch();
-        }}
         style={{
           width: "70%",
           padding: "10px 12px",
@@ -299,20 +295,6 @@ export default function CategoryList() {
 
     {/* Nút hành động */}
     <div style={{ display: "flex", gap: 8 }}>
-      <button
-        onClick={handleSearch}
-        style={{
-          padding: "10px 20px",
-          background: "#2563eb",
-          color: "#fff",
-          borderRadius: 8,
-          border: "none",
-          fontWeight: 500,
-          cursor: "pointer",
-        }}
-      >
-        Tìm
-      </button>
       <button
         onClick={() => {
           setSearch("");

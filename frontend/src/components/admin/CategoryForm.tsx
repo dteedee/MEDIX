@@ -127,6 +127,7 @@ export default function CategoryForm({ category, onSaved, onCancel }: Props) { /
             required
             value={slug}
             onChange={e => { setSlug(e.target.value); if (errors.slug) setErrors(prev => ({ ...prev, slug: undefined })); }}
+            onBlur={e => validateOnBlur('slug', e.target.value)}
             style={{...inputStyle, borderColor: errors.slug ? '#ef4444' : '#d1d5db'}} 
           />
           {errors.slug && <div style={errorTextStyle}>{errors.slug}</div>}

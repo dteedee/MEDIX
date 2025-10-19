@@ -90,7 +90,6 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
     const allowedTypes = ['image/png', 'image/jpeg'];
     if (!allowedTypes.includes(f.type)) {
       showToast('Chỉ chấp nhận tệp ảnh có định dạng PNG hoặc JPG.', 'error');
-      setErrors(prev => ({ ...prev, imageUrl: 'Chỉ chấp nhận tệp ảnh có định dạng PNG hoặc JPG.' }));
       // Xóa tệp đã chọn để người dùng có thể chọn lại
       if (fileRef.current) {
         fileRef.current.value = '';
@@ -105,7 +104,6 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
     } catch (err) {
       console.error(err)
       showToast('Tải ảnh lên thất bại.', 'error')
-      setErrors(prev => ({ ...prev, imageUrl: 'Tải ảnh lên thất bại.' }));
     }
   }
 

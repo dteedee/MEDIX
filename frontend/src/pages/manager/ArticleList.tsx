@@ -102,12 +102,61 @@ export default function ArticleList() {
 
   const onCreate = () => navigate('/manager/articles/new')
   const onEdit = (a: ArticleDTO) => navigate(`/manager/articles/edit/${a.id}`)
-  const onDelete = async (id: string) => {
-    if (!confirm('Delete this article?')) return;
-    await articleService.remove(id);
-    showToast('Xóa bài viết thành công!')
-    await load()
+  const handleArchive = async (article: ArticleDTO) => {
+  if (article.statusCode === 'ARCHIVE') {
+    showToast('Bài viết đã được lưu trữ.', 'info');
+    return;
   }
+
+  if (!confirm(`Bạn có chắc muốn lưu trữ bài viết "${article.title}" không?`)) return;
+
+  try {
+    const categoryIds =
+      Array.isArray(article.categories)
+        ? article.categories
+            .map(c => c?.id)
+            .filter((id: string) => typeof id === 'string' && id.trim() !== '')
+        : Array.isArray((article as any).categoryIds)
+        ? (article as any).categoryIds.filter((id: string) => typeof id === 'string' && id.trim() !== '')
+        : [];
+const fixedCategoryIds = categoryIds.length > 0
+  ? categoryIds
+  : (article as any).categoryIds && (article as any).categoryIds.length > 0
+  ? (article as any).categoryIds
+  : ['4531ED5F-2DB8-4B56-A38C-3C320F555922'];
+    const payload = {
+      title: article.title ?? 'Không có tiêu đề',
+      slug: article.slug ?? 'khong-co-slug',
+      summary: article.summary ?? '',
+      content: article.content ?? 'Nội dung tạm thời',
+      displayType: article.displayType ?? 'default',
+      thumbnailUrl: article.thumbnailUrl ?? '',
+      coverImageUrl: article.coverImageUrl ?? '',
+      isHomepageVisible: article.isHomepageVisible ?? false,
+      displayOrder: article.displayOrder ?? 0,
+      metaTitle: article.metaTitle ?? '',
+      metaDescription: article.metaDescription ?? '',
+      authorId:
+        (article as any).authorId ??
+        '1A2C1A65-7B00-415F-8164-4FC3C1054203',
+      publishedAt: article.publishedAt ?? undefined, // ✅ fix kiểu dữ liệu
+      categoryIds: fixedCategoryIds,
+      statusCode: 'ARCHIVE',
+    };
+
+    console.log('🧾 Payload gửi lên backend:', payload);
+    await articleService.update(article.id, payload);
+    showToast('Đã chuyển bài viết vào kho lưu trữ.');
+    await load();
+  } catch (error: any) {
+    console.error('🚨 Failed to archive article:', error);
+    if (error.response?.data?.errors) {
+      console.error('🧩 Backend validation errors:', error.response.data.errors);
+    }
+    showToast('Lưu trữ bài viết thất bại.', 'error');
+  }
+};
+
 
   const handleViewDetails = async (articleId: string) => {
     setLoadingDetails(true);
@@ -208,10 +257,19 @@ export default function ArticleList() {
   const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString() : '-'
 
   const pill = (statusCode?: string) => {
-    const isPublished = (statusCode ?? '').toLowerCase().includes('publ');
-    const text = isPublished ? 'Đã xuất bản' : 'Bản nháp';
-    const bg = isPublished ? '#e7f9ec' : '#fff7e6';
-    const color = isPublished ? '#16a34a' : '#b45309';
+    let text = 'Bản nháp';
+    let bg = '#fff7e6'; // yellow-100
+    let color = '#b45309'; // yellow-700
+
+    if (statusCode === 'PUBLISHED') {
+      text = 'Đã xuất bản';
+      bg = '#e7f9ec'; // green-100
+      color = '#16a34a'; // green-700
+    } else if (statusCode === 'ARCHIVE') {
+      text = 'Lưu trữ';
+      bg = '#fee2e2'; // red-100
+      color = '#b91c1c'; // red-700
+    }
     return <span style={{ background: bg, color, padding: '6px 10px', borderRadius: 16, fontSize: 12, fontWeight: 500 }}>{text}</span>;
   }
 
@@ -361,6 +419,7 @@ export default function ArticleList() {
         <option value="all">Tất cả trạng thái</option>
         <option value="PUBLISHED">Đã xuất bản</option>
         <option value="DRAFT">Bản nháp</option>
+        <option value="ARCHIVE">Lưu trữ</option>
       </select>
     </div>
 
@@ -495,7 +554,7 @@ export default function ArticleList() {
                   <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
                     <button onClick={() => handleViewDetails(a.id)} disabled={loadingDetails} title="Xem" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
                     <button onClick={() => onEdit(a)} title="Sửa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
-                    <button onClick={() => onDelete(a.id)} title="Xóa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><DeleteIcon /></button>
+                    <button onClick={() => handleArchive(a)} title="Lưu trữ" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><DeleteIcon /></button>
                   </td>
                 </tr>
               ))}

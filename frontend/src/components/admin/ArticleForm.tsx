@@ -458,6 +458,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
                 <select value={statusCode} onChange={e => setStatusCode(e.target.value)} style={inputStyle}>
                   <option value="DRAFT">Bản nháp (DRAFT)</option>
                   <option value="PUBLISHED">Xuất bản (PUBLISHED)</option>
+                  <option value="ARCHIVE">Lưu trữ (ARCHIVE)</option>
                 </select>
                 <select value={displayType} onChange={e => setDisplayType(e.target.value)} style={inputStyle}>
                   <option value="STANDARD">Tiêu chuẩn (STANDARD)</option>

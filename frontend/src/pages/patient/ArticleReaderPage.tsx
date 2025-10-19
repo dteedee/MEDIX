@@ -1,32 +1,48 @@
-import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { articleService } from '../../services/articleService'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArticleDTO } from '../../types/article.types'
 import './ArticleReader.css'
 
 export default function ArticleReaderPage() {
-  const [articles, setArticles] = useState<ArticleDTO[]>([])
-  const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const initialPage = parseInt(queryParams.get('page') || '1', 10) || 1;
+  const initialCategories = queryParams.get('categories')?.split(',') || [];
+
+  const [allArticles, setAllArticles] = useState<ArticleDTO[]>([]);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [loading, setLoading] = useState(true)
+  // State for search suggestions
+  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<ArticleDTO[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  // State for category filter
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategories.filter(Boolean));
   const pageSize = 5 // 1 featured + 4 grid items per page
 
-  const loadArticles = async (pageNum: number) => {
+  const loadAllArticles = async () => {
     setLoading(true);
-    setHasMore(true); // Reset hasMore on every page load to re-evaluate
     try {
-      // Fetch only published articles from the server
-      const response = await articleService.list(pageNum, pageSize, { status: 'PUBLISHED' });
-      
-      setArticles(response.items);
-      
-      // If the API returns fewer items than requested, or no items, it's the last page.
-      if (response.items.length < pageSize) {
-        setHasMore(false);
+      // First, fetch a single item to get the total count from `item1`
+      const initialUrl = `/api/HealthArticle/published?page=1&pageSize=1`;
+      const initialRes = await fetch(initialUrl);
+      const initialResponse = await initialRes.json();
+      const totalArticles = initialResponse.item1 || 0;
+
+      if (totalArticles > 0) {
+        // Now, fetch all articles in a single request
+        const allUrl = `/api/HealthArticle/published?page=1&pageSize=${totalArticles}`;
+        const allRes = await fetch(allUrl);
+        const allResponse = await allRes.json();
+        setAllArticles(allResponse.item2 || []);
+      } else {
+        setAllArticles([]);
       }
     } catch (error) {
       console.error("Failed to load articles:", error);
-      setHasMore(false); // Disable next on error
+      setAllArticles([]); // Clear articles on error
     } finally {
       setLoading(false);
     }
@@ -34,22 +50,143 @@ export default function ArticleReaderPage() {
 
   // Load initial articles on component mount
   useEffect(() => {
-    loadArticles(page);
-    window.scrollTo(0, 0);
-  }, [page])
+    loadAllArticles();
+  }, [])
+
+  // Effect for fetching search suggestions with debouncing
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setSuggestions([]);
+      return;
+    }
+
+    const fetchSuggestions = async () => {
+      setIsSearching(true);
+      try {
+        // Assume a new endpoint for searching articles
+        const url = `/api/HealthArticle/search?q=${encodeURIComponent(searchQuery)}`;
+        const res = await fetch(url);
+        const suggestedArticles = await res.json();
+        setSuggestions(suggestedArticles || []);
+      } catch (error) {
+        console.error("Failed to fetch search suggestions:", error);
+        setSuggestions([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(() => fetchSuggestions(), 300); // 300ms delay
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery]);
+
+  // Derive categories and filtered articles using useMemo for performance
+  const { categories, filteredArticles } = useMemo(() => {
+    const categorySet = new Set<string>();
+    allArticles.forEach(article => {
+      article.categories?.forEach(cat => categorySet.add(cat.name));
+    });
+    const categories = Array.from(categorySet).sort();
+
+    const filtered =
+      selectedCategories.length === 0
+        ? allArticles
+        : allArticles.filter(article =>
+            // Show article if it has at least one of the selected categories
+            selectedCategories.some(selectedCat =>
+              article.categories?.some(articleCat => articleCat.name === selectedCat)
+            )
+          );
+
+    return { categories, filteredArticles: filtered };
+  }, [allArticles, selectedCategories]);
+
+  // Paginate the filtered articles
+  const paginatedArticles = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredArticles.slice(startIndex, startIndex + pageSize);
+  }, [filteredArticles, currentPage, pageSize]);
+
+  const updateUrl = (newPage: number, newCategories: string[]) => {
+    const params = new URLSearchParams();
+    if (newCategories.length > 0) {
+      params.set('categories', newCategories.join(','));
+    }
+    params.set('page', newPage.toString());
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    updateUrl(newPage, selectedCategories);
+  };
+
+  const handleCategoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const category = event.target.value;
+    const newCategories = selectedCategories.includes(category)
+        ? selectedCategories.filter(c => c !== category) // Uncheck: remove from array
+        : [...selectedCategories, category]; // Check: add to array
+    
+    setSelectedCategories(newCategories);
+    setCurrentPage(1); // Reset to page 1 on filter change
+    updateUrl(1, newCategories);
+  };
+
+  const totalPages = Math.ceil(filteredArticles.length / pageSize) || 1;
+  const hasMore = currentPage < totalPages;
 
   // Show a loading indicator only on the initial page load
   if (loading) {
     return <div className="article-reader-container">Đang tải bài viết...</div>;
   }
 
-  const featuredArticle = articles[0];
-  const otherArticles = articles.slice(1);
+  const featuredArticle = paginatedArticles[0];
+  const otherArticles = paginatedArticles.slice(1);
 
   return (
-    <div className="article-reader-container">
+    <div className="article-reader-container" style={{ maxWidth: 780 }}>
       <h1 className="reader-main-title">Kiến Thức Y Khoa</h1>
       <p className="reader-main-subtitle">Khám phá các bài viết chuyên sâu về sức khỏe, dinh dưỡng và lối sống lành mạnh từ các chuyên gia hàng đầu.</p>
+
+      {/* Search Bar */}
+      <div className="search-container">
+        <input
+          type="text"
+          placeholder="Tìm kiếm bài viết..."
+          className="search-input"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        {isSearching && <div className="search-spinner"></div>}
+        {suggestions.length > 0 && (
+          <ul className="suggestions-list">
+            {suggestions.map(article => (
+              <li key={article.id}>
+                <Link to={`/articles/${article.slug}`}>{article.title}</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Category Filter */}
+      <div className="category-filter-container">
+        <label className="category-filter-label">Lọc theo danh mục:</label>
+        <div className="category-checkbox-group">
+          {categories.map(cat => (
+            <div key={cat} className="category-checkbox-item">
+              <input
+                type="checkbox"
+                id={`cat-${cat}`}
+                value={cat}
+                checked={selectedCategories.includes(cat)}
+                onChange={handleCategoryChange}
+              />
+              <label htmlFor={`cat-${cat}`}>{cat}</label>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="article-page-chunk">
         {featuredArticle && (
@@ -82,11 +219,11 @@ export default function ArticleReaderPage() {
       </div>
 
       <div className="pagination-container">
-        <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="pagination-button">
+        <button onClick={() => handlePageChange(Math.max(1, currentPage - 1))} disabled={currentPage <= 1} className="pagination-button">
           Trang trước
         </button>
-        <span className="pagination-info">Trang {page}</span>
-        <button onClick={() => setPage(p => p + 1)} disabled={!hasMore} className="pagination-button">
+        <span className="pagination-info">Trang {currentPage} / {totalPages}</span>
+        <button onClick={() => handlePageChange(currentPage + 1)} disabled={!hasMore || loading} className="pagination-button">
           Trang sau
         </button>
       </div>

@@ -121,7 +121,7 @@ namespace Medix.API.Business.Services.Classification
                 existingDoctor.User.PhoneNumber = req.PhoneNumber;
                 existingDoctor.User.PhoneNumberConfirmed = false;
             }
-            existingDoctor.User.Address = req.Address;
+
             existingDoctor.Bio = req.Bio;
             existingDoctor.Education = req.Education;
             existingDoctor.YearsOfExperience = (int)(req.YearsOfExperience == null ? 0 : req.YearsOfExperience);

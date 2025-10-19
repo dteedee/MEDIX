@@ -17,17 +17,39 @@ export default function CmsPageForm({ page, onSaved, onCancel }: Props) {
   // Use a REAL user ID from your database for development until auth is ready.
   const [authorId, setAuthorId] = useState<string>('1A2C1A65-7B00-415F-8164-4FC3C1054203') // <-- Replace with a valid user ID from your DB
   const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState<{ pageTitle?: string, pageSlug?: string, pageContent?: string }>({})
+
+  const validateOnBlur = (field: 'pageTitle' | 'pageSlug' | 'pageContent', value: string) => {
+    if (!value.trim()) {
+      let message = 'Trường này không được để trống.';
+      if (field === 'pageTitle') message = 'Tiêu đề trang không được để trống.';
+      if (field === 'pageSlug') message = 'Đường dẫn (Slug) không được để trống.';
+      if (field === 'pageContent') message = 'Nội dung không được để trống.';
+      setErrors(prev => ({ ...prev, [field]: message }));
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const newErrors: typeof errors = {};
+    if (!title.trim()) newErrors.pageTitle = "Tiêu đề trang không được để trống.";
+    if (!slug.trim()) newErrors.pageSlug = "Đường dẫn (Slug) không được để trống.";
+    if (!content.trim()) newErrors.pageContent = "Nội dung không được để trống.";
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+        showToast('Vui lòng điền đầy đủ các trường bắt buộc.', 'error');
+        return;
+    }
+
     setSaving(true)
     try {
       const payload: CreateCmsPageRequest = {
         pageTitle: title.trim(),
         pageSlug: slug.trim(),
         pageContent: content.trim(),
-        metaTitle,
-        metaDescription,
+        metaTitle: metaTitle.trim(),
+        metaDescription: metaDescription.trim(),
         isPublished,
         publishedAt: isPublished ? new Date().toISOString() : undefined,
         authorId
@@ -35,11 +57,12 @@ export default function CmsPageForm({ page, onSaved, onCancel }: Props) {
       if (page) await cmspageService.update(page.id, payload as any)
       else await cmspageService.create(payload)
       onSaved?.()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving CMS page:', error);
-      // Theo yêu cầu, hiển thị thông báo này cho bất kỳ lỗi lưu nào.
-      // Trong một ứng dụng thực tế, bạn nên kiểm tra `error.response` để phân biệt các loại lỗi cụ thể.
-      showToast('Slug không được phép trùng', 'error');
+      // Xử lý lỗi validation từ backend
+      const backendErrors = { pageTitle: error.PageTitle, pageSlug: error.PageSlug };
+      setErrors(prev => ({ ...prev, ...backendErrors }));
+      showToast('Lưu trang thất bại, vui lòng kiểm tra lại thông tin.', 'error');
     } finally {
       setSaving(false)
     }
@@ -112,20 +135,47 @@ export default function CmsPageForm({ page, onSaved, onCancel }: Props) {
     gap: '24px',
   }
 
+  const errorTextStyle: React.CSSProperties = {
+    color: '#ef4444',
+    fontSize: 13,
+    marginTop: 6,
+  }
+
   return (
     <form onSubmit={submit} style={formContainerStyle}>
       <div style={gridStyle}>
         <div style={{ gridColumn: '1 / -1' }}>
           <label style={labelStyle}>Tiêu đề trang</label>
-          <input value={title} onChange={e => setTitle(e.target.value)} required style={inputStyle} />
+          <input 
+            value={title} 
+            onChange={e => { setTitle(e.target.value); if (errors.pageTitle) setErrors(prev => ({ ...prev, pageTitle: undefined })); }} 
+            onBlur={e => validateOnBlur('pageTitle', e.target.value)}
+            required 
+            style={{...inputStyle, borderColor: errors.pageTitle ? '#ef4444' : '#d1d5db'}} 
+          />
+          {errors.pageTitle && <div style={errorTextStyle}>{errors.pageTitle}</div>}
         </div>
         <div style={{ gridColumn: '1 / -1' }}>
           <label style={labelStyle}>Đường dẫn (Slug)</label>
-          <input value={slug} onChange={e => setSlug(e.target.value)} style={inputStyle} />
+          <input 
+            value={slug} 
+            onChange={e => { setSlug(e.target.value); if (errors.pageSlug) setErrors(prev => ({ ...prev, pageSlug: undefined })); }} 
+            onBlur={e => validateOnBlur('pageSlug', e.target.value)}
+            required
+            style={{...inputStyle, borderColor: errors.pageSlug ? '#ef4444' : '#d1d5db'}} 
+          />
+          {errors.pageSlug && <div style={errorTextStyle}>{errors.pageSlug}</div>}
         </div>
         <div style={{ gridColumn: '1 / -1' }}>
           <label style={labelStyle}>Nội dung</label>
-          <textarea value={content} onChange={e => setContent(e.target.value)} style={textareaStyle} />
+          <textarea 
+            value={content} 
+            onChange={e => { setContent(e.target.value); if (errors.pageContent) setErrors(prev => ({ ...prev, pageContent: undefined })); }} 
+            onBlur={e => validateOnBlur('pageContent', e.target.value)}
+            required
+            style={{...textareaStyle, borderColor: errors.pageContent ? '#ef4444' : '#d1d5db'}} 
+          />
+          {errors.pageContent && <div style={errorTextStyle}>{errors.pageContent}</div>}
         </div>
         <div>
           <label style={labelStyle}>Meta Title (SEO)</label>

@@ -87,14 +87,10 @@ export default function CmsPageList() {
     };
   }, []);
 
-  const handleSearch = () => {
-    setPage(1); // Reset to first page on new search
-    setAppliedSearch(search);
-    setShowSuggestions(false);
-  }
-
   const handleSearchChange = (value: string) => {
     setSearch(value);
+    setAppliedSearch(value); // Áp dụng tìm kiếm ngay khi người dùng nhập
+    setPage(1); // Reset về trang đầu tiên khi có tìm kiếm mới
     if (value.trim()) {
       const filteredSuggestions = items.filter(item =>
         item.pageTitle.toLowerCase().includes(value.toLowerCase()) ||
@@ -270,7 +266,6 @@ export default function CmsPageList() {
               placeholder="Tìm theo tiêu đề..."
               value={search}
               onChange={e => handleSearchChange(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
               style={{ width: '80%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
             />
             {showSuggestions && (
@@ -325,11 +320,6 @@ export default function CmsPageList() {
           <div style={{ flex: '1 1 150px' }}>
             <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Đến ngày</label>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ padding: 9, width: '100%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
-          </div>
-          <div>
-            <button onClick={handleSearch} style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer' }}>
-              Tìm
-            </button>
           </div>
           <div>
             <button onClick={() => { 

@@ -12,7 +12,26 @@ function authHeader() {
   }
 }
 
+// Helper function to process and re-throw API validation errors
+function handleApiError(error: any, context: string) {
+  if (error.response?.data?.errors) {
+    const backendErrors = error.response.data.errors;
+    console.error(`Lỗi validation từ backend khi ${context}:`, JSON.stringify(backendErrors, null, 2));
+    
+    // Trích xuất thông báo lỗi đầu tiên từ mỗi trường
+    const processedErrors: { [key: string]: string } = {};
+    for (const key in backendErrors) {
+      if (backendErrors[key] && backendErrors[key].length > 0) {
+        processedErrors[key] = backendErrors[key][0];
+      }
+    }
+    throw processedErrors;
+  }
+  throw error; // Re-throw other types of errors
+}
+
 export const cmspageService = {
+
   list: async (page = 1, pageSize = 10, keyword?: string): Promise<{ items: CmsPageDTO[]; total?: number }> => {
     const params: any = { page, pageSize };
     let url = BASE;
@@ -42,12 +61,32 @@ export const cmspageService = {
     return r.data
   },
   create: async (payload: CreateCmsPageRequest): Promise<CmsPageDTO> => {
-    const r = await axios.post(BASE, payload, { headers: authHeader() })
-    return r.data
+    try {
+      const r = await axios.post(BASE, payload, { headers: authHeader() })
+      return r.data
+    } catch (error: any) {
+      if (error.response?.data?.errors) {
+        const backendErrors = error.response.data.errors;
+        console.error("Lỗi validation từ backend khi tạo trang CMS:", JSON.stringify(backendErrors, null, 2));
+        throw backendErrors;
+      }
+      throw error;
+      handleApiError(error, 'tạo trang CMS');
+    }
   },
   update: async (id: string, payload: UpdateCmsPageRequest): Promise<CmsPageDTO> => {
-    const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() })
-    return r.data
+    try {
+      const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() })
+      return r.data
+    } catch (error: any) {
+      if (error.response?.data?.errors) {
+        const backendErrors = error.response.data.errors;
+        console.error(`Lỗi validation từ backend khi cập nhật trang CMS (ID: ${id}):`, JSON.stringify(backendErrors, null, 2));
+        throw backendErrors;
+      }
+      throw error;
+      handleApiError(error, `cập nhật trang CMS (ID: ${id})`);
+    }
   },
   remove: async (id: string): Promise<void> => {
     await axios.delete(`${BASE}/${id}`, { headers: authHeader() })

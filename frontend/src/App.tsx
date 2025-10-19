@@ -19,6 +19,7 @@ import { DoctorRegister } from './pages/doctor/DoctorRegister';
 import { AIChatBot } from './pages/ai/AIChatBot';
 import { PatientDashboard } from './pages/patient/patientdashboard';
 import { PatientProfile } from './pages/patient/patientProfile';
+import DoctorBooking from './pages/patient/DoctorBooking';
 
 export function App() {
   return (
@@ -79,6 +80,10 @@ export function App() {
                 </Routes>
               </ProtectedRoute>
             } />
+
+            {/* Public booking route - anyone can view */}
+            <Route path="booking" element={<DoctorBooking />} />
+            <Route path="booking/:doctorId" element={<div>Booking Details</div>} />
 
             {/* Patient routes */}
             <Route path="patient/*" element={

@@ -19,5 +19,8 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task<bool> DeleteAsync(Guid id);
 
         Task<bool> UserExistsAsync(Guid userId);
+
+        Task<(IEnumerable<Cmspage> Pages, int TotalCount)> GetPagedAsync(int page, int pageSize);
+        Task<IEnumerable<Cmspage>> SearchByNameAsync(string name);
     }
 }

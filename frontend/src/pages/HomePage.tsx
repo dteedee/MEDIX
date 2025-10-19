@@ -47,7 +47,6 @@ function HomePage() {
 
     return (
         <div>
-            <Header />
             <nav>
                 <ul className={styles["nav-menu"]} style={{ justifyContent: 'center' }}>
                     <li><a href="#">Trang chủ</a></li>
@@ -241,7 +240,7 @@ function HomePage() {
 
                     <button
                         onClick={handleNext}
-                        disabled={currentIndex + doctorsPerPage >= homeMetadata?.displayedDoctors.length}
+                        disabled={currentIndex + doctorsPerPage >= (homeMetadata?.displayedDoctors?.length ?? 0)}
                         className={styles["doctor-nav-button"]}>
                         →
                     </button>
@@ -270,7 +269,7 @@ function HomePage() {
                 </div>
             </section >
 
-            <Footer />
+            
 
             <div className={styles["ai-bubble"]}>
                 <img src="/images/medix-logo-mirrored.jpg" alt="Chat" />

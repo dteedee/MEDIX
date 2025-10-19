@@ -53,7 +53,6 @@ export const userService = {
     } catch (error: any) {
       console.error('Error fetching user info:', error);
       
-      // Handle specific error cases
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -66,16 +65,11 @@ export const userService = {
 
   async updateUserInfo(data: UpdateUserInfo): Promise<UserBasicInfo> {
     try {
-      // Get access token from localStorage
       const accessToken = localStorage.getItem('accessToken');
-      
-      if (!accessToken) {
-        throw new Error('No access token found - please login');
-      }
+      if (!accessToken) throw new Error('No access token found - please login');
 
-      // Format data to match UpdateUserDto structure
       const updateDto = {
-        id: null, // Will be set by backend from JWT token
+        id: null,
         username: data.username || '',
         fullName: data.fullName || '',
         email: data.email || '',
@@ -84,7 +78,6 @@ export const userService = {
         dob: data.dob || null
       };
 
-      // Use shared api client with explicit Authorization header
       const response = await apiClient.put<UserBasicInfo>('/api/user/updateUserInfor', updateDto, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
@@ -98,7 +91,6 @@ export const userService = {
     } catch (error: any) {
       console.error('Error updating user info:', error);
       
-      // Handle specific error cases
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -113,14 +105,9 @@ export const userService = {
 
   async uploadProfileImage(imageFile: File): Promise<{ imageUrl: string }> {
     try {
-      // Get access token from localStorage
       const accessToken = localStorage.getItem('accessToken');
-      
-      if (!accessToken) {
-        throw new Error('No access token found - please login');
-      }
+      if (!accessToken) throw new Error('No access token found - please login');
 
-      // Create FormData for file upload
       const formData = new FormData();
       formData.append('file', imageFile);
 
@@ -129,12 +116,10 @@ export const userService = {
       console.log('- File type:', imageFile.type);
       console.log('- File size:', imageFile.size);
 
-      // Use native fetch instead of axios
       const response = await fetch(`${API_BASE_URL}/api/user/uploadAvatar`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`
-          // Don't set Content-Type for FormData - browser will set it with boundary
         },
         body: formData
       });
@@ -164,7 +149,6 @@ export const userService = {
         }
       });
       
-      // Handle specific error cases
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -172,11 +156,8 @@ export const userService = {
       } else if (error.response?.status === 413) {
         throw new Error('File quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB');
       } else if (error.response?.status === 400) {
-        // Handle ASP.NET Core validation errors
         const responseData = error.response?.data;
-        
         if (responseData?.errors) {
-          // Extract validation error messages
           const validationErrors = [];
           for (const [field, messages] of Object.entries(responseData.errors)) {
             if (Array.isArray(messages)) {
@@ -188,8 +169,6 @@ export const userService = {
           console.log('Validation errors:', validationErrors);
           throw new Error(`Validation Error: ${validationErrors.join('; ')}`);
         }
-        
-        // Fallback for other 400 errors
         const backendMessage = responseData?.message || responseData?.title || 'File không hợp lệ';
         console.log('Backend 400 error message:', backendMessage);
         throw new Error(`Backend Error: ${backendMessage}`);
@@ -201,5 +180,53 @@ export const userService = {
         throw new Error(error.response?.data?.message || `Lỗi ${error.response?.status}: Không thể tải ảnh lên`);
       }
     }
+  },
+};
+
+// --- Phần dành cho quản lý người dùng (Admin) ---
+import { UserDTO, CreateUserRequest, UpdateUserRequest } from '../types/user.types';
+
+const BASE = '/api/User'; // Base path for user-related actions
+
+function authHeader() {
+  try {
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}` } : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export const userAdminService = {
+  list: async (page = 1, pageSize = 10, search?: string): Promise<{ items: UserDTO[]; total?: number }> => {
+    let response;
+    const params: any = { page, pageSize };
+
+    if (search && search.trim()) {
+      params.keyword = search;
+      response = await axios.get(`${BASE}/search`, { params, headers: authHeader() });
+    } else {
+      response = await axios.get(BASE, { params, headers: authHeader() });
+    }
+
+    const data = response.data;
+    const items: UserDTO[] = data?.item2 ?? [];
+    const total: number | undefined = data?.item1;
+    return { items, total };
+  },
+  get: async (id: string): Promise<UserDTO> => {
+    const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() });
+    return r.data;
+  },
+  create: async (payload: CreateUserRequest): Promise<UserDTO> => {
+    const r = await axios.post(BASE, payload, { headers: authHeader() });
+    return r.data;
+  },
+  update: async (id: string, payload: UpdateUserRequest): Promise<UserDTO> => {
+    const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() });
+    return r.data;
+  },
+  remove: async (id: string): Promise<void> => {
+    await axios.delete(`${BASE}/${id}`, { headers: authHeader() });
   },
 };

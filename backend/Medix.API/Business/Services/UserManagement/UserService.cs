@@ -2,6 +2,7 @@ using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 using Medix.API.Business.Interfaces.UserManagement;
+using Medix.API.Exceptions;
 // using Medix.API.Business.Util; // Removed for performance
 
 namespace Medix.API.Business.Services.UserManagement
@@ -37,6 +38,7 @@ namespace Medix.API.Business.Services.UserManagement
                 DateOfBirth = registerDto.DateOfBirth,
                 GenderCode = registerDto.GenderCode,
                 IdentificationNumber = registerDto.IdentificationNumber,
+                Role = "Patient", // Gán vai trò mặc định là Patient
                 IsProfileCompleted = false,
                 CreatedAt = DateTime.UtcNow,
                 Address = registerDto.address,
@@ -57,10 +59,83 @@ namespace Medix.API.Business.Services.UserManagement
                 Email = savedUser.Email,
                 FullName = savedUser.FullName,
                 PhoneNumber = savedUser.PhoneNumber,
-                Role = "Patient",
+                Role = savedUser.Role, // Lấy vai trò từ đối tượng đã được lưu
                 EmailConfirmed = savedUser.EmailConfirmed,
-                CreatedAt = savedUser.CreatedAt
+                CreatedAt = savedUser.CreatedAt,
+                DateOfBirth = savedUser.DateOfBirth,
+                GenderCode = savedUser.GenderCode,
+                IdentificationNumber = savedUser.IdentificationNumber,
+                UserName = savedUser.UserName,
+                Address = savedUser.Address,
+                AvatarUrl = savedUser.AvatarUrl,
+                IsProfileCompleted = savedUser.IsProfileCompleted,
+                LockoutEnd = savedUser.LockoutEnd,
+                LockoutEnabled = savedUser.LockoutEnabled,
+                AccessFailedCount = savedUser.AccessFailedCount
             };
+        }
+
+        public async Task<UserDto> CreateUserAsync(CreateUserDTO createUserDto)
+        {
+            // Check if username already exists
+            var existingUser = await _userRepository.GetByUserNameAsync(createUserDto.UserName);
+            if (existingUser != null)
+            {
+                throw new MedixException($"Username '{createUserDto.UserName}' already exists");
+            }
+
+            string passwordHash = BCrypt.Net.BCrypt.HashPassword(createUserDto.Password);
+
+            User user = new User
+            {
+                Id = Guid.NewGuid(),
+                UserName = createUserDto.UserName,
+                NormalizedUserName = createUserDto.UserName.ToUpperInvariant(),
+                Email = createUserDto.UserName + "@temp.com", // Temporary email based on username
+                NormalizedEmail = (createUserDto.UserName + "@temp.com").ToUpperInvariant(),
+                PasswordHash = passwordHash,
+                PhoneNumber = null,
+                FullName = createUserDto.UserName, // Use username as full name initially
+                Role = "PATIENT", // Default role
+                IsProfileCompleted = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                EmailConfirmed = false,
+                PhoneNumberConfirmed = false,
+                LockoutEnabled = false,
+                AccessFailedCount = 0
+            };
+
+            try
+            {
+                var savedUser = await _userRepository.CreateAsync(user);
+
+                return new UserDto
+            {
+                Id = savedUser.Id,
+                Email = savedUser.Email,
+                FullName = savedUser.FullName,
+                PhoneNumber = savedUser.PhoneNumber,
+                Role = savedUser.Role,
+                EmailConfirmed = savedUser.EmailConfirmed,
+                CreatedAt = savedUser.CreatedAt,
+                DateOfBirth = savedUser.DateOfBirth,
+                GenderCode = savedUser.GenderCode,
+                IdentificationNumber = savedUser.IdentificationNumber,
+                UserName = savedUser.UserName,
+                Address = savedUser.Address,
+                AvatarUrl = savedUser.AvatarUrl,
+                IsProfileCompleted = savedUser.IsProfileCompleted,
+                LockoutEnd = savedUser.LockoutEnd,
+                LockoutEnabled = savedUser.LockoutEnabled,
+                AccessFailedCount = savedUser.AccessFailedCount
+            };
+            }
+            catch (Exception ex) when (ex.InnerException?.Message.Contains("UK_Users_NormalizedUserName") == true || 
+                                     ex.InnerException?.Message.Contains("UK_Users_NormalizedEmail") == true)
+            {
+                throw new MedixException($"Username '{createUserDto.UserName}' already exists");
+            }
         }
 
         public async Task<UserDto?> GetByIdAsync(Guid id)
@@ -76,7 +151,17 @@ namespace Medix.API.Business.Services.UserManagement
                 PhoneNumber = user.PhoneNumber,
                 Role = user.Role,
                 EmailConfirmed = user.EmailConfirmed,
-                CreatedAt = user.CreatedAt
+                CreatedAt = user.CreatedAt,
+                DateOfBirth = user.DateOfBirth,
+                GenderCode = user.GenderCode,
+                IdentificationNumber = user.IdentificationNumber,
+                UserName = user.UserName,
+                Address = user.Address,
+                AvatarUrl = user.AvatarUrl,
+                IsProfileCompleted = user.IsProfileCompleted,
+                LockoutEnd = user.LockoutEnd,
+                LockoutEnabled = user.LockoutEnabled,
+                AccessFailedCount = user.AccessFailedCount
             };
         }
 
@@ -93,17 +178,42 @@ namespace Medix.API.Business.Services.UserManagement
                 PhoneNumber = user.PhoneNumber,
                 Role = user.Role,
                 EmailConfirmed = user.EmailConfirmed,
-                CreatedAt = user.CreatedAt
+                CreatedAt = user.CreatedAt,
+                DateOfBirth = user.DateOfBirth,
+                GenderCode = user.GenderCode,
+                IdentificationNumber = user.IdentificationNumber,
+                UserName = user.UserName,
+                Address = user.Address,
+                AvatarUrl = user.AvatarUrl,
+                IsProfileCompleted = user.IsProfileCompleted,
+                LockoutEnd = user.LockoutEnd,
+                LockoutEnabled = user.LockoutEnabled,
+                AccessFailedCount = user.AccessFailedCount
             };
         }
 
-        public async Task<UserDto> UpdateAsync(Guid id, UserDto userDto)
+        public async Task<UserDto> UpdateAsync(Guid id, UpdateUserDTO userUpdateDto)
         {
             var user = await _userRepository.GetByIdAsync(id);
-            if (user == null) throw new ArgumentException("Không tìm thấy người dùng");
+            if (user == null) throw new NotFoundException($"User with ID {id} not found");
 
-            user.FullName = userDto.FullName;
-            user.PhoneNumber = userDto.PhoneNumber;
+            // Update basic information
+            user.FullName = userUpdateDto.FullName;
+            user.PhoneNumber = userUpdateDto.PhoneNumber;
+            user.Address = userUpdateDto.Address;
+            user.AvatarUrl = userUpdateDto.AvatarUrl;
+            user.DateOfBirth = userUpdateDto.DateOfBirth;
+            user.GenderCode = userUpdateDto.GenderCode;
+            user.IdentificationNumber = userUpdateDto.IdentificationNumber;
+            user.EmailConfirmed = userUpdateDto.EmailConfirmed;
+            user.IsProfileCompleted = userUpdateDto.IsProfileCompleted;
+
+            // Update role and security settings
+            user.Role = userUpdateDto.Role;
+            user.LockoutEnabled = userUpdateDto.LockoutEnabled;
+            user.LockoutEnd = userUpdateDto.LockoutEnd;
+            user.AccessFailedCount = userUpdateDto.AccessFailedCount;
+
             user.UpdatedAt = DateTime.UtcNow;
       
 
@@ -117,9 +227,20 @@ namespace Medix.API.Business.Services.UserManagement
                 PhoneNumber = updatedUser.PhoneNumber,
                 Role = updatedUser.Role,
                 EmailConfirmed = updatedUser.EmailConfirmed,
-                CreatedAt = updatedUser.CreatedAt
+                CreatedAt = updatedUser.CreatedAt,
+                GenderCode = updatedUser.GenderCode,
+                IdentificationNumber = updatedUser.IdentificationNumber,
+                DateOfBirth = updatedUser.DateOfBirth,
+                UserName = updatedUser.UserName,
+                Address = updatedUser.Address,
+                AvatarUrl = updatedUser.AvatarUrl,
+                IsProfileCompleted = updatedUser.IsProfileCompleted,
+                LockoutEnd = updatedUser.LockoutEnd,
+                LockoutEnabled = updatedUser.LockoutEnabled,
+                AccessFailedCount = updatedUser.AccessFailedCount
             };
         }
+
 
         public async Task<bool> DeleteAsync(Guid id)
         {
@@ -128,7 +249,71 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<IEnumerable<UserDto>> GetAllAsync()
         {
+            // TODO: Fix when UserRepository.GetAllAsync is implemented
             var users = await _userRepository.GetAllAsync();
+            return users.Select(u => new UserDto
+            {
+                Id = u.Id,
+                Email = u.Email,
+                FullName = u.FullName,
+                PhoneNumber = u.PhoneNumber,
+                Role = u.Role,
+                EmailConfirmed = u.EmailConfirmed,
+                CreatedAt = u.CreatedAt
+            });
+        }
+
+        public async Task<(int total, IEnumerable<UserDto> data)> GetPagedAsync(int page, int pageSize)
+        {
+            var (total, users) = await _userRepository.GetPagedAsync(page, pageSize);
+
+            var data = users.Select(u => new UserDto
+            {
+                Id = u.Id,
+                Email = u.Email,
+                FullName = u.FullName,
+                PhoneNumber = u.PhoneNumber,
+                Role = u.Role,
+                EmailConfirmed = u.EmailConfirmed,
+                CreatedAt = u.CreatedAt,
+                DateOfBirth = u.DateOfBirth,
+                GenderCode = u.GenderCode,
+                IdentificationNumber = u.IdentificationNumber
+            });
+
+            return (total, data);
+        }
+
+        public async Task<(int total, IEnumerable<UserDto> data)> SearchAsync(string keyword, int page, int pageSize)
+        {
+            var (total, users) = await _userRepository.SearchAsync(keyword, page, pageSize);
+
+            var data = users.Select(u => new UserDto
+            {
+                Id = u.Id,
+                Email = u.Email,
+                FullName = u.FullName,
+                PhoneNumber = u.PhoneNumber,
+                Role = u.Role,
+                EmailConfirmed = u.EmailConfirmed,
+                CreatedAt = u.CreatedAt,
+                DateOfBirth = u.DateOfBirth,
+                GenderCode = u.GenderCode,
+                IdentificationNumber = u.IdentificationNumber
+            });
+
+            return (total, data);
+        }
+
+        public async Task<IEnumerable<UserDto>> SearchByNameAsync(string keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return Enumerable.Empty<UserDto>();
+            }
+
+            var users = await _userRepository.SearchByNameAsync(keyword);
+
             return users.Select(u => new UserDto
             {
                 Id = u.Id,

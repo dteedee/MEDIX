@@ -1,11 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types/common.types';
+import './Sidebar.css';
 
 type SidebarItem = {
   to: string;
   label: string;
+  submenu?: SidebarItem[];
 };
 
 interface SidebarProps {
@@ -15,6 +17,9 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ basePath }) => {
   const { user } = useAuth();
   const location = useLocation();
+  const [openCMS, setOpenCMS] = useState(false);
+
+  const toggleCMS = () => setOpenCMS((prev) => !prev);
 
   // Auto-detect basePath from current /app/<module> when not provided
   const autoBasePath = useMemo(() => {
@@ -36,6 +41,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ basePath }) => {
           { to: 'users', label: 'Quản lý người dùng' },
           { to: 'doctors', label: 'Quản lý bác sĩ' },
           { to: 'patients', label: 'Quản lý bệnh nhân' },
+          {
+            to: '#',
+            label: 'Nội dung - CMS',
+            submenu: [
+              { to: '/manager/articles', label: 'Quản lý Bài viết' },
+              { to: '/manager/banners', label: 'Quản lý Banner' },
+              { to: '/articles', label: 'Xem trang bài viết' },
+            ],
+          },
           { to: 'analytics', label: 'Thống kê' },
           { to: 'settings', label: 'Cấu hình hệ thống' },
         ];
@@ -43,7 +57,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ basePath }) => {
         return [
           { to: 'dashboard', label: 'Dashboard' },
           { to: 'appointments', label: 'Quản lý lịch hẹn' },
-          { to: 'content', label: 'Quản lý nội dung' },
+          {
+            to: '#',
+            label: 'Nội dung - CMS',
+            submenu: [
+              { to: '/manager/articles', label: 'Quản lý Bài viết' },
+              { to: '/manager/banners', label: 'Quản lý Banner' },
+              { to: '/manager/categories', label: 'Quản lý Danh mục' },
+              { to: '/manager/cms-pages', label: 'Quản lý CMSpage' },
+              { to: '/articles', label: 'Xem trang bài viết' },
+            ],
+          },
           { to: 'analytics', label: 'Thống kê' },
           { to: 'profile', label: 'Quản lý Profile' },
         ];
@@ -67,38 +91,62 @@ export const Sidebar: React.FC<SidebarProps> = ({ basePath }) => {
         ];
     }
   }, [user?.role]);
+
   return (
-    <aside style={{
-      width: 220,
-      background: '#fff',
-      borderRight: '1px solid #e5e7eb',
-      padding: '16px 8px',
-      height: 'calc(100vh - 56px)',
-      position: 'sticky',
-      top: 56,
-    }}>
-      <div style={{ fontWeight: 700, color: '#111827', padding: '8px 12px', marginBottom: 8 }}>
-        MEDIX
+    <aside className="medix-sidebar">
+      <div className="sidebar-top">
+        <div className="sidebar-logo-box" />
+        <div className="sidebar-logo-text">MEDIX</div>
       </div>
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {items.map((it) => (
-          <NavLink
-            key={it.to}
-            to={`${autoBasePath}/${it.to}`}
-            end
-            style={({ isActive }) => ({
-              padding: '10px 12px',
-              borderRadius: 6,
-              color: isActive ? '#1f2937' : '#6b7280',
-              backgroundColor: isActive ? '#f3f4f6' : 'transparent',
-              textDecoration: 'none',
-              fontSize: 14,
-              fontWeight: 500,
-            })}
-          >
-            {it.label}
-          </NavLink>
-        ))}
+
+      <nav className="sidebar-nav">
+        {items.map((it) => {
+          if (it.submenu) {
+            return (
+              <div key={it.label}>
+                <div
+                  className="sidebar-section"
+                  onClick={toggleCMS}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {it.label} {openCMS ? '▲' : '▼'}
+                </div>
+                {openCMS &&
+                  it.submenu.map((sub) => (
+                    <NavLink
+                      key={sub.to}
+                      to={sub.to}
+                      target={sub.to.startsWith('http') ? '_blank' : undefined}
+                      className="sidebar-link sub"
+                      style={({ isActive }) => ({
+                        color: isActive ? '#1f2937' : '#6b7280',
+                        backgroundColor: isActive ? '#f3f4f6' : 'transparent',
+                        textDecoration: 'none',
+                      })}
+                    >
+                      {sub.label}
+                    </NavLink>
+                  ))}
+              </div>
+            );
+          }
+
+          return (
+            <NavLink
+              key={it.to}
+              to={`${autoBasePath}/${it.to}`}
+              end
+              className="sidebar-link"
+              style={({ isActive }) => ({
+                color: isActive ? '#1f2937' : '#6b7280',
+                backgroundColor: isActive ? '#f3f4f6' : 'transparent',
+                textDecoration: 'none',
+              })}
+            >
+              {it.label}
+            </NavLink>
+          );
+        })}
       </nav>
     </aside>
   );

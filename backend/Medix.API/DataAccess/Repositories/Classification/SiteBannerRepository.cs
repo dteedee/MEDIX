@@ -116,5 +116,20 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .OrderBy(b => b.DisplayOrder)
                 .ToListAsync();
         }
+        public async Task<(IEnumerable<SiteBanner> Banners, int TotalCount)> SearchByNameAsync(string name, int page, int pageSize)
+        {
+            var query = _context.SiteBanners
+                .Where(b => EF.Functions.Like(b.BannerTitle, $"%{name}%"))
+                .OrderBy(b => b.DisplayOrder)
+                .ThenByDescending(b => b.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var banners = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (banners, totalCount);
+        }
     }
 }

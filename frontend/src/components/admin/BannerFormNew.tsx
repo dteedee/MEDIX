@@ -89,8 +89,8 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
 
     const allowedTypes = ['image/png', 'image/jpeg'];
     if (!allowedTypes.includes(f.type)) {
-      showToast('Chỉ chấp nhận tệp ảnh có định dạng PNG hoặc JPG.', 'error');
       // Xóa tệp đã chọn để người dùng có thể chọn lại
+      setErrors(prev => ({ ...prev, imageUrl: 'Chỉ chấp nhận tệp ảnh có định dạng PNG hoặc JPG.' }));
       if (fileRef.current) {
         fileRef.current.value = '';
       }

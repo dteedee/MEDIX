@@ -68,28 +68,8 @@ export default function UserList() {
   const load = async () => {
     const r = await userService.list(page, pageSize, search)
     console.debug('[UserList] loaded users', r.items)
-    // Normalize lock state to ensure UI reflects DB regardless of backend field names/formats
-    const normalized = (r.items || []).map(u => {
-      const any = u as any
-      let locked = false
-      if (u.lockoutEnabled === true) locked = true
-      if (any.isLocked === true) locked = true
-      if (any.locked === true) locked = true
-      if (any.isLockedOut === true) locked = true
-      const lockoutEndVal = any.lockoutEnd ?? any.lockout_end ?? any.lockEnd ?? any.lockedUntil
-      if (lockoutEndVal) {
-        try {
-          const ts = Date.parse(lockoutEndVal as any)
-          if (!isNaN(ts) && ts > Date.now()) locked = true
-          else if (isNaN(ts)) locked = true // treat truthy unparsable as locked
-        } catch {
-          locked = true
-        }
-      }
-      return { ...u, lockoutEnabled: locked }
-    })
-    console.debug('[UserList] normalized users', normalized)
-    setUsers(normalized)
+    // Data is now pre-normalized by the service
+    setUsers(r.items || [])
     setTotal(r.total)
     setLoading(false)
   }
@@ -106,69 +86,46 @@ export default function UserList() {
     window.scrollTo(0, 0);
   }, [page, pageSize]);
 
-  const handleStatusChange = (userToUpdate: UserDTO, newStatus: boolean) => {
-    // debounce rapid toggles per user (300ms)
-    if (debounceRef.current[userToUpdate.id]) {
-      clearTimeout(debounceRef.current[userToUpdate.id])
+  const handleStatusChange = async (userToUpdate: UserDTO, isBeingLocked: boolean) => {
+    // Lấy user mới nhất trong state (nếu có), fallback userToUpdate
+    const currentUser = users.find(u => u.id === userToUpdate.id) ?? userToUpdate;
+
+    // Nếu không có thay đổi thì bỏ qua
+    if (Boolean(currentUser.lockoutEnabled) === isBeingLocked) {
+      return;
     }
 
-    debounceRef.current[userToUpdate.id] = setTimeout(async () => {
-      // Guard: ignore if same status or already updating for this user
-      const currentUser = (users.find(u => u.id === userToUpdate.id) as any) ?? userToUpdate
-      if (currentUser.lockoutEnabled === newStatus) return
-      if (updatingRef.current[userToUpdate.id]) {
-        console.debug('[UserList] update already in-flight for', userToUpdate.id)
-        return
-      }
+    const actionText = isBeingLocked ? 'khóa' : 'mở khóa';
+    if (!confirm(`Bạn có chắc muốn ${actionText} tài khoản "${currentUser.fullName}" không?`)) {
+      return;
+    }
 
-      // Mark in-flight synchronously via ref then update UI state
-      updatingRef.current[userToUpdate.id] = true
-      setUpdatingIds(prev => ({ ...prev, [userToUpdate.id]: true }))
+    setUpdatingIds(prev => ({ ...prev, [userToUpdate.id]: true }));
 
-      // Optimistic UI: cập nhật ngay trong state
-      setUsers(prev => prev.map(u => u.id === userToUpdate.id ? { ...u, lockoutEnabled: newStatus } : u))
-
-      try {
-        const payload: Partial<UpdateUserRequest> = { lockoutEnabled: newStatus }
-        if (!newStatus) payload.lockoutEnd = null
-        console.debug('[UserList] update payload', userToUpdate.id, payload)
-        const resp = await userService.update(userToUpdate.id, payload)
-        console.debug('[UserList] update response', resp)
-        // reload list from server to get canonical DB state (handles backend using different fields/formats)
-        try {
-          await load()
-        } catch (err) {
-          console.debug('[UserList] reload after update failed', err)
-        }
-        // avoid duplicate toasts for the same user in short time
-        const now = Date.now()
-        const last = lastToastRef.current[userToUpdate.id] || 0
-        if (now - last > 2000) {
-          lastToastRef.current[userToUpdate.id] = now
-          showToast(newStatus ? 'Tài khoản đã bị khóa.' : 'Tài khoản đã được mở khóa.')
-        } else {
-          console.debug('[UserList] skipped duplicate toast for', userToUpdate.id)
-        }
-      } catch (error) {
-        // revert optimistic update
-        setUsers(prev => prev.map(u => u.id === userToUpdate.id ? { ...u, lockoutEnabled: userToUpdate.lockoutEnabled } : u))
-        showToast('Không thể cập nhật trạng thái tài khoản.', 'error')
-      } finally {
-        // clear ref and state
-        updatingRef.current[userToUpdate.id] = false
-        setUpdatingIds(prev => {
-          const copy = { ...prev }
-          delete copy[userToUpdate.id]
-          return copy
-        })
-        // clear debounce timer
-        if (debounceRef.current[userToUpdate.id]) {
-          clearTimeout(debounceRef.current[userToUpdate.id])
-          delete debounceRef.current[userToUpdate.id]
-        }
-      }
-    }, 300)
-  }
+    try {
+      // Xây dựng một payload "sạch" và đầy đủ, chỉ chứa các trường mà API Update yêu cầu.
+      // Điều này tương tự như cách form edit hoạt động.
+      const payload: UpdateUserRequest = {
+        fullName: currentUser.fullName,
+        phoneNumber: currentUser.phoneNumber,
+        role: currentUser.role,
+        lockoutEnabled: isBeingLocked,
+        // To unlock, we must set lockoutEnd to a past date.
+        // To lock, we can set it to a future date or null for an indefinite lock.
+        // For simplicity here, we'll use a past date for unlocking and null for locking.
+        lockoutEnd: isBeingLocked 
+          ? null // Lock indefinitely
+          : new Date(Date.now() - 86400000).toISOString(), // Unlock by setting date to the past (yesterday)
+      };
+      await userService.update(userToUpdate.id, payload);
+      showToast(`Đã ${actionText} tài khoản thành công.`);
+      await load(); // Tải lại danh sách để cập nhật UI
+    } catch (error) {
+      showToast('Không thể cập nhật trạng thái tài khoản.', 'error');
+    } finally {
+      setUpdatingIds(prev => ({ ...prev, [userToUpdate.id]: false }));
+    }
+  };
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -272,22 +229,6 @@ export default function UserList() {
     return <span style={{ background: bg, color, padding: '6px 10px', borderRadius: 16, fontSize: 12 }}>{text}</span>
   }
 
-  const getStatusStyle = (isLocked?: boolean): React.CSSProperties => {
-    const locked = Boolean(isLocked)
-    return {
-      padding: '6px 12px',
-      borderRadius: 16,
-      border: '1px solid',
-      borderColor: locked ? '#fca5a5' : '#6ee7b7',
-      background: locked ? '#fee2e2' : '#e7f9ec',
-      color: locked ? '#991b1b' : '#065f46',
-      fontWeight: 600,
-      cursor: 'pointer',
-      fontSize: 13,
-      appearance: 'none',
-    }
-  }
-
     return (
     <div style={{ padding: 24, backgroundColor: '#f9fafb', minHeight: '100vh' }}>
       {/* Header */}
@@ -380,18 +321,20 @@ export default function UserList() {
                   <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.email}</td>
                   <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}</td>
                   <td style={{ padding: '16px' }}>
-                    <select
-                      value={((u as any).lockoutEnabled ? 'locked' : 'unlocked')}
-                      onChange={(e) => handleStatusChange(u, e.target.value === 'locked')}
+                    <button
+                      onClick={() => handleStatusChange(u, !u.lockoutEnabled)}
                       disabled={Boolean(updatingIds[u.id])}
+                      title={u.lockoutEnabled ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
                       style={{
-                        ...getStatusStyle((u as any).lockoutEnabled),
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '4px',
                         opacity: updatingIds[u.id] ? 0.6 : 1,
-                        cursor: updatingIds[u.id] ? 'not-allowed' : 'pointer'
-                      }}>
-                      <option value="unlocked">Hoạt động</option>
-                      <option value="locked">Đang khóa</option>
-                    </select>
+                      }}
+                    >
+                      {u.lockoutEnabled ? <UnlockIcon /> : <LockIcon />}
+                    </button>
                   </td>
                   <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
                     <button onClick={() => handleViewDetails(u.id)} title="Xem chi tiết" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>

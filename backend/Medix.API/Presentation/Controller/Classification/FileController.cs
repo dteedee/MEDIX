@@ -25,14 +25,13 @@ namespace Medix.API.Presentation.Controller.Classification
                 return BadRequest(new { message = "Vui lòng chọn một tệp để tải lên." });
             }
 
-            var uploadResult = await _cloudinaryService.UploadImageAsync(file);
-
-            if (uploadResult.Error != null)
+            var imageUrl = await _cloudinaryService.UploadImageAsync(file);
+            if (string.IsNullOrEmpty(imageUrl))
             {
-                return StatusCode(500, new { message = "Lỗi khi tải ảnh lên Cloudinary.", error = uploadResult.Error.Message });
+                return StatusCode(500, new { message = "Lỗi khi tải ảnh lên Cloudinary." });
             }
 
-            return Ok(new { url = uploadResult.SecureUrl.ToString() });
+            return Ok(new { url = imageUrl });
         }
     }
 }

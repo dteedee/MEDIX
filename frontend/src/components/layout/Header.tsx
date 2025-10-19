@@ -84,45 +84,22 @@ export const Header: React.FC = () => {
         {/* Khu vực tài khoản / hành động */}
         <div className="medix-actions">
           {currentUser ? (
-            <>
-              <div className="avatar" title={currentUser.fullName || currentUser.email}>
-                <svg
-                  width="28"
-                  height="28"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
-                    stroke="#ffffff"
-                    strokeWidth="1.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M20.59 21C19.79 18.88 17.98 17.25 15.75 16.5C13.52 15.75 10.48 15.75 8.25 16.5C6.02 17.25 4.21 18.88 3.41 21"
-                    stroke="#ffffff"
-                    strokeWidth="1.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+            <div className="user-menu">
+              <div className="user-greeting">
+                <span className="greeting-text">Xin chào,</span>
+                <span className="user-name">{currentUser.fullName || currentUser.email}</span>
+                <span className="user-role">({currentUser.role || 'USER'})</span>
               </div>
-              <span className="user-info">
-                {currentUser.fullName || currentUser.email}
-              </span>
-              <span className="user-role">{currentUser.role || 'USER'}</span>
               <button className="logout-btn" onClick={handleLogout}>
-                Đăng Xuất
+                Đăng xuất
               </button>
-            </>
+            </div>
           ) : (
             <>
               <Link to="/login" className="login-btn">
                 Đăng nhập
               </Link>
-              <Link to="/register" className="register-btn">
+              <Link to="/patient-register" className="register-btn">
                 Đăng ký
               </Link>
             </>

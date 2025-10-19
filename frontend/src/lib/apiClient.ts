@@ -6,8 +6,11 @@ class ApiClient {
   private refreshTokenPromise: Promise<string> | null = null;
 
   constructor() {
+    // Use environment variable for API base URL, fallback to proxy for development
+    const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api';
+    
     this.client = axios.create({
-      baseURL: '/api',
+      baseURL: API_BASE_URL,
       headers: {
         'Content-Type': 'application/json',
       },

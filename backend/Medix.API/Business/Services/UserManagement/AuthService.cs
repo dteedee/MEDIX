@@ -36,7 +36,20 @@ namespace Medix.API.Business.Services.UserManagement
         // =====================
         public async Task<AuthResponseDto> LoginAsync(LoginRequestDto loginRequest)
         {
-            var user = await _userRepository.GetByEmailAsync(loginRequest.Email);
+            // Allow login by email or username
+            var identifier = loginRequest.Identifier?.Trim();
+            User? user = null;
+            if (!string.IsNullOrEmpty(identifier))
+            {
+                if (identifier.Contains("@"))
+                {
+                    user = await _userRepository.GetByEmailAsync(identifier);
+                }
+                else
+                {
+                    user = await _userRepository.GetByUserNameAsync(identifier);
+                }
+            }
 
             if (user != null && BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash))
             {
@@ -76,7 +89,7 @@ namespace Medix.API.Business.Services.UserManagement
                 };
             }
 
-            throw new UnauthorizedException("Email hoặc mật khẩu không đúng");
+            throw new UnauthorizedException("Tên đăng nhập/Email hoặc mật khẩu không đúng");
         }
 
         // =====================
@@ -276,19 +289,40 @@ namespace Medix.API.Business.Services.UserManagement
             var user = await _userRepository.GetByEmailAsync(request.Email);
             if (user == null) return true;
 
-            var token = _jwtService.GeneratePasswordResetToken(user.Email);
-            await _emailService.SendPasswordResetEmailAsync(user.Email, token);
+            // Generate 6-digit numeric code
+            var code = new Random().Next(100000, 999999).ToString();
+
+            // Save code in EmailVerificationCodes table
+            var entity = new Medix.API.Models.Entities.EmailVerificationCode
+            {
+                Email = request.Email,
+                Code = code,
+                ExpirationTime = DateTime.UtcNow.AddMinutes(15),
+                IsUsed = false
+            };
+
+            _context.EmailVerificationCodes.Add(entity);
+            await _context.SaveChangesAsync();
+
+            // Send code via email
+            await _emailService.SendVerificationCodeAsync(user.Email, code);
+
             return true;
         }
 
         public async Task<bool> ResetPasswordAsync(ResetPasswordRequestDto request)
         {
-            var isValid = _jwtService.ValidatePasswordResetToken(request.Token, request.Email);
-            if (!isValid)
+            // Validate code stored in DB
+            var codeEntity = await _context.EmailVerificationCodes
+                .Where(c => c.Email == request.Email && c.Code == request.Code && !c.IsUsed)
+                .OrderByDescending(c => c.ExpirationTime)
+                .FirstOrDefaultAsync();
+
+            if (codeEntity == null || codeEntity.ExpirationTime < DateTime.UtcNow)
             {
                 throw new ValidationException(new Dictionary<string, string[]>
                 {
-                    { "Token", new[] { "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn" } }
+                    { "Code", new[] { "Mã xác nhận không hợp lệ hoặc đã hết hạn" } }
                 });
             }
 
@@ -298,6 +332,11 @@ namespace Medix.API.Business.Services.UserManagement
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
             user.UpdatedAt = DateTime.UtcNow;
             await _userRepository.UpdateAsync(user);
+
+            // Mark code as used
+            codeEntity.IsUsed = true;
+            await _context.SaveChangesAsync();
+
             return true;
         }
 

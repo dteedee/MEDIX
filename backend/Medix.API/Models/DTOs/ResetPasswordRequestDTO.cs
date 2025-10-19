@@ -4,8 +4,8 @@ namespace Medix.API.Models.DTOs
 {
     public class ResetPasswordRequestDto
     {
-        [Required(ErrorMessage = "Token is required")]
-        public string Token { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Code is required")]
+        public string Code { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Email is required")]
         [EmailAddress(ErrorMessage = "Invalid email format")]

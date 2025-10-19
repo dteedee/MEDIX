@@ -26,7 +26,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
         {
             try
             {
-                _logger.LogInformation("Login attempt for email: {Email} at {Time}", loginRequest?.Email, DateTime.UtcNow);
+                _logger.LogInformation("Login attempt for identifier: {Identifier} at {Time}", loginRequest?.Identifier, DateTime.UtcNow);
                 if (!ModelState.IsValid)
                 {
                     return BadRequest(ModelState);
@@ -35,12 +35,12 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 try
                 {
                     var result = await _authService.LoginAsync(loginRequest);
-                    _logger.LogInformation("Login success for email: {Email} at {Time}", loginRequest.Email, DateTime.UtcNow);
+                    _logger.LogInformation("Login success for identifier: {Identifier} at {Time}", loginRequest.Identifier, DateTime.UtcNow);
                     return Ok(result);
                 }
                 catch (UnauthorizedException ex)
                 {
-                    _logger.LogWarning(ex, "Login failed for email: {Email} at {Time}", loginRequest.Email, DateTime.UtcNow);
+                    _logger.LogWarning(ex, "Login failed for identifier: {Identifier} at {Time}", loginRequest.Identifier, DateTime.UtcNow);
                     throw;
                 }
             }
@@ -50,7 +50,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error during login for email: {Email} at {Time}", loginRequest?.Email, DateTime.UtcNow);
+                _logger.LogError(ex, "Unexpected error during login for identifier: {Identifier} at {Time}", loginRequest?.Identifier, DateTime.UtcNow);
                 return StatusCode(500, new { message = "An error occurred during login" });
             }
         }

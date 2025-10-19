@@ -76,6 +76,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Store user data
       localStorage.setItem('userData', JSON.stringify(authResponse.user));
+      localStorage.setItem('currentUser', JSON.stringify(authResponse.user));
       setUser(authResponse.user);
     } catch (error) {
       console.error('Login failed:', error);
@@ -95,6 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Store user data
       localStorage.setItem('userData', JSON.stringify(authResponse.user));
+      localStorage.setItem('currentUser', JSON.stringify(authResponse.user));
       setUser(authResponse.user);
     } catch (error) {
       console.error('Registration failed:', error);
@@ -114,6 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Store user data
       localStorage.setItem('userData', JSON.stringify(authResponse.user));
+      localStorage.setItem('currentUser', JSON.stringify(authResponse.user));
       setUser(authResponse.user);
     } catch (error) {
       console.error('Patient registration failed:', error);
@@ -132,6 +135,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Always clear local state
       setUser(null);
       localStorage.removeItem('userData');
+      localStorage.removeItem('currentUser');
       apiClient.clearTokens();
     }
   };

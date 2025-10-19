@@ -2,7 +2,7 @@
 import { ApiResponse, BloodTypeDTO} from '../types/common.types';
 
 // Get API base URL from environment variable
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'https://localhost:55883' ;
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5123';
 
 
 // Helper function để build full URL

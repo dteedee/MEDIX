@@ -57,7 +57,7 @@ namespace Medix.API.Presentation.Controller.Classification
 
             Validator.TryValidateObject(request, context, validationResults, true);
             validationResults = await ValidateAsync(request, validationResults);
-            if (validationResults.Any())
+            if (validationResults.Count != 0)
             {
                 var modelState = new ModelStateDictionary();
                 foreach (var validationResult in validationResults)
@@ -85,11 +85,10 @@ namespace Medix.API.Presentation.Controller.Classification
                 DateOfBirth = request.Dob == null ? null : DateOnly.Parse(request.Dob),
                 GenderCode = request.GenderCode,
                 IdentificationNumber = request.IdentificationNumber,
-                Address = "", // Placeholder
                 Status = 2, // Assuming 2 means pending verification
             };
 
-            var licenseImageUrl = await _cloudinaryService.UploadImageAsync(request.LicenseImage);
+            var licenseImageUrl = await _cloudinaryService.UploadArchiveAsync(request.LicenseImage);
 
             Doctor doctor = new Doctor
             {

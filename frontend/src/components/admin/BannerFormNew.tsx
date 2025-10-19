@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { BannerDTO } from '../../types/banner.types'
+import { useToast } from '../../contexts/ToastContext'
 import { bannerService } from '../../services/bannerService'
 import { articleService } from '../../services/articleService'
 
@@ -10,29 +11,56 @@ interface Props {
 }
 
 export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
-  const [title, setTitle] = useState(banner?.title ?? '')
-  const [imageUrl, setImageUrl] = useState(banner?.imageUrl ?? '')
-  const [link, setLink] = useState(banner?.link ?? '')
+  const { showToast } = useToast()
+  const [title, setTitle] = useState(banner?.bannerTitle ?? '')
+  const [imageUrl, setImageUrl] = useState(banner?.bannerImageUrl ?? '')
+  const [link, setLink] = useState(banner?.bannerUrl ?? '')
   const [isActive, setIsActive] = useState<boolean>(banner?.isActive ?? true)
-  const [order, setOrder] = useState<number | undefined>(banner?.order)
+  const [order, setOrder] = useState<number | undefined>(banner?.displayOrder)
   // store local input-friendly datetime values (YYYY-MM-DDTHH:mm) for datetime-local
-  const isoToLocalInput = (iso?: string) => {
-    if (!iso) return ''
+  const isoToLocalInput = (iso?: string | null) => {
+    if (!iso) return '';
     const d = new Date(iso)
+    // Handle invalid date strings gracefully
+    if (isNaN(d.getTime())) return '';
     const pad = (n: number) => n.toString().padStart(2, '0')
     const yyyy = d.getFullYear()
     const mm = pad(d.getMonth() + 1)
     const dd = pad(d.getDate())
     const hh = pad(d.getHours())
     const mins = pad(d.getMinutes())
-    return `${yyyy}-${mm}-${dd}T${hh}:${mins}`
+    return `${yyyy}-${mm}-${dd}T${hh}:${mins}`;
   }
 
-  const [startDateLocal, setStartDateLocal] = useState<string>(isoToLocalInput(banner ? (banner as any).startDate : undefined))
-  const [endDateLocal, setEndDateLocal] = useState<string>(isoToLocalInput(banner ? (banner as any).endDate : undefined))
+  const [startDateLocal, setStartDateLocal] = useState<string>(isoToLocalInput(banner?.startDate))
+  const [endDateLocal, setEndDateLocal] = useState<string>(isoToLocalInput(banner?.endDate))
   const [saving, setSaving] = useState(false)
   const fileRef = React.createRef<HTMLInputElement>()
-  const [errors, setErrors] = useState<{ order?: string }>({})
+  const [errors, setErrors] = useState<{ title?: string, imageUrl?: string, order?: string, link?: string }>({})
+
+  const validateOnBlur = (field: 'title' | 'link', value: string) => {
+    if (!value.trim()) {
+      let message = '';
+      if (field === 'title') {
+        message = 'Tiêu đề không được để trống.';
+      } else if (field === 'link') {
+        message = 'Đường dẫn (Link) không được để trống.';
+      }
+      if (message) setErrors(prev => ({ ...prev, [field]: message }));
+    }
+  };
+  
+  useEffect(() => {
+    if (banner) {
+      setTitle(banner.bannerTitle ?? '');
+      setImageUrl(banner.bannerImageUrl ?? '');
+      setLink(banner.bannerUrl ?? '');
+      setOrder(banner.displayOrder);
+      setIsActive(banner.isActive);
+      setStartDateLocal(isoToLocalInput(banner.startDate));
+      setEndDateLocal(isoToLocalInput(banner.endDate));
+    }
+  }, [banner]);
 
   const onSelectFile = () => fileRef.current?.click()
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,6 +69,7 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
     try {
       const url = await articleService.uploadImage(f)
       setImageUrl(url)
+      if (errors.imageUrl) setErrors(prev => ({ ...prev, imageUrl: undefined }));
     } catch (err) {
       console.error(err)
       alert('Upload failed')
@@ -49,8 +78,16 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (errors.order) {
-      alert('Vui lòng sửa lỗi ở trường Thứ tự hiển thị trước khi lưu.');
+
+    const newErrors: typeof errors = {};
+    if (!title.trim()) newErrors.title = "Tiêu đề không được để trống.";
+    if (!link.trim()) newErrors.link = "Đường dẫn (Link) không được để trống.";
+    if (!imageUrl) newErrors.imageUrl = "Ảnh banner không được để trống.";
+    if (errors.order) newErrors.order = errors.order; // Giữ lại lỗi order nếu có
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      showToast('Vui lòng điền đầy đủ các trường bắt buộc.', 'error');
       return;
     }
     setSaving(true)
@@ -83,9 +120,9 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
         console.debug('Banner save response:', res)
         onSaved?.()
       } catch (err: any) {
-        console.error('Banner save failed', err)
-        const serverMsg = err?.response?.data ?? err?.message ?? String(err)
-        alert('Save failed: ' + (typeof serverMsg === 'string' ? serverMsg : JSON.stringify(serverMsg)))
+        console.error('Lưu banner thất bại', err)
+        const message = err?.response?.data?.message || 'Đã xảy ra lỗi khi lưu banner. Vui lòng thử lại.';
+        showToast(message, 'error');
       }
     } finally {
       setSaving(false)
@@ -137,21 +174,35 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
           <div style={{ width: '100%', aspectRatio: '16/9', background: '#f0f2f5', borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', border: '1px dashed #d1d5db' }}>
             {imageUrl ? <img src={imageUrl} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
           </div>
+          {errors.imageUrl && <div style={errorTextStyle}>{errors.imageUrl}</div>}
           <button type="button" onClick={onSelectFile} style={{ width: '100%', marginTop: 12, padding: '10px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 500 }}>
             Tải ảnh lên
           </button>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFileChange} />
+          <input ref={fileRef} type="file" accept="image/png, image/jpeg" style={{ display: 'none' }} onChange={onFileChange} />
         </div>
 
         {/* Right Column for Fields */}
         <div style={gridStyle}>
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={labelStyle}>Tiêu đề</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} required style={inputStyle} />
+            <input 
+              value={title} 
+              onChange={e => { setTitle(e.target.value); if (errors.title) setErrors(prev => ({ ...prev, title: undefined })); }} 
+              required 
+              onBlur={e => validateOnBlur('title', e.target.value)}
+              style={{...inputStyle, borderColor: errors.title ? '#ef4444' : '#d1d5db'}} 
+            />
+            {errors.title && <div style={errorTextStyle}>{errors.title}</div>}
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={labelStyle}>Đường dẫn (Link)</label>
-            <input value={link ?? ''} onChange={e => setLink(e.target.value)} style={inputStyle} placeholder="https://example.com/promotion" />
+            <input 
+              value={link ?? ''} 
+              onChange={e => { setLink(e.target.value); if (errors.link) setErrors(prev => ({ ...prev, link: undefined })); }} 
+              onBlur={e => validateOnBlur('link', e.target.value)}
+              style={{...inputStyle, borderColor: errors.link ? '#ef4444' : '#d1d5db'}} 
+              placeholder="https://example.com/promotion" />
+            {errors.link && <div style={errorTextStyle}>{errors.link}</div>}
           </div>
           <div>
             <label style={labelStyle}>Ngày bắt đầu</label>

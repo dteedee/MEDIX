@@ -83,17 +83,14 @@ export default function BannerList() {
     };
   }, []);
 
-  const handleSearch = () => {
-    setPage(1); // Reset to first page on new search
-    setAppliedSearch(search);
-    setShowSuggestions(false);
-  }
-
   const handleSearchChange = (value: string) => {
     setSearch(value);
+    setAppliedSearch(value); // Áp dụng tìm kiếm ngay khi người dùng nhập
+    setPage(1); // Reset về trang đầu tiên khi có tìm kiếm mới
+
     if (value.trim()) {
       const filteredSuggestions = items.filter(item =>
-        item.title.toLowerCase().includes(value.toLowerCase())
+        item.bannerTitle.toLowerCase().includes(value.toLowerCase())
       ).slice(0, 5);
       setSuggestions(filteredSuggestions);
       setShowSuggestions(filteredSuggestions.length > 0);
@@ -104,10 +101,10 @@ export default function BannerList() {
   };
 
   const handleSuggestionClick = (suggestion: BannerDTO) => {
-    setSearch(suggestion.title);
+    setSearch(suggestion.bannerTitle);
     setSuggestions([]);
     setShowSuggestions(false);
-    setAppliedSearch(suggestion.title);
+    setAppliedSearch(suggestion.bannerTitle);
   };
 
   const handleSort = (column: string) => {
@@ -130,8 +127,8 @@ export default function BannerList() {
     if (appliedSearch.trim()) {
       const searchTerm = appliedSearch.toLowerCase();
       filtered = filtered.filter(item =>
-        item.title.toLowerCase().includes(searchTerm) ||
-        item.link?.toLowerCase().includes(searchTerm)
+        item.bannerTitle.toLowerCase().includes(searchTerm) ||
+        item.bannerUrl?.toLowerCase().includes(searchTerm)
       );
     }
 
@@ -166,10 +163,10 @@ export default function BannerList() {
     try {
       // Tạo payload với các trường mà backend mong đợi
       const payload: any = {
-        bannerTitle: bannerToUpdate.title ?? '',
-        bannerImageUrl: bannerToUpdate.imageUrl ?? null,
-        bannerUrl: bannerToUpdate.link ?? null,
-        displayOrder: bannerToUpdate.order ?? 0,
+        bannerTitle: bannerToUpdate.bannerTitle ?? '',
+        bannerImageUrl: bannerToUpdate.bannerImageUrl ?? null,
+        bannerUrl: bannerToUpdate.bannerUrl ?? null,
+        displayOrder: bannerToUpdate.displayOrder ?? 0,
         isActive: newStatus,
       };
 
@@ -218,7 +215,6 @@ export default function BannerList() {
               placeholder="Tìm theo tiêu đề"
               value={search}
               onChange={e => handleSearchChange(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
               style={{ width: '80%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
             />
             {showSuggestions && (
@@ -252,7 +248,7 @@ export default function BannerList() {
                       (e.currentTarget.style.backgroundColor = "transparent")
                     }
                   >
-                    {suggestion.title}
+                    {suggestion.bannerTitle}
                   </div>
                 ))}
               </div>
@@ -265,11 +261,6 @@ export default function BannerList() {
               <option value="active">Đang hoạt động</option>
               <option value="inactive">Ngừng</option>
             </select>
-          </div>
-          <div>
-            <button onClick={handleSearch} style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, cursor: 'pointer' }}>
-              Tìm
-            </button>
           </div>
           <div>
             <button onClick={() => { setSearch(''); setAppliedSearch(''); setStatusFilter('all'); setPage(1); }} style={{ padding: '10px 20px', background: '#fff', color: '#2563eb', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
@@ -303,14 +294,14 @@ export default function BannerList() {
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ width: 100, height: 56, background: '#f0f2f5', borderRadius: 6, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {b.imageUrl ? <img src={b.imageUrl} alt={b.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 12, color: '#6b7280' }}>No Image</span>}
+                        {b.bannerImageUrl ? <img src={b.bannerImageUrl} alt={b.bannerTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 12, color: '#6b7280' }}>No Image</span>}
                       </div>
                     </td>
-                    <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14 }}>{b.title}</td>
+                    <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14 }}>{b.bannerTitle}</td>
                     <td style={{ padding: '16px', color: '#4b5563', fontSize: 14, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <a href={b.link} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>{b.link}</a>
+                      <a href={b.bannerUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>{b.bannerUrl}</a>
                     </td>
-                    <td style={{ padding: '16px', color: '#4b5563', fontSize: 14, textAlign: 'center' }}>{b.order ?? '-'}</td>
+                    <td style={{ padding: '16px', color: '#4b5563', fontSize: 14, textAlign: 'center' }}>{b.displayOrder ?? '-'}</td>
                     <td style={{ padding: '16px' }}>
                       <select
                         value={b.isActive ? 'active' : 'inactive'}

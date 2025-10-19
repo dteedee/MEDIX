@@ -98,20 +98,20 @@ export default function BannerDetails({ banner, onClose }: Props) {
         <div style={contentGridStyle}>
           <div style={fullWidthItem}>
             <span style={labelStyle}>Tiêu đề</span>
-            <p style={{ ...valueStyle, fontSize: 16, fontWeight: 600, margin: 0 }}>{banner.title}</p>
+            <p style={{ ...valueStyle, fontSize: 16, fontWeight: 600, margin: 0 }}>{banner.bannerTitle}</p>
           </div>
-          {banner.imageUrl && (
+          {banner.bannerImageUrl && (
             <div style={fullWidthItem}>
               <span style={labelStyle}>Ảnh banner</span>
-              <img src={banner.imageUrl} alt="Banner" style={{ width: '100%', height: 'auto', maxHeight: 300, borderRadius: 8, objectFit: 'contain', border: '1px solid #e5e7eb', marginTop: 4 }} />
+              <img src={banner.bannerImageUrl} alt="Banner" style={{ width: '100%', height: 'auto', maxHeight: 300, borderRadius: 8, objectFit: 'contain', border: '1px solid #e5e7eb', marginTop: 4 }} />
             </div>
           )}
-          <div style={detailItemStyle}><span style={labelStyle}>Đường dẫn (Link)</span><span style={valueStyle}>{banner.link || 'Không có'}</span></div>
-          <div style={detailItemStyle}><span style={labelStyle}>Thứ tự hiển thị</span><span style={valueStyle}>{banner.order ?? 'Không có'}</span></div>
+          <div style={detailItemStyle}><span style={labelStyle}>Đường dẫn (Link)</span><span style={valueStyle}>{banner.bannerUrl || 'Không có'}</span></div>
+          <div style={detailItemStyle}><span style={labelStyle}>Thứ tự hiển thị</span><span style={valueStyle}>{banner.displayOrder ?? 'Không có'}</span></div>
           <div style={detailItemStyle}><span style={labelStyle}>Trạng thái</span><span style={valueStyle}>{banner.isActive ? 'Đang hoạt động' : 'Ngừng'}</span></div>
           <div style={detailItemStyle}><span style={labelStyle}>Ngày tạo</span><span style={valueStyle}>{fmtDate(banner.createdAt)}</span></div>
-          <div style={detailItemStyle}><span style={labelStyle}>Ngày bắt đầu</span><span style={valueStyle}>{fmtDate((banner as any).startDate)}</span></div>
-          <div style={detailItemStyle}><span style={labelStyle}>Ngày kết thúc</span><span style={valueStyle}>{fmtDate((banner as any).endDate)}</span></div>
+          <div style={detailItemStyle}><span style={labelStyle}>Ngày bắt đầu</span><span style={valueStyle}>{fmtDate(banner.startDate)}</span></div>
+          <div style={detailItemStyle}><span style={labelStyle}>Ngày kết thúc</span><span style={valueStyle}>{fmtDate(banner.endDate)}</span></div>
         </div>
       </div>
     </div>

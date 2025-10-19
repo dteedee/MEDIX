@@ -16,12 +16,14 @@ function authHeader() {
 function mapToDTO(x: any): BannerDTO {
   return {
     id: x.id,
-    title: x.bannerTitle ?? x.title ?? '',
-    imageUrl: x.bannerImageUrl ?? x.imageUrl,
-    link: x.bannerUrl ?? x.link,
-    order: x.displayOrder ?? x.order,
+    bannerTitle: x.bannerTitle ?? x.title ?? '',
+    bannerImageUrl: x.bannerImageUrl ?? x.imageUrl,
+    bannerUrl: x.bannerUrl ?? x.link,
+    displayOrder: x.displayOrder ?? x.order,
     isActive: x.isActive ?? false,
     createdAt: x.createdAt,
+    startDate: x.startDate,
+    endDate: x.endDate,
   };
 }
 

@@ -9,6 +9,7 @@
         public string Specialization { get; set; }
         public string? Biography { get; set; }
         public int[] RatingByStar { get; set; }
+        public string? Education { get; set; }
         public List<ReviewDto> Reviews { get; set; }
     }
 

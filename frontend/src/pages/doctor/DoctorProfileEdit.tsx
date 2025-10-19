@@ -23,6 +23,10 @@ function DoctorProfileEdit() {
 
     const [passwordFieldErrors, setPasswordFieldErrors] = useState<Record<string, string>>({});
 
+    const [uploadImageLoading, setUploadImageLoading] = useState(false);
+    const [updateLoading, setUpdateLoading] = useState(false);
+    const [updatePasswordLoading, setUpdatePasswordLoading] = useState(false);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleUploadClick = () => {
@@ -36,8 +40,10 @@ function DoctorProfileEdit() {
         const formData = new FormData();
         formData.append('avatar', file);
 
+        setUploadImageLoading(true);
         try {
             const response = await DoctorService.updateAvatar(formData);
+            setUploadImageLoading(false);
             console.log(response);
             const newUrl = response.avatarUrl;
 
@@ -49,6 +55,7 @@ function DoctorProfileEdit() {
             setUploadStatus('success');
             setUploadMessage('Ảnh đã được cập nhật thành công!');
         } catch (error: unknown) {
+            setUploadImageLoading(false);
             if (axios.isAxiosError(error)) {
                 const status = error.response?.status;
                 const errorData = error.response?.data;
@@ -94,9 +101,10 @@ function DoctorProfileEdit() {
         }
 
         setErrors({});
+        setUpdateLoading(true);
         try {
             await DoctorService.updateDoctorProfile(formData);
-
+            setUpdateLoading(false);
             Swal.fire({
                 title: 'Cập nhật thông tin thành công!',
                 icon: 'success',
@@ -105,6 +113,7 @@ function DoctorProfileEdit() {
                 window.location.href = '/';
             });
         } catch (error: unknown) {
+            setUpdateLoading(false);
             if (axios.isAxiosError(error)) {
                 const errorData = error.response?.data;
                 if (errorData?.errors) {
@@ -128,9 +137,11 @@ function DoctorProfileEdit() {
             console.log(`${key}:`, value);
         }
 
+        setUpdatePasswordLoading(true);
         setPasswordFieldErrors({});
         try {
             await DoctorService.updatePassword(formData);
+            setUpdatePasswordLoading(false);
             Swal.fire({
                 title: 'Cập nhật thông tin thành công!',
                 icon: 'success',
@@ -140,6 +151,7 @@ function DoctorProfileEdit() {
             });
             console.log("Update pasword successfully");
         } catch (error: any) {
+            setUpdatePasswordLoading(false);
             if (error.response?.status === 400 && Array.isArray(error.response.data)) {
                 const errors: Record<string, string> = {};
                 error.response.data.forEach((item: any) => {
@@ -230,7 +242,16 @@ function DoctorProfileEdit() {
                             <div className={styles["profile-avatar"]}>
                                 <img className={styles["avatar-placeholder"]} src={profileDetails?.avatarUrl} />
                             </div>
-                            <button className="btn btn-primary" onClick={handleUploadClick}>Tải ảnh lên</button>
+                            <button className="btn btn-primary" disabled={uploadImageLoading} onClick={handleUploadClick}>
+                                {uploadImageLoading ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        Đang xử lý...
+                                    </>
+                                ) : (
+                                    'Tải ảnh lên'
+                                )}
+                            </button>
                             {uploadMessage && (
                                 <div
                                     style={{
@@ -387,26 +408,20 @@ function DoctorProfileEdit() {
                                 </div>
                             </div>
 
-                            <div className={styles["form-row"]}>
-                                <label className={styles["form-label"]}>Giá khám</label>
-                                <div className={styles["form-input-group"]}>
-                                    <input
-                                        type="text"
-                                        className={styles["form-input"]}
-                                        defaultValue={profileDetails?.consultationFee}
-                                        name="consultationFee"
-                                    />
-                                    {errors.ConsultationFee?.[0] && (
-                                        <div className={styles["form-error"]}>{errors.ConsultationFee[0]}</div>
-                                    )}
-                                </div>
-                            </div>
-
                             {/* Action Buttons */}
                             <div className={styles["action-buttons"]}>
                                 <button type="button" className="btn btn-primary" data-bs-toggle="modal"
                                     data-bs-target="#changePasswordModal">Đổi mật khẩu</button>
-                                <button type="submit" className="btn btn-primary">Lưu thay đổi</button>
+                                <button type="submit" disabled={updateLoading} className="btn btn-primary">
+                                    {updateLoading ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                            Đang xử lý...
+                                        </>
+                                    ) : (
+                                        'Lưu thay đổi'
+                                    )}
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -504,8 +519,15 @@ function DoctorProfileEdit() {
                                 <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">
                                     Đóng
                                 </button>
-                                <button type="submit" className="btn btn-primary">
-                                    Cập nhật mật khẩu
+                                <button type="submit" className="btn btn-primary" disabled={updatePasswordLoading}>
+                                    {updatePasswordLoading ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                            Đang xử lý...
+                                        </>
+                                    ) : (
+                                        'Cập nhật mật khẩu'
+                                    )}
                                 </button>
                             </div>
                         </form>

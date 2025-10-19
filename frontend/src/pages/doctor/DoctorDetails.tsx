@@ -111,8 +111,8 @@ function DoctorDetails() {
                             <span className={styles["info-value"]}>{profileData?.specialization}</span>
                         </div>
                         <div className={styles["info-row"]}>
-                            <span className={styles["info-label"]}>Nơi công tác:</span>
-                            <span className={styles["info-value"]}>Bệnh viện đại học y Hà Nội</span>
+                            <span className={styles["info-label"]}>Trình độ học vấn:</span>
+                            <span className={styles["info-value"]}>{profileData?.education}</span>
                         </div>
                     </div>
                 </div>

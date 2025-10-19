@@ -92,6 +92,7 @@ namespace Medix.API.Business.Services.Classification
                 AvatarUrl = doctor.User.AvatarUrl,
                 NumberOfReviews = reviews.Count,
                 RatingByStar = ratingByStar,
+                Education = doctor.Education,
             };
 
             profileDto.Reviews = reviews.OrderByDescending(r => r.CreatedAt)
@@ -115,7 +116,7 @@ namespace Medix.API.Business.Services.Classification
         public async Task<bool> UpdateDoctorProfileAsync(Doctor existingDoctor, DoctorProfileUpdateRequest req)
         {
             existingDoctor.User.FullName = req.FullName;
-            existingDoctor.User.DateOfBirth = req.Dob == null ? null : DateOnly.Parse(req.Dob);
+            existingDoctor.User.DateOfBirth = (req.Dob == null || string.IsNullOrWhiteSpace(req.Dob)) ? null : DateOnly.Parse(req.Dob);
             if (existingDoctor.User.PhoneNumber != req.PhoneNumber)
             {
                 existingDoctor.User.PhoneNumber = req.PhoneNumber;
@@ -124,7 +125,6 @@ namespace Medix.API.Business.Services.Classification
             existingDoctor.Bio = req.Bio;
             existingDoctor.Education = req.Education;
             existingDoctor.YearsOfExperience = (int)(req.YearsOfExperience == null ? 0 : req.YearsOfExperience);
-            existingDoctor.ConsultationFee = req.ConsultationFee == null ? 0 : req.ConsultationFee.Value;
 
             var updatedDoctor = await _doctorRepository.UpdateDoctorAsync(existingDoctor);
             return updatedDoctor != null;

@@ -4,6 +4,8 @@ import { categoryService } from '../../services/categoryService'
 import { CategoryDTO } from '../../types/category.types'
 import { articleService } from '../../services/articleService'
 import { useToast } from '../../contexts/ToastContext'
+import { CKEditor } from '@ckeditor/ckeditor5-react'
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
 
 interface Props {
   article?: ArticleDTO
@@ -422,10 +424,20 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
           </div>
           <div>
             <label style={labelStyle}>Nội dung</label>
-            <textarea value={content} onChange={e => {
-              setContent(e.target.value);
-              if (errors.content) setErrors(prev => ({ ...prev, content: undefined }));
-            }} onBlur={(e) => validateOnBlur('content', e.target.value)} placeholder="Nhập nội dung bài viết..." style={{ ...inputStyle, minHeight: '300px', fontFamily: 'inherit', borderColor: errors.content ? '#ef4444' : '#d1d5db' }} />
+            <div style={{ border: `1px solid ${errors.content ? '#ef4444' : '#d1d5db'}`, borderRadius: 8, overflow: 'hidden', minHeight: 300 }}>
+              <CKEditor
+                editor={ClassicEditor}
+                data={content}
+                onChange={(event, editor) => {
+                  const data = editor.getData()
+                  setContent(data)
+                  if (errors.content) setErrors(prev => ({ ...prev, content: undefined }))
+                }}
+                onBlur={(event, editor) => {
+                  validateOnBlur('content', editor.getData())
+                }}
+              />
+            </div>
             {errors.content && <div style={errorTextStyle}>{errors.content}</div>}
           </div>
           

@@ -13,7 +13,7 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
             _context = context;
         }
 
-        public async Task<User?> GetByIdAsync(Guid id)
+        public async Task<User?> GetByIdAsync(Guid? id)
         {
             return await _context.Users.FindAsync(id);
         }

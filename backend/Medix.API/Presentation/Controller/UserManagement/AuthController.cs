@@ -62,7 +62,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during registration");
+                _logger.LogError(ex, "Error 1 during registration");
                 return StatusCode(500, new { message = "An error occurred during registration" });
             }
         }

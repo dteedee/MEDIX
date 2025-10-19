@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, AuthResponse, LoginRequest, RegisterRequest, PatientRegistration } from '../types/auth.types';
 import { UserRole } from '../types/common.types';
 import { authService } from '../services/authService';
-import { apiClient } from '../lib/apiClient'
+import { apiClient } from '../lib/apiClient';
 
 interface AuthContextType {
   user: User | null;

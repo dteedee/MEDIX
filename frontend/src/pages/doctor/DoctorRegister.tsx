@@ -443,6 +443,4 @@ function DoctorRegister() {
         </div>
     )
 }
-
-
 export default DoctorRegister;

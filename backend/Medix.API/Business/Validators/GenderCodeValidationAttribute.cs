@@ -4,7 +4,7 @@ namespace Medix.API.Business.Validators
 {
     public class GenderCodeValidationAttribute : ValidationAttribute
     {
-        private static readonly string[] AllowedValues = { "Male", "Female", "Others" };
+        private static readonly string[] AllowedValues = { "Male", "Female", "Other" };
 
         protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {

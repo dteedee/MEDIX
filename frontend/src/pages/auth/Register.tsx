@@ -8,7 +8,8 @@ export const Register: React.FC = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    fullName: '',
+    firstName: '',
+    lastName: '',
     phoneNumber: '',
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -85,7 +86,7 @@ export const Register: React.FC = () => {
                 name="fullName"
                 type="text"
                 required
-                value={formData.fullName}
+                value={formData.firstName + ' ' + formData.lastName}
                 onChange={handleChange}
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Nhập họ và tên"

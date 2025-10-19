@@ -11,6 +11,7 @@ namespace Medix.API.Business.Services.UserManagement
         private readonly IUserRoleRepository _userRoleRepository;
         private readonly IUserRepository _userRepository;
         private readonly IPatientRepository _patientRepository;
+   
 
         public UserService(IUserRepository userRepository, IPatientRepository patientRepository, IUserRoleRepository userRoleRepository)
         {
@@ -38,6 +39,7 @@ namespace Medix.API.Business.Services.UserManagement
                 IdentificationNumber = registerDto.IdentificationNumber,
                 IsProfileCompleted = false,
                 CreatedAt = DateTime.UtcNow,
+                Address = registerDto.address,
                 UpdatedAt = DateTime.UtcNow,
                 EmailConfirmed = true,
                 PhoneNumberConfirmed = false,
@@ -47,8 +49,8 @@ namespace Medix.API.Business.Services.UserManagement
 
             var savedUser = await _userRepository.CreateAsync(user);
             // TODO: Fix when UserRoleRepository.CreateAsync is implemented
-            // await _userRoleRepository.CreateAsync(new UserRole { UserId = savedUser.Id, RoleCode = "Patient" });
-
+        
+            await _userRoleRepository.AssignRole("Patient", savedUser.Id);
             return new UserDto
             {
                 Id = savedUser.Id,
@@ -103,6 +105,7 @@ namespace Medix.API.Business.Services.UserManagement
             user.FullName = userDto.FullName;
             user.PhoneNumber = userDto.PhoneNumber;
             user.UpdatedAt = DateTime.UtcNow;
+      
 
             var updatedUser = await _userRepository.UpdateAsync(user);
 
@@ -155,6 +158,76 @@ namespace Medix.API.Business.Services.UserManagement
         public async Task<User> UpdateUserAsync(User user)
         {
             return await _userRepository.UpdateAsync(user);
+        }
+        public async Task<UserBasicInfoDto> GetUserBasicInfo(Guid id)
+        {
+            var user = await _userRepository.GetByIdAsync(id);
+
+            if (user == null) throw new ArgumentException("Không tìm thấy người dùng");
+
+            return new UserBasicInfoDto
+            {
+                Id = user.Id,
+                username = user.UserName,
+                FullName = user.FullName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                imageURL = user.AvatarUrl,
+                dob = user.DateOfBirth,
+                address = user.Address
+            };
+        }
+
+        public async Task<UserBasicInfoDto> UpdateUserBasicInfo(UpdateUserDto updateDto)
+        {
+            var user = await _userRepository.GetByIdAsync(updateDto.Id);
+            if (user == null) throw new ArgumentException("Không tìm thấy người dùng");
+
+            if (updateDto.FullName != null)
+                user.FullName = updateDto.FullName;
+            if (updateDto.PhoneNumber != null)
+                user.PhoneNumber = updateDto.PhoneNumber;
+            if (updateDto.address != null)
+                user.Address = updateDto.address;
+            if (updateDto.dob != null)
+                user.DateOfBirth = updateDto.dob;
+            if (updateDto.Email != null)
+                user.Email = updateDto.Email;
+            if (updateDto.username != null)
+                user.UserName = updateDto.username;
+
+            user.UpdatedAt = DateTime.UtcNow;
+
+            var updatedUser = await _userRepository.UpdateAsync(user);
+
+            return new UserBasicInfoDto
+            {
+                Id = updatedUser.Id,
+                username = updatedUser.UserName,
+                FullName = updatedUser.FullName,
+                Email = updatedUser.Email,
+                PhoneNumber = updatedUser.PhoneNumber,
+                address = updatedUser.Address,
+                dob = updatedUser.DateOfBirth,
+                CreatedAt = updatedUser.CreatedAt
+            };
+        }
+
+        public async Task<string?> UpdateAvatarURL(string linkImage, Guid id)
+        {
+            if (string.IsNullOrWhiteSpace(linkImage))
+                return null;
+
+            var user = await _userRepository.GetByIdAsync(id);
+            if (user == null)
+                return null;
+
+            user.AvatarUrl = linkImage;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userRepository.UpdateAsync(user);
+
+            return linkImage;
         }
 
     }

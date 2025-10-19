@@ -1,10 +1,14 @@
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using Microsoft.Extensions.Logging;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 
 namespace Medix.API.Business.Services.Community
 {
     public class CloudinaryService
     {
+        private readonly Cloudinary _cloudinary;
         private readonly ILogger<CloudinaryService> _logger;
         private readonly IConfiguration _configuration;
         private readonly Cloudinary _cloudinary;
@@ -29,18 +33,33 @@ namespace Medix.API.Business.Services.Community
 
         public async Task<string?> UploadImageAsync(IFormFile? file)
         {
-            if (file?.Length > 0)
+            try
             {
-                await using var stream = file.OpenReadStream();
                 var uploadParams = new ImageUploadParams
                 {
-                    File = new FileDescription(file.FileName, stream),
-                    Transformation = new Transformation().Crop("fill").Gravity("face")
+                    File = new FileDescription(fileName, imageStream),
+                    PublicId = fileName,
+                    Overwrite = true,
+                    Folder = "user-avatars"
                 };
+
                 var uploadResult = await _cloudinary.UploadAsync(uploadParams);
-                return uploadResult.SecureUrl.ToString();
+
+                if (uploadResult.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    return uploadResult.SecureUrl.ToString();
+                }
+                else
+                {
+                    _logger.LogError("Cloudinary upload failed: {0}", uploadResult.Error?.Message);
+                    return string.Empty;
+                }
             }
-            return null;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception when uploading image to Cloudinary");
+                return string.Empty;
+            }
         }
 
         public async Task<bool> DeleteImageAsync(string publicId)

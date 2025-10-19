@@ -77,13 +77,13 @@ export const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children 
 const getDashboardPath = (role: UserRole): string => {
   switch (role) {
     case UserRole.ADMIN:
-      return '/admin';
+      return '/app/admin';
     case UserRole.MANAGER:
-      return '/manager';
+      return '/app/manager';
     case UserRole.DOCTOR:
-      return '/doctor';
+      return '/app/doctor';
     case UserRole.PATIENT:
-      return '/patient';
+      return '/app/patient';
     default:
       return '/';
   }

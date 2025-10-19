@@ -30,7 +30,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const [categoryIds, setCategoryIds] = useState<string[]>(article?.categoryIds ?? [])
   const [content, setContent] = useState(article?.content ?? '')
   const [saving, setSaving] = useState(false)
-  const [errors, setErrors] = useState<{ title?: string; slug?: string; displayOrder?: string }>({})
+  const [errors, setErrors] = useState<{ title?: string; slug?: string; summary?: string; content?: string; thumbnailUrl?: string; categoryIds?: string; displayOrder?: string }>({})
   const [validating, setValidating] = useState<{ title?: boolean; slug?: boolean }>({})
   const fileRef = React.createRef<HTMLInputElement>()
 
@@ -62,8 +62,13 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (!f) return
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!allowedTypes.includes(f.type)) {
+        alert('Chỉ chấp nhận tệp PNG hoặc JPG.');
+        return;
+    }
     try {
-      const url = await articleService.uploadImage(f)
+      const url = await articleService.uploadImage(f);
       setThumbnailUrl(url)
     } catch (err) {
       console.error('Upload failed', err)
@@ -74,6 +79,11 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const onCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (!f) return
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!allowedTypes.includes(f.type)) {
+        alert('Chỉ chấp nhận tệp PNG hoặc JPG.');
+        return;
+    }
     try {
       // Re-use the same upload service
       const url = await articleService.uploadImage(f)
@@ -89,7 +99,8 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
       setLoadingCategories(true)
       try {
         const r = await categoryService.list(1, 1000)
-        setAvailableCategories(r.items ?? [])
+        // Chỉ hiển thị các danh mục đang hoạt động
+        setAvailableCategories(r.items?.filter(c => c.isActive) ?? [])
       } finally {
         setLoadingCategories(false)
       }
@@ -118,10 +129,24 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
       setStatusCode(article.statusCode ?? 'DRAFT')
       setPublishedAt(isoToLocalInput(article.publishedAt))
       setContent(article.content ?? '')
-      // This is the key part for fixing the category selection.
-      setCategoryIds(article.categoryIds ?? [])
+      // Handle category IDs. Prefer `categoryIds` if available.
+      if (article.categoryIds && article.categoryIds.length > 0) {
+        setCategoryIds(article.categoryIds);
+      } else if (article.categories && article.categories.length > 0) {
+        // If categories have IDs, use them directly.
+        if (article.categories[0].id) {
+          setCategoryIds(article.categories.map(c => c.id));
+        } else {
+          // Fallback: if categories only have names (no IDs), find their IDs from the available list.
+          const namesToMatch = article.categories.map(c => c.name);
+          const matchingIds = availableCategories
+            .filter(ac => namesToMatch.includes(ac.name))
+            .map(ac => ac.id);
+          setCategoryIds(matchingIds);
+        }
+      }
     }
-  }, [article])
+  }, [article, availableCategories])
 
   // Auto-generate slug from title if slug is empty
   useEffect(() => {
@@ -131,38 +156,67 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
     }
   }, [title]);
 
-  const validateField = async (field: 'title' | 'slug', value: string) => {
-    // Don't validate if the value hasn't changed from the initial value, or if it's empty
-    if (value === (article?.[field] ?? '') || !value) {
-      return
-    }
+  // const validateField = async (field: 'title' | 'slug', value: string) => {
+  //   // Don't validate if the value hasn't changed from the initial value, or if it's empty
+  //   if (value === (article?.[field] ?? '') || !value) {
+  //     return
+  //   }
 
-    setValidating(prev => ({ ...prev, [field]: true }))
-    setErrors(prev => ({ ...prev, [field]: undefined })) // Clear previous error
+  //   setValidating(prev => ({ ...prev, [field]: true }))
+  //   setErrors(prev => ({ ...prev, [field]: undefined })) // Clear previous error
 
-    try {
-      // We assume articleService has a new method for this.
-      // You will need to implement this in your service and the corresponding backend endpoint.
-      await articleService.checkUniqueness(field, value, article?.id)
-    } catch (error: any) {
-      const message = error?.response?.data?.message || `Giá trị này không được phép trùng.`
-      setErrors(prev => ({ ...prev, [field]: message }))
-    } finally {
-      setValidating(prev => ({ ...prev, [field]: false }))
-    }
-  }
+  //   try {
+  //     // We assume articleService has a new method for this.
+  //     // You will need to implement this in your service and the corresponding backend endpoint.
+  //     await articleService.checkUniqueness(field, value, article?.id)
+  //   } catch (error: any) {
+  //     const message = error?.response?.data?.message || `Trường này không được phép trùng.`
+  //     setErrors(prev => ({ ...prev, [field]: message }))
+  //   } finally {
+  //     setValidating(prev => ({ ...prev, [field]: false }))
+  //   }
+  // }
 
   // Store initial values to compare on blur
   const initialTitle = React.useRef(article?.title ?? '').current;
   const initialSlug = React.useRef(article?.slug ?? '').current;
 
+  const validateOnBlur = (field: 'title' | 'slug' | 'summary' | 'content', value: string) => {
+    // Only validate for emptiness on blur
+    if (!value.trim()) {
+      let message = 'Trường này không được để trống.';
+      if (field === 'title') message = 'Tiêu đề không được để trống.';
+      if (field === 'slug') message = 'Đường dẫn (slug) không được để trống.';
+      if (field === 'summary') message = 'Tóm tắt không được để trống.';
+      if (field === 'content') message = 'Nội dung không được để trống.';
+      setErrors(prev => ({ ...prev, [field]: message }));
+    }
+    // The onChange handler already clears the error, so no need for an else clause here.
+  };
+
   const submit = async (e: React.FormEvent | null, overrideStatusCode?: string) => {
     e?.preventDefault()
-    if (errors.displayOrder || errors.slug || errors.title) {
-      alert('Vui lòng sửa các lỗi được hiển thị trước khi lưu.');
+
+    // --- Validation ---
+    const newErrors: typeof errors = {};
+    if (!title.trim()) newErrors.title = "Tiêu đề không được để trống.";
+    if (!slug.trim()) newErrors.slug = "Đường dẫn (slug) không được để trống.";
+    if (!summary.trim()) newErrors.summary = "Tóm tắt không được để trống.";
+    if (!content.trim()) newErrors.content = "Nội dung không được để trống.";
+    if (!thumbnailUrl) newErrors.thumbnailUrl = "Ảnh đại diện không được để trống.";
+    if (categoryIds.length === 0) newErrors.categoryIds = "Vui lòng chọn ít nhất một danh mục.";
+    
+    // Check for existing async validation errors
+    if (errors.displayOrder) {
+      alert('Vui lòng sửa các lỗi đã báo trước khi lưu.');
       return;
     }
-    setErrors({}) // Reset errors on new submission
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+        alert('Vui lòng điền đầy đủ các trường bắt buộc.');
+        return;
+    }
     setSaving(true)
     try {
       const finalStatusCode = overrideStatusCode ?? statusCode;
@@ -173,11 +227,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         setSaving(false)
         return
       }
-      if (categoryIds.length === 0) {
-        alert('Vui lòng chọn ít nhất một danh mục cho bài viết.')
-        setSaving(false)
-        return
-      }
+
       const payload: CreateArticleRequest = {
         title,
         slug,
@@ -277,8 +327,11 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
             <button type="button" onClick={onSelectFile} style={{ width: '100%', marginTop: 12, padding: '10px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 500 }}>
               Tải ảnh lên
             </button>
+            <input ref={fileRef} type="file" accept="image/png, image/jpeg" style={{ display: 'none' }} onChange={(e) => {
+                onFileChange(e);
+                if (errors.thumbnailUrl) setErrors(prev => ({ ...prev, thumbnailUrl: undefined }));
+            }} />
           </div>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFileChange} />
 
           <div>
             <label style={labelStyle}>Ảnh bìa (Cover Image)</label>
@@ -289,18 +342,23 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
               Tải ảnh bìa
             </button>
           </div>
-          <input ref={coverFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onCoverFileChange} />
+          <input ref={coverFileRef} type="file" accept="image/png, image/jpeg" style={{ display: 'none' }} onChange={onCoverFileChange} />
 
           <div>
             <label style={labelStyle}>Danh mục</label>
-            <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 12px' }}>
+            
+            <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid', borderColor: errors.categoryIds ? '#ef4444' : '#d1d5db', borderRadius: 8, padding: '8px 12px' }}>
               {loadingCategories && <div>Đang tải...</div>}
               {!loadingCategories && availableCategories.map(c => (
                 <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', cursor: 'pointer', fontSize: 14 }}>
-                  <input type="checkbox" checked={categoryIds.includes(c.id)} onChange={() => toggleCategory(c.id)} />
+                  <input type="checkbox" checked={categoryIds.includes(c.id)} onChange={() => {
+                      toggleCategory(c.id);
+                      if (errors.categoryIds) setErrors(prev => ({ ...prev, categoryIds: undefined }));
+                  }} />
                   <span>{c.name}</span>
                 </label>
               ))}
+              
             </div>
           </div>
 
@@ -336,7 +394,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
                 if (errors.title) setErrors(prev => ({ ...prev, title: undefined }))
               }}
               required
-              onBlur={(e) => validateField('title', e.target.value)}
+              onBlur={(e) => validateOnBlur('title', e.target.value)}
               style={{ ...inputStyle, borderColor: errors.title ? '#ef4444' : '#d1d5db' }}
             />
             {errors.title && <div style={errorTextStyle}>{errors.title}</div>}
@@ -348,7 +406,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
               setSlug(e.target.value)
               if (errors.slug) setErrors(prev => ({ ...prev, slug: undefined }))
             }}
-            onBlur={(e) => validateField('slug', e.target.value)}
+            onBlur={(e) => validateOnBlur('slug', e.target.value)}
             placeholder="Tự động tạo nếu để trống"
             style={{ ...inputStyle, borderColor: errors.slug ? '#ef4444' : '#d1d5db' }} />
             {errors.slug && <div style={errorTextStyle}>{errors.slug}</div>}
@@ -356,11 +414,19 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
           </div>
           <div>
             <label style={labelStyle}>Tóm tắt</label>
-            <textarea value={summary} onChange={e => setSummary(e.target.value)} style={{ ...inputStyle, minHeight: '80px', fontFamily: 'inherit' }} />
+            <textarea value={summary} onChange={e => {
+              setSummary(e.target.value);
+              if (errors.summary) setErrors(prev => ({ ...prev, summary: undefined }));
+            }} onBlur={(e) => validateOnBlur('summary', e.target.value)} style={{ ...inputStyle, minHeight: '80px', fontFamily: 'inherit', borderColor: errors.summary ? '#ef4444' : '#d1d5db' }} />
+            {errors.summary && <div style={errorTextStyle}>{errors.summary}</div>}
           </div>
           <div>
             <label style={labelStyle}>Nội dung</label>
-            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Nhập nội dung bài viết..." style={{ ...inputStyle, minHeight: '300px', fontFamily: 'inherit' }} />
+            <textarea value={content} onChange={e => {
+              setContent(e.target.value);
+              if (errors.content) setErrors(prev => ({ ...prev, content: undefined }));
+            }} onBlur={(e) => validateOnBlur('content', e.target.value)} placeholder="Nhập nội dung bài viết..." style={{ ...inputStyle, minHeight: '300px', fontFamily: 'inherit', borderColor: errors.content ? '#ef4444' : '#d1d5db' }} />
+            {errors.content && <div style={errorTextStyle}>{errors.content}</div>}
           </div>
           
 

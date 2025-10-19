@@ -108,7 +108,7 @@ export const articleService = {
   get: async (id: string): Promise<ArticleDTO> => {
     const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })
     const x = r.data;
-
+    
     // Also enrich with categories on single-get
     const allCategories = (await categoryCache.fetchAll()).items;
     const article: ArticleDTO = {
@@ -145,18 +145,42 @@ export const articleService = {
       throw err
     }
   },
-  create: async (payload: CreateArticleRequest): Promise<ArticleDTO> => {
-    const r = await axios.post(BASE, { ...payload }, { headers: authHeader() })
-    return r.data
+ create: async (payload: CreateArticleRequest): Promise<ArticleDTO> => {
+    try {
+      const r = await axios.post(BASE, { ...payload }, { headers: authHeader() });
+      return r.data;
+    } catch (error: any) {
+      if (error.response && error.response.data && error.response.data.errors) {
+        console.error("Lỗi validation từ backend khi tạo bài viết:");
+        const backendErrors = error.response.data.errors;
+        // Lặp qua và log tất cả các lỗi để dễ dàng debug
+        for (const field in backendErrors) {
+          if (Object.prototype.hasOwnProperty.call(backendErrors, field)) {
+            console.error(`- ${field}: ${backendErrors[field].join(', ')}`);
+          }
+        }
+      }
+      // Ném lại lỗi để component có thể xử lý và hiển thị trên UI
+      throw error;
+    }
   },
+
   update: async (id: string, payload: UpdateArticleRequest): Promise<ArticleDTO> => {
-    const r = await axios.put(`${BASE}/${id}`, { ...payload }, { headers: authHeader() })
-    return r.data
+    try {
+      const r = await axios.put(`${BASE}/${id}`, { ...payload }, { headers: authHeader() })
+      return r.data
+    } catch (error: any) {
+      if (error.response && error.response.data && error.response.data.errors) {
+        console.error(`Backend validation error on update (ID: ${id}):`, JSON.stringify(error.response.data.errors, null, 2));
+      }
+      // Re-throw the error so the calling component can handle it for UI feedback
+      throw error;
+    }
   },
   remove: async (id: string): Promise<void> => {
     await axios.delete(`${BASE}/${id}`, { headers: authHeader() })
   },
-  checkUniqueness: async (field: 'title' | 'slug', value: string, excludeId?: string): Promise<void> => {
+  checkUniqueness: async (field: 'title' | 'slug' | 'displayOrder', value: string, excludeId?: string): Promise<void> => {
     const params = new URLSearchParams()
     params.append('field', field)
     params.append('value', value)

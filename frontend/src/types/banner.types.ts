@@ -1,10 +1,12 @@
 export interface BannerDTO {
   id: string
-  title: string
-  imageUrl?: string
-  link?: string
+  bannerTitle: string
+  bannerImageUrl?: string
+  bannerUrl?: string
   isActive: boolean
-  order?: number
+  displayOrder?: number
+  startDate?: string | null
+  endDate?: string | null
   createdAt?: string
 }
 

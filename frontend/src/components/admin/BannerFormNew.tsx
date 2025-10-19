@@ -36,7 +36,7 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
   const [endDateLocal, setEndDateLocal] = useState<string>(isoToLocalInput(banner?.endDate))
   const [saving, setSaving] = useState(false)
   const fileRef = React.createRef<HTMLInputElement>()
-  const [errors, setErrors] = useState<{ title?: string, imageUrl?: string, order?: string, link?: string }>({})
+  const [errors, setErrors] = useState<{ title?: string, imageUrl?: string, order?: string, link?: string, startDate?: string, endDate?: string }>({})
 
   const validateOnBlur = (field: 'title' | 'link', value: string) => {
     if (!value.trim()) {
@@ -50,6 +50,21 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
     }
   };
   
+  const validateDateRange = (start: string, end: string) => {
+    if (start && end && new Date(start) > new Date(end)) {
+      setErrors(prev => ({
+        ...prev,
+        startDate: 'Ngày bắt đầu không được muộn hơn ngày kết thúc.',
+        endDate: 'Ngày kết thúc không được sớm hơn ngày bắt đầu.'
+      }));
+    } else {
+      // Xóa lỗi nếu ngày hợp lệ
+      if (errors.startDate || errors.endDate) {
+        setErrors(prev => ({ ...prev, startDate: undefined, endDate: undefined }));
+      }
+    }
+  };
+
   useEffect(() => {
     if (banner) {
       setTitle(banner.bannerTitle ?? '');
@@ -62,19 +77,66 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
     }
   }, [banner]);
 
+  // Validate date range whenever they change
+  useEffect(() => {
+    validateDateRange(startDateLocal, endDateLocal);
+  }, [startDateLocal, endDateLocal]);
+
   const onSelectFile = () => fileRef.current?.click()
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (!f) return
+
+    const allowedTypes = ['image/png', 'image/jpeg'];
+    if (!allowedTypes.includes(f.type)) {
+      showToast('Chỉ chấp nhận tệp ảnh có định dạng PNG hoặc JPG.', 'error');
+      setErrors(prev => ({ ...prev, imageUrl: 'Chỉ chấp nhận tệp ảnh có định dạng PNG hoặc JPG.' }));
+      // Xóa tệp đã chọn để người dùng có thể chọn lại
+      if (fileRef.current) {
+        fileRef.current.value = '';
+      }
+      return;
+    }
+
     try {
       const url = await articleService.uploadImage(f)
       setImageUrl(url)
       if (errors.imageUrl) setErrors(prev => ({ ...prev, imageUrl: undefined }));
     } catch (err) {
       console.error(err)
-      alert('Upload failed')
+      showToast('Tải ảnh lên thất bại.', 'error')
+      setErrors(prev => ({ ...prev, imageUrl: 'Tải ảnh lên thất bại.' }));
     }
   }
+
+  const handleBackendErrors = (err: any) => {
+    const newErrors: typeof errors = {};
+    let hasSpecificError = false;
+
+    // Ánh xạ lỗi từ backend (ví dụ: "BannerTitle") sang state của form (ví dụ: "title")
+    if (err.BannerTitle) { newErrors.title = err.BannerTitle[0]; hasSpecificError = true; }
+    if (err.BannerImageUrl) { newErrors.imageUrl = err.BannerImageUrl[0]; hasSpecificError = true; }
+    if (err.BannerUrl) { newErrors.link = err.BannerUrl[0]; hasSpecificError = true; }
+    if (err.DisplayOrder) { newErrors.order = err.DisplayOrder[0]; hasSpecificError = true; }
+
+    // Xử lý lỗi cross-validation cho khoảng ngày
+    if (err.DateRange && err.DateRange[0]) {
+      // Hiển thị lỗi inline cho cả hai trường ngày
+      newErrors.startDate = err.DateRange[0];
+      newErrors.endDate = err.DateRange[0];
+      hasSpecificError = true; // Đánh dấu là đã xử lý lỗi cụ thể
+    }
+
+    if (hasSpecificError) {
+      setErrors(prev => ({ ...prev, ...newErrors }));
+      // Không hiển thị toast chung, chỉ hiển thị lỗi inline
+      // showToast('Vui lòng kiểm tra lại các thông tin đã nhập.', 'error');
+    } else {
+      // Xử lý các lỗi chung khác không thuộc về trường cụ thể
+      const message = err?.response?.data?.message || err?.message || 'Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.';
+      showToast(message, 'error');
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,11 +145,12 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
     if (!title.trim()) newErrors.title = "Tiêu đề không được để trống.";
     if (!link.trim()) newErrors.link = "Đường dẫn (Link) không được để trống.";
     if (!imageUrl) newErrors.imageUrl = "Ảnh banner không được để trống.";
-    if (errors.order) newErrors.order = errors.order; // Giữ lại lỗi order nếu có
+    // Giữ lại các lỗi đã có từ trước (ví dụ: lỗi ngày tháng)
+    const currentErrors = { ...errors, ...newErrors };
 
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) {
-      showToast('Vui lòng điền đầy đủ các trường bắt buộc.', 'error');
+    setErrors(currentErrors);
+    // Nếu có bất kỳ lỗi nào, không submit
+    if (Object.values(currentErrors).some(e => e !== undefined)) {
       return;
     }
     setSaving(true)
@@ -120,9 +183,7 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
         console.debug('Banner save response:', res)
         onSaved?.()
       } catch (err: any) {
-        console.error('Lưu banner thất bại', err)
-        const message = err?.response?.data?.message || 'Đã xảy ra lỗi khi lưu banner. Vui lòng thử lại.';
-        showToast(message, 'error');
+        handleBackendErrors(err);
       }
     } finally {
       setSaving(false)
@@ -201,16 +262,18 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
               onChange={e => { setLink(e.target.value); if (errors.link) setErrors(prev => ({ ...prev, link: undefined })); }} 
               onBlur={e => validateOnBlur('link', e.target.value)}
               style={{...inputStyle, borderColor: errors.link ? '#ef4444' : '#d1d5db'}} 
-              placeholder="https://example.com/promotion" />
+              placeholder="https://vi dụ.com/khuyen-mai" />
             {errors.link && <div style={errorTextStyle}>{errors.link}</div>}
           </div>
           <div>
             <label style={labelStyle}>Ngày bắt đầu</label>
-            <input type="datetime-local" value={startDateLocal} onChange={e => setStartDateLocal(e.target.value)} style={inputStyle} />
+            <input type="datetime-local" value={startDateLocal} onChange={e => setStartDateLocal(e.target.value)} style={{...inputStyle, borderColor: errors.startDate ? '#ef4444' : '#d1d5db'}} />
+            {errors.startDate && <div style={errorTextStyle}>{errors.startDate}</div>}
           </div>
           <div>
             <label style={labelStyle}>Ngày kết thúc</label>
-            <input type="datetime-local" value={endDateLocal} onChange={e => setEndDateLocal(e.target.value)} style={inputStyle} />
+            <input type="datetime-local" value={endDateLocal} onChange={e => setEndDateLocal(e.target.value)} style={{...inputStyle, borderColor: errors.endDate ? '#ef4444' : '#d1d5db'}} />
+            {errors.endDate && <div style={errorTextStyle}>{errors.endDate}</div>}
           </div>
           <div>
             <label style={labelStyle}>Thứ tự hiển thị</label>

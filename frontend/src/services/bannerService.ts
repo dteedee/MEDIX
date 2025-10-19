@@ -58,12 +58,31 @@ export const bannerService = {
     return mapToDTO(r.data)
   },
   create: async (payload: CreateBannerRequest): Promise<BannerDTO> => {
-    const r = await axios.post(BASE, payload, { headers: authHeader() })
-    return mapToDTO(r.data)
+    try {
+      const r = await axios.post(BASE, payload, { headers: authHeader() })
+      return mapToDTO(r.data)
+    } catch (error: any) {
+      if (error.response?.data?.errors) {
+        const backendErrors = error.response.data.errors;
+        console.error("Lỗi validation từ backend khi tạo banner:", JSON.stringify(backendErrors, null, 2));
+        // Ném lại đối tượng lỗi để component có thể xử lý
+        throw backendErrors;
+      }
+      throw error; // Ném lại các lỗi khác
+    }
   },
   update: async (id: string, payload: UpdateBannerRequest): Promise<BannerDTO> => {
-    const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() })
-    return mapToDTO(r.data)
+    try {
+      const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() })
+      return mapToDTO(r.data)
+    } catch (error: any) {
+      if (error.response?.data?.errors) {
+        const backendErrors = error.response.data.errors;
+        console.error(`Lỗi validation từ backend khi cập nhật banner (ID: ${id}):`, JSON.stringify(backendErrors, null, 2));
+        throw backendErrors;
+      }
+      throw error;
+    }
   },
   remove: async (id: string): Promise<void> => {
     await axios.delete(`${BASE}/${id}`, { headers: authHeader() })

@@ -11,7 +11,6 @@ namespace Medix.API.Business.Services.Community
         private readonly Cloudinary _cloudinary;
         private readonly ILogger<CloudinaryService> _logger;
         private readonly IConfiguration _configuration;
-        private readonly Cloudinary _cloudinary;
 
         public CloudinaryService(ILogger<CloudinaryService> logger, IConfiguration configuration)
         {
@@ -31,38 +30,47 @@ namespace Medix.API.Business.Services.Community
             _configuration = configuration;
         }
 
-        public async Task<string?> UploadImageAsync(IFormFile? file)
-        {
-            try
-            {
-                var uploadParams = new ImageUploadParams
-                {
-                    File = new FileDescription(fileName, imageStream),
-                    PublicId = fileName,
-                    Overwrite = true,
-                    Folder = "user-avatars"
-                };
+		public async Task<string?> UploadImageAsync(IFormFile? file)
+		{
+			try
+			{
+				if (file == null || file.Length == 0)
+				{
+					_logger.LogError("Invalid file provided for upload.");
+					return string.Empty;
+				}
 
-                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+				var fileName = Path.GetFileNameWithoutExtension(file.FileName);
+				await using var imageStream = file.OpenReadStream();
 
-                if (uploadResult.StatusCode == System.Net.HttpStatusCode.OK)
-                {
-                    return uploadResult.SecureUrl.ToString();
-                }
-                else
-                {
-                    _logger.LogError("Cloudinary upload failed: {0}", uploadResult.Error?.Message);
-                    return string.Empty;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Exception when uploading image to Cloudinary");
-                return string.Empty;
-            }
-        }
+				var uploadParams = new ImageUploadParams
+				{
+					File = new FileDescription(fileName, imageStream),
+					PublicId = fileName,
+					Overwrite = true,
+					Folder = "user-avatars"
+				};
 
-        public async Task<bool> DeleteImageAsync(string publicId)
+				var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+
+				if (uploadResult.StatusCode == System.Net.HttpStatusCode.OK)
+				{
+					return uploadResult.SecureUrl.ToString();
+				}
+				else
+				{
+					_logger.LogError("Cloudinary upload failed: {0}", uploadResult.Error?.Message);
+					return string.Empty;
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Exception when uploading image to Cloudinary");
+				return string.Empty;
+			}
+		}
+
+		public async Task<bool> DeleteImageAsync(string publicId)
         {
             await Task.Delay(100);
             _logger.LogWarning("CloudinaryService delete chưa được triển khai.");

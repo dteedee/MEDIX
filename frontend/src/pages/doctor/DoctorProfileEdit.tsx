@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import styles from '../../styles/doctor-edit-profile.module.css'
 import DoctorService from '../../services/doctorService';
 import { DoctorProfileDetails } from '../../types/doctor.types';
-import Header from '../../components/layout/Header';
+import {Header} from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import Swal from 'sweetalert2';
 import axios from 'axios';

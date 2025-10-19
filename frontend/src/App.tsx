@@ -6,7 +6,7 @@ import { MainLayout } from './components/layout/MainLayout';
 import { UserRole } from './types/common.types';
 
 // Pages
-import  HomePage  from './pages/HomePage';
+import HomePage from './pages/HomePage';
 import Login from './pages/auth/Login';
 import { Register } from './pages/auth/Register';
 import { PatientRegister } from './pages/auth/PatientRegister';
@@ -15,10 +15,12 @@ import { Unauthorized } from './pages/Unauthorized';
 // Dashboard pages  
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { ManageDashboard } from './pages/manager/ManageDashboard';
-import DoctorRegister  from './pages/doctor/DoctorRegister';
+import DoctorRegister from './pages/doctor/DoctorRegister';
 import { AIChatBot } from './pages/ai/AIChatBot';
 import { PatientDashboard } from './pages/patient/patientdashboard';
 import { PatientProfile } from './pages/patient/patientProfile';
+import DoctorDetails from './pages/doctor/DoctorDetails';
+import DoctorProfileEdit from './pages/doctor/DoctorProfileEdit';
 
 export function App() {
   return (
@@ -41,13 +43,21 @@ export function App() {
               <PatientRegister />
             </PublicRoute>
           } />
+          <Route path="/doctor/*" element={
+            <PublicRoute>
+              <Routes>
+                <Route path="register" element={<DoctorRegister />} />
+                <Route path="details/:username" element={<DoctorDetails />} />
+                <Route path="profile/edit" element={<DoctorProfileEdit />} />
+              </Routes>
+            </PublicRoute>
+          } />
 
           {/* Home page - standalone layout */}
           <Route index element={<HomePage />} />
-          
-          {/* Main layout routes */}
-          <Route path="/app" element={<MainLayout />}> 
 
+          {/* Main layout routes */}
+          <Route path="/app" element={<MainLayout />}>
             {/* Protected routes */}
             <Route path="dashboard" element={
               <ProtectedRoute>
@@ -66,17 +76,6 @@ export function App() {
             <Route path="manager/*" element={
               <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
                 <ManageDashboard />
-              </ProtectedRoute>
-            } />
-
-            {/* Doctor routes */}
-            <Route path="doctor/*" element={
-              <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
-                <Routes>
-                  <Route index element={<Navigate to="dashboard" replace />} />
-                  <Route path="dashboard" element={<div>Doctor Dashboard</div>} />
-                  <Route path="register" element={<DoctorRegister />} />
-                </Routes>
               </ProtectedRoute>
             } />
 
@@ -102,6 +101,7 @@ export function App() {
             <Route path="unauthorized" element={<Unauthorized />} />
             <Route path="*" element={<NotFound />} />
           </Route>
+
         </Routes>
       </Router>
     </AuthProvider>
@@ -111,7 +111,7 @@ export function App() {
 // Component to redirect to appropriate dashboard based on role
 const DashboardRedirect: React.FC = () => {
   const userRole = JSON.parse(localStorage.getItem('userData') || '{}')?.role;
-  
+
   switch (userRole) {
     case UserRole.ADMIN:
       return <Navigate to="/app/admin" replace />;

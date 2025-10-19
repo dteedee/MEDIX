@@ -5,6 +5,7 @@ using Medix.API.Exceptions;
 using Medix.API.Models.DTOs.SiteBanner;
 using Medix.API.Models.Entities;
 using Medix.API.Business.Helper;
+using Medix.API.Business.Validators;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -12,11 +13,13 @@ namespace Medix.API.Business.Services.Classification
     {
         private readonly ISiteBannerRepository _siteBannerRepository;
         private readonly IMapper _mapper;
+        private readonly IDtoValidatorService _validator;
 
-        public SiteBannerService(ISiteBannerRepository siteBannerRepository, IMapper mapper)
+        public SiteBannerService(ISiteBannerRepository siteBannerRepository, IMapper mapper, IDtoValidatorService validator)
         {
             _siteBannerRepository = siteBannerRepository;
             _mapper = mapper;
+            _validator = validator;
         }
 
         public async Task<(int total, IEnumerable<SiteBannerDto> data)> GetPagedAsync(int page = 1, int pageSize = 10)
@@ -31,6 +34,8 @@ namespace Medix.API.Business.Services.Classification
                 BannerUrl = b.BannerUrl,
                 IsActive = b.IsActive,
                 DisplayOrder = b.DisplayOrder,
+                StartDate = b.StartDate,
+                EndDate = b.EndDate,
                 CreatedAt = b.CreatedAt
             });
 
@@ -49,6 +54,8 @@ namespace Medix.API.Business.Services.Classification
                 BannerUrl = b.BannerUrl,
                 IsActive = b.IsActive,
                 DisplayOrder = b.DisplayOrder,
+                StartDate = b.StartDate,
+                EndDate = b.EndDate,
                 CreatedAt = b.CreatedAt
             });
 
@@ -70,6 +77,8 @@ namespace Medix.API.Business.Services.Classification
                 BannerUrl = banner.BannerUrl,
                 IsActive = banner.IsActive,
                 DisplayOrder = banner.DisplayOrder,
+                StartDate = banner.StartDate,
+                EndDate = banner.EndDate,
                 CreatedAt = banner.CreatedAt
             };
         }
@@ -92,6 +101,9 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<SiteBannerDto> CreateAsync(SiteBannerCreateDto createDto)
         {
+            // Validate using DtoValidatorService
+            await _validator.ValidateSiteBannerCreateAsync(createDto);
+
             var banner = new SiteBanner
             {
                 Id = Guid.NewGuid(),
@@ -100,6 +112,8 @@ namespace Medix.API.Business.Services.Classification
                 BannerUrl = createDto.BannerUrl,
                 IsActive = createDto.IsActive,
                 DisplayOrder = createDto.DisplayOrder,
+                StartDate = createDto.StartDate,
+                EndDate = createDto.EndDate,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -115,33 +129,17 @@ namespace Medix.API.Business.Services.Classification
             {
                 throw new NotFoundException("Banner not found");
             }
-            // If DTO includes date range fields (start/end), validate them here. If not present, this is a no-op.
-            try
-            {
-                var startProp = updateDto.GetType().GetProperty("StartDate");
-                var endProp = updateDto.GetType().GetProperty("EndDate");
-                if (startProp != null && endProp != null)
-                {
-                    var startVal = startProp.GetValue(updateDto) as DateTime?;
-                    var endVal = endProp.GetValue(updateDto) as DateTime?;
-                    if (startVal.HasValue && endVal.HasValue && endVal.Value < startVal.Value)
-                    {
-                        throw new ValidationException(new Dictionary<string, string[]>
-                        {
-                            { "DateRange", new[] { "EndDate must be equal or later than StartDate." } }
-                        });
-                    }
-                }
-            }
-            catch
-            {
-                // reflection-based check is best-effort; ignore reflection errors here
-            }
+
+            // Validate using DtoValidatorService
+            await _validator.ValidateSiteBannerUpdateAsync(id, updateDto);
+
             banner.BannerTitle = updateDto.BannerTitle;
             banner.BannerImageUrl = updateDto.BannerImageUrl;
             banner.BannerUrl = updateDto.BannerUrl;
             banner.IsActive = updateDto.IsActive;
             banner.DisplayOrder = updateDto.DisplayOrder;
+            banner.StartDate = updateDto.StartDate;
+            banner.EndDate = updateDto.EndDate;
 
             await _siteBannerRepository.UpdateAsync(banner);
 
@@ -193,6 +191,8 @@ namespace Medix.API.Business.Services.Classification
                 BannerUrl = b.BannerUrl,
                 IsActive = b.IsActive,
                 DisplayOrder = b.DisplayOrder,
+                StartDate = b.StartDate,
+                EndDate = b.EndDate,
                 CreatedAt = b.CreatedAt
             });
 

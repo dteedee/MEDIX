@@ -1,44 +1,41 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authService } from '../../services/authService';
+import { useAuth } from '../../contexts/AuthContext';
 import './Header.css';
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<any | null>(() => {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null;
-    return raw ? JSON.parse(raw) : null;
-  });
+  const { user, isAuthenticated, logout } = useAuth();
 
-  // Lắng nghe sự kiện thay đổi đăng nhập/đăng xuất
-  useEffect(() => {
-    const handleAuthChanged = () => {
-      const raw = localStorage.getItem('currentUser');
-      setCurrentUser(raw ? JSON.parse(raw) : null);
-    };
-
-    window.addEventListener('authChanged', handleAuthChanged);
-    window.addEventListener('storage', handleAuthChanged);
-
-    return () => {
-      window.removeEventListener('authChanged', handleAuthChanged);
-      window.removeEventListener('storage', handleAuthChanged);
-    };
-  }, []);
+  // Chuyển đến trang profile dựa trên role
+  const handleProfileClick = () => {
+    if (!user) return;
+    
+    switch (user.role?.toUpperCase()) {
+      case 'ADMIN':
+        navigate('/app/admin');
+        break;
+      case 'MANAGER':
+        navigate('/app/manager');
+        break;
+      case 'DOCTOR':
+        navigate('/doctor/profile/edit');
+        break;
+      case 'PATIENT':
+        navigate('/app/patient/profile');
+        break;
+      default:
+        navigate('/');
+    }
+  };
 
   // Đăng xuất
   const handleLogout = async () => {
     try {
-      await authService.logout();
-    } finally {
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('expiresAt');
-      localStorage.removeItem('rememberEmail');
-
-      window.dispatchEvent(new Event('authChanged'));
-      setCurrentUser(null);
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
       navigate('/');
     }
   };
@@ -83,9 +80,14 @@ export const Header: React.FC = () => {
 
         {/* Khu vực tài khoản / hành động */}
         <div className="medix-actions">
-          {currentUser ? (
+          {isAuthenticated && user ? (
             <>
-              <div className="avatar" title={currentUser.fullName || currentUser.email}>
+              <div 
+                className="avatar" 
+                title={user.fullName || user.email}
+                onClick={handleProfileClick}
+                style={{ cursor: 'pointer' }}
+              >
                 <svg
                   width="28"
                   height="28"
@@ -109,10 +111,14 @@ export const Header: React.FC = () => {
                   />
                 </svg>
               </div>
-              <span className="user-info">
-                {currentUser.fullName || currentUser.email}
+              <span 
+                className="user-info"
+                onClick={handleProfileClick}
+                style={{ cursor: 'pointer' }}
+              >
+                {user.fullName || user.email}
               </span>
-              <span className="user-role">{currentUser.role || 'USER'}</span>
+              <span className="user-role">{user.role || 'USER'}</span>
               <button className="logout-btn" onClick={handleLogout}>
                 Đăng Xuất
               </button>
@@ -122,7 +128,7 @@ export const Header: React.FC = () => {
               <Link to="/login" className="login-btn">
                 Đăng nhập
               </Link>
-              <Link to="/register" className="register-btn">
+              <Link to="/patient-register" className="register-btn">
                 Đăng ký
               </Link>
             </>

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Medix.API.Migrations
 {
     [DbContext(typeof(MedixContext))]
-    [Migration("20251015173622_AddEmailVerificationCodeTable")]
-    partial class AddEmailVerificationCodeTable
+    [Migration("20251019160929_AddEmailVerificationCodesTable")]
+    partial class AddEmailVerificationCodesTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1818,10 +1818,6 @@ namespace Medix.API.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<byte>("Status")
                         .ValueGeneratedOnAdd()

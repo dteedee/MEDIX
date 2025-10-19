@@ -16,8 +16,9 @@ namespace Medix.API.Presentation.Controller.Classification
             _cloudinaryService = cloudinaryService;
         }
 
+    
         [HttpPost("upload")] // Giữ tên action là "upload"
-        // Sử dụng ImageFileAttribute để xác thực tệp tải lên
+                             // Sử dụng ImageFileAttribute để xác thực tệp tải lên
         public async Task<IActionResult> UploadImage([ImageFile(maxFileSizeInMB: 10)] IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -27,12 +28,13 @@ namespace Medix.API.Presentation.Controller.Classification
 
             var uploadResult = await _cloudinaryService.UploadImageAsync(file);
 
-            if (uploadResult.Error != null)
+            if (string.IsNullOrEmpty(uploadResult))
             {
-                return StatusCode(500, new { message = "Lỗi khi tải ảnh lên Cloudinary.", error = uploadResult.Error.Message });
+                return StatusCode(500, new { message = "Lỗi khi tải ảnh lên Cloudinary." });
             }
 
-            return Ok(new { url = uploadResult.SecureUrl.ToString() });
+            return Ok(new { url = uploadResult });
         }
+    
     }
 }

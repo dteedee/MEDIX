@@ -223,11 +223,19 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
     try {
       const finalStatusCode = overrideStatusCode ?? statusCode;
       // Prevent saving base64 data URLs into DB columns (causes truncation error)
-      if ((thumbnailUrl && thumbnailUrl.startsWith('data:')) || (coverImageUrl && coverImageUrl.startsWith('data:'))) {
-        console.warn('Attempt to save data URL into DB blocked')
-        alert('Upload failed earlier so the image is a local data URL. The server likely returned 404 for the upload endpoint.\n\nDo not save data URLs into the database. Please ensure the backend upload endpoint is available so images are stored and a remote URL is returned.')
-        setSaving(false)
-        return
+      if (thumbnailUrl && thumbnailUrl.startsWith('data:')) {
+        console.warn('Attempt to save data URL for thumbnail blocked');
+        setErrors(prev => ({ ...prev, thumbnailUrl: 'Lỗi tải ảnh đại diện. Vui lòng tải lại ảnh.' }));
+        showToast('Ảnh đại diện không hợp lệ. Vui lòng tải lại.', 'error');
+        setSaving(false);
+        return;
+      }
+      if (coverImageUrl && coverImageUrl.startsWith('data:')) {
+        console.warn('Attempt to save data URL for cover image blocked');
+        // Mặc dù không có trường lỗi riêng cho ảnh bìa, ta vẫn hiển thị toast
+        showToast('Ảnh bìa không hợp lệ. Vui lòng tải lại.', 'error');
+        setSaving(false);
+        return;
       }
 
       const payload: CreateArticleRequest = {
@@ -236,8 +244,8 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         summary,
         content,
         displayType,
-        thumbnailUrl,
-        coverImageUrl,
+        thumbnailUrl: thumbnailUrl || undefined, // Gửi undefined nếu là chuỗi rỗng
+        coverImageUrl: coverImageUrl || undefined, // Gửi undefined nếu là chuỗi rỗng
         isHomepageVisible,
         displayOrder,
         metaTitle,
@@ -333,6 +341,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
                 onFileChange(e);
                 if (errors.thumbnailUrl) setErrors(prev => ({ ...prev, thumbnailUrl: undefined }));
             }} />
+            {errors.thumbnailUrl && <div style={errorTextStyle}>{errors.thumbnailUrl}</div>}
           </div>
 
           <div>

@@ -24,10 +24,8 @@ namespace Medix.API.Models.DTOs.HealthArticle
        
         public string DisplayType { get; set; } = null!;
 
-        [Url(ErrorMessage = "ThumbnailUrl must be a valid URL.")]
         public string? ThumbnailUrl { get; set; }
 
-        [Url(ErrorMessage = "CoverImageUrl must be a valid URL.")]
         public string? CoverImageUrl { get; set; }
 
         public bool IsHomepageVisible { get; set; }

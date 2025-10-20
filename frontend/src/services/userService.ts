@@ -1,5 +1,16 @@
-import { apiClient } from '../lib/apiClient';
-import { UserDTO, CreateUserRequest, UpdateUserRequest } from '../types/user.types';
+import axios from 'axios';
+
+// Base URL for API - có thể config trong .env file
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5123';
+
+// Create axios instance with default config
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 export interface UserBasicInfo {
   id: string;
@@ -25,7 +36,19 @@ export interface UpdateUserInfo {
 export const userService = {
   async getUserInfo(): Promise<UserBasicInfo> {
     try {
-      const response = await apiClient.get<UserBasicInfo>('/user/getUserInfor');
+      // Get access token from localStorage
+      const accessToken = localStorage.getItem('accessToken');
+      
+      if (!accessToken) {
+        throw new Error('No access token found - please login');
+      }
+
+      // Use shared api client with explicit Authorization header
+      const response = await apiClient.get<UserBasicInfo>('/api/user/getUserInfor', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
       return response.data;
     } catch (error: any) {
       console.error('Error fetching user info:', error);
@@ -42,6 +65,9 @@ export const userService = {
 
   async updateUserInfo(data: UpdateUserInfo): Promise<UserBasicInfo> {
     try {
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) throw new Error('No access token found - please login');
+
       const updateDto = {
         id: null,
         username: data.username || '',
@@ -52,7 +78,11 @@ export const userService = {
         dob: data.dob || null
       };
 
-      const response = await apiClient.put<UserBasicInfo>('/user/updateUserInfor', updateDto);
+      const response = await apiClient.put<UserBasicInfo>('/api/user/updateUserInfor', updateDto, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
       
       console.log('UpdateUserInfo - Request payload:', updateDto);
       console.log('UpdateUserInfo - API response:', response.data);
@@ -75,19 +105,35 @@ export const userService = {
 
   async uploadProfileImage(imageFile: File): Promise<{ imageUrl: string }> {
     try {
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) throw new Error('No access token found - please login');
+
       const formData = new FormData();
       formData.append('file', imageFile);
 
-      console.log('Upload profile image:');
+      console.log('Upload attempt with fetch:');
       console.log('- File name:', imageFile.name);
       console.log('- File type:', imageFile.type);
       console.log('- File size:', imageFile.size);
 
-      const response = await apiClient.postMultipart<{ imageUrl: string }>('/user/uploadAvatar', formData);
+      const response = await fetch(`${API_BASE_URL}/api/user/uploadAvatar`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: formData
+      });
 
-      console.log('Upload successful:', response.data);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Fetch error:', response.status, errorText);
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Upload successful:', result);
       
-      return response.data;
+      return result;
     } catch (error: any) {
       console.error('Error uploading profile image:', error);
       console.error('Error response:', error.response);
@@ -138,7 +184,18 @@ export const userService = {
 };
 
 // --- Phần dành cho quản lý người dùng (Admin) ---
-const BASE = '/User'; // Base path for user-related actions (apiClient đã có /api)
+import { UserDTO, CreateUserRequest, UpdateUserRequest } from '../types/user.types';
+
+const BASE = '/api/User'; // Base path for user-related actions
+
+function authHeader() {
+  try {
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}` } : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export const userAdminService = {
   list: async (page = 1, pageSize = 10, search?: string): Promise<{ items: UserDTO[]; total?: number }> => {
@@ -147,9 +204,9 @@ export const userAdminService = {
 
     if (search && search.trim()) {
       params.keyword = search;
-      response = await apiClient.get(`${BASE}/search`, { params });
+      response = await axios.get(`${BASE}/search`, { params, headers: authHeader() });
     } else {
-      response = await apiClient.get(BASE, { params });
+      response = await axios.get(BASE, { params, headers: authHeader() });
     }
 
     const data = response.data;
@@ -158,18 +215,18 @@ export const userAdminService = {
     return { items, total };
   },
   get: async (id: string): Promise<UserDTO> => {
-    const r = await apiClient.get(`${BASE}/${id}`);
+    const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() });
     return r.data;
   },
   create: async (payload: CreateUserRequest): Promise<UserDTO> => {
-    const r = await apiClient.post(BASE, payload);
+    const r = await axios.post(BASE, payload, { headers: authHeader() });
     return r.data;
   },
   update: async (id: string, payload: UpdateUserRequest): Promise<UserDTO> => {
-    const r = await apiClient.put(`${BASE}/${id}`, payload);
+    const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() });
     return r.data;
   },
   remove: async (id: string): Promise<void> => {
-    await apiClient.delete(`${BASE}/${id}`);
+    await axios.delete(`${BASE}/${id}`, { headers: authHeader() });
   },
 };

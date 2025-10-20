@@ -1,7 +1,7 @@
 // Authentication related types - Updated to match backend models
 
 export interface LoginRequest {
-  email: string;
+  email: string; // This will be used as identifier (email or username)
   password: string;
 }
 
@@ -11,10 +11,13 @@ export interface RegisterRequestPatient {
   passwordConfirmation: string; // Match backend PasswordConfirmation
   fullName: string;
   phoneNumber?: string;
+  address?: string; // Match backend address field
   dateOfBirth?: string; // DateOnly from backend
   identificationNumber?: string;
-  genderCode?: string; // "Male", "Female", "Others"
+  genderCode?: string; // "Male", "Female", "Other"
 }
+
+
 
 export interface RegisterRequest {
   email: string;
@@ -30,8 +33,9 @@ export interface ForgotPasswordRequest {
 }
 
 export interface ResetPasswordRequest {
-  token: string;
-  newPassword: string;
+  code: string;
+  email: string;
+  password: string;
   confirmPassword: string;
 }
 
@@ -49,6 +53,7 @@ export interface AuthResponse {
 export interface User {
   id: string;
   email: string;
+  userName: string;
   fullName: string;
   phoneNumber?: string;
   role: string;

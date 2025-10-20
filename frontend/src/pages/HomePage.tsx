@@ -3,7 +3,7 @@ import styles from '../styles/home.module.css'
 import { HomeMetadata } from '../types/home.types';
 import Footer from '../components/layout/Footer';
 import HomeService from '../services/homeService';
-import Header from '../components/layout/Header';
+import {Header} from '../components/layout/Header';
 
 function HomePage() {
 
@@ -47,7 +47,6 @@ function HomePage() {
 
     return (
         <div>
-            <Header />
             <nav>
                 <ul className={styles["nav-menu"]} style={{ justifyContent: 'center' }}>
                     <li><a href="#">Trang chủ</a></li>
@@ -224,8 +223,8 @@ function HomePage() {
                     <button onClick={handlePrev} disabled={currentIndex === 0} className={styles["doctor-nav-button"]}>←</button>
 
                     <div className={styles["doctors-grid"]}>
-                        {visibleDoctors?.map((doctor) => (
-                            <a href={`/doctor/details/${doctor.userName}`} className={styles["doctor-card"]}>
+                        {visibleDoctors?.map((doctor, index) => (
+                            <a key={`doctor-${doctor.userName}-${index}`} href={`/doctor/details/${doctor.userName}`} className={styles["doctor-card"]}>
                                 <div className={styles["doctor-photo"]}>
                                     <img className={styles['doctor-photo']} src={doctor.avatarUrl}></img>
                                 </div>
@@ -241,7 +240,7 @@ function HomePage() {
 
                     <button
                         onClick={handleNext}
-                        disabled={currentIndex + doctorsPerPage >= homeMetadata?.displayedDoctors.length}
+                        disabled={currentIndex + doctorsPerPage >= (homeMetadata?.displayedDoctors?.length ?? 0)}
                         className={styles["doctor-nav-button"]}>
                         →
                     </button>
@@ -255,8 +254,8 @@ function HomePage() {
             < section className={styles["knowledge"]} >
                 <h2>KIẾN THỨC SỨC KHỎE HỮU ÍCH</h2>
                 <div className={styles["knowledge-grid"]}>
-                    {homeMetadata?.articles.map((article) => (
-                        <div className={styles["knowledge-card"]}>
+                    {homeMetadata?.articles.map((article, index) => (
+                        <div key={`article-${article.title}-${index}`} className={styles["knowledge-card"]}>
                             <img className={styles["knowledge-image"]} src={article.thumbnailUrl} />
                             <div className={styles["knowledge-content"]}>
                                 <h5>{article.title}</h5>
@@ -270,7 +269,7 @@ function HomePage() {
                 </div>
             </section >
 
-            <Footer />
+            
 
             <div className={styles["ai-bubble"]}>
                 <img src="/images/medix-logo-mirrored.jpg" alt="Chat" />

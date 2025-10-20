@@ -6,8 +6,11 @@ class ApiClient {
   private refreshTokenPromise: Promise<string> | null = null;
 
   constructor() {
+    // Use environment variable for API base URL, fallback to proxy for development
+    const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api';
+    
     this.client = axios.create({
-      baseURL: '/api',
+      baseURL: API_BASE_URL,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -36,8 +39,22 @@ class ApiClient {
       (response: AxiosResponse) => response,
       async (error) => {
         const originalRequest = error.config;
+        if (!originalRequest) return Promise.reject(error);
 
+        const reqUrl = (originalRequest.url || '').toString();
+        const isAuthEndpoint =
+          reqUrl.includes('/auth/login') ||
+          reqUrl.includes('/auth/refresh-token') ||
+          reqUrl.includes('/auth/logout');
+
+        // If the failing request is an auth route (login/refresh) don't attempt refresh —
+        // let the caller receive the original 401 so UI can show the correct message.
         if (error.response?.status === 401 && !originalRequest._retry) {
+          if (isAuthEndpoint) {
+            this.handleLogout();
+            return Promise.reject(error); // propagate original 401/error to caller
+          }
+
           originalRequest._retry = true;
 
           try {
@@ -89,7 +106,20 @@ class ApiClient {
 
   // Token management
   private getAccessToken(): string | null {
-    return localStorage.getItem('accessToken');
+    const token = localStorage.getItem('accessToken');
+    const expiration = localStorage.getItem('tokenExpiration');
+    
+    // Check if token is expired
+    if (token && expiration) {
+      const expirationTime = parseInt(expiration);
+      if (Date.now() >= expirationTime) {
+        // Token expired, clear it
+        this.clearTokens();
+        return null;
+      }
+    }
+    
+    return token;
   }
 
   private getRefreshToken(): string | null {
@@ -99,11 +129,15 @@ class ApiClient {
   public setTokens(accessToken: string, refreshToken: string): void {
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
+    // Set token expiration time (30 minutes from now)
+    const expirationTime = Date.now() + (30 * 60 * 1000); // 30 minutes
+    localStorage.setItem('tokenExpiration', expirationTime.toString());
   }
 
   public clearTokens(): void {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('tokenExpiration');
   }
 
   private handleLogout(): void {

@@ -5,17 +5,20 @@ using Medix.API.Exceptions;
 using Medix.API.Models.DTOs.HealthArticle;
 using Medix.API.Models.Entities;
 using Medix.API.Business.Helper;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Medix.API.Business.Services.Classification
 {
     public class HealthArticleService : IHealthArticleService
     {
         private readonly IHealthArticleRepository _healthArticleRepository;
+        private readonly IContentCategoryRepository _contentCategoryRepository;
         private readonly IMapper _mapper;
 
-        public HealthArticleService(IHealthArticleRepository healthArticleRepository, IMapper mapper)
+        public HealthArticleService(IHealthArticleRepository healthArticleRepository, IContentCategoryRepository contentCategoryRepository, IMapper mapper)
         {
             _healthArticleRepository = healthArticleRepository;
+            _contentCategoryRepository = contentCategoryRepository;
             _mapper = mapper;
         }
 
@@ -33,9 +36,19 @@ namespace Medix.API.Business.Services.Classification
                 ThumbnailUrl = a.ThumbnailUrl,
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
+                LikeCount = a.LikeCount,
+
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt
+                UpdatedAt = a.UpdatedAt,
+                DisplayType = a.DisplayType,
+                Categories = a.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
             });
 
             return (total, data);
@@ -55,9 +68,19 @@ namespace Medix.API.Business.Services.Classification
                 ThumbnailUrl = a.ThumbnailUrl,
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
+                LikeCount = a.LikeCount,
+
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt
+                UpdatedAt = a.UpdatedAt,
+                DisplayType = a.DisplayType,
+                Categories = a.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
             });
 
             return (total, data);
@@ -83,12 +106,21 @@ namespace Medix.API.Business.Services.Classification
                 MetaDescription = article.MetaDescription,
                 StatusCode = article.StatusCode,
                 ViewCount = article.ViewCount,
+                LikeCount = article.LikeCount,
+
                 IsHomepageVisible = article.IsHomepageVisible,
                 DisplayOrder = article.DisplayOrder,
                 DisplayType = article.DisplayType,
                 AuthorName = article.Author?.FullName ?? string.Empty,
                 CreatedAt = article.CreatedAt,
-                UpdatedAt = article.UpdatedAt
+                UpdatedAt = article.UpdatedAt,
+                Categories = article.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
             };
         }
 
@@ -115,12 +147,21 @@ namespace Medix.API.Business.Services.Classification
                 MetaDescription = article.MetaDescription,
                 StatusCode = article.StatusCode,
                 ViewCount = article.ViewCount + 1, // Show incremented count
+                LikeCount = article.LikeCount,
+
                 IsHomepageVisible = article.IsHomepageVisible,
                 DisplayOrder = article.DisplayOrder,
                 DisplayType = article.DisplayType,
                 AuthorName = article.Author?.FullName ?? string.Empty,
                 CreatedAt = article.CreatedAt,
-                UpdatedAt = article.UpdatedAt
+                UpdatedAt = article.UpdatedAt,
+                Categories = article.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
             };
         }
 
@@ -138,9 +179,19 @@ namespace Medix.API.Business.Services.Classification
                 ThumbnailUrl = a.ThumbnailUrl,
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
+                LikeCount = a.LikeCount,
+
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt
+                UpdatedAt = a.UpdatedAt,
+                DisplayType = a.DisplayType,
+                Categories = a.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
             });
 
             return (total, data);
@@ -160,10 +211,51 @@ namespace Medix.API.Business.Services.Classification
                 ThumbnailUrl = a.ThumbnailUrl,
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
+                LikeCount = a.LikeCount,
+
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt
+                UpdatedAt = a.UpdatedAt,
+                Categories = a.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
             });
+        }
+
+        public async Task<IEnumerable<HealthArticlePublicDto>> SearchByNameAsync(string name)
+        {
+            var articles = await _healthArticleRepository.SearchByNameAsync(name);
+
+            var data = articles.Select(a => new HealthArticlePublicDto
+            {
+                Id = a.Id,
+                Title = a.Title,
+                Slug = a.Slug,
+                Summary = a.Summary,
+                CoverImageUrl = a.CoverImageUrl,
+                ThumbnailUrl = a.ThumbnailUrl,
+                StatusCode = a.StatusCode,
+                ViewCount = a.ViewCount,
+                LikeCount = a.LikeCount,
+
+                AuthorName = a.Author?.FullName ?? string.Empty,
+                CreatedAt = a.CreatedAt,
+                UpdatedAt = a.UpdatedAt,
+                DisplayType = a.DisplayType,
+                Categories = a.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
+            });
+
+            return data;
         }
 
         public async Task<HealthArticlePublicDto> CreateAsync(HealthArticleCreateDto createDto)
@@ -176,13 +268,12 @@ namespace Medix.API.Business.Services.Classification
                     { "Slug", new[] { "Article slug already exists" } }
                 });
             }
-
-            var authorExists = await _healthArticleRepository.UserExistsAsync(createDto.AuthorId);
-            if (!authorExists)
+            var titleExists = await _healthArticleRepository.TitleExistsAsync(createDto.Title);
+            if (titleExists)
             {
                 throw new ValidationException(new Dictionary<string, string[]>
                 {
-                    { "AuthorId", new[] { "Author does not exist" } }
+                    { "Title", new[] { "Article title already exists" } }
                 });
             }
 
@@ -199,6 +290,8 @@ namespace Medix.API.Business.Services.Classification
                 MetaDescription = createDto.MetaDescription,
                 StatusCode = createDto.StatusCode ?? "Draft",
                 ViewCount = 0,
+                LikeCount = 0,
+
                 IsHomepageVisible = createDto.IsHomepageVisible,
                 DisplayOrder = createDto.DisplayOrder,
                 DisplayType = createDto.DisplayType ?? "Standard",
@@ -206,6 +299,26 @@ namespace Medix.API.Business.Services.Classification
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
+
+            // Attach categories if provided
+            if (createDto.CategoryIds != null && createDto.CategoryIds.Any())
+            {
+                var distinctIds = createDto.CategoryIds.Distinct().ToList();
+                var categories = await _contentCategoryRepository.GetAllActiveAsync();
+                var matched = categories.Where(c => distinctIds.Contains(c.Id)).ToList();
+
+                if (matched.Count != distinctIds.Count)
+                {
+                    var missing = distinctIds.Except(matched.Select(c => c.Id)).ToList();
+                    throw new ValidationException(new Dictionary<string, string[]>
+                    {
+                        { "CategoryIds", new[] { $"Some categories not found: {string.Join(',', missing)}" } }
+                    });
+                }
+
+                foreach (var cat in matched)
+                    article.Categories.Add(cat);
+            }
 
             await _healthArticleRepository.CreateAsync(article);
 
@@ -219,15 +332,38 @@ namespace Medix.API.Business.Services.Classification
             {
                 throw new NotFoundException("Article not found");
             }
+            // Normalize current vs new values and skip checks when unchanged to avoid false-positive duplicates
+            string Normalize(string? s) => string.IsNullOrWhiteSpace(s) ? string.Empty : s.Trim().ToLowerInvariant();
 
-            var slugExists = await _healthArticleRepository.SlugExistsAsync(updateDto.Slug, id);
-            if (slugExists)
+            var currentTitleNorm = Normalize(article.Title);
+            var newTitleNorm = Normalize(updateDto.Title);
+            if (currentTitleNorm != newTitleNorm)
             {
-                throw new ValidationException(new Dictionary<string, string[]>
+                var titleExists = await _healthArticleRepository.TitleExistsAsync(updateDto.Title, id);
+                if (titleExists)
                 {
-                    { "Slug", new[] { "Article slug already exists" } }
-                });
+                    throw new ValidationException(new Dictionary<string, string[]>
+                    {
+                        { "Title", new[] { "Article title already exists" } }
+                    });
+                }
             }
+
+            var currentSlugNorm = Normalize(article.Slug);
+            var newSlugNorm = Normalize(updateDto.Slug);
+            if (currentSlugNorm != newSlugNorm)
+            {
+                var slugExists = await _healthArticleRepository.SlugExistsAsync(updateDto.Slug, id);
+                if (slugExists)
+                {
+                    throw new ValidationException(new Dictionary<string, string[]>
+                    {
+                        { "Slug", new[] { "Article slug already exists" } }
+                    });
+                }
+            }
+
+          
 
             var authorExists = await _healthArticleRepository.UserExistsAsync(updateDto.AuthorId);
             if (!authorExists)
@@ -252,6 +388,28 @@ namespace Medix.API.Business.Services.Classification
             article.DisplayType = updateDto.DisplayType;
             article.AuthorId = updateDto.AuthorId;
             article.UpdatedAt = DateTime.UtcNow;
+
+            // Update categories if provided
+            if (updateDto.CategoryIds != null)
+            {
+                var distinctIds = updateDto.CategoryIds.Distinct().ToList();
+                var categories = await _contentCategoryRepository.GetAllActiveAsync();
+                var matched = categories.Where(c => distinctIds.Contains(c.Id)).ToList();
+
+                if (matched.Count != distinctIds.Count)
+                {
+                    var missing = distinctIds.Except(matched.Select(c => c.Id)).ToList();
+                    throw new ValidationException(new Dictionary<string, string[]>
+                    {
+                        { "CategoryIds", new[] { $"Some categories not found: {string.Join(',', missing)}" } }
+                    });
+                }
+
+                // Replace article categories with requested set
+                article.Categories.Clear();
+                foreach (var cat in matched)
+                    article.Categories.Add(cat);
+            }
 
             await _healthArticleRepository.UpdateAsync(article);
 

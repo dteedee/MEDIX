@@ -54,6 +54,14 @@ namespace Medix.API.Presentation.Controller.Classification
             return Ok(articles);
         }
 
+        [HttpGet("search")]
+        public async Task<ActionResult> SearchByName([FromQuery] string? name)
+        {
+           
+            var result = await _healthArticleService.SearchByNameAsync(name);
+            return Ok(result);
+        }
+
         [HttpPost]
         public async Task<ActionResult> Create([FromBody] HealthArticleCreateDto request)
         {

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, AuthResponse, LoginRequest, RegisterRequest, PatientRegistration } from '../types/auth.types';
 import { UserRole } from '../types/common.types';
 import { authService } from '../services/authService';
-import { apiClient } from '../lib/apiClient'
+import { apiClient } from '../lib/apiClient';
 
 interface AuthContextType {
   user: User | null;
@@ -59,6 +59,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userData = localStorage.getItem('userData');
       if (userData) {
         setUser(JSON.parse(userData));
+        // Dispatch auth changed event for Header component
+        window.dispatchEvent(new Event('authChanged'));
       }
     } catch (error) {
       console.error('Failed to load user profile:', error);
@@ -76,7 +78,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Store user data
       localStorage.setItem('userData', JSON.stringify(authResponse.user));
+      localStorage.setItem('currentUser', JSON.stringify(authResponse.user));
       setUser(authResponse.user);
+      
+      // Dispatch auth changed event for Header component
+      window.dispatchEvent(new Event('authChanged'));
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -95,7 +101,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Store user data
       localStorage.setItem('userData', JSON.stringify(authResponse.user));
+      localStorage.setItem('currentUser', JSON.stringify(authResponse.user));
       setUser(authResponse.user);
+      
+      // Dispatch auth changed event for Header component
+      window.dispatchEvent(new Event('authChanged'));
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;
@@ -114,7 +124,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Store user data
       localStorage.setItem('userData', JSON.stringify(authResponse.user));
+      localStorage.setItem('currentUser', JSON.stringify(authResponse.user));
       setUser(authResponse.user);
+      
+      // Dispatch auth changed event for Header component
+      window.dispatchEvent(new Event('authChanged'));
     } catch (error) {
       console.error('Patient registration failed:', error);
       throw error;
@@ -132,7 +146,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Always clear local state
       setUser(null);
       localStorage.removeItem('userData');
+      localStorage.removeItem('currentUser');
       apiClient.clearTokens();
+      
+      // Dispatch auth changed event for Header component
+      window.dispatchEvent(new Event('authChanged'));
     }
   };
 

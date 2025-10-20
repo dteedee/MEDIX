@@ -5,6 +5,7 @@ using Medix.API.Exceptions;
 using Medix.API.Models.DTOs.SiteBanner;
 using Medix.API.Models.Entities;
 using Medix.API.Business.Helper;
+using Medix.API.Business.Validators;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -12,11 +13,13 @@ namespace Medix.API.Business.Services.Classification
     {
         private readonly ISiteBannerRepository _siteBannerRepository;
         private readonly IMapper _mapper;
+        private readonly IDtoValidatorService _validator;
 
-        public SiteBannerService(ISiteBannerRepository siteBannerRepository, IMapper mapper)
+        public SiteBannerService(ISiteBannerRepository siteBannerRepository, IMapper mapper, IDtoValidatorService validator)
         {
             _siteBannerRepository = siteBannerRepository;
             _mapper = mapper;
+            _validator = validator;
         }
 
         public async Task<(int total, IEnumerable<SiteBannerDto> data)> GetPagedAsync(int page = 1, int pageSize = 10)
@@ -31,6 +34,8 @@ namespace Medix.API.Business.Services.Classification
                 BannerUrl = b.BannerUrl,
                 IsActive = b.IsActive,
                 DisplayOrder = b.DisplayOrder,
+                StartDate = b.StartDate,
+                EndDate = b.EndDate,
                 CreatedAt = b.CreatedAt
             });
 
@@ -49,6 +54,8 @@ namespace Medix.API.Business.Services.Classification
                 BannerUrl = b.BannerUrl,
                 IsActive = b.IsActive,
                 DisplayOrder = b.DisplayOrder,
+                StartDate = b.StartDate,
+                EndDate = b.EndDate,
                 CreatedAt = b.CreatedAt
             });
 
@@ -70,6 +77,8 @@ namespace Medix.API.Business.Services.Classification
                 BannerUrl = banner.BannerUrl,
                 IsActive = banner.IsActive,
                 DisplayOrder = banner.DisplayOrder,
+                StartDate = banner.StartDate,
+                EndDate = banner.EndDate,
                 CreatedAt = banner.CreatedAt
             };
         }
@@ -92,6 +101,9 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<SiteBannerDto> CreateAsync(SiteBannerCreateDto createDto)
         {
+            // Validate using DtoValidatorService
+            await _validator.ValidateSiteBannerCreateAsync(createDto);
+
             var banner = new SiteBanner
             {
                 Id = Guid.NewGuid(),
@@ -100,6 +112,8 @@ namespace Medix.API.Business.Services.Classification
                 BannerUrl = createDto.BannerUrl,
                 IsActive = createDto.IsActive,
                 DisplayOrder = createDto.DisplayOrder,
+                StartDate = createDto.StartDate,
+                EndDate = createDto.EndDate,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -116,11 +130,16 @@ namespace Medix.API.Business.Services.Classification
                 throw new NotFoundException("Banner not found");
             }
 
+            // Validate using DtoValidatorService
+            await _validator.ValidateSiteBannerUpdateAsync(id, updateDto);
+
             banner.BannerTitle = updateDto.BannerTitle;
             banner.BannerImageUrl = updateDto.BannerImageUrl;
             banner.BannerUrl = updateDto.BannerUrl;
             banner.IsActive = updateDto.IsActive;
             banner.DisplayOrder = updateDto.DisplayOrder;
+            banner.StartDate = updateDto.StartDate;
+            banner.EndDate = updateDto.EndDate;
 
             await _siteBannerRepository.UpdateAsync(banner);
 
@@ -164,6 +183,25 @@ namespace Medix.API.Business.Services.Classification
         {
             var banners = await _siteBannerRepository.GetRunningBannersAsync();
             return banners.Take(5).ToList();
+        }
+        public async Task<(int total, IEnumerable<SiteBannerDto> data)> SearchByNameAsync(string name, int page = 1, int pageSize = 10)
+        {
+            var (banners, total) = await _siteBannerRepository.SearchByNameAsync(name, page, pageSize);
+
+            var data = banners.Select(b => new SiteBannerDto
+            {
+                Id = b.Id,
+                BannerTitle = b.BannerTitle,
+                BannerImageUrl = b.BannerImageUrl,
+                BannerUrl = b.BannerUrl,
+                IsActive = b.IsActive,
+                DisplayOrder = b.DisplayOrder,
+                StartDate = b.StartDate,
+                EndDate = b.EndDate,
+                CreatedAt = b.CreatedAt
+            });
+
+            return (total, data);
         }
     }
 }

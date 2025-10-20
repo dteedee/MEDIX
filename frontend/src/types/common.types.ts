@@ -35,7 +35,7 @@ export enum UserRole {
 export enum Gender {
   MALE = "Male",
   FEMALE = "Female", 
-  OTHER = "Others"
+  OTHER = "Other"
 }
 
 export enum AppointmentStatus {
@@ -119,8 +119,13 @@ export const VALIDATION_RULES = {
   IDENTIFICATION_NUMBER: {
     MAX_LENGTH: 20,
   },
-  GENDER_CODES: ['Male', 'Female', 'Others'],
+  GENDER_CODES: ['Male', 'Female', 'Other'],
   PHONE_NUMBER: {
     PATTERN: /^[0-9+\-\s\(\)]+$/,
   }
 } as const;
+
+export interface BloodTypeDTO {
+  code: string;
+  displayName: string;
+}

@@ -18,6 +18,7 @@ public partial class MedixContext : DbContext
     }
 
     public virtual DbSet<AISymptomAnalysis> AISymptomAnalyses { get; set; }
+    public virtual DbSet<EmailVerificationCode> EmailVerificationCodes { get; set; }
 
     public virtual DbSet<Appointment> Appointments { get; set; }
 

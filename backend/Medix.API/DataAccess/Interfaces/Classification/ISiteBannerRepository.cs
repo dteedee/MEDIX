@@ -23,5 +23,6 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task ToggleActiveStatusAsync(Guid id, bool isActive);
 
         Task<List<SiteBanner>> GetRunningBannersAsync();
+        Task<(IEnumerable<SiteBanner> Banners, int TotalCount)> SearchByNameAsync(string name, int page, int pageSize);
     }
 }

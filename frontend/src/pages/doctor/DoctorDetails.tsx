@@ -4,7 +4,7 @@ import styles from '../../styles/doctor-details.module.css'
 import { useEffect, useState } from "react";
 import doctorService from "../../services/doctorService";
 import { DoctorProfileDto } from "../../types/doctor.types";
-import Header from "../../components/layout/Header";
+import {Header } from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 
 function DoctorDetails() {

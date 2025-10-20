@@ -1,8 +1,6 @@
 import styles from '../../styles/doctor-register.module.css'
 
 import { useEffect, useState } from 'react';
-import Header from '../../components/layout/Header';
-import Footer from '../../components/layout/Footer';
 import Swal from 'sweetalert2';
 import DoctorService from '../../services/doctorService';
 import { DoctorRegisterMetadata } from '../../types/doctor.types';
@@ -208,7 +206,6 @@ function DoctorRegister() {
 
     return (
         <div>
-            <Header />
             <main className={styles["main-container"]}>
                 <div className={styles["form-container"]}>
                     <form id="registrationForm" encType='multipart/form-data' onSubmit={handleSubmit}>
@@ -469,10 +466,7 @@ function DoctorRegister() {
                     </form>
                 </div>
             </main>
-            <Footer />
         </div>
     )
 }
-
-
 export default DoctorRegister;

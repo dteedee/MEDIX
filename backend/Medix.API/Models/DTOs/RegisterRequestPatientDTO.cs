@@ -26,10 +26,14 @@ namespace Medix.API.Models.DTOs
         [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
         public string? PhoneNumber { get; set; }
 
+      
+        public string? address { get; set; }
+
         [DataType(DataType.Date, ErrorMessage = "Ngày sinh không hợp lệ")]
+        [MinAge(18)]
         public DateOnly? DateOfBirth { get; set; }
 
-        [MaxLength(20, ErrorMessage = "Số CMND/CCCD không được vượt quá 20 ký tự")]
+        [MaxLength(12, ErrorMessage = "Số CMND/CCCD không được vượt quá 12 ký tự")]
         public string? IdentificationNumber { get; set; }
 
         [MaxLength(10, ErrorMessage = "Mã giới tính không được vượt quá 10 ký tự")]

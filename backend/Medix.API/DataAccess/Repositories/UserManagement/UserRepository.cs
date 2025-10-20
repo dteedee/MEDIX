@@ -21,6 +21,8 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
         public async Task<User?> GetByEmailAsync(string email)
         {
             return await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.RoleCodeNavigation)
                 .FirstOrDefaultAsync(u => u.NormalizedEmail == email.ToUpperInvariant());
         }
 
@@ -54,6 +56,12 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
                 .AnyAsync(u => u.NormalizedEmail == email.ToUpperInvariant());
         }
 
+        public async Task<User?> GetByUserNameAsync(string userName)
+        {
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.NormalizedUserName == userName.ToUpperInvariant());
+        }
+
         public async Task<User> SaveUserAsync(User user)
         {
             return await CreateAsync(user);
@@ -64,11 +72,67 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
             return await _context.Users.ToListAsync();
         }
 
+        public async Task<(int total, IEnumerable<User> data)> GetPagedAsync(int page, int pageSize)
+        {
+            var query = _context.Users
+                .OrderByDescending(u => u.CreatedAt);
+
+            var total = await query.CountAsync();
+            var users = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (total, users);
+        }
+
+        public async Task<(int total, IEnumerable<User> data)> SearchAsync(string keyword, int page, int pageSize)
+        {
+            var query = _context.Users.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                var k = keyword.Trim().ToLower();
+                query = query.Where(u => (u.FullName != null && u.FullName.ToLower().Contains(k)) ||
+                                         (u.Email != null && u.Email.ToLower().Contains(k)) ||
+                                         (u.PhoneNumber != null && u.PhoneNumber.Contains(k)));
+            }
+
+            var total = await query.CountAsync();
+            var users = await query.OrderByDescending(u => u.CreatedAt)
+                                   .Skip((page - 1) * pageSize)
+                                   .Take(pageSize)
+                                   .ToListAsync();
+            return (total, users);
+        }
+
+        public async Task<IEnumerable<User>> SearchByNameAsync(string keyword)
+        {
+            keyword = keyword?.Trim() ?? string.Empty;
+
+            return await _context.Users
+                .Where(u => !string.IsNullOrEmpty(u.FullName) && u.FullName.Contains(keyword))
+                .OrderByDescending(u => u.CreatedAt)
+                .ToListAsync();
+        }
+
         public async Task<UserRole> CreateUserRoleAsync(UserRole userRole)
         {
             _context.UserRoles.Add(userRole);
             await _context.SaveChangesAsync();
             return userRole;
         }
+
+        public async Task<bool> ExistsByPhoneNumberAsync(string phoneNumber)
+        {
+            return await _context.Users
+                .AnyAsync(u => u.PhoneNumber == phoneNumber);
+        }
+
+        public async Task<bool> ExistsByUserNameAsync(string userName) => await _context.Users
+            .AnyAsync(u => u.NormalizedUserName == userName.ToUpperInvariant());
+        public async Task<bool> ExistsByIdentificationNumberAsync(string identificationNumber) => await _context.Users
+            .AnyAsync(u => u.IdentificationNumber == identificationNumber);
+
     }
 }

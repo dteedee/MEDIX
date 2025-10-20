@@ -55,6 +55,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 // Component for routes that should redirect authenticated users
 export const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
+  const location = useLocation();
   
   if (isLoading) {
     return (
@@ -67,7 +68,11 @@ export const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children 
   // Redirect authenticated users to their respective dashboards
   if (isAuthenticated && user) {
     const dashboardPath = getDashboardPath(user.role as UserRole);
-    return <Navigate to={dashboardPath} replace />;
+    // If already at the dashboard path, don't redirect (prevents loops)
+    if (location.pathname !== dashboardPath) {
+      return <Navigate to={dashboardPath} replace />;
+    }
+    // If user is on the same path, render children
   }
 
   return <>{children}</>;

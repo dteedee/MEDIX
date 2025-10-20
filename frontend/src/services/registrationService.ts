@@ -1,14 +1,7 @@
 // src/services/patientRegistrationApiService.ts
 import { ApiResponse, BloodTypeDTO} from '../types/common.types';
-
-// Get API base URL from environment variable
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'https://localhost:55883' ;
-
-
-// Helper function để build full URL
-const buildApiUrl = (endpoint: string): string => {
-  return `${API_BASE_URL}${endpoint}`;
-};
+import { PatientRegistration } from '../types/auth.types';
+import { apiClient } from '../lib/apiClient';
 
 
 
@@ -20,20 +13,10 @@ const registrationService = {
   checkEmailExists: async (email: string): Promise<ApiResponse<{ exists: boolean }>> => {
     try {
       console.log('Checking email exists:', email);
-      const response = await fetch(buildApiUrl('/api/register/checkEmailExist'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(email)
-      });
+      const response = await apiClient.post('/register/checkEmailExist', email);
       
-      if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
-      }
-
       // API trả về boolean trực tiếp
-      const exists: boolean = await response.json();
+      const exists: boolean = response.data;
       console.log('Email exists result:', exists);
       
       return {
@@ -56,20 +39,10 @@ const registrationService = {
   checkIdNumberExists: async (idNumber: string): Promise<ApiResponse<{ exists: boolean }>> => {
     try {
       console.log('Checking ID number exists:', idNumber);
-      const response = await fetch(buildApiUrl('/api/register/checkVNEIDExist'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(idNumber)
-      });
+      const response = await apiClient.post('/register/checkVNEIDExist', idNumber);
       
-      if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
-      }
-
       // API trả về boolean trực tiếp
-      const exists: boolean = await response.json();
+      const exists: boolean = response.data;
       console.log('ID number exists result:', exists);
       
       return {
@@ -91,19 +64,10 @@ const registrationService = {
   // Lấy danh sách nhóm máu
   getBloodTypes: async (): Promise<ApiResponse<BloodTypeDTO[]>> => {
     try {
-      console.log('Fetching blood types from:', buildApiUrl('/api/register/getBloodTypes'));
-      const response = await fetch(buildApiUrl('/api/register/getBloodTypes'), {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
+      console.log('Fetching blood types...');
+      const response = await apiClient.get<BloodTypeDTO[]>('/register/getBloodTypes');
       
-      if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
-      }
-
-      const data: BloodTypeDTO[] = await response.json();
+      const data: BloodTypeDTO[] = response.data;
       console.log('Blood types fetched successfully:', data);
       
       return {
@@ -118,6 +82,57 @@ const registrationService = {
         success: false,
         data: [],
         errors: { general: [error instanceof Error ? error.message : 'Có lỗi xảy ra khi lấy danh sách nhóm máu'] }
+      };
+    }
+  },
+
+  // Đăng ký bệnh nhân
+  registerPatient: async (registrationData: PatientRegistration): Promise<ApiResponse<any>> => {
+    try {
+      console.log('Registering patient with data:', registrationData);
+      
+      // Transform frontend data to match backend DTO structure
+      const payload = {
+        registerRequest: {
+          email: registrationData.registerRequest.email,
+          password: registrationData.registerRequest.password,
+          passwordConfirmation: registrationData.registerRequest.passwordConfirmation,
+          fullName: registrationData.registerRequest.fullName,
+          phoneNumber: registrationData.registerRequest.phoneNumber,
+          address: registrationData.registerRequest.address,
+          dateOfBirth: registrationData.registerRequest.dateOfBirth,
+          identificationNumber: registrationData.registerRequest.identificationNumber,
+          genderCode: registrationData.registerRequest.genderCode
+        },
+        patientDTO: {
+          bloodTypeCode: registrationData.patientDTO.bloodTypeCode,
+          medicalHistory: registrationData.patientDTO.medicalHistory,
+          allergies: registrationData.patientDTO.allergies,
+          emergencyContactName: registrationData.patientDTO.emergencyContactName,
+          emergencyContactPhone: registrationData.patientDTO.emergencyContactPhone,
+          isActive: true
+        }
+      };
+
+      console.log('Sending registration payload:', payload);
+
+      const response = await apiClient.post('/register/registerPatient', payload);
+      
+      const result = response.data;
+      console.log('Patient registration successful:', result);
+      
+      return {
+        success: true,
+        data: result
+      };
+      
+    } catch (error) {
+      console.error('Error registering patient:', error);
+      
+      return {
+        success: false,
+        data: null,
+        errors: { general: [error instanceof Error ? error.message : 'Có lỗi xảy ra khi đăng ký tài khoản'] }
       };
     }
   }

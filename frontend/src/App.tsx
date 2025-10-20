@@ -1,122 +1,169 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import { MainLayout } from './components/layout/MainLayout';
 import { UserRole } from './types/common.types';
 
-// Pages
-import { HomePage } from './pages/HomePage';
+// Layout
+import { Header } from './components/layout/Header';
+import Footer from './components/layout/Footer';
+import Sidebar from './components/layout/Sidebar';
+
+// Auth pages
+import HomePage from './pages/HomePage';
 import Login from './pages/auth/Login';
-import { Register } from './pages/auth/Register';
 import { PatientRegister } from './pages/auth/PatientRegister';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
+import ChangePassword from './pages/auth/ChangePassword';
+import AuthLayout from './components/layout/AuthLayout';
+import AuthStatus from './pages/auth/AuthStatus';
 import { Unauthorized } from './pages/Unauthorized';
 
 // Dashboard pages  
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { ManageDashboard } from './pages/manager/ManageDashboard';
-import { DoctorRegister } from './pages/doctor/DoctorRegister';
+import DoctorRegister from './pages/doctor/DoctorRegister';
 import { AIChatBot } from './pages/ai/AIChatBot';
 import { PatientDashboard } from './pages/patient/patientdashboard';
 import { PatientProfile } from './pages/patient/patientProfile';
-import DoctorBooking from './pages/patient/DoctorBooking';
+import DoctorDetails from './pages/doctor/DoctorDetails';
+import DoctorProfileEdit from './pages/doctor/DoctorProfileEdit';
+
+// CMS Management pages
+import BannerList from './pages/manager/BannerList';
+import ArticleList from './pages/manager/ArticleList';
+import CategoryList from './pages/manager/CategoryList';
+import CmsPageList from './pages/manager/CmsPageList';
+import ArticleEditPage from './pages/manager/ArticleEditPage';
+import CategoryEditPage from './pages/manager/CategoryEditPage';
+import BannerEditPage from './pages/manager/BannerEditPage';
+import CmsPageEditPage from './pages/manager/CmsPageEditPage';
+import UserList from './pages/admin/UserList';
+import UserEditPage from './pages/admin/UserEditPage';
+
+// Reader pages
+import ArticleReaderPage from './pages/patient/ArticleReaderPage';
+import ArticleDetailPage from './pages/patient/ArticleDetailPage';
 
 export function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Public routes - redirect if authenticated */}
-          <Route path="/login" element={
-            <PublicRoute>
-              <Login />
-            </PublicRoute>
-          } />
-          <Route path="/register" element={
-            <PublicRoute>
-              <Register />
-            </PublicRoute>
-          } />
-          <Route path="/patient-register" element={
-            <PublicRoute>
-              <PatientRegister />
-            </PublicRoute>
-          } />
+      <ToastProvider>
+        <Router>
+          <div className="min-h-screen w-full flex flex-col">
+            <Header />
 
-          {/* Home page - standalone layout */}
-          <Route index element={<HomePage />} />
-          
-          {/* Main layout routes */}
-          <Route path="/app" element={<MainLayout />}> 
+            <Routes>
+              {/* ---------- Public routes ---------- */}
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                <Route path="/patient-register" element={<PublicRoute><PatientRegister /></PublicRoute>} />
+                <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+                <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+                <Route path="/auth-status" element={<PublicRoute><AuthStatus /></PublicRoute>} />
+              </Route>
 
-            {/* Protected routes */}
-            <Route path="dashboard" element={
-              <ProtectedRoute>
-                <DashboardRedirect />
-              </ProtectedRoute>
-            } />
+              {/* ---------- Change password route ---------- */}
+              <Route path="/change-password" element={<ChangePassword />} />
 
-            {/* Admin routes */}
-            <Route path="admin/*" element={
-              <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } />
+              {/* ---------- Doctor routes ---------- */}
+              <Route path="/doctor/*" element={
+                <PublicRoute>
+                  <Routes>
+                    <Route path="register" element={<DoctorRegister />} />
+                    <Route path="details/:username" element={<DoctorDetails />} />
+                    <Route path="profile/edit" element={<DoctorProfileEdit />} />
+                  </Routes>
+                </PublicRoute>
+              } />
 
-            {/* Manager routes */}
-            <Route path="manager/*" element={
-              <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
-                <ManageDashboard />
-              </ProtectedRoute>
-            } />
+              {/* ---------- Home ---------- */}
+              <Route index element={<HomePage />} />
 
-            {/* Doctor routes */}
-            <Route path="doctor/*" element={
-              <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
-                <Routes>
-                  <Route index element={<Navigate to="dashboard" replace />} />
-                  <Route path="dashboard" element={<div>Doctor Dashboard</div>} />
-                  <Route path="register" element={<DoctorRegister />} />
-                </Routes>
-              </ProtectedRoute>
-            } />
+              {/* ---------- Main app layout ---------- */}
+              <Route path="/app" element={<MainLayout />}>
+                <Route path="dashboard" element={
+                  <ProtectedRoute>
+                    <DashboardRedirect />
+                  </ProtectedRoute>
+                } />
 
-            {/* Public booking route - anyone can view */}
-            <Route path="booking" element={<DoctorBooking />} />
-            <Route path="booking/:doctorId" element={<div>Booking Details</div>} />
+                {/* ---------- Admin routes ---------- */}
+                <Route path="admin/*" element={
+                  <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                    <Routes>
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="users" element={<UserList />} />
+                      <Route path="users/new" element={<UserEditPage />} />
+                      <Route path="users/edit/:id" element={<UserEditPage />} />
+                    </Routes>
+                  </ProtectedRoute>
+                } />
 
-            {/* Patient routes */}
-            <Route path="patient/*" element={
-              <ProtectedRoute requiredRoles={[UserRole.PATIENT]}>
-                <Routes>
-                  <Route index element={<Navigate to="dashboard" replace />} />
-                  <Route path="dashboard" element={<PatientDashboard />} />
-                  <Route path="profile" element={<PatientProfile />} />
-                </Routes>
-              </ProtectedRoute>
-            } />
+                {/* ---------- Manager routes ---------- */}
+                <Route path="manager/*" element={
+                  <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
+                    <Routes>
+                      <Route index element={<ManageDashboard />} />
+                      <Route path="banners" element={<BannerList />} />
+                      <Route path="banners/new" element={<BannerEditPage />} />
+                      <Route path="banners/edit/:id" element={<BannerEditPage />} />
+                      <Route path="articles" element={<ArticleList />} />
+                      <Route path="articles/new" element={<ArticleEditPage />} />
+                      <Route path="articles/edit/:id" element={<ArticleEditPage />} />
+                      <Route path="categories" element={<CategoryList />} />
+                      <Route path="categories/new" element={<CategoryEditPage />} />
+                      <Route path="categories/edit/:id" element={<CategoryEditPage />} />
+                      <Route path="cms-pages" element={<CmsPageList />} />
+                      <Route path="cms-pages/new" element={<CmsPageEditPage />} />
+                      <Route path="cms-pages/edit/:id" element={<CmsPageEditPage />} />
+                    </Routes>
+                  </ProtectedRoute>
+                } />
 
-            {/* AI Chat Bot */}
-            <Route path="ai-chat" element={
-              <ProtectedRoute>
-                <AIChatBot />
-              </ProtectedRoute>
-            } />
+                {/* ---------- Patient routes ---------- */}
+                <Route path="patient/*" element={
+                  <ProtectedRoute requiredRoles={[UserRole.PATIENT]}>
+                    <Routes>
+                      <Route index element={<Navigate to="dashboard" replace />} />
+                      <Route path="dashboard" element={<PatientDashboard />} />
+                      <Route path="profile" element={<PatientProfile />} />
+                    </Routes>
+                  </ProtectedRoute>
+                } />
 
-            {/* Error routes */}
-            <Route path="unauthorized" element={<Unauthorized />} />
-            <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
-      </Router>
+                {/* ---------- Reader ---------- */}
+                <Route path="articles" element={<ArticleReaderPage />} />
+                <Route path="articles/:slug" element={<ArticleDetailPage />} />
+
+                {/* ---------- AI Chat ---------- */}
+                <Route path="ai-chat" element={
+                  <ProtectedRoute>
+                    <AIChatBot />
+                  </ProtectedRoute>
+                } />
+
+                {/* ---------- Error pages ---------- */}
+                <Route path="unauthorized" element={<Unauthorized />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Routes>
+
+            <Footer />
+          </div>
+        </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }
 
-// Component to redirect to appropriate dashboard based on role
+// Redirect to role-based dashboard
 const DashboardRedirect: React.FC = () => {
   const userRole = JSON.parse(localStorage.getItem('userData') || '{}')?.role;
-  
+
   switch (userRole) {
     case UserRole.ADMIN:
       return <Navigate to="/app/admin" replace />;
@@ -131,7 +178,7 @@ const DashboardRedirect: React.FC = () => {
   }
 };
 
-// 404 Not Found component
+// 404 page
 const NotFound: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
     <div className="text-center">

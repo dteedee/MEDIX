@@ -1,7 +1,7 @@
 // Authentication related types - Updated to match backend models
 
 export interface LoginRequest {
-  email: string;
+  email: string; // This will be used as identifier (email or username)
   password: string;
 }
 
@@ -33,8 +33,9 @@ export interface ForgotPasswordRequest {
 }
 
 export interface ResetPasswordRequest {
-  token: string;
-  newPassword: string;
+  code: string;
+  email: string;
+  password: string;
   confirmPassword: string;
 }
 

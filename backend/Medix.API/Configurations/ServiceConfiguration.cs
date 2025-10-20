@@ -9,6 +9,7 @@ using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.DataAccess.Repositories.Classification;
 using Medix.API.DataAccess.Repositories.UserManagement;
 using AutoMapper;
+using Medix.API.Business.Validators;
 
 namespace Medix.API.Configurations
 {
@@ -35,6 +36,8 @@ namespace Medix.API.Configurations
             services.AddScoped<IPatientRepository, PatientRepository>();
             services.AddScoped<IUserRoleRepository, UserRoleRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<IArticleRepository, ArticleRepitory>();
+            services.AddScoped<IReviewRepository, ReviewRepository>();
         }
 
         private static void RegisterServices(IServiceCollection services)
@@ -43,6 +46,8 @@ namespace Medix.API.Configurations
             services.AddScoped<IContentCategoryService, ContentCategoryService>();
             services.AddScoped<IHealthArticleService, HealthArticleService>();
             services.AddScoped<ISiteBannerService, SiteBannerService>();
+            // DTO validators for checks that DataAnnotations can't handle (slug uniqueness, user existence, etc.)
+            services.AddScoped<IDtoValidatorService, DtoValidatorService>();
             services.AddScoped<IDoctorService, DoctorService>();
             services.AddScoped<ISpecializationService, SpecializationService>();
             services.AddScoped<IUserService, UserService>();
@@ -51,6 +56,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IJwtService, JwtService>();
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<CloudinaryService>();
+            services.AddScoped<IArticleService, ArticleService>();
         }
     }
 }

@@ -3,6 +3,8 @@
 import { VALIDATION_RULES, Gender } from '../types/common.types';
 import { PasswordRequirements, ValidationErrors } from '../types/auth.types';
 
+// ===================== PASSWORD VALIDATION =====================
+
 // Password validation matching backend PasswordComplexityAttribute
 export const validatePassword = (password: string): PasswordRequirements => {
   return {
@@ -19,11 +21,14 @@ export const isPasswordValid = (password: string): boolean => {
   return Object.values(requirements).every(Boolean);
 };
 
-// Email validation
+// ===================== EMAIL VALIDATION =====================
+
 export const validateEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
+
+// ===================== PHONE NUMBER VALIDATION =====================
 
 // Phone number validation (Vietnamese format)
 export const validatePhoneNumber = (phone: string): boolean => {
@@ -32,44 +37,53 @@ export const validatePhoneNumber = (phone: string): boolean => {
   return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''));
 };
 
-// Full name validation
+// ===================== FULL NAME VALIDATION =====================
+
 export const validateFullName = (fullName: string): boolean => {
-  return fullName.length >= VALIDATION_RULES.FULL_NAME.MIN_LENGTH && 
-         fullName.length <= VALIDATION_RULES.FULL_NAME.MAX_LENGTH;
+  return (
+    fullName.length >= VALIDATION_RULES.FULL_NAME.MIN_LENGTH &&
+    fullName.length <= VALIDATION_RULES.FULL_NAME.MAX_LENGTH
+  );
 };
 
-// Identification number validation
+// ===================== IDENTIFICATION NUMBER VALIDATION =====================
+
 export const validateIdentificationNumber = (idNumber: string): boolean => {
   if (!idNumber) return true; // Optional field
-  return idNumber.length <= VALIDATION_RULES.IDENTIFICATION_NUMBER.MAX_LENGTH && /^\d+$/.test(idNumber);
+  return (
+    idNumber.length <= VALIDATION_RULES.IDENTIFICATION_NUMBER.MAX_LENGTH &&
+    /^\d+$/.test(idNumber)
+  );
 };
 
-// Gender code validation matching backend
+// ===================== GENDER VALIDATION =====================
+
 export const validateGenderCode = (genderCode: string): boolean => {
   if (!genderCode) return true; // Optional field
   return VALIDATION_RULES.GENDER_CODES.includes(genderCode as Gender);
 };
 
-// Date of birth validation
+// ===================== DATE OF BIRTH VALIDATION =====================
+
 export const validateDateOfBirth = (dateOfBirth: string): boolean => {
   if (!dateOfBirth) return true; // Optional field
-  
+
   const date = new Date(dateOfBirth);
   const now = new Date();
-  
-  // Calculate age more accurately considering month and day
+
   let age = now.getFullYear() - date.getFullYear();
   const monthDiff = now.getMonth() - date.getMonth();
-  
+
   if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
     age--;
   }
-  
-  // Must be a valid date, person must be at least 18 years old and not more than 150 years old
+
+  // Must be a valid date, at least 18 years old, not older than 150
   return !isNaN(date.getTime()) && age >= 18 && age <= 150;
 };
 
-// Comprehensive form validation
+// ===================== FORM VALIDATION =====================
+
 export const validatePatientRegistrationForm = (formData: any): ValidationErrors => {
   const errors: ValidationErrors = {};
 
@@ -77,7 +91,9 @@ export const validatePatientRegistrationForm = (formData: any): ValidationErrors
   if (!formData.fullName) {
     errors.fullName = ['Họ và tên là bắt buộc'];
   } else if (!validateFullName(formData.fullName)) {
-    errors.fullName = [`Họ và tên phải từ ${VALIDATION_RULES.FULL_NAME.MIN_LENGTH} đến ${VALIDATION_RULES.FULL_NAME.MAX_LENGTH} ký tự`];
+    errors.fullName = [
+      `Họ và tên phải từ ${VALIDATION_RULES.FULL_NAME.MIN_LENGTH} đến ${VALIDATION_RULES.FULL_NAME.MAX_LENGTH} ký tự`,
+    ];
   }
 
   if (!formData.email) {
@@ -89,7 +105,9 @@ export const validatePatientRegistrationForm = (formData: any): ValidationErrors
   if (!formData.password) {
     errors.password = ['Mật khẩu là bắt buộc'];
   } else if (!isPasswordValid(formData.password)) {
-    errors.password = ['Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt'];
+    errors.password = [
+      'Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt',
+    ];
   }
 
   if (!formData.passwordConfirmation) {
@@ -118,8 +136,13 @@ export const validatePatientRegistrationForm = (formData: any): ValidationErrors
   return errors;
 };
 
-// Real-time validation helpers
-export const getFieldError = (fieldName: string, value: any, allErrors: ValidationErrors): string[] => {
+// ===================== FIELD HELPERS =====================
+
+export const getFieldError = (
+  fieldName: string,
+  value: any,
+  allErrors: ValidationErrors
+): string[] => {
   return allErrors[fieldName] || [];
 };
 
@@ -127,16 +150,20 @@ export const hasFieldError = (fieldName: string, allErrors: ValidationErrors): b
   return !!allErrors[fieldName]?.length;
 };
 
-// Format error messages for display
+// ===================== ERROR MESSAGE FORMATTER =====================
+
 export const formatErrorMessage = (errors: string[]): string => {
   return errors.join(', ');
 };
 
-// Password strength indicator
-export const getPasswordStrength = (password: string): { score: number; label: string; color: string } => {
+// ===================== PASSWORD STRENGTH INDICATOR =====================
+
+export const getPasswordStrength = (
+  password: string
+): { score: number; label: string; color: string } => {
   const requirements = validatePassword(password);
   const score = Object.values(requirements).filter(Boolean).length;
-  
+
   if (score <= 2) return { score, label: 'Yếu', color: 'text-red-600' };
   if (score <= 3) return { score, label: 'Trung bình', color: 'text-yellow-600' };
   if (score <= 4) return { score, label: 'Khá', color: 'text-blue-600' };

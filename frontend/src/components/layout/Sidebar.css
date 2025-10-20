@@ -1,0 +1,31 @@
+.medix-sidebar{
+  width: 220px;
+  background: #f7f8fa;
+  border-right: 1px solid #e6e6e6;
+  min-height: calc(100vh - 64px);
+  padding: 18px 12px;
+}
+
+.sidebar-top{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e9e9e9;
+  margin-bottom: 12px;
+}
+
+.sidebar-logo-box{
+  width:40px;height:40px;background:#e9eef3;border-radius:6px;
+}
+
+.sidebar-logo-text{font-weight:700}
+
+.sidebar-nav{display:flex;flex-direction:column;gap:8px}
+
+.sidebar-link{color:#333;text-decoration:none;padding:6px 8px;border-radius:6px}
+.sidebar-link.sub{padding-left:18px;font-size:14px;color:#444}
+
+.sidebar-section{font-size:12px;color:#666;padding:6px 8px}
+
+.sidebar-link:hover{background:#eef4fb}

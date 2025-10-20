@@ -52,8 +52,12 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
         public async Task<bool> NameExistsAsync(string name, Guid? excludeId = null)
         {
-            var query = _context.ContentCategories.Where(c => c.Name == name);
-            
+            if (string.IsNullOrWhiteSpace(name))
+                return false;
+
+            var normalized = name.Trim().ToLowerInvariant();
+            var query = _context.ContentCategories.Where(c => c.Name != null && c.Name.ToLower() == normalized);
+
             if (excludeId.HasValue)
                 query = query.Where(c => c.Id != excludeId.Value);
 
@@ -62,8 +66,12 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
         public async Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null)
         {
-            var query = _context.ContentCategories.Where(c => c.Slug == slug);
-            
+            if (string.IsNullOrWhiteSpace(slug))
+                return false;
+
+            var normalized = slug.Trim().ToLowerInvariant();
+            var query = _context.ContentCategories.Where(c => c.Slug != null && c.Slug.ToLower() == normalized);
+
             if (excludeId.HasValue)
                 query = query.Where(c => c.Id != excludeId.Value);
 

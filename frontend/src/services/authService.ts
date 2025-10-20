@@ -1,29 +1,58 @@
-// Updated AuthService to match backend API structure
-
+// src/services/authService.ts
 import { apiClient } from '../lib/apiClient';
-import { 
-  LoginRequest, 
-  RegisterRequest, 
-  RegisterRequestPatient,
-  AuthResponse, 
+import {
+  LoginRequest,
+  RegisterRequest,
+  AuthResponse,
   ForgotPasswordRequest,
-  ResetPasswordRequest,
   RefreshTokenRequest,
+  RegisterRequestPatient,
+  ResetPasswordRequest,
   BloodType,
   Gender,
-  PatientRegistration
+  PatientRegistration,
 } from '../types/auth.types';
 
+declare global {
+  interface ImportMetaEnv {
+    readonly VITE_GOOGLE_CLIENT_ID: string;
+  }
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
+}
+
 export class AuthService {
+  // ===================== LOGIN =====================
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
-      const response = await apiClient.post<AuthResponse>('/auth/login', credentials);
+      // Map email field to identifier for backend compatibility
+      const loginData = {
+        identifier: credentials.email,
+        password: credentials.password
+      };
+      const response = await apiClient.post<AuthResponse>('/auth/login', loginData);
       return response.data;
     } catch (error: any) {
       throw this.handleApiError(error);
     }
   }
 
+  // ===================== LOGIN WITH GOOGLE =====================
+  async loginWithGoogle(idToken: string): Promise<AuthResponse> {
+    try {
+      const response = await apiClient.post<AuthResponse>('/auth/login-google', { idToken });
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Lỗi khi gọi /auth/login-google:', error?.response?.data || error);
+      if (error?.response?.data?.message?.includes('JWT must consist')) {
+        throw new Error('ID Token từ Google không hợp lệ. Kiểm tra Client ID hoặc cấu hình Google Console.');
+      }
+      throw new Error(error?.response?.data?.message || 'Đăng nhập Google thất bại.');
+    }
+  }
+
+  // ===================== REGISTER (GENERAL) =====================
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     try {
       const response = await apiClient.post<AuthResponse>('/auth/register', userData);
@@ -33,10 +62,9 @@ export class AuthService {
     }
   }
 
+  // ===================== REGISTER (PATIENT) =====================
   async registerPatient(patientData: PatientRegistration): Promise<AuthResponse> {
     try {
-      // Transform data to match backend RegistrationPayloadDTO structure
-      // Backend C# với [FromBody] sẽ tự động map camelCase → PascalCase
       const payload = {
         registerRequest: {
           email: patientData.registerRequest.email,
@@ -57,36 +85,80 @@ export class AuthService {
           allergies: patientData.patientDTO.allergies || null,
           emergencyContactName: patientData.patientDTO.emergencyContactName || null,
           emergencyContactPhone: patientData.patientDTO.emergencyContactPhone || null,
-          isActive: true, // Default to active
-        }
+          isActive: true,
+        },
       };
-      
-      // Debug log the final payload
-      console.log('Final payload being sent to backend:', JSON.stringify(payload, null, 2));
-      
-      const response = await apiClient.post<AuthResponse>('https://localhost:55883/api/register/registerPatient', payload);
+
+      console.log('📤 Payload gửi lên backend:', JSON.stringify(payload, null, 2));
+      const response = await apiClient.post<AuthResponse>('/register/registerPatient', payload);
       return response.data;
     } catch (error: any) {
       throw this.handleApiError(error);
     }
   }
 
-  async forgotPassword(data: ForgotPasswordRequest): Promise<void> {
+  // ===================== FORGOT PASSWORD =====================
+  async sendForgotPasswordCode(email: string): Promise<string> {
     try {
-      await apiClient.post('/auth/forgot-password', data);
+      const response = await apiClient.post('/auth/sendForgotPasswordCode', email);
+      return response.data;
     } catch (error: any) {
       throw this.handleApiError(error);
     }
   }
 
-  async resetPassword(data: ResetPasswordRequest): Promise<void> {
+  async verifyForgotPasswordCode(email: string, code: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await apiClient.post('/auth/verifyForgotPasswordCode', { email, code });
+      return { success: true, message: response.data.message };
+    } catch (error: any) {
+      return { success: false, message: error.response?.data?.message || 'Lỗi xác thực mã' };
+    }
+  }
+
+  async resendForgotPasswordCode(email: string): Promise<string> {
+    try {
+      const response = await apiClient.post('/auth/resendForgotPasswordCode', email);
+      return response.data;
+    } catch (error: any) {
+      throw this.handleApiError(error);
+    }
+  }
+
+  // ===================== CHECK EMAIL EXISTS =====================
+  async checkEmailExists(email: string): Promise<{ exists: boolean }> {
+    try {
+      const response = await apiClient.post('/api/register/checkEmailExist', email);
+      return { exists: response.data };
+    } catch (error: any) {
+      // If there's an error, assume email doesn't exist
+      return { exists: false };
+    }
+  }
+
+  // ===================== RESET PASSWORD =====================
+  async resetPassword(data: ResetPasswordRequest): Promise<{ success: boolean; error?: string }> {
     try {
       await apiClient.post('/auth/reset-password', data);
+      return { success: true };
+    } catch (error: any) {
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Không thể đặt lại mật khẩu' 
+      };
+    }
+  }
+
+  // ===================== CHANGE PASSWORD =====================
+  async changePassword(data: { currentPassword: string; newPassword: string; confirmPassword: string }): Promise<void> {
+    try {
+      await apiClient.post('/auth/change-password', data);
     } catch (error: any) {
       throw this.handleApiError(error);
     }
   }
 
+  // ===================== REFRESH TOKEN =====================
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
       const response = await apiClient.post<AuthResponse>('/auth/refresh-token', { refreshToken });
@@ -96,33 +168,19 @@ export class AuthService {
     }
   }
 
+  // ===================== LOGOUT =====================
   async logout(): Promise<void> {
     try {
       await apiClient.post('/auth/logout');
     } catch (error: any) {
-      // Don't throw error on logout failure, just log it
       console.error('Logout API error:', error);
     } finally {
-      // Always clear tokens even if API call fails
       apiClient.clearTokens();
     }
   }
 
-  async checkEmailExists(email: string): Promise<boolean> {
-    try {
-      // Backend expects JSON body with email string
-      const response = await apiClient.post<boolean>('/register/checkEmailExist', JSON.stringify(email), {
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error('Check email exists error:', error);
-      return false; // Default to false if check fails
-    }
-  }
 
+  // ===================== GET BLOOD TYPES =====================
   async getBloodTypes(): Promise<BloodType[]> {
     try {
       const response = await apiClient.get<BloodType[]>('/register/getBloodTypes');
@@ -133,19 +191,18 @@ export class AuthService {
     }
   }
 
+  // ===================== SEND EMAIL VERIFICATION =====================
   async sendEmailVerification(email: string): Promise<void> {
     try {
       await apiClient.post('/register/sendEmailVerified', JSON.stringify(email), {
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: { 'Content-Type': 'application/json' },
       });
     } catch (error: any) {
       throw this.handleApiError(error);
     }
   }
 
-  // Get available gender options (could be from backend or static)
+  // ===================== GENDER OPTIONS =====================
   getGenderOptions(): Gender[] {
     return [
       { code: 'Male', displayName: 'Nam', isActive: true },
@@ -154,12 +211,22 @@ export class AuthService {
     ];
   }
 
-  // Helper method to handle API errors consistently
+  // ===================== VALIDATION HELPERS =====================
+  validateEmailFormat(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  validatePasswordComplexity(password: string): boolean {
+    const complexityRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
+    return complexityRegex.test(password);
+  }
+
+  // ===================== ERROR HANDLER =====================
   private handleApiError(error: any): Error {
     if (error.response?.data) {
       const apiError = error.response.data;
-      
-      // Handle validation errors from backend
+
       if (apiError.errors) {
         const errorMessages = Object.entries(apiError.errors)
           .flat()
@@ -167,24 +234,10 @@ export class AuthService {
           .join(', ');
         return new Error(errorMessages || apiError.message || 'Validation error');
       }
-      
+
       return new Error(apiError.message || 'API error occurred');
     }
-    
     return new Error(error.message || 'Network error occurred');
-  }
-
-  // Validate email format before making API calls
-  validateEmailFormat(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  }
-
-  // Check password complexity before making API calls
-  validatePasswordComplexity(password: string): boolean {
-    // Must contain at least 1 uppercase, 1 lowercase, 1 digit, 1 special character, min 6 chars
-    const complexityRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
-    return complexityRegex.test(password);
   }
 }
 

@@ -217,6 +217,132 @@
   transform: translate(-50%, -50%);
 }
 
+/* Email verification styles */
+.email-input-group {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.verify-email-btn {
+  padding: 8px 16px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+  transition: background-color 0.3s ease;
+}
+
+.verify-email-btn:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+.verify-email-btn:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+}
+
+.verify-email-btn.verified {
+  background-color: #27ae60;
+}
+
+.verify-email-btn.checking {
+  background-color: #f39c12;
+}
+
+/* Verification code section */
+.verification-code-section {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.verification-info {
+  margin-bottom: 15px;
+}
+
+.verification-input-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.verification-code-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 16px;
+  text-align: center;
+  letter-spacing: 2px;
+  font-weight: bold;
+}
+
+.verification-code-input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.verify-code-btn {
+  padding: 12px 20px;
+  background-color: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.verify-code-btn:hover:not(:disabled) {
+  background-color: #229954;
+}
+
+.verify-code-btn:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+}
+
+.resend-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.resend-text {
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.resend-btn {
+  background: none;
+  border: none;
+  color: #3498db;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+.resend-btn:hover:not(:disabled) {
+  color: #2980b9;
+}
+
+.resend-btn:disabled {
+  color: #bdc3c7;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
 /* Password strength indicator */
 .password-strength {
   margin-top: 8px;
@@ -635,44 +761,4 @@
 
 .login-link-text:hover {
   text-decoration: underline;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .registration-container {
-    padding: 10px;
-  }
-  
-  .registration-form {
-    padding: 20px;
-  }
-  
-  .form-layout {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  
-  .left-column {
-    border-right: none;
-    padding-right: 0;
-    border-bottom: 1px solid #e9ecef;
-    padding-bottom: 20px;
-  }
-  
-  .right-column {
-    padding-left: 0;
-  }
-  
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .radio-group {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .section-title {
-    font-size: 18px;
-  }
 }

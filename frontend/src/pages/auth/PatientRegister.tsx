@@ -6,6 +6,7 @@ import registrationService from '../../services/registrationService';
 import { PatientRegistration, BloodType, Gender, RegisterRequestPatient, PatientDTO, ValidationErrors } from '../../types/auth.types';
 import { Gender as GenderEnum } from '../../types/common.types';
 import { validatePatientRegistrationForm, validatePassword, getPasswordStrength } from '../../utils/validation';
+// @ts-ignore: allow importing CSS without type declarations
 import '../../style/RegistrationPage.css';
 
 export const PatientRegister: React.FC = () => {
@@ -327,7 +328,7 @@ export const PatientRegister: React.FC = () => {
 
     // Check if email already exists first
     setIsCheckingEmail(true);
-    setError('');
+    setError(''); // Clear error
 
     try {
       // First check if email exists
@@ -335,6 +336,7 @@ export const PatientRegister: React.FC = () => {
       
       if (checkResult.success && checkResult.data?.exists) {
         setEmailExists(true);
+        setEmailVerificationSent(false); // Đảm bảo không conflict
         setError('Email này đã được sử dụng. Vui lòng sử dụng email khác.');
         setIsCheckingEmail(false);
         return;
@@ -344,16 +346,18 @@ export const PatientRegister: React.FC = () => {
       const result = await emailVerificationService.sendVerificationCode(formData.email);
       
       if (result.success && result.data) {
-        // Không cần lưu serverVerificationCode nữa vì verify qua API
         setEmailVerificationSent(true);
-        setResendEndTime(Date.now() + 60000); // 60 seconds từ bây giờ
-        setError('');
-        // Show success message in UI instead of alert
+        setEmailExists(false); // Đảm bảo không conflict với emailExists
+        setResendEndTime(Date.now() + 60000);
+        setError(''); // Clear any previous errors
+        console.log('Verification code sent successfully');
       } else {
         setError(result.error || 'Không thể gửi mã xác nhận');
+        setEmailVerificationSent(false);
       }
     } catch (err) {
       setError('Có lỗi xảy ra khi gửi mã xác nhận');
+      setEmailVerificationSent(false);
     } finally {
       setIsCheckingEmail(false);
     }
@@ -367,7 +371,7 @@ export const PatientRegister: React.FC = () => {
     }
 
     setIsVerifyingCode(true);
-    setError('');
+    setError(''); // Clear error trước khi verify
 
     try {
       // Gọi API verify email code
@@ -377,8 +381,12 @@ export const PatientRegister: React.FC = () => {
       
       if (result.success) {
         setEmailVerified(true);
+        setEmailVerificationSent(false); // QUAN TRỌNG: Clear trạng thái "đã gửi"
         setError(''); // Clear error
-        // Có thể thêm success message nếu cần
+        setValidationErrors(prev => {
+          const { email, ...rest } = prev;
+          return rest;
+        }); // Clear validation errors
         console.log('Email verification successful!');
       } else {
         // Hiển thị thông báo lỗi khi mã code sai
@@ -398,19 +406,15 @@ export const PatientRegister: React.FC = () => {
     if (resendCountdown > 0) return;
 
     setIsCheckingEmail(true);
-    setError('');
-    // Ẩn thông báo success cũ khi bấm resend
-    setEmailVerificationSent(false);
+    setError(''); // Clear error
 
     try {
       const result = await emailVerificationService.resendVerificationCode(formData.email);
       
       if (result.success && result.data) {
-        // Không cần lưu serverVerificationCode nữa vì verify qua API
         setResendEndTime(Date.now() + 60000);
-        setError('');
-        // Hiển thị lại thông báo success mới
-        setEmailVerificationSent(true);
+        setError(''); // Clear error
+        setEmailVerificationSent(true); // Hiển thị lại thông báo success
       } else {
         setError(result.error || 'Không thể gửi lại mã xác nhận');
       }
@@ -691,7 +695,9 @@ export const PatientRegister: React.FC = () => {
         patientDTO,
       };
 
+      // Sử dụng AuthContext registerPatient thay vì gọi trực tiếp registrationService
       await registerPatient(patientRegistration);
+      
       // Redirect to patient dashboard after successful registration
       navigate('/app/patient/dashboard');
     } catch (err: any) {
@@ -709,21 +715,6 @@ export const PatientRegister: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-blue-600 text-white py-4">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="text-2xl font-bold">MEDIX</Link>
-            <p className="text-blue-100">HỆ THỐNG Y TẾ THÔNG MINH ỨNG DỤNG AI</p>
-            <div className="flex space-x-4">
-              <Link to="/login" className="bg-transparent border border-white px-4 py-2 rounded hover:bg-white hover:text-blue-600 transition">
-                Đăng Nhập
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="registration-container">
         <form onSubmit={handleSubmit} className="registration-form">
@@ -854,23 +845,14 @@ export const PatientRegister: React.FC = () => {
                       style={emailExists ? { borderColor: '#e74c3c', backgroundColor: '#fdf2f2' } : {}}
                     />
                     {/* Hide button when verification code is sent but not yet verified */}
-                    {!emailVerificationSent && (
+                    {!emailVerificationSent && !emailVerified && (
                       <button
                         type="button"
                         onClick={handleSendVerificationCode}
                         disabled={isCheckingEmail || emailVerified || !formData.email || emailExists}
-                        className={`verify-email-btn ${emailVerified ? 'verified' : ''} ${isCheckingEmail ? 'checking' : ''}`}
+                        className={`verify-email-btn ${isCheckingEmail ? 'checking' : ''}`}
                       >
-                        {isCheckingEmail ? 'Đang kiểm tra...' : emailVerified ? '✓ Đã xác thực' : 'Gửi mã xác thực'}
-                      </button>
-                    )}
-                    {emailVerified && (
-                      <button
-                        type="button"
-                        disabled
-                        className="verify-email-btn verified"
-                      >
-                        ✓ Đã xác thực
+                        {isCheckingEmail ? 'Đang kiểm tra...' : 'Gửi mã xác thực'}
                       </button>
                     )}
                   </div>
@@ -881,48 +863,79 @@ export const PatientRegister: React.FC = () => {
                       </span>
                     </div>
                   )}
-                  {emailExists && (
-                    <div className="error-message" style={{ 
-                      marginTop: '4px', 
-                      fontSize: '12px',
-                      padding: '8px 12px',
-                      borderLeft: '3px solid #e74c3c'
-                    }}>
-                      ❌ Email này đã được sử dụng. Vui lòng sử dụng email khác.
-                    </div>
-                  )}
-                  {emailVerificationSent && !emailVerified && !emailExists && (
-                    <div className="success-message" style={{ 
-                      marginTop: '4px', 
-                      fontSize: '12px',
-                      padding: '8px 12px',
-                      borderLeft: '3px solid #27ae60',
-                      backgroundColor: '#f8fff8',
-                      color: '#27ae60'
-                    }}>
-                      ✅ Mã xác thực đã được gửi đến email của bạn!
-                    </div>
-                  )}
-                  {validationErrors.email && !emailExists && !emailVerified && (
-                    <div className="error-message" style={{ marginTop: '4px', fontSize: '12px' }}>
-                      ❌ {validationErrors.email[0]}
-                    </div>
-                  )}
-                  {emailVerified && !emailExists && (
-                    <div className="email-verified-message" style={{ 
-                      marginTop: '4px', 
-                      fontSize: '12px',
-                      padding: '8px 12px',
-                      borderLeft: '3px solid #27ae60',
-                      backgroundColor: '#f8f9fa',
-                      color: '#27ae60'
-                    }}>
-                      ✓ Email đã được xác thực
-                    </div>
-                  )}
+
+                  {/* Chỉ hiển thị một thông báo duy nhất theo thứ tự ưu tiên */}
+                  {(() => {
+                    // Ưu tiên 1: Email đã verified (màu xanh)
+                    if (emailVerified && !emailExists) {
+                      return (
+                        <div className="success-message" style={{ 
+                          marginTop: '4px', 
+                          fontSize: '12px',
+                          padding: '8px 12px',
+                          borderLeft: '3px solid #27ae60',
+                          backgroundColor: '#f8fff8',
+                          color: '#27ae60'
+                        }}>
+                          ✓ Email đã được xác thực
+                        </div>
+                      );
+                    }
+                    
+                    // Ưu tiên 2: Email đã tồn tại (màu đỏ)
+                    if (emailExists) {
+                      return (
+                        <div className="error-message" style={{ 
+                          marginTop: '4px', 
+                          fontSize: '12px',
+                          padding: '8px 12px',
+                          borderLeft: '3px solid #e74c3c',
+                          backgroundColor: '#fdf2f2',
+                          color: '#e74c3c'
+                        }}>
+                          ❌ Email này đã được sử dụng. Vui lòng sử dụng email khác.
+                        </div>
+                      );
+                    }
+                    
+                    // Ưu tiên 3: Validation errors từ submit (màu đỏ) - bao gồm yêu cầu xác thực
+                    if (validationErrors.email && !emailExists && !emailVerified) {
+                      return (
+                        <div className="error-message" style={{ 
+                          marginTop: '4px', 
+                          fontSize: '12px',
+                          padding: '8px 12px',
+                          borderLeft: '3px solid #e74c3c',
+                          backgroundColor: '#fdf2f2',
+                          color: '#e74c3c'
+                        }}>
+                          ❌ {validationErrors.email[0]}
+                        </div>
+                      );
+                    }
+                    
+                    // Ưu tiên 4: Đã gửi mã xác thực và chưa verified - CHỈ hiển thị khi có hành động gửi mail
+                    if (emailVerificationSent && !emailVerified && !emailExists && !validationErrors.email) {
+                      return (
+                        <div className="success-message" style={{ 
+                          marginTop: '4px', 
+                          fontSize: '12px',
+                          padding: '8px 12px',
+                          borderLeft: '3px solid #27ae60',
+                          backgroundColor: '#f8fff8',
+                          color: '#27ae60'
+                        }}>
+                          ✅ Mã xác thực đã được gửi đến email của bạn!
+                        </div>
+                      );
+                    }
+                    
+                    // Không hiển thị gì
+                    return null;
+                  })()}
                 </div>
 
-                {/* Verification Code Section - Only show if email doesn't exist */}
+                {/* Verification Code Section - Chỉ hiển thị khi cần thiết */}
                 {emailVerificationSent && !emailVerified && !emailExists && (
                   <div className="verification-code-section">
                     <div className="verification-info">
@@ -954,8 +967,8 @@ export const PatientRegister: React.FC = () => {
                       </button>
                     </div>
 
-                    {/* Hiển thị lỗi xác thực mã */}
-                    {error && (
+                    {/* Hiển thị lỗi xác thực mã - CHỈ khi đang trong flow verify */}
+                    {error && emailVerificationSent && !emailVerified && (
                       <div className="error-message" style={{ 
                         marginTop: '8px', 
                         fontSize: '12px',

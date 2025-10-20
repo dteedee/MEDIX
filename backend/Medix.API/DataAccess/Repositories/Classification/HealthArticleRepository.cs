@@ -96,10 +96,41 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<HealthArticle>> SearchByNameAsync(string name)
+        {
+            var query = _context.HealthArticles
+                .Where(a => a.StatusCode == "Published" &&
+                            (EF.Functions.Like(a.Title, $"%{name}%") || EF.Functions.Like(a.Summary, $"%{name}%")))
+                .Include(a => a.Author)
+                .Include(a => a.StatusCodeNavigation)
+                .Include(a => a.Categories)
+                .OrderByDescending(a => a.CreatedAt);
+
+            return await query.ToListAsync();
+        }
+
         public async Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null)
         {
-            var query = _context.HealthArticles.Where(a => a.Slug == slug);
-            
+            if (string.IsNullOrWhiteSpace(slug))
+                return false;
+
+            var normalized = slug.Trim().ToLowerInvariant();
+            var query = _context.HealthArticles.Where(a => a.Slug != null && a.Slug.ToLower() == normalized);
+
+            if (excludeId.HasValue)
+                query = query.Where(a => a.Id != excludeId.Value);
+
+            return await query.AnyAsync();
+        }
+
+        public async Task<bool> TitleExistsAsync(string title, Guid? excludeId = null)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+                return false;
+
+            var normalized = title.Trim().ToLowerInvariant();
+            var query = _context.HealthArticles.Where(a => a.Title != null && a.Title.ToLower() == normalized);
+
             if (excludeId.HasValue)
                 query = query.Where(a => a.Id != excludeId.Value);
 

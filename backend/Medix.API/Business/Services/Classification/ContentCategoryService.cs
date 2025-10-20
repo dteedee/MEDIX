@@ -135,22 +135,34 @@ namespace Medix.API.Business.Services.Classification
                 throw new NotFoundException("Category not found");
             }
 
-            var slugExists = await _contentCategoryRepository.SlugExistsAsync(updateDto.Slug, id);
-            if (slugExists)
+            string Normalize(string? s) => string.IsNullOrWhiteSpace(s) ? string.Empty : s.Trim().ToLowerInvariant();
+
+            var currentSlugNorm = Normalize(category.Slug);
+            var newSlugNorm = Normalize(updateDto.Slug);
+            if (currentSlugNorm != newSlugNorm)
             {
-                throw new ValidationException(new Dictionary<string, string[]>
+                var slugExists = await _contentCategoryRepository.SlugExistsAsync(updateDto.Slug, id);
+                if (slugExists)
                 {
-                    { "Slug", new[] { "Slug already exists. Please choose a different slug" } }
-                });
+                    throw new ValidationException(new Dictionary<string, string[]>
+                    {
+                        { "Slug", new[] { "Slug already exists. Please choose a different slug" } }
+                    });
+                }
             }
 
-            var nameExists = await _contentCategoryRepository.NameExistsAsync(updateDto.Name, id);
-            if (nameExists)
+            var currentNameNorm = Normalize(category.Name);
+            var newNameNorm = Normalize(updateDto.Name);
+            if (currentNameNorm != newNameNorm)
             {
-                throw new ValidationException(new Dictionary<string, string[]>
+                var nameExists = await _contentCategoryRepository.NameExistsAsync(updateDto.Name, id);
+                if (nameExists)
                 {
-                    { "Name", new[] { "Category name already exists" } }
-                });
+                    throw new ValidationException(new Dictionary<string, string[]>
+                    {
+                        { "Name", new[] { "Category name already exists" } }
+                    });
+                }
             }
 
             if (updateDto.ParentId.HasValue)

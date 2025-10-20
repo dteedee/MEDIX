@@ -1,39 +1,43 @@
-using System.ComponentModel.DataAnnotations;
 using Medix.API.Business.Validators;
+using System.ComponentModel.DataAnnotations;
 
-namespace Medix.API.Models.DTOs.Doctor
+namespace Medix.API.Application.DTOs.Doctor
 {
     public class DoctorRegisterRequest
     {
-        [Required(ErrorMessage = "Vui l�ng nh?p h? v� t�n")]
-        [MaxLength(200, ErrorMessage = "H? v� t�n kh�ng du?c vu?t qu� 200 k� t?")]
+        [Required(ErrorMessage = "Vui lòng nhập họ và tên")]
+        [MaxLength(200, ErrorMessage = "Họ và tên không được vượt quá 200 ký tự")]
         public string FullName { get; set; } = null!;
+        [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập")]
+        [MaxLength(256, ErrorMessage = "Tên đăng nhập không được vượt quá 256 ký tự")]
+        [RegularExpression(@"^[a-zA-Z0-9]+$", ErrorMessage = "Tên đăng nhập chỉ được chứa chữ cái không dấu và số")]
+        public string UserName { get; set; } = null!;
+        [Dob]
         public string? Dob { get; set; }
         public string? GenderCode { get; set; }
-        [Required(ErrorMessage = "Vui l�ng nh?p s? CCCD/CMND")]
-        [MaxLength(50, ErrorMessage = "S? CCCD/CMND kh�ng du?c vu?t qu� 50 k� t?")]
+        [Required(ErrorMessage = "Vui lòng nhập số CCCD")]
+        [RegularExpression(@"^\d{12}$", ErrorMessage = "Số CCCD phải gồm đúng 12 chữ số")]
         public string IdentificationNumber { get; set; } = null!;
-        [Required(ErrorMessage = "Vui l�ng nh?p email")]
-        [EmailAddress(ErrorMessage = "Email kh�ng h?p l?")]
+        [Required(ErrorMessage = "Vui lòng nhập email")]
+        [EmailAddress(ErrorMessage = "Email không hợp lệ")]
         public string Email { get; set; } = null!;
-        [Required(ErrorMessage = "Vui l�ng nh?p s? di?n tho?i")]
-        [Phone(ErrorMessage = "S? di?n tho?i kh�ng h?p l?")]
-        [MaxLength(20, ErrorMessage = "S? di?n tho?i kh�ng du?c vu?t qu� 20 k� t?")]
+        [Required(ErrorMessage = "Vui lòng nhập số điện thoại")]
+        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
+        [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại phải bắt đầu bằng 0 và gồm 10 chữ số")]
         public string PhoneNumber { get; set; } = null!;
-        public string Password { get; set; } = null!;
 
-        [Required(ErrorMessage = "Vui l�ng ch?n chuy�n khoa")]
+        [Required(ErrorMessage = "Vui lòng chọn chuyên khoa")]
         public string SpecializationId { get; set; } = null!;
-        [Required(ErrorMessage = "Vui l�ng nh?p s? gi?y ph�p h�nh ngh?")]
+        [Required(ErrorMessage = "Vui lòng nhập số giấy phép hành nghề")]
         public string LicenseNumber { get; set; } = null!;
         [ImageFile]
         public IFormFile? LicenseImage { get; set; }
-        [MaxLength(1000, ErrorMessage = "Ti?u s? kh�ng du?c vu?t qu� 1000 k� t?")]
+        [MaxLength(1000, ErrorMessage = "Tiểu sử không được vượt quá 1000 ký tự")]
         public string? Bio { get; set; }
-        [MaxLength(1000, ErrorMessage = "H?c v?n kh�ng du?c vu?t qu� 1000 k� t?")]
+        [MaxLength(1000, ErrorMessage = "Học vấn không được vượt quá 1000 ký tự")]
         public string? Education { get; set; }
-        [Required(ErrorMessage = "Vui l�ng nh?p s? nam kinh nghi?m")]
-        [Range(1, 50, ErrorMessage = "S? nam kinh nghi?m kh�ng h?p l?")]
-        public int YearsOfExperience { get; set; } = 0;
+        [Required(ErrorMessage = "Vui lòng nhập số năm kinh nghiệm")]
+        [Range(1, 50, ErrorMessage = "Số năm kinh nghiệm không hợp lệ")]
+        public int? YearsOfExperience { get; set; } = 0;
     }
 }

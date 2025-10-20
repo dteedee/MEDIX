@@ -21,16 +21,42 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return doctor;
         }
 
-        public async Task<List<Doctor>> GetDoctorsWithTierIDAsync(string tierID)
+        public async Task<List<Doctor>> GetHomePageDoctorsAsync()
         {
-            if (!Guid.TryParse(tierID, out var tierGuid))
-                return new List<Doctor>();
-
             return await _context.Doctors
-                .Where(d => d.ServiceTierId == tierGuid)
+                .Include(d => d.ServiceTier)
+                .Where(d => d.ServiceTier.PriorityBoost >= 25)
+                .OrderByDescending(d => d.ServiceTier.PriorityBoost)
+                .Include(d => d.User)
+                .Include(d => d.Specialization)
                 .ToListAsync();
         }
 
-     
+        public async Task<bool> LicenseNumberExistsAsync(string licenseNumber)
+        {
+            return await _context.Doctors.AnyAsync(d => d.LicenseNumber.ToLower() == licenseNumber.ToLower());
+        }
+
+        public async Task<Doctor?> GetDoctorByUserNameAsync(string userName)
+        {
+            return await _context.Doctors
+                .Include(d => d.User)
+                .Include(d => d.Specialization)
+                .FirstOrDefaultAsync(d => d.User.UserName.ToLower() == userName.ToLower());
+        }
+
+        public async Task<Doctor?> GetDoctorByUserIdAsync(Guid userId)
+        {
+            return await _context.Doctors
+                .Include(d => d.User)
+                .FirstOrDefaultAsync(d => d.User.Id == userId);
+        }
+
+        public async Task<Doctor> UpdateDoctorAsync(Doctor doctor)
+        {
+            _context.Doctors.Update(doctor);
+            await _context.SaveChangesAsync();
+            return doctor;
+        }
     }
 }

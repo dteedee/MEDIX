@@ -1,39 +1,30 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import styles from '../../styles/doctor-register.module.css'
 
-interface SpecializationDto {
-  id: string;
-  name: string;
-}
+import { useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
+import DoctorService from '../../services/doctorService';
+import { DoctorRegisterMetadata } from '../../types/doctor.types';
+import { PageLoader } from '../../components/ui';
 
+function DoctorRegister() {
+    const [metadata, setMetadata] = useState<DoctorRegisterMetadata>();
 
+    const [loading, setLoading] = useState(false);
 
-export const DoctorRegister: React.FC = () => {
-    const [specializations, setSpecializations] = useState<SpecializationDto[]>([]);
     const [errors, setErrors] = useState<any>({});
-
-    //const [password, setPassword] = useState('');
-    //const [confirmPassword, setConfirmPassword] = useState('');
-
-    const [selectedSpecialization, setSelectedSpecialization] = useState<string | null>(null);
-
-    /*
-    const hasMinLength = password.length >= 8;
-    const hasUppercase = /[A-Z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSymbol = /[^A-Za-z0-9]/.test(password);
-    const passwordsMatch = password && confirmPassword && password === confirmPassword;
-    */
-
+    const [formData, setFormData] = useState<any>({});
+    const [touched, setTouched] = useState<{ licenseImage?: boolean }>({});
 
     useEffect(() => {
-        axios.get('/api/doctor/register-metadata')
-            .then(response => {
-                setSpecializations(response.data.specializations);
-            })
-            .catch(error => {
-                console.error('Error fetching specializations:', error);
-            });
+        const fetchMetadata = async () => {
+            try {
+                const data = await DoctorService.getMetadata();
+                setMetadata(data);
+            } catch (error) {
+                console.error('Failed to fetch metadata:', error);
+            }
+        }
+        fetchMetadata();
     }, []);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -45,165 +36,296 @@ export const DoctorRegister: React.FC = () => {
         for (const [key, value] of formData.entries()) {
             console.log(`${key}:`, value);
         }
+        console.log(formData);
 
-        /*
-        if (!hasMinLength || !hasUppercase || !hasNumber || !hasSymbol || !passwordsMatch) {
-            return;
-        }
-            */
-
+        setErrors({});
+        setLoading(true);
         try {
-            const response = await fetch('/api/doctor/register', {
-                method: 'POST',
-                body: formData,
-            });
+            await DoctorService.registerDoctor(formData);
 
-            if (response.ok) {
-                console.log('Registration successful');
-                setErrors({});
-            } else {
-                console.error('Registration failed');
-                const errorData = await response.json();
-                setErrors(errorData.errors);
-                console.log(errorData.errors);
-            }
+            console.log('Registration successful');
+            setLoading(false);
+            Swal.fire({
+                title: 'Đăng ký thành công!',
+                text: 'Bạn sẽ được chuyển về trang chủ',
+                icon: 'success',
+                confirmButtonText: 'OK',
+            }).then(() => {
+                window.location.href = '/';
+            });
         } catch (error) {
-            console.error('Error submitting form:', error);
+            setLoading(false);
+            console.error('Registration failed');
+            const errorData = error.response.data;
+            setErrors(errorData.errors);
+            console.log(errorData.errors);
         }
+
+    };
+
+    const validateField = (name: string, value: string) => {
+        const newErrors: Record<string, string[]> = {};
+
+        switch (name) {
+            case 'fullName':
+                if (!value.trim()) {
+                    newErrors.FullName = ['Vui lòng nhập họ và tên'];
+                } else {
+                    newErrors.FullName = [''];
+                }
+                break;
+
+            case 'userName':
+                if (!value.trim()) {
+                    newErrors.UserName = ['Vui lòng nhập tên đăng nhập'];
+                } else {
+                    newErrors.UserName = [''];
+                }
+                break;
+
+            case 'identificationNumber':
+                if (!value.trim()) {
+                    newErrors.IdentificationNumber = ['Vui lòng nhập số CCCD'];
+                } else if (!/^\d{12}$/.test(value)) {
+                    newErrors.IdentificationNumber = ['Số CCCD phải gồm đúng 12 chữ số'];
+                } else {
+                    newErrors.IdentificationNumber = [];
+                }
+                break;
+
+            case 'email':
+                if (!value.trim()) {
+                    newErrors.Email = ['Vui lòng nhập email'];
+                } else if (!/^\S+@\S+\.\S+$/.test(value)) {
+                    newErrors.Email = ['Email không hợp lệ'];
+                }
+                else {
+                    newErrors.Email = [];
+                }
+                break;
+
+            case 'phoneNumber':
+                if (!value.trim()) {
+                    newErrors.PhoneNumber = ['Vui lòng nhập số điện thoại'];
+                } else if (!/^0\d{9}$/.test(value)) {
+                    newErrors.PhoneNumber = ['Số điện thoại phải bắt đầu bằng 0 và gồm 10 chữ số'];
+                } else {
+                    newErrors.PhoneNumber = [];
+                }
+                break;
+
+            case 'licenseNumber':
+                if (!value.trim()) {
+                    newErrors.LicenseNumber = ['Vui lòng nhập số giấy phép hành nghề'];
+                } else {
+                    newErrors.LicenseNumber = [];
+                }
+                break;
+
+            case 'yearsOfExperience':
+                const years = Number(value);
+                if (!value.trim()) {
+                    newErrors.YearsOfExperience = ['Vui lòng nhập số năm kinh nghiệm'];
+                } else if (isNaN(years) || years < 1 || years > 50) {
+                    newErrors.YearsOfExperience = ['Số năm kinh nghiệm không hợp lệ'];
+                } else {
+                    newErrors.YearsOfExperience = [];
+                }
+                break;
+
+            case 'dob':
+                if (!value) {
+                    newErrors.birthdate = []; // No error if left empty
+                } else {
+                    const birthYear = new Date(value).getFullYear();
+                    const currentYear = new Date().getFullYear();
+                    const age = currentYear - birthYear;
+
+                    if (age < 25) {
+                        newErrors.Dob = ['Bạn phải đủ 25 tuổi để đăng ký'];
+                    } else if (age > 150) {
+                        newErrors.Dob = ['Ngày sinh không hợp lệ'];
+                    } else {
+                        newErrors.Dob = [];
+                    }
+                }
+                break;
+
+
+        }
+
+        setErrors((prev: any) => ({ ...prev, ...newErrors }));
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData((prev: any) => ({ ...prev, [name]: value }));
+        validateField(name, value);
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, files } = e.target;
+        const file = files?.[0];
+
+        setTouched((prev) => ({ ...prev, [name]: true }));
+
+        if (!file) {
+            setErrors((prev: any) => ({
+                ...prev,
+                [name === 'licenseImage' ? 'LicenseImage' : name]: ['Vui lòng chọn một tệp hình ảnh'],
+            }));
+        } else if (!file.type.startsWith('image/')) {
+            setErrors((prev: any) => ({
+                ...prev,
+                [name === 'licenseImage' ? 'LicenseImage' : name]: ['Tệp phải là hình ảnh (jpg, png, gif...)'],
+            }));
+        } else {
+            setErrors((prev: any) => ({
+                ...prev,
+                [name === 'licenseImage' ? 'LicenseImage' : name]: [],
+            }));
+        }
+        setFormData((prev: any) => ({ ...prev, [name]: file }));
     };
 
     return (
         <div>
-            <main className="main-container">
-                <div className="form-container">
+            <main className={styles["main-container"]}>
+                <div className={styles["form-container"]}>
                     <form id="registrationForm" encType='multipart/form-data' onSubmit={handleSubmit}>
                         {/* Row 1 */}
-                        <div className="form-row">
+                        <div className={styles["form-row"]}>
                             {/* Left Column: Personal Info & Login */}
-                            <div className="form-section">
-                                <h2 className="section-title">Phần 1: Thông tin cá nhân &amp; đăng nhập</h2>
-                                <div className="form-group">
-                                    <label className="form-label">Họ và tên <span className="required">*</span></label>
-                                    <input type="text" className="form-input" placeholder="Nguyễn Văn A" name='fullName' />
-                                    {errors.FullName?.[0] && (
-                                        <div className="text-danger">{errors.FullName[0]}</div>
+                            <div className={styles["form-section"]}>
+                                <h2 className={styles["section-title"]}>Phần 1: Thông tin cá nhân &amp; đăng nhập</h2>
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Họ và tên <span className={styles["required"]}>*</span></label>
+                                    <input
+                                        type="text"
+                                        className={`${styles["form-input"]} form-control ${errors.FullName?.[0]
+                                            ? 'is-invalid'
+                                            : formData.fullName?.trim()
+                                                ? 'is-valid'
+                                                : ''
+                                            }`}
+                                        onChange={handleChange}
+                                        name="fullName"
+                                        placeholder="Nguyễn Văn A" />
+                                    {errors.FullName?.[0] && <div className="text-danger">{errors.FullName[0]}</div>}
+                                </div>
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Tên đăng nhập <span className={styles["required"]}>*</span></label>
+                                    <input type="text"
+                                        className={`${styles["form-input"]} form-control ${errors.UserName?.[0]
+                                            ? 'is-invalid'
+                                            : formData.userName?.trim()
+                                                ? 'is-valid'
+                                                : ''
+                                            }`}
+                                        onChange={handleChange} placeholder="drhao" name='userName' />
+                                    {errors.UserName?.[0] && (
+                                        <div className="text-danger">{errors.UserName[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Ngày sinh</label>
-                                    <input type="date" className="form-input" placeholder="mm/dd/yyyy" name='dob' />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Ngày sinh</label>
+                                    <input type="date"
+                                        className={`${styles["form-input"]} form-control ${errors.Dob?.[0]
+                                            ? 'is-invalid'
+                                            : formData.dob?.trim()
+                                                ? 'is-valid'
+                                                : ''
+                                            }`}
+                                        onChange={handleChange}
+                                        placeholder="mm/dd/yyyy" name='dob' />
+                                    {errors.Dob?.[0] && (
+                                        <div className="text-danger">{errors.Dob[0]}</div>
+                                    )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Giới tính</label>
-                                    <div className="radio-group">
-                                        <div className="radio-option">
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Giới tính</label>
+                                    <div className={styles["radio-group"]}>
+                                        <div className={styles["radio-option"]}>
                                             <input type="radio" name="gender" id="male" defaultValue="Male" />
                                             <label htmlFor="male">Nam</label>
                                         </div>
-                                        <div className="radio-option">
+                                        <div className={styles["radio-option"]}>
                                             <input type="radio" name="gender" id="female" defaultValue="Female" />
                                             <label htmlFor="female">Nữ</label>
                                         </div>
-                                        <div className="radio-option">
+                                        <div className={styles["radio-option"]}>
                                             <input type="radio" name="gender" id="other" defaultValue="Other" />
                                             <label htmlFor="other">Khác</label>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Số CCCD/CMND <span className="required">*</span></label>
-                                    <input type="text" className="form-input" placeholder="Nhập số căn cước công dân 12 số"
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Số CCCD <span className={styles["required"]}>*</span></label>
+                                    <input type="number"
+                                        onInput={(e) => {
+                                            const target = e.target as HTMLInputElement;
+                                            if (target.value.length > 12) {
+                                                target.value = target.value.slice(0, 12);
+                                            }
+                                        }}
+                                        className={`${styles["form-input"]} form-control ${errors.IdentificationNumber?.[0]
+                                            ? 'is-invalid'
+                                            : formData.identificationNumber?.trim()
+                                                ? 'is-valid'
+                                                : ''
+                                            }`}
+                                        onChange={handleChange}
+                                        placeholder="Nhập số căn cước công dân 12 số"
                                         name='identificationNumber' />
                                     {errors.IdentificationNumber?.[0] && (
                                         <div className="text-danger">{errors.IdentificationNumber[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Email <span className="required">*</span></label>
-                                    <input type="text" name='email' className="form-input" placeholder="Email@example.com" />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Email <span className={styles["required"]}>*</span></label>
+                                    <input type="text" name='email'
+                                        className={`${styles["form-input"]} form-control ${errors.Email?.[0]
+                                            ? 'is-invalid'
+                                            : formData.email?.trim()
+                                                ? 'is-valid'
+                                                : ''
+                                            }`}
+                                        onChange={handleChange}
+                                        placeholder="Email@example.com" />
                                     {errors.Email?.[0] && (
                                         <div className="text-danger">{errors.Email[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Số điện thoại <span className="required">*</span></label>
-                                    <input type="tel" name='phoneNumber' className="form-input" placeholder="09xxxxxxxx" />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Số điện thoại <span className={styles["required"]}>*</span></label>
+                                    <input type="number" name='phoneNumber'
+                                        onInput={(e) => {
+                                            const target = e.target as HTMLInputElement;
+                                            if (target.value.length > 10) {
+                                                target.value = target.value.slice(0, 10);
+                                            }
+                                        }}
+                                        className={`${styles["form-input"]} form-control ${errors.PhoneNumber?.[0]
+                                            ? 'is-invalid'
+                                            : formData.phoneNumber?.trim()
+                                                ? 'is-valid'
+                                                : ''
+                                            }`}
+                                        onChange={handleChange}
+                                        placeholder="09xxxxxxxx" />
                                     {errors.PhoneNumber?.[0] && (
                                         <div className="text-danger">{errors.PhoneNumber[0]}</div>
                                     )}
                                 </div>
-                                {/* 
-                                <div className="form-group">
-                                    <label className="form-label">Mật khẩu</label>
-                                    <input
-                                        type="password"
-                                        id="password"
-                                        name="password"
-                                        className="form-input"
-                                        placeholder="••••••••"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                    />
-
-                                    <div className="password-requirements">
-                                        <div className="requirement-item">
-                                            <span className="check-icon" style={{ color: hasMinLength ? 'green' : 'red' }}>
-                                                {hasMinLength ? '✓' : '✗'}
-                                            </span>
-                                            <span className="requirement-text">Ít nhất 8 ký tự</span>
-                                        </div>
-                                        <div className="requirement-item">
-                                            <span className="check-icon" style={{ color: hasUppercase ? 'green' : 'red' }}>
-                                                {hasUppercase ? '✓' : '✗'}
-                                            </span>
-                                            <span className="requirement-text">Có chữ hoa (A, B, C)</span>
-                                        </div>
-                                        <div className="requirement-item">
-                                            <span className="check-icon" style={{ color: hasNumber ? 'green' : 'red' }}>
-                                                {hasNumber ? '✓' : '✗'}
-                                            </span>
-
-                                            <span className="requirement-text">Có số (1, 2, 3...)</span>
-                                        </div>
-                                        <div className="requirement-item">
-                                            <span className="check-icon" style={{ color: hasSymbol ? 'green' : 'red' }}>
-                                                {hasSymbol ? '✓' : '✗'}
-                                            </span>
-
-                                            <span className="requirement-text">Biểu tượng (*#@...)</span>
-                                        </div>
-                                    </div>
-
-                                </div>
-
-                                <div className="form-group">
-                                    <label className="form-label">Xác nhận mật khẩu</label>
-                                    <input
-                                        type="password"
-                                        id="confirmPassword"
-                                        className="form-input"
-                                        placeholder="••••••••"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                    />
-                                    <div className="password-match">
-                                        {passwordsMatch ? (
-                                            <span className="match-success">Mật khẩu khớp</span>
-                                        ) : (
-                                            <span className="match-error">Mật khẩu không khớp</span>
-                                        )}
-                                    </div>
-                                </div>
-                                */}
                             </div>
                             {/* Right Column: Medical Info & Emergency Contact */}
-                            <div className="form-section">
-                                <h2 className="section-title">Phần 2: Thông tin bác sĩ</h2>
-                                <div className="form-group">
-                                    <label className="form-label">Chuyên khoa <span className="required">*</span></label>
-                                    <select className="form-select" name='specializationId'>
+                            <div className={styles["form-section"]}>
+                                <h2 className={styles["section-title"]}>Phần 2: Thông tin bác sĩ</h2>
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Chuyên khoa <span className={styles["required"]}>*</span></label>
+                                    <select className={styles["form-select"]} name='specializationId'>
                                         <option value="">Chọn chuyên khoa</option>
-                                        {specializations.map(spec => (
+                                        {metadata?.specializations.map(spec => (
                                             <option key={spec.id} value={spec.id}>{spec.name}</option>
                                         ))}
                                     </select>
@@ -211,37 +333,81 @@ export const DoctorRegister: React.FC = () => {
                                         <div className="text-danger">{errors.SpecializationId[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Chứng chỉ làm việc <span className="required">*</span></label>
-                                    <input type="file" className="form-file" accept="image/*" name='licenseImage' />
+                                <div className={styles["form-group"]}>
+                                    <label htmlFor="licenseImage" className={styles["form-label"]}>
+                                        Chứng chỉ làm việc <span className={styles["required"]}>*</span>
+                                    </label>
+
+                                    <div className="d-flex align-items-center gap-2">
+                                        <input
+                                            type="file"
+                                            id="licenseImage"
+                                            name="licenseImage"
+                                            accept="image/*"
+                                            onChange={handleFileChange}
+                                            className={`d-none`} />
+
+                                        <label
+                                            htmlFor="licenseImage"
+                                            className={`btn btn-outline-primary ${errors.LicenseImage?.[0]
+                                                ? 'is-invalid'
+                                                : touched.licenseImage && formData.licenseImage
+                                                    ? 'is-valid'
+                                                    : ''
+                                                }`}>
+                                            Chọn file
+                                        </label>
+
+                                        <span className="ms-2">
+                                            {formData.licenseImage?.name || 'Chưa có file nào được chọn'}
+                                        </span>
+                                    </div>
+
                                     {errors.LicenseImage?.[0] && (
-                                        <div className="text-danger">{errors.LicenseImage[0]}</div>
+                                        <div className="text-danger">
+                                            {errors.LicenseImage[0]}
+                                        </div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Số chứng chỉ <span className="required">*</span></label>
-                                    <input type="text" name='licenseNumber' className="form-input" />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Số chứng chỉ <span className={styles["required"]}>*</span></label>
+                                    <input type="text" name='licenseNumber'
+                                        className={`${styles["form-input"]} form-control ${errors.LicenseNumber?.[0]
+                                            ? 'is-invalid'
+                                            : formData.licenseNumber?.trim()
+                                                ? 'is-valid'
+                                                : ''
+                                            }`}
+                                        onChange={handleChange} />
                                     {errors.LicenseNumber?.[0] && (
                                         <div className="text-danger">{errors.LicenseNumber[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Thông tin bác sĩ</label>
-                                    <textarea className="form-input" name='bio' defaultValue={""} />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Tiểu sử</label>
+                                    <textarea className={styles["form-input"]} name='bio' defaultValue={""} />
                                     {errors.Bio?.[0] && (
                                         <div className="text-danger">{errors.Bio[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Trình độ học vấn</label>
-                                    <textarea className="form-input" name='education' defaultValue={""} />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Trình độ học vấn</label>
+                                    <textarea className={styles["form-input"]} name='education' defaultValue={""} />
                                     {errors.Education?.[0] && (
                                         <div className="text-danger">{errors.Education[0]}</div>
                                     )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Số năm kinh nghiệm <span className="required">*</span></label>
-                                    <input type="text" className="form-input" name='yearsOfExperience' />
+                                <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Số năm kinh nghiệm <span className={styles["required"]}>*</span></label>
+                                    <input type="number"
+                                        className={`${styles["form-input"]} form-control ${errors.YearsOfExperience?.[0]
+                                            ? 'is-invalid'
+                                            : formData.yearsOfExperience?.trim()
+                                                ? 'is-valid'
+                                                : ''
+                                            }`}
+                                        onChange={handleChange}
+                                        name='yearsOfExperience' />
                                     {errors.YearsOfExperience?.[0] && (
                                         <div className="text-danger">{errors.YearsOfExperience[0]}</div>
                                     )}
@@ -261,10 +427,10 @@ export const DoctorRegister: React.FC = () => {
                         </div>
                         */}
                         {/* Submit Button */}
-                        <div className="submit-section">
-                            <button type="submit" className="btn-submit">ĐĂNG KÝ TÀI KHOẢN</button>
-                            <div className="login-link-section">
-                                Bạn đã có tài khoản? <a href="#" className="login-link">Đăng nhập ngay</a>
+                        <div className={styles["submit-section"]}>
+                            <button type="submit" className={styles["btn-submit"]}>ĐĂNG KÝ TÀI KHOẢN</button>
+                            <div className={styles["login-link-section"]}>
+                                Bạn đã có tài khoản? <a href="#" className={styles["login-link"]}>Đăng nhập ngay</a>
                             </div>
                         </div>
                     </form>
@@ -273,3 +439,4 @@ export const DoctorRegister: React.FC = () => {
         </div>
     )
 }
+export default DoctorRegister;

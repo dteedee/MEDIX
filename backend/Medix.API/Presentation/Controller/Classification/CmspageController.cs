@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Medix.API.DataAccess;
+using Medix.API.Business.Interfaces.Classification;
+using Medix.API.Models.DTOs.CMSPage;
 
 namespace Medix.API.Presentation.Controller.Classification
 {
@@ -7,33 +8,62 @@ namespace Medix.API.Presentation.Controller.Classification
     [ApiController]
     public class CmspageController : ControllerBase
     {
-        private readonly MedixContext _context;
+        private readonly ICmspageService _cmspageService;
 
-        public CmspageController(MedixContext context)
+        public CmspageController(ICmspageService cmspageService)
         {
-            _context = context;
+            _cmspageService = cmspageService;
         }
 
         [HttpGet]
-        public ActionResult GetAll()
+        public async Task<ActionResult> GetAll()
         {
-            var pages = _context.Cmspages.Take(10).ToList();
+            var pages = await _cmspageService.GetAllAsync();
             return Ok(pages);
         }
 
         [HttpGet("{id}")]
-        public ActionResult GetById(Guid id)
+        public async Task<ActionResult> GetById(Guid id)
         {
-            var page = _context.Cmspages.Find(id);
+            var page = await _cmspageService.GetByIdAsync(id);
             if (page == null)
-                return NotFound("Không tìm thấy trang");
+                return NotFound();
             return Ok(page);
         }
 
         [HttpPost]
-        public ActionResult Create([FromBody] dynamic request)
+        public async Task<ActionResult> Create([FromBody] CmspageCreateDto request)
         {
-            return Ok(new { message = "API đã được tối ưu cho tốc độ cao" });
+            var created = await _cmspageService.CreateAsync(request);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult> Update(Guid id, [FromBody] CmspageUpdateDto request)
+        {
+            var updated = await _cmspageService.UpdateAsync(id, request);
+            return Ok(updated);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> Delete(Guid id)
+        {
+            await _cmspageService.DeleteAsync(id);
+            return Ok();
+        }
+
+        [HttpGet("paged")]
+        public async Task<ActionResult> GetPaged([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        {
+            var result = await _cmspageService.GetPagedAsync(page, pageSize);
+            return Ok(result);
+        }
+
+        [HttpGet("search")]
+        public async Task<ActionResult> SearchByName([FromQuery] string? name)
+        {
+            var result = await _cmspageService.SearchByNameAsync(name);
+            return Ok(result);
         }
     }
 }

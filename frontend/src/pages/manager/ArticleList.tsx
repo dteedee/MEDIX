@@ -149,13 +149,15 @@ export default function ArticleList() {
     const fullArticle = await articleService.get(article.id);
     console.log('>>> Full Article từ backend:', fullArticle);
 
-    // ✅ 2. Lấy categoryIds từ fullArticle
-    const categoryIds =
+    let categoryIds =
       (Array.isArray(fullArticle.categoryIds) && fullArticle.categoryIds.length > 0)
         ? fullArticle.categoryIds
         : (Array.isArray(fullArticle.categories) && fullArticle.categories.length > 0)
           ? fullArticle.categories.map(c => c.id).filter(Boolean)
           : [];
+    if (categoryIds.length === 0) {
+      categoryIds = ['4531ED5F-2DB8-4B56-A38C-3C320F555922'];
+    }
 
 
     const payload = {

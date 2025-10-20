@@ -1,12 +1,17 @@
 using System;
 using System.Text;
+using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.Community;
 using Medix.API.Business.Interfaces.UserManagement;
+using Medix.API.Business.Services.Classification;
 using Medix.API.Business.Services.Community;
 using Medix.API.Business.Services.UserManagement;
+using Medix.API.Business.Validators;
 using Medix.API.Configurations;
 using Medix.API.DataAccess;
+using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
+using Medix.API.DataAccess.Repositories.Classification;
 using Medix.API.DataAccess.Repositories.UserManagement;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +24,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<MedixContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
 
-builder.Services.ConfigureServices();
+//builder.Services.ConfigureServices();
 
 // ================= CORS =================
 builder.Services.AddCors(options =>
@@ -104,6 +109,8 @@ builder.Services.AddSwaggerGen(c =>
 
 // ================= APPLICATION SERVICES =================
 // AutoMapper is already configured in ServiceConfiguration.cs
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -112,6 +119,17 @@ builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPatientRepository, PatientRepository>();
+builder.Services.AddScoped<ICmspageRepository, CmspageRepository>();
+builder.Services.AddScoped<ICmspageService, CmspageService>();
+builder.Services.AddScoped<IHealthArticleRepository, HealthArticleRepository>();
+builder.Services.AddScoped<IHealthArticleService, HealthArticleService>();
+builder.Services.AddScoped<IContentCategoryRepository, ContentCategoryRepository>();
+builder.Services.AddScoped<IContentCategoryService, ContentCategoryService>();
+builder.Services.AddScoped<ISiteBannerRepository,SiteBannerRepository>();
+builder.Services.AddScoped<ISiteBannerService, SiteBannerService>();
+builder.Services.AddScoped<IDtoValidatorService, DtoValidatorService>();
+
+
 
 // ================= BUILD APP =================
 var app = builder.Build();

@@ -24,9 +24,9 @@ export default function BannerEditPage() {
 
   const handleSave = () => {
     showToast(id ? 'Cập nhật banner thành công!' : 'Tạo banner thành công!')
-    navigate('/manager/banners')
+    navigate(-1); // Quay lại trang trước đó trong lịch sử
   }
-  const handleCancel = () => navigate('/manager/banners')
+  const handleCancel = () => navigate(-1); // Quay lại trang trước đó trong lịch sử
 
   if (loading) return <div>Loading...</div>
 

@@ -29,7 +29,7 @@ public partial class User
     public string FullName { get; set; } = null!;
 
     // Role is determined via related UserRoles/RefRole, not a Users column
-    [NotMapped]
+    //[NotMapped]
     public string Role { get; set; } = "Patient";
 
     public DateOnly? DateOfBirth { get; set; }

@@ -1,0 +1,288 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: #f8f9fa;
+    color: #212529;
+}
+
+/* Main Content */
+.main-container {
+    max-width: 1000px;
+    margin: 50px auto;
+    padding: 0 40px;
+}
+
+.form-container {
+    background: white;
+    border-radius: 12px;
+    padding: 50px 60px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    margin-bottom: 40px;
+}
+
+.form-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.section-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 30px;
+    color: #212529;
+}
+
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #212529;
+}
+
+.required {
+    color: #dc3545;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.form-input:focus {
+    border-color: #0066b2;
+}
+
+.form-input::placeholder {
+    color: #adb5bd;
+}
+
+textarea.form-input {
+    min-height: 120px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+/* Gender Radio Buttons */
+.radio-group {
+    display: flex;
+    gap: 30px;
+    margin-top: 8px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.radio-option input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #0066b2;
+}
+
+.radio-option label {
+    font-size: 14px;
+    cursor: pointer;
+    color: #495057;
+}
+
+/* Blood Type Select */
+.form-select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    background: white;
+    cursor: pointer;
+    color: #495057;
+}
+
+.form-select:focus {
+    border-color: #0066b2;
+}
+
+/* Password Requirements */
+.password-requirements {
+    margin-top: 12px;
+    font-size: 12px;
+}
+
+.requirement-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    color: #6c757d;
+}
+
+.requirement-item.valid {
+    color: #28a745;
+}
+
+.requirement-item.invalid {
+    color: #dc3545;
+}
+
+.check-icon {
+    font-size: 14px;
+}
+
+.requirement-text {
+    font-size: 12px;
+}
+
+.password-match {
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.match-success {
+    color: #28a745;
+}
+
+.match-error {
+    color: #dc3545;
+}
+
+/* Terms Checkbox */
+.terms-section {
+    margin: 30px 0;
+}
+
+.checkbox-wrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+    margin-top: 3px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #0066b2;
+    flex-shrink: 0;
+}
+
+.terms-text {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #495057;
+}
+
+.terms-link {
+    color: #0066b2;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.terms-link:hover {
+    text-decoration: underline;
+}
+
+/* Submit Button */
+.submit-section {
+    text-align: center;
+    margin-top: 40px;
+}
+
+.btn-submit {
+    background: linear-gradient(90deg, #1c7acc 0%, #0066b2 100%);
+    color: white;
+    border: none;
+    padding: 16px 80px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(0, 102, 178, 0.3);
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 102, 178, 0.4);
+}
+
+.login-link-section {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.login-link {
+    color: #0066b2;
+    text-decoration: none;
+    font-weight: 500;
+    margin-left: 5px;
+}
+
+.login-link:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 968px) {
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+
+    .footer-content {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+
+    .header-search {
+        margin: 0 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .header-search {
+        max-width: 100%;
+        margin: 0;
+    }
+
+    .form-container {
+        padding: 30px 25px;
+    }
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Medix.API.Migrations
 {
     /// <inheritdoc />
-    public partial class newDb : Migration
+    public partial class AddEmailVerificationCodesTable : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -52,6 +52,22 @@ namespace Medix.API.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__DoctorSe__3214EC073702BBFE", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "EmailVerificationCodes",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ExpirationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsUsed = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EmailVerificationCodes", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -358,7 +374,6 @@ namespace Medix.API.Migrations
                     PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
                     EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
                     FullName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Role = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     DateOfBirth = table.Column<DateOnly>(type: "date", nullable: true),
                     GenderCode = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
                     IdentificationNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
@@ -1617,6 +1632,9 @@ namespace Medix.API.Migrations
 
             migrationBuilder.DropTable(
                 name: "DoctorSubscriptions");
+
+            migrationBuilder.DropTable(
+                name: "EmailVerificationCodes");
 
             migrationBuilder.DropTable(
                 name: "MedicalRecordAttachments");

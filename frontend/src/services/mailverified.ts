@@ -1,16 +1,4 @@
-import axios from 'axios';
-
-// Base URL for API - có thể config trong .env file
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5123';
-
-// Create axios instance with default config
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+import { apiClient } from '../lib/apiClient';
 
 // Email verification service
 export const emailVerificationService = {
@@ -18,11 +6,7 @@ export const emailVerificationService = {
   sendVerificationCode: async (email: string) => {
     try {
       // Gọi API mới theo endpoint backend
-      const response = await apiClient.post('api/register/sendEmailVerified', JSON.stringify(email), {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.post('/register/sendEmailVerified', JSON.stringify(email));
       
       // Backend trả về verification code dạng string
       const verificationCode = response.data; // string từ backend
@@ -46,11 +30,7 @@ export const emailVerificationService = {
   resendVerificationCode: async (email: string) => {
     try {
       // Gọi API resend mới từ backend
-      const response = await apiClient.post('api/register/resendEmailVerificationCode', JSON.stringify(email), {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.post('/register/resendEmailVerificationCode', JSON.stringify(email));
       
       // Backend trả về verification code mới dạng string
       const verificationCode = response.data; // string từ backend
@@ -75,7 +55,7 @@ export const emailVerificationService = {
     try {
       console.log('Sending verification request:', { email, code }); // Debug log
       
-      const response = await apiClient.post('api/register/verifyEmailCode', {
+      const response = await apiClient.post('/register/verifyEmailCode', {
         email: email,
         code: code
       });

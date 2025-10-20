@@ -16,8 +16,9 @@ namespace Medix.API.Presentation.Controller.Classification
             _cloudinaryService = cloudinaryService;
         }
 
+    
         [HttpPost("upload")] // Giữ tên action là "upload"
-        // Sử dụng ImageFileAttribute để xác thực tệp tải lên
+                             // Sử dụng ImageFileAttribute để xác thực tệp tải lên
         public async Task<IActionResult> UploadImage([ImageFile(maxFileSizeInMB: 10)] IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -33,5 +34,6 @@ namespace Medix.API.Presentation.Controller.Classification
 
             return Ok(new { url = imageUrl });
         }
+    
     }
 }

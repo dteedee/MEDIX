@@ -97,7 +97,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
             {
                 using var stream = file.OpenReadStream();
                 var fileName = $"{userId}_{Guid.NewGuid()}{ext}";
-                var imageUrl = await cloudinaryService.UploadImageAsyncFile(stream, fileName);
+                var imageUrl = await cloudinaryService.UploadImageAsync(stream, fileName);
 
                 if (string.IsNullOrEmpty(imageUrl))
                     return StatusCode(500, new { message = "Image upload failed" });

@@ -26,7 +26,12 @@ export class AuthService {
   // ===================== LOGIN =====================
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
-      const response = await apiClient.post<AuthResponse>('/auth/login', credentials);
+      // Map email field to identifier for backend compatibility
+      const loginData = {
+        identifier: credentials.email,
+        password: credentials.password
+      };
+      const response = await apiClient.post<AuthResponse>('/auth/login', loginData);
       return response.data;
     } catch (error: any) {
       throw this.handleApiError(error);
@@ -93,18 +98,61 @@ export class AuthService {
   }
 
   // ===================== FORGOT PASSWORD =====================
-  async forgotPassword(data: ForgotPasswordRequest): Promise<void> {
+  async sendForgotPasswordCode(email: string): Promise<string> {
     try {
-      await apiClient.post('/auth/forgot-password', data);
+      const response = await apiClient.post('/auth/sendForgotPasswordCode', email);
+      return response.data;
     } catch (error: any) {
       throw this.handleApiError(error);
     }
   }
 
+  async verifyForgotPasswordCode(email: string, code: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await apiClient.post('/auth/verifyForgotPasswordCode', { email, code });
+      return { success: true, message: response.data.message };
+    } catch (error: any) {
+      return { success: false, message: error.response?.data?.message || 'Lỗi xác thực mã' };
+    }
+  }
+
+  async resendForgotPasswordCode(email: string): Promise<string> {
+    try {
+      const response = await apiClient.post('/auth/resendForgotPasswordCode', email);
+      return response.data;
+    } catch (error: any) {
+      throw this.handleApiError(error);
+    }
+  }
+
+  // ===================== CHECK EMAIL EXISTS =====================
+  async checkEmailExists(email: string): Promise<{ exists: boolean }> {
+    try {
+      const response = await apiClient.post('/api/register/checkEmailExist', email);
+      return { exists: response.data };
+    } catch (error: any) {
+      // If there's an error, assume email doesn't exist
+      return { exists: false };
+    }
+  }
+
   // ===================== RESET PASSWORD =====================
-  async resetPassword(data: ResetPasswordRequest): Promise<void> {
+  async resetPassword(data: ResetPasswordRequest): Promise<{ success: boolean; error?: string }> {
     try {
       await apiClient.post('/auth/reset-password', data);
+      return { success: true };
+    } catch (error: any) {
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Không thể đặt lại mật khẩu' 
+      };
+    }
+  }
+
+  // ===================== CHANGE PASSWORD =====================
+  async changePassword(data: { currentPassword: string; newPassword: string; confirmPassword: string }): Promise<void> {
+    try {
+      await apiClient.post('/auth/change-password', data);
     } catch (error: any) {
       throw this.handleApiError(error);
     }
@@ -131,20 +179,6 @@ export class AuthService {
     }
   }
 
-  // ===================== CHECK EMAIL EXIST =====================
-  async checkEmailExists(email: string): Promise<boolean> {
-    try {
-      const response = await apiClient.post<boolean>(
-        '/register/checkEmailExist',
-        JSON.stringify(email),
-        { headers: { 'Content-Type': 'application/json' } }
-      );
-      return response.data;
-    } catch (error: any) {
-      console.error('Check email exists error:', error);
-      return false;
-    }
-  }
 
   // ===================== GET BLOOD TYPES =====================
   async getBloodTypes(): Promise<BloodType[]> {

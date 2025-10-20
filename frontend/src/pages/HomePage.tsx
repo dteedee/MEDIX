@@ -223,8 +223,8 @@ function HomePage() {
                     <button onClick={handlePrev} disabled={currentIndex === 0} className={styles["doctor-nav-button"]}>←</button>
 
                     <div className={styles["doctors-grid"]}>
-                        {visibleDoctors?.map((doctor) => (
-                            <a href={`/doctor/details/${doctor.userName}`} className={styles["doctor-card"]}>
+                        {visibleDoctors?.map((doctor, index) => (
+                            <a key={`doctor-${doctor.userName}-${index}`} href={`/doctor/details/${doctor.userName}`} className={styles["doctor-card"]}>
                                 <div className={styles["doctor-photo"]}>
                                     <img className={styles['doctor-photo']} src={doctor.avatarUrl}></img>
                                 </div>
@@ -254,8 +254,8 @@ function HomePage() {
             < section className={styles["knowledge"]} >
                 <h2>KIẾN THỨC SỨC KHỎE HỮU ÍCH</h2>
                 <div className={styles["knowledge-grid"]}>
-                    {homeMetadata?.articles.map((article) => (
-                        <div className={styles["knowledge-card"]}>
+                    {homeMetadata?.articles.map((article, index) => (
+                        <div key={`article-${article.title}-${index}`} className={styles["knowledge-card"]}>
                             <img className={styles["knowledge-image"]} src={article.thumbnailUrl} />
                             <div className={styles["knowledge-content"]}>
                                 <h5>{article.title}</h5>

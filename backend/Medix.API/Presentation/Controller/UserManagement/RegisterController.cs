@@ -176,7 +176,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
             var patientDTO = await _patientService.RegisterPatientAsync(registration.PatientDTO, userDTO.Id);
             var loginRequest = new LoginRequestDto
             {
-                Email = registration.RegisterRequest.Email,
+                Identifier = registration.RegisterRequest.Email,
                 Password = registration.RegisterRequest.Password
             };
 

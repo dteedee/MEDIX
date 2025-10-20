@@ -21,11 +21,11 @@ namespace Medix.API.Business.Interfaces.UserManagement
         Task<bool> PhoneNumberExistsAsync(string phoneNumber);
         Task<bool> UserNameExistsAsync(string userName);
         Task<bool> IdentificationNumberExistsAsync(string identificationNumber);
-        Task<User> UpdateUserAsync(User user);
+    Task<User> UpdateUserAsync(User user);
         Task<UserBasicInfoDto> GetUserBasicInfo(Guid id);
 
         Task<UserBasicInfoDto> UpdateUserBasicInfo(UpdateUserDto updateDto);
-        Task<string> UpdateAvatarURL(string linkImage, Guid id);
+    Task<string?> UpdateAvatarURL(string linkImage, Guid id);
 
     }
 }

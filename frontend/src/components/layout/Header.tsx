@@ -1,41 +1,44 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { authService } from '../../services/authService';
 import './Header.css';
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+  const [currentUser, setCurrentUser] = useState<any | null>(() => {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null;
+    return raw ? JSON.parse(raw) : null;
+  });
 
-  // Chuyển đến trang profile dựa trên role
-  const handleProfileClick = () => {
-    if (!user) return;
-    
-    switch (user.role?.toUpperCase()) {
-      case 'ADMIN':
-        navigate('/app/admin');
-        break;
-      case 'MANAGER':
-        navigate('/app/manager');
-        break;
-      case 'DOCTOR':
-        navigate('/doctor/profile/edit');
-        break;
-      case 'PATIENT':
-        navigate('/app/patient/profile');
-        break;
-      default:
-        navigate('/');
-    }
-  };
+  // Lắng nghe sự kiện thay đổi đăng nhập/đăng xuất
+  useEffect(() => {
+    const handleAuthChanged = () => {
+      const raw = localStorage.getItem('currentUser');
+      setCurrentUser(raw ? JSON.parse(raw) : null);
+    };
+
+    window.addEventListener('authChanged', handleAuthChanged);
+    window.addEventListener('storage', handleAuthChanged);
+
+    return () => {
+      window.removeEventListener('authChanged', handleAuthChanged);
+      window.removeEventListener('storage', handleAuthChanged);
+    };
+  }, []);
 
   // Đăng xuất
   const handleLogout = async () => {
     try {
-      await logout();
-      navigate('/');
-    } catch (error) {
-      console.error('Logout error:', error);
+      await authService.logout();
+    } finally {
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('expiresAt');
+      localStorage.removeItem('rememberEmail');
+
+      window.dispatchEvent(new Event('authChanged'));
+      setCurrentUser(null);
       navigate('/');
     }
   };
@@ -80,49 +83,17 @@ export const Header: React.FC = () => {
 
         {/* Khu vực tài khoản / hành động */}
         <div className="medix-actions">
-          {isAuthenticated && user ? (
-            <>
-              <div 
-                className="avatar" 
-                title={user.fullName || user.email}
-                onClick={handleProfileClick}
-                style={{ cursor: 'pointer' }}
-              >
-                <svg
-                  width="28"
-                  height="28"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
-                    stroke="#ffffff"
-                    strokeWidth="1.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M20.59 21C19.79 18.88 17.98 17.25 15.75 16.5C13.52 15.75 10.48 15.75 8.25 16.5C6.02 17.25 4.21 18.88 3.41 21"
-                    stroke="#ffffff"
-                    strokeWidth="1.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+          {currentUser ? (
+            <div className="user-menu">
+              <div className="user-greeting">
+                <span className="greeting-text">Xin chào,</span>
+                <span className="user-name">{currentUser.fullName || currentUser.email}</span>
+                <span className="user-role">({currentUser.role || 'USER'})</span>
               </div>
-              <span 
-                className="user-info"
-                onClick={handleProfileClick}
-                style={{ cursor: 'pointer' }}
-              >
-                {user.fullName || user.email}
-              </span>
-              <span className="user-role">{user.role || 'USER'}</span>
               <button className="logout-btn" onClick={handleLogout}>
-                Đăng Xuất
+                Đăng xuất
               </button>
-            </>
+            </div>
           ) : (
             <>
               <Link to="/login" className="login-btn">

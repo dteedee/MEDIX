@@ -12,18 +12,18 @@ namespace Medix.API.Business.Services.Community
     // Lớp mô phỏng cấu trúc kết quả trả về (nếu cần cho unit test hoặc môi trường dev)
     public class UploadError
     {
-        public string Message { get; set; }
+        public string? Message { get; set; }
     }
 
     public class UploadResult
     {
-        public Uri SecureUrl { get; set; }
-        public UploadError Error { get; set; }
+        public Uri? SecureUrl { get; set; }
+        public UploadError? Error { get; set; }
     }
 
     public class CloudinaryService
     {
-        private readonly Cloudinary _cloudinary;
+        private readonly Cloudinary? _cloudinary;
         private readonly ILogger<CloudinaryService> _logger;
         private readonly IConfiguration _configuration;
 
@@ -135,6 +135,14 @@ namespace Medix.API.Business.Services.Community
                 _logger.LogError(ex, "Exception when uploading image to Cloudinary");
                 return string.Empty;
             }
+        }
+
+        /// <summary>
+        /// Backwards-compatible wrapper used by controllers expecting UploadImageAsyncFile
+        /// </summary>
+        public async Task<string> UploadImageAsyncFile(Stream imageStream, string fileName)
+        {
+            return await UploadImageAsync(imageStream, fileName);
         }
 
         /// <summary>

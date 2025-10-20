@@ -47,6 +47,7 @@ import UserEditPage from './pages/admin/UserEditPage';
 // Reader pages
 import ArticleReaderPage from './pages/patient/ArticleReaderPage';
 import ArticleDetailPage from './pages/patient/ArticleDetailPage';
+import DoctorBookingList from './pages/patient/DoctorBookingList';
 
 export function App() {
   return (
@@ -82,6 +83,9 @@ export function App() {
 
               {/* ---------- Home ---------- */}
               <Route index element={<HomePage />} />
+
+              {/* ---------- Doctor Booking List (Public) ---------- */}
+              <Route path="/doctors" element={<DoctorBookingList />} />
 
               {/* ---------- Main app layout ---------- */}
               <Route path="/app" element={<MainLayout />}>

@@ -1,4 +1,7 @@
-import { apiClient } from '../lib/apiClient';
+import axios from 'axios';
+
+// Base URL for API - có thể config trong .env file
+import { apiClient } from "../lib/apiClient";
 
 // Email verification service
 export const emailVerificationService = {
@@ -6,7 +9,11 @@ export const emailVerificationService = {
   sendVerificationCode: async (email: string) => {
     try {
       // Gọi API mới theo endpoint backend
-      const response = await apiClient.post('/register/sendEmailVerified', JSON.stringify(email));
+      const response = await apiClient.post('/register/sendEmailVerified', JSON.stringify(email), {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
       // Backend trả về verification code dạng string
       const verificationCode = response.data; // string từ backend
@@ -30,7 +37,11 @@ export const emailVerificationService = {
   resendVerificationCode: async (email: string) => {
     try {
       // Gọi API resend mới từ backend
-      const response = await apiClient.post('/register/resendEmailVerificationCode', JSON.stringify(email));
+      const response = await apiClient.post('/register/resendEmailVerificationCode', JSON.stringify(email), {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
       // Backend trả về verification code mới dạng string
       const verificationCode = response.data; // string từ backend
@@ -55,7 +66,7 @@ export const emailVerificationService = {
     try {
       console.log('Sending verification request:', { email, code }); // Debug log
       
-      const response = await apiClient.post('/register/verifyEmailCode', {
+      const response = await apiClient.post('register/verifyEmailCode', {
         email: email,
         code: code
       });

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from '../styles/home.module.css'
 import { HomeMetadata } from '../types/home.types';
 import Footer from '../components/layout/Footer';
@@ -6,6 +7,7 @@ import HomeService from '../services/homeService';
 import {Header} from '../components/layout/Header';
 
 function HomePage() {
+    const navigate = useNavigate();
 
     //get home page details
     const [homeMetadata, setHomeMetadata] = useState<HomeMetadata>();
@@ -247,7 +249,12 @@ function HomePage() {
 
                 </div>
                 <div className={styles["view-all"]}>
-                    <button className={styles["btn-view-all"]}>XEM TẤT CẢ</button>
+                    <button 
+                        className={styles["btn-view-all"]}
+                        onClick={() => navigate('/doctors')}
+                    >
+                        XEM TẤT CẢ
+                    </button>
                 </div>
             </section >
             {/* Knowledge Section */}

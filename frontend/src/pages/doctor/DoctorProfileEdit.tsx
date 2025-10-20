@@ -232,7 +232,6 @@ function DoctorProfileEdit() {
 
     return (
         <>
-            <Header />
             <div className={styles["main-container"]}>
                 {/* Content */}
                 <main className={styles["content"]}>
@@ -427,7 +426,6 @@ function DoctorProfileEdit() {
                     </div>
                 </main>
             </div>
-            <Footer />
             {/* Modal */}
             <div
                 className="modal fade"

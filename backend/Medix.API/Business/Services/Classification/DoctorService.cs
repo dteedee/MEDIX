@@ -125,7 +125,6 @@ namespace Medix.API.Business.Services.Classification
             existingDoctor.Bio = req.Bio;
             existingDoctor.Education = req.Education;
             existingDoctor.YearsOfExperience = (int)(req.YearsOfExperience == null ? 0 : req.YearsOfExperience);
-            existingDoctor.ConsultationFee = req.ConsultationFee == null ? 0 : req.ConsultationFee.Value;
 
             var updatedDoctor = await _doctorRepository.UpdateDoctorAsync(existingDoctor);
             return updatedDoctor != null;

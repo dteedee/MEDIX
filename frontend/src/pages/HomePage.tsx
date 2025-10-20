@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import styles from '../styles/home.module.css'
 import { HomeMetadata } from '../types/home.types';
-import Footer from '../components/layout/Footer';
 import HomeService from '../services/homeService';
-import {Header} from '../components/layout/Header';
 
 function HomePage() {
 

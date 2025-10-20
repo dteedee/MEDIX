@@ -23,18 +23,18 @@ namespace Medix.API.Business.Services.Classification
             _reviewRepository = reviewRepository;
         }
 
-        public Task<List<DoctorBookingDto>> GetDoctorsByServiceTierIdAsync(string tierID)
-        {
-            var doctors = _doctorRepository.GetDoctorsWithTierIDAsync(tierID);
-            //var doctorDtos = doctors.Result.Select(d => new DoctorBookingDto
-            //{
-            //    DoctorId = d.Id,
-            //    FullName = d.FullName,
-            //    Specialty = d.Specialty,
-            //    ServiceTierId = d.ServiceTierId
-            //}).ToList();
-            return null;
-        }
+        //public Task<List<DoctorBookingDto>> GetDoctorsByServiceTierIdAsync(string tierID)
+        //{
+        //    var doctors = _doctorRepository.GetDoctorsWithTierIDAsync(tierID);
+        //    //var doctorDtos = doctors.Result.Select(d => new DoctorBookingDto
+        //    //{
+        //    //    DoctorId = d.Id,
+        //    //    FullName = d.FullName,
+        //    //    Specialty = d.Specialty,
+        //    //    ServiceTierId = d.ServiceTierId
+        //    //}).ToList();
+        //    return null;
+        //}
 
         public async Task<bool> RegisterDoctorAsync(User user, Doctor doctor, UserRole role)
         {

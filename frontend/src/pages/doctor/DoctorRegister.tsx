@@ -460,7 +460,7 @@ function DoctorRegister() {
                                 )}
                             </button>
                             <div className={styles["login-link-section"]}>
-                                Bạn đã có tài khoản? <a href="#" className={styles["login-link"]}>Đăng nhập ngay</a>
+                                Bạn đã có tài khoản? <a href="/login" className={styles["login-link"]}>Đăng nhập ngay</a>
                             </div>
                         </div>
                     </form>

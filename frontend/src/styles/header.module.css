@@ -58,14 +58,17 @@ header {
     display: flex;
     gap: 20px;
     font-size: 14px;
+    justify-content: center;
+    align-items: center;
 }
 
-.header-links a {
+.header-link{
     color: white;
     text-decoration: none;
     background-color: #0A375D;
     border-radius: 18px;
     padding: 3px;
+    height: 30px;
 }
 
 .user-avatar img {

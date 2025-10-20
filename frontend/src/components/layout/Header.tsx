@@ -1,16 +1,11 @@
-import { useState } from 'react';
 import styles from '../../styles/header.module.css'
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 export const Header: React.FC = () => {
-    const token = null;
-    const [showDropdown, setShowDropdown] = useState(false);
-
-    const toggleDropdown = () => setShowDropdown((prev) => !prev);
-    const handleLogout = () => {
-        // Your logout logic here
-        console.log("Logging out...");
-    };
-
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
 
     return (
         <header>
@@ -26,28 +21,42 @@ export const Header: React.FC = () => {
                     <button>🔍</button>
                 </div>
                 <div className={styles["header-links"]}>
-                    {token ? (
-                        <div className={styles["dropdown"]}>
-                            <img
-                                src="https://pbs.twimg.com/profile_images/1937117284725661696/8ppkq53g_400x400.jpg" // Replace with actual avatar URL
-                                alt="User avatar"
-                                className="rounded-circle dropdown-toggle"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false"
-                                style={{ width: '40px', height: '40px', cursor: 'pointer' }}
-                            />
-                            <ul className="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <button className="dropdown-item" onClick={handleLogout}>
-                                        Đăng xuất
-                                    </button>
-                                </li>
-                            </ul>
-                        </div>
+                    {user ? (
+                        <>
+                            <div>
+                                <a href={user.role === "Doctor" ? "/doctor/profile/edit" : "/patient/profile"}>
+                                    <img
+                                        src={user.avatarUrl}
+                                        alt="User avatar"
+                                        className="rounded-circle dropdown-toggle"
+                                        // data-bs-toggle="dropdown"
+                                        // aria-expanded="false"
+                                        style={{ width: '40px', height: '40px', cursor: 'pointer' }} />
+                                </a>
+                                {/* <ul className="dropdown-menu dropdown-menu-start">
+                                    <li>
+                                        <button className="dropdown-item">
+                                            {user.avatarUrl}
+                                        </button>
+                                    </li>
+                                </ul> */}
+                            </div>
+                            <button className={styles['header-link']}
+                                onClick={async () => {
+                                    await logout();
+                                    navigate('/login');
+                                }}>
+                                Đăng xuất
+                            </button>
+                        </>
                     ) : (
                         <>
-                            <a href="#">Đăng nhập</a>
-                            <a href="#">Đăng ký</a>
+                            <a className={styles['header-link']} href="/login">Đăng nhập</a>
+                            <a className={styles['header-link']} href="#" data-bs-toggle="dropdown" aria-expanded="false">Đăng ký</a>
+                            <ul className="dropdown-menu">
+                                <li><a className="dropdown-item" href="/patient-register">Đăng ký bệnh nhân</a></li>
+                                <li><a className="dropdown-item" href="/doctor/register">Đăng ký bác sĩ</a></li>
+                            </ul>
                         </>
                     )}
                 </div>

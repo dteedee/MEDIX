@@ -41,9 +41,7 @@ namespace Medix.API.Business.Services.Classification
                     await transaction.RollbackAsync();
                     return false;
                 }
-                // TODO: Fix when UserRepository.CreateUserRoleAsync is implemented
-                // var userRole = await _userRepository.CreateUserRoleAsync(role);
-                var userRole = role; // Temporary fix
+                var userRole = await _userRepository.CreateUserRoleAsync(role);
                 if (userRole == null)
                 {
                     await transaction.RollbackAsync();
@@ -115,7 +113,7 @@ namespace Medix.API.Business.Services.Classification
         public async Task<bool> UpdateDoctorProfileAsync(Doctor existingDoctor, DoctorProfileUpdateRequest req)
         {
             existingDoctor.User.FullName = req.FullName;
-            existingDoctor.User.DateOfBirth = req.Dob == null ? null : DateOnly.Parse(req.Dob);
+            existingDoctor.User.DateOfBirth = (req.Dob == null || string.IsNullOrWhiteSpace(req.Dob)) ? null : DateOnly.Parse(req.Dob);
             if (existingDoctor.User.PhoneNumber != req.PhoneNumber)
             {
                 existingDoctor.User.PhoneNumber = req.PhoneNumber;

@@ -7,7 +7,7 @@ import Footer from '../../components/layout/Footer';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
-function DoctorProfileEdit() {
+export default function DoctorProfileEdit() {
 
     const [profileDetails, setProfileDetails] = useState<DoctorProfileDetails>();
     const [errors, setErrors] = useState<any>({});
@@ -535,5 +535,3 @@ function DoctorProfileEdit() {
         </>
     )
 }
-
-export default DoctorProfileEdit;

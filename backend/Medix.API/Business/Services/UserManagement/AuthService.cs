@@ -84,7 +84,8 @@ namespace Medix.API.Business.Services.UserManagement
                         FullName = user.FullName,
                         Role = roleCode,
                         EmailConfirmed = user.EmailConfirmed,
-                        CreatedAt = user.CreatedAt
+                        CreatedAt = user.CreatedAt,
+                        AvatarUrl = user.AvatarUrl,
                     }
                 };
             }

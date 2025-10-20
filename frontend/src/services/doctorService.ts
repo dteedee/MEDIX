@@ -29,8 +29,17 @@ class DoctorService {
     }
 
     async getDoctorProfileDetails(): Promise<DoctorProfileDetails> {
+        const accessToken = localStorage.getItem('accessToken');
+
+        if (!accessToken) {
+            throw new Error('No access token found - please login');
+        }
         try {
-            const response = await apiClient.get<DoctorProfileDetails>('doctor/profile/details');
+            const response = await apiClient.get<DoctorProfileDetails>('doctor/profile/details', {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
             return response.data;
         }
         catch (error: any) {
@@ -48,7 +57,7 @@ class DoctorService {
         return response.data;
     }
 
-    async updatePassword(payload: FormData): Promise<any>{
+    async updatePassword(payload: FormData): Promise<any> {
         await apiClient.put('doctor/profile/update-password', payload);
     }
 

@@ -255,7 +255,7 @@ function HomePage() {
                 <h2>KIẾN THỨC SỨC KHỎE HỮU ÍCH</h2>
                 <div className={styles["knowledge-grid"]}>
                     {homeMetadata?.articles.map((article, index) => (
-                        <div key={`article-${article.title}-${index}`} className={styles["knowledge-card"]}>
+                        <div key={`/app/article-${article.title}-${index}`} className={styles["knowledge-card"]}>
                             <img className={styles["knowledge-image"]} src={article.thumbnailUrl} />
                             <div className={styles["knowledge-content"]}>
                                 <h5>{article.title}</h5>

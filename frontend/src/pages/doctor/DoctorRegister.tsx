@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 import DoctorService from '../../services/doctorService';
 import { DoctorRegisterMetadata } from '../../types/doctor.types';
-import { PageLoader } from '../../components/ui';
 
 function DoctorRegister() {
     const [metadata, setMetadata] = useState<DoctorRegisterMetadata>();
@@ -38,13 +37,19 @@ function DoctorRegister() {
         }
         console.log(formData);
 
+        const agreed = formData.get('agreeToTerms') === 'on'; // checkbox returns 'on' if checked
+
+        if (!agreed) {
+            setErrors({ AgreeToTerms: 'Bạn phải đồng ý với điều khoản trước khi đăng ký.' });
+            return;
+        }
+
         setErrors({});
         setLoading(true);
         try {
             await DoctorService.registerDoctor(formData);
-
-            console.log('Registration successful');
             setLoading(false);
+            console.log('Registration successful');
             Swal.fire({
                 title: 'Đăng ký thành công!',
                 text: 'Bạn sẽ được chuyển về trang chủ',
@@ -76,10 +81,16 @@ function DoctorRegister() {
                 break;
 
             case 'userName':
-                if (!value.trim()) {
+                const trimmed = value.trim();
+
+                if (!trimmed) {
                     newErrors.UserName = ['Vui lòng nhập tên đăng nhập'];
+                } else if (trimmed.length > 15) {
+                    newErrors.UserName = ['Tên đăng nhập không được vượt quá 15 ký tự'];
+                } else if (!/^[a-zA-Z0-9]+$/.test(trimmed)) {
+                    newErrors.UserName = ['Tên đăng nhập chỉ được chứa chữ cái và số, không có khoảng trắng hoặc ký tự đặc biệt'];
                 } else {
-                    newErrors.UserName = [''];
+                    newErrors.UserName = [];
                 }
                 break;
 
@@ -150,8 +161,6 @@ function DoctorRegister() {
                     }
                 }
                 break;
-
-
         }
 
         setErrors((prev: any) => ({ ...prev, ...newErrors }));
@@ -164,29 +173,36 @@ function DoctorRegister() {
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, files } = e.target;
-        const file = files?.[0];
+        const file = e.target.files?.[0] || null;
 
-        setTouched((prev) => ({ ...prev, [name]: true }));
+        setFormData((prev: any) => ({ ...prev, licenseImage: file }));
 
         if (!file) {
-            setErrors((prev: any) => ({
-                ...prev,
-                [name === 'licenseImage' ? 'LicenseImage' : name]: ['Vui lòng chọn một tệp hình ảnh'],
-            }));
-        } else if (!file.type.startsWith('image/')) {
-            setErrors((prev: any) => ({
-                ...prev,
-                [name === 'licenseImage' ? 'LicenseImage' : name]: ['Tệp phải là hình ảnh (jpg, png, gif...)'],
-            }));
-        } else {
-            setErrors((prev: any) => ({
-                ...prev,
-                [name === 'licenseImage' ? 'LicenseImage' : name]: [],
-            }));
+            setErrors((prev: any) => ({ ...prev, LicenseImage: ['Vui lòng chọn một tệp ZIP hoặc RAR.'] }));
+            return;
         }
-        setFormData((prev: any) => ({ ...prev, [name]: file }));
+
+        const validExtensions = ['.zip', '.rar'];
+        const fileExtension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+
+        if (!validExtensions.includes(fileExtension)) {
+            setErrors((prev: any) => ({ ...prev, LicenseImage: ['Tệp phải có định dạng ZIP hoặc RAR.'] }));
+        } else {
+            setErrors((prev: any) => ({ ...prev, LicenseImage: [''] }));
+        }
     };
+
+    const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const { name, value } = e.target;
+
+        // Live validation
+        if (!value) {
+            setErrors((prev: any) => ({ ...prev, 'SpecializationId': ['Vui lòng chọn chuyên khoa'] }));
+        } else {
+            setErrors((prev: any) => ({ ...prev, 'SpecializationId': [''] }));
+        }
+    };
+
 
     return (
         <div>
@@ -222,7 +238,12 @@ function DoctorRegister() {
                                                 ? 'is-valid'
                                                 : ''
                                             }`}
-                                        onChange={handleChange} placeholder="drhao" name='userName' />
+                                        onChange={handleChange}
+                                        onInput={(e) => {
+                                            const target = e.target as HTMLInputElement;
+                                            target.value = target.value.slice(0, 15); // force max 15 characters
+                                        }}
+                                        placeholder="drhao" name='userName' />
                                     {errors.UserName?.[0] && (
                                         <div className="text-danger">{errors.UserName[0]}</div>
                                     )}
@@ -246,15 +267,15 @@ function DoctorRegister() {
                                     <label className={styles["form-label"]}>Giới tính</label>
                                     <div className={styles["radio-group"]}>
                                         <div className={styles["radio-option"]}>
-                                            <input type="radio" name="gender" id="male" defaultValue="Male" />
+                                            <input type="radio" name="genderCode" id="male" defaultValue="Male" />
                                             <label htmlFor="male">Nam</label>
                                         </div>
                                         <div className={styles["radio-option"]}>
-                                            <input type="radio" name="gender" id="female" defaultValue="Female" />
+                                            <input type="radio" name="genderCode" id="female" defaultValue="Female" />
                                             <label htmlFor="female">Nữ</label>
                                         </div>
                                         <div className={styles["radio-option"]}>
-                                            <input type="radio" name="gender" id="other" defaultValue="Other" />
+                                            <input type="radio" name="genderCode" id="other" defaultValue="Other" />
                                             <label htmlFor="other">Khác</label>
                                         </div>
                                     </div>
@@ -323,7 +344,8 @@ function DoctorRegister() {
                                 <h2 className={styles["section-title"]}>Phần 2: Thông tin bác sĩ</h2>
                                 <div className={styles["form-group"]}>
                                     <label className={styles["form-label"]}>Chuyên khoa <span className={styles["required"]}>*</span></label>
-                                    <select className={styles["form-select"]} name='specializationId'>
+                                    <select className={`${styles["form-select"]}`} name='specializationId'
+                                        onChange={handleSelectChange}>
                                         <option value="">Chọn chuyên khoa</option>
                                         {metadata?.specializations.map(spec => (
                                             <option key={spec.id} value={spec.id}>{spec.name}</option>
@@ -343,7 +365,7 @@ function DoctorRegister() {
                                             type="file"
                                             id="licenseImage"
                                             name="licenseImage"
-                                            accept="image/*"
+                                            accept=".zip,.rar"
                                             onChange={handleFileChange}
                                             className={`d-none`} />
 
@@ -415,22 +437,30 @@ function DoctorRegister() {
                             </div>
                         </div>
                         {/* Terms & Conditions */}
-                        {/*  
-                        <div className="terms-section">
-                            <div className="checkbox-wrapper">
-                                <input type="checkbox" id="terms" />
-                                <label htmlFor="terms" className="terms-text">
-                                    Tôi đồng ý <a href="#" className="terms-link">Điều khoản dịch vụ</a> và <a href="#" className="terms-link">Chính sách bảo mật</a> của MEDIX. Thông tin y tế của bạn được mã hóa
+                        <div className={styles["terms-section"]}>
+                            <div className={styles["checkbox-wrapper"]}>
+                                <input type="checkbox" id="terms" name='agreeToTerms' />
+                                <label htmlFor="terms" className={styles["terms-text"]}>
+                                    Tôi đồng ý <a href="#" className={styles["terms-link"]}>Điều khoản dịch vụ</a> và <a href="#" className={styles["terms-link"]}>Chính sách bảo mật</a> của MEDIX. Thông tin y tế của bạn được mã hóa
                                     và tuân thủ chuẩn bảo mật y tế.
                                 </label>
                             </div>
+                            {errors.AgreeToTerms?.[0] && <div className="text-danger">{errors.AgreeToTerms}</div>}
                         </div>
-                        */}
                         {/* Submit Button */}
                         <div className={styles["submit-section"]}>
-                            <button type="submit" className={styles["btn-submit"]}>ĐĂNG KÝ TÀI KHOẢN</button>
+                            <button type="submit" disabled={loading} className={styles["btn-submit"]}>
+                                {loading ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        Đang xử lý...
+                                    </>
+                                ) : (
+                                    'ĐĂNG KÝ TÀI KHOẢN'
+                                )}
+                            </button>
                             <div className={styles["login-link-section"]}>
-                                Bạn đã có tài khoản? <a href="#" className={styles["login-link"]}>Đăng nhập ngay</a>
+                                Bạn đã có tài khoản? <a href="/login" className={styles["login-link"]}>Đăng nhập ngay</a>
                             </div>
                         </div>
                     </form>

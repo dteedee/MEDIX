@@ -65,21 +65,32 @@ export function App() {
                 <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
                 <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
                 <Route path="/auth-status" element={<PublicRoute><AuthStatus /></PublicRoute>} />
+                <Route path="/doctor/register" element={<PublicRoute><DoctorRegister /></PublicRoute>} />
               </Route>
 
               {/* ---------- Change password route ---------- */}
               <Route path="/change-password" element={<ChangePassword />} />
 
               {/* ---------- Doctor routes ---------- */}
+              {/* <Route path="/doctor/*" element={
+                <Routes>
+                  <Route path="register" element={<DoctorRegister />} />
+                  <Route path="details/:username" element={<DoctorDetails />} />
+                </Routes>
+              } /> */}
+
+              {/* ---------- Doctor routes ---------- */}
               <Route path="/doctor/*" element={
-                <PublicRoute>
-                  <Routes>
-                    <Route path="register" element={<DoctorRegister />} />
-                    <Route path="details/:username" element={<DoctorDetails />} />
-                    <Route path="profile/edit" element={<DoctorProfileEdit />} />
-                  </Routes>
-                </PublicRoute>
+                <>
+                  <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
+                    <Routes>
+                      <Route path="profile/edit" element={<DoctorProfileEdit />} />
+                    </Routes>
+                  </ProtectedRoute>
+                </>
               } />
+
+              <Route path="/doctor/details/:username" element={<DoctorDetails />} />
 
               {/* ---------- Home ---------- */}
               <Route index element={<HomePage />} />

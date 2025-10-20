@@ -6,10 +6,12 @@ using Medix.API.Business.Services.Community;
 using Medix.API.Business.Validators;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Org.BouncyCastle.Ocsp;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 
 namespace Medix.API.Presentation.Controller.Classification
 {
@@ -57,7 +59,7 @@ namespace Medix.API.Presentation.Controller.Classification
 
             Validator.TryValidateObject(request, context, validationResults, true);
             validationResults = await ValidateAsync(request, validationResults);
-            if (validationResults.Any())
+            if (validationResults.Count != 0)
             {
                 var modelState = new ModelStateDictionary();
                 foreach (var validationResult in validationResults)
@@ -85,11 +87,11 @@ namespace Medix.API.Presentation.Controller.Classification
                 DateOfBirth = request.Dob == null ? null : DateOnly.Parse(request.Dob),
                 GenderCode = request.GenderCode,
                 IdentificationNumber = request.IdentificationNumber,
-                Address = "", // Placeholder
+                AvatarUrl = "https://res.cloudinary.com/dvyswwdcz/image/upload/v1760970670/default_avatar_cnnmzg.jpg", // Default avatar
                 Status = 2, // Assuming 2 means pending verification
             };
 
-            var licenseImageUrl = await _cloudinaryService.UploadImageAsync(request.LicenseImage);
+            var licenseImageUrl = await _cloudinaryService.UploadArchiveAsync(request.LicenseImage);
 
             Doctor doctor = new Doctor
             {
@@ -162,10 +164,11 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpGet("profile/details")]
+        [Authorize(Roles = "Doctor")]
         public async Task<IActionResult> GetDoctorProfilesDetails()
         {
-            var userId = "5383719A-63AC-43D9-8FC7-D6F99C83A9C2"; // Example doctor ID
-            var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userId));
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userId.Value));
             if (doctor == null)
             {
                 return NotFound(new { Message = "Doctor not found" });
@@ -188,10 +191,11 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPut("profile/update")]
+        [Authorize(Roles = "Doctor")]
         public async Task<IActionResult> UpdateDoctorProfile([FromBody] DoctorProfileUpdateRequest request)
         {
-            var userId = Guid.Parse("5383719A-63AC-43D9-8FC7-D6F99C83A9C2"); // Example doctor ID
-            var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userId.Value));
             if (doctor == null)
             {
                 return NotFound(new { Message = "Doctor not found" });
@@ -206,10 +210,11 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPut("profile/update-avatar")]
+        [Authorize(Roles = "Doctor")]
         public async Task<IActionResult> UpdateDoctorAvatar([FromForm] UpdateAvatarRequest req)
         {
-            var userId = Guid.Parse("5383719A-63AC-43D9-8FC7-D6F99C83A9C2"); // Example doctor ID
-            var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userId.Value));
             if (doctor == null)
             {
                 return NotFound(new { Message = "Doctor not found" });
@@ -229,10 +234,11 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPut("profile/update-password")]
+        [Authorize(Roles = "Doctor")]
         public async Task<IActionResult> UpdateDoctorPassword([FromBody] PasswordUpdatePresenter pre)
         {
-            var userId = Guid.Parse("5383719A-63AC-43D9-8FC7-D6F99C83A9C2"); // Example doctor ID
-            var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userId.Value));
             if (doctor == null)
             {
                 return NotFound(new { Message = "Doctor not found" });

@@ -89,7 +89,7 @@ namespace Medix.API.Business.Services.Classification
         public async Task<HealthArticlePublicDto?> GetByIdAsync(Guid id)
         {
             var article = await _healthArticleRepository.GetByIdWithDetailsAsync(id);
-            
+
             if (article == null)
                 return null;
 
@@ -127,7 +127,7 @@ namespace Medix.API.Business.Services.Classification
         public async Task<HealthArticlePublicDto?> GetBySlugAsync(string slug)
         {
             var article = await _healthArticleRepository.GetBySlugAsync(slug);
-            
+
             if (article == null)
                 return null;
 
@@ -363,7 +363,7 @@ namespace Medix.API.Business.Services.Classification
                 }
             }
 
-          
+
 
             var authorExists = await _healthArticleRepository.UserExistsAsync(updateDto.AuthorId);
             if (!authorExists)

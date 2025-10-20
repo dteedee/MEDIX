@@ -128,6 +128,7 @@ builder.Services.AddScoped<IContentCategoryService, ContentCategoryService>();
 builder.Services.AddScoped<ISiteBannerRepository,SiteBannerRepository>();
 builder.Services.AddScoped<ISiteBannerService, SiteBannerService>();
 builder.Services.AddScoped<IDtoValidatorService, DtoValidatorService>();
+builder.Services.AddScoped<CloudinaryService>();
 
 
 

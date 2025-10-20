@@ -1,22 +1,25 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs.SiteBanner;
 using Medix.API.Exceptions;
 using Microsoft.AspNetCore.Authorization;
+using Medix.API.Business.Services.Community;
+using CloudinaryDotNet;
 
 namespace Medix.API.Presentation.Controller.Classification
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Manager")]
 
     public class SiteBannersController : ControllerBase
     {
         private readonly ISiteBannerService _siteBannerService;
+        private readonly CloudinaryService _cloudinaryService;
 
-        public SiteBannersController(ISiteBannerService siteBannerService)
+        public SiteBannersController(ISiteBannerService siteBannerService,CloudinaryService cloudinaryService)
         {
             _siteBannerService = siteBannerService;
+            _cloudinaryService = cloudinaryService;
         }
 
         [HttpGet]
@@ -43,10 +46,16 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPost]
-        public async Task<ActionResult> Create([FromBody] SiteBannerCreateDto request)
+        public async Task<ActionResult> Create([FromForm] SiteBannerCreateDto request, IFormFile? bannerFile)
         {
             try
             {
+                if (bannerFile != null && bannerFile.Length > 0)
+                {
+                    var imageUrl = await _cloudinaryService.UploadImageAsync(bannerFile);
+                    request.BannerImageUrl = imageUrl;
+                }
+
                 var banner = await _siteBannerService.CreateAsync(request);
                 return CreatedAtAction(nameof(GetById), new { id = banner.Id }, banner);
             }
@@ -61,10 +70,16 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult> Update(Guid id, [FromBody] SiteBannerUpdateDto request)
+        public async Task<ActionResult> Update(Guid id, [FromForm] SiteBannerUpdateDto request, IFormFile? bannerFile)
         {
             try
             {
+                if (bannerFile != null && bannerFile.Length > 0)
+                {
+                    var imageUrl = await _cloudinaryService.UploadImageAsync(bannerFile);
+                    request.BannerImageUrl = imageUrl;
+                }
+
                 var banner = await _siteBannerService.UpdateAsync(id, request);
                 return Ok(banner);
             }
@@ -81,6 +96,7 @@ namespace Medix.API.Presentation.Controller.Classification
                 return StatusCode(500, new { message = "Internal server error", error = ex.Message });
             }
         }
+
 
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(Guid id)

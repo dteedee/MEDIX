@@ -79,7 +79,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
 
         [HttpPost("verifyEmailCode")]
-        public async Task<IActionResult> VerifyEmailCode([FromBody] EmailCodeVerifyRequest request)
+        public async Task<IActionResult> VerifyEmailCode([FromBody] xEmailCodeVerifyRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Code))
                 return BadRequest(new { message = "Email và mã xác thực là bắt buộc" });
@@ -106,7 +106,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
         }
 
         // Request DTO
-        public class EmailCodeVerifyRequest
+        public class xEmailCodeVerifyRequest
         {
             public string Email { get; set; }
             public string Code { get; set; }

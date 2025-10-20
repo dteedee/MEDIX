@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using static System.Net.Mime.MediaTypeNames;
+using System.Globalization;
 
 namespace Medix.API.Business.Validators
 {
@@ -13,26 +13,31 @@ namespace Medix.API.Business.Validators
                 return ValidationResult.Success;
             }
 
-            if (!DateTime.TryParse(dobString, out var dob))
+            if (!DateTime.TryParseExact(dobString, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dob))
             {
-                return new ValidationResult("Ngày sinh không hợp lệ");
+                return new ValidationResult("Ngày sinh không hợp lệ", new[] { validationContext.MemberName });
             }
 
             var today = DateTime.Today;
+
+            // ✅ Explicit check for future date
+            if (dob > today)
+            {
+                return new ValidationResult($"Bạn phải đủ {25} tuổi để đăng ký", new[] { validationContext.MemberName });
+            }
 
             var age = today.Year - dob.Year;
             if (dob > today.AddYears(-age)) age--; // adjust if birthday hasn't occurred yet this year
 
             if (age < 25)
             {
-                return new ValidationResult($"Bạn phải đủ {25} tuổi để đăng ký");
+                return new ValidationResult($"Bạn phải đủ {25} tuổi để đăng ký", new[] { validationContext.MemberName });
             }
 
             if (age > 150)
             {
-                return new ValidationResult("Ngày sinh không hợp lệ");
+                return new ValidationResult("Ngày sinh không hợp lệ", new[] { validationContext.MemberName });
             }
-
             return ValidationResult.Success;
 
         }

@@ -180,7 +180,7 @@ function DoctorRegister() {
         setFormData((prev: any) => ({ ...prev, licenseImage: file }));
 
         if (!file) {
-            setErrors({ LicenseImage: ['Vui lòng chọn một tệp ZIP hoặc RAR.'] });
+            setErrors((prev: any) => ({ ...prev, LicenseImage: ['Vui lòng chọn một tệp ZIP hoặc RAR.'] }));
             return;
         }
 
@@ -188,9 +188,9 @@ function DoctorRegister() {
         const fileExtension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
 
         if (!validExtensions.includes(fileExtension)) {
-            setErrors({ LicenseImage: ['Tệp phải có định dạng ZIP hoặc RAR.'] });
+            setErrors((prev: any) => ({ ...prev, LicenseImage: ['Tệp phải có định dạng ZIP hoặc RAR.'] }));
         } else {
-            setErrors({ LicenseImage: [''] });
+            setErrors((prev: any) => ({ ...prev, LicenseImage: [''] }));
         }
     };
 

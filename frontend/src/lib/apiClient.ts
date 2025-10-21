@@ -6,11 +6,11 @@ class ApiClient {
   private refreshTokenPromise: Promise<string> | null = null;
 
   constructor() {
-    // Use environment variable for API base URL, fallback to proxy for development
-    const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api';
+    // Use environment variable for API base URL, fallback to localhost for development
+    const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5123/api';
     
     this.client = axios.create({
-      baseURL: 'https://localhost:55883/api',
+      baseURL: API_BASE_URL,
       headers: {
         'Content-Type': 'application/json',
       },

@@ -1,16 +1,6 @@
-import axios from 'axios'
 import { BannerDTO, CreateBannerRequest, UpdateBannerRequest } from '../types/banner.types'
-const BASE = '/api/SiteBanners'
-
-function authHeader() {
-  // try localStorage by default; adapt to AuthContext if available
-  try {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
-    return token ? { Authorization: `Bearer ${token}` } : undefined
-  } catch {
-    return undefined
-  }
-}
+import { apiClient } from '../lib/apiClient'
+const BASE = '/SiteBanners'
 
 // Helper function to map API response to our DTO consistently
 function mapToDTO(x: any): BannerDTO {
@@ -41,7 +31,7 @@ export const bannerService = {
       query.isActive = params.status === 'active';
     }
 
-    const r = await axios.get(url, { params: query, headers: authHeader() });
+    const r = await apiClient.get(url, { params: query });
     const data = r.data
 
     // Handle multiple response shapes from backend
@@ -54,7 +44,7 @@ export const bannerService = {
     return { items, total }
   },
   get: async (id: string): Promise<BannerDTO> => {
-    const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })
+    const r = await apiClient.get(`${BASE}/${id}`)
     return mapToDTO(r.data)
   },
   create: async (payload: CreateBannerRequest): Promise<BannerDTO> => {
@@ -73,12 +63,7 @@ export const bannerService = {
         formData.append('bannerFile', payload.bannerFile);
       }
 
-      const r = await axios.post(BASE, formData, { 
-        headers: { 
-          ...authHeader(),
-          // Axios will set 'Content-Type': 'multipart/form-data' automatically
-        } 
-      });
+      const r = await apiClient.postMultipart(BASE, formData);
       return mapToDTO(r.data)
     } catch (error: any) {
       if (error.response?.data?.errors) {
@@ -114,11 +99,7 @@ export const bannerService = {
         formData.append('bannerFile', payload.bannerFile);
       }
 
-      const r = await axios.put(`${BASE}/${id}`, formData, { 
-        headers: { 
-          ...authHeader() 
-        } 
-      });
+      const r = await apiClient.putMultipart(`${BASE}/${id}`, formData);
       return mapToDTO(r.data)
     } catch (error: any) {
       if (error.response?.data?.errors) {
@@ -130,6 +111,6 @@ export const bannerService = {
     }
   },
   remove: async (id: string): Promise<void> => {
-    await axios.delete(`${BASE}/${id}`, { headers: authHeader() })
+    await apiClient.delete(`${BASE}/${id}`)
   }
 }

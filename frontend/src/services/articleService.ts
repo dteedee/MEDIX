@@ -1,6 +1,6 @@
-import axios from 'axios'
 import { ArticleDTO } from '../types/article.types'
 import { categoryService } from './categoryService'
+import { apiClient } from '../lib/apiClient'
 
 // Define a new type for the form payload that can include File objects
 // This is used internally by the service to construct FormData
@@ -24,16 +24,7 @@ export interface ArticleFormPayload {
   coverFile?: File; // New file to upload
 }
 
-const BASE = '/api/HealthArticle'
-
-function authHeader() {
-  try {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
-    return token ? { Authorization: `Bearer ${token}` } : undefined
-  } catch {
-    return undefined
-  }
-}
+const BASE = '/HealthArticle'
 
 // Helper to fetch all categories once and cache them for mapping
 const categoryCache = {
@@ -61,7 +52,7 @@ export const articleService = {
     if (params?.status) query.status = params.status;
     if (params?.slug) query.slug = params.slug;
 
-    const r = await axios.get(url, { params: query, headers: authHeader() });
+    const r = await apiClient.get(url, { params: query });
     const data = r.data
 
     // Fetch all categories to map names from IDs
@@ -128,7 +119,7 @@ export const articleService = {
     return { items, total }
   },
   get: async (id: string): Promise<ArticleDTO> => {
-    const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })
+    const r = await apiClient.get(`${BASE}/${id}`)
     const x = r.data;
     
     // Also enrich with categories on single-get
@@ -160,7 +151,7 @@ export const articleService = {
   },
   getBySlug: async (slug: string): Promise<ArticleDTO | null> => {
     try {
-      const r = await axios.get(`${BASE}/slug/${encodeURIComponent(slug)}`, { headers: authHeader() })
+      const r = await apiClient.get(`${BASE}/slug/${encodeURIComponent(slug)}`)
       return r.data
     } catch (err: any) {
       if (err?.response?.status === 404) return null
@@ -205,8 +196,8 @@ export const articleService = {
     }
 
     try {
-      // Axios automatically sets Content-Type to multipart/form-data when FormData is passed
-      const r = await axios.post(BASE, formData, { headers: authHeader() });
+      // apiClient automatically adds auth header and sets Content-Type for FormData
+      const r = await apiClient.postMultipart(BASE, formData);
       return r.data;
     } catch (error: any) {
       if (error.response && error.response.data && error.response.data.errors) {
@@ -265,7 +256,7 @@ export const articleService = {
     }
 
     try {
-      const r = await axios.put(`${BASE}/${id}`, formData, { headers: authHeader() })
+      const r = await apiClient.putMultipart(`${BASE}/${id}`, formData)
       return r.data
     } catch (error: any) {
       if (error.response && error.response.data && error.response.data.errors) {
@@ -276,7 +267,7 @@ export const articleService = {
     }
   },
   remove: async (id: string): Promise<void> => {
-    await axios.delete(`${BASE}/${id}`, { headers: authHeader() })
+    await apiClient.delete(`${BASE}/${id}`)
   },
   checkUniqueness: async (field: 'title' | 'slug' | 'displayOrder', value: string, excludeId?: string): Promise<void> => {
     const params = new URLSearchParams()
@@ -290,7 +281,7 @@ export const articleService = {
     // and a 4xx status code (e.g., 409 Conflict) if it's not.
     // The `axios` call will automatically throw an error for 4xx/5xx responses,
     // which is caught in the ArticleForm component.
-    await axios.get(`${BASE}/check-uniqueness`, { params, headers: authHeader() })
+    await apiClient.get(`${BASE}/check-uniqueness`, { params })
   }
   ,
   /**
@@ -299,11 +290,11 @@ export const articleService = {
    * @param endpoint optional upload endpoint (defaults to /api/File/Upload)
    * Returns the uploaded file URL as string. The function attempts to normalize common response shapes.
    */
-  uploadImage: async (file: File, endpoint = '/api/File/Upload'): Promise<string> => {
+  uploadImage: async (file: File, endpoint = '/File/Upload'): Promise<string> => {
     const form = new FormData()
     form.append('file', file)
     try {
-      const r = await axios.post(endpoint, form, { headers: { ...(authHeader() ?? {}), 'Content-Type': 'multipart/form-data' } })
+      const r = await apiClient.postMultipart(endpoint, form)
       const data = r.data
 
   // Try common fields for returned URL/path. Backend commonly returns { url: '...' }.

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../../services/authService';
 import { apiClient } from '../../lib/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
@@ -10,31 +11,32 @@ const GOOGLE_CLIENT_ID = import.meta.env?.VITE_GOOGLE_CLIENT_ID as string | unde
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { showToast } = useToast();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [googleError, setGoogleError] = useState<string | null>(null);
   const [googleReady, setGoogleReady] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const errorTimerRef = useRef<number | null>(null);
-  const successTimerRef = useRef<number | null>(null);
-
-  // Load remembered email on component mount
+  // Load remembered email and password on component mount
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberEmail');
+    const rememberedPassword = localStorage.getItem('rememberPassword');
+    
     if (rememberedEmail) {
       setIdentifier(rememberedEmail);
       setRememberMe(true);
+    }
+    
+    if (rememberedPassword) {
+      setPassword(rememberedPassword);
     }
   }, []);
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) {
-      setGoogleError('Google Client ID chưa được cấu hình. Vui lòng thêm VITE_GOOGLE_CLIENT_ID vào .env');
+      console.warn('⚠️ Google Client ID chưa được cấu hình');
       return;
     }
 
@@ -70,93 +72,40 @@ const Login: React.FC = () => {
     document.body.appendChild(script);
     return () => {
       if (script.parentNode) script.parentNode.removeChild(script);
-      // clear timers on unmount
-      if (errorTimerRef.current) window.clearTimeout(errorTimerRef.current);
-      if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    // auto-clear error after 5s
-    if (!error) return;
-    if (errorTimerRef.current) window.clearTimeout(errorTimerRef.current);
-    errorTimerRef.current = window.setTimeout(() => setError(null), 5000);
-    return () => {
-      if (errorTimerRef.current) window.clearTimeout(errorTimerRef.current);
-    };
-  }, [error]);
-
-  useEffect(() => {
-    // auto-clear success after 5s
-    if (!successMsg) return;
-    if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
-    successTimerRef.current = window.setTimeout(() => setSuccessMsg(null), 5000);
-    return () => {
-      if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
-    };
-  }, [successMsg]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Don't clear errors immediately - let them show until new result
-    // setError(null);
-    // setGoogleError(null);
 
     setIsLoading(true);
     try {
       // Use AuthContext.login so it updates central auth state, saves currentUser
       await login({ email: identifier, password });
 
-      // remember email is still handled by this component
+      // remember email and password
       if (rememberMe) {
         localStorage.setItem('rememberEmail', identifier);
+        localStorage.setItem('rememberPassword', password);
       } else {
         localStorage.removeItem('rememberEmail');
+        localStorage.removeItem('rememberPassword');
       }
 
-      // Clear any previous errors and show success
-      setError(null);
-      setGoogleError(null);
-      setSuccessMsg('Đăng nhập thành công');
-      // navigate to role-based dashboard after short delay
-      setTimeout(() => {
-        const userRole = localStorage.getItem('currentUser') ? 
-          JSON.parse(localStorage.getItem('currentUser')!).role : 'USER';
-        
-        switch (userRole) {
-          case 'ADMIN':
-          case 'Admin':
-            navigate('/app/admin');
-            break;
-          case 'MANAGER':
-          case 'Manager':
-            navigate('/app/manager');
-            break;
-          case 'DOCTOR':
-          case 'Doctor':
-            navigate('/app/doctor');
-            break;
-          case 'PATIENT':
-          case 'Patient':
-            navigate('/app/patient');
-            break;
-          default:
-            navigate('/app/dashboard');
-        }
-      }, 1200);
+      // Show success toast
+      showToast('Đăng nhập thành công! Chào mừng bạn đến với MEDIX', 'success');
+      
+      // Redirect will be handled by PublicRoute when auth state updates
     } catch (err: any) {
       const status = err?.response?.status;
       const message = err?.message || '';
-      // Clear any previous success messages and show error
-      setSuccessMsg(null);
       
-      // If backend returned unauthorized -> show specific message for 5s
+      // If backend returned unauthorized -> show specific message
       if (status === 401 || message.includes('Email hoặc mật khẩu') || message.includes('Tên đăng nhập/Email hoặc mật khẩu') || message.toLowerCase().includes('unauthorized')) {
-        setError('Sai tên đăng nhập/email hoặc mật khẩu, vui lòng kiểm tra lại');
-        // don't navigate away on failure
+        showToast('Sai tên đăng nhập/email hoặc mật khẩu, vui lòng kiểm tra lại', 'error');
       } else {
-        setError(message || 'Đăng nhập thất bại');
+        showToast(message || 'Đăng nhập thất bại', 'error');
       }
     } finally {
       setIsLoading(false);
@@ -165,7 +114,7 @@ const Login: React.FC = () => {
 
   const handleGoogleResponse = async (response: any) => {
     if (!response || !response.credential) {
-      setGoogleError('Không lấy được credential từ Google.');
+      showToast('Không lấy được credential từ Google', 'error');
       return;
     }
 
@@ -173,61 +122,21 @@ const Login: React.FC = () => {
       setIsLoading(true);
       const idToken = response.credential;
       const auth = await authService.loginWithGoogle(idToken);
-      console.log('Google login response:', auth);
+      
+      // Store tokens and user data like AuthContext.login does
       apiClient.setTokens(auth.accessToken, auth.refreshToken);
-
-      // Ensure Header/Auth listeners pick up the new user
-      if (auth?.user) {
-        console.log('Google login user data:', auth.user);
-        localStorage.setItem('userData', JSON.stringify(auth.user));
-        localStorage.setItem('currentUser', JSON.stringify(auth.user));
-        window.dispatchEvent(new Event('authChanged'));
-      } else {
-        console.log('No user data in Google login response');
-      }
-
-      // Clear any previous errors and show success
-      setError(null);
-      setGoogleError(null);
-      console.log('Setting Google success message...');
-      setSuccessMsg('Đăng nhập bằng Google thành công');
-      setTimeout(() => {
-        const currentUser = localStorage.getItem('currentUser');
-        console.log('Current user from localStorage:', currentUser);
-        const userRole = currentUser ? 
-          JSON.parse(currentUser).role : 'USER';
-        console.log('User role for redirect:', userRole);
-        
-        switch (userRole) {
-          case 'ADMIN':
-          case 'Admin':
-            console.log('Redirecting to /app/admin');
-            navigate('/app/admin');
-            break;
-          case 'MANAGER':
-          case 'Manager':
-            console.log('Redirecting to /app/manager');
-            navigate('/app/manager');
-            break;
-          case 'DOCTOR':
-          case 'Doctor':
-            console.log('Redirecting to /app/doctor');
-            navigate('/app/doctor');
-            break;
-          case 'PATIENT':
-          case 'Patient':
-            console.log('Redirecting to /app/patient');
-            navigate('/app/patient');
-            break;
-          default:
-            console.log('Redirecting to /app/dashboard');
-            navigate('/app/dashboard');
-        }
-      }, 1200);
+      localStorage.setItem('userData', JSON.stringify(auth.user));
+      localStorage.setItem('currentUser', JSON.stringify(auth.user));
+      
+      // Force trigger auth state update for Google login
+      window.dispatchEvent(new Event('authChanged'));
+      
+      // Show success toast
+      showToast('Đăng nhập Google thành công! Chào mừng bạn đến với MEDIX', 'success');
+      
     } catch (err: any) {
-      // Clear any previous success messages and show error
-      setSuccessMsg(null);
-      setGoogleError(err?.message || 'Đăng nhập Google thất bại.');
+      const message = err?.message || 'Đăng nhập Google thất bại';
+      showToast(message, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -254,69 +163,6 @@ const Login: React.FC = () => {
           {/* Right form */}
           <Card className="w-full p-6 shadow-[0_1px_0_#e6e9f0]">
             <h2 className="text-2xl font-semibold mb-4">Đăng nhập</h2>
-
-            {/* Error alert (red) */}
-            {error && (
-              <div 
-                style={{
-                  marginBottom: '16px',
-                  fontSize: '14px',
-                  color: '#dc2626',
-                  backgroundColor: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  borderRadius: '6px',
-                  padding: '12px',
-                  fontWeight: '500',
-                  zIndex: 9999,
-                  position: 'relative'
-                }}
-                role="alert"
-              >
-                ❌ {error}
-              </div>
-            )}
-
-            {/* Google error */}
-            {googleError && (
-              <div 
-                style={{
-                  marginBottom: '16px',
-                  fontSize: '14px',
-                  color: '#dc2626',
-                  backgroundColor: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  borderRadius: '6px',
-                  padding: '12px',
-                  fontWeight: '500'
-                }}
-                role="alert"
-              >
-                ❌ {googleError}
-              </div>
-            )}
-
-            {/* Success popup (green) */}
-            {successMsg && (
-              <div 
-                style={{
-                  marginBottom: '16px',
-                  fontSize: '14px',
-                  color: '#166534',
-                  backgroundColor: '#f0fdf4',
-                  border: '1px solid #bbf7d0',
-                  borderRadius: '6px',
-                  padding: '12px',
-                  fontWeight: '500',
-                  zIndex: 9999,
-                  position: 'relative'
-                }}
-                role="status"
-              >
-                ✅ {successMsg}
-              </div>
-            )}
-            {/* Debug: Show success state */}
-            {console.log('Success state in render:', successMsg)}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>

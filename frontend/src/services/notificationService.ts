@@ -3,17 +3,8 @@ import { NotificationMetadata } from "../types/notification.types";
 
 class NotificationService{
     async getMetadata(): Promise<NotificationMetadata>{
-        const accessToken = localStorage.getItem('accessToken');
-
-        if (!accessToken) {
-            throw new Error('No access token found - please login');
-        }
-
-        const response = await apiClient.get<NotificationMetadata>('/notification', {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        });
+        // apiClient automatically adds Authorization header
+        const response = await apiClient.get<NotificationMetadata>('/notification');
         return response.data;
     }
 }

@@ -13,17 +13,21 @@ export const Header: React.FC = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
+        // Only fetch if user is logged in
+        if (!user) {
+            return;
+        }
+        
         const fetchMetadata = async () => {
             try {
                 const data = await NotificationService.getMetadata();
                 setNotificationMetadata(data);
-                console.log(data);
             } catch (error) {
-                console.error('Failed to fetch metadata:', error);
+                console.error('❌ Header - Failed to fetch metadata:', error);
             }
         }
         fetchMetadata();
-    }, []);
+    }, [user?.id]); // Use user.id instead of entire user object to prevent unnecessary re-renders
 
     const getNotificationIconClass = (type: string): string => {
         switch (type) {

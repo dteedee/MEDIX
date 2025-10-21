@@ -152,7 +152,7 @@ const ForgotPassword: React.FC = () => {
             {/* Email Input Section */}
             {!emailVerificationSent && (
               <div className="email-input-section">
-                <div className="email-input-group">
+                <div className="email-input-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <Input
                     type="email"
                     placeholder="Email *"
@@ -162,14 +162,20 @@ const ForgotPassword: React.FC = () => {
                       if (error) setError('');
                     }}
                     className="email-input"
+                    style={{ width: '100%' }}
                   />
-                  <Button
-                    onClick={handleSendVerificationCode}
-                    disabled={isCheckingEmail || !email}
-                    className="send-code-btn"
-                  >
-                    {isCheckingEmail ? 'Đang gửi...' : 'Gửi mã xác thực'}
-                  </Button>
+
+                  {/* Button on its own centered line below the input */}
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <Button
+                      onClick={handleSendVerificationCode}
+                      disabled={isCheckingEmail || !email}
+                      className="send-code-btn"
+                      style={{ minWidth: '200px' }}
+                    >
+                      {isCheckingEmail ? 'Đang gửi...' : 'Gửi mã xác thực'}
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Error message */}

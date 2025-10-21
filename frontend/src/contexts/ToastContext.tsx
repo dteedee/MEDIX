@@ -51,20 +51,22 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     zIndex: 9999,
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
+    gap: '20px',
   };
 
   const getToastStyle = (type: ToastMessage['type']): React.CSSProperties => {
     const baseStyle: React.CSSProperties = {
-      padding: '12px 16px',
-      borderRadius: '8px',
+      padding: '24px 32px',
+      borderRadius: '12px',
       color: '#fff',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+      fontSize: '18px',
+      fontWeight: '500',
+      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      minWidth: '300px',
-      maxWidth: '400px',
+      minWidth: '600px',
+      maxWidth: '800px',
     };
 
     switch (type) {
@@ -84,10 +86,11 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     background: 'transparent',
     border: 'none',
     color: 'inherit',
-    fontSize: '18px',
-    marginLeft: '15px',
+    fontSize: '36px',
+    marginLeft: '30px',
     cursor: 'pointer',
     lineHeight: 1,
+    fontWeight: 'bold',
   };
 
   return (

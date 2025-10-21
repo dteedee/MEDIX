@@ -289,7 +289,8 @@ export default function UserList() {
     localStorage.removeItem('userListState');
     // We can either reload the page or reset state manually
     // Reloading is simpler and ensures a clean slate
-    window.location.reload();
+    // Reload user list instead of full page reload
+    fetchUsers();
     // Or manual reset: setFilters(getInitialState());
   };
 

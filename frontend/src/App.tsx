@@ -48,6 +48,7 @@ import UserEditPage from './pages/admin/UserEditPage';
 import ArticleReaderPage from './pages/patient/ArticleReaderPage';
 import ArticleDetailPage from './pages/patient/ArticleDetailPage';
 import DoctorBookingList from './pages/patient/DoctorBookingList';
+import ErrorPageWrapper from './pages/ErrorPageWrapper';
 
 export function App() {
   return (
@@ -58,6 +59,8 @@ export function App() {
             <Header />
 
             <Routes>
+              <Route path="/error/:code" element={<ErrorPageWrapper />} />
+
               {/* ---------- Public routes ---------- */}
               <Route element={<AuthLayout />}>
                 <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />

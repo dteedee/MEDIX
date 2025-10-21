@@ -68,7 +68,7 @@ namespace Medix.API.Business.Services.Classification
             catch
             {
                 await transaction.RollbackAsync();
-                return false;
+                throw;
             }
         }
 

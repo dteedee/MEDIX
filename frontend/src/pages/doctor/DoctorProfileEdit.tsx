@@ -2,12 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import styles from '../../styles/doctor-edit-profile.module.css'
 import DoctorService from '../../services/doctorService';
 import { DoctorProfileDetails } from '../../types/doctor.types';
-import {Header} from '../../components/layout/Header';
-import Footer from '../../components/layout/Footer';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { PageLoader } from '../../components/ui';
 
 export default function DoctorProfileEdit() {
+
+    const navigate = useNavigate();
+
+    const [pageLoading, setPageLoading] = useState(true);
+    const [errorCode, setErrorCode] = useState<number | null>(null);
 
     const [profileDetails, setProfileDetails] = useState<DoctorProfileDetails>();
     const [errors, setErrors] = useState<any>({});
@@ -83,8 +88,11 @@ export default function DoctorProfileEdit() {
                 const data = await DoctorService.getDoctorProfileDetails();
                 setProfileDetails(data);
                 console.log(data);
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Failed to fetch profile details:', error);
+                setErrorCode(error?.response?.status ?? 500);
+            } finally {
+                setPageLoading(false);
             }
         }
         fetchProfile();
@@ -114,17 +122,44 @@ export default function DoctorProfileEdit() {
             });
         } catch (error: unknown) {
             setUpdateLoading(false);
+
             if (axios.isAxiosError(error)) {
+                const status = error.response?.status;
                 const errorData = error.response?.data;
-                if (errorData?.errors) {
-                    setErrors(errorData.errors);
-                } else {
-                    console.error('Unexpected error format:', errorData);
+
+                switch (status) {
+                    case 400:
+                        // Bad Request – likely validation errors
+                        if (errorData?.errors) {
+                            setErrors(errorData.errors);
+                        } else {
+                            setErrors({ general: 'Yêu cầu không hợp lệ. Vui lòng kiểm tra lại thông tin.' });
+                        }
+                        break;
+
+                    case 401:
+                        // Unauthorized – user needs to log in
+                        setErrors({ general: 'Bạn chưa đăng nhập hoặc phiên đã hết hạn.' });
+                        // Optionally redirect to login:
+                        // navigate('/login');
+                        break;
+
+                    case 500:
+                        // Internal Server Error
+                        setErrors({ general: 'Lỗi máy chủ. Vui lòng thử lại sau.' });
+                        break;
+
+                    default:
+                        // Other unexpected errors
+                        setErrors({ general: 'Đã xảy ra lỗi. Vui lòng thử lại.' });
+                        console.error('Unhandled error status:', status, errorData);
                 }
             } else {
                 console.error('Non-Axios error:', error);
+                setErrors({ general: 'Lỗi không xác định. Vui lòng thử lại.' });
             }
         }
+
     }
 
     const handlePasswordUpdateSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -229,6 +264,13 @@ export default function DoctorProfileEdit() {
         setFormData((prev: any) => ({ ...prev, [name]: value }));
         validateField(name, value);
     };
+
+    if (pageLoading) return <PageLoader />;
+
+    if (errorCode) {
+        navigate(`/error/${errorCode}`);
+        return null;
+    }
 
     return (
         <>
@@ -407,6 +449,10 @@ export default function DoctorProfileEdit() {
                                 </div>
                             </div>
 
+                            {errors.general && (
+                                <div className={styles["form-error"]}
+                                    style={{ textAlign: 'center' }}>{errors.general}</div>
+                            )}
                             {/* Action Buttons */}
                             <div className={styles["action-buttons"]}>
                                 <button type="button" className="btn btn-primary" data-bs-toggle="modal"

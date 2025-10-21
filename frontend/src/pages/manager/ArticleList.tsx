@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { articleService } from '../../services/articleService'
+import { articleService, ArticleFormPayload } from '../../services/articleService' // Import ArticleFormPayload
 import { ArticleDTO } from '../../types/article.types'
 import ArticleDetails from '../../components/admin/ArticleDetails'
 import { categoryService } from '../../services/categoryService'
@@ -138,11 +138,11 @@ export default function ArticleList() {
   const onEdit = (a: ArticleDTO) => navigate(`/app/manager/articles/edit/${a.id}`)
   const handleArchive = async (article: ArticleDTO) => {
   if (article.statusCode === 'ARCHIVE') {
-    showToast('Bài viết đã được lưu trữ.', 'info');
+    showToast('Bài viết đã được khóa.', 'info');
     return;
   }
 
-  if (!confirm(`Bạn có chắc muốn lưu trữ bài viết "${article.title}" không?`)) return;
+  if (!confirm(`Bạn có chắc muốn khóa bài viết "${article.title}" không?`)) return;
 
   try {
     // ✅ 1. Lấy lại full dữ liệu từ backend theo ID bằng phương thức 'get'
@@ -160,7 +160,7 @@ export default function ArticleList() {
     }
 
 
-    const payload = {
+    const payload: ArticleFormPayload = { // Use the new payload type
       title: fullArticle.title ?? 'Không có tiêu đề',
       slug: fullArticle.slug ?? 'khong-co-slug',
       summary: fullArticle.summary ?? '',
@@ -184,7 +184,7 @@ export default function ArticleList() {
 
     // ✅ 4. Gửi update
     await articleService.update(article.id, payload);
-    showToast('Đã chuyển bài viết vào kho lưu trữ.');
+    showToast('Đã chuyển bài viết vào kho lưu trữ.', 'success');
     await load();
   } catch (error: any) {
     console.error('🚨 Failed to archive article:', error);
@@ -309,7 +309,7 @@ export default function ArticleList() {
       bg = '#e7f9ec'; // green-100
       color = '#16a34a'; // green-700
     } else if (statusCode === 'ARCHIVE') {
-      text = 'Lưu trữ';
+      text = 'Khóa';
       bg = '#fee2e2'; // red-100
       color = '#b91c1c'; // red-700
     }
@@ -462,7 +462,7 @@ export default function ArticleList() {
         <option value="all">Tất cả trạng thái</option>
         <option value="PUBLISHED">Đã xuất bản</option>
         <option value="DRAFT">Bản nháp</option>
-        <option value="ARCHIVE">Lưu trữ</option>
+        <option value="ARCHIVE">Khóa</option>
       </select>
     </div>
 

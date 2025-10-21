@@ -1,6 +1,28 @@
 import axios from 'axios'
-import { ArticleDTO, CreateArticleRequest, UpdateArticleRequest } from '../types/article.types'
+import { ArticleDTO } from '../types/article.types'
 import { categoryService } from './categoryService'
+
+// Define a new type for the form payload that can include File objects
+// This is used internally by the service to construct FormData
+export interface ArticleFormPayload {
+  title: string;
+  slug: string;
+  summary: string;
+  content: string;
+  displayType: string;
+  thumbnailUrl?: string; // Existing URL if no new file is uploaded
+  coverImageUrl?: string; // Existing URL if no new file is uploaded
+  isHomepageVisible: boolean;
+  displayOrder: number;
+  metaTitle: string;
+  metaDescription: string;
+  authorId: string;
+  statusCode: string;
+  publishedAt?: string;
+  categoryIds: string[];
+  thumbnailFile?: File; // New file to upload
+  coverFile?: File; // New file to upload
+}
 
 const BASE = '/api/HealthArticle'
 
@@ -145,9 +167,46 @@ export const articleService = {
       throw err
     }
   },
- create: async (payload: CreateArticleRequest): Promise<ArticleDTO> => {
+ create: async (payload: ArticleFormPayload): Promise<ArticleDTO> => {
+    const formData = new FormData();
+
+    // Append text fields to FormData under 'model' prefix as expected by [FromForm]
+    formData.append('model.Title', payload.title);
+    formData.append('model.Slug', payload.slug);
+    formData.append('model.Summary', payload.summary);
+    formData.append('model.Content', payload.content);
+    formData.append('model.DisplayType', payload.displayType);
+    formData.append('model.IsHomepageVisible', payload.isHomepageVisible.toString());
+    formData.append('model.DisplayOrder', payload.displayOrder.toString());
+    formData.append('model.MetaTitle', payload.metaTitle);
+    formData.append('model.MetaDescription', payload.metaDescription);
+    formData.append('model.AuthorId', payload.authorId);
+    formData.append('model.StatusCode', payload.statusCode);
+    if (payload.publishedAt) {
+        formData.append('model.PublishedAt', payload.publishedAt);
+    }
+    payload.categoryIds.forEach(id => formData.append('model.CategoryIds', id));
+
+    // Append existing image URLs if no new file is provided
+    // This is crucial if the backend expects the URL to be part of the DTO
+    if (payload.thumbnailUrl && !payload.thumbnailFile) {
+        formData.append('model.ThumbnailUrl', payload.thumbnailUrl);
+    }
+    if (payload.coverImageUrl && !payload.coverFile) {
+        formData.append('model.CoverImageUrl', payload.coverImageUrl);
+    }
+
+    // Append file objects if present
+    if (payload.thumbnailFile) {
+        formData.append('thumbnailFile', payload.thumbnailFile);
+    }
+    if (payload.coverFile) {
+        formData.append('coverFile', payload.coverFile);
+    }
+
     try {
-      const r = await axios.post(BASE, { ...payload }, { headers: authHeader() });
+      // Axios automatically sets Content-Type to multipart/form-data when FormData is passed
+      const r = await axios.post(BASE, formData, { headers: authHeader() });
       return r.data;
     } catch (error: any) {
       if (error.response && error.response.data && error.response.data.errors) {
@@ -165,9 +224,48 @@ export const articleService = {
     }
   },
 
-  update: async (id: string, payload: UpdateArticleRequest): Promise<ArticleDTO> => {
+  update: async (id: string, payload: ArticleFormPayload): Promise<ArticleDTO> => {
+    const formData = new FormData();
+
+    // Append text fields to FormData under 'model' prefix as expected by [FromForm]
+    formData.append('model.Title', payload.title);
+    formData.append('model.Slug', payload.slug);
+    formData.append('model.Summary', payload.summary);
+    formData.append('model.Content', payload.content);
+    formData.append('model.DisplayType', payload.displayType);
+    formData.append('model.IsHomepageVisible', payload.isHomepageVisible.toString());
+    formData.append('model.DisplayOrder', payload.displayOrder.toString());
+    formData.append('model.MetaTitle', payload.metaTitle);
+    formData.append('model.MetaDescription', payload.metaDescription);
+    formData.append('model.AuthorId', payload.authorId);
+    formData.append('model.StatusCode', payload.statusCode);
+    if (payload.publishedAt) {
+        formData.append('model.PublishedAt', payload.publishedAt);
+    }
+    payload.categoryIds.forEach(catId => formData.append('model.CategoryIds', catId));
+
+    // Append existing image URLs if no new file is provided
+    if (payload.thumbnailUrl && !payload.thumbnailFile) {
+        formData.append('model.ThumbnailUrl', payload.thumbnailUrl);
+    } else if (!payload.thumbnailFile) { // If no new file and no existing URL, explicitly send empty string
+        formData.append('model.ThumbnailUrl', '');
+    }
+    if (payload.coverImageUrl && !payload.coverFile) {
+        formData.append('model.CoverImageUrl', payload.coverImageUrl);
+    } else if (!payload.coverFile) { // If no new file and no existing URL, explicitly send empty string
+        formData.append('model.CoverImageUrl', '');
+    }
+
+    // Append file objects if present
+    if (payload.thumbnailFile) {
+        formData.append('thumbnailFile', payload.thumbnailFile);
+    }
+    if (payload.coverFile) {
+        formData.append('coverFile', payload.coverFile);
+    }
+
     try {
-      const r = await axios.put(`${BASE}/${id}`, { ...payload }, { headers: authHeader() })
+      const r = await axios.put(`${BASE}/${id}`, formData, { headers: authHeader() })
       return r.data
     } catch (error: any) {
       if (error.response && error.response.data && error.response.data.errors) {

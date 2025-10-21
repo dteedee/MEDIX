@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Exceptions;
@@ -32,24 +32,33 @@ namespace Medix.API.Business.Services.Classification
                 Title = a.Title,
                 Slug = a.Slug,
                 Summary = a.Summary,
+                Content = a.Content, 
+                MetaTitle = a.MetaTitle, 
+                MetaDescription = a.MetaDescription, 
+                PublishedAt = a.PublishedAt, 
+                IsHomepageVisible = a.IsHomepageVisible,
+                DisplayOrder = a.DisplayOrder,
+
                 CoverImageUrl = a.CoverImageUrl,
                 ThumbnailUrl = a.ThumbnailUrl,
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
                 LikeCount = a.LikeCount,
+                DisplayType = a.DisplayType,
 
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
-                DisplayType = a.DisplayType,
+
                 Categories = a.Categories
-                    .Select(c => new HealthArticlePublicDto.CategoryInfo
-                    {
-                        Name = c.Name,
-                        Slug = c.Slug
-                    })
-                    .ToList()
+         .Select(c => new HealthArticlePublicDto.CategoryInfo
+         {
+             Name = c.Name,
+             Slug = c.Slug
+         })
+         .ToList()
             });
+
 
             return (total, data);
         }

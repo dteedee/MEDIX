@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { BannerDTO } from '../../types/banner.types'
+import { BannerDTO, CreateBannerRequest, UpdateBannerRequest } from '../../types/banner.types'
 import { useToast } from '../../contexts/ToastContext'
 import { bannerService } from '../../services/bannerService'
-import { articleService } from '../../services/articleService'
 
 interface Props {
   banner?: BannerDTO
@@ -13,7 +12,8 @@ interface Props {
 export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
   const { showToast } = useToast()
   const [title, setTitle] = useState(banner?.bannerTitle ?? '')
-  const [imageUrl, setImageUrl] = useState(banner?.bannerImageUrl ?? '')
+  const [imagePreviewUrl, setImagePreviewUrl] = useState(banner?.bannerImageUrl ?? '') // For preview
+  const [selectedFile, setSelectedFile] = useState<File | null>(null) // For upload
   const [link, setLink] = useState(banner?.bannerUrl ?? '')
   const [isActive, setIsActive] = useState<boolean>(banner?.isActive ?? true)
   const [order, setOrder] = useState<number | undefined>(banner?.displayOrder)
@@ -68,7 +68,7 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
   useEffect(() => {
     if (banner) {
       setTitle(banner.bannerTitle ?? '');
-      setImageUrl(banner.bannerImageUrl ?? '');
+      setImagePreviewUrl(banner.bannerImageUrl ?? '');
       setLink(banner.bannerUrl ?? '');
       setOrder(banner.displayOrder);
       setIsActive(banner.isActive);
@@ -81,6 +81,13 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
   useEffect(() => {
     validateDateRange(startDateLocal, endDateLocal);
   }, [startDateLocal, endDateLocal]);
+
+  // Cleanup object URLs to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl && imagePreviewUrl.startsWith('blob:')) URL.revokeObjectURL(imagePreviewUrl);
+    };
+  }, [imagePreviewUrl]);
 
   const onSelectFile = () => fileRef.current?.click()
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,12 +105,13 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
     }
 
     try {
-      const url = await articleService.uploadImage(f)
-      setImageUrl(url)
+      setSelectedFile(f);
+      setImagePreviewUrl(URL.createObjectURL(f));
       if (errors.imageUrl) setErrors(prev => ({ ...prev, imageUrl: undefined }));
     } catch (err) {
       console.error(err)
-      showToast('Tải ảnh lên thất bại.', 'error')
+      showToast('Không thể xem trước ảnh.', 'error')
+      setSelectedFile(null);
     }
   }
 
@@ -141,8 +149,8 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
 
     const newErrors: typeof errors = {};
     if (!title.trim()) newErrors.title = "Tiêu đề không được để trống.";
-    if (!link.trim()) newErrors.link = "Đường dẫn (Link) không được để trống.";
-    if (!imageUrl) newErrors.imageUrl = "Ảnh banner không được để trống.";
+    // Link is optional in some cases, so we might not want to enforce it here.
+    if (!imagePreviewUrl && !selectedFile) newErrors.imageUrl = "Ảnh banner không được để trống.";
     // Giữ lại các lỗi đã có từ trước (ví dụ: lỗi ngày tháng)
     const currentErrors = { ...errors, ...newErrors };
 
@@ -154,30 +162,31 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
     setSaving(true)
     try {
       const toIso = (local?: string) => local ? new Date(local).toISOString() : undefined
-      // Prevent accidental saving of base64 data URLs into DB (column too small)
-      if (imageUrl && imageUrl.startsWith('data:')) {
-        console.warn('Attempt to save data URL into DB blocked')
-        alert('Upload failed earlier so the image is a local data URL. The server likely returned 404 for the upload endpoint.\n\nDo not save data URLs into the database. Please ensure the backend upload endpoint is available so images are stored and a remote URL is returned. Contact the backend team or configure /api/File/Upload.')
-        setSaving(false)
-        return
-      }
 
-      const payload: any = {
+      const payload: CreateBannerRequest | UpdateBannerRequest = {
         bannerTitle: title,
-        bannerImageUrl: imageUrl || undefined,
+        bannerImageUrl: selectedFile ? undefined : (imagePreviewUrl || undefined),
         bannerUrl: link || undefined,
         displayOrder: order,
         startDate: toIso(startDateLocal) || undefined,
         endDate: toIso(endDateLocal) || undefined,
-        isActive
+        isActive,
+        bannerFile: selectedFile || undefined,
       }
 
       console.debug('Banner submit payload:', payload)
 
       try {
         let res
-        if (banner) res = await bannerService.update(banner.id, payload)
-        else res = await bannerService.create(payload)
+        if (banner) {
+          // In edit mode, payload can be UpdateBannerRequest
+          res = await bannerService.update(banner.id, payload as UpdateBannerRequest)
+        } else {
+          // In create mode, ensure the payload matches CreateBannerRequest
+          const createPayload: CreateBannerRequest = { ...payload, bannerTitle: title, isActive: isActive };
+          delete (createPayload as any).bannerImageUrl; // Remove property not in CreateBannerRequest
+          res = await bannerService.create(createPayload);
+        }
         console.debug('Banner save response:', res)
         onSaved?.()
       } catch (err: any) {
@@ -230,8 +239,8 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
         {/* Left Column for Image */}
         <div>
           <label style={labelStyle}>Ảnh banner</label>
-          <div style={{ width: '100%', aspectRatio: '16/9', background: '#f0f2f5', borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', border: '1px dashed #d1d5db' }}>
-            {imageUrl ? <img src={imageUrl} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
+          <div style={{ width: '100%', aspectRatio: '16/9', background: '#f0f2f5', borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', border: `1px dashed ${errors.imageUrl ? '#ef4444' : '#d1d5db'}` }}>
+            {imagePreviewUrl ? <img src={imagePreviewUrl} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
           </div>
           {errors.imageUrl && <div style={errorTextStyle}>{errors.imageUrl}</div>}
           <button type="button" onClick={onSelectFile} style={{ width: '100%', marginTop: 12, padding: '10px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 500 }}>

@@ -76,7 +76,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
         return { ...baseStyle, backgroundColor: '#ffc107', color: '#212529' }; // Vàng
       case 'info':
       default:
-        return { ...baseStyle, backgroundColor: '#17a2b8' }; // Xanh dương
+        return { ...baseStyle, backgroundColor: '#28a745' }; // Xanh dương
     }
   };
 

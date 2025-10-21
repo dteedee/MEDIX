@@ -59,7 +59,26 @@ export const bannerService = {
   },
   create: async (payload: CreateBannerRequest): Promise<BannerDTO> => {
     try {
-      const r = await axios.post(BASE, payload, { headers: authHeader() })
+      const formData = new FormData();
+      // Append fields under 'request' prefix to match [FromForm] SiteBannerCreateDto request
+      formData.append('request.BannerTitle', payload.bannerTitle);
+      if (payload.bannerUrl) formData.append('request.BannerUrl', payload.bannerUrl);
+      if (payload.displayOrder !== undefined) formData.append('request.DisplayOrder', payload.displayOrder.toString());
+      formData.append('request.IsActive', String(payload.isActive));
+      if (payload.startDate) formData.append('request.StartDate', payload.startDate);
+      if (payload.endDate) formData.append('request.EndDate', payload.endDate);
+
+      // Append the file if it exists
+      if (payload.bannerFile) {
+        formData.append('bannerFile', payload.bannerFile);
+      }
+
+      const r = await axios.post(BASE, formData, { 
+        headers: { 
+          ...authHeader(),
+          // Axios will set 'Content-Type': 'multipart/form-data' automatically
+        } 
+      });
       return mapToDTO(r.data)
     } catch (error: any) {
       if (error.response?.data?.errors) {
@@ -73,7 +92,33 @@ export const bannerService = {
   },
   update: async (id: string, payload: UpdateBannerRequest): Promise<BannerDTO> => {
     try {
-      const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() })
+      const formData = new FormData();
+      // Append fields under 'request' prefix to match [FromForm] SiteBannerUpdateDto request
+      if (payload.bannerTitle !== undefined) formData.append('request.BannerTitle', payload.bannerTitle);
+      
+      // Handle image URL: send existing URL if no new file, otherwise send empty to let backend know it might be removed or replaced.
+      if (payload.bannerImageUrl && !payload.bannerFile) {
+        formData.append('request.BannerImageUrl', payload.bannerImageUrl);
+      } else if (!payload.bannerFile) {
+        formData.append('request.BannerImageUrl', '');
+      }
+
+      if (payload.bannerUrl) formData.append('request.BannerUrl', payload.bannerUrl);
+      if (payload.displayOrder !== undefined) formData.append('request.DisplayOrder', payload.displayOrder.toString());
+      if (payload.isActive !== undefined) formData.append('request.IsActive', String(payload.isActive));
+      if (payload.startDate) formData.append('request.StartDate', payload.startDate);
+      if (payload.endDate) formData.append('request.EndDate', payload.endDate);
+
+      // Append the file if it exists
+      if (payload.bannerFile) {
+        formData.append('bannerFile', payload.bannerFile);
+      }
+
+      const r = await axios.put(`${BASE}/${id}`, formData, { 
+        headers: { 
+          ...authHeader() 
+        } 
+      });
       return mapToDTO(r.data)
     } catch (error: any) {
       if (error.response?.data?.errors) {

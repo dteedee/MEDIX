@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { ArticleDTO, CreateArticleRequest } from '../../types/article.types'
+import { ArticleDTO } from '../../types/article.types'
 import { categoryService } from '../../services/categoryService'
 import { CategoryDTO } from '../../types/category.types'
-import { articleService } from '../../services/articleService'
+import { articleService, ArticleFormPayload } from '../../services/articleService'
 import { useToast } from '../../contexts/ToastContext'
 import { CKEditor } from '@ckeditor/ckeditor5-react'
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
@@ -18,8 +18,10 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const [title, setTitle] = useState(article?.title ?? '')
   const [slug, setSlug] = useState(article?.slug ?? '')
   const [summary, setSummary] = useState(article?.summary ?? '')
-  const [thumbnailUrl, setThumbnailUrl] = useState(article?.thumbnailUrl ?? '')
-  const [coverImageUrl, setCoverImageUrl] = useState(article?.coverImageUrl ?? '')
+  const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState(article?.thumbnailUrl ?? '') // For displaying preview
+  const [selectedThumbnailFile, setSelectedThumbnailFile] = useState<File | null>(null) // Actual file object
+  const [coverImagePreviewUrl, setCoverImagePreviewUrl] = useState(article?.coverImageUrl ?? '') // For displaying preview
+  const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null) // Actual file object
   const [displayType, setDisplayType] = useState(article?.displayType ?? 'STANDARD')
   const [isHomepageVisible, setIsHomepageVisible] = useState<boolean>(article?.isHomepageVisible ?? false)
   const [displayOrder, setDisplayOrder] = useState<number>(article?.displayOrder ?? 0)
@@ -27,7 +29,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const [metaDescription, setMetaDescription] = useState(article?.metaDescription ?? '')
   // TODO: Replace with actual logged-in user ID from AuthContext when available
   // Use a REAL user ID from your database for development until auth is ready.
-  const [authorId, setAuthorId] = useState((article as any)?.authorId ?? '1A2C1A65-7B00-415F-8164-4FC3C1054203') // <-- Replace with a valid user ID from your DB
+  const [authorId, setAuthorId] = useState((article as any)?.authorId ?? '30AA82C5-9BB6-4DF0-ABDF-9A65892F69C8') // <-- Replace with a valid user ID from your DB
   const [statusCode, setStatusCode] = useState(article?.statusCode ?? 'DRAFT')
   const [categoryIds, setCategoryIds] = useState<string[]>(article?.categoryIds ?? [])
   const [content, setContent] = useState(article?.content ?? '')
@@ -62,39 +64,51 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const onSelectCoverFile = () => coverFileRef.current?.click()
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (!f) return
+    const file = e.target.files?.[0]
+    if (!file) return
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-    if (!allowedTypes.includes(f.type)) {
+    if (!allowedTypes.includes(file.type)) {
         alert('Chỉ chấp nhận tệp PNG hoặc JPG.');
         return;
     }
     try {
-      const url = await articleService.uploadImage(f);
-      setThumbnailUrl(url)
+      setSelectedThumbnailFile(file);
+      setThumbnailPreviewUrl(URL.createObjectURL(file)); // Create a local URL for preview
+      if (errors.thumbnailUrl) setErrors(prev => ({ ...prev, thumbnailUrl: undefined }));
     } catch (err) {
-      console.error('Upload failed', err)
-      alert('Upload failed')
+      console.error('Error setting thumbnail file:', err);
+      showToast('Không thể chọn ảnh đại diện.', 'error');
+      setSelectedThumbnailFile(null);
+      setThumbnailPreviewUrl('');
     }
   }
 
   const onCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (!f) return
+    const file = e.target.files?.[0]
+    if (!file) return
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-    if (!allowedTypes.includes(f.type)) {
+    if (!allowedTypes.includes(file.type)) {
         alert('Chỉ chấp nhận tệp PNG hoặc JPG.');
         return;
     }
     try {
-      // Re-use the same upload service
-      const url = await articleService.uploadImage(f)
-      setCoverImageUrl(url)
+      setSelectedCoverFile(file);
+      setCoverImagePreviewUrl(URL.createObjectURL(file)); // Create a local URL for preview
     } catch (err) {
-      console.error('Cover image upload failed', err)
-      alert('Upload ảnh bìa thất bại')
+      console.error('Error setting cover image file:', err);
+      showToast('Không thể chọn ảnh bìa.', 'error');
+      setSelectedCoverFile(null);
+      setCoverImagePreviewUrl('');
     }
   }
+
+  // Cleanup object URLs when component unmounts or files change
+  useEffect(() => {
+    return () => {
+      if (thumbnailPreviewUrl && thumbnailPreviewUrl.startsWith('blob:')) URL.revokeObjectURL(thumbnailPreviewUrl);
+      if (coverImagePreviewUrl && coverImagePreviewUrl.startsWith('blob:')) URL.revokeObjectURL(coverImagePreviewUrl);
+    };
+  }, [thumbnailPreviewUrl, coverImagePreviewUrl]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -121,8 +135,10 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
       setTitle(article.title ?? '')
       setSlug(article.slug ?? '')
       setSummary(article.summary ?? '')
-      setThumbnailUrl(article.thumbnailUrl ?? '')
-      setCoverImageUrl(article.coverImageUrl ?? '')
+      setThumbnailPreviewUrl(article.thumbnailUrl ?? '') // Set existing URL for preview
+      setSelectedThumbnailFile(null); // No new file selected initially
+      setCoverImagePreviewUrl(article.coverImageUrl ?? '') // Set existing URL for preview
+      setSelectedCoverFile(null); // No new file selected initially
       setDisplayType(article.displayType ?? 'STANDARD')
       setIsHomepageVisible(Boolean(article.isHomepageVisible))
       setDisplayOrder(typeof article.displayOrder === 'number' ? article.displayOrder : 0)
@@ -205,7 +221,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
     if (!slug.trim()) newErrors.slug = "Đường dẫn (slug) không được để trống.";
     if (!summary.trim()) newErrors.summary = "Tóm tắt không được để trống.";
     if (!content.trim()) newErrors.content = "Nội dung không được để trống.";
-    if (!thumbnailUrl) newErrors.thumbnailUrl = "Ảnh đại diện không được để trống.";
+    if (!thumbnailPreviewUrl && !selectedThumbnailFile) newErrors.thumbnailUrl = "Ảnh đại diện không được để trống.";
     if (categoryIds.length === 0) newErrors.categoryIds = "Vui lòng chọn ít nhất một danh mục.";
     
     // Check for existing async validation errors
@@ -222,30 +238,22 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
     setSaving(true)
     try {
       const finalStatusCode = overrideStatusCode ?? statusCode;
-      // Prevent saving base64 data URLs into DB columns (causes truncation error)
-      if (thumbnailUrl && thumbnailUrl.startsWith('data:')) {
-        console.warn('Attempt to save data URL for thumbnail blocked');
-        setErrors(prev => ({ ...prev, thumbnailUrl: 'Lỗi tải ảnh đại diện. Vui lòng tải lại ảnh.' }));
-        showToast('Ảnh đại diện không hợp lệ. Vui lòng tải lại.', 'error');
-        setSaving(false);
-        return;
-      }
-      if (coverImageUrl && coverImageUrl.startsWith('data:')) {
-        console.warn('Attempt to save data URL for cover image blocked');
-        // Mặc dù không có trường lỗi riêng cho ảnh bìa, ta vẫn hiển thị toast
-        showToast('Ảnh bìa không hợp lệ. Vui lòng tải lại.', 'error');
+      // Re-validate thumbnail on submit
+      if (!selectedThumbnailFile && !thumbnailPreviewUrl) {
+        setErrors(prev => ({ ...prev, thumbnailUrl: "Ảnh đại diện không được để trống." }));
+        alert('Vui lòng điền đầy đủ các trường bắt buộc.');
         setSaving(false);
         return;
       }
 
-      const payload: CreateArticleRequest = {
+      const payload: ArticleFormPayload = {
         title,
         slug,
         summary,
         content,
         displayType,
-        thumbnailUrl: thumbnailUrl || undefined, // Gửi undefined nếu là chuỗi rỗng
-        coverImageUrl: coverImageUrl || undefined, // Gửi undefined nếu là chuỗi rỗng
+        thumbnailUrl: selectedThumbnailFile ? undefined : (thumbnailPreviewUrl || undefined), // Send existing URL if no new file
+        coverImageUrl: selectedCoverFile ? undefined : (coverImagePreviewUrl || undefined), // Send existing URL if no new file
         isHomepageVisible,
         displayOrder,
         metaTitle,
@@ -257,11 +265,13 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         publishedAt: finalStatusCode === 'PUBLISHED' && !publishedAt 
           ? new Date().toISOString() 
           : (publishedAt ? new Date(publishedAt).toISOString() : undefined),
-        categoryIds
+        categoryIds: categoryIds,
+        thumbnailFile: selectedThumbnailFile || undefined, // Pass the File object
+        coverFile: selectedCoverFile || undefined, // Pass the File object
       }
       if (article) await articleService.update(article.id, payload)
       else await articleService.create(payload)
-      showToast(article ? 'Cập nhật bài viết thành công!' : 'Tạo bài viết thành công!')
+      showToast(article ? 'Cập nhật bài viết thành công!' : 'Tạo bài viết thành công!', 'success')
       onSaved?.()
     } catch (error: any) {
       console.error('Error saving article:', error)
@@ -331,8 +341,8 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
             <label style={labelStyle}>Ảnh đại diện</label>
-            <div style={{ width: '100%', aspectRatio: '16/9', background: '#f0f2f5', borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', border: '1px dashed #d1d5db' }}>
-              {thumbnailUrl ? <img src={thumbnailUrl} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
+            <div style={{ width: '100%', aspectRatio: '16/9', background: '#f0f2f5', borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', border: `1px dashed ${errors.thumbnailUrl ? '#ef4444' : '#d1d5db'}` }}>
+              {thumbnailPreviewUrl ? <img src={thumbnailPreviewUrl} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
             </div>
             <button type="button" onClick={onSelectFile} style={{ width: '100%', marginTop: 12, padding: '10px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 500 }}>
               Tải ảnh lên
@@ -347,13 +357,13 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
           <div>
             <label style={labelStyle}>Ảnh bìa (Cover Image)</label>
             <div style={{ width: '100%', aspectRatio: '16/9', background: '#f0f2f5', borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', border: '1px dashed #d1d5db' }}>
-              {coverImageUrl ? <img src={coverImageUrl} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
+              {coverImagePreviewUrl ? <img src={coverImagePreviewUrl} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
             </div>
             <button type="button" onClick={onSelectCoverFile} style={{ width: '100%', marginTop: 12, padding: '10px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 500 }}>
               Tải ảnh bìa
             </button>
           </div>
-          <input ref={coverFileRef} type="file" accept="image/png, image/jpeg" style={{ display: 'none' }} onChange={onCoverFileChange} />
+          <input ref={coverFileRef} type="file" accept="image/png, image/jpeg, image/jpg" style={{ display: 'none' }} onChange={onCoverFileChange} />
 
           <div>
             <label style={labelStyle}>Danh mục</label>
@@ -456,13 +466,14 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
             <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1rem' }}>Trạng thái & Hiển thị</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                 <select value={statusCode} onChange={e => setStatusCode(e.target.value)} style={inputStyle}>
-                  <option value="DRAFT">Bản nháp (DRAFT)</option>
-                  <option value="PUBLISHED">Xuất bản (PUBLISHED)</option>
-                  <option value="ARCHIVE">Lưu trữ (ARCHIVE)</option>
+                  <option value="DRAFT">Bản nháp</option>
+                  
+                  <option value="PUBLISHED">Xuất bản</option>
+                  <option value="ARCHIVE">Khóa</option>
                 </select>
                 <select value={displayType} onChange={e => setDisplayType(e.target.value)} style={inputStyle}>
-                  <option value="STANDARD">Tiêu chuẩn (STANDARD)</option>
-                  <option value="FEATURED">Nổi bật (FEATURED)</option>
+                  <option value="STANDARD">Tiêu chuẩn</option>
+                  <option value="FEATURED">Nổi bật</option>
                 </select>
                 <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>

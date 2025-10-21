@@ -18,7 +18,10 @@ export interface CreateBannerRequest {
   displayOrder?: number
   startDate?: string
   endDate?: string
-  isActive?: boolean
+  isActive: boolean
+  bannerFile?: File; // Add this for file uploads
 }
 
-export interface UpdateBannerRequest extends Partial<CreateBannerRequest> {}
+export interface UpdateBannerRequest extends Partial<CreateBannerRequest> {
+  bannerFile?: File; // Also add here
+}

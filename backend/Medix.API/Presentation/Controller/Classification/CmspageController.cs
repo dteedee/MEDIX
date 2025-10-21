@@ -7,7 +7,7 @@ namespace Medix.API.Presentation.Controller.Classification
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Manager")]
+    //[Authorize(Roles = "Manager")]
 
     public class CmspageController : ControllerBase
     {

@@ -4,15 +4,21 @@ import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 import DoctorService from '../../services/doctorService';
 import { DoctorRegisterMetadata } from '../../types/doctor.types';
+import { useNavigate } from 'react-router-dom';
+import { PageLoader } from '../../components/ui';
 
 function DoctorRegister() {
     const [metadata, setMetadata] = useState<DoctorRegisterMetadata>();
 
     const [loading, setLoading] = useState(false);
+    const [pageLoading, setPageLoading] = useState(true);
+    const [errorCode, setErrorCode] = useState<number | null>(null);
 
     const [errors, setErrors] = useState<any>({});
     const [formData, setFormData] = useState<any>({});
     const [touched, setTouched] = useState<{ licenseImage?: boolean }>({});
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchMetadata = async () => {
@@ -21,6 +27,9 @@ function DoctorRegister() {
                 setMetadata(data);
             } catch (error) {
                 console.error('Failed to fetch metadata:', error);
+                setErrorCode(500);
+            } finally {
+                setPageLoading(false);
             }
         }
         fetchMetadata();
@@ -58,12 +67,21 @@ function DoctorRegister() {
             }).then(() => {
                 window.location.href = '/';
             });
-        } catch (error) {
+        } catch (error: any) {
             setLoading(false);
-            console.error('Registration failed');
-            const errorData = error.response.data;
-            setErrors(errorData.errors);
-            console.log(errorData.errors);
+            console.error('Registration failed:', error);
+
+            const status = error?.response?.status;
+
+            if (status === 400 || status === 422) {
+                // Handle validation errors
+                const errorData = error.response.data;
+                setErrors(errorData.errors);
+                console.log(errorData.errors);
+            } else {
+                // Fallback for other errors
+                setErrors({ general: 'Đã xảy ra lỗi. Vui lòng thử lại.' });
+            }
         }
 
     };
@@ -203,6 +221,12 @@ function DoctorRegister() {
         }
     };
 
+    if (pageLoading) return <PageLoader />;
+
+    if (errorCode) {
+        navigate(`/error/${errorCode}`);
+        return null;
+    }
 
     return (
         <div>
@@ -449,6 +473,7 @@ function DoctorRegister() {
                         </div>
                         {/* Submit Button */}
                         <div className={styles["submit-section"]}>
+                            {errors.general && <div className="text-danger">{errors.general}</div>}
                             <button type="submit" disabled={loading} className={styles["btn-submit"]}>
                                 {loading ? (
                                     <>

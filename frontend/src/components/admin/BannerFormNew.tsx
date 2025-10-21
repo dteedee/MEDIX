@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { BannerDTO, CreateBannerRequest, UpdateBannerRequest } from '../../types/banner.types'
 import { useToast } from '../../contexts/ToastContext'
 import { bannerService } from '../../services/bannerService'
+import formStyles from '../../styles/Form.module.css'
+import styles from '../../styles/BannerFormNew.module.css'
 
 interface Props {
   banner?: BannerDTO
@@ -197,93 +199,57 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
     }
   }
 
-  // --- CSS Styles --- (Adopted from other forms for consistency)
-  const formContainerStyle: React.CSSProperties = {
-    background: '#fff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 12,
-    padding: '28px',
-    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-  }
-  const labelStyle: React.CSSProperties = {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 6,
-    display: 'block',
-    fontWeight: 600,
-  }
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 12px',
-    border: '1px solid #d1d5db',
-    borderRadius: 8,
-    fontSize: 15,
-    boxSizing: 'border-box',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
-  }
-  const gridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '24px',
-  }
-
-  const errorTextStyle: React.CSSProperties = {
-    color: '#ef4444',
-    fontSize: 13,
-    marginTop: 6,
-  }
-
   return (
-    <form onSubmit={submit} style={formContainerStyle}>
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '32px' }}>
+    <form onSubmit={submit} className={formStyles.formContainer}>
+      <div className={styles.mainGrid}>
         {/* Left Column for Image */}
-        <div>
-          <label style={labelStyle}>Ảnh banner</label>
-          <div style={{ width: '100%', aspectRatio: '16/9', background: '#f0f2f5', borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', border: `1px dashed ${errors.imageUrl ? '#ef4444' : '#d1d5db'}` }}>
-            {imagePreviewUrl ? <img src={imagePreviewUrl} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
+        <div className={styles.imageColumn}>
+          <label className={formStyles.label}>Ảnh banner</label>
+          <div className={`${styles.imagePreviewContainer} ${errors.imageUrl ? styles.error : ''}`}>
+            {imagePreviewUrl ? <img src={imagePreviewUrl} alt={title} className={styles.imagePreview} /> : <span className={styles.noImageText}>Chưa có ảnh</span>}
           </div>
-          {errors.imageUrl && <div style={errorTextStyle}>{errors.imageUrl}</div>}
-          <button type="button" onClick={onSelectFile} style={{ width: '100%', marginTop: 12, padding: '10px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 500 }}>
+          {errors.imageUrl && <div className={formStyles.errorText}>{errors.imageUrl}</div>}
+          <button type="button" onClick={onSelectFile} className={styles.uploadButton}>
             Tải ảnh lên
           </button>
           <input ref={fileRef} type="file" accept="image/png, image/jpeg" style={{ display: 'none' }} onChange={onFileChange} />
         </div>
 
         {/* Right Column for Fields */}
-        <div style={gridStyle}>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={labelStyle}>Tiêu đề</label>
+        <div className={styles.fieldsGrid}>
+          <div className={styles.fullWidth}>
+            <label className={formStyles.label}>Tiêu đề</label>
             <input 
               value={title} 
               onChange={e => { setTitle(e.target.value); if (errors.title) setErrors(prev => ({ ...prev, title: undefined })); }} 
               required 
               onBlur={e => validateOnBlur('title', e.target.value)}
-              style={{...inputStyle, borderColor: errors.title ? '#ef4444' : '#d1d5db'}} 
+              className={`${formStyles.input} ${errors.title ? formStyles.inputError : ''}`}
             />
-            {errors.title && <div style={errorTextStyle}>{errors.title}</div>}
+            {errors.title && <div className={formStyles.errorText}>{errors.title}</div>}
           </div>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={labelStyle}>Đường dẫn (Link)</label>
+          <div className={styles.fullWidth}>
+            <label className={formStyles.label}>Đường dẫn (Link)</label>
             <input 
               value={link ?? ''} 
               onChange={e => { setLink(e.target.value); if (errors.link) setErrors(prev => ({ ...prev, link: undefined })); }} 
               onBlur={e => validateOnBlur('link', e.target.value)}
-              style={{...inputStyle, borderColor: errors.link ? '#ef4444' : '#d1d5db'}} 
+              className={`${formStyles.input} ${errors.link ? formStyles.inputError : ''}`}
               placeholder="https://vi dụ.com/khuyen-mai" />
-            {errors.link && <div style={errorTextStyle}>{errors.link}</div>}
+            {errors.link && <div className={formStyles.errorText}>{errors.link}</div>}
           </div>
           <div>
-            <label style={labelStyle}>Ngày bắt đầu</label>
-            <input type="datetime-local" value={startDateLocal} onChange={e => setStartDateLocal(e.target.value)} style={{...inputStyle, borderColor: errors.startDate ? '#ef4444' : '#d1d5db'}} />
-            {errors.startDate && <div style={errorTextStyle}>{errors.startDate}</div>}
+            <label className={formStyles.label}>Ngày bắt đầu</label>
+            <input type="datetime-local" value={startDateLocal} onChange={e => setStartDateLocal(e.target.value)} className={`${formStyles.input} ${errors.startDate ? formStyles.inputError : ''}`} />
+            {errors.startDate && <div className={formStyles.errorText}>{errors.startDate}</div>}
           </div>
           <div>
-            <label style={labelStyle}>Ngày kết thúc</label>
-            <input type="datetime-local" value={endDateLocal} onChange={e => setEndDateLocal(e.target.value)} style={{...inputStyle, borderColor: errors.endDate ? '#ef4444' : '#d1d5db'}} />
-            {errors.endDate && <div style={errorTextStyle}>{errors.endDate}</div>}
+            <label className={formStyles.label}>Ngày kết thúc</label>
+            <input type="datetime-local" value={endDateLocal} onChange={e => setEndDateLocal(e.target.value)} className={`${formStyles.input} ${errors.endDate ? formStyles.inputError : ''}`} />
+            {errors.endDate && <div className={formStyles.errorText}>{errors.endDate}</div>}
           </div>
           <div>
-            <label style={labelStyle}>Thứ tự hiển thị</label>
+            <label className={formStyles.label}>Thứ tự hiển thị</label>
             <input 
               type="number" 
               value={order ?? ''} 
@@ -302,7 +268,7 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
                   }
                 }
               }} 
-              style={{...inputStyle, borderColor: errors.order ? '#ef4444' : '#d1d5db'}} 
+              className={`${formStyles.input} ${errors.order ? formStyles.inputError : ''}`}
               min="0"
               max="9999"
               onKeyDown={(e) => {
@@ -312,23 +278,23 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
                 }
               }}
             />
-            {errors.order && <div style={errorTextStyle}>{errors.order}</div>}
+            {errors.order && <div className={formStyles.errorText}>{errors.order}</div>}
           </div>
           <div>
-            <label style={labelStyle}>Trạng thái</label>
-            <div style={{ display: 'flex', alignItems: 'center', height: '42px' }}>
-              <input type="checkbox" id="isActive" checked={isActive} onChange={e => setIsActive(e.target.checked)} style={{ marginRight: 8, width: 16, height: 16, cursor: 'pointer' }} />
-              <label htmlFor="isActive" style={{ fontSize: 14, color: '#4b5563', cursor: 'pointer' }}>Đang hoạt động</label>
+            <label className={formStyles.label}>Trạng thái</label>
+            <div className={styles.statusContainer}>
+              <input type="checkbox" id="isActive" checked={isActive} onChange={e => setIsActive(e.target.checked)} className={styles.statusCheckbox} />
+              <label htmlFor="isActive" className={styles.statusLabel}>Đang hoạt động</label>
             </div>
           </div>
         </div>
       </div>
 
-      <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid #e5e7eb', paddingTop: 24 }}>
-        <button type="button" onClick={onCancel} style={{ padding: '10px 20px', backgroundColor: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 600, cursor: 'pointer', transition: 'background-color 0.2s' }}>
+      <div className={formStyles.actionsContainer}>
+        <button type="button" onClick={onCancel} className={`${formStyles.button} ${formStyles.buttonSecondary}`}>
           Hủy
         </button>
-        <button type="submit" disabled={saving} style={{ padding: '10px 20px', backgroundColor: saving ? '#9ca3af' : '#2563eb', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, transition: 'background-color 0.2s' }}>
+        <button type="submit" disabled={saving} className={`${formStyles.button} ${formStyles.buttonPrimary}`}>
           {saving ? 'Đang lưu...' : 'Lưu Banner'}
         </button>
       </div>

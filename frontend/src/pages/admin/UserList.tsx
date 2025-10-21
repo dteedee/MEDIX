@@ -138,7 +138,7 @@ export default function UserList() {
   const load = async () => {
     // Fetch a large list of users for client-side filtering.
     // We ignore local filters for the API call, except for maybe a base search if desired.
-    const r = await userAdminService.list({ page: 1, pageSize: 10000 }); // Fetch up to 10000 users
+    const r = await userAdminService.list(1, 10000); // Fetch up to 10000 users
     console.debug('[UserList] loaded users', r.items)
     setAllUsers(r.items || [])
     setTotal(r.total)

@@ -1,0 +1,117 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px 28px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.loading {
+  padding: 40px 0;
+  text-align: center;
+  color: #6b7280;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 28px;
+}
+
+.detailItem {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.label {
+  display: block;
+  color: #6b7280;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.value {
+  color: #1f2937;
+  word-break: break-word;
+}
+
+.fullWidthItem {
+  grid-column: 1 / -1;
+}
+
+.userInfoBlock {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e5e7eb;
+}
+
+.userNameDisplay {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.userIdentifier {
+  color: #6b7280;
+  margin: 4px 0 0 0;
+}
+
+.statusValue {
+  font-weight: 600;
+}
+
+.statusActive {
+  color: #16a34a;
+}
+
+.statusInactive {
+  color: #dc2626;
+}

@@ -3,6 +3,7 @@ import { UserDTO, CreateUserRequest, UpdateUserRequest } from '../../types/user.
 import { userAdminService } from '../../services/userService'
 import { useToast } from '../../contexts/ToastContext'
 
+import styles from '../../styles/UserForm.module.css';
 interface Props {
   user?: UserDTO
   onSaved?: () => void
@@ -178,117 +179,65 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       }
     }
   };
-  // --- CSS Styles --- (Updated for a cleaner look)
-  const formContainerStyle: React.CSSProperties = {
-    background: '#fff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 12,
-    padding: '28px',
-    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-  }
-  const labelStyle: React.CSSProperties = {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 6,
-    display: 'block',
-    fontWeight: 600,
-  }
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 12px',
-    border: '1px solid #d1d5db',
-    borderRadius: 8,
-    fontSize: 15,
-    boxSizing: 'border-box',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
-  }
-  const gridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '24px',
-  }
-
-  const statusStyle = (locked: boolean): React.CSSProperties => ({
-    padding: '6px 12px',
-    borderRadius: 16,
-    border: '1px solid',
-    borderColor: locked ? '#fca5a5' : '#6ee7b7',
-    background: locked ? '#fee2e2' : '#e7f9ec',
-    color: locked ? '#991b1b' : '#065f46',
-    fontWeight: 600,
-    cursor: 'pointer',
-    fontSize: 13,
-    // Đảm bảo select không bị cắt chữ
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    appearance: 'none',
-  })
-
-  const errorTextStyle: React.CSSProperties = {
-    color: '#ef4444',
-    fontSize: 13,
-    marginTop: 6,
-  }
 
   return (
-    <form onSubmit={submit} style={formContainerStyle}>
-      <div style={gridStyle}>
+    <form onSubmit={submit} className={styles.formContainer}>
+      <div className={styles.grid}>
         {!isEditMode && (
           <>
             <div>
-              <label style={labelStyle}>Tên đăng nhập (Username)</label>
+              <label className={styles.label}>Tên đăng nhập (Username)</label>
               <input 
                 value={userName} 
                 onChange={e => { setUserName(e.target.value); if (errors.userName) setErrors(prev => ({ ...prev, userName: undefined })); }} 
                 required 
                 onBlur={e => validateOnBlur('userName', e.target.value)}
-                style={{...inputStyle, borderColor: errors.userName ? '#ef4444' : '#d1d5db'}} 
+                className={`${styles.input} ${errors.userName ? styles.inputError : ''}`}
               />
-              {errors.userName && <div style={errorTextStyle}>{errors.userName}</div>}
+              {errors.userName && <div className={styles.errorText}>{errors.userName}</div>}
             </div>
             <div>
-              <label style={labelStyle}>Email</label> {/* Changed from Password to Email */}
+              <label className={styles.label}>Email</label> {/* Changed from Password to Email */}
               <input 
                 type="email" // Set type to email for better UX and validation
                 value={email} 
                 onChange={e => { setEmail(e.target.value); if (errors.email) setErrors(prev => ({ ...prev, email: undefined })); }} 
                 required 
                 onBlur={e => validateOnBlur('email', e.target.value)} // Validate email on blur
-                style={{...inputStyle, borderColor: errors.email ? '#ef4444' : '#d1d5db'}} 
+                className={`${styles.input} ${errors.email ? styles.inputError : ''}`}
               />
-              {errors.email && <div style={errorTextStyle}>{errors.email}</div>}
+              {errors.email && <div className={styles.errorText}>{errors.email}</div>}
             </div>
           </>
         )}
         {isEditMode && (
           <>
             <div>
-              <label style={labelStyle}>Tên đăng nhập (Username)</label>
-              <input value={userName} disabled style={{...inputStyle, background: '#f3f4f6'}} />
+              <label className={styles.label}>Tên đăng nhập (Username)</label>
+              <input value={userName} disabled className={styles.input} />
             </div>
             <div>
-              <label style={labelStyle}>Email</label>
-              <input type="email" value={email} disabled style={{...inputStyle, background: '#f3f4f6'}} />
+              <label className={styles.label}>Email</label>
+              <input type="email" value={email} disabled className={styles.input} />
             </div>
             <div>
-              <label style={labelStyle}>Họ và tên</label>
-              <input value={fullName} onChange={e => setFullName(e.target.value)} required style={inputStyle} disabled />
+              <label className={styles.label}>Họ và tên</label>
+              <input value={fullName} onChange={e => setFullName(e.target.value)} required className={styles.input} disabled />
             </div>
             <div>
-              <label style={labelStyle}>Số điện thoại</label>
-              <input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} style={inputStyle} disabled />
+              <label className={styles.label}>Số điện thoại</label>
+              <input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} className={styles.input} disabled />
             </div>
             <div>
-              <label style={labelStyle}>Ngày sinh</label>
-              <input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} style={inputStyle} disabled />
+              <label className={styles.label}>Ngày sinh</label>
+              <input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} className={styles.input} disabled />
             </div>
             <div>
-              <label style={labelStyle}>Số CMND/CCCD</label>
-              <input value={identificationNumber} onChange={e => setIdentificationNumber(e.target.value)} style={inputStyle} disabled />
+              <label className={styles.label}>Số CMND/CCCD</label>
+              <input value={identificationNumber} onChange={e => setIdentificationNumber(e.target.value)} className={styles.input} disabled />
             </div>
             <div>
-              <label style={labelStyle}>Giới tính</label>
+              <label className={styles.label}>Giới tính</label>
               <input
                 value={
                   genderCode === 'MALE' ? 'Nam' :
@@ -296,22 +245,26 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                   genderCode === 'OTHER' ? 'Khác' : ''
                 }
                 disabled
-                style={{...inputStyle, background: '#f3f4f6'}}
+                className={styles.input}
               />
             </div>
             <div>
-              <label style={labelStyle}>Trạng thái tài khoản</label>
-              <div style={{ display: 'flex', alignItems: 'center', height: '42px' }}>
-                <select value={lockoutEnabled ? '1' : '0'} onChange={e => setLockoutEnabled(e.target.value === '1')} style={{ ...inputStyle, width: 180, ...statusStyle(lockoutEnabled) }}>
+              <label className={styles.label}>Trạng thái tài khoản</label>
+              <div className={styles.statusContainer}>
+                <select 
+                  value={lockoutEnabled ? '1' : '0'} 
+                  onChange={e => setLockoutEnabled(e.target.value === '1')} 
+                  className={`${styles.statusSelect} ${lockoutEnabled ? styles.statusLocked : styles.statusActive}`}
+                >
                   <option value="0">Hoạt động</option>
                   <option value="1">Đang khóa</option>
                 </select>
-                <span style={{ marginLeft: 12, color: '#6b7280' }}>{lockoutEnabled ? 'Tài khoản đang bị khóa' : 'Tài khoản hoạt động'}</span>
+                <span className={styles.statusLabel}>{lockoutEnabled ? 'Tài khoản đang bị khóa' : 'Tài khoản hoạt động'}</span>
               </div>
             </div>
             <div>
-              <label style={labelStyle}>Vai trò</label>
-              <select value={role} onChange={e => setRole(e.target.value)} style={inputStyle}>
+              <label className={styles.label}>Vai trò</label>
+              <select value={role} onChange={e => setRole(e.target.value)} className={styles.select}>
                 {/* <option value="ADMIN">Quản trị</option> */}
                 <option value="MANAGER">Quản lý</option>
                 <option value="DOCTOR">Bác sĩ</option>
@@ -319,69 +272,33 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Email đã xác thực</label>
-              <input value={emailConfirmed ? 'Đã xác thực' : 'Chưa xác thực'} disabled style={{...inputStyle, background: '#f3f4f6'}} />
+              <label className={styles.label}>Email đã xác thực</label>
+              <input value={emailConfirmed ? 'Đã xác thực' : 'Chưa xác thực'} disabled className={styles.input} />
             </div>
             <div>
-              <label style={labelStyle}>Số lần đăng nhập sai</label>
-              <input type="number" value={accessFailedCount} disabled style={{...inputStyle, background: '#f3f4f6'}} />
+              <label className={styles.label}>Số lần đăng nhập sai</label>
+              <input type="number" value={accessFailedCount} disabled className={styles.input} />
             </div>
             <div>
-              <label style={labelStyle}>Ngày tạo tài khoản</label>
-              <input 
-                value={createdAt ? new Date(createdAt).toLocaleString('vi-VN') : ''} 
-                disabled 
-                style={{...inputStyle, background: '#f3f4f6'}} 
-              />
+              <label className={styles.label}>Ngày tạo tài khoản</label>
+              <input value={createdAt ? new Date(createdAt).toLocaleString('vi-VN') : ''} disabled className={styles.input} />
             </div>
             <div>
-              <label style={labelStyle}>Cập nhật lần cuối</label>
-              <input 
-                value={updatedAt ? new Date(updatedAt).toLocaleString('vi-VN') : ''} 
-                disabled 
-                style={{...inputStyle, background: '#f3f4f6'}} 
-              />
+              <label className={styles.label}>Cập nhật lần cuối</label>
+              <input value={updatedAt ? new Date(updatedAt).toLocaleString('vi-VN') : ''} disabled className={styles.input} />
             </div>
           </>
         )}
       </div>
 
-      <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+      <div className={styles.actionsContainer}>
         {isEditMode && (
-          <button type="button" onClick={handleResetPassword} style={{
-            padding: '10px 20px',
-            backgroundColor: '#f97316',
-            color: '#fff',
-            borderRadius: 8,
-            border: 'none',
-            fontWeight: 600,
-            cursor: 'pointer',
-            marginRight: 'auto' // Đẩy nút này sang trái
-          }}>Đặt lại mật khẩu</button>
+          <button type="button" onClick={handleResetPassword} className={`${styles.button} ${styles.buttonDanger}`}>Đặt lại mật khẩu</button>
         )}
-        <button type="button" onClick={onCancel} style={{
-          padding: '10px 20px',
-          backgroundColor: '#fff',
-          color: '#374151',
-          borderRadius: 8,
-          border: '1px solid #d1d5db',
-          fontWeight: 600,
-          cursor: 'pointer',
-          transition: 'background-color 0.2s',
-        }}>
+        <button type="button" onClick={onCancel} className={`${styles.button} ${styles.buttonSecondary}`}>
           Hủy
         </button>
-        <button type="submit" disabled={saving} style={{
-          padding: '10px 20px',
-          backgroundColor: saving ? '#9ca3af' : '#2563eb',
-          color: '#fff',
-          borderRadius: 8,
-          border: 'none',
-          fontWeight: 600,
-          cursor: saving ? 'not-allowed' : 'pointer',
-          opacity: saving ? 0.7 : 1,
-          transition: 'background-color 0.2s',
-        }}>
+        <button type="submit" disabled={saving} className={`${styles.button} ${styles.buttonPrimary}`}>
           {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
         </button>
       </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { UserDTO } from '../../types/user.types';
+import styles from '../../styles/UserDetails.module.css';
 
 interface Props {
   user: UserDTO | null;
@@ -18,122 +19,45 @@ export default function UserDetails({ user, onClose, isLoading }: Props) {
     return 'Chưa có';
   };
 
-  // --- Styles ---
-  const overlayStyle: React.CSSProperties = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  };
-
-  const modalStyle: React.CSSProperties = {
-    background: '#fff',
-    borderRadius: 12,
-    padding: '24px 28px',
-    width: '90%',
-    maxWidth: '800px',
-    maxHeight: '90vh',
-    overflowY: 'auto',
-    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
-  };
-
-  const headerStyle: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottom: '1px solid #e5e7eb',
-    paddingBottom: 16,
-    marginBottom: 24,
-  };
-
-  const titleStyle: React.CSSProperties = {
-    margin: 0,
-    fontSize: '1.25rem',
-    fontWeight: 600,
-    color: '#111827',
-  };
-
-  const closeButtonStyle: React.CSSProperties = {
-    background: 'transparent',
-    border: 'none',
-    fontSize: 24,
-    cursor: 'pointer',
-    color: '#6b7280',
-  };
-
-  const contentGridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '20px 28px',
-  };
-
-  const detailItemStyle: React.CSSProperties = {
-    fontSize: 14,
-    lineHeight: 1.6,
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    color: '#6b7280',
-    fontWeight: 500,
-    marginBottom: 4,
-  };
-
-  const valueStyle: React.CSSProperties = {
-    color: '#1f2937',
-    wordBreak: 'break-word',
-  };
-
-  const fullWidthItem: React.CSSProperties = {
-    ...detailItemStyle,
-    gridColumn: '1 / -1',
-  };
-
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <div style={headerStyle}>
-          <h2 style={titleStyle}>Chi tiết Người dùng</h2>
-          <button onClick={onClose} style={closeButtonStyle}>&times;</button>
+    <div className={styles.overlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.header}>
+          <h2 className={styles.title}>Chi tiết Người dùng</h2>
+          <button onClick={onClose} className={styles.closeButton}>&times;</button>
         </div>
         {isLoading ? (
-          <div style={{ padding: '40px 0', textAlign: 'center', color: '#6b7280' }}>Đang tải chi tiết...</div>
+          <div className={styles.loading}>Đang tải chi tiết...</div>
         ) : (
-          <div style={contentGridStyle}>
-            <div style={{ ...fullWidthItem, display: 'flex', alignItems: 'center', gap: 20 }}>
-              <img src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || user.userName || user.email)}&background=random`} alt="Avatar" style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e5e7eb' }} />
+          <div className={styles.contentGrid}>
+            <div className={`${styles.detailItem} ${styles.fullWidthItem} ${styles.userInfoBlock}`}>
+              <img src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || user.userName || user.email)}&background=random`} alt="Avatar" className={styles.avatar} />
               <div>
-                <p style={{ ...valueStyle, fontSize: 18, fontWeight: 600, margin: 0 }}>{user.fullName || 'Chưa có tên'}</p>
-                <p style={{ ...valueStyle, color: '#6b7280', margin: '4px 0 0 0' }}>{user.userName ? `@${user.userName}` : user.email}</p>
+                <p className={`${styles.value} ${styles.userNameDisplay}`}>{user.fullName || 'Chưa có tên'}</p>
+                <p className={`${styles.value} ${styles.userIdentifier}`}>{user.userName ? `@${user.userName}` : user.email}</p>
               </div>
             </div>
 
-            <div style={detailItemStyle}><span style={labelStyle}>Họ và tên</span><span style={valueStyle}>{user.fullName || 'Chưa có'}</span></div>
-            <div style={detailItemStyle}><span style={labelStyle}>Tên đăng nhập</span><span style={valueStyle}>{user.userName || 'Chưa có'}</span></div>
-            <div style={detailItemStyle}><span style={labelStyle}>Email</span><span style={valueStyle}>{user.email}</span></div>
-            <div style={detailItemStyle}><span style={labelStyle}>Số điện thoại</span><span style={valueStyle}>{user.phoneNumber || 'Chưa có'}</span></div>
-            <div style={detailItemStyle}><span style={labelStyle}>Vai trò</span><span style={valueStyle}>{user.role || 'Chưa có'}</span></div>
-            <div style={detailItemStyle}><span style={labelStyle}>Ngày sinh</span><span style={valueStyle}>{user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString('vi-VN') : 'Chưa có'}</span></div>
-            <div style={detailItemStyle}><span style={labelStyle}>Giới tính</span><span style={valueStyle}>{getGender(user.genderCode)}</span></div>
-            <div style={detailItemStyle}><span style={labelStyle}>Số CMND/CCCD</span><span style={valueStyle}>{user.identificationNumber || 'Chưa có'}</span></div>
-            <div style={detailItemStyle}><span style={labelStyle}>Email xác thực</span><span style={valueStyle}>{user.emailConfirmed ? 'Đã xác thực' : 'Chưa xác thực'}</span></div>
-            <div style={detailItemStyle}><span style={labelStyle}>Địa chỉ</span><span style={valueStyle}>{user.address || 'Chưa có'}</span></div>
-            <div style={detailItemStyle}>
-              <span style={labelStyle}>Tài khoản bị khóa</span>
-              <span style={{...valueStyle, color: user.lockoutEnabled ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+            <div className={styles.detailItem}><span className={styles.label}>Họ và tên</span><span className={styles.value}>{user.fullName || 'Chưa có'}</span></div>
+            <div className={styles.detailItem}><span className={styles.label}>Tên đăng nhập</span><span className={styles.value}>{user.userName || 'Chưa có'}</span></div>
+            <div className={styles.detailItem}><span className={styles.label}>Email</span><span className={styles.value}>{user.email}</span></div>
+            <div className={styles.detailItem}><span className={styles.label}>Số điện thoại</span><span className={styles.value}>{user.phoneNumber || 'Chưa có'}</span></div>
+            <div className={styles.detailItem}><span className={styles.label}>Vai trò</span><span className={styles.value}>{user.role || 'Chưa có'}</span></div>
+            <div className={styles.detailItem}><span className={styles.label}>Ngày sinh</span><span className={styles.value}>{user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString('vi-VN') : 'Chưa có'}</span></div>
+            <div className={styles.detailItem}><span className={styles.label}>Giới tính</span><span className={styles.value}>{getGender(user.genderCode)}</span></div>
+            <div className={styles.detailItem}><span className={styles.label}>Số CMND/CCCD</span><span className={styles.value}>{user.identificationNumber || 'Chưa có'}</span></div>
+            <div className={styles.detailItem}><span className={styles.label}>Email xác thực</span><span className={styles.value}>{user.emailConfirmed ? 'Đã xác thực' : 'Chưa xác thực'}</span></div>
+            <div className={styles.detailItem}><span className={styles.label}>Địa chỉ</span><span className={styles.value}>{user.address || 'Chưa có'}</span></div>
+            <div className={styles.detailItem}>
+              <span className={styles.label}>Tài khoản bị khóa</span>
+              <span className={`${styles.value} ${styles.statusValue} ${user.lockoutEnabled ? styles.statusInactive : styles.statusActive}`}>
                 {user.lockoutEnabled ? 'Có' : 'Không'}
               </span>
             </div>
-            <div style={detailItemStyle}><span style={labelStyle}>Khóa đến</span><span style={valueStyle}>{fmtDate(user.lockoutEnd)}</span></div>
-            <div style={detailItemStyle}><span style={labelStyle}>Số lần đăng nhập sai</span><span style={valueStyle}>{user.accessFailedCount ?? 0}</span></div>
-            <div style={detailItemStyle}><span style={labelStyle}>Ngày tạo</span><span style={valueStyle}>{fmtDate(user.createdAt)}</span></div>
-            <div style={detailItemStyle}><span style={labelStyle}>Cập nhật lần cuối</span><span style={valueStyle}>{fmtDate(user.updatedAt)}</span></div>
+            <div className={styles.detailItem}><span className={styles.label}>Khóa đến</span><span className={styles.value}>{fmtDate(user.lockoutEnd)}</span></div>
+            <div className={styles.detailItem}><span className={styles.label}>Số lần đăng nhập sai</span><span className={styles.value}>{user.accessFailedCount ?? 0}</span></div>
+            <div className={styles.detailItem}><span className={styles.label}>Ngày tạo</span><span className={styles.value}>{fmtDate(user.createdAt)}</span></div>
+            <div className={styles.detailItem}><span className={styles.label}>Cập nhật lần cuối</span><span className={styles.value}>{fmtDate(user.updatedAt)}</span></div>
           </div>
         )}
       </div>

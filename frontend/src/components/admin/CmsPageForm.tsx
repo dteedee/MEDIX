@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { CmsPageDTO, CreateCmsPageRequest } from '../../types/cmspage.types'
 import { cmspageService } from '../../services/cmspageService'
 import { useToast } from '../../contexts/ToastContext'
+import formStyles from '../../styles/Form.module.css'
+import styles from '../../styles/CmsPageForm.module.css'
 
 interface Props { page?: CmsPageDTO; onSaved?: () => void; onCancel?: () => void }
 
@@ -100,105 +102,64 @@ export default function CmsPageForm({ page, onSaved, onCancel }: Props) {
     }
   }, [title]);
 
-  // --- CSS Styles --- (Adopted from UserForm for consistency)
-  const formContainerStyle: React.CSSProperties = {
-    background: '#fff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 12,
-    padding: '28px',
-    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-  }
-  const labelStyle: React.CSSProperties = {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 6,
-    display: 'block',
-    fontWeight: 600,
-  }
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 12px',
-    border: '1px solid #d1d5db',
-    borderRadius: 8,
-    fontSize: 15,
-    boxSizing: 'border-box',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
-  }
-  const textareaStyle: React.CSSProperties = {
-    ...inputStyle,
-    minHeight: '150px',
-    fontFamily: 'inherit',
-  }
-  const gridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '24px',
-  }
-
-  const errorTextStyle: React.CSSProperties = {
-    color: '#ef4444',
-    fontSize: 13,
-    marginTop: 6,
-  }
-
   return (
-    <form onSubmit={submit} style={formContainerStyle}>
-      <div style={gridStyle}>
-        <div style={{ gridColumn: '1 / -1' }}>
-          <label style={labelStyle}>Tiêu đề trang</label>
+    <form onSubmit={submit} className={formStyles.formContainer}>
+      <div className={styles.grid}>
+        <div className={styles.fullWidth}>
+          <label className={formStyles.label}>Tiêu đề trang</label>
           <input 
             value={title} 
             onChange={e => { setTitle(e.target.value); if (errors.pageTitle) setErrors(prev => ({ ...prev, pageTitle: undefined })); }} 
             onBlur={e => validateOnBlur('pageTitle', e.target.value)}
             required 
-            style={{...inputStyle, borderColor: errors.pageTitle ? '#ef4444' : '#d1d5db'}} 
+            className={`${formStyles.input} ${errors.pageTitle ? formStyles.inputError : ''}`}
           />
-          {errors.pageTitle && <div style={errorTextStyle}>{errors.pageTitle}</div>}
+          {errors.pageTitle && <div className={formStyles.errorText}>{errors.pageTitle}</div>}
         </div>
-        <div style={{ gridColumn: '1 / -1' }}>
-          <label style={labelStyle}>Đường dẫn (Slug)</label>
+        <div className={styles.fullWidth}>
+          <label className={formStyles.label}>Đường dẫn (Slug)</label>
           <input 
             value={slug} 
             onChange={e => { setSlug(e.target.value); if (errors.pageSlug) setErrors(prev => ({ ...prev, pageSlug: undefined })); }} 
             onBlur={e => validateOnBlur('pageSlug', e.target.value)}
             required
-            style={{...inputStyle, borderColor: errors.pageSlug ? '#ef4444' : '#d1d5db'}} 
+            className={`${formStyles.input} ${errors.pageSlug ? formStyles.inputError : ''}`}
           />
-          {errors.pageSlug && <div style={errorTextStyle}>{errors.pageSlug}</div>}
+          {errors.pageSlug && <div className={formStyles.errorText}>{errors.pageSlug}</div>}
         </div>
-        <div style={{ gridColumn: '1 / -1' }}>
-          <label style={labelStyle}>Nội dung</label>
+        <div className={styles.fullWidth}>
+          <label className={formStyles.label}>Nội dung</label>
           <textarea 
             value={content} 
             onChange={e => { setContent(e.target.value); if (errors.pageContent) setErrors(prev => ({ ...prev, pageContent: undefined })); }} 
             onBlur={e => validateOnBlur('pageContent', e.target.value)}
             required
-            style={{...textareaStyle, borderColor: errors.pageContent ? '#ef4444' : '#d1d5db'}} 
+            className={`${formStyles.textarea} ${styles.contentTextarea} ${errors.pageContent ? formStyles.inputError : ''}`}
           />
-          {errors.pageContent && <div style={errorTextStyle}>{errors.pageContent}</div>}
+          {errors.pageContent && <div className={formStyles.errorText}>{errors.pageContent}</div>}
         </div>
         <div>
-          <label style={labelStyle}>Meta Title (SEO)</label>
-          <input value={metaTitle} onChange={e => setMetaTitle(e.target.value)} style={inputStyle} />
+          <label className={formStyles.label}>Meta Title (SEO)</label>
+          <input value={metaTitle} onChange={e => setMetaTitle(e.target.value)} className={formStyles.input} />
         </div>
         <div>
-          <label style={labelStyle}>Meta Description (SEO)</label>
-          <input value={metaDescription} onChange={e => setMetaDescription(e.target.value)} style={inputStyle} />
+          <label className={formStyles.label}>Meta Description (SEO)</label>
+          <input value={metaDescription} onChange={e => setMetaDescription(e.target.value)} className={formStyles.input} />
         </div>
         <div>
-          <label style={labelStyle}>Trạng thái</label>
-          <div style={{ display: 'flex', alignItems: 'center', height: '42px' }}>
-            <input type="checkbox" id="isPublished" checked={isPublished} onChange={e => setIsPublished(e.target.checked)} style={{ marginRight: 8, width: 16, height: 16, cursor: 'pointer' }} />
-            <label htmlFor="isPublished" style={{ fontSize: 14, color: '#4b5563', cursor: 'pointer' }}>Hoạt động</label>
+          <label className={formStyles.label}>Trạng thái</label>
+          <div className={styles.statusContainer}>
+            <input type="checkbox" id="isPublished" checked={isPublished} onChange={e => setIsPublished(e.target.checked)} className={styles.statusCheckbox} />
+            <label htmlFor="isPublished" className={styles.statusLabel}>Hoạt động</label>
           </div>
         </div>
       </div>
 
-      <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-        <button type="button" onClick={onCancel} style={{ padding: '10px 20px', backgroundColor: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 600, cursor: 'pointer', transition: 'background-color 0.2s' }}>
+      <div className={formStyles.actionsContainer}>
+        <button type="button" onClick={onCancel} className={`${formStyles.button} ${formStyles.buttonSecondary}`}>
           Hủy
         </button>
-        <button type="submit" disabled={saving} style={{ padding: '10px 20px', backgroundColor: saving ? '#9ca3af' : '#2563eb', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, transition: 'background-color 0.2s' }}>
+        <button type="submit" disabled={saving} className={`${formStyles.button} ${formStyles.buttonPrimary}`}>
           {saving ? 'Đang lưu...' : 'Lưu trang'}
         </button>
       </div>

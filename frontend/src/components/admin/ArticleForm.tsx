@@ -5,6 +5,8 @@ import { CategoryDTO } from '../../types/category.types'
 import { articleService, ArticleFormPayload } from '../../services/articleService'
 import { useToast } from '../../contexts/ToastContext'
 import { CKEditor } from '@ckeditor/ckeditor5-react'
+import formStyles from '../../styles/Form.module.css' // Import shared form styles
+import styles from '../../styles/ArticleForm.module.css' // Import component-specific styles
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
 
 interface Props {
@@ -226,13 +228,13 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
     
     // Check for existing async validation errors
     if (errors.displayOrder) {
-      alert('Vui lòng sửa các lỗi đã báo trước khi lưu.');
+      showToast('Vui lòng sửa các lỗi đã báo trước khi lưu.', 'error');
       return;
     }
 
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
-        alert('Vui lòng điền đầy đủ các trường bắt buộc.');
+        showToast('Vui lòng điền đầy đủ các trường bắt buộc.', 'error');
         return;
     }
     setSaving(true)
@@ -241,7 +243,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
       // Re-validate thumbnail on submit
       if (!selectedThumbnailFile && !thumbnailPreviewUrl) {
         setErrors(prev => ({ ...prev, thumbnailUrl: "Ảnh đại diện không được để trống." }));
-        alert('Vui lòng điền đầy đủ các trường bắt buộc.');
+        showToast('Vui lòng điền đầy đủ các trường bắt buộc.', 'error');
         setSaving(false);
         return;
       }
@@ -291,87 +293,44 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
     }
   }
 
-  // --- CSS Styles ---
-  const formContainerStyle: React.CSSProperties = {
-    background: '#fff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 12,
-    padding: '28px',
-    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-  }
-  const labelStyle: React.CSSProperties = {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 6,
-    display: 'block',
-    fontWeight: 600,
-  }
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 12px',
-    border: '1px solid #d1d5db',
-    borderRadius: 8,
-    fontSize: 15,
-    boxSizing: 'border-box',
-  }
-  const buttonStyle: React.CSSProperties = {
-    padding: '10px 20px',
-    borderRadius: 8,
-    border: 'none',
-    fontWeight: 600,
-    cursor: 'pointer',
-  }
-  const errorTextStyle: React.CSSProperties = {
-    color: '#ef4444',
-    fontSize: 13,
-    marginTop: 6,
-  }
-
-  const validatingTextStyle: React.CSSProperties = {
-    color: '#6b7280',
-    fontSize: 13,
-    marginTop: 6,
-  }
-
-
   return (
-    <form onSubmit={(e) => submit(e)} style={formContainerStyle}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '32px' }}>
+    <form onSubmit={(e) => submit(e)} className={formStyles.formContainer}>
+      <div className={styles.mainGrid}>
         {/* Left Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className={styles.leftColumn}>
           <div>
-            <label style={labelStyle}>Ảnh đại diện</label>
-            <div style={{ width: '100%', aspectRatio: '16/9', background: '#f0f2f5', borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', border: `1px dashed ${errors.thumbnailUrl ? '#ef4444' : '#d1d5db'}` }}>
-              {thumbnailPreviewUrl ? <img src={thumbnailPreviewUrl} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
+            <label className={formStyles.label}>Ảnh đại diện</label>
+            <div className={`${styles.imagePreviewContainer} ${errors.thumbnailUrl ? styles.error : ''}`}>
+              {thumbnailPreviewUrl ? <img src={thumbnailPreviewUrl} alt="thumb" className={styles.imagePreview} /> : <span className={styles.noImageText}>Chưa có ảnh</span>}
             </div>
-            <button type="button" onClick={onSelectFile} style={{ width: '100%', marginTop: 12, padding: '10px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 500 }}>
+            <button type="button" onClick={onSelectFile} className={styles.uploadButton}>
               Tải ảnh lên
             </button>
             <input ref={fileRef} type="file" accept="image/png, image/jpeg" style={{ display: 'none' }} onChange={(e) => {
                 onFileChange(e);
                 if (errors.thumbnailUrl) setErrors(prev => ({ ...prev, thumbnailUrl: undefined }));
             }} />
-            {errors.thumbnailUrl && <div style={errorTextStyle}>{errors.thumbnailUrl}</div>}
+            {errors.thumbnailUrl && <div className={formStyles.errorText}>{errors.thumbnailUrl}</div>}
           </div>
 
           <div>
-            <label style={labelStyle}>Ảnh bìa (Cover Image)</label>
-            <div style={{ width: '100%', aspectRatio: '16/9', background: '#f0f2f5', borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', border: '1px dashed #d1d5db' }}>
-              {coverImagePreviewUrl ? <img src={coverImagePreviewUrl} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
+            <label className={formStyles.label}>Ảnh bìa (Cover Image)</label>
+            <div className={styles.imagePreviewContainer}>
+              {coverImagePreviewUrl ? <img src={coverImagePreviewUrl} alt="cover" className={styles.imagePreview} /> : <span className={styles.noImageText}>Chưa có ảnh</span>}
             </div>
-            <button type="button" onClick={onSelectCoverFile} style={{ width: '100%', marginTop: 12, padding: '10px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 500 }}>
+            <button type="button" onClick={onSelectCoverFile} className={styles.uploadButton}>
               Tải ảnh bìa
             </button>
           </div>
           <input ref={coverFileRef} type="file" accept="image/png, image/jpeg, image/jpg" style={{ display: 'none' }} onChange={onCoverFileChange} />
 
           <div>
-            <label style={labelStyle}>Danh mục</label>
+            <label className={formStyles.label}>Danh mục</label>
             
-            <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid', borderColor: errors.categoryIds ? '#ef4444' : '#d1d5db', borderRadius: 8, padding: '8px 12px' }}>
+            <div className={`${styles.categoriesContainer} ${errors.categoryIds ? styles.error : ''}`}>
               {loadingCategories && <div>Đang tải...</div>}
               {!loadingCategories && availableCategories.map(c => (
-                <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', cursor: 'pointer', fontSize: 14 }}>
+                <label key={c.id} className={styles.categoryItem}>
                   <input type="checkbox" checked={categoryIds.includes(c.id)} onChange={() => {
                       toggleCategory(c.id);
                       if (errors.categoryIds) setErrors(prev => ({ ...prev, categoryIds: undefined }));
@@ -379,12 +338,12 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
                   <span>{c.name}</span>
                 </label>
               ))}
-              
             </div>
+            {errors.categoryIds && <div className={formStyles.errorText}>{errors.categoryIds}</div>}
           </div>
 
           <div>
-            <label style={labelStyle}>Thứ tự hiển thị</label>
+            <label className={formStyles.label}>Thứ tự hiển thị</label>
             <input 
               type="number" 
               value={displayOrder} 
@@ -397,17 +356,17 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
                   setErrors(prev => ({ ...prev, displayOrder: undefined }));
                 }
               }} 
-              style={{...inputStyle, borderColor: errors.displayOrder ? '#ef4444' : '#d1d5db'}}
+              className={`${formStyles.input} ${errors.displayOrder ? formStyles.inputError : ''}`}
               min="0"
             />
-            {errors.displayOrder && <div style={errorTextStyle}>{errors.displayOrder}</div>}
+            {errors.displayOrder && <div className={formStyles.errorText}>{errors.displayOrder}</div>}
           </div>
         </div>
 
         {/* Right Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className={styles.rightColumn}>
           <div>
-            <label style={labelStyle}>Tiêu đề bài viết</label>
+            <label className={formStyles.label}>Tiêu đề bài viết</label>
             <input
               value={title}
               onChange={e => {
@@ -416,84 +375,84 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
               }}
               required
               onBlur={(e) => validateOnBlur('title', e.target.value)}
-              style={{ ...inputStyle, borderColor: errors.title ? '#ef4444' : '#d1d5db' }}
+              className={`${formStyles.input} ${errors.title ? formStyles.inputError : ''}`}
             />
-            {errors.title && <div style={errorTextStyle}>{errors.title}</div>}
-            {validating.title && <div style={validatingTextStyle}>Đang kiểm tra...</div>}
+            {errors.title && <div className={formStyles.errorText}>{errors.title}</div>}
+            {validating.title && <div className={styles.validatingText}>Đang kiểm tra...</div>}
           </div>
           <div>
-            <label style={labelStyle}>Đường dẫn (Slug)</label>
+            <label className={formStyles.label}>Đường dẫn (Slug)</label>
             <input value={slug} onChange={e => {
               setSlug(e.target.value)
               if (errors.slug) setErrors(prev => ({ ...prev, slug: undefined }))
             }}
             onBlur={(e) => validateOnBlur('slug', e.target.value)}
             placeholder="Tự động tạo nếu để trống"
-            style={{ ...inputStyle, borderColor: errors.slug ? '#ef4444' : '#d1d5db' }} />
-            {errors.slug && <div style={errorTextStyle}>{errors.slug}</div>}
-            {validating.slug && <div style={validatingTextStyle}>Đang kiểm tra...</div>}
+            className={`${formStyles.input} ${errors.slug ? formStyles.inputError : ''}`} />
+            {errors.slug && <div className={formStyles.errorText}>{errors.slug}</div>}
+            {validating.slug && <div className={styles.validatingText}>Đang kiểm tra...</div>}
           </div>
           <div>
-            <label style={labelStyle}>Tóm tắt</label>
+            <label className={formStyles.label}>Tóm tắt</label>
             <textarea value={summary} onChange={e => {
               setSummary(e.target.value);
               if (errors.summary) setErrors(prev => ({ ...prev, summary: undefined }));
-            }} onBlur={(e) => validateOnBlur('summary', e.target.value)} style={{ ...inputStyle, minHeight: '80px', fontFamily: 'inherit', borderColor: errors.summary ? '#ef4444' : '#d1d5db' }} />
-            {errors.summary && <div style={errorTextStyle}>{errors.summary}</div>}
+            }} onBlur={(e) => validateOnBlur('summary', e.target.value)} className={`${formStyles.textarea} ${errors.summary ? formStyles.inputError : ''}`} />
+            {errors.summary && <div className={formStyles.errorText}>{errors.summary}</div>}
           </div>
           <div>
-            <label style={labelStyle}>Nội dung</label>
-            <div style={{ border: `1px solid ${errors.content ? '#ef4444' : '#d1d5db'}`, borderRadius: 8, overflow: 'hidden', minHeight: 300 }}>
+            <label className={formStyles.label}>Nội dung</label>
+            <div className={`${styles.ckeditorContainer} ${errors.content ? styles.error : ''}`}>
               <CKEditor
                 editor={ClassicEditor}
                 data={content}
                 onChange={(event, editor) => {
                   const data = editor.getData()
                   setContent(data)
-                  if (errors.content) setErrors(prev => ({ ...prev, content: undefined }))
+                  if (errors.content) setErrors(prev => ({ ...prev, content: undefined }));
                 }}
                 onBlur={(event, editor) => {
                   validateOnBlur('content', editor.getData())
                 }}
               />
             </div>
-            {errors.content && <div style={errorTextStyle}>{errors.content}</div>}
+            {errors.content && <div className={formStyles.errorText}>{errors.content}</div>}
           </div>
           
 
           {/* Status & Display Section - MOVED HERE */}
-          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1rem' }}>Trạng thái & Hiển thị</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                <select value={statusCode} onChange={e => setStatusCode(e.target.value)} style={inputStyle}>
+          <div className={styles.sectionDivider}>
+            <h3 className={styles.sectionHeader}>Trạng thái & Hiển thị</h3>
+            <div className={styles.statusDisplayGrid}>
+                <select value={statusCode} onChange={e => setStatusCode(e.target.value)} className={formStyles.select}>
                   <option value="DRAFT">Bản nháp</option>
                   
                   <option value="PUBLISHED">Xuất bản</option>
                   <option value="ARCHIVE">Khóa</option>
                 </select>
-                <select value={displayType} onChange={e => setDisplayType(e.target.value)} style={inputStyle}>
+                <select value={displayType} onChange={e => setDisplayType(e.target.value)} className={formStyles.select}>
                   <option value="STANDARD">Tiêu chuẩn</option>
                   <option value="FEATURED">Nổi bật</option>
                 </select>
-                <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>
-                    <input type="checkbox" checked={isHomepageVisible} onChange={e => setIsHomepageVisible(e.target.checked)} style={{ width: 16, height: 16 }} />
+                <div className={styles.homepageVisibility}>
+                  <label>
+                    <input type="checkbox" checked={isHomepageVisible} onChange={e => setIsHomepageVisible(e.target.checked)} />
                     Hiển thị trang chủ
                   </label>
                 </div>
                
             </div>
           </div>
-          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1rem' }}>Cấu hình SEO</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div className={styles.sectionDivider}>
+            <h3 className={styles.sectionHeader}>Cấu hình SEO</h3>
+            <div className={styles.statusDisplayGrid}>
               <div>
-                <label style={labelStyle}>Meta Title</label>
-                <input value={metaTitle} onChange={e => setMetaTitle(e.target.value)} style={inputStyle} />
+                <label className={formStyles.label}>Meta Title</label>
+                <input value={metaTitle} onChange={e => setMetaTitle(e.target.value)} className={formStyles.input} />
               </div>
               <div>
-                <label style={labelStyle}>Meta Description</label>
-                <input value={metaDescription} onChange={e => setMetaDescription(e.target.value)} style={inputStyle} />
+                <label className={formStyles.label}>Meta Description</label>
+                <input value={metaDescription} onChange={e => setMetaDescription(e.target.value)} className={formStyles.input} />
               </div>
             </div>
           </div>
@@ -502,12 +461,12 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
       </div>
 
       {/* Actions */}
-      <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid #e5e7eb', paddingTop: 24 }}>
-        <button type="button" onClick={onCancel} style={{ ...buttonStyle, background: '#fff', color: '#374151', border: '1px solid #d1d5db' }}>
+      <div className={formStyles.actionsContainer}>
+        <button type="button" onClick={onCancel} className={`${formStyles.button} ${formStyles.buttonSecondary}`}>
           Hủy
         </button>
         
-        <button type="submit" disabled={saving} style={{ ...buttonStyle, background: saving ? '#9ca3af' : '#2563eb', color: '#fff' }}>
+        <button type="submit" disabled={saving} className={`${formStyles.button} ${formStyles.buttonPrimary}`}>
           {saving ? 'Đang lưu...' : 'Lưu'}
         </button>
       </div>

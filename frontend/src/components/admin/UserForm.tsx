@@ -66,7 +66,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     setLockoutEnabled(deriveLocked(user))
   }, [user])
   const [saving, setSaving] = useState(false)
-  const [errors, setErrors] = useState<{ userName?: string, password?: string }>({})
+  const [errors, setErrors] = useState<{ userName?: string, email?: string, password?: string }>({})
 
   const validatePassword = (password: string): string | undefined => {
     if (!password) {
@@ -79,15 +79,33 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     return undefined;
   };
 
-  const validateOnBlur = (field: 'userName' | 'password', value: string) => {
+  const validateEmail = (email: string): string | undefined => {
+    if (!email.trim()) {
+      return "Email không được để trống.";
+    }
+    // Basic email regex
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!regex.test(email)) {
+      return "Email không hợp lệ.";
+    }
+    return undefined;
+  };
+
+  const validateOnBlur = (field: 'userName' | 'email' | 'password', value: string) => {
     if (field === 'userName' && !value.trim()) {
       setErrors(prev => ({ ...prev, userName: 'Tên đăng nhập không được để trống.' }));
     }
-    if (field === 'password') {
-      const passwordError = validatePassword(value);
-      // Chỉ cập nhật lỗi nếu có, không xóa lỗi của trường khác
-      if (passwordError) setErrors(prev => ({ ...prev, password: passwordError }));
+    if (field === 'email') {
+      const emailError = validateEmail(value);
+      if (emailError) setErrors(prev => ({ ...prev, email: emailError }));
+      else setErrors(prev => ({ ...prev, email: undefined })); // Clear error if valid
     }
+    // Password validation is only relevant if the field is present (not for new user creation anymore)
+    // if (field === 'password' && !isEditMode) { // This condition ensures it's not called for new user creation
+    //   const passwordError = validatePassword(value);
+    //   if (passwordError) setErrors(prev => ({ ...prev, password: passwordError }));
+    //   else setErrors(prev => ({ ...prev, password: undefined }));
+    // }
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -96,8 +114,9 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     if (!isEditMode) {
       const newErrors: typeof errors = {};
       if (!userName.trim()) newErrors.userName = "Tên đăng nhập không được để trống.";
-      const passwordError = validatePassword(password);
-      if (passwordError) newErrors.password = passwordError;
+      const emailError = validateEmail(email);
+      if (emailError) newErrors.email = emailError;
+      // Password is no longer required for new user creation from this form
       
       setErrors(newErrors);
       if (Object.keys(newErrors).length > 0) {
@@ -117,21 +136,23 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
   console.debug('[UserForm] update payload', user.id, payload)
   const resp = await userAdminService.update(user.id, payload)
   console.debug('[UserForm] update response', resp)
-      } else {
-        // Khi tạo mới, chỉ cần username và password
-  const payload: CreateUserRequest = { userName, password, role }
-  await userAdminService.create(payload)
+      } else { // When creating new user
+        // Assuming CreateUserRequest type is updated to accept email and not password directly
+        const payload: CreateUserRequest = { userName, email, role } // Changed payload
+        await userAdminService.create(payload)
       }
       onSaved?.()
     } catch (error: any) {
+      // Xử lý lỗi từ server
       console.error('Lỗi khi lưu người dùng:', error);
       const serverErrors = error?.response?.data?.errors;
       if (serverErrors) {
-        const newErrors: { userName?: string; password?: string } = {};
+        const newErrors: { userName?: string; email?: string; password?: string } = {};
         // Backend có thể trả về lỗi với key là 'UserName' hoặc 'userName'
         if (serverErrors.UserName || serverErrors.userName) newErrors.userName = (serverErrors.UserName || serverErrors.userName)[0];
         if (serverErrors.Password || serverErrors.password) newErrors.password = (serverErrors.Password || serverErrors.password)[0];
-        setErrors(newErrors);
+        if (serverErrors.Email || serverErrors.email) newErrors.email = (serverErrors.Email || serverErrors.email)[0]; // Handle email server error
+        setErrors(newErrors); // Update errors state with server errors
         showToast('Vui lòng kiểm tra lại thông tin đã nhập.', 'error');
       } else {
         // Xử lý các lỗi chung khác
@@ -227,16 +248,16 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
               {errors.userName && <div style={errorTextStyle}>{errors.userName}</div>}
             </div>
             <div>
-              <label style={labelStyle}>Mật khẩu</label>
+              <label style={labelStyle}>Email</label> {/* Changed from Password to Email */}
               <input 
-                type="password" 
-                value={password} 
-                onChange={e => { setPassword(e.target.value); if (errors.password) setErrors(prev => ({ ...prev, password: undefined })); }} 
+                type="email" // Set type to email for better UX and validation
+                value={email} 
+                onChange={e => { setEmail(e.target.value); if (errors.email) setErrors(prev => ({ ...prev, email: undefined })); }} 
                 required 
-                onBlur={e => validateOnBlur('password', e.target.value)}
-                style={{...inputStyle, borderColor: errors.password ? '#ef4444' : '#d1d5db'}} 
+                onBlur={e => validateOnBlur('email', e.target.value)} // Validate email on blur
+                style={{...inputStyle, borderColor: errors.email ? '#ef4444' : '#d1d5db'}} 
               />
-              {errors.password && <div style={errorTextStyle}>{errors.password}</div>}
+              {errors.email && <div style={errorTextStyle}>{errors.email}</div>}
             </div>
           </>
         )}
@@ -268,12 +289,15 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
             </div>
             <div>
               <label style={labelStyle}>Giới tính</label>
-              <select value={genderCode} onChange={e => setGenderCode(e.target.value)} style={inputStyle} disabled>
-                <option value="">-- Chọn giới tính --</option>
-                <option value="MALE">Nam</option>
-                <option value="FEMALE">Nữ</option>
-                <option value="OTHER">Khác</option>
-              </select>
+              <input
+                value={
+                  genderCode === 'MALE' ? 'Nam' :
+                  genderCode === 'FEMALE' ? 'Nữ' :
+                  genderCode === 'OTHER' ? 'Khác' : ''
+                }
+                disabled
+                style={{...inputStyle, background: '#f3f4f6'}}
+              />
             </div>
             <div>
               <label style={labelStyle}>Trạng thái tài khoản</label>

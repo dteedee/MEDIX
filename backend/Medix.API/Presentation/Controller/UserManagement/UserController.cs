@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.Community;
+using Medix.API.Exceptions;
 using Medix.API.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -146,21 +147,24 @@ namespace Medix.API.Presentation.Controller.UserManagement
         [ProducesResponseType(400)]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserDTO request)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             try
             {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
-
                 var userDto = await _userService.CreateUserAsync(request);
                 return CreatedAtAction(nameof(GetById), new { id = userDto.Id }, userDto);
+            }
+            catch (MedixException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "An error occurred while creating the user", error = ex.Message });
             }
         }
+
 
         [HttpPut("{id}")]
         //[Authorize(Roles = "Admin")]

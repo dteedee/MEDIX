@@ -104,26 +104,29 @@ builder.Services.AddSwaggerGen(c =>
 
 // ================= APPLICATION SERVICES =================
 // AutoMapper is already configured in ServiceConfiguration.cs
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IPatientRepository, PatientRepository>();
-builder.Services.AddScoped<ICmspageRepository, CmspageRepository>();
-builder.Services.AddScoped<ICmspageService, CmspageService>();
-builder.Services.AddScoped<IHealthArticleRepository, HealthArticleRepository>();
-builder.Services.AddScoped<IHealthArticleService, HealthArticleService>();
-builder.Services.AddScoped<IContentCategoryRepository, ContentCategoryRepository>();
-builder.Services.AddScoped<IContentCategoryService, ContentCategoryService>();
-builder.Services.AddScoped<ISiteBannerRepository,SiteBannerRepository>();
-builder.Services.AddScoped<ISiteBannerService, SiteBannerService>();
-builder.Services.AddScoped<IDtoValidatorService, DtoValidatorService>();
-builder.Services.AddScoped<CloudinaryService>();
+//builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+//builder.Services.AddScoped<IAuthService, AuthService>();
+//builder.Services.AddScoped<IJwtService, JwtService>();
+//builder.Services.AddScoped<IEmailService, EmailService>();
+//builder.Services.AddScoped<IUserRepository, UserRepository>();
+//builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+//builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
+//builder.Services.AddScoped<IUserService, UserService>();
+//builder.Services.AddScoped<IPatientRepository, PatientRepository>();
+//builder.Services.AddScoped<ICmspageRepository, CmspageRepository>();
+//builder.Services.AddScoped<ICmspageService, CmspageService>();
+//builder.Services.AddScoped<IHealthArticleRepository, HealthArticleRepository>();
+//builder.Services.AddScoped<IHealthArticleService, HealthArticleService>();
+//builder.Services.AddScoped<IContentCategoryRepository, ContentCategoryRepository>();
+//builder.Services.AddScoped<IContentCategoryService, ContentCategoryService>();
+//builder.Services.AddScoped<ISiteBannerRepository,SiteBannerRepository>();
+//builder.Services.AddScoped<ISiteBannerService, SiteBannerService>();
+//builder.Services.AddScoped<IDtoValidatorService, DtoValidatorService>();
+//builder.Services.AddScoped<CloudinaryService>();
 
 
+builder.Services.ConfigureServices();
 
 // ================= BUILD APP =================
 var app = builder.Build();

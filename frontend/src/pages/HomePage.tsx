@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import styles from '../styles/home.module.css'
 import { HomeMetadata } from '../types/home.types';
 import HomeService from '../services/homeService';
+import { useLanguage } from '../contexts/LanguageContext';
 
 function HomePage() {
     const navigate = useNavigate();
+    const { t } = useLanguage();
 
     //get home page details
     const [homeMetadata, setHomeMetadata] = useState<HomeMetadata>();
@@ -44,58 +46,126 @@ function HomePage() {
         }
     };
 
+    const [showButton, setShowButton] = useState(false);
 
+    useEffect(() => {
+      const handleScroll = () => {
+        setShowButton(window.scrollY > 300);
+      };
+      window.addEventListener('scroll', handleScroll);
+      return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+    
     return (
         <div>
-            <nav>
-                <ul className={styles["nav-menu"]} style={{ justifyContent: 'center' }}>
-                    <li><a href="#">Trang chủ</a></li>
-                    <li><a>|</a></li>
-                    <li><a href="#">AI chẩn đoán</a></li>
-                    <li><a>|</a></li>
-                    <li><a href="#">Chuyên khoa</a></li>
-                    <li><a>|</a></li>
-                    <li><a href="#">Bác sĩ</a></li>
-                    <li><a>|</a></li>
-                    <li><a href="#">Bài viết sức khỏe</a></li>
-                    <li><a>|</a></li>
-                    <li><a href="#">Về chúng tôi</a></li>
+            <nav className={styles["navbar"]}>
+                <ul className={styles["nav-menu"]}>
+                    <li>
+                        <a
+                            onClick={() => navigate('/')}
+                            className={`${styles["nav-link"]} ${location.pathname === '/' ? styles["active"] : ''}`}
+                        >
+                            {t('nav.home')}
+                        </a>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <a
+                            onClick={() => navigate('/ai-chat')}
+                            className={`${styles["nav-link"]} ${location.pathname === '/ai-chat' ? styles["active"] : ''}`}
+                        >
+                            {t('nav.ai-diagnosis')}
+                        </a>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <a
+                            onClick={() => navigate('/specialties')}
+                            className={`${styles["nav-link"]} ${location.pathname === '/specialties' ? styles["active"] : ''}`}
+                        >
+                            {t('nav.specialties')}
+                        </a>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <a
+                            onClick={() => navigate('/doctors')}
+                            className={`${styles["nav-link"]} ${location.pathname === '/doctors' ? styles["active"] : ''}`}
+                        >
+                            {t('nav.doctors')}
+                        </a>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <a
+                            onClick={() => navigate('/articles')}
+                            className={`${styles["nav-link"]} ${location.pathname === '/articles' ? styles["active"] : ''}`}
+                        >
+                            {t('nav.health-articles')}
+                        </a>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <a
+                            onClick={() => navigate('/about')}
+                            className={`${styles["nav-link"]} ${location.pathname === '/about' ? styles["active"] : ''}`}
+                        >
+                            {t('nav.about')}
+                        </a>
+                    </li>
                 </ul>
             </nav>
+
             {/* Hero Section */}
             <section className={styles["hero"]}>
+                {/* Floating Elements */}
+                <div className={styles["floating-elements"]}>
+                    <div className={styles["floating-card"]} style={{ top: '15%', left: '5%' }}>
+                    <div className={styles["floating-icon"]}>🏥</div>
+                    <div className={styles["floating-text"]}>{t('hero.healthcare')}</div>
+                    </div>
+                    <div className={styles["floating-card"]} style={{ top: '25%', right: '8%' }}>
+                    <div className={styles["floating-icon"]}>👨‍⚕️</div>
+                    <div className={styles["floating-text"]}>{t('hero.doctor')}</div>
+                    </div>
+                    <div className={styles["floating-card"]} style={{ bottom: '20%', left: '8%' }}>
+                    <div className={styles["floating-icon"]}>🤖</div>
+                    <div className={styles["floating-text"]}>{t('hero.ai')}</div>
+                    </div>
+                    <div className={styles["floating-card"]} style={{ bottom: '25%', right: '5%' }}>
+                    <div className={styles["floating-icon"]}>📱</div>
+                    <div className={styles["floating-text"]}>{t('hero.booking')}</div>
+                    </div>
+                </div>
                 <div className={styles["hero-content"]}>
                     <div className={styles["hero-text"]}>
-                        <h1>CHĂM SÓC SỨC KHỎE TOÀN DIỆN<br />TIÊU CHUẨN QUỐC TẾ</h1>
-                        <p>Đội ngũ giáo sư, bác sĩ đầu ngành – Công nghệ<br />AI tiên tiến – Dịch vụ chăm sóc cá nhân hóa</p>
+                        <h1>{t('hero.title')}<br />{t('hero.subtitle')}</h1>
+                        <p>{t('hero.description')}</p>
                         <div className={styles["features-box"]}>
                             <div className={styles["feature-item"]}>
-                                <div>
-                                    <strong>AI chẩn đoán</strong><br />
-                                    <small>Tư vấn và giải đáp các vấn đề của bạn</small>
-                                </div>
+                                <div className={styles["icon"]}>🤖</div>
+                                <strong>{t('hero.ai-diagnosis')}</strong>
+                                <small>{t('hero.ai-diagnosis.desc')}</small>
                             </div>
                             <div className={styles["feature-item"]}>
-                                <div>
-                                    <strong>Đặt lịch hẹn</strong><br />
-                                    <small>Đặt lịch hẹn nhanh chóng, tiện lợi</small>
-                                </div>
+                                <div className={styles["icon"]}>📅</div>
+                                <strong>{t('hero.appointment')}</strong>
+                                <small>{t('hero.appointment.desc')}</small>
                             </div>
                             <div className={styles["feature-item"]}>
-                                <div>
-                                    <strong>Tìm bác sĩ</strong><br />
-                                    <small>Tìm chuyên gia nhanh chóng</small>
-                                </div>
+                                <div className={styles["icon"]}>👨‍⚕️</div>
+                                <strong>{t('hero.find-doctor')}</strong>
+                                <small>{t('hero.find-doctor.desc')}</small>
                             </div>
                         </div>
                     </div>
-                    <div id="carouselBanner" className="carousel slide" data-bs-ride="carousel">
+                    <div id="carouselBanner" className="carousel slide" data-bs-ride="carousel" data-bs-interval="5000">
                         <div className="carousel-inner">
                             {homeMetadata?.bannerUrls.map((bannerUrl, index) => (
                                 <div className={`carousel-item${index === 0 ? ' active' : ''}`} key={index}>
                                     <img
                                         src={bannerUrl}
-                                        className={`d-block w-100 ${styles['carousel-img']}`}
+                                        className="d-block w-100"
                                         alt={`Banner ${index + 1}`}
                                     />
                                 </div>
@@ -109,12 +179,25 @@ function HomePage() {
                             <span className="carousel-control-next-icon" aria-hidden="true" />
                             <span className="visually-hidden">Next</span>
                         </button>
+                        <div className="carousel-indicators">
+                            {homeMetadata?.bannerUrls.map((_, index) => (
+                                <button
+                                    key={index}
+                                    type="button"
+                                    data-bs-target="#carouselBanner"
+                                    data-bs-slide-to={index}
+                                    className={index === 0 ? 'active' : ''}
+                                    aria-current={index === 0 ? 'true' : 'false'}
+                                    aria-label={`Slide ${index + 1}`}
+                                />
+                            ))}
+                        </div>
                     </div>
                 </div>
             </section>
             {/* Why Choose Section */}
             <section className={styles["why-choose"]}>
-                <h2>TẠI SAO NÊN CHỌN MEDIX</h2>
+                <h2>{t('why-choose.title')}</h2>
                 <div className={styles["why-content"]}>
                     <div className={styles["doctor-image"]}>
                         <img src="/images/why-choose-doctor.png" alt="Doctor" />
@@ -122,33 +205,23 @@ function HomePage() {
                     <div className={styles["benefits"]}>
                         <div className={styles["benefit-item"]}>
                             <img src="/images/why-choose-1.png" className={styles["icon"]} />
-                            <h3>Chuyên gia hàng đầu</h3>
-                            <p>MEDIX quy tụ đội ngũ chuyên gia, bác sĩ, dược sĩ và điều dưỡng có trình độ chuyên môn cao, tay
-                                nghề giỏi, tận tâm và chuyên nghiệp. Luôn đặt người bệnh làm trung tâm, Medix cam kết đem đến
-                                dịch vụ chăm sóc sức khỏe tốt cho khách hàng.</p>
+                            <h3>{t('why-choose.expert.title')}</h3>
+                            <p>{t('why-choose.expert.desc')}</p>
                         </div>
                         <div className={styles["benefit-item"]}>
                             <img src="/images/why-choose-2.png" className={styles["icon"]} />
-                            <h3>Chất lượng quốc tế</h3>
-                            <p>Hệ thống Y tế MEDIX được quản lý và vận hành dưới sự giám sát của những nhà quản lý y tế giàu
-                                kinh nghiệm, cùng với sự hỗ trợ của phương tiện kỹ thuật hiện đại, nhằm đảm bảo cung cấp dịch vụ
-                                chăm sóc sức khỏe toàn diện và hiệu quả.</p>
+                            <h3>{t('why-choose.quality.title')}</h3>
+                            <p>{t('why-choose.quality.desc')}</p>
                         </div>
                         <div className={styles["benefit-item"]}>
                             <img src="/images/why-choose-3.png" className={styles["icon"]} />
-                            <h3>Nghiên cứu &amp; Đổi mới</h3>
-                            <p>MEDIX liên tục thúc đẩy y học hàn lâm dựa trên nghiên cứu có phương pháp và sự phát triển y tế
-                                được chia sẻ từ quan hệ đối tác toàn cầu với các hệ thống chăm sóc sức khỏe hàng đầu thế giới
-                                nhằm cung cấp các phương pháp điều trị mang tính cách mạng và sáng tạo cho tiêu chuẩn chăm sóc
-                                bệnh nhân tốt nhất.</p>
+                            <h3>{t('why-choose.research.title')}</h3>
+                            <p>{t('why-choose.research.desc')}</p>
                         </div>
                         <div className={styles["benefit-item"]}>
                             <img src="/images/why-choose-1.png" className={styles["icon"]} />
-                            <h3>Công nghệ tiên tiến</h3>
-                            <p>MEDIX cung cấp cơ sở vật chất hạng nhất và dịch vụ 5 sao bằng cách sử dụng các công nghệ tiên
-                                tiến được quản lý bởi các bác sĩ lâm sàng lành nghề để đảm bảo dịch vụ chăm sóc sức khỏe toàn
-                                diện và hiệu quả cao
-                            </p>
+                            <h3>{t('why-choose.technology.title')}</h3>
+                            <p>{t('why-choose.technology.desc')}</p>
                         </div>
                     </div>
                 </div>
@@ -156,7 +229,7 @@ function HomePage() {
             {/* AI Section */}
             <section className={styles["ai-section"]}>
                 <div className={styles["ai-content"]}>
-                    <div className={styles["ai-badge"]}>CÔNG NGHỆ AI</div>
+                    <div className={styles["ai-badge"]}>{t('ai.badge')}</div>
                     <div className={styles["ai-features"]}>
                         <div className={styles["ai-robot"]}>
                             <div className={styles["robot-circle"]}>
@@ -167,16 +240,12 @@ function HomePage() {
                             </div>
                         </div>
                         <div className={styles["ai-text"]}>
-                            <p>Hệ thống AI của chúng tôi có khả năng phân tích triệu chứng, đưa ra các tư vấn y tế ban đầu, hỗ
-                                trợ đặt lịch khám và theo dõi sức khỏe liên tục. Công nghệ AI giúp tối ưu hóa quy trình chăm sóc
-                                sức khỏe, tiết kiệm thời gian và nâng cao chất lượng dịch vụ.</p>
+                            <p>{t('ai.description')}</p>
                         </div>
                     </div>
                     <div className={styles["ai-features"]}>
                         <div className={styles["ai-text"]}>
-                            <p>Hệ thống AI của chúng tôi có khả năng phân tích triệu chứng, đưa ra các tư vấn y tế ban đầu, hỗ
-                                trợ đặt lịch khám và theo dõi sức khỏe liên tục. Công nghệ AI giúp tối ưu hóa quy trình chăm sóc
-                                sức khỏe, tiết kiệm thời gian và nâng cao chất lượng dịch vụ.</p>
+                            <p>{t('ai.description')}</p>
                         </div>
                         <div className={styles["ai-robot"]}>
                             <div className={styles["robot-circle"]}>
@@ -185,8 +254,7 @@ function HomePage() {
                                 </div>
                             </div>
                             <div style={{ marginTop: '15px' }}>
-                                <span><i> Tỉ lệ chuẩn xác của công cụ chẩn đoán AI MEDIX – được ghi nhận tính đến tháng 11 năm
-                                    2025</i></span>
+                                <span><i>{t('ai.accuracy')}</i></span>
                             </div>
                         </div>
                     </div>
@@ -194,31 +262,39 @@ function HomePage() {
             </section>
             {/* Steps Section */}
             <section className={styles["steps"]}>
-                <h2>HƯỚNG DẪN SỬ DỤNG: 3 BƯỚC ĐƠN GIẢN</h2>
-                <div className={styles["steps-container"]}>
-                    <div className={styles["step"]}>
-                        <div className={styles["step-circle"]}>01</div>
-                        <div className={styles["step-icon"]}>⏰</div>
-                        <h3>Tra cứu triệu chứng với AI</h3>
-                        <p>Bạn chỉ cần nhập các triệu chứng đang gặp phải — hệ thống AI sẽ phân tích và đưa ra gợi ý ban đầu về tình trạng sức khỏe, giúp bạn hiểu rõ hơn trước khi gặp bác sĩ.</p>
-                    </div>
-                    <div className={styles["step"]}>
-                        <div className={styles["step-circle"]}>02</div>
-                        <div className={styles["step-icon"]}>⭐</div>
-                        <h3>Đăng ký tài khoản cá nhân</h3>
-                        <p>Việc tạo tài khoản giúp bạn lưu trữ lịch sử khám bệnh, thông tin cá nhân và dễ dàng quản lý các cuộc hẹn trong tương lai. Quá trình đăng ký nhanh chóng, bảo mật và hoàn toàn miễn phí.</p>
-                    </div>
-                    <div className={styles["step"]}>
-                        <div className={styles["step-circle"]}>03</div>
-                        <div className={styles["step-icon"]}>💡</div>
-                        <h3>Đặt lịch hẹn với bác sĩ chuyên khoa</h3>
-                        <p>Sau khi có thông tin ban đầu, bạn có thể chọn bác sĩ phù hợp và đặt lịch khám trực tuyến ngay trên hệ thống. Lịch hẹn được xác nhận nhanh chóng, giúp bạn tiết kiệm thời gian và chủ động chăm sóc sức khỏe.</p>
-                    </div>
+            <h2>{t('steps.title')}</h2>
+            <div className={styles["steps-container"]}>
+                <div className={styles["step"]}>
+                <div className={styles["step-circle"]}>01</div>
+                <div className={styles["step-icon"]}>
+                    <i className="bi bi-robot"></i>
                 </div>
+                <h3>{t('steps.step1.title')}</h3>
+                <p>{t('steps.step1.desc')}</p>
+                </div>
+
+                <div className={styles["step"]}>
+                <div className={styles["step-circle"]}>02</div>
+                <div className={styles["step-icon"]}>
+                    <i className="bi bi-person-vcard"></i>
+                </div>
+                <h3>{t('steps.step2.title')}</h3>
+                <p>{t('steps.step2.desc')}</p>
+                </div>
+
+                <div className={styles["step"]}>
+                <div className={styles["step-circle"]}>03</div>
+                <div className={styles["step-icon"]}>
+                    <i className="bi bi-calendar-heart"></i>
+                </div>
+                <h3>{t('steps.step3.title')}</h3>
+                <p>{t('steps.step3.desc')}</p>
+                </div>
+            </div>
             </section>
             {/* Doctors Section */}
             <section className={styles["doctors"]}>
-                <h2>ĐỘI NGŨ BÁC SĨ CỦA CHÚNG TÔI</h2>
+                <h2>{t('doctors.title')}</h2>
                 <div className={styles["doctor-carousel-container"]}>
                     <button onClick={handlePrev} disabled={currentIndex === 0} className={styles["doctor-nav-button"]}>←</button>
 
@@ -229,8 +305,8 @@ function HomePage() {
                                     <img className={styles['doctor-photo']} src={doctor.avatarUrl}></img>
                                 </div>
                                 <h3>{doctor.fullName}</h3>
-                                <p className={styles["specialty"]}>Bác sĩ - {doctor.specializationName}</p>
-                                <p className={styles["specialty"]}>{doctor.yearsOfExperience} năm kinh nghiệm</p>
+                                <p className={styles["specialty"]}>{t('doctors.specialty')} - {doctor.specializationName}</p>
+                                <p className={styles["specialty"]}>{doctor.yearsOfExperience} {t('common.years-experience')}</p>
                                 <div className={styles["rating"]}>
                                     {'★'.repeat(Math.round(doctor.averageRating)) + '☆'.repeat(5 - Math.round(doctor.averageRating))}
                                 </div>
@@ -251,13 +327,13 @@ function HomePage() {
                         className={styles["btn-view-all"]}
                         onClick={() => navigate('/doctors')}
                     >
-                        XEM TẤT CẢ
+                        {t('doctors.view-all')}
                     </button>
                 </div>
             </section >
             {/* Knowledge Section */}
             < section className={styles["knowledge"]} >
-                <h2>KIẾN THỨC SỨC KHỎE HỮU ÍCH</h2>
+                <h2>{t('knowledge.title')}</h2>
                 <div className={styles["knowledge-grid"]}>
                     {homeMetadata?.articles.map((article, index) => (
                         <div key={`article-${article.title}-${index}`} className={styles["knowledge-card"]}>
@@ -274,15 +350,20 @@ function HomePage() {
                 </div>
             </section >
 
-            
-
             <div className={styles["ai-bubble"]}>
                 <img src="/images/medix-logo-mirrored.jpg" alt="Chat" />
                 <div className={styles['status-indicator-sm']}></div>
             </div>
 
-        </div >
-    )
+            <button
+                className={`${styles["back-to-top"]} ${!showButton ? styles["hidden"] : ""}`}
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                aria-label="Back to top"
+            >
+                <i className="fas fa-arrow-up"></i>
+            </button>
+    </div>
+  );
 }
 
 export default HomePage;

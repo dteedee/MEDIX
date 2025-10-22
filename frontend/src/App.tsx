@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import { MainLayout } from './components/layout/MainLayout';
 import { UserRole } from './types/common.types';
@@ -52,9 +53,10 @@ import ErrorPageWrapper from './pages/ErrorPageWrapper';
 
 export function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <Router>
+    <LanguageProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <Router>
           <div className="min-h-screen w-full flex flex-col">
             <Header />
 
@@ -173,8 +175,9 @@ export function App() {
             <Footer />
           </div>
         </Router>
-      </ToastProvider>
-    </AuthProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 

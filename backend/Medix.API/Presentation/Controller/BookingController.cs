@@ -1,6 +1,8 @@
 ﻿using Medix.API.Business.Interfaces.Classification;
+using Medix.API.Models.DTOs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using static Medix.API.Models.DTOs.DoctorBookinDto;
 
 namespace Medix.API.Presentation.Controller
 {
@@ -9,6 +11,7 @@ namespace Medix.API.Presentation.Controller
     public class BookingController : ControllerBase
     {
         private readonly IDoctorService _doctorService;
+    
 
         public BookingController(IDoctorService doctorService)
         {
@@ -16,12 +19,15 @@ namespace Medix.API.Presentation.Controller
 
         }
 
-        [HttpGet("getDoctor")]
-        public IActionResult getDoctor()
+        [HttpGet("by-tier")]
+        // Cập nhật kiểu trả về
+        [ProducesResponseType(typeof(IEnumerable<ServiceTierWithPaginatedDoctorsDto>), 200)]
+        public async Task<IActionResult> GetDoctorsGroupedByTier(
+        [FromQuery] PaginationParams paginationParams) // <-- Nhận tham số
         {
-
-            return Ok();
-
+            // Truyền tham số vào service
+            var result = await _doctorService.GetGroupedDoctorsAsync(paginationParams);
+            return Ok(result);
         }
     }
 }

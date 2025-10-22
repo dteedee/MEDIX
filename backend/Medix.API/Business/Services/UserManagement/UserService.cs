@@ -37,6 +37,7 @@ namespace Medix.API.Business.Services.UserManagement
                 FullName = registerDto.FullName,
                 DateOfBirth = registerDto.DateOfBirth,
                 GenderCode = registerDto.GenderCode,
+                Status = 0,
                 IdentificationNumber = registerDto.IdentificationNumber,
                 Role = "Patient", // Gán vai trò mặc định là Patient
                 IsProfileCompleted = false,
@@ -44,11 +45,11 @@ namespace Medix.API.Business.Services.UserManagement
                 Address = registerDto.address,
                 UpdatedAt = DateTime.UtcNow,
                 EmailConfirmed = true,
-                PhoneNumberConfirmed = false,
+                PhoneNumberConfirmed = false,   
                 LockoutEnabled = false,
                 AccessFailedCount = 0
             };
-
+           
             var savedUser = await _userRepository.CreateAsync(user);
             // TODO: Fix when UserRoleRepository.CreateAsync is implemented
         

@@ -73,3 +73,36 @@ export interface DoctorProfileDetails{
   yearsOfExperience: number;
   consultationFee: string;
 }
+
+// Types for Service Tier API with Pagination
+export interface DoctorInTier {
+  userId: string;
+  doctorId: string;
+  doctorName: string;
+  specialization: string;
+  education: string;
+  experience: string;
+  price: number;
+  bio: string;
+  rating: number;
+}
+
+export interface PaginationParams {
+  pageNumber: number;
+  pageSize: number;
+}
+
+export interface PaginatedListDto<T> {
+  items: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+export interface ServiceTierWithPaginatedDoctorsDto {
+  id: string;
+  name: string;
+  description: string;
+  doctors: PaginatedListDto<DoctorInTier>;
+}

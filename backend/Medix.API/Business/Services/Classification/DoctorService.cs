@@ -1,9 +1,11 @@
+﻿using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess;
-using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
-using Medix.API.Models.Entities;
+using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.Doctor;
+using Medix.API.Models.Entities;
+using static Medix.API.Models.DTOs.DoctorBookinDto;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -14,27 +16,20 @@ namespace Medix.API.Business.Services.Classification
         private readonly IReviewRepository _reviewRepository;
         private readonly MedixContext _context;
 
+        private readonly IServiceTierRepository _serviceTierRepo;
+        private readonly IServiceTierRepository _serviceTierRepository;
+
         public DoctorService(IDoctorRepository doctorRepository, IUserRepository userRepository,
-            MedixContext context, IReviewRepository reviewRepository)
+            MedixContext context, IReviewRepository reviewRepository, IServiceTierRepository serviceTierRepository, IServiceTierRepository serviceTierRepo)
         {
             _doctorRepository = doctorRepository;
             _userRepository = userRepository;
             _context = context;
             _reviewRepository = reviewRepository;
+            _serviceTierRepository = serviceTierRepository;
+            _serviceTierRepo = serviceTierRepo;
         }
 
-        //public Task<List<DoctorBookingDto>> GetDoctorsByServiceTierIdAsync(string tierID)
-        //{
-        //    var doctors = _doctorRepository.GetDoctorsWithTierIDAsync(tierID);
-        //    //var doctorDtos = doctors.Result.Select(d => new DoctorBookingDto
-        //    //{
-        //    //    DoctorId = d.Id,
-        //    //    FullName = d.FullName,
-        //    //    Specialty = d.Specialty,
-        //    //    ServiceTierId = d.ServiceTierId
-        //    //}).ToList();
-        //    return null;
-        //}
 
         public async Task<bool> RegisterDoctorAsync(User user, Doctor doctor, UserRole role)
         {
@@ -142,6 +137,57 @@ namespace Medix.API.Business.Services.Classification
 
             var updatedDoctor = await _doctorRepository.UpdateDoctorAsync(existingDoctor);
             return updatedDoctor != null;
+        }
+
+        public async Task<IEnumerable<ServiceTierWithPaginatedDoctorsDto>> GetGroupedDoctorsAsync(PaginationParams paginationParams)
+        {
+            // 1. Lấy danh sách các phân khúc (Tiers)
+            var tiers = await _serviceTierRepo.GetActiveTiersAsync();
+
+            var resultList = new List<ServiceTierWithPaginatedDoctorsDto>();
+
+            // 2. Lặp qua từng phân khúc
+            foreach (var tier in tiers)
+            {
+                // 3. Với mỗi phân khúc, gọi repo để lấy bác sĩ đã phân trang
+                var (doctors, totalCount) = await _doctorRepository.GetPaginatedDoctorsByTierIdAsync(
+                    tier.Id,
+                    paginationParams.PageNumber,
+                    paginationParams.PageSize);
+
+                // 4. Map Doctor entities sang DoctorDto
+                var doctorDtos = doctors.Select(doc => new DoctorBookinDto
+                {
+                  userId= doc.User.Id,
+                    DoctorId= doc.Id,
+                    DoctorName = doc.User.FullName,
+                    specialization = doc.Specialization.Name,
+                    Education = doc.Education,
+                    Experience = doc.YearsOfExperience.ToString(),
+                    price = doc.ConsultationFee,
+                    bio = doc.Bio,
+                    rating = doc.AverageRating
+
+                }).ToList();
+
+                // 5. Tạo DTO phân trang cho bác sĩ
+                var paginatedDoctors = new PaginatedListDto<DoctorBookinDto>(
+                    doctorDtos,
+                    paginationParams.PageNumber,
+                    paginationParams.PageSize,
+                    totalCount);
+
+                // 6. Thêm vào kết quả cuối cùng
+                resultList.Add(new ServiceTierWithPaginatedDoctorsDto
+                {
+                    Id = tier.Id,
+                    Name = tier.Name,
+                    Description = tier.Description,
+                    Doctors = paginatedDoctors
+                });
+            }
+
+            return resultList;
         }
     }
 }

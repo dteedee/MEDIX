@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata } from "../types/doctor.types";
+import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, ServiceTierWithPaginatedDoctorsDto, PaginationParams } from "../types/doctor.types";
 
 class DoctorService {
     async getMetadata(): Promise<DoctorRegisterMetadata> {
@@ -50,6 +50,18 @@ class DoctorService {
 
     async updatePassword(payload: FormData): Promise<any>{
         await apiClient.put('doctor/profile/update-password', payload);
+    }
+
+    async getDoctorsGroupedByTier(paginationParams: PaginationParams): Promise<ServiceTierWithPaginatedDoctorsDto[]> {
+        try {
+            const response = await apiClient.get<ServiceTierWithPaginatedDoctorsDto[]>('/booking/by-tier', {
+                params: paginationParams
+            });
+            return response.data;
+        } catch (error: any) {
+            console.error('Get doctors grouped by tier error: ', error);
+            throw this.handleApiError(error);
+        }
     }
 
     private handleApiError(error: any): Error {

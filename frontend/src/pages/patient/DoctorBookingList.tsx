@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types/common.types';
+import doctorService from '../../services/doctorService';
+import { ServiceTierWithPaginatedDoctorsDto, DoctorInTier, PaginationParams } from '../../types/doctor.types';
 
 interface Doctor {
   id: string;
@@ -16,6 +18,26 @@ interface Doctor {
   bio: string; // Đặc điểm
   imageUrl?: string; // Ảnh đại diện
 }
+
+// Helper function to convert API data to Doctor interface
+const convertApiDoctorToDoctor = (apiDoctor: DoctorInTier, tierName: string): Doctor => {
+  // Ensure rating is a valid number
+  const rating = typeof apiDoctor.rating === 'number' ? apiDoctor.rating : parseFloat(String(apiDoctor.rating)) || 0;
+  
+  return {
+    id: apiDoctor.doctorId,
+    fullName: apiDoctor.doctorName,
+    degree: apiDoctor.education,
+    specialty: apiDoctor.specialization,
+    experience: `${apiDoctor.experience}+ năm kinh nghiệm`,
+    rating: Math.max(0, Math.min(5, rating)), // Ensure rating is between 0 and 5
+    reviewCount: 0, // API doesn't provide review count
+    price: apiDoctor.price,
+    tier: tierName as 'Basic' | 'Professional' | 'Premium' | 'VIP',
+    bio: apiDoctor.bio,
+    imageUrl: undefined
+  };
+};
 
 interface DoctorTier {
   id: string;
@@ -32,176 +54,137 @@ interface DoctorTier {
 const DoctorBookingList: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const [currentBasicPage, setCurrentBasicPage] = useState(1);
-  const [currentProfessionalPage, setCurrentProfessionalPage] = useState(1);
-  const [currentPremiumPage, setCurrentPremiumPage] = useState(1);
-  const [currentVipPage, setCurrentVipPage] = useState(1);
-  const doctorsPerPage = 4;
 
-  // Mock data theo 4 tier từ database
-  const [basicDoctors] = useState<Doctor[]>([
-    {
-      id: '1',
-      fullName: 'Phạm Quỳnh Anh',
-      degree: 'Bác sĩ',
-      specialty: 'Nội khoa',
-      experience: '2+ năm kinh nghiệm',
-      rating: 4.5,
-      reviewCount: 45,
-      price: 50000,
-      tier: 'Basic',
-      bio: 'Tư vấn sức khỏe tổng quát, khám bệnh cơ bản'
-    },
-    {
-      id: '2',
-      fullName: 'Trần Minh Hải',
-      degree: 'Bác sĩ',
-      specialty: 'Da liễu',
-      experience: '3+ năm kinh nghiệm',
-      rating: 4.6,
-      reviewCount: 38,
-      price: 50000,
-      tier: 'Basic',
-      bio: 'Điều trị bệnh da liễu thường gặp'
+  // API data states
+  const [tiersData, setTiersData] = useState<ServiceTierWithPaginatedDoctorsDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Metadata states for specializations only
+  const [specializations, setSpecializations] = useState<{id: string, name: string}[]>([]);
+  const [metadataLoading, setMetadataLoading] = useState(true);
+  
+  
+  // Pagination states for each tier
+  const [basicPagination, setBasicPagination] = useState({ pageNumber: 1, pageSize: 3 });
+  const [professionalPagination, setProfessionalPagination] = useState({ pageNumber: 1, pageSize: 3 });
+  const [premiumPagination, setPremiumPagination] = useState({ pageNumber: 1, pageSize: 3 });
+  const [vipPagination, setVipPagination] = useState({ pageNumber: 1, pageSize: 3 });
+
+  // Load metadata (specializations only)
+  const loadMetadata = async () => {
+    try {
+      setMetadataLoading(true);
+      const metadata = await doctorService.getMetadata();
+      setSpecializations(metadata.specializations);
+    } catch (err: any) {
+      console.error('Error loading metadata:', err);
+    } finally {
+      setMetadataLoading(false);
     }
-  ]);
+  };
 
-  const [professionalDoctors] = useState<Doctor[]>([
-    {
-      id: '3',
-      fullName: 'Lê Thu Hằng',
-      degree: 'Thạc sĩ, Bác sĩ',
-      specialty: 'Nhi khoa',
-      experience: '6+ năm kinh nghiệm',
-      rating: 4.8,
-      reviewCount: 156,
-      price: 75000,
-      tier: 'Professional',
-      bio: 'Khám bệnh nhi, tư vấn dinh dưỡng trẻ em'
-    },
-    {
-      id: '4',
-      fullName: 'Nguyễn Văn Đức',
-      degree: 'Thạc sĩ, Bác sĩ',
-      specialty: 'Tai mũi họng',
-      experience: '7+ năm kinh nghiệm',
-      rating: 4.7,
-      reviewCount: 203,
-      price: 75000,
-      tier: 'Professional',
-      bio: 'Điều trị bệnh tai mũi họng, phẫu thuật nhỏ'
+
+  // Load data from API for each tier
+  const loadTierData = async (tierName: string, paginationParams: PaginationParams) => {
+    try {
+      const data = await doctorService.getDoctorsGroupedByTier(paginationParams);
+      const tierData = data.find(t => t.name === tierName);
+      return tierData;
+    } catch (err: any) {
+      console.error(`Error loading ${tierName} data:`, err);
+      throw err;
     }
-  ]);
+  };
 
-  const [premiumDoctors] = useState<Doctor[]>([
-    {
-      id: '5',
-      fullName: 'Võ Minh Anh',
-      degree: 'Tiến sĩ, Phó Giáo sư',
-      specialty: 'Tim mạch',
-      experience: '15+ năm kinh nghiệm',
-      rating: 4.9,
-      reviewCount: 324,
-      price: 100000,
-      tier: 'Premium',
-      bio: 'Chuyên gia tim mạch hàng đầu, phẫu thuật tim'
-    },
-    {
-      id: '6',
-      fullName: 'Phạm Hoàng Lan',
-      degree: 'Tiến sĩ, Phó Giáo sư',
-      specialty: 'Ung bướu',
-      experience: '18+ năm kinh nghiệm',
-      rating: 5.0,
-      reviewCount: 456,
-      price: 100000,
-      tier: 'Premium',
-      bio: 'Chuyên gia ung thư, điều trị đa mô thức'
-    }
-  ]);
+  // Load metadata on component mount
+  useEffect(() => {
+    loadMetadata();
+  }, []);
 
-  const [vipDoctors] = useState<Doctor[]>([
-    {
-      id: '7',
-      fullName: 'Lê Quang Nhật',
-      degree: 'Tiến sĩ, Giáo sư',
-      specialty: 'Thần kinh',
-      experience: '20+ năm kinh nghiệm',
-      rating: 5.0,
-      reviewCount: 289,
-      price: 150000,
-      tier: 'VIP',
-      bio: 'Chuyên gia thần kinh hàng đầu, phẫu thuật não'
-    },
-    {
-      id: '8',
-      fullName: 'Nguyễn Mai Lan',
-      degree: 'Tiến sĩ, Giáo sư',
-      specialty: 'Ngoại khoa',
-      experience: '25+ năm kinh nghiệm',
-      rating: 5.0,
-      reviewCount: 512,
-      price: 150000,
-      tier: 'VIP',
-      bio: 'Chuyên gia ngoại khoa quốc tế, phẫu thuật phức tạp'
-    }
-  ]);
+  // Load all tiers data
+  useEffect(() => {
+    const loadAllTiersData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Load data for each tier with their respective pagination
+        const [basicData, professionalData, premiumData, vipData] = await Promise.all([
+          loadTierData('Basic', basicPagination),
+          loadTierData('Professional', professionalPagination),
+          loadTierData('Premium', premiumPagination),
+          loadTierData('VIP', vipPagination)
+        ]);
 
-  // Filter options
-  const tierOptions = [
-    { value: 'all', label: 'Tất cả gói khám' },
-    { value: 'Basic', label: 'Gói Basic' },
-    { value: 'Professional', label: 'Gói Professional' },
-    { value: 'Premium', label: 'Gói Premium' },
-    { value: 'VIP', label: 'Gói VIP' }
-  ];
+        const allTiersData = [basicData, professionalData, premiumData, vipData].filter((tier): tier is ServiceTierWithPaginatedDoctorsDto => tier !== undefined);
+        setTiersData(allTiersData);
+      } catch (err: any) {
+        console.error('Error loading tiers data:', err);
+        setError(err.message || 'Erro ao carregar dados dos médicos');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const degreeOptions = [
-    { value: 'all', label: 'Tất cả học vị' },
-    { value: 'Bác sĩ', label: 'Bác sĩ' },
-    { value: 'Thạc sĩ, Bác sĩ', label: 'Thạc sĩ, Bác sĩ' },
-    { value: 'Tiến sĩ, Phó Giáo sư', label: 'Tiến sĩ, Phó Giáo sư' },
-    { value: 'Tiến sĩ, Giáo sư', label: 'Tiến sĩ, Giáo sư' }
-  ];
+    loadAllTiersData();
+  }, [basicPagination, professionalPagination, premiumPagination, vipPagination]);
 
+  // Convert API data to doctors by tier
+  const getDoctorsByTier = (tierName: string): Doctor[] => {
+    const tier = tiersData.find(t => t.name === tierName);
+    if (!tier || !tier.doctors || !tier.doctors.items) return [];
+    return tier.doctors.items.map(doctor => convertApiDoctorToDoctor(doctor, tierName));
+  };
+
+  // Get pagination info for each tier
+  const getTierPaginationInfo = (tierName: string) => {
+    const tier = tiersData.find(t => t.name === tierName);
+    if (!tier || !tier.doctors) return { totalPages: 0, totalCount: 0 };
+    return {
+      totalPages: tier.doctors.totalPages,
+      totalCount: tier.doctors.totalCount
+    };
+  };
+
+  const basicDoctors = getDoctorsByTier('Basic');
+  const professionalDoctors = getDoctorsByTier('Professional');
+  const premiumDoctors = getDoctorsByTier('Premium');
+  const vipDoctors = getDoctorsByTier('VIP');
+
+  // Generate specialty options from API data
   const specialtyOptions = [
     { value: 'all', label: 'Tất cả chuyên khoa' },
-    { value: 'Nội khoa', label: 'Nội khoa' },
-    { value: 'Da liễu', label: 'Da liễu' },
-    { value: 'Nhi khoa', label: 'Nhi khoa' },
-    { value: 'Tai mũi họng', label: 'Tai mũi họng' },
-    { value: 'Tim mạch', label: 'Tim mạch' },
-    { value: 'Ung bướu', label: 'Ung bướu' },
-    { value: 'Thần kinh', label: 'Thần kinh' },
-    { value: 'Ngoại khoa', label: 'Ngoại khoa' }
+    ...specializations.map(spec => ({
+      value: spec.name,
+      label: spec.name
+    }))
   ];
 
-  const priceRangeOptions = [
-    { value: 'all', label: 'Tất cả mức giá' },
-    { value: '0-60000', label: 'Dưới 60.000đ' },
-    { value: '60000-80000', label: '60.000đ - 80.000đ' },
-    { value: '80000-120000', label: '80.000đ - 120.000đ' },
-    { value: '120000+', label: 'Trên 120.000đ' }
-  ];
-
-  const sortOptions = [
-    { value: 'name', label: 'Tên A-Z' },
-    { value: 'rating', label: 'Đánh giá cao nhất' },
-    { value: 'price-low', label: 'Giá thấp đến cao' },
-    { value: 'price-high', label: 'Giá cao đến thấp' },
-    { value: 'experience', label: 'Kinh nghiệm' }
-  ];
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN').format(price) + ' đ/phút';
   };
 
+  const formatRating = (rating: number) => {
+    // Ensure rating is a valid number and format to 1 decimal place
+    const numRating = typeof rating === 'number' ? rating : parseFloat(String(rating)) || 0;
+    return Math.max(0, Math.min(5, numRating)).toFixed(1);
+  };
+
   const renderStars = (rating: number) => {
+    // Ensure rating is between 0 and 5
+    const normalizedRating = Math.max(0, Math.min(5, rating));
+    const fullStars = Math.floor(normalizedRating);
+    const hasHalfStar = normalizedRating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-        {[...Array(5)].map((_, index) => (
+        {/* Full stars */}
+        {[...Array(fullStars)].map((_, index) => (
           <span
-            key={index}
+            key={`full-${index}`}
             style={{
               color: '#FCD34D',
               fontSize: '16px'
@@ -210,12 +193,53 @@ const DoctorBookingList: React.FC = () => {
             ⭐
           </span>
         ))}
+        
+        {/* Half star for ratings >= 0.5 */}
+        {hasHalfStar && (
+          <span
+            style={{
+              color: '#FCD34D',
+              fontSize: '16px',
+              position: 'relative',
+              display: 'inline-block'
+            }}
+          >
+            <span style={{ 
+              position: 'absolute',
+              overflow: 'hidden',
+              width: '50%',
+              color: '#FCD34D'
+            }}>
+              ⭐
+            </span>
+            <span style={{ 
+              color: '#E5E7EB'
+            }}>
+              ⭐
+            </span>
+          </span>
+        )}
+        
+        {/* Empty stars */}
+        {[...Array(emptyStars)].map((_, index) => (
+          <span
+            key={`empty-${index}`}
+            style={{
+              color: '#E5E7EB',
+              fontSize: '16px'
+            }}
+          >
+            ⭐
+          </span>
+        ))}
+        
         <span style={{
           fontSize: '14px',
           color: '#6B7280',
-          marginLeft: '8px'
+          marginLeft: '8px',
+          fontWeight: '500'
         }}>
-          ({rating}/5)
+          ({formatRating(normalizedRating)}/5)
         </span>
       </div>
     );
@@ -237,15 +261,23 @@ const DoctorBookingList: React.FC = () => {
     navigate(`/app/patient/booking/${doctorId}`);
   };
 
-  // Pagination logic
-  const getPageDoctors = (doctors: Doctor[], currentPage: number) => {
-    const startIndex = (currentPage - 1) * doctorsPerPage;
-    return doctors.slice(startIndex, startIndex + doctorsPerPage);
+  // Pagination handlers for each tier
+  const handleBasicPageChange = (page: number) => {
+    setBasicPagination(prev => ({ ...prev, pageNumber: page }));
   };
 
-  const getTotalPages = (doctors: Doctor[]) => {
-    return Math.ceil(doctors.length / doctorsPerPage);
+  const handleProfessionalPageChange = (page: number) => {
+    setProfessionalPagination(prev => ({ ...prev, pageNumber: page }));
   };
+
+  const handlePremiumPageChange = (page: number) => {
+    setPremiumPagination(prev => ({ ...prev, pageNumber: page }));
+  };
+
+  const handleVipPageChange = (page: number) => {
+    setVipPagination(prev => ({ ...prev, pageNumber: page }));
+  };
+
 
   const renderDoctorCard = (doctor: Doctor) => {
     const getTierColor = (tier: string) => {
@@ -288,7 +320,7 @@ const DoctorBookingList: React.FC = () => {
           e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
         }}
       >
-        {/* Phân hạng */}
+        {/* Education */}
         <div style={{
           backgroundColor: tierStyle.badge,
           color: 'white',
@@ -300,7 +332,7 @@ const DoctorBookingList: React.FC = () => {
           marginBottom: '16px',
           letterSpacing: '0.5px'
         }}>
-          {tierStyle.text}
+          {doctor.degree}
         </div>
 
         {/* Avatar */}
@@ -328,18 +360,10 @@ const DoctorBookingList: React.FC = () => {
             fontSize: '18px',
             fontWeight: '700',
             color: '#1F2937',
-            marginBottom: '4px'
+            marginBottom: '8px'
           }}>
             {doctor.fullName}
           </h3>
-          <p style={{
-            fontSize: '14px',
-            color: '#6B7280',
-            fontWeight: '500',
-            marginBottom: '8px'
-          }}>
-            {doctor.degree}
-          </p>
           <p style={{
             fontSize: '14px',
             color: '#374151',
@@ -474,7 +498,91 @@ const DoctorBookingList: React.FC = () => {
     );
   };
 
+  // Loading state
+  if (loading) {
   return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%)',
+        padding: '20px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        <div style={{
+          textAlign: 'center',
+          padding: '40px',
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid #E5E7EB',
+            borderTop: '4px solid #2563EB',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 20px'
+          }}></div>
+          <p style={{ color: '#6B7280', fontSize: '16px' }}>Carregando dados dos médicos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%)',
+        padding: '20px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        <div style={{
+          textAlign: 'center',
+          padding: '40px',
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          maxWidth: '500px'
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
+          <h2 style={{ color: '#DC2626', marginBottom: '16px' }}>Erro ao carregar dados</h2>
+          <p style={{ color: '#6B7280', marginBottom: '24px' }}>{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              backgroundColor: '#2563EB',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 24px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%)',
@@ -644,16 +752,17 @@ const DoctorBookingList: React.FC = () => {
                 backgroundColor: 'white',
                 cursor: 'pointer'
               }}
+              disabled={metadataLoading}
             >
-              <option value="all">Tất cả chuyên khoa</option>
-              <option value="Nội khoa">Nội khoa</option>
-              <option value="Da liễu">Da liễu</option>
-              <option value="Nhi khoa">Nhi khoa</option>
-              <option value="Tai mũi họng">Tai mũi họng</option>
-              <option value="Tim mạch">Tim mạch</option>
-              <option value="Ung bướu">Ung bướu</option>
-              <option value="Thần kinh">Thần kinh</option>
-              <option value="Ngoại khoa">Ngoại khoa</option>
+              {metadataLoading ? (
+                <option value="all">Carregando especializações...</option>
+              ) : (
+                specialtyOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -751,8 +860,6 @@ const DoctorBookingList: React.FC = () => {
         </div>
       </div>
 
-
-
       {/* Phần 1: BASIC */}
       <div style={{
         maxWidth: '1400px',
@@ -795,15 +902,15 @@ const DoctorBookingList: React.FC = () => {
           gap: '20px',
           padding: '0 20px'
         }}>
-          {getPageDoctors(basicDoctors, currentBasicPage).map((doctor) => 
+          {basicDoctors.map((doctor) => 
             renderDoctorCard(doctor)
           )}
         </div>
 
-        {renderPagination(
-          getTotalPages(basicDoctors), 
-          currentBasicPage, 
-          setCurrentBasicPage
+        {basicDoctors.length > 0 && renderPagination(
+          getTierPaginationInfo('Basic').totalPages, 
+          basicPagination.pageNumber, 
+          handleBasicPageChange
         )}
       </div>
 
@@ -849,15 +956,15 @@ const DoctorBookingList: React.FC = () => {
           gap: '20px',
           padding: '0 20px'
         }}>
-          {getPageDoctors(professionalDoctors, currentProfessionalPage).map((doctor) => 
+          {professionalDoctors.map((doctor) => 
             renderDoctorCard(doctor)
           )}
         </div>
 
-        {renderPagination(
-          getTotalPages(professionalDoctors), 
-          currentProfessionalPage, 
-          setCurrentProfessionalPage
+        {professionalDoctors.length > 0 && renderPagination(
+          getTierPaginationInfo('Professional').totalPages, 
+          professionalPagination.pageNumber, 
+          handleProfessionalPageChange
         )}
       </div>
 
@@ -903,15 +1010,15 @@ const DoctorBookingList: React.FC = () => {
           gap: '20px',
           padding: '0 20px'
         }}>
-          {getPageDoctors(premiumDoctors, currentPremiumPage).map((doctor) => 
+          {premiumDoctors.map((doctor) => 
             renderDoctorCard(doctor)
           )}
         </div>
 
-        {renderPagination(
-          getTotalPages(premiumDoctors), 
-          currentPremiumPage, 
-          setCurrentPremiumPage
+        {premiumDoctors.length > 0 && renderPagination(
+          getTierPaginationInfo('Premium').totalPages, 
+          premiumPagination.pageNumber, 
+          handlePremiumPageChange
         )}
       </div>
 
@@ -956,18 +1063,19 @@ const DoctorBookingList: React.FC = () => {
           gap: '20px',
           padding: '0 20px'
         }}>
-          {getPageDoctors(vipDoctors, currentVipPage).map((doctor) => 
+          {vipDoctors.map((doctor) => 
             renderDoctorCard(doctor)
           )}
         </div>
 
-        {renderPagination(
-          getTotalPages(vipDoctors), 
-          currentVipPage, 
-          setCurrentVipPage
+        {vipDoctors.length > 0 && renderPagination(
+          getTierPaginationInfo('VIP').totalPages, 
+          vipPagination.pageNumber, 
+          handleVipPageChange
         )}
       </div>
     </div>
+    </>
   );
 };
 

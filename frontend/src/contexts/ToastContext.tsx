@@ -1,111 +1,49 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import ReactDOM from 'react-dom';
+import './Toast.css';
 
-// Định nghĩa kiểu dữ liệu cho một toast
+type ToastType = 'success' | 'error' | 'info';
+
 interface ToastMessage {
-  id: number;
-  message: string;
-  type: 'success' | 'error' | 'info' | 'warning';
+    id: number;
+    message: string;
+    type: ToastType;
 }
 
-// Định nghĩa kiểu cho context
 interface ToastContextType {
-  showToast: (message: string, type?: ToastMessage['type']) => void;
+    showToast: (message: string, type?: ToastType) => void;
 }
 
-// Tạo Context với giá trị mặc định
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
-// Hook tùy chỉnh để sử dụng toast context dễ dàng hơn
 export const useToast = () => {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
-  }
-  return context;
-};
-
-// ToastProvider component
-export const ToastProvider = ({ children }: { children: ReactNode }) => {
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-
-  const showToast = useCallback((message: string, type: ToastMessage['type'] = 'info') => {
-    const id = Date.now();
-    const newToast: ToastMessage = { id, message, type };
-    setToasts(prevToasts => [...prevToasts, newToast]);
-
-    // Tự động xóa toast sau 5 giây
-    setTimeout(() => {
-      setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
-    }, 5000);
-  }, []);
-
-  const removeToast = (id: number) => {
-    setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
-  };
-
-  // --- CSS Styles cho Toast ---
-  const toastContainerStyle: React.CSSProperties = {
-    position: 'fixed',
-    top: '20px',
-    right: '20px',
-    zIndex: 9999,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px',
-  };
-
-  const getToastStyle = (type: ToastMessage['type']): React.CSSProperties => {
-    const baseStyle: React.CSSProperties = {
-      padding: '12px 16px',
-      borderRadius: '8px',
-      color: '#fff',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      minWidth: '300px',
-      maxWidth: '400px',
-    };
-
-    switch (type) {
-      case 'success':
-        return { ...baseStyle, backgroundColor: '#28a745' }; // Xanh lá
-      case 'error':
-        return { ...baseStyle, backgroundColor: '#dc3545' }; // Đỏ
-      case 'warning':
-        return { ...baseStyle, backgroundColor: '#ffc107', color: '#212529' }; // Vàng
-      case 'info':
-      default:
-        return { ...baseStyle, backgroundColor: '#17a2b8' }; // Xanh dương
+    const context = useContext(ToastContext);
+    if (!context) {
+        throw new Error('useToast must be used within a ToastProvider');
     }
-  };
-
-  const closeButtonStyle: React.CSSProperties = {
-    background: 'transparent',
-    border: 'none',
-    color: 'inherit',
-    fontSize: '18px',
-    marginLeft: '15px',
-    cursor: 'pointer',
-    lineHeight: 1,
-  };
-
-  return (
-    <ToastContext.Provider value={{ showToast }}>
-      {children}
-      {/* Phần hiển thị các toast */}
-      <div style={toastContainerStyle}>
-        {toasts.map(toast => (
-          <div key={toast.id} style={getToastStyle(toast.type)}>
-            <span>{toast.message}</span>
-            <button onClick={() => removeToast(toast.id)} style={closeButtonStyle}>
-              &times;
-            </button>
-          </div>
-        ))}
-      </div>
-    </ToastContext.Provider>
-  );
+    return context;
 };
 
-export default ToastProvider;
+export const ToastProvider = ({ children }: { children: ReactNode }) => {
+    const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+    const showToast = useCallback((message: string, type: ToastType = 'success') => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, message, type }]);
+        setTimeout(() => {
+            setToasts(prev => prev.filter(toast => toast.id !== id));
+        }, 5000); // Tự động ẩn sau 5 giây
+    }, []);
+
+    return (
+        <ToastContext.Provider value={{ showToast }}>
+            {children}
+            {ReactDOM.createPortal(
+                <div className="toast-container">
+                    {toasts.map(toast => <div key={toast.id} className={`toast ${toast.type}`}>{toast.message}</div>)}
+                </div>,
+                document.body
+            )}
+        </ToastContext.Provider>
+    );
+};

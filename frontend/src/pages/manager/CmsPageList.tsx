@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { cmspageService } from '../../services/cmspageService'
 import { CmsPageDTO } from '../../types/cmspage.types'
 import CmsPageDetails from '../../components/admin/CmsPageDetails'
@@ -37,49 +37,25 @@ const SortIcon = ({ direction }: { direction?: 'asc' | 'desc' }) => (
 );
 
 export default function CmsPageList() {
-  const SESSION_STORAGE_KEY = 'cmsPageListState';
-
-  // Helper to get initial state from sessionStorage or defaults
-  const getInitialState = () => {
-    try {
-      const savedState = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (savedState) {
-        return JSON.parse(savedState);
-      }
-    } catch (error) {
-      console.error("Failed to parse saved state:", error);
-    }
-    // Default state
-    return {
-      page: 1,
-      pageSize: 5,
-      search: '',
-      status: 'all',
-      from: '',
-      to: '',
-      sortBy: 'createdAt',
-      sortDir: 'desc',
-    };
-  };
-
   const [items, setItems] = useState<CmsPageDTO[]>([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(5)
   const [viewing, setViewing] = useState<CmsPageDTO | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
 
-  // Initialize all states from sessionStorage or defaults
-  const [page, setPage] = useState(getInitialState().page);
-  const [pageSize, setPageSize] = useState(getInitialState().pageSize);
-  const [search, setSearch] = useState(getInitialState().search);
-  const [appliedSearch, setAppliedSearch] = useState(getInitialState().search);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>(getInitialState().status);
-  const [dateFrom, setDateFrom] = useState(getInitialState().from);
-  const [dateTo, setDateTo] = useState(getInitialState().to);
-  const [sortBy, setSortBy] = useState(getInitialState().sortBy);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(getInitialState().sortDir);
-
+  // Search and suggestion state
+  const [search, setSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [suggestions, setSuggestions] = useState<CmsPageDTO[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const searchContainerRef = React.useRef<HTMLDivElement>(null)
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState('createdAt')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
   const { showToast } = useToast()
   const navigate = useNavigate()
@@ -94,6 +70,11 @@ export default function CmsPageList() {
     load()
   }, [])
 
+  // Scroll to top on page or page size change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [page, pageSize]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
@@ -106,25 +87,10 @@ export default function CmsPageList() {
     };
   }, []);
 
-  // Save state to sessionStorage whenever it changes
-  useEffect(() => {
-    const stateToSave = {
-      page,
-      pageSize,
-      search: appliedSearch,
-      status: statusFilter,
-      from: dateFrom,
-      to: dateTo,
-      sortBy,
-      sortDir: sortDirection,
-    };
-    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(stateToSave));
-  }, [page, pageSize, appliedSearch, statusFilter, dateFrom, dateTo, sortBy, sortDirection]);
-
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setAppliedSearch(value); // Áp dụng tìm kiếm ngay khi người dùng nhập
-    if (page !== 1) setPage(1); // Reset về trang đầu tiên khi có tìm kiếm mới
+    setPage(1); // Reset về trang đầu tiên khi có tìm kiếm mới
     if (value.trim()) {
       const filteredSuggestions = items.filter(item =>
         item.pageTitle.toLowerCase().includes(value.toLowerCase()) ||
@@ -218,8 +184,8 @@ export default function CmsPageList() {
     }
   }
 
-  const onCreate = () => navigate('/app/manager/cms-pages/new')
-  const onEdit = (p: CmsPageDTO) => navigate(`/app/manager/cms-pages/edit/${p.id}`)
+  const onCreate = () => navigate('/manager/cms-pages/new')
+  const onEdit = (p: CmsPageDTO) => navigate(`/manager/cms-pages/edit/${p.id}`)
   
   const handleStatusChange = async (pageToUpdate: CmsPageDTO, newStatus: boolean) => {
     // Prevent update if status is already the same
@@ -357,7 +323,7 @@ export default function CmsPageList() {
           </div>
           <div>
             <button onClick={() => { 
-              setSearch(''); setAppliedSearch(''); setStatusFilter('all'); setDateFrom(''); setDateTo(''); if (page !== 1) setPage(1); 
+              setSearch(''); setAppliedSearch(''); setStatusFilter('all'); setDateFrom(''); setDateTo(''); setPage(1); 
             }} style={{ padding: '10px 20px', background: '#fff', color: '#374151', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
               Xóa
             </button>
@@ -438,10 +404,10 @@ export default function CmsPageList() {
             </select>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setPage((p: number) => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
               Trang trước
             </button>
-            <button onClick={() => setPage((p: number) => p + 1)} disabled={page >= totalPages} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page >= totalPages ? 0.6 : 1 }}>
+            <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page >= totalPages ? 0.6 : 1 }}>
               Trang sau
             </button>
           </div>

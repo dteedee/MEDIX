@@ -36,53 +36,30 @@ const SortIcon = ({ direction }: { direction?: 'asc' | 'desc' }) => (
   </svg>
 );
 export default function ArticleList() {
-  const SESSION_STORAGE_KEY = 'articleListState';
-
-  const getInitialState = () => {
-    try {
-      const savedState = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (savedState) {
-        return JSON.parse(savedState);
-      }
-    } catch (error) {
-      console.error("Failed to parse saved state for articles:", error);
-    }
-    // Default state
-    return {
-      page: 1,
-      pageSize: 5,
-      search: '',
-      status: 'all',
-      category: [],
-      from: '',
-      to: '',
-      sortBy: 'publishedAt',
-      sortDir: 'desc',
-    };
-  };
-
   const [items, setItems] = useState<ArticleDTO[]>([])
+  const [total, setTotal] = useState<number | undefined>(undefined)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(5)
   const [viewing, setViewing] = useState<ArticleDTO | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [allCategories, setAllCategories] = useState<CategoryDTO[]>([])
 
-  const [page, setPage] = useState(getInitialState().page);
-  const [pageSize, setPageSize] = useState(getInitialState().pageSize);
-  const [search, setSearch] = useState(getInitialState().search);
-  const [appliedSearch, setAppliedSearch] = useState(getInitialState().search);
-  const [statusFilter, setStatusFilter] = useState(getInitialState().status);
-  const [categoryFilterIds, setCategoryFilterIds] = useState<string[]>(getInitialState().category);
-  const [dateFrom, setDateFrom] = useState(getInitialState().from);
-  const [dateTo, setDateTo] = useState(getInitialState().to);
-  const [sortBy, setSortBy] = useState(getInitialState().sortBy);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(getInitialState().sortDir);
-
+  // filter/search UI
+  const [search, setSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('') // State for the actual filtering
+  const [statusFilter, setStatusFilter] = useState('all') // 'all', 'PUBLISHED', 'DRAFT'
+  const [categoryFilterIds, setCategoryFilterIds] = useState<string[]>([])
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [suggestions, setSuggestions] = useState<ArticleDTO[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
   const categoryFilterRef = React.useRef<HTMLDivElement>(null)
   const searchContainerRef = React.useRef<HTMLDivElement>(null)
 
+  // sorting
+  const [sortBy, setSortBy] = useState('publishedAt')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const { showToast } = useToast()
 
   const load = async () => {
@@ -97,7 +74,7 @@ export default function ArticleList() {
       setAllCategories(res.items);
       load();
     });
-  }, []); // Load categories and all articles once on mount
+  }, []) // Load categories and all articles once on mount
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -118,24 +95,13 @@ export default function ArticleList() {
     };
   }, []);
 
-  // Save state to sessionStorage whenever it changes
+  // Scroll to top on page or page size change
   useEffect(() => {
-    const stateToSave = {
-      page,
-      pageSize,
-      search: appliedSearch,
-      status: statusFilter,
-      category: categoryFilterIds,
-      from: dateFrom,
-      to: dateTo,
-      sortBy,
-      sortDir: sortDirection,
-    };
-    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(stateToSave));
-  }, [page, pageSize, appliedSearch, statusFilter, categoryFilterIds, dateFrom, dateTo, sortBy, sortDirection]);
+    window.scrollTo(0, 0);
+  }, [page, pageSize]);
 
-  const onCreate = () => navigate('/app/manager/articles/new')
-  const onEdit = (a: ArticleDTO) => navigate(`/app/manager/articles/edit/${a.id}`)
+  const onCreate = () => navigate('/manager/articles/new')
+  const onEdit = (a: ArticleDTO) => navigate(`/manager/articles/edit/${a.id}`)
   const handleArchive = async (article: ArticleDTO) => {
   if (article.statusCode === 'ARCHIVE') {
     showToast('Bài viết đã được lưu trữ.', 'info');
@@ -145,44 +111,40 @@ export default function ArticleList() {
   if (!confirm(`Bạn có chắc muốn lưu trữ bài viết "${article.title}" không?`)) return;
 
   try {
-    // ✅ 1. Lấy lại full dữ liệu từ backend theo ID bằng phương thức 'get'
-    const fullArticle = await articleService.get(article.id);
-    console.log('>>> Full Article từ backend:', fullArticle);
-
-    let categoryIds =
-      (Array.isArray(fullArticle.categoryIds) && fullArticle.categoryIds.length > 0)
-        ? fullArticle.categoryIds
-        : (Array.isArray(fullArticle.categories) && fullArticle.categories.length > 0)
-          ? fullArticle.categories.map(c => c.id).filter(Boolean)
-          : [];
-    if (categoryIds.length === 0) {
-      categoryIds = ['4531ED5F-2DB8-4B56-A38C-3C320F555922'];
-    }
-
-
+    const categoryIds =
+      Array.isArray(article.categories)
+        ? article.categories
+            .map(c => c?.id)
+            .filter((id: string) => typeof id === 'string' && id.trim() !== '')
+        : Array.isArray((article as any).categoryIds)
+        ? (article as any).categoryIds.filter((id: string) => typeof id === 'string' && id.trim() !== '')
+        : [];
+const fixedCategoryIds = categoryIds.length > 0
+  ? categoryIds
+  : (article as any).categoryIds && (article as any).categoryIds.length > 0
+  ? (article as any).categoryIds
+  : ['4531ED5F-2DB8-4B56-A38C-3C320F555922'];
     const payload = {
-      title: fullArticle.title ?? 'Không có tiêu đề',
-      slug: fullArticle.slug ?? 'khong-co-slug',
-      summary: fullArticle.summary ?? '',
-      content: fullArticle.content ?? '*', 
-      displayType: fullArticle.displayType ?? 'default',
-      thumbnailUrl: fullArticle.thumbnailUrl ?? '',
-      coverImageUrl: fullArticle.coverImageUrl ?? '',
-      isHomepageVisible: fullArticle.isHomepageVisible ?? false,
-      displayOrder: fullArticle.displayOrder ?? 0,
-      metaTitle: fullArticle.metaTitle ?? '',
-      metaDescription: fullArticle.metaDescription ?? '',
+      title: article.title ?? 'Không có tiêu đề',
+      slug: article.slug ?? 'khong-co-slug',
+      summary: article.summary ?? '',
+      content: article.content ?? 'Nội dung tạm thời',
+      displayType: article.displayType ?? 'default',
+      thumbnailUrl: article.thumbnailUrl ?? '',
+      coverImageUrl: article.coverImageUrl ?? '',
+      isHomepageVisible: article.isHomepageVisible ?? false,
+      displayOrder: article.displayOrder ?? 0,
+      metaTitle: article.metaTitle ?? '',
+      metaDescription: article.metaDescription ?? '',
       authorId:
-        (fullArticle as any).authorId ??
+        (article as any).authorId ??
         '1A2C1A65-7B00-415F-8164-4FC3C1054203',
-      publishedAt: fullArticle.publishedAt ?? undefined,
-      categoryIds: categoryIds,
+      publishedAt: article.publishedAt ?? undefined, // ✅ fix kiểu dữ liệu
+      categoryIds: fixedCategoryIds,
       statusCode: 'ARCHIVE',
     };
 
     console.log('🧾 Payload gửi lên backend:', payload);
-
-    // ✅ 4. Gửi update
     await articleService.update(article.id, payload);
     showToast('Đã chuyển bài viết vào kho lưu trữ.');
     await load();
@@ -194,7 +156,6 @@ export default function ArticleList() {
     showToast('Lưu trữ bài viết thất bại.', 'error');
   }
 };
-
 
 
   const handleViewDetails = async (articleId: string) => {
@@ -223,11 +184,8 @@ export default function ArticleList() {
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
-    setAppliedSearch(value);
-
-    if (value.trim() && !appliedSearch.trim()) {
-      if (page !== 1) setPage(1);
-    }
+    setAppliedSearch(value); // Áp dụng tìm kiếm ngay khi người dùng nhập
+    setPage(1); // Reset về trang đầu tiên khi có tìm kiếm mới
 
     if (value.trim()) {
       // Suggestions should be based on the full, unfiltered list
@@ -247,7 +205,6 @@ export default function ArticleList() {
     setSuggestions([]);
     setShowSuggestions(false);
     setAppliedSearch(suggestion.title);
-    if (page !== 1) setPage(1);
   };
 
   const processedItems = useMemo(() => {
@@ -625,10 +582,10 @@ export default function ArticleList() {
             </select>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setPage((p: number) => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
               Trang trước
             </button>
-            <button onClick={() => setPage((p: number) => p + 1)} disabled={page >= totalPages} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page >= totalPages ? 0.6 : 1 }}>
+            <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page >= totalPages ? 0.6 : 1 }}>
               Trang sau
             </button>
           </div>

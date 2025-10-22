@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { UserDTO, CreateUserRequest, UpdateUserRequest } from '../../types/user.types'
-import { userAdminService } from '../../services/userService'
+import { userService } from '../../services/userService'
 import { useToast } from '../../contexts/ToastContext'
 
 interface Props {
@@ -22,10 +22,6 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
   const [identificationNumber, setIdentificationNumber] = useState<string>(user?.identificationNumber ?? '')
   const [genderCode, setGenderCode] = useState<string>(user?.genderCode ?? '')
   const [role, setRole] = useState(user?.role ?? 'PATIENT')
-  const [createdAt, setCreatedAt] = useState(user?.createdAt ?? '');
-  const [updatedAt, setUpdatedAt] = useState(user?.updatedAt ?? '');
-  const [emailConfirmed, setEmailConfirmed] = useState(user?.emailConfirmed ?? false);
-  const [accessFailedCount, setAccessFailedCount] = useState(user?.accessFailedCount ?? 0);
   const deriveLocked = (u?: UserDTO) => {
     if (!u) return false
     if (u.lockoutEnabled === true) return true
@@ -59,10 +55,6 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     setIdentificationNumber(user?.identificationNumber ?? '')
     setGenderCode(user?.genderCode ?? '')
     setRole(user?.role ?? 'PATIENT')
-    setCreatedAt(user?.createdAt ?? '');
-    setUpdatedAt(user?.updatedAt ?? '');
-    setEmailConfirmed(user?.emailConfirmed ?? false);
-    setAccessFailedCount(user?.accessFailedCount ?? 0);
     setLockoutEnabled(deriveLocked(user))
   }, [user])
   const [saving, setSaving] = useState(false)
@@ -111,31 +103,27 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
         // Khi chỉnh sửa, chỉ gửi những trường được phép thay đổi: role và lockoutEnabled
         const payload: UpdateUserRequest = {
           role,
-          lockoutEnabled: lockoutEnabled,
+          lockoutEnabled,
         }
   if (!lockoutEnabled) (payload as any).lockoutEnd = null
   console.debug('[UserForm] update payload', user.id, payload)
-  const resp = await userAdminService.update(user.id, payload)
+  const resp = await userService.update(user.id, payload)
   console.debug('[UserForm] update response', resp)
       } else {
         // Khi tạo mới, chỉ cần username và password
   const payload: CreateUserRequest = { userName, password, role }
-  await userAdminService.create(payload)
+  await userService.create(payload)
       }
       onSaved?.()
     } catch (error: any) {
       console.error('Lỗi khi lưu người dùng:', error);
-      const serverErrors = error?.response?.data?.errors;
-      if (serverErrors) {
-        const newErrors: { userName?: string; password?: string } = {};
-        // Backend có thể trả về lỗi với key là 'UserName' hoặc 'userName'
-        if (serverErrors.UserName || serverErrors.userName) newErrors.userName = (serverErrors.UserName || serverErrors.userName)[0];
-        if (serverErrors.Password || serverErrors.password) newErrors.password = (serverErrors.Password || serverErrors.password)[0];
-        setErrors(newErrors);
-        showToast('Vui lòng kiểm tra lại thông tin đã nhập.', 'error');
+      // Xử lý lỗi validation từ backend
+      if (error.userName || error.password) {
+        const backendErrors = { userName: error.userName, password: error.password }; // error.userName is now correctly formatted
+        setErrors(prev => ({ ...prev, ...backendErrors }));
       } else {
         // Xử lý các lỗi chung khác
-        const message = error?.response?.data?.message || error?.message || 'Tạo người dùng thất bại. Vui lòng thử lại.';
+        const message = error?.response?.data?.message || error?.message || 'Đã xảy ra lỗi không mong muốn.';
         showToast(message, 'error');
       }
     } finally {
@@ -148,8 +136,8 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
 
     if (confirm(`Bạn có chắc muốn gửi email đặt lại mật khẩu cho người dùng "${user.fullName || user.email}" không?`)) {
       try {
-        // Giả định service có hàm này, bạn cần thêm nó vào userAdminService.ts
-        await (userAdminService as any).sendResetPasswordEmail(user.id);
+        // Giả định service có hàm này, bạn cần thêm nó vào userService.ts
+        await (userService as any).sendResetPasswordEmail(user.id);
         showToast('Yêu cầu đặt lại mật khẩu đã được gửi thành công!', 'success');
       } catch (error) {
         console.error('Failed to send password reset email:', error);
@@ -197,10 +185,6 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     fontWeight: 600,
     cursor: 'pointer',
     fontSize: 13,
-    // Đảm bảo select không bị cắt chữ
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
     appearance: 'none',
   })
 
@@ -237,6 +221,15 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                 style={{...inputStyle, borderColor: errors.password ? '#ef4444' : '#d1d5db'}} 
               />
               {errors.password && <div style={errorTextStyle}>{errors.password}</div>}
+            </div>
+            <div>
+              <label style={labelStyle}>Vai trò</label>
+              <select value={role} onChange={e => setRole(e.target.value)} required style={inputStyle}>
+                <option value="PATIENT">Bệnh nhân</option>
+                <option value="DOCTOR">Bác sĩ</option>
+                <option value="MANAGER">Quản lý</option>
+                <option value="ADMIN">Quản trị</option>
+              </select>
             </div>
           </>
         )}
@@ -278,45 +271,12 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
             <div>
               <label style={labelStyle}>Trạng thái tài khoản</label>
               <div style={{ display: 'flex', alignItems: 'center', height: '42px' }}>
-                <select value={lockoutEnabled ? '1' : '0'} onChange={e => setLockoutEnabled(e.target.value === '1')} style={{ ...inputStyle, width: 180, ...statusStyle(lockoutEnabled) }}>
-                  <option value="0">Hoạt động</option>
-                  <option value="1">Đang khóa</option>
+                <select value={lockoutEnabled ? 'locked' : 'active'} onChange={e => setLockoutEnabled(e.target.value === 'locked')} style={{ ...inputStyle, width: 180, ...statusStyle(lockoutEnabled) }}>
+                  <option value="active">Active</option>
+                  <option value="locked">Locked</option>
                 </select>
                 <span style={{ marginLeft: 12, color: '#6b7280' }}>{lockoutEnabled ? 'Tài khoản đang bị khóa' : 'Tài khoản hoạt động'}</span>
               </div>
-            </div>
-            <div>
-              <label style={labelStyle}>Vai trò</label>
-              <select value={role} onChange={e => setRole(e.target.value)} style={inputStyle}>
-                {/* <option value="ADMIN">Quản trị</option> */}
-                <option value="MANAGER">Quản lý</option>
-                <option value="DOCTOR">Bác sĩ</option>
-                <option value="PATIENT">Bệnh nhân</option>
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Email đã xác thực</label>
-              <input value={emailConfirmed ? 'Đã xác thực' : 'Chưa xác thực'} disabled style={{...inputStyle, background: '#f3f4f6'}} />
-            </div>
-            <div>
-              <label style={labelStyle}>Số lần đăng nhập sai</label>
-              <input type="number" value={accessFailedCount} disabled style={{...inputStyle, background: '#f3f4f6'}} />
-            </div>
-            <div>
-              <label style={labelStyle}>Ngày tạo tài khoản</label>
-              <input 
-                value={createdAt ? new Date(createdAt).toLocaleString('vi-VN') : ''} 
-                disabled 
-                style={{...inputStyle, background: '#f3f4f6'}} 
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Cập nhật lần cuối</label>
-              <input 
-                value={updatedAt ? new Date(updatedAt).toLocaleString('vi-VN') : ''} 
-                disabled 
-                style={{...inputStyle, background: '#f3f4f6'}} 
-              />
             </div>
           </>
         )}

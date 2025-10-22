@@ -4,7 +4,8 @@ using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.Doctor;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.Entities;
+using static Medix.API.Models.DTOs.DoctorBookinDto;
 
 namespace Medix.API.Business.Services.Classification
 {

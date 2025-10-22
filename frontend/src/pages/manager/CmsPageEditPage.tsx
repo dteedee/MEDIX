@@ -24,20 +24,13 @@ export default function CmsPageEditPage() {
 
   const handleSave = () => {
     showToast(id ? 'Cập nhật trang thành công!' : 'Tạo trang thành công!')
-    navigate(-1); // Quay lại trang trước đó trong lịch sử
+    navigate('/manager/cms-pages')
   }
-  const handleCancel = () => navigate(-1); // Quay lại trang trước đó trong lịch sử
+  const handleCancel = () => navigate('/manager/cms-pages')
 
   if (loading) return <div>Loading...</div>
 
-  const title = id ? 'Chỉnh sửa Trang (CMS)' : 'Tạo Trang (CMS) mới';
-
   return (
-    <div style={{ padding: 24, backgroundColor: '#f9fafb', minHeight: '100vh' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontSize: '1.875rem', fontWeight: 'bold', color: '#111827' }}>{title}</h1>
-      </div>
-      <CmsPageForm page={page} onSaved={handleSave} onCancel={handleCancel} />
-    </div>
+    <CmsPageForm page={page} onSaved={handleSave} onCancel={handleCancel} />
   )
 }

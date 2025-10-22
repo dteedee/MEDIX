@@ -24,9 +24,9 @@ export default function CategoryEditPage() {
 
   const handleSave = () => {
     showToast(id ? 'Cập nhật danh mục thành công!' : 'Tạo danh mục thành công!')
-    navigate(-1); // Quay lại trang trước đó trong lịch sử
+    navigate('/manager/categories')
   }
-  const handleCancel = () => navigate(-1); // Quay lại trang trước đó trong lịch sử
+  const handleCancel = () => navigate('/manager/categories')
 
   if (loading) return <div>Loading...</div>
 

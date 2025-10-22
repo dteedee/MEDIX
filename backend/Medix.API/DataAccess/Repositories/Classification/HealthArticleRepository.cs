@@ -176,59 +176,5 @@ namespace Medix.API.DataAccess.Repositories.Classification
         {
             return await _context.Users.AnyAsync(u => u.Id == userId);
         }
-        public async Task IncrementLikeCountAsync(Guid id)
-        {
-            var article = await _context.HealthArticles.FindAsync(id);
-            if (article != null)
-            {
-                article.LikeCount++;
-                await _context.SaveChangesAsync();
-            }
-        }
-
-        public async Task<bool> HasUserLikedAsync(Guid articleId, Guid userId)
-        {
-            return await _context.HealthArticleLikes.AnyAsync(l => l.ArticleId == articleId && l.UserId == userId);
-        }
-
-        public async Task AddLikeAsync(Guid articleId, Guid userId)
-        {
-            // Prevent duplicate likes at DB level via unique index, but check first to avoid exception
-            var existing = await _context.HealthArticleLikes.FirstOrDefaultAsync(l => l.ArticleId == articleId && l.UserId == userId);
-            if (existing != null)
-                return;
-
-            var like = new Models.Entities.HealthArticleLike
-            {
-                Id = Guid.NewGuid(),
-                ArticleId = articleId,
-                UserId = userId,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.HealthArticleLikes.Add(like);
-
-            // also increment article LikeCount
-            var article = await _context.HealthArticles.FindAsync(articleId);
-            if (article != null)
-                article.LikeCount++;
-
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task RemoveLikeAsync(Guid articleId, Guid userId)
-        {
-            var existing = await _context.HealthArticleLikes.FirstOrDefaultAsync(l => l.ArticleId == articleId && l.UserId == userId);
-            if (existing == null)
-                return;
-
-            _context.HealthArticleLikes.Remove(existing);
-
-            var article = await _context.HealthArticles.FindAsync(articleId);
-            if (article != null && article.LikeCount > 0)
-                article.LikeCount--;
-
-            await _context.SaveChangesAsync();
-        }
     }
 }

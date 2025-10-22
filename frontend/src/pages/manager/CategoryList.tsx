@@ -27,34 +27,15 @@ const DeleteIcon = () => (
   </svg>
 );
 export default function CategoryList() {
-  const SESSION_STORAGE_KEY = 'categoryListState';
-
-  const getInitialState = () => {
-    try {
-      const savedState = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (savedState) {
-        return JSON.parse(savedState);
-      }
-    } catch (error) {
-      console.error("Failed to parse saved state for categories:", error);
-    }
-    return {
-      page: 1,
-      pageSize: 5,
-      search: '',
-      status: 'all',
-    };
-  };
-
   const [items, setItems] = useState<CategoryDTO[]>([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(5)
   const [viewing, setViewing] = useState<CategoryDTO | null>(null)
 
-  const [page, setPage] = useState(getInitialState().page);
-  const [pageSize, setPageSize] = useState(getInitialState().pageSize);
-  const [search, setSearch] = useState(getInitialState().search);
-  const [appliedSearch, setAppliedSearch] = useState(getInitialState().search);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(getInitialState().status);
-
+  // Search and suggestion state
+  const [search, setSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [suggestions, setSuggestions] = useState<CategoryDTO[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const searchContainerRef = React.useRef<HTMLDivElement>(null)
@@ -72,6 +53,11 @@ export default function CategoryList() {
     load()
   }, [])
 
+  // Scroll to top on page or page size change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [page, pageSize]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
@@ -84,21 +70,10 @@ export default function CategoryList() {
     };
   }, []);
 
-  // Save state to sessionStorage when it changes
-  useEffect(() => {
-    const stateToSave = {
-      page,
-      pageSize,
-      search: appliedSearch,
-      status: statusFilter,
-    };
-    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(stateToSave));
-  }, [page, pageSize, appliedSearch, statusFilter]);
-
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setAppliedSearch(value); // Áp dụng tìm kiếm ngay khi người dùng nhập
-    if (page !== 1) setPage(1); // Reset về trang đầu tiên khi có tìm kiếm mới
+    setPage(1); // Reset về trang đầu tiên khi có tìm kiếm mới
 
     if (value.trim()) {
       const filteredSuggestions = items.filter(item =>
@@ -135,8 +110,8 @@ export default function CategoryList() {
     return filtered;
   }, [items, appliedSearch, statusFilter]);
 
-  const onCreate = () => navigate('/app/manager/categories/new')
-  const onEdit = (c: CategoryDTO) => navigate(`/app/manager/categories/edit/${c.id}`)
+  const onCreate = () => navigate('/manager/categories/new')
+  const onEdit = (c: CategoryDTO) => navigate(`/manager/categories/edit/${c.id}`)
   const handleStatusChange = async (categoryToUpdate: CategoryDTO, newStatus: boolean) => {
     if (categoryToUpdate.isActive === newStatus) return;
 
@@ -325,7 +300,7 @@ export default function CategoryList() {
           setSearch("");
           setAppliedSearch("");
           setStatusFilter("all");
-          if (page !== 1) setPage(1);
+          setPage(1);
         }}
         style={{
           padding: "10px 20px",
@@ -414,10 +389,10 @@ export default function CategoryList() {
             </select>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setPage((p: number) => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
               Trang trước
             </button>
-            <button onClick={() => setPage((p: number) => p + 1)} disabled={page >= totalPages} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page >= totalPages ? 0.6 : 1 }}>
+            <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page >= totalPages ? 0.6 : 1 }}>
               Trang sau
             </button>
           </div>

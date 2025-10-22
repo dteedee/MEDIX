@@ -23,8 +23,5 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<HealthArticlePublicDto> UpdateAsync(Guid id, HealthArticleUpdateDto updateDto);
 
         Task<bool> DeleteAsync(Guid id);
-        Task<HealthArticlePublicDto?> LikeAsync(Guid id, Guid userId);
-
-        Task<HealthArticlePublicDto?> UnlikeAsync(Guid id, Guid userId);
     }
 }

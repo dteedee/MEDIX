@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Mvc;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs.SiteBanner;
 using Medix.API.Exceptions;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Medix.API.Presentation.Controller.Classification
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Manager")]
+
     public class SiteBannersController : ControllerBase
     {
         private readonly ISiteBannerService _siteBannerService;

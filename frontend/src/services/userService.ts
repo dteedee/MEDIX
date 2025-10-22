@@ -29,7 +29,6 @@ export const userService = {
       return response.data;
     } catch (error: any) {
       console.error('Error fetching user info:', error);
-      
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -51,16 +50,12 @@ export const userService = {
         address: data.address || null,
         dob: data.dob || null
       };
-
       const response = await apiClient.put<UserBasicInfo>('/user/updateUserInfor', updateDto);
-      
       console.log('UpdateUserInfo - Request payload:', updateDto);
       console.log('UpdateUserInfo - API response:', response.data);
-      
       return response.data;
     } catch (error: any) {
       console.error('Error updating user info:', error);
-      
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -77,32 +72,15 @@ export const userService = {
     try {
       const formData = new FormData();
       formData.append('file', imageFile);
-
       console.log('Upload profile image:');
       console.log('- File name:', imageFile.name);
       console.log('- File type:', imageFile.type);
       console.log('- File size:', imageFile.size);
-
       const response = await apiClient.postMultipart<{ imageUrl: string }>('/user/uploadAvatar', formData);
-
       console.log('Upload successful:', response.data);
-      
       return response.data;
     } catch (error: any) {
       console.error('Error uploading profile image:', error);
-      console.error('Error response:', error.response);
-      console.error('Full error details:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        headers: error.response?.headers,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers
-        }
-      });
-      
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -138,20 +116,17 @@ export const userService = {
 };
 
 // --- Phần dành cho quản lý người dùng (Admin) ---
-const BASE = '/User'; // Base path for user-related actions (apiClient đã có /api)
-
+const BASE = '/User'; // Base path (apiClient đã có /api)
 export const userAdminService = {
   list: async (page = 1, pageSize = 10, search?: string): Promise<{ items: UserDTO[]; total?: number }> => {
     let response;
     const params: any = { page, pageSize };
-
     if (search && search.trim()) {
       params.keyword = search;
       response = await apiClient.get(`${BASE}/search`, { params });
     } else {
       response = await apiClient.get(BASE, { params });
     }
-
     const data = response.data;
     const items: UserDTO[] = data?.item2 ?? [];
     const total: number | undefined = data?.item1;

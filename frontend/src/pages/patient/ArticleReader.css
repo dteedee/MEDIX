@@ -1,12 +1,11 @@
 .article-reader-container {
-    max-width: 1100px;
     margin: 40px auto;
     padding: 0 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .reader-main-title {
-    font-size: 2.5rem;
+    font-size: 2.25rem;
     font-weight: 700;
     color: #111827;
     text-align: center;
@@ -14,12 +13,121 @@
 }
 
 .reader-main-subtitle {
-    font-size: 1.125rem;
+    font-size: 1rem;
     color: #6b7280;
-    max-width: 600px;
-    margin: 0 auto 48px auto;
+    max-width: 640px;
+    margin: 0 auto 32px auto;
     text-align: center;
     line-height: 1.6;
+}
+
+/* Search Bar Styles */
+.search-container {
+    position: relative;
+    max-width: 640px;
+    margin: 0 auto 32px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 18px;
+    font-size: 0.95rem;
+    border-radius: 28px;
+    border: 1px solid #d1d5db;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.search-spinner {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #2563eb;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: translateY(-50%) rotate(0deg); }
+    100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+.suggestions-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    margin-top: 8px;
+    padding: 8px 0;
+    list-style: none;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.07);
+    z-index: 10;
+}
+
+.suggestions-list li a {
+    display: block;
+    padding: 10px 20px;
+    color: #374151;
+    text-decoration: none;
+}
+
+.category-filter-container {
+    margin-bottom: 32px;
+    padding: 16px;
+    background-color: #f8f9fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+}
+
+.category-filter-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #374151;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.category-checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.category-checkbox-item {
+    display: flex;
+    align-items: center;
+}
+
+.category-checkbox-item input[type="checkbox"] {
+    display: none; /* Hide default checkbox */
+}
+
+.category-checkbox-item label {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    border: 1px solid #d1d5db;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    background-color: #fff;
+}
+
+.category-checkbox-item input[type="checkbox"]:checked + label {
+    background-color: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
 }
 
 .article-page-chunk {
@@ -33,8 +141,8 @@
 
 .featured-article {
     display: flex;
-    flex-direction: column; /* Changed to column for horizontal layout */
-    gap: 24px;
+    flex-direction: row; /* Horizontal layout */
+    gap: 0; /* Remove gap, padding will handle spacing */
     margin-bottom: 32px;
     background-color: #f8f9fa;
     border-radius: 16px;
@@ -49,37 +157,38 @@
 }
 
 .featured-article img {
-    width: 100%; /* Image takes full width */
-    height: 400px; /* Fixed height for the image */
-    border-radius: 16px 16px 0 0; /* Rounded corners only at the top */
+    width: 50%; /* Image takes half the width */
+    height: auto;
+    border-radius: 16px 0 0 16px; /* Rounded corners on the left */
     object-fit: cover;
 }
 
 .featured-content {
-    padding: 24px;
+    width: 50%;
+    padding: 20px;
     display: flex;
     flex-direction: column;
     justify-content: center;
 }
 
 .featured-content h2 {
-    font-size: 2rem;
+    font-size: 1.3rem;
     font-weight: 700;
-    margin: 0 0 16px 0;
+    margin: 0 0 12px 0;
     line-height: 1.3;
     color: #111827;
 }
 
 .featured-content p {
-    font-size: 1.05rem;
+    font-size: 0.9rem;
     color: #4b5563;
     line-height: 1.6;
 }
 
 .article-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 24px;
+    display: grid; /* Changed to 3 columns for a denser look */
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
 }
 
 .article-card-link {
@@ -90,7 +199,7 @@
 
 .article-card {
     background: #fff;
-    border-radius: 16px;
+    border-radius: 6px;
     overflow: hidden;
     border: 1px solid #e5e7eb;
     display: flex;
@@ -117,7 +226,7 @@
 }
 
 .article-card-content {
-    padding: 16px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
     flex-grow: 1;
@@ -125,13 +234,13 @@
 
 .article-card-category {
     color: #2563eb;
-    font-size: 0.8rem;
+    font-size: 0.65rem;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .article-card-title {
-    font-size: 1.1rem;
+    font-size: 0.85rem;
     font-weight: 600;
     color: #1f2937;
     margin: 0;
@@ -148,16 +257,38 @@
     font-size: 2.8rem;
     margin-bottom: 0.5rem;
 }
-.article-meta {
-    font-size: 0.9rem;
-    color: #777;
+.article-meta-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 2rem;
     border-bottom: 1px solid #eee;
     padding-bottom: 1rem;
 }
+.article-meta {
+    font-size: 0.9rem;
+    color: #777;
+}
+.article-actions {
+    /* This class is no longer used here, but kept for potential future use */
+    display: flex;
+    align-items: center;
+}
+.article-stats {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: #6b7280;
+}
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+}
 .article-cover-image {
     width: 100%;
-    max-height: 450px;
+    max-height: 300px;
     object-fit: cover;
     border-radius: 8px;
     margin-bottom: 2rem;
@@ -179,14 +310,14 @@
 }
 
 .pagination-button {
-    padding: 12px 28px;
+    padding: 10px 24px;
     background-color: #2563eb;
     color: #fff;
     border-radius: 8px;
     border: none;
     font-weight: 600;
     cursor: pointer;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     transition: background-color 0.2s, transform 0.1s;
 }
 
@@ -205,3 +336,78 @@
     font-weight: 500;
     color: #4b5563;
 }
+/* --- Like Button Styles --- */
+.like-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px; /* Khoảng cách giữa icon và số lượt thích */
+  background-color: transparent;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #555;
+  transition: all 0.2s ease-in-out;
+  user-select: none; /* Ngăn chọn văn bản khi nhấp đúp */
+}
+
+/* Hiệu ứng khi di chuột vào nút (khi không bị vô hiệu hóa) */
+.like-button:hover:not(:disabled) {
+  background-color: #f0f0f0;
+  border-color: #ccc;
+}
+
+/* Kiểu cho nút khi bị vô hiệu hóa */
+.like-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Kiểu cho nút khi đã được "thích" */
+.like-button.liked {
+  color: #e53e3e; /* Màu đỏ trùng với màu icon */
+  border-color: #fecaca; /* Viền màu đỏ nhạt */
+  background-color: #fff5f5; /* Nền màu đỏ rất nhạt */
+}
+
+/* Hiệu ứng khi di chuột vào nút đã "thích" */
+.like-button.liked:hover:not(:disabled) {
+  background-color: #feebec;
+}
+
+/* Hiệu ứng phóng to nhẹ cho icon khi di chuột */
+.like-button:hover:not(:disabled) svg {
+  transform: scale(1.15);
+}
+
+.like-button svg {
+  transition: transform 0.2s ease;
+}
+
+.like-count {
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Back button on detail page */
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    padding: 8px 16px;
+    background-color: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.back-button:hover {
+    background-color: #e5e7eb;
+}
+

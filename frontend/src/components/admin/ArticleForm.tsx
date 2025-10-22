@@ -27,7 +27,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const [metaDescription, setMetaDescription] = useState(article?.metaDescription ?? '')
   // TODO: Replace with actual logged-in user ID from AuthContext when available
   // Use a REAL user ID from your database for development until auth is ready.
-  const [authorId, setAuthorId] = useState('1A2C1A65-7B00-415F-8164-4FC3C1054203') // <-- Replace with a valid user ID from your DB
+  const [authorId, setAuthorId] = useState((article as any)?.authorId ?? '1A2C1A65-7B00-415F-8164-4FC3C1054203') // <-- Replace with a valid user ID from your DB
   const [statusCode, setStatusCode] = useState(article?.statusCode ?? 'DRAFT')
   const [categoryIds, setCategoryIds] = useState<string[]>(article?.categoryIds ?? [])
   const [content, setContent] = useState(article?.content ?? '')

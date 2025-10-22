@@ -64,6 +64,9 @@ namespace Medix.API.Presentation.Controller.UserManagement
             return Ok(updatedUser);
         }
 
+
+
+
         [HttpPost("uploadAvatar")]
         [Authorize]
         public async Task<IActionResult> UploadAvatar([FromForm] IFormFile file, [FromServices] CloudinaryService cloudinaryService)
@@ -139,7 +142,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(UserDto), 201)]
         [ProducesResponseType(400)]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserDTO request)
@@ -147,14 +149,15 @@ namespace Medix.API.Presentation.Controller.UserManagement
             try
             {
                 if (!ModelState.IsValid)
+                {
                     return BadRequest(ModelState);
+                }
 
                 var userDto = await _userService.CreateUserAsync(request);
                 return CreatedAtAction(nameof(GetById), new { id = userDto.Id }, userDto);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating user");
                 return StatusCode(500, new { message = "An error occurred while creating the user", error = ex.Message });
             }
         }

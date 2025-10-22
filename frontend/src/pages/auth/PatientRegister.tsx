@@ -6,7 +6,6 @@ import registrationService from '../../services/registrationService';
 import { PatientRegistration, BloodType, Gender, RegisterRequestPatient, PatientDTO, ValidationErrors } from '../../types/auth.types';
 import { Gender as GenderEnum } from '../../types/common.types';
 import { validatePatientRegistrationForm, validatePassword, getPasswordStrength } from '../../utils/validation';
-// @ts-ignore: allow importing CSS without type declarations
 import '../../style/RegistrationPage.css';
 
 export const PatientRegister: React.FC = () => {

@@ -13,10 +13,16 @@
 
 .registration-form {
   background: white;
-  border-radius: 12px;
+  border-radius: 28px;
   padding: 40px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 60px rgba(33,150,243, 0.18);
+  border: 2px solid #e3f2fd;
   font-family: 'Be Vietnam Pro', sans-serif;
+  transition: box-shadow 0.3s;
+}
+
+.registration-form:hover {
+  box-shadow: 0 40px 100px 0 rgba(33, 150, 243, 0.23);
 }
 
 .form-header {
@@ -25,15 +31,15 @@
 }
 
 .form-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #2c3e50;
+  color: #1565c0;
+  font-size: 38px;
+  font-weight: 800;
   margin-bottom: 8px;
-  font-family: 'Be Vietnam Pro', sans-serif;
+  letter-spacing: 1.3px;
 }
 
 .form-header p {
-  color: #7f8c8d;
+  color: #ff0000;
   font-size: 16px;
   font-family: 'Be Vietnam Pro', sans-serif;
 }
@@ -62,9 +68,8 @@
 /* Form footer spanning both columns */
 .form-footer {
   grid-column: 1 / -1;
-  margin-top: 30px;
   border-top: 1px solid #e9ecef;
-  padding-top: 30px;
+  padding-top: 10px;
 }
 
 .form-section {
@@ -73,16 +78,19 @@
 
 .section-title {
   font-size: 20px;
-  font-weight: 600;
-  color: #2c3e50;
+  font-weight: 700;
+  color: #1565c0;
   margin-bottom: 24px;
   padding-bottom: 12px;
-  border-bottom: 2px solid #3498db;
+  border-bottom: 2px solid #4fc3f7;
   font-family: 'Be Vietnam Pro', sans-serif;
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .form-row {
@@ -94,11 +102,17 @@
 .form-group label {
   display: block;
   margin-bottom: 8px;
-  font-weight: 500;
-  color: #34495e;
+  font-weight: 400;
+  color: #1565c0;
   font-size: 14px;
   position: relative;
   font-family: 'Be Vietnam Pro', sans-serif;
+  transition: color 0.2s;
+}
+
+.form-group:focus-within label {
+  color: #0288d1;
+  font-weight: 700;
 }
 
 /* Required field indicator */
@@ -113,21 +127,22 @@
 .form-group textarea,
 .form-group select {
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: border-color 0.3s ease;
-  box-sizing: border-box;
+  padding: 18px 18px;
+  border: 2px solid #bbdefb;
+  border-radius: 16px;
+  font-size: 16px;
+  background: #f9fafb;
+  transition: border-color 0.2s, box-shadow 0.2s;
   font-family: 'Be Vietnam Pro', sans-serif;
 }
 
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
+  border-color: #4fc3f7;
+  box-shadow: 0 0 0 3px rgba(33,150,243,0.11);
   outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  background: #fff;
 }
 
 .form-group input.error,
@@ -226,14 +241,14 @@
 
 .verify-email-btn {
   padding: 8px 16px;
-  background-color: #3498db;
+  background: linear-gradient(135deg, #4fc3f7 0%, #0288d1 100%);
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 18px;
   white-space: nowrap;
-  transition: background-color 0.3s ease;
+  transition: background 0.25s, box-shadow 0.25s;
 }
 
 .verify-email-btn:hover:not(:disabled) {
@@ -647,10 +662,7 @@
 
 /* Terms section */
 .terms-section {
-  margin: 32px 0;
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+  padding-bottom: 10px;
 }
 
 .terms-checkbox {
@@ -720,18 +732,16 @@
 
 /* Submit button */
 .submit-button {
-  width: 100%;
-  background: linear-gradient(135deg, #3498db, #2980b9);
-  color: white;
+  background: linear-gradient(135deg, #4fc3f7 0%, #0288d1 100%);
+  color: #fff;
   border: none;
-  padding: 16px 24px;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin-bottom: 20px;
-  font-family: 'Be Vietnam Pro', sans-serif;
+  border-radius: 18px;
+  padding: 18px 0;
+  font-size: 18px;
+  font-weight: 700;
+  box-shadow: 0 8px 26px rgba(33,150,243,0.11);
+  width: 100%;
+  transition: background 0.25s, box-shadow 0.25s;
 }
 
 .submit-button:hover {
@@ -750,6 +760,7 @@
   font-size: 14px;
   color: #7f8c8d;
   font-family: 'Be Vietnam Pro', sans-serif;
+  padding-top: 30px;
 }
 
 .login-link-text {

@@ -1,39 +1,45 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../../services/authService';
 import { apiClient } from '../../lib/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Card } from '../../components/ui/Card';
+import styles from '../../styles/login.module.css';
+
 const GOOGLE_CLIENT_ID = import.meta.env?.VITE_GOOGLE_CLIENT_ID as string | undefined;
+
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { showToast } = useToast();
+
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
-  // Load remembered email and password on component mount
+  // Regex kiểm tra email hợp lệ
+  const isValidEmail = (text: string) =>
+    /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(text);
+
+  // Lấy thông tin ghi nhớ từ localStorage
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberEmail');
     const rememberedPassword = localStorage.getItem('rememberPassword');
-    
     if (rememberedEmail) {
       setIdentifier(rememberedEmail);
       setRememberMe(true);
     }
-    
     if (rememberedPassword) {
       setPassword(rememberedPassword);
     }
   }, []);
 
+  // Khởi tạo Google Sign-In
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) {
       console.warn('⚠️ Google Client ID chưa được cấu hình');
@@ -46,7 +52,6 @@ const Login: React.FC = () => {
     script.defer = true;
     script.onload = () => {
       setGoogleReady(true);
-
       const google = (window as any).google;
       if (google && GOOGLE_CLIENT_ID) {
         google.accounts.id.initialize({
@@ -55,13 +60,12 @@ const Login: React.FC = () => {
           context: 'signin',
         });
 
-        // render button if element exists
         const container = document.getElementById('googleSignInDiv');
         if (container) {
           google.accounts.id.renderButton(container, {
             theme: 'outline',
             size: 'large',
-            width: 330,
+            width: 380,
             text: 'signin_with',
             shape: 'rectangular',
             logo_alignment: 'left',
@@ -73,45 +77,9 @@ const Login: React.FC = () => {
     return () => {
       if (script.parentNode) script.parentNode.removeChild(script);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    setIsLoading(true);
-    try {
-      // Use AuthContext.login so it updates central auth state, saves currentUser
-      await login({ email: identifier, password });
-
-      // remember email and password
-      if (rememberMe) {
-        localStorage.setItem('rememberEmail', identifier);
-        localStorage.setItem('rememberPassword', password);
-      } else {
-        localStorage.removeItem('rememberEmail');
-        localStorage.removeItem('rememberPassword');
-      }
-
-      // Show success toast
-      showToast('Đăng nhập thành công! Chào mừng bạn đến với MEDIX', 'success');
-      
-      // Redirect will be handled by PublicRoute when auth state updates
-    } catch (err: any) {
-      const status = err?.response?.status;
-      const message = err?.message || '';
-      
-      // If backend returned unauthorized -> show specific message
-      if (status === 401 || message.includes('Email hoặc mật khẩu') || message.includes('Tên đăng nhập/Email hoặc mật khẩu') || message.toLowerCase().includes('unauthorized')) {
-        showToast('Sai tên đăng nhập/email hoặc mật khẩu, vui lòng kiểm tra lại', 'error');
-      } else {
-        showToast(message || 'Đăng nhập thất bại', 'error');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Xử lý đăng nhập Google
   const handleGoogleResponse = async (response: any) => {
     if (!response || !response.credential) {
       showToast('Không lấy được credential từ Google', 'error');
@@ -122,18 +90,11 @@ const Login: React.FC = () => {
       setIsLoading(true);
       const idToken = response.credential;
       const auth = await authService.loginWithGoogle(idToken);
-      
-      // Store tokens and user data like AuthContext.login does
       apiClient.setTokens(auth.accessToken, auth.refreshToken);
       localStorage.setItem('userData', JSON.stringify(auth.user));
       localStorage.setItem('currentUser', JSON.stringify(auth.user));
-      
-      // Force trigger auth state update for Google login
       window.dispatchEvent(new Event('authChanged'));
-      
-      // Show success toast
       showToast('Đăng nhập Google thành công! Chào mừng bạn đến với MEDIX', 'success');
-      
     } catch (err: any) {
       const message = err?.message || 'Đăng nhập Google thất bại';
       showToast(message, 'error');
@@ -142,90 +103,247 @@ const Login: React.FC = () => {
     }
   };
 
+  // Xử lý submit form
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Nếu còn lỗi, không cho gửi
+    if (emailError || passwordError) {
+      showToast('Vui lòng kiểm tra lại thông tin nhập', 'error');
+      return;
+    }
+
+    if (!identifier) {
+      showToast('Vui lòng nhập email hoặc tên đăng nhập', 'error');
+      return;
+    }
+
+    if (identifier.includes('@') && !isValidEmail(identifier)) {
+      showToast('Email không hợp lệ', 'error');
+      return;
+    }
+
+    if (!password) {
+      showToast('Vui lòng nhập mật khẩu', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await login({ email: identifier, password });
+
+      if (rememberMe) {
+        localStorage.setItem('rememberEmail', identifier);
+        localStorage.setItem('rememberPassword', password);
+      } else {
+        localStorage.removeItem('rememberEmail');
+        localStorage.removeItem('rememberPassword');
+      }
+
+      showToast('Đăng nhập thành công! Chào mừng bạn đến với MEDIX', 'success');
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const message = err?.message || '';
+
+      if (
+        status === 401 ||
+        message.includes('Email hoặc mật khẩu') ||
+        message.includes('Tên đăng nhập/Email hoặc mật khẩu') ||
+        message.toLowerCase().includes('unauthorized')
+      ) {
+        showToast('Sai tên đăng nhập/email hoặc mật khẩu, vui lòng kiểm tra lại', 'error');
+      } else {
+        showToast(message || 'Đăng nhập thất bại', 'error');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Body */}
-      <main className="flex-1 bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-12 grid md:grid-cols-2 gap-12 items-start">
-          {/* Left content */}
-          <div className="space-y-4">
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-black">
-              MEDIX - HỆ THỐNG Y TẾ<br />THÔNG MINH TÍCH HỢP AI
-            </h1>
-            <p className="text-gray-700">
-              Chào mừng bạn đã quay trở lại, hãy đăng nhập vào tài khoản y tế của bạn
-            </p>
-            <p className="text-gray-600">
-              Bạn chưa có tài khoản? <a href="/register" className="text-[#0A66C2] font-medium hover:underline">Đăng ký ngay</a>
-            </p>
+    <div className={styles["login-page"]}>
+      {/* Background animation */}
+      <div className={styles["bg-decoration"]}>
+        <div className={styles["shape"]} style={{ top: '10%', left: '5%' }}></div>
+        <div className={styles["shape"]} style={{ top: '60%', left: '10%' }}></div>
+        <div className={styles["shape"]} style={{ top: '20%', right: '8%' }}></div>
+        <div className={styles["shape"]} style={{ bottom: '15%', right: '5%' }}></div>
+      </div>
+
+      <div className={styles["login-container"]}>
+        {/* Left side */}
+        <div className={styles["brand-section"]}>
+          <div className={styles["brand-content"]}>
+            <div className={styles["brand-logo"]}>
+              <img src="/images/medix-logo.png" alt="MEDIX" />
+            </div>
+
+            <h1 className={styles["brand-heading"]}>MEDIX</h1>
+            <p className={styles["brand-tagline"]}>Hệ thống Y tế Thông minh Tích hợp AI</p>
+
+            <div className={styles["brand-stats"]}>
+              <div className={styles["stat-item"]}>
+                <div className={styles["stat-number"]}>500+</div>
+                <div className={styles["stat-label"]}>Bác sĩ</div>
+              </div>
+              <div className={styles["stat-divider"]}></div>
+              <div className={styles["stat-item"]}>
+                <div className={styles["stat-number"]}>95%</div>
+                <div className={styles["stat-label"]}>Độ chính xác AI</div>
+              </div>
+              <div className={styles["stat-divider"]}></div>
+              <div className={styles["stat-item"]}>
+                <div className={styles["stat-number"]}>10k+</div>
+                <div className={styles["stat-label"]}>Người dùng</div>
+              </div>
+            </div>
+
+            <div className={styles["brand-features"]}>
+              <div className={styles["brand-feature"]}>
+                <i className="bi bi-check-circle-fill"></i>
+                <span>Chẩn đoán AI thông minh</span>
+              </div>
+              <div className={styles["brand-feature"]}>
+                <i className="bi bi-check-circle-fill"></i>
+                <span>Đặt lịch nhanh chóng</span>
+              </div>
+              <div className={styles["brand-feature"]}>
+                <i className="bi bi-check-circle-fill"></i>
+                <span>Bảo mật tuyệt đối</span>
+              </div>
+            </div>
           </div>
+        </div>
 
-          {/* Right form */}
-          <Card className="w-full p-6 shadow-[0_1px_0_#e6e9f0]">
-            <h2 className="text-2xl font-semibold mb-4">Đăng nhập</h2>
+        {/* Right side - Login form */}
+        <div className={styles["form-section"]}>
+          <div className={styles["form-container"]}>
+            <div className={styles["form-header"]}>
+              <h2>Đăng nhập</h2>
+              <p>Chào mừng bạn trở lại!</p>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="identifier" className="block text-sm mb-1">Tên đăng nhập hoặc Email</label>
-                <Input
+            <form onSubmit={handleSubmit}>
+              {/* Email / Username */}
+              <div className={styles["input-group"]}>
+                <label htmlFor="identifier">
+                  <i className="bi bi-envelope"></i>
+                  Email hoặc tên đăng nhập
+                </label>
+                <input
                   id="identifier"
                   type="text"
-                  placeholder="Tên đăng nhập hoặc Email"
+                  placeholder="Nhập email hoặc tên đăng nhập"
                   value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  required
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setIdentifier(value);
+
+                    if (value.trim() === '') {
+                      setEmailError('');
+                      return;
+                    }
+
+                    if (value.includes('@')) {
+                      if (!isValidEmail(value)) {
+                        setEmailError('Email không hợp lệ');
+                      } else {
+                        setEmailError('');
+                      }
+                    } else if (value.length < 4) {
+                      setEmailError('Tên đăng nhập quá ngắn');
+                    } else {
+                      setEmailError('');
+                    }
+                  }}
+                  className={emailError ? styles['input-error'] : ''}
                 />
+                {emailError && (
+                  <p style={{ color: 'red', fontSize: '13px', marginTop: '4px' }}>{emailError}</p>
+                )}
               </div>
-              <div>
-                <label htmlFor="password" className="block text-sm mb-1">Mật khẩu</label>
-                <div className="relative">
-                  <Input
+
+              {/* Password */}
+              <div className={styles["input-group"]}>
+                <label htmlFor="password">
+                  <i className="bi bi-lock"></i>
+                  Mật khẩu
+                </label>
+                <div className={styles["password-wrapper"]}>
+                  <input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
+                    placeholder="Nhập mật khẩu"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="pr-10"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setPassword(value);
+                      if (value.length > 0 && value.length < 6) {
+                        setPasswordError('Mật khẩu phải có ít nhất 6 ký tự');
+                      } else {
+                        setPasswordError('');
+                      }
+                    }}
+                    className={passwordError ? styles['input-error'] : ''}
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    className={styles["password-toggle"]}
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    )}
+                    <i className={showPassword ? "bi bi-eye-slash" : "bi bi-eye"}></i>
                   </button>
                 </div>
+                {passwordError && (
+                  <p style={{ color: 'red', fontSize: '13px', marginTop: '4px' }}>{passwordError}</p>
+                )}
               </div>
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
-                  Ghi nhớ đăng nhập
+
+              {/* Remember + Forgot */}
+              <div className={styles["form-extras"]}>
+                <label className={styles["remember-me"]}>
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <span>Ghi nhớ đăng nhập</span>
                 </label>
-                <Link to="/forgot-password" className="text-sm text-[#0A66C2] hover:underline">Quên mật khẩu?</Link>
+                <Link to="/forgot-password" className={styles["forgot-password"]}>
+                  Quên mật khẩu?
+                </Link>
               </div>
-              <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-              </Button>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-                <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-gray-500">Hoặc</span></div>
-              </div>
-              <div id="googleSignInDiv" className="flex justify-center"></div>
+
+              {/* Submit */}
+              <button type="submit" className={styles["btn-login"]} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <i className="bi bi-arrow-clockwise"></i>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  <>
+                    Đăng nhập
+                    <i className="bi bi-arrow-right"></i>
+                  </>
+                )}
+              </button>
             </form>
-            
-          </Card>
+
+            {/* Divider */}
+            <div className={styles["divider"]}>
+              <span>hoặc</span>
+            </div>
+
+            {/* Google Sign In */}
+            <div id="googleSignInDiv" className={styles["google-btn-wrapper"]}></div>
+
+            <div className={styles["signup-link"]}>
+              Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
+            </div>
+          </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 };

@@ -39,6 +39,13 @@ namespace Medix.API.Configurations
             services.AddScoped<IArticleRepository, ArticleRepitory>();
             services.AddScoped<IReviewRepository, ReviewRepository>();
             services.AddScoped<INotificationRepository, NotificationRepostiory>();
+            services.AddScoped<IDoctorScheduleRepository, DoctorScheduleRepository>();
+            services.AddScoped<IAppointmentRepository, AppointmentRepository>();
+            services.AddScoped<IMedicalRecordRepository, MedicalRecordRepository>();
+            services.AddScoped<IPrescriptionRepository, PrescriptionRepository>();
+            services.AddScoped<IDoctorScheduleOverrideRepository, DoctorScheduleOverrideRepository>();
+
+
         }
 
         private static void RegisterServices(IServiceCollection services)
@@ -59,6 +66,14 @@ namespace Medix.API.Configurations
             services.AddScoped<CloudinaryService>();
             services.AddScoped<IArticleService, ArticleService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IDoctorScheduleService, DoctorScheduleService>();
+            services.AddScoped<IAppointmentService, AppointmentService>();
+            services.AddScoped<IMedicalRecordService, MedicalRecordService>();
+            services.AddScoped<IPrescriptionService, PrescriptionService>();
+            services.AddScoped<IReviewService, ReviewService>();
+            services.AddScoped<IDoctorScheduleOverrideService, DoctorScheduleOverrideService>();
+
+
         }
     }
 }

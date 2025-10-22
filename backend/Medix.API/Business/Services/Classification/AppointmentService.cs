@@ -1,0 +1,82 @@
+﻿using AutoMapper;
+using Medix.API.Business.Interfaces.Classification;
+using Medix.API.DataAccess.Interfaces.Classification;
+using Medix.API.Models.DTOs.ApointmentDTO;
+using Medix.API.Models.Entities;
+
+namespace Medix.API.Business.Services.Classification
+{
+    public class AppointmentService : IAppointmentService
+    {
+        private readonly IAppointmentRepository _repository;
+        private readonly IMapper _mapper;
+
+        public AppointmentService(IAppointmentRepository repository, IMapper mapper)
+        {
+            _repository = repository;
+            _mapper = mapper;
+        }
+
+        public async Task<IEnumerable<AppointmentDto>> GetAllAsync()
+        {
+            var entities = await _repository.GetAllAsync();
+            return _mapper.Map<IEnumerable<AppointmentDto>>(entities);
+        }
+
+        public async Task<AppointmentDto?> GetByIdAsync(Guid id)
+        {
+            var entity = await _repository.GetByIdAsync(id);
+            return entity == null ? null : _mapper.Map<AppointmentDto>(entity);
+        }
+
+        public async Task<AppointmentDto> CreateAsync(CreateAppointmentDto dto)
+        {
+            var entity = _mapper.Map<Appointment>(dto);
+            entity.Id = Guid.NewGuid();
+            entity.CreatedAt = DateTime.UtcNow;
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            await _repository.AddAsync(entity);
+            return _mapper.Map<AppointmentDto>(entity);
+        }
+
+        public async Task<AppointmentDto?> UpdateAsync(UpdateAppointmentDto dto)
+        {
+            var existing = await _repository.GetByIdAsync(dto.Id);
+            if (existing == null) return null;
+
+            _mapper.Map(dto, existing);
+            existing.UpdatedAt = DateTime.UtcNow;
+
+            await _repository.UpdateAsync(existing);
+            return _mapper.Map<AppointmentDto>(existing);
+        }
+
+        public async Task<bool> DeleteAsync(Guid id)
+        {
+            var existing = await _repository.GetByIdAsync(id);
+            if (existing == null) return false;
+
+            await _repository.DeleteAsync(id);
+            return true;
+        }
+
+        public async Task<IEnumerable<AppointmentDto>> GetByDoctorAsync(Guid doctorId)
+        {
+            var list = await _repository.GetByDoctorAsync(doctorId);
+            return _mapper.Map<IEnumerable<AppointmentDto>>(list);
+        }
+
+        public async Task<IEnumerable<AppointmentDto>> GetByPatientAsync(Guid patientId)
+        {
+            var list = await _repository.GetByPatientAsync(patientId);
+            return _mapper.Map<IEnumerable<AppointmentDto>>(list);
+        }
+
+        public async Task<IEnumerable<AppointmentDto>> GetByDateAsync(DateTime date)
+        {
+            var list = await _repository.GetByDateAsync(date);
+            return _mapper.Map<IEnumerable<AppointmentDto>>(list);
+        }
+    }
+}

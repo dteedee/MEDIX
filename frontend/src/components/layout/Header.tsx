@@ -1,15 +1,17 @@
 import styles from '../../styles/header.module.css'
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { NotificationMetadata } from '../../types/notification.types';
 import NotificationService from '../../services/notificationService';
 import { formatDistanceToNow } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import { vi, enUS } from 'date-fns/locale';
 
 export const Header: React.FC = () => {
     const [notificationMetadata, setNotificationMetadata] = useState<NotificationMetadata>();
     const { user, logout } = useAuth();
+    const { language, setLanguage, t } = useLanguage();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -56,7 +58,7 @@ export const Header: React.FC = () => {
                     </a>
                 </div>
                 <div className={styles["search-bar"]}>
-                    <input type="text" placeholder="Chuyên khoa, triệu chứng, tên bác sĩ..." />
+                    <input type="text" placeholder={t('header.search.placeholder')} />
                     <button>🔍</button>
                 </div>
                 <div className={styles["header-links"]}>
@@ -106,7 +108,7 @@ export const Header: React.FC = () => {
                                     maxHeight: '500px', // 🔧 Short height for testing
                                     overflowY: 'auto', width: '400px'
                                 }}>
-                                    <li><h6 className="dropdown-header">Thông báo</h6></li>
+                                    <li><h6 className="dropdown-header">{t('header.notifications')}</h6></li>
                                     {notificationMetadata?.notifications.map((notification) => (
                                         <li>
                                             <a className="dropdown-item" href="#" style={{ whiteSpace: 'normal' }}>
@@ -119,7 +121,7 @@ export const Header: React.FC = () => {
                                                     <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '4px' }}>
                                                         {formatDistanceToNow(new Date(notification.createdAt), {
                                                             addSuffix: true,
-                                                            locale: vi,
+                                                            locale: language === 'vi' ? vi : enUS,
                                                         })}
                                                     </div>
                                                 </div>
@@ -129,22 +131,65 @@ export const Header: React.FC = () => {
                                 </ul>
                             </div>
 
+                            {/* Language Selector */}
+                            <div className={styles['language-selector']}>
+                                <button
+                                    className={styles['language-button']}
+                                    onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
+                                    title={language === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'}
+                                >
+                                    <img
+                                        src={language === 'vi'
+                                            ? '/images/vn-flag.jpg'
+                                            : '/images/us-flag.jpg'}
+                                        alt={language === 'vi' ? 'Vietnamese' : 'English'}
+                                        className={styles['flag-icon']}
+                                    />
+                                </button>
+                            </div>
                             <button className={styles['header-link']}
                                 onClick={async () => {
                                     await logout();
                                     navigate('/login');
                                 }}>
-                                Đăng xuất
+                                {t('header.logout')}
                             </button>
                         </>
                     ) : (
                         <>
-                            <a className={styles['header-link']} href="/login">Đăng nhập</a>
-                            <a className={styles['header-link']} href="#" data-bs-toggle="dropdown" aria-expanded="false">Đăng ký</a>
+                            <div className={styles["auth-buttons"]}>
+                                <a href="/login" className={styles["btn-login"]}>
+                                    {t('header.login')}
+                                </a>
+                                <a href="#" className={styles["btn-register"]} data-bs-toggle="dropdown" aria-expanded="false">
+                                    {t('header.register')}
+                                </a>
+                                <ul className="dropdown-menu">
+                                    <li><a className="dropdown-item" href="/patient-register">{t('header.register.patient')}</a></li>
+                                    <li><a className="dropdown-item" href="/doctor/register">{t('header.register.doctor')}</a></li>
+                                </ul>
+                            </div>
                             <ul className="dropdown-menu">
-                                <li><a className="dropdown-item" href="/patient-register">Đăng ký bệnh nhân</a></li>
-                                <li><a className="dropdown-item" href="/doctor/register">Đăng ký bác sĩ</a></li>
+                                <li><a className="dropdown-item" href="/patient-register">{t('header.register.patient')}</a></li>
+                                <li><a className="dropdown-item" href="/doctor/register">{t('header.register.doctor')}</a></li>
                             </ul>
+                            
+                            {/* Language Selector */}
+                            <div className={styles['language-selector']}>
+                                <button
+                                    className={styles['language-button']}
+                                    onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
+                                    title={language === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'}
+                                >
+                                    <img
+                                        src={language === 'vi'
+                                            ? '/images/vn-flag.jpg'
+                                            : '/images/us-flag.jpg'}
+                                        alt={language === 'vi' ? 'Vietnamese' : 'English'}
+                                        className={styles['flag-icon']}
+                                    />
+                                </button>
+                            </div>
                         </>
                     )}
                 </div>

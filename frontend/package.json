@@ -11,6 +11,7 @@
   "dependencies": {
     "@ckeditor/ckeditor5-build-classic": "^41.4.2",
     "@ckeditor/ckeditor5-react": "^11.0.0",
+    "@fortawesome/fontawesome-free": "^7.1.0",
     "@types/node": "^24.7.2",
     "axios": "^1.7.7",
     "date-fns": "^3.6.0",

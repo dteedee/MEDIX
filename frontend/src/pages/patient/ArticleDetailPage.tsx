@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { articleService } from '../../services/articleService'
 import { ArticleDTO } from '../../types/article.types'
 import './ArticleReader.css'
@@ -127,15 +127,6 @@ export default function ArticleDetailPage() {
        <button onClick={() => navigate(-1)} className="back-button">
         &larr; Quay lại danh sách
       </button>
-
-      <div className="breadcrumb">
-        <Link to="/app/patient">Trang chủ</Link>
-        <span className="separator">/</span>
-        <Link to="/app/articles">Kiến thức y khoa</Link>
-        <span className="separator">/</span>
-        <span className="current-page">{article.title}</span>
-      </div>
-
       <article className="article-detail">
         <h1>{article.title}</h1>
         <div className="article-meta-container">

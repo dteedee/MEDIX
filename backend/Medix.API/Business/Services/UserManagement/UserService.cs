@@ -275,7 +275,15 @@ namespace Medix.API.Business.Services.UserManagement
                 CreatedAt = u.CreatedAt,
                 DateOfBirth = u.DateOfBirth,
                 GenderCode = u.GenderCode,
-                IdentificationNumber = u.IdentificationNumber
+                IdentificationNumber = u.IdentificationNumber,
+                UserName = u.UserName,
+                Address = u.Address,
+                AvatarUrl = u.AvatarUrl,
+                IsProfileCompleted = u.IsProfileCompleted,
+                LockoutEnd = u.LockoutEnd,
+                LockoutEnabled = u.LockoutEnabled,
+                AccessFailedCount = u.AccessFailedCount,
+              
             });
 
             return (total, data);
@@ -296,7 +304,15 @@ namespace Medix.API.Business.Services.UserManagement
                 CreatedAt = u.CreatedAt,
                 DateOfBirth = u.DateOfBirth,
                 GenderCode = u.GenderCode,
-                IdentificationNumber = u.IdentificationNumber
+                IdentificationNumber = u.IdentificationNumber,
+                UserName = u.UserName,
+                Address = u.Address,
+                AvatarUrl = u.AvatarUrl,
+                IsProfileCompleted = u.IsProfileCompleted,
+                LockoutEnd = u.LockoutEnd,
+                LockoutEnabled = u.LockoutEnabled,
+                AccessFailedCount = u.AccessFailedCount,
+              
             });
 
             return (total, data);

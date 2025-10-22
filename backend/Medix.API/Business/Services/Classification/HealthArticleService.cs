@@ -435,5 +435,99 @@ namespace Medix.API.Business.Services.Classification
 
             return true;
         }
+        public async Task<HealthArticlePublicDto?> LikeAsync(Guid id, Guid userId)
+        {
+            var article = await _healthArticleRepository.GetByIdWithDetailsAsync(id);
+            if (article == null)
+                return null;
+
+            // If user already liked, return current state (idempotent)
+            var already = await _healthArticleRepository.HasUserLikedAsync(id, userId);
+            if (!already)
+            {
+                await _healthArticleRepository.AddLikeAsync(id, userId);
+            }
+
+            var updated = await _healthArticleRepository.GetByIdWithDetailsAsync(id);
+            if (updated == null)
+                return null;
+
+            return new HealthArticlePublicDto
+            {
+                Id = updated.Id,
+                Title = updated.Title,
+                Slug = updated.Slug,
+                Summary = updated.Summary,
+                Content = updated.Content,
+                CoverImageUrl = updated.CoverImageUrl,
+                ThumbnailUrl = updated.ThumbnailUrl,
+                MetaTitle = updated.MetaTitle,
+                MetaDescription = updated.MetaDescription,
+                StatusCode = updated.StatusCode,
+                ViewCount = updated.ViewCount,
+                LikeCount = updated.LikeCount,
+
+                IsHomepageVisible = updated.IsHomepageVisible,
+                DisplayOrder = updated.DisplayOrder,
+                DisplayType = updated.DisplayType,
+                AuthorName = updated.Author?.FullName ?? string.Empty,
+                CreatedAt = updated.CreatedAt,
+                UpdatedAt = updated.UpdatedAt,
+                Categories = updated.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
+            };
+        }
+
+        public async Task<HealthArticlePublicDto?> UnlikeAsync(Guid id, Guid userId)
+        {
+            var article = await _healthArticleRepository.GetByIdWithDetailsAsync(id);
+            if (article == null)
+                return null;
+
+            var already = await _healthArticleRepository.HasUserLikedAsync(id, userId);
+            if (already)
+            {
+                await _healthArticleRepository.RemoveLikeAsync(id, userId);
+            }
+
+            var updated = await _healthArticleRepository.GetByIdWithDetailsAsync(id);
+            if (updated == null)
+                return null;
+
+            return new HealthArticlePublicDto
+            {
+                Id = updated.Id,
+                Title = updated.Title,
+                Slug = updated.Slug,
+                Summary = updated.Summary,
+                Content = updated.Content,
+                CoverImageUrl = updated.CoverImageUrl,
+                ThumbnailUrl = updated.ThumbnailUrl,
+                MetaTitle = updated.MetaTitle,
+                MetaDescription = updated.MetaDescription,
+                StatusCode = updated.StatusCode,
+                ViewCount = updated.ViewCount,
+                LikeCount = updated.LikeCount,
+
+                IsHomepageVisible = updated.IsHomepageVisible,
+                DisplayOrder = updated.DisplayOrder,
+                DisplayType = updated.DisplayType,
+                AuthorName = updated.Author?.FullName ?? string.Empty,
+                CreatedAt = updated.CreatedAt,
+                UpdatedAt = updated.UpdatedAt,
+                Categories = updated.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
+            };
+        }
     }
 }

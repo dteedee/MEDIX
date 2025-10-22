@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿﻿using Microsoft.AspNetCore.Mvc;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Services.Community;
 using Microsoft.Extensions.Logging;
@@ -36,8 +36,17 @@ namespace Medix.API.Presentation.Controller.Classification
         [HttpGet("published")]
         public async Task<ActionResult> GetPublished([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var result = await _healthArticleService.GetPublishedPagedAsync(page, pageSize);
-            return Ok(result);
+            try
+            {
+                var result = await _healthArticleService.GetPublishedPagedAsync(page, pageSize);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while getting published health articles. Page: {Page}, PageSize: {PageSize}", page, pageSize);
+                // Trả về lỗi 500 với thông điệp chung, chi tiết lỗi đã được ghi lại
+                return StatusCode(500, new { message = "An unexpected error occurred while fetching published articles." });
+            }
         }
 
         [HttpGet("{id}")]
@@ -63,6 +72,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpGet("homepage")]
+
         public async Task<ActionResult> GetHomepage([FromQuery] int limit = 5)
         {
             var articles = await _healthArticleService.GetHomepageArticlesAsync(limit);

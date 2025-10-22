@@ -143,7 +143,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(UserDto), 201)]
         [ProducesResponseType(400)]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserDTO request)
@@ -162,7 +161,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating user");
                 return StatusCode(500, new { message = "An error occurred while creating the user", error = ex.Message });
             }
         }

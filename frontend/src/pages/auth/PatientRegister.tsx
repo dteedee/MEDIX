@@ -956,6 +956,12 @@ export const PatientRegister: React.FC = () => {
                           if (error) setError('');
                         }}
                         maxLength={6}
+                        style={{
+                          fontSize: '14px',
+                          padding: '10px 12px',
+                          textAlign: 'center',
+                          letterSpacing: '2px'
+                        }}
                       />
                       <button
                         type="button"

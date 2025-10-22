@@ -47,6 +47,7 @@ public partial class MedixContext : DbContext
     public virtual DbSet<DoctorSubscription> DoctorSubscriptions { get; set; }
 
     public virtual DbSet<HealthArticle> HealthArticles { get; set; }
+    public virtual DbSet<HealthArticleLike> HealthArticleLikes { get; set; }
 
     public virtual DbSet<MedicalRecord> MedicalRecords { get; set; }
 

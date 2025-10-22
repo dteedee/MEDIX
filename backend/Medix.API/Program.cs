@@ -1,12 +1,17 @@
 using System;
 using System.Text;
+using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.Community;
 using Medix.API.Business.Interfaces.UserManagement;
+using Medix.API.Business.Services.Classification;
 using Medix.API.Business.Services.Community;
 using Medix.API.Business.Services.UserManagement;
+using Medix.API.Business.Validators;
 using Medix.API.Configurations;
 using Medix.API.DataAccess;
+using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
+using Medix.API.DataAccess.Repositories.Classification;
 using Medix.API.DataAccess.Repositories.UserManagement;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;

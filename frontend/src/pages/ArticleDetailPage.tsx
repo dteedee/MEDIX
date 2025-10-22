@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { articleService } from '../services/articleService';
 import { ArticleDTO } from '../types/article.types';
 
 export default function ArticleDetailPage() {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const [article, setArticle] = useState<ArticleDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +86,21 @@ export default function ArticleDetailPage() {
     whiteSpace: 'pre-wrap', // To respect newlines and spacing
   };
 
+  const backButtonStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '24px',
+    padding: '8px 16px',
+    backgroundColor: '#f3f4f6',
+    color: '#374151',
+    border: '1px solid #e5e7eb',
+    borderRadius: '8px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    textDecoration: 'none',
+  };
+
   if (loading) return <div style={containerStyle}>Đang tải bài viết...</div>;
   if (error) return <div style={containerStyle}><h2>Lỗi</h2><p>{error}</p></div>;
   if (!article) return <div style={containerStyle}><h2>Không tìm thấy bài viết</h2></div>;
@@ -92,6 +108,9 @@ export default function ArticleDetailPage() {
   return (
     <div style={pageStyle}>
       <div style={containerStyle}>
+        <button onClick={() => navigate(-1)} style={backButtonStyle}>
+          &larr; Quay lại
+        </button>
         <header style={headerStyle}>
           <h1 style={titleStyle}>{article.title}</h1>
           <p style={metaInfoStyle}>Tác giả: {article.authorName || 'N/A'} | Ngày đăng: {fmtDate(article.publishedAt ?? article.createdAt)}</p>

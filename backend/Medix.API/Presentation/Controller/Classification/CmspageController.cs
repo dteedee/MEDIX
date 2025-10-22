@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs.CMSPage;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Medix.API.Presentation.Controller.Classification
 {

@@ -1,16 +1,6 @@
-import axios from 'axios'
 import { BannerDTO, CreateBannerRequest, UpdateBannerRequest } from '../types/banner.types'
-const BASE = '/api/SiteBanners'
-
-function authHeader() {
-  // try localStorage by default; adapt to AuthContext if available
-  try {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
-    return token ? { Authorization: `Bearer ${token}` } : undefined
-  } catch {
-    return undefined
-  }
-}
+import { apiClient } from '../lib/apiClient'
+const BASE = '/SiteBanners'
 
 // Helper function to map API response to our DTO consistently
 function mapToDTO(x: any): BannerDTO {
@@ -41,7 +31,7 @@ export const bannerService = {
       query.isActive = params.status === 'active';
     }
 
-    const r = await axios.get(url, { params: query, headers: authHeader() });
+    const r = await apiClient.get(url, { params: query });
     const data = r.data
 
     // Handle multiple response shapes from backend
@@ -54,12 +44,26 @@ export const bannerService = {
     return { items, total }
   },
   get: async (id: string): Promise<BannerDTO> => {
-    const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })
+    const r = await apiClient.get(`${BASE}/${id}`)
     return mapToDTO(r.data)
   },
   create: async (payload: CreateBannerRequest): Promise<BannerDTO> => {
     try {
-      const r = await axios.post(BASE, payload, { headers: authHeader() })
+      const formData = new FormData();
+      // Append fields under 'request' prefix to match [FromForm] SiteBannerCreateDto request
+      formData.append('request.BannerTitle', payload.bannerTitle);
+      if (payload.bannerUrl) formData.append('request.BannerUrl', payload.bannerUrl);
+      if (payload.displayOrder !== undefined) formData.append('request.DisplayOrder', payload.displayOrder.toString());
+      formData.append('request.IsActive', String(payload.isActive));
+      if (payload.startDate) formData.append('request.StartDate', payload.startDate);
+      if (payload.endDate) formData.append('request.EndDate', payload.endDate);
+
+      // Append the file if it exists
+      if (payload.bannerFile) {
+        formData.append('bannerFile', payload.bannerFile);
+      }
+
+      const r = await apiClient.postMultipart(BASE, formData);
       return mapToDTO(r.data)
     } catch (error: any) {
       if (error.response?.data?.errors) {
@@ -73,7 +77,29 @@ export const bannerService = {
   },
   update: async (id: string, payload: UpdateBannerRequest): Promise<BannerDTO> => {
     try {
-      const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() })
+      const formData = new FormData();
+      // Append fields under 'request' prefix to match [FromForm] SiteBannerUpdateDto request
+      if (payload.bannerTitle !== undefined) formData.append('request.BannerTitle', payload.bannerTitle);
+      
+      // Handle image URL: send existing URL if no new file, otherwise send empty to let backend know it might be removed or replaced.
+      if (payload.bannerImageUrl && !payload.bannerFile) {
+        formData.append('request.BannerImageUrl', payload.bannerImageUrl);
+      } else if (!payload.bannerFile) {
+        formData.append('request.BannerImageUrl', '');
+      }
+
+      if (payload.bannerUrl) formData.append('request.BannerUrl', payload.bannerUrl);
+      if (payload.displayOrder !== undefined) formData.append('request.DisplayOrder', payload.displayOrder.toString());
+      if (payload.isActive !== undefined) formData.append('request.IsActive', String(payload.isActive));
+      if (payload.startDate) formData.append('request.StartDate', payload.startDate);
+      if (payload.endDate) formData.append('request.EndDate', payload.endDate);
+
+      // Append the file if it exists
+      if (payload.bannerFile) {
+        formData.append('bannerFile', payload.bannerFile);
+      }
+
+      const r = await apiClient.putMultipart(`${BASE}/${id}`, formData);
       return mapToDTO(r.data)
     } catch (error: any) {
       if (error.response?.data?.errors) {
@@ -85,6 +111,6 @@ export const bannerService = {
     }
   },
   remove: async (id: string): Promise<void> => {
-    await axios.delete(`${BASE}/${id}`, { headers: authHeader() })
+    await apiClient.delete(`${BASE}/${id}`)
   }
 }

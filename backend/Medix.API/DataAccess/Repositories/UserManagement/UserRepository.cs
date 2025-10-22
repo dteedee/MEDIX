@@ -128,6 +128,7 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
             return await _context.Users
                 .AnyAsync(u => u.PhoneNumber == phoneNumber);
         }
+      
 
         public async Task<bool> ExistsByUserNameAsync(string userName) => await _context.Users
             .AnyAsync(u => u.NormalizedUserName == userName.ToUpperInvariant());

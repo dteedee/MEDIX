@@ -26,8 +26,5 @@ namespace Medix.API.Models.DTOs.Doctor
         [Required(ErrorMessage = "Vui lòng nhập số năm kinh nghiệm")]
         [Range(1, 50, ErrorMessage = "Số năm kinh nghiệm không hợp lệ")]
         public int? YearsOfExperience { get; set; } = 0;
-
-        [Range(0, 1000000, ErrorMessage = "Phí tư vấn không hợp lệ")]
-        public decimal? ConsultationFee { get; set; } = 0;
     }
 }

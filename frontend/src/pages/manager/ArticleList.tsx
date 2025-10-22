@@ -1,65 +1,89 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { articleService } from '../../services/articleService'
+import { articleService, ArticleFormPayload } from '../../services/articleService' // Import ArticleFormPayload
 import { ArticleDTO } from '../../types/article.types'
 import ArticleDetails from '../../components/admin/ArticleDetails'
 import { categoryService } from '../../services/categoryService'
 import { CategoryDTO } from '../../types/category.types'
 import { useToast } from '../../contexts/ToastContext'
+import styles from '../../styles/ArticleList.module.css'
 
 // SVG Icons for actions
 const ViewIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <circle cx="12" cy="12" r="3" />
   </svg>
 );
 
 const EditIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
   </svg>
 );
 
 const DeleteIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#ef4444' }}>
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="3 6 5 6 21 6" />
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
   </svg>
 );
 
 const SortIcon = ({ direction }: { direction?: 'asc' | 'desc' }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', marginLeft: 4, color: direction ? '#111827' : '#9ca3af' }}>
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.sortIcon} data-active={!!direction}>
     {direction === 'asc' && <path d="M12 5l-7 7h14z" transform="rotate(180 12 12)" />}
     {direction !== 'asc' && <path d="M12 5l-7 7h14z" />}
   </svg>
 );
 export default function ArticleList() {
+  const SESSION_STORAGE_KEY = 'articleListState';
+
+  const getInitialState = () => {
+    try {
+      const savedState = sessionStorage.getItem(SESSION_STORAGE_KEY);
+      if (savedState) {
+        return JSON.parse(savedState);
+      }
+    } catch (error) {
+      console.error("Failed to parse saved state for articles:", error);
+    }
+    // Default state
+    return {
+      page: 1,
+      pageSize: 5,
+      search: '',
+      status: 'all',
+      category: [],
+      from: '',
+      to: '',
+      sortBy: 'publishedAt',
+      sortDir: 'desc',
+    };
+  };
+
   const [items, setItems] = useState<ArticleDTO[]>([])
-  const [total, setTotal] = useState<number | undefined>(undefined)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(5)
   const [viewing, setViewing] = useState<ArticleDTO | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [allCategories, setAllCategories] = useState<CategoryDTO[]>([])
 
-  // filter/search UI
-  const [search, setSearch] = useState('')
-  const [appliedSearch, setAppliedSearch] = useState('') // State for the actual filtering
-  const [statusFilter, setStatusFilter] = useState('all') // 'all', 'PUBLISHED', 'DRAFT'
-  const [categoryFilterIds, setCategoryFilterIds] = useState<string[]>([])
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  const [page, setPage] = useState(getInitialState().page);
+  const [pageSize, setPageSize] = useState(getInitialState().pageSize);
+  const [search, setSearch] = useState(getInitialState().search);
+  const [appliedSearch, setAppliedSearch] = useState(getInitialState().search);
+  const [statusFilter, setStatusFilter] = useState(getInitialState().status);
+  const [categoryFilterIds, setCategoryFilterIds] = useState<string[]>(getInitialState().category);
+  const [dateFrom, setDateFrom] = useState(getInitialState().from);
+  const [dateTo, setDateTo] = useState(getInitialState().to);
+  const [sortBy, setSortBy] = useState(getInitialState().sortBy);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(getInitialState().sortDir);
+
   const [suggestions, setSuggestions] = useState<ArticleDTO[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
   const categoryFilterRef = React.useRef<HTMLDivElement>(null)
   const searchContainerRef = React.useRef<HTMLDivElement>(null)
 
-  // sorting
-  const [sortBy, setSortBy] = useState('publishedAt')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const { showToast } = useToast()
 
   const load = async () => {
@@ -74,7 +98,7 @@ export default function ArticleList() {
       setAllCategories(res.items);
       load();
     });
-  }, []) // Load categories and all articles once on mount
+  }, []); // Load categories and all articles once on mount
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -95,58 +119,73 @@ export default function ArticleList() {
     };
   }, []);
 
-  // Scroll to top on page or page size change
+  // Save state to sessionStorage whenever it changes
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [page, pageSize]);
+    const stateToSave = {
+      page,
+      pageSize,
+      search: appliedSearch,
+      status: statusFilter,
+      category: categoryFilterIds,
+      from: dateFrom,
+      to: dateTo,
+      sortBy,
+      sortDir: sortDirection,
+    };
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [page, pageSize, appliedSearch, statusFilter, categoryFilterIds, dateFrom, dateTo, sortBy, sortDirection]);
 
-  const onCreate = () => navigate('/manager/articles/new')
-  const onEdit = (a: ArticleDTO) => navigate(`/manager/articles/edit/${a.id}`)
+  const onCreate = () => navigate('/app/manager/articles/new')
+  const onEdit = (a: ArticleDTO) => navigate(`/app/manager/articles/edit/${a.id}`)
   const handleArchive = async (article: ArticleDTO) => {
   if (article.statusCode === 'ARCHIVE') {
-    showToast('Bài viết đã được lưu trữ.', 'info');
+    showToast('Bài viết đã được khóa.', 'info');
     return;
   }
 
-  if (!confirm(`Bạn có chắc muốn lưu trữ bài viết "${article.title}" không?`)) return;
+  if (!confirm(`Bạn có chắc muốn khóa bài viết "${article.title}" không?`)) return;
 
   try {
-    const categoryIds =
-      Array.isArray(article.categories)
-        ? article.categories
-            .map(c => c?.id)
-            .filter((id: string) => typeof id === 'string' && id.trim() !== '')
-        : Array.isArray((article as any).categoryIds)
-        ? (article as any).categoryIds.filter((id: string) => typeof id === 'string' && id.trim() !== '')
-        : [];
-const fixedCategoryIds = categoryIds.length > 0
-  ? categoryIds
-  : (article as any).categoryIds && (article as any).categoryIds.length > 0
-  ? (article as any).categoryIds
-  : ['4531ED5F-2DB8-4B56-A38C-3C320F555922'];
-    const payload = {
-      title: article.title ?? 'Không có tiêu đề',
-      slug: article.slug ?? 'khong-co-slug',
-      summary: article.summary ?? '',
-      content: article.content ?? 'Nội dung tạm thời',
-      displayType: article.displayType ?? 'default',
-      thumbnailUrl: article.thumbnailUrl ?? '',
-      coverImageUrl: article.coverImageUrl ?? '',
-      isHomepageVisible: article.isHomepageVisible ?? false,
-      displayOrder: article.displayOrder ?? 0,
-      metaTitle: article.metaTitle ?? '',
-      metaDescription: article.metaDescription ?? '',
+    // ✅ 1. Lấy lại full dữ liệu từ backend theo ID bằng phương thức 'get'
+    const fullArticle = await articleService.get(article.id);
+    console.log('>>> Full Article từ backend:', fullArticle);
+
+    let categoryIds =
+      (Array.isArray(fullArticle.categoryIds) && fullArticle.categoryIds.length > 0)
+        ? fullArticle.categoryIds
+        : (Array.isArray(fullArticle.categories) && fullArticle.categories.length > 0)
+          ? fullArticle.categories.map(c => c.id).filter(Boolean)
+          : [];
+    if (categoryIds.length === 0) {
+      categoryIds = ['4531ED5F-2DB8-4B56-A38C-3C320F555922'];
+    }
+
+
+    const payload: ArticleFormPayload = { // Use the new payload type
+      title: fullArticle.title ?? 'Không có tiêu đề',
+      slug: fullArticle.slug ?? 'khong-co-slug',
+      summary: fullArticle.summary ?? '',
+      content: fullArticle.content ?? '*', 
+      displayType: fullArticle.displayType ?? 'default',
+      thumbnailUrl: fullArticle.thumbnailUrl ?? '',
+      coverImageUrl: fullArticle.coverImageUrl ?? '',
+      isHomepageVisible: fullArticle.isHomepageVisible ?? false,
+      displayOrder: fullArticle.displayOrder ?? 0,
+      metaTitle: fullArticle.metaTitle ?? '',
+      metaDescription: fullArticle.metaDescription ?? '',
       authorId:
-        (article as any).authorId ??
+        (fullArticle as any).authorId ??
         '1A2C1A65-7B00-415F-8164-4FC3C1054203',
-      publishedAt: article.publishedAt ?? undefined, // ✅ fix kiểu dữ liệu
-      categoryIds: fixedCategoryIds,
+      publishedAt: fullArticle.publishedAt ?? undefined,
+      categoryIds: categoryIds,
       statusCode: 'ARCHIVE',
     };
 
     console.log('🧾 Payload gửi lên backend:', payload);
+
+    // ✅ 4. Gửi update
     await articleService.update(article.id, payload);
-    showToast('Đã chuyển bài viết vào kho lưu trữ.');
+    showToast('Đã chuyển bài viết vào kho lưu trữ.', 'success');
     await load();
   } catch (error: any) {
     console.error('🚨 Failed to archive article:', error);
@@ -156,6 +195,7 @@ const fixedCategoryIds = categoryIds.length > 0
     showToast('Lưu trữ bài viết thất bại.', 'error');
   }
 };
+
 
 
   const handleViewDetails = async (articleId: string) => {
@@ -184,8 +224,11 @@ const fixedCategoryIds = categoryIds.length > 0
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
-    setAppliedSearch(value); // Áp dụng tìm kiếm ngay khi người dùng nhập
-    setPage(1); // Reset về trang đầu tiên khi có tìm kiếm mới
+    setAppliedSearch(value);
+
+    if (value.trim() && !appliedSearch.trim()) {
+      if (page !== 1) setPage(1);
+    }
 
     if (value.trim()) {
       // Suggestions should be based on the full, unfiltered list
@@ -205,6 +248,7 @@ const fixedCategoryIds = categoryIds.length > 0
     setSuggestions([]);
     setShowSuggestions(false);
     setAppliedSearch(suggestion.title);
+    if (page !== 1) setPage(1);
   };
 
   const processedItems = useMemo(() => {
@@ -262,15 +306,12 @@ const fixedCategoryIds = categoryIds.length > 0
     let color = '#b45309'; // yellow-700
 
     if (statusCode === 'PUBLISHED') {
-      text = 'Đã xuất bản';
-      bg = '#e7f9ec'; // green-100
-      color = '#16a34a'; // green-700
+      return <span className={`${styles.statusPill} ${styles.statusPublished}`}>Đã xuất bản</span>;
     } else if (statusCode === 'ARCHIVE') {
-      text = 'Lưu trữ';
-      bg = '#fee2e2'; // red-100
-      color = '#b91c1c'; // red-700
+      return <span className={`${styles.statusPill} ${styles.statusArchive}`}>Khóa</span>;
     }
-    return <span style={{ background: bg, color, padding: '6px 10px', borderRadius: 16, fontSize: 12, fontWeight: 500 }}>{text}</span>;
+    // Default is DRAFT
+    return <span className={`${styles.statusPill} ${styles.statusDraft}`}>{text}</span>;
   }
 
   const getCategoryNames = (article: ArticleDTO) => {
@@ -286,14 +327,11 @@ const fixedCategoryIds = categoryIds.length > 0
   const paginatedItems = processedItems.slice((page - 1) * pageSize, page * pageSize);
 
   return (
-    <div style={{ padding: 24, backgroundColor: '#f9fafb', minHeight: '100vh' }}>
+    <div className={styles.pageContainer}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontSize: '1.875rem', fontWeight: 'bold', color: '#111827' }}>Quản lý Bài viết</h1>
-        <button
-          onClick={onCreate}
-          style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
-        >
+      <div className={styles.header}>
+        <h1 className={styles.title}>Quản lý Bài viết</h1>
+        <button onClick={onCreate} className={styles.createButton}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           Tạo mới
         </button>
@@ -301,38 +339,18 @@ const fixedCategoryIds = categoryIds.length > 0
 
       {/* Filter Section */}
      <div
-  style={{
-    marginBottom: 24,
-    background: "#fff",
-    border: "1px solid #e5e7eb",
-    borderRadius: 12,
-    padding: 20,
-  }}
+  className={styles.filterContainer}
 >
   <div
-    style={{
-      display: "flex",
-      gap: 16,
-      alignItems: "end",
-      flexWrap: "wrap",
-    }}
+    className={styles.filterGrid}
   >
     {/* Ô tìm kiếm */}
     <div
       ref={searchContainerRef}
-      style={{
-        flex: "3 1 300px",
-        minWidth: 260,
-        position: "relative",
-      }}
+      className={styles.filterGroup}
     >
       <label
-        style={{
-          fontSize: 14,
-          color: "#4b5563",
-          marginBottom: 6,
-          display: "block",
-        }}
+        className={styles.filterLabel}
       >
         Tìm kiếm
       </label>
@@ -340,44 +358,17 @@ const fixedCategoryIds = categoryIds.length > 0
         placeholder="Tìm theo tiêu đề..."
         value={search}
         onChange={e => handleSearchChange(e.target.value)}
-        style={{
-          width: "80%",
-          padding: "10px 12px",
-          border: "1px solid #d1d5db",
-          borderRadius: 8,
-          fontSize: 14,
-        }}
+        className={styles.filterInput}
       />
       {showSuggestions && (
         <div
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            background: "#fff",
-            border: "1px solid #e5e7eb",
-            borderRadius: "0 0 8px 8px",
-            zIndex: 10,
-            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-            marginTop: "-1px",
-          }}
+          className={styles.suggestionsContainer}
         >
           {suggestions.map((suggestion) => (
             <div
               key={suggestion.id}
               onClick={() => handleSuggestionClick(suggestion)}
-              style={{
-                padding: "10px 12px",
-                cursor: "pointer",
-                fontSize: 14,
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = "#f9fafb")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = "transparent")
-              }
+              className={styles.suggestionItem}
             >
               {suggestion.title}
             </div>
@@ -386,57 +377,33 @@ const fixedCategoryIds = categoryIds.length > 0
       )}
     </div>
 
-    
-
     {/* Trạng thái */}
     <div
-      style={{
-        flex: "1 1 180px",
-        minWidth: 160,
-      }}
+      className={`${styles.filterGroup} ${styles.status}`}
     >
       <label
-        style={{
-          fontSize: 14,
-          color: "#4b5563",
-          marginBottom: 6,
-          display: "block",
-        }}
+        className={styles.filterLabel}
       >
         Trạng thái
       </label>
       <select
         value={statusFilter}
         onChange={(e) => setStatusFilter(e.target.value as any)}
-        style={{
-          padding: 10,
-          width: "100%",
-          border: "1px solid #d1d5db",
-          borderRadius: 8,
-          fontSize: 14,
-        }}
+        className={styles.filterSelect}
       >
         <option value="all">Tất cả trạng thái</option>
         <option value="PUBLISHED">Đã xuất bản</option>
         <option value="DRAFT">Bản nháp</option>
-        <option value="ARCHIVE">Lưu trữ</option>
+        <option value="ARCHIVE">Khóa</option>
       </select>
     </div>
 
     {/* Từ ngày */}
     <div
-      style={{
-        flex: "1 1 160px",
-        minWidth: 120,
-      }}
+      className={`${styles.filterGroup} ${styles.date}`}
     >
       <label
-        style={{
-          fontSize: 14,
-          color: "#4b5563",
-          marginBottom: 6,
-          display: "block",
-        }}
+        className={styles.filterLabel}
       >
         Từ ngày
       </label>
@@ -444,30 +411,16 @@ const fixedCategoryIds = categoryIds.length > 0
         type="date"
         value={dateFrom}
         onChange={(e) => setDateFrom(e.target.value)}
-        style={{
-          padding: 9,
-          width: "80%",
-          border: "1px solid #d1d5db",
-          borderRadius: 8,
-          fontSize: 14,
-        }}
+        className={`${styles.filterInput} ${styles.date}`}
       />
     </div>
 
     {/* Đến ngày */}
     <div
-      style={{
-        flex: "1 1 160px",
-        minWidth: 120,
-      }}
+      className={`${styles.filterGroup} ${styles.date}`}
     >
       <label
-        style={{
-          fontSize: 14,
-          color: "#4b5563",
-          marginBottom: 6,
-          display: "block",
-        }}
+        className={styles.filterLabel}
       >
         Đến ngày
       </label>
@@ -475,23 +428,13 @@ const fixedCategoryIds = categoryIds.length > 0
         type="date"
         value={dateTo}
         onChange={(e) => setDateTo(e.target.value)}
-        style={{
-          padding: 9,
-          width: "80%",
-          border: "1px solid #d1d5db",
-          borderRadius: 8,
-          fontSize: 14,
-        }}
+        className={`${styles.filterInput} ${styles.date}`}
       />
     </div>
 
     {/* Nút thao tác */}
     <div
-      style={{
-        display: "flex",
-        gap: 8,
-        flex: "0 0 auto",
-      }}
+      className={`${styles.filterGroup} ${styles.action}`}
     >
       <button
         onClick={() => {
@@ -504,15 +447,7 @@ const fixedCategoryIds = categoryIds.length > 0
           setDateTo('');
           setPage(1);
         }}
-        style={{
-          padding: "10px 20px",
-          background: "#fff",
-          color: "#2563eb",
-          borderRadius: 8,
-          border: "1px solid #d1d5db",
-          fontWeight: 500,
-          cursor: "pointer",
-        }}
+        className={styles.filterButton}
       >
         Xóa
       </button>
@@ -522,70 +457,70 @@ const fixedCategoryIds = categoryIds.length > 0
 
 
       {/* Table */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflowX: 'auto' }}>
+      <div className={styles.tableContainer}>
         {paginatedItems.length > 0 ? (
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
-            <thead style={{ backgroundColor: '#f9fafb' }}>
+          <table className={styles.table}>
+            <thead className={styles.tableHead}>
               <tr>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '50px' }}>STT</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '120px' }}>Ảnh</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tiêu đề</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Danh mục</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trạng thái</th>
-                <th onClick={() => handleSort('publishedAt')} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer' }}>Ngày đăng <SortIcon direction={sortBy === 'publishedAt' ? sortDirection : undefined} /></th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thao tác</th>
+                <th className={styles.th} style={{ width: '50px' }}>STT</th>
+                <th className={styles.th} style={{ width: '120px' }}>Ảnh</th>
+                <th className={styles.th}>Tiêu đề</th>
+                <th className={styles.th}>Danh mục</th>
+                <th className={styles.th}>Trạng thái</th>
+                <th onClick={() => handleSort('publishedAt')} className={`${styles.th} ${styles.sortable}`}>Ngày đăng <SortIcon direction={sortBy === 'publishedAt' ? sortDirection : undefined} /></th>
+                <th className={styles.th} style={{ textAlign: 'right' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {paginatedItems.map((a, index) => (
-                <tr key={a.id} style={{ borderTop: '1px solid #e5e7eb' }}>
-                  <td style={{ padding: '12px 16px', color: '#4b5563', fontSize: 14, textAlign: 'center' }}>
+                <tr key={a.id}>
+                  <td className={`${styles.td} ${styles.center}`}>
                     {(page - 1) * pageSize + index + 1}
                   </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ width: 100, height: 56, background: '#f0f2f5', borderRadius: 6, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {a.thumbnailUrl ? <img src={a.thumbnailUrl} alt={a.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 12, color: '#6b7280' }}>No Image</span>}
+                  <td className={styles.td}>
+                    <div className={styles.thumbnailContainer}>
+                      {a.thumbnailUrl ? <img src={a.thumbnailUrl} alt={a.title} className={styles.thumbnail} /> : <span className={styles.noImage}>No Image</span>}
                     </div>
                   </td>
-                  <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14, maxWidth: 250 }}>{a.title}</td>
-                  <td style={{ padding: '16px', color: '#4b5563', fontSize: 14, maxWidth: 200 }}>{getCategoryNames(a)}</td>
-                  <td style={{ padding: '16px' }}>{pill(a.statusCode)}</td>
-                  <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{fmtDate(a.publishedAt ?? a.createdAt)}</td>
-                  <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <button onClick={() => handleViewDetails(a.id)} disabled={loadingDetails} title="Xem" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
-                    <button onClick={() => onEdit(a)} title="Sửa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
-                    <button onClick={() => handleArchive(a)} title="Lưu trữ" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><DeleteIcon /></button>
+                  <td className={`${styles.td} ${styles.title}`}>{a.title}</td>
+                  <td className={`${styles.td} ${styles.category}`}>{getCategoryNames(a)}</td>
+                  <td className={styles.td}>{pill(a.statusCode)}</td>
+                  <td className={styles.td}>{fmtDate(a.publishedAt ?? a.createdAt)}</td>
+                  <td className={`${styles.td} ${styles.actions}`}>
+                    <button onClick={() => handleViewDetails(a.id)} disabled={loadingDetails} title="Xem" className={styles.actionButton}><ViewIcon /></button>
+                    <button onClick={() => onEdit(a)} title="Sửa" className={styles.actionButton}><EditIcon /></button>
+                    <button onClick={() => handleArchive(a)} title="Lưu trữ" className={styles.actionButton}><DeleteIcon /></button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         ) : (
-          <div style={{ padding: '48px 16px', textAlign: 'center', color: '#6b7280', fontSize: 14 }}>
+          <div className={styles.noResults}>
             Không tìm thấy kết quả
           </div>
         )}
       </div>
 
       {/* Pagination */}
-      <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#4b5563', fontSize: 14 }}>
+      <div className={styles.paginationContainer}>
         <div>
           Hiển thị {paginatedItems.length} trên tổng số {totalItems} kết quả
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label htmlFor="pageSize" style={{ fontSize: 14 }}>Số mục:</label>
-            <select id="pageSize" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}>
+        <div className={styles.paginationControls}>
+          <div className={styles.paginationPageSize}>
+            <label htmlFor="pageSize">Số mục:</label>
+            <select id="pageSize" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }} className={styles.filterSelect} style={{ padding: '6px 10px' }}>
               <option value={5}>5</option>
               <option value={10}>10</option>
               <option value={15}>15</option>
             </select>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
+          <div className={styles.paginationControls}>
+            <button onClick={() => setPage((p: number) => Math.max(1, p - 1))} disabled={page <= 1} className={styles.paginationButton}>
               Trang trước
             </button>
-            <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page >= totalPages ? 0.6 : 1 }}>
+            <button onClick={() => setPage((p: number) => p + 1)} disabled={page >= totalPages} className={styles.paginationButton}>
               Trang sau
             </button>
           </div>

@@ -3,14 +3,8 @@ import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, Service
 
 class DoctorService {
     async getMetadata(): Promise<DoctorRegisterMetadata> {
-        try {
-            const response = await apiClient.get<DoctorRegisterMetadata>('/doctor/register-metadata');
-            return response.data;
-        }
-        catch (error: any) {
-            console.error('Get doctor register metadata error: ', error);
-            throw this.handleApiError(error);
-        }
+        const response = await apiClient.get<DoctorRegisterMetadata>('/doctor/register-metadata');
+        return response.data;
     }
 
     async registerDoctor(payload: FormData): Promise<void> {
@@ -29,14 +23,9 @@ class DoctorService {
     }
 
     async getDoctorProfileDetails(): Promise<DoctorProfileDetails> {
-        try {
-            const response = await apiClient.get<DoctorProfileDetails>('doctor/profile/details');
-            return response.data;
-        }
-        catch (error: any) {
-            console.error('Get doctor profile details error:', error);
-            throw this.handleApiError(error);
-        }
+        // apiClient automatically adds Authorization header
+        const response = await apiClient.get<DoctorProfileDetails>('doctor/profile/details');
+        return response.data;
     }
 
     async updateDoctorProfile(payload: FormData): Promise<void> {
@@ -48,7 +37,7 @@ class DoctorService {
         return response.data;
     }
 
-    async updatePassword(payload: FormData): Promise<any>{
+    async updatePassword(payload: FormData): Promise<any> {
         await apiClient.put('doctor/profile/update-password', payload);
     }
 

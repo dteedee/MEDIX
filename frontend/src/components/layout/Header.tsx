@@ -1,154 +1,154 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import styles from '../../styles/header.module.css'
 import { useAuth } from '../../contexts/AuthContext';
-import './Header.css';
+import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NotificationMetadata } from '../../types/notification.types';
+import NotificationService from '../../services/notificationService';
+import { formatDistanceToNow } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
 export const Header: React.FC = () => {
-  const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+    const [notificationMetadata, setNotificationMetadata] = useState<NotificationMetadata>();
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
 
-  // Chuyển đến trang profile dựa trên role
-  const handleProfileClick = () => {
-    if (!user) return;
-    
-    switch (user.role?.toUpperCase()) {
-      case 'ADMIN':
-        navigate('/app/admin');
-        break;
-      case 'MANAGER':
-        navigate('/app/manager');
-        break;
-      case 'DOCTOR':
-        navigate('/doctor/profile/edit');
-        break;
-      case 'PATIENT':
-        navigate('/app/patient/profile');
-        break;
-      default:
-        navigate('/');
-    }
-  };
+    useEffect(() => {
+        // Only fetch if user is logged in
+        if (!user) {
+            return;
+        }
+        
+        const fetchMetadata = async () => {
+            try {
+                const data = await NotificationService.getMetadata();
+                setNotificationMetadata(data);
+            } catch (error) {
+                console.error('❌ Header - Failed to fetch metadata:', error);
+            }
+        }
+        fetchMetadata();
+    }, [user?.id]); // Use user.id instead of entire user object to prevent unnecessary re-renders
 
-  // Đăng xuất
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-      navigate('/');
-    }
-  };
+    const getNotificationIconClass = (type: string): string => {
+        switch (type) {
+            case 'Appointment':
+                return 'bi-calendar-event';
+            case 'Payment':
+                return 'bi-credit-card';
+            case 'System':
+                return 'bi-gear';
+            case 'Reminder':
+                return 'bi-alarm';
+            case 'Marketing':
+                return 'bi-megaphone';
+            default:
+                return 'bi-info-circle'; // fallback icon
+        }
+    };
 
-  const handleLogoClick = () => navigate('/');
+    return (
+        <header>
+            <div className={styles["top-bar"]}>
+                <div className={styles["logo"]}>
+                    <a href='/' className={styles["logo"]}>
+                        MEDIX
+                        <small style={{ textTransform: 'uppercase' }}>Hệ thống y tế thông minh ứng dụng AI</small>
+                    </a>
+                </div>
+                <div className={styles["search-bar"]}>
+                    <input type="text" placeholder="Chuyên khoa, triệu chứng, tên bác sĩ..." />
+                    <button>🔍</button>
+                </div>
+                <div className={styles["header-links"]}>
+                    {user ? (
+                        <>
+                            <div>
+                                <a href={user.role === "Doctor" ? "/doctor/profile/edit" : "/patient/profile"}>
+                                    <img
+                                        src={user.avatarUrl}
+                                        alt="User avatar"
+                                        className="rounded-circle dropdown-toggle"
+                                        // data-bs-toggle="dropdown"
+                                        // aria-expanded="false"
+                                        style={{ width: '40px', height: '40px', cursor: 'pointer' }} />
+                                </a>
+                                {/* <ul className="dropdown-menu dropdown-menu-start">
+                                    <li>
+                                        <button className="dropdown-item">
+                                            {user.avatarUrl}
+                                        </button>
+                                    </li>
+                                </ul> */}
+                            </div>
+                            <div className="dropdown" style={{ position: 'relative', display: 'inline-block' }}>
+                                <i
+                                    className="bi bi-bell-fill fs-4"
+                                    style={{ cursor: 'pointer' }}
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                </i>
 
-  return (
-    <header className="medix-header">
-      <div className="medix-header-inner">
-        {/* Logo */}
-        <div className="medix-logo" onClick={handleLogoClick}>
-          <div className="medix-logo-title">MEDIX</div>
-          <div className="medix-logo-sub">HỆ THỐNG Y TẾ THÔNG MINH ỨNG DỤNG AI</div>
-        </div>
+                                {!notificationMetadata?.isAllRead && (
+                                    <span
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            right: 0,
+                                            width: '10px',
+                                            height: '10px',
+                                            backgroundColor: 'red',
+                                            borderRadius: '50%',
+                                        }}
+                                    ></span>
+                                )}
 
-        {/* Thanh tìm kiếm */}
-        <div className="medix-search">
-          <div className="search-pill">
-            <input
-              className="search-input"
-              placeholder="Chuyên khoa, Triệu chứng, Tên bác sĩ"
-            />
-            <button className="search-icon" aria-label="search">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
+                                <ul className="dropdown-menu dropdown-menu-start" style={{
+                                    maxHeight: '500px', // 🔧 Short height for testing
+                                    overflowY: 'auto', width: '400px'
+                                }}>
+                                    <li><h6 className="dropdown-header">Thông báo</h6></li>
+                                    {notificationMetadata?.notifications.map((notification) => (
+                                        <li>
+                                            <a className="dropdown-item" href="#" style={{ whiteSpace: 'normal' }}>
+                                                <div>
+                                                    <strong><i className={`bi ${getNotificationIconClass(notification.type)} me-2`}></i>
+                                                        {notification.title}</strong>
+                                                    <div style={{ fontSize: '0.9rem', lineHeight: '1.4', marginTop: '2px' }}>
+                                                        {notification.message}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '4px' }}>
+                                                        {formatDistanceToNow(new Date(notification.createdAt), {
+                                                            addSuffix: true,
+                                                            locale: vi,
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
 
-        {/* Khu vực tài khoản / hành động */}
-        <div className="medix-actions">
-          {isAuthenticated && user ? (
-            <>
-              <div 
-                className="avatar" 
-                title={user.fullName || user.email}
-                onClick={handleProfileClick}
-                style={{ cursor: 'pointer' }}
-              >
-                {user.avatarUrl ? (
-                  <img 
-                    src={user.avatarUrl} 
-                    alt={user.fullName || 'User avatar'} 
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '2px solid #ffffff'
-                    }}
-                  />
-                ) : (
-                  <svg
-                    width="28"
-                    height="28"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
-                      stroke="#ffffff"
-                      strokeWidth="1.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M20.59 21C19.79 18.88 17.98 17.25 15.75 16.5C13.52 15.75 10.48 15.75 8.25 16.5C6.02 17.25 4.21 18.88 3.41 21"
-                      stroke="#ffffff"
-                      strokeWidth="1.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
-              </div>
-              <span 
-                className="user-info"
-                onClick={handleProfileClick}
-                style={{ cursor: 'pointer' }}
-              >
-                {user.fullName || user.email}
-              </span>
-              <span className="user-role">{user.role || 'USER'}</span>
-              <button className="logout-btn" onClick={handleLogout}>
-                Đăng Xuất
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login" className="login-btn">
-                Đăng nhập
-              </Link>
-              <Link to="/patient-register" className="register-btn">
-                Đăng ký
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
-  );
+                            <button className={styles['header-link']}
+                                onClick={async () => {
+                                    await logout();
+                                    navigate('/login');
+                                }}>
+                                Đăng xuất
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <a className={styles['header-link']} href="/login">Đăng nhập</a>
+                            <a className={styles['header-link']} href="#" data-bs-toggle="dropdown" aria-expanded="false">Đăng ký</a>
+                            <ul className="dropdown-menu">
+                                <li><a className="dropdown-item" href="/patient-register">Đăng ký bệnh nhân</a></li>
+                                <li><a className="dropdown-item" href="/doctor/register">Đăng ký bác sĩ</a></li>
+                            </ul>
+                        </>
+                    )}
+                </div>
+            </div>
+        </header >
+    );
 };

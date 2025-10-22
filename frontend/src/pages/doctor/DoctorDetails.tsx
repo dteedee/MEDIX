@@ -85,7 +85,6 @@ function DoctorDetails() {
 
     return (
         <div>
-            <Header />
             <div className={styles["breadcrumb"]}>
                 <a href="#">Trang chủ</a> / <a href="#">Bác sĩ</a> / <span>Chi Tiết Bác Sĩ</span>
             </div>
@@ -111,8 +110,8 @@ function DoctorDetails() {
                             <span className={styles["info-value"]}>{profileData?.specialization}</span>
                         </div>
                         <div className={styles["info-row"]}>
-                            <span className={styles["info-label"]}>Nơi công tác:</span>
-                            <span className={styles["info-value"]}>Bệnh viện đại học y Hà Nội</span>
+                            <span className={styles["info-label"]}>Trình độ học vấn:</span>
+                            <span className={styles["info-value"]}>{profileData?.education}</span>
                         </div>
                     </div>
                 </div>
@@ -133,7 +132,6 @@ function DoctorDetails() {
                     </div>
                 </div>
             </div>
-            <Footer />
         </div>
     )
 }

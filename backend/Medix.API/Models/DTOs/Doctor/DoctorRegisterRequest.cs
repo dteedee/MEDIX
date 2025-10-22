@@ -9,7 +9,7 @@ namespace Medix.API.Application.DTOs.Doctor
         [MaxLength(200, ErrorMessage = "Họ và tên không được vượt quá 200 ký tự")]
         public string FullName { get; set; } = null!;
         [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập")]
-        [MaxLength(256, ErrorMessage = "Tên đăng nhập không được vượt quá 256 ký tự")]
+        [MaxLength(15, ErrorMessage = "Tên đăng nhập không được vượt quá 15 ký tự")]
         [RegularExpression(@"^[a-zA-Z0-9]+$", ErrorMessage = "Tên đăng nhập chỉ được chứa chữ cái không dấu và số")]
         public string UserName { get; set; } = null!;
         [Dob]
@@ -30,7 +30,8 @@ namespace Medix.API.Application.DTOs.Doctor
         public string SpecializationId { get; set; } = null!;
         [Required(ErrorMessage = "Vui lòng nhập số giấy phép hành nghề")]
         public string LicenseNumber { get; set; } = null!;
-        [ImageFile]
+        [Required(ErrorMessage = "Vui lòng chọn một tệp ZIP hoặc RAR.")]
+        [ArchiveFile]
         public IFormFile? LicenseImage { get; set; }
         [MaxLength(1000, ErrorMessage = "Tiểu sử không được vượt quá 1000 ký tự")]
         public string? Bio { get; set; }

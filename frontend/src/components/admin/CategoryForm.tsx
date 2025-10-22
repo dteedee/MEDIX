@@ -3,6 +3,8 @@ import { CategoryDTO, CreateCategoryRequest } from '../../types/category.types'
 import { categoryService } from '../../services/categoryService'
 import { useToast } from '../../contexts/ToastContext'
 
+import formStyles from '../../styles/Form.module.css'
+import styles from '../../styles/CategoryForm.module.css'
 interface Props {
   category?: CategoryDTO
   onSaved?: () => void
@@ -72,73 +74,37 @@ export default function CategoryForm({ category, onSaved, onCancel }: Props) { /
     } finally { setSaving(false) } // eslint-disable-line
   }
 
-  // --- CSS Styles --- (Adopted from UserForm for consistency)
-  const formContainerStyle: React.CSSProperties = {
-    background: '#fff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 12,
-    padding: '28px',
-    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-  }
-  const labelStyle: React.CSSProperties = {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 6,
-    display: 'block',
-    fontWeight: 600,
-  }
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 12px',
-    border: '1px solid #d1d5db',
-    borderRadius: 8,
-    fontSize: 15,
-    boxSizing: 'border-box',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
-  }
-  const gridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '24px',
-  }
-
-  const errorTextStyle: React.CSSProperties = {
-    color: '#ef4444',
-    fontSize: 13,
-    marginTop: 6,
-  }
-
   return (
-    <form onSubmit={submit} style={formContainerStyle}>
-      <div style={gridStyle}>
+    <form onSubmit={submit} className={formStyles.formContainer}>
+      <div className={styles.grid}>
         <div>
-          <label style={labelStyle}>Tên danh mục</label>
+          <label className={formStyles.label}>Tên danh mục</label>
           <input 
             value={name}
             onChange={e => { setName(e.target.value); if (errors.name) setErrors(prev => ({ ...prev, name: undefined })); }}
             required
             onBlur={e => validateOnBlur('name', e.target.value)}
-            style={{...inputStyle, borderColor: errors.name ? '#ef4444' : '#d1d5db'}} />
-            {errors.name && <div style={errorTextStyle}>{errors.name}</div>}
+            className={`${formStyles.input} ${errors.name ? formStyles.inputError : ''}`} />
+            {errors.name && <div className={formStyles.errorText}>{errors.name}</div>}
         </div>
         <div>
-          <label style={labelStyle}>Đường dẫn (Slug)</label>
+          <label className={formStyles.label}>Đường dẫn (Slug)</label>
           <input 
             required
             value={slug}
             onChange={e => { setSlug(e.target.value); if (errors.slug) setErrors(prev => ({ ...prev, slug: undefined })); }}
             onBlur={e => validateOnBlur('slug', e.target.value)}
-            style={{...inputStyle, borderColor: errors.slug ? '#ef4444' : '#d1d5db'}} 
+            className={`${formStyles.input} ${errors.slug ? formStyles.inputError : ''}`}
           />
-          {errors.slug && <div style={errorTextStyle}>{errors.slug}</div>}
+          {errors.slug && <div className={formStyles.errorText}>{errors.slug}</div>}
         </div>
-        <div style={{ gridColumn: '1 / -1' }}>
-          <label style={labelStyle}>Mô tả</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} style={{...inputStyle, minHeight: '100px', fontFamily: 'inherit'}} />
+        <div className={styles.fullWidth}>
+          <label className={formStyles.label}>Mô tả</label>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} className={`${formStyles.textarea} ${styles.descriptionTextarea}`} />
         </div>
         <div>
-          <label style={labelStyle}>Danh mục cha</label>
-          <select value={parentId ?? ''} onChange={e => setParentId(e.target.value || null)} style={inputStyle}>
+          <label className={formStyles.label}>Danh mục cha</label>
+          <select value={parentId ?? ''} onChange={e => setParentId(e.target.value || null)} className={formStyles.select}>
             <option value="">-- Không có --</option>
             {allCategories.filter(c => c.id !== category?.id).map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
@@ -146,38 +112,19 @@ export default function CategoryForm({ category, onSaved, onCancel }: Props) { /
           </select>
         </div>
         <div>
-          <label style={labelStyle}>Trạng thái</label>
-          <div style={{ display: 'flex', alignItems: 'center', height: '42px' }}>
-            <input type="checkbox" id="isActive" checked={isActive} onChange={e => setIsActive(e.target.checked)} style={{ marginRight: 8, width: 16, height: 16, cursor: 'pointer' }} />
-            <label htmlFor="isActive" style={{ fontSize: 14, color: '#4b5563', cursor: 'pointer' }}>Đang hoạt động</label>
+          <label className={formStyles.label}>Trạng thái</label>
+          <div className={styles.statusContainer}>
+            <input type="checkbox" id="isActive" checked={isActive} onChange={e => setIsActive(e.target.checked)} className={styles.statusCheckbox} />
+            <label htmlFor="isActive" className={styles.statusLabel}>Đang hoạt động</label>
           </div>
         </div>
       </div>
 
-      <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-        <button type="button" onClick={onCancel} style={{
-          padding: '10px 20px',
-          backgroundColor: '#fff',
-          color: '#374151',
-          borderRadius: 8,
-          border: '1px solid #d1d5db',
-          fontWeight: 600,
-          cursor: 'pointer',
-          transition: 'background-color 0.2s',
-        }}>
+      <div className={formStyles.actionsContainer}>
+        <button type="button" onClick={onCancel} className={`${formStyles.button} ${formStyles.buttonSecondary}`}>
           Hủy
         </button>
-        <button type="submit" disabled={saving} style={{
-          padding: '10px 20px',
-          backgroundColor: saving ? '#9ca3af' : '#2563eb',
-          color: '#fff',
-          borderRadius: 8,
-          border: 'none',
-          fontWeight: 600,
-          cursor: saving ? 'not-allowed' : 'pointer',
-          opacity: saving ? 0.7 : 1,
-          transition: 'background-color 0.2s',
-        }}>
+        <button type="submit" disabled={saving} className={`${formStyles.button} ${formStyles.buttonPrimary}`}>
           {saving ? 'Đang lưu...' : 'Lưu danh mục'}
         </button>
       </div>

@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.Community;
+using Medix.API.Exceptions;
 using Medix.API.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -29,95 +30,98 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
         // ========================= USER SELF MANAGEMENT =========================
 
-        [HttpGet("getUserInfor")]
-        [Authorize]
-        public async Task<IActionResult> GetUserInfor()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-            if (userIdClaim == null)
-                return Unauthorized(new { message = "User ID not found in token" });
+        //[HttpGet("getUserInfor")]
+        //[Authorize]
+        //public async Task<IActionResult> GetUserInfor()
+        //{
+        //    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+        //    if (userIdClaim == null)
+        //        return Unauthorized(new { message = "User ID not found in token" });
 
-            if (!Guid.TryParse(userIdClaim.Value, out var userId))
-                return Unauthorized(new { message = "Invalid user ID in token" });
+        //    if (!Guid.TryParse(userIdClaim.Value, out var userId))
+        //        return Unauthorized(new { message = "Invalid user ID in token" });
 
-            var userInfo = await _userService.GetUserBasicInfo(userId);
-            if (userInfo == null)
-                return NotFound(new { message = "User not found" });
+        //    var userInfo = await _userService.GetUserBasicInfo(userId);
+        //    if (userInfo == null)
+        //        return NotFound(new { message = "User not found" });
 
-            return Ok(userInfo);
-        }
+        //    return Ok(userInfo);
+        //}
 
-        [HttpPut("updateUserInfor")]
-        [Authorize]
-        public async Task<IActionResult> UpdateUserInfor([FromBody] UpdateUserDto updateDto)
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-            if (userIdClaim == null)
-                return Unauthorized(new { message = "User ID not found in token" });
+        //[HttpPut("updateUserInfor")]
+        //[Authorize]
+        //public async Task<IActionResult> UpdateUserInfor([FromBody] UpdateUserDto updateDto)
+        //{
+        //    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+        //    if (userIdClaim == null)
+        //        return Unauthorized(new { message = "User ID not found in token" });
 
-            if (!Guid.TryParse(userIdClaim.Value, out var userId))
-                return Unauthorized(new { message = "Invalid user ID in token" });
+        //    if (!Guid.TryParse(userIdClaim.Value, out var userId))
+        //        return Unauthorized(new { message = "Invalid user ID in token" });
 
-            updateDto.Id = userId;
+        //    updateDto.Id = userId;
 
-            var updatedUser = await _userService.UpdateUserBasicInfo(updateDto);
-            return Ok(updatedUser);
-        }
+        //    var updatedUser = await _userService.UpdateUserBasicInfo(updateDto);
+        //    return Ok(updatedUser);
+        //}
 
-        [HttpPost("uploadAvatar")]
-        [Authorize]
-        public async Task<IActionResult> UploadAvatar([FromForm] IFormFile file, [FromServices] CloudinaryService cloudinaryService)
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-            if (userIdClaim == null)
-                return Unauthorized(new { message = "User ID not found in token" });
 
-            if (!Guid.TryParse(userIdClaim.Value, out var userId))
-                return Unauthorized(new { message = "Invalid user ID in token" });
 
-            if (file == null || file.Length == 0)
-                return BadRequest(new { message = "No file uploaded" });
 
-            const long maxFileSize = 5 * 1024 * 1024;
-            if (file.Length > maxFileSize)
-                return BadRequest(new { message = "File quá lớn (tối đa 5 MB)" });
+        //[HttpPost("uploadAvatar")]
+        //[Authorize]
+        //public async Task<IActionResult> UploadAvatar([FromForm] IFormFile file, [FromServices] CloudinaryService cloudinaryService)
+        //{
+        //    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+        //    if (userIdClaim == null)
+        //        return Unauthorized(new { message = "User ID not found in token" });
 
-            if (string.IsNullOrWhiteSpace(file.ContentType) || !file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-                return BadRequest(new { message = "File must be an image." });
+        //    if (!Guid.TryParse(userIdClaim.Value, out var userId))
+        //        return Unauthorized(new { message = "Invalid user ID in token" });
 
-            var allowedExt = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-            var ext = Path.GetExtension(file.FileName)?.ToLowerInvariant();
-            if (string.IsNullOrEmpty(ext) || !allowedExt.Contains(ext))
-                return BadRequest(new { message = "Định dạng file không được hỗ trợ." });
+        //    if (file == null || file.Length == 0)
+        //        return BadRequest(new { message = "No file uploaded" });
 
-            try
-            {
-                using var stream = file.OpenReadStream();
-                var fileName = $"{userId}_{Guid.NewGuid()}{ext}";
-                var imageUrl = await cloudinaryService.UploadImageAsync(stream, fileName);
+        //    const long maxFileSize = 5 * 1024 * 1024;
+        //    if (file.Length > maxFileSize)
+        //        return BadRequest(new { message = "File quá lớn (tối đa 5 MB)" });
 
-                if (string.IsNullOrEmpty(imageUrl))
-                    return StatusCode(500, new { message = "Image upload failed" });
+        //    if (string.IsNullOrWhiteSpace(file.ContentType) || !file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        //        return BadRequest(new { message = "File must be an image." });
 
-                var user = await _userService.GetByIdAsync(userId);
-                if (user == null)
-                    return NotFound(new { message = "User not found" });
+        //    var allowedExt = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+        //    var ext = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+        //    if (string.IsNullOrEmpty(ext) || !allowedExt.Contains(ext))
+        //        return BadRequest(new { message = "Định dạng file không được hỗ trợ." });
 
-                await _userService.UpdateAvatarURL(imageUrl, user.Id);
+        //    try
+        //    {
+        //        using var stream = file.OpenReadStream();
+        //        var fileName = $"{userId}_{Guid.NewGuid()}{ext}";
+        //        var imageUrl = await cloudinaryService.UploadImageAsync(stream, fileName);
 
-                return Ok(new { imageUrl });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error uploading avatar for user {UserId}", userIdClaim.Value);
-                return StatusCode(500, new { message = "Cloud upload error", detail = ex.Message });
-            }
-        }
+        //        if (string.IsNullOrEmpty(imageUrl))
+        //            return StatusCode(500, new { message = "Image upload failed" });
+
+        //        var user = await _userService.GetByIdAsync(userId);
+        //        if (user == null)
+        //            return NotFound(new { message = "User not found" });
+
+        //        await _userService.UpdateAvatarURL(imageUrl, user.Id);
+
+        //        return Ok(new { imageUrl });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error uploading avatar for user {UserId}", userIdClaim.Value);
+        //        return StatusCode(500, new { message = "Cloud upload error", detail = ex.Message });
+        //    }
+        //}
 
         // ========================= ADMIN MANAGEMENT =========================
 
         [HttpGet]
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(Tuple<int, IEnumerable<UserDto>>), 200)]
         public async Task<IActionResult> GetPaged([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
@@ -126,7 +130,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(UserDto), 200)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> GetById(Guid id)
@@ -144,13 +148,17 @@ namespace Medix.API.Presentation.Controller.UserManagement
         [ProducesResponseType(400)]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserDTO request)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             try
             {
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
-
                 var userDto = await _userService.CreateUserAsync(request);
                 return CreatedAtAction(nameof(GetById), new { id = userDto.Id }, userDto);
+            }
+            catch (MedixException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -159,8 +167,9 @@ namespace Medix.API.Presentation.Controller.UserManagement
             }
         }
 
+
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(UserDto), 200)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserDTO updateUserDto)
@@ -170,7 +179,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [ProducesResponseType(204)]
         public async Task<IActionResult> DeleteUser(Guid id)
         {
@@ -179,7 +188,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
         }
 
         [HttpGet("search")]
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(Tuple<int, IEnumerable<UserDto>>), 200)]
         public async Task<IActionResult> SearchUsers([FromQuery] string keyword, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {

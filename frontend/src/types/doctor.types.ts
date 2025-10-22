@@ -58,6 +58,7 @@ export interface DoctorProfileDto{
   biography: string;
   ratingByStar: number[];
   reviews: ReviewDto[];
+  education: string;
 }
 
 export interface DoctorProfileDetails{

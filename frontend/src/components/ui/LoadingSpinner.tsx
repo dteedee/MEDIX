@@ -43,10 +43,8 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 };
 
 export const PageLoader: React.FC = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="text-center">
-      <LoadingSpinner size="xl" className="text-blue-600 mb-4" />
-      <p className="text-gray-600">Đang tải...</p>
-    </div>
+  <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+    <LoadingSpinner size="xl" className="text-blue-600" />
+    <p className="text-gray-600 text-lg">Đang tải...</p>
   </div>
 );

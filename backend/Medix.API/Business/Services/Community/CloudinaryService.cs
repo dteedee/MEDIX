@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using System.Net;
 
 namespace Medix.API.Business.Services.Community
 {
@@ -182,5 +183,27 @@ namespace Medix.API.Business.Services.Community
             await Task.Delay(50);
             return $"https://res.cloudinary.com/demo/image/upload/w_{width},h_{height}/{publicId}.jpg";
         }
+
+        public async Task<string> UploadArchiveAsync(IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+                throw new ArgumentException("File is required");
+
+            using var stream = file.OpenReadStream();
+
+            var uploadParams = new RawUploadParams
+            {
+                File = new FileDescription(file.FileName, stream),
+                PublicId = Path.GetFileNameWithoutExtension(file.FileName),
+            };
+
+            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+
+            if (uploadResult.StatusCode != HttpStatusCode.OK)
+                throw new Exception("Upload failed");
+
+            return uploadResult.SecureUrl.ToString(); // or use .Url if you prefer http
+        }
+
     }
 }

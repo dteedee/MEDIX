@@ -48,6 +48,7 @@ import UserEditPage from './pages/admin/UserEditPage';
 import ArticleReaderPage from './pages/patient/ArticleReaderPage';
 import ArticleDetailPage from './pages/patient/ArticleDetailPage';
 import DoctorBookingList from './pages/patient/DoctorBookingList';
+import ErrorPageWrapper from './pages/ErrorPageWrapper';
 
 export function App() {
   return (
@@ -58,6 +59,8 @@ export function App() {
             <Header />
 
             <Routes>
+              <Route path="/error/:code" element={<ErrorPageWrapper />} />
+
               {/* ---------- Public routes ---------- */}
               <Route element={<AuthLayout />}>
                 <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
@@ -65,21 +68,32 @@ export function App() {
                 <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
                 <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
                 <Route path="/auth-status" element={<PublicRoute><AuthStatus /></PublicRoute>} />
+                <Route path="/doctor/register" element={<PublicRoute><DoctorRegister /></PublicRoute>} />
               </Route>
 
               {/* ---------- Change password route ---------- */}
               <Route path="/change-password" element={<ChangePassword />} />
 
               {/* ---------- Doctor routes ---------- */}
+              {/* <Route path="/doctor/*" element={
+                <Routes>
+                  <Route path="register" element={<DoctorRegister />} />
+                  <Route path="details/:username" element={<DoctorDetails />} />
+                </Routes>
+              } /> */}
+
+              {/* ---------- Doctor routes ---------- */}
               <Route path="/doctor/*" element={
-                <PublicRoute>
-                  <Routes>
-                    <Route path="register" element={<DoctorRegister />} />
-                    <Route path="details/:username" element={<DoctorDetails />} />
-                    <Route path="profile/edit" element={<DoctorProfileEdit />} />
-                  </Routes>
-                </PublicRoute>
+                <>
+                  <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
+                    <Routes>
+                      <Route path="profile/edit" element={<DoctorProfileEdit />} />
+                    </Routes>
+                  </ProtectedRoute>
+                </>
               } />
+
+              <Route path="/doctor/details/:username" element={<DoctorDetails />} />
 
               {/* ---------- Home ---------- */}
               <Route index element={<HomePage />} />

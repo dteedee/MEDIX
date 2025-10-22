@@ -10,12 +10,15 @@ namespace Medix.API.Presentation.Controller.Community
         private readonly ISiteBannerService _siteBannerService;
         private readonly IDoctorService _doctorService;
         private readonly IArticleService _articleService;
+        private readonly ILogger<HomeController> _logger;
 
-        public HomeController(ISiteBannerService siteBannerService, IDoctorService doctorService, IArticleService articleService)
+        public HomeController(ISiteBannerService siteBannerService, IDoctorService doctorService,
+            IArticleService articleService, ILogger<HomeController> logger)
         {
             _siteBannerService = siteBannerService;
             _doctorService = doctorService;
             _articleService = articleService;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -23,55 +26,6 @@ namespace Medix.API.Presentation.Controller.Community
         {
             try
             {
-                // TEMPORARY: Return mock data to avoid database errors
-                var mockData = new
-                {
-                    bannerUrls = new[] { "/images/banner1.jpg", "/images/banner2.jpg" },
-                    displayedDoctors = new[]
-                    {
-                        new
-                        {
-                            AvatarUrl = "/images/doctor1.jpg",
-                            FullName = "Dr. Nguyễn Văn A",
-                            UserName = "dr.nguyenvana",
-                            SpecializationName = "Tim mạch",
-                            YearsOfExperience = 10,
-                            AverageRating = 4.8
-                        },
-                        new
-                        {
-                            AvatarUrl = "/images/doctor2.jpg",
-                            FullName = "Dr. Trần Thị B",
-                            UserName = "dr.tranthib",
-                            SpecializationName = "Nhi khoa",
-                            YearsOfExperience = 8,
-                            AverageRating = 4.9
-                        }
-                    },
-                    articles = new[]
-                    {
-                        new
-                        {
-                            Title = "Cách phòng chống bệnh tim mạch",
-                            Summary = "Những cách đơn giản để bảo vệ sức khỏe tim mạch",
-                            ThumbnailUrl = "/images/article1.jpg",
-                            PublishedAt = "20/10/2025"
-                        },
-                        new
-                        {
-                            Title = "Dinh dưỡng cho trẻ em",
-                            Summary = "Chế độ dinh dưỡng hợp lý cho sự phát triển của trẻ",
-                            ThumbnailUrl = "/images/article2.jpg",
-                            PublishedAt = "19/10/2025"
-                        }
-                    }
-                };
-
-                Console.WriteLine("=== HOME API CALLED - RETURNING MOCK DATA ===");
-                return Ok(mockData);
-
-                // TODO: Uncomment when database is ready
-                /*
                 var banners = await _siteBannerService.GetHomePageBanners();
                 var bannerUrls = banners.Select(b => b.BannerImageUrl).ToList();
 
@@ -96,20 +50,11 @@ namespace Medix.API.Presentation.Controller.Community
                 }).Take(3).ToList();
 
                 return Ok(new { bannerUrls, displayedDoctors, articles });
-                */
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in GetHomeMetadata: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                
-                // Return empty data instead of throwing error
-                return Ok(new 
-                { 
-                    bannerUrls = new string[0], 
-                    displayedDoctors = new object[0], 
-                    articles = new object[0] 
-                });
+                _logger.LogWarning(ex, "An error occurred while fetching home page metadata.");
+                throw;
             }
         }
     }

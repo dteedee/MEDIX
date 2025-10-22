@@ -20,7 +20,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
 
         Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null);
 
-    Task<bool> TitleExistsAsync(string title, Guid? excludeId = null);
+        Task<bool> TitleExistsAsync(string title, Guid? excludeId = null);
 
         Task<HealthArticle> CreateAsync(HealthArticle article);
 

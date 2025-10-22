@@ -40,6 +40,7 @@ namespace Medix.API.Models.DTOs.HealthArticle
         public string? MetaDescription { get; set; }
 
         [Required(ErrorMessage = "AuthorId is required.")]
+
         public Guid AuthorId { get; set; }
 
         [Required(ErrorMessage = "StatusCode is required.")]

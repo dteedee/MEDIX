@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { ArticleDTO, CreateArticleRequest } from '../../types/article.types'
+import { ArticleDTO } from '../../types/article.types'
 import { categoryService } from '../../services/categoryService'
 import { CategoryDTO } from '../../types/category.types'
-import { articleService } from '../../services/articleService'
+import { articleService, ArticleFormPayload } from '../../services/articleService'
 import { useToast } from '../../contexts/ToastContext'
 import { CKEditor } from '@ckeditor/ckeditor5-react'
+import formStyles from '../../styles/Form.module.css' // Import shared form styles
+import styles from '../../styles/ArticleForm.module.css' // Import component-specific styles
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
 
 interface Props {
@@ -18,8 +20,10 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const [title, setTitle] = useState(article?.title ?? '')
   const [slug, setSlug] = useState(article?.slug ?? '')
   const [summary, setSummary] = useState(article?.summary ?? '')
-  const [thumbnailUrl, setThumbnailUrl] = useState(article?.thumbnailUrl ?? '')
-  const [coverImageUrl, setCoverImageUrl] = useState(article?.coverImageUrl ?? '')
+  const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState(article?.thumbnailUrl ?? '') // For displaying preview
+  const [selectedThumbnailFile, setSelectedThumbnailFile] = useState<File | null>(null) // Actual file object
+  const [coverImagePreviewUrl, setCoverImagePreviewUrl] = useState(article?.coverImageUrl ?? '') // For displaying preview
+  const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null) // Actual file object
   const [displayType, setDisplayType] = useState(article?.displayType ?? 'STANDARD')
   const [isHomepageVisible, setIsHomepageVisible] = useState<boolean>(article?.isHomepageVisible ?? false)
   const [displayOrder, setDisplayOrder] = useState<number>(article?.displayOrder ?? 0)
@@ -27,7 +31,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const [metaDescription, setMetaDescription] = useState(article?.metaDescription ?? '')
   // TODO: Replace with actual logged-in user ID from AuthContext when available
   // Use a REAL user ID from your database for development until auth is ready.
-  const [authorId, setAuthorId] = useState('1A2C1A65-7B00-415F-8164-4FC3C1054203') // <-- Replace with a valid user ID from your DB
+  const [authorId, setAuthorId] = useState((article as any)?.authorId ?? '30AA82C5-9BB6-4DF0-ABDF-9A65892F69C8') // <-- Replace with a valid user ID from your DB
   const [statusCode, setStatusCode] = useState(article?.statusCode ?? 'DRAFT')
   const [categoryIds, setCategoryIds] = useState<string[]>(article?.categoryIds ?? [])
   const [content, setContent] = useState(article?.content ?? '')
@@ -62,39 +66,51 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const onSelectCoverFile = () => coverFileRef.current?.click()
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (!f) return
+    const file = e.target.files?.[0]
+    if (!file) return
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-    if (!allowedTypes.includes(f.type)) {
+    if (!allowedTypes.includes(file.type)) {
         alert('Chỉ chấp nhận tệp PNG hoặc JPG.');
         return;
     }
     try {
-      const url = await articleService.uploadImage(f);
-      setThumbnailUrl(url)
+      setSelectedThumbnailFile(file);
+      setThumbnailPreviewUrl(URL.createObjectURL(file)); // Create a local URL for preview
+      if (errors.thumbnailUrl) setErrors(prev => ({ ...prev, thumbnailUrl: undefined }));
     } catch (err) {
-      console.error('Upload failed', err)
-      alert('Upload failed')
+      console.error('Error setting thumbnail file:', err);
+      showToast('Không thể chọn ảnh đại diện.', 'error');
+      setSelectedThumbnailFile(null);
+      setThumbnailPreviewUrl('');
     }
   }
 
   const onCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (!f) return
+    const file = e.target.files?.[0]
+    if (!file) return
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-    if (!allowedTypes.includes(f.type)) {
+    if (!allowedTypes.includes(file.type)) {
         alert('Chỉ chấp nhận tệp PNG hoặc JPG.');
         return;
     }
     try {
-      // Re-use the same upload service
-      const url = await articleService.uploadImage(f)
-      setCoverImageUrl(url)
+      setSelectedCoverFile(file);
+      setCoverImagePreviewUrl(URL.createObjectURL(file)); // Create a local URL for preview
     } catch (err) {
-      console.error('Cover image upload failed', err)
-      alert('Upload ảnh bìa thất bại')
+      console.error('Error setting cover image file:', err);
+      showToast('Không thể chọn ảnh bìa.', 'error');
+      setSelectedCoverFile(null);
+      setCoverImagePreviewUrl('');
     }
   }
+
+  // Cleanup object URLs when component unmounts or files change
+  useEffect(() => {
+    return () => {
+      if (thumbnailPreviewUrl && thumbnailPreviewUrl.startsWith('blob:')) URL.revokeObjectURL(thumbnailPreviewUrl);
+      if (coverImagePreviewUrl && coverImagePreviewUrl.startsWith('blob:')) URL.revokeObjectURL(coverImagePreviewUrl);
+    };
+  }, [thumbnailPreviewUrl, coverImagePreviewUrl]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -121,8 +137,10 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
       setTitle(article.title ?? '')
       setSlug(article.slug ?? '')
       setSummary(article.summary ?? '')
-      setThumbnailUrl(article.thumbnailUrl ?? '')
-      setCoverImageUrl(article.coverImageUrl ?? '')
+      setThumbnailPreviewUrl(article.thumbnailUrl ?? '') // Set existing URL for preview
+      setSelectedThumbnailFile(null); // No new file selected initially
+      setCoverImagePreviewUrl(article.coverImageUrl ?? '') // Set existing URL for preview
+      setSelectedCoverFile(null); // No new file selected initially
       setDisplayType(article.displayType ?? 'STANDARD')
       setIsHomepageVisible(Boolean(article.isHomepageVisible))
       setDisplayOrder(typeof article.displayOrder === 'number' ? article.displayOrder : 0)
@@ -205,47 +223,39 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
     if (!slug.trim()) newErrors.slug = "Đường dẫn (slug) không được để trống.";
     if (!summary.trim()) newErrors.summary = "Tóm tắt không được để trống.";
     if (!content.trim()) newErrors.content = "Nội dung không được để trống.";
-    if (!thumbnailUrl) newErrors.thumbnailUrl = "Ảnh đại diện không được để trống.";
+    if (!thumbnailPreviewUrl && !selectedThumbnailFile) newErrors.thumbnailUrl = "Ảnh đại diện không được để trống.";
     if (categoryIds.length === 0) newErrors.categoryIds = "Vui lòng chọn ít nhất một danh mục.";
     
     // Check for existing async validation errors
     if (errors.displayOrder) {
-      alert('Vui lòng sửa các lỗi đã báo trước khi lưu.');
+      showToast('Vui lòng sửa các lỗi đã báo trước khi lưu.', 'error');
       return;
     }
 
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
-        alert('Vui lòng điền đầy đủ các trường bắt buộc.');
+        showToast('Vui lòng điền đầy đủ các trường bắt buộc.', 'error');
         return;
     }
     setSaving(true)
     try {
       const finalStatusCode = overrideStatusCode ?? statusCode;
-      // Prevent saving base64 data URLs into DB columns (causes truncation error)
-      if (thumbnailUrl && thumbnailUrl.startsWith('data:')) {
-        console.warn('Attempt to save data URL for thumbnail blocked');
-        setErrors(prev => ({ ...prev, thumbnailUrl: 'Lỗi tải ảnh đại diện. Vui lòng tải lại ảnh.' }));
-        showToast('Ảnh đại diện không hợp lệ. Vui lòng tải lại.', 'error');
-        setSaving(false);
-        return;
-      }
-      if (coverImageUrl && coverImageUrl.startsWith('data:')) {
-        console.warn('Attempt to save data URL for cover image blocked');
-        // Mặc dù không có trường lỗi riêng cho ảnh bìa, ta vẫn hiển thị toast
-        showToast('Ảnh bìa không hợp lệ. Vui lòng tải lại.', 'error');
+      // Re-validate thumbnail on submit
+      if (!selectedThumbnailFile && !thumbnailPreviewUrl) {
+        setErrors(prev => ({ ...prev, thumbnailUrl: "Ảnh đại diện không được để trống." }));
+        showToast('Vui lòng điền đầy đủ các trường bắt buộc.', 'error');
         setSaving(false);
         return;
       }
 
-      const payload: CreateArticleRequest = {
+      const payload: ArticleFormPayload = {
         title,
         slug,
         summary,
         content,
         displayType,
-        thumbnailUrl: thumbnailUrl || undefined, // Gửi undefined nếu là chuỗi rỗng
-        coverImageUrl: coverImageUrl || undefined, // Gửi undefined nếu là chuỗi rỗng
+        thumbnailUrl: selectedThumbnailFile ? undefined : (thumbnailPreviewUrl || undefined), // Send existing URL if no new file
+        coverImageUrl: selectedCoverFile ? undefined : (coverImagePreviewUrl || undefined), // Send existing URL if no new file
         isHomepageVisible,
         displayOrder,
         metaTitle,
@@ -257,11 +267,13 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
         publishedAt: finalStatusCode === 'PUBLISHED' && !publishedAt 
           ? new Date().toISOString() 
           : (publishedAt ? new Date(publishedAt).toISOString() : undefined),
-        categoryIds
+        categoryIds: categoryIds,
+        thumbnailFile: selectedThumbnailFile || undefined, // Pass the File object
+        coverFile: selectedCoverFile || undefined, // Pass the File object
       }
       if (article) await articleService.update(article.id, payload)
       else await articleService.create(payload)
-      showToast(article ? 'Cập nhật bài viết thành công!' : 'Tạo bài viết thành công!')
+      showToast(article ? 'Cập nhật bài viết thành công!' : 'Tạo bài viết thành công!', 'success')
       onSaved?.()
     } catch (error: any) {
       console.error('Error saving article:', error)
@@ -281,87 +293,44 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
     }
   }
 
-  // --- CSS Styles ---
-  const formContainerStyle: React.CSSProperties = {
-    background: '#fff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 12,
-    padding: '28px',
-    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-  }
-  const labelStyle: React.CSSProperties = {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 6,
-    display: 'block',
-    fontWeight: 600,
-  }
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 12px',
-    border: '1px solid #d1d5db',
-    borderRadius: 8,
-    fontSize: 15,
-    boxSizing: 'border-box',
-  }
-  const buttonStyle: React.CSSProperties = {
-    padding: '10px 20px',
-    borderRadius: 8,
-    border: 'none',
-    fontWeight: 600,
-    cursor: 'pointer',
-  }
-  const errorTextStyle: React.CSSProperties = {
-    color: '#ef4444',
-    fontSize: 13,
-    marginTop: 6,
-  }
-
-  const validatingTextStyle: React.CSSProperties = {
-    color: '#6b7280',
-    fontSize: 13,
-    marginTop: 6,
-  }
-
-
   return (
-    <form onSubmit={(e) => submit(e)} style={formContainerStyle}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '32px' }}>
+    <form onSubmit={(e) => submit(e)} className={formStyles.formContainer}>
+      <div className={styles.mainGrid}>
         {/* Left Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className={styles.leftColumn}>
           <div>
-            <label style={labelStyle}>Ảnh đại diện</label>
-            <div style={{ width: '100%', aspectRatio: '16/9', background: '#f0f2f5', borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', border: '1px dashed #d1d5db' }}>
-              {thumbnailUrl ? <img src={thumbnailUrl} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
+            <label className={formStyles.label}>Ảnh đại diện</label>
+            <div className={`${styles.imagePreviewContainer} ${errors.thumbnailUrl ? styles.error : ''}`}>
+              {thumbnailPreviewUrl ? <img src={thumbnailPreviewUrl} alt="thumb" className={styles.imagePreview} /> : <span className={styles.noImageText}>Chưa có ảnh</span>}
             </div>
-            <button type="button" onClick={onSelectFile} style={{ width: '100%', marginTop: 12, padding: '10px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 500 }}>
+            <button type="button" onClick={onSelectFile} className={styles.uploadButton}>
               Tải ảnh lên
             </button>
             <input ref={fileRef} type="file" accept="image/png, image/jpeg" style={{ display: 'none' }} onChange={(e) => {
                 onFileChange(e);
                 if (errors.thumbnailUrl) setErrors(prev => ({ ...prev, thumbnailUrl: undefined }));
             }} />
-            {errors.thumbnailUrl && <div style={errorTextStyle}>{errors.thumbnailUrl}</div>}
+            {errors.thumbnailUrl && <div className={formStyles.errorText}>{errors.thumbnailUrl}</div>}
           </div>
 
           <div>
-            <label style={labelStyle}>Ảnh bìa (Cover Image)</label>
-            <div style={{ width: '100%', aspectRatio: '16/9', background: '#f0f2f5', borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', border: '1px dashed #d1d5db' }}>
-              {coverImageUrl ? <img src={coverImageUrl} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, color: '#6b7280' }}>Chưa có ảnh</span>}
+            <label className={formStyles.label}>Ảnh bìa (Cover Image)</label>
+            <div className={styles.imagePreviewContainer}>
+              {coverImagePreviewUrl ? <img src={coverImagePreviewUrl} alt="cover" className={styles.imagePreview} /> : <span className={styles.noImageText}>Chưa có ảnh</span>}
             </div>
-            <button type="button" onClick={onSelectCoverFile} style={{ width: '100%', marginTop: 12, padding: '10px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 500 }}>
+            <button type="button" onClick={onSelectCoverFile} className={styles.uploadButton}>
               Tải ảnh bìa
             </button>
           </div>
-          <input ref={coverFileRef} type="file" accept="image/png, image/jpeg" style={{ display: 'none' }} onChange={onCoverFileChange} />
+          <input ref={coverFileRef} type="file" accept="image/png, image/jpeg, image/jpg" style={{ display: 'none' }} onChange={onCoverFileChange} />
 
           <div>
-            <label style={labelStyle}>Danh mục</label>
+            <label className={formStyles.label}>Danh mục</label>
             
-            <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid', borderColor: errors.categoryIds ? '#ef4444' : '#d1d5db', borderRadius: 8, padding: '8px 12px' }}>
+            <div className={`${styles.categoriesContainer} ${errors.categoryIds ? styles.error : ''}`}>
               {loadingCategories && <div>Đang tải...</div>}
               {!loadingCategories && availableCategories.map(c => (
-                <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', cursor: 'pointer', fontSize: 14 }}>
+                <label key={c.id} className={styles.categoryItem}>
                   <input type="checkbox" checked={categoryIds.includes(c.id)} onChange={() => {
                       toggleCategory(c.id);
                       if (errors.categoryIds) setErrors(prev => ({ ...prev, categoryIds: undefined }));
@@ -369,12 +338,12 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
                   <span>{c.name}</span>
                 </label>
               ))}
-              
             </div>
+            {errors.categoryIds && <div className={formStyles.errorText}>{errors.categoryIds}</div>}
           </div>
 
           <div>
-            <label style={labelStyle}>Thứ tự hiển thị</label>
+            <label className={formStyles.label}>Thứ tự hiển thị</label>
             <input 
               type="number" 
               value={displayOrder} 
@@ -387,17 +356,17 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
                   setErrors(prev => ({ ...prev, displayOrder: undefined }));
                 }
               }} 
-              style={{...inputStyle, borderColor: errors.displayOrder ? '#ef4444' : '#d1d5db'}}
+              className={`${formStyles.input} ${errors.displayOrder ? formStyles.inputError : ''}`}
               min="0"
             />
-            {errors.displayOrder && <div style={errorTextStyle}>{errors.displayOrder}</div>}
+            {errors.displayOrder && <div className={formStyles.errorText}>{errors.displayOrder}</div>}
           </div>
         </div>
 
         {/* Right Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className={styles.rightColumn}>
           <div>
-            <label style={labelStyle}>Tiêu đề bài viết</label>
+            <label className={formStyles.label}>Tiêu đề bài viết</label>
             <input
               value={title}
               onChange={e => {
@@ -406,83 +375,84 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
               }}
               required
               onBlur={(e) => validateOnBlur('title', e.target.value)}
-              style={{ ...inputStyle, borderColor: errors.title ? '#ef4444' : '#d1d5db' }}
+              className={`${formStyles.input} ${errors.title ? formStyles.inputError : ''}`}
             />
-            {errors.title && <div style={errorTextStyle}>{errors.title}</div>}
-            {validating.title && <div style={validatingTextStyle}>Đang kiểm tra...</div>}
+            {errors.title && <div className={formStyles.errorText}>{errors.title}</div>}
+            {validating.title && <div className={styles.validatingText}>Đang kiểm tra...</div>}
           </div>
           <div>
-            <label style={labelStyle}>Đường dẫn (Slug)</label>
+            <label className={formStyles.label}>Đường dẫn (Slug)</label>
             <input value={slug} onChange={e => {
               setSlug(e.target.value)
               if (errors.slug) setErrors(prev => ({ ...prev, slug: undefined }))
             }}
             onBlur={(e) => validateOnBlur('slug', e.target.value)}
             placeholder="Tự động tạo nếu để trống"
-            style={{ ...inputStyle, borderColor: errors.slug ? '#ef4444' : '#d1d5db' }} />
-            {errors.slug && <div style={errorTextStyle}>{errors.slug}</div>}
-            {validating.slug && <div style={validatingTextStyle}>Đang kiểm tra...</div>}
+            className={`${formStyles.input} ${errors.slug ? formStyles.inputError : ''}`} />
+            {errors.slug && <div className={formStyles.errorText}>{errors.slug}</div>}
+            {validating.slug && <div className={styles.validatingText}>Đang kiểm tra...</div>}
           </div>
           <div>
-            <label style={labelStyle}>Tóm tắt</label>
+            <label className={formStyles.label}>Tóm tắt</label>
             <textarea value={summary} onChange={e => {
               setSummary(e.target.value);
               if (errors.summary) setErrors(prev => ({ ...prev, summary: undefined }));
-            }} onBlur={(e) => validateOnBlur('summary', e.target.value)} style={{ ...inputStyle, minHeight: '80px', fontFamily: 'inherit', borderColor: errors.summary ? '#ef4444' : '#d1d5db' }} />
-            {errors.summary && <div style={errorTextStyle}>{errors.summary}</div>}
+            }} onBlur={(e) => validateOnBlur('summary', e.target.value)} className={`${formStyles.textarea} ${errors.summary ? formStyles.inputError : ''}`} />
+            {errors.summary && <div className={formStyles.errorText}>{errors.summary}</div>}
           </div>
           <div>
-            <label style={labelStyle}>Nội dung</label>
-            <div style={{ border: `1px solid ${errors.content ? '#ef4444' : '#d1d5db'}`, borderRadius: 8, overflow: 'hidden', minHeight: 300 }}>
+            <label className={formStyles.label}>Nội dung</label>
+            <div className={`${styles.ckeditorContainer} ${errors.content ? styles.error : ''}`}>
               <CKEditor
                 editor={ClassicEditor}
                 data={content}
                 onChange={(event, editor) => {
                   const data = editor.getData()
                   setContent(data)
-                  if (errors.content) setErrors(prev => ({ ...prev, content: undefined }))
+                  if (errors.content) setErrors(prev => ({ ...prev, content: undefined }));
                 }}
                 onBlur={(event, editor) => {
                   validateOnBlur('content', editor.getData())
                 }}
               />
             </div>
-            {errors.content && <div style={errorTextStyle}>{errors.content}</div>}
+            {errors.content && <div className={formStyles.errorText}>{errors.content}</div>}
           </div>
           
 
           {/* Status & Display Section - MOVED HERE */}
-          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1rem' }}>Trạng thái & Hiển thị</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                <select value={statusCode} onChange={e => setStatusCode(e.target.value)} style={inputStyle}>
-                  <option value="DRAFT">Bản nháp (DRAFT)</option>
-                  <option value="PUBLISHED">Xuất bản (PUBLISHED)</option>
-                  <option value="ARCHIVE">Lưu trữ (ARCHIVE)</option>
+          <div className={styles.sectionDivider}>
+            <h3 className={styles.sectionHeader}>Trạng thái & Hiển thị</h3>
+            <div className={styles.statusDisplayGrid}>
+                <select value={statusCode} onChange={e => setStatusCode(e.target.value)} className={formStyles.select}>
+                  <option value="DRAFT">Bản nháp</option>
+                  
+                  <option value="PUBLISHED">Xuất bản</option>
+                  <option value="ARCHIVE">Khóa</option>
                 </select>
-                <select value={displayType} onChange={e => setDisplayType(e.target.value)} style={inputStyle}>
-                  <option value="STANDARD">Tiêu chuẩn (STANDARD)</option>
-                  <option value="FEATURED">Nổi bật (FEATURED)</option>
+                <select value={displayType} onChange={e => setDisplayType(e.target.value)} className={formStyles.select}>
+                  <option value="STANDARD">Tiêu chuẩn</option>
+                  <option value="FEATURED">Nổi bật</option>
                 </select>
-                <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>
-                    <input type="checkbox" checked={isHomepageVisible} onChange={e => setIsHomepageVisible(e.target.checked)} style={{ width: 16, height: 16 }} />
+                <div className={styles.homepageVisibility}>
+                  <label>
+                    <input type="checkbox" checked={isHomepageVisible} onChange={e => setIsHomepageVisible(e.target.checked)} />
                     Hiển thị trang chủ
                   </label>
                 </div>
                
             </div>
           </div>
-          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1rem' }}>Cấu hình SEO</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div className={styles.sectionDivider}>
+            <h3 className={styles.sectionHeader}>Cấu hình SEO</h3>
+            <div className={styles.statusDisplayGrid}>
               <div>
-                <label style={labelStyle}>Meta Title</label>
-                <input value={metaTitle} onChange={e => setMetaTitle(e.target.value)} style={inputStyle} />
+                <label className={formStyles.label}>Meta Title</label>
+                <input value={metaTitle} onChange={e => setMetaTitle(e.target.value)} className={formStyles.input} />
               </div>
               <div>
-                <label style={labelStyle}>Meta Description</label>
-                <input value={metaDescription} onChange={e => setMetaDescription(e.target.value)} style={inputStyle} />
+                <label className={formStyles.label}>Meta Description</label>
+                <input value={metaDescription} onChange={e => setMetaDescription(e.target.value)} className={formStyles.input} />
               </div>
             </div>
           </div>
@@ -491,12 +461,12 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
       </div>
 
       {/* Actions */}
-      <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid #e5e7eb', paddingTop: 24 }}>
-        <button type="button" onClick={onCancel} style={{ ...buttonStyle, background: '#fff', color: '#374151', border: '1px solid #d1d5db' }}>
+      <div className={formStyles.actionsContainer}>
+        <button type="button" onClick={onCancel} className={`${formStyles.button} ${formStyles.buttonSecondary}`}>
           Hủy
         </button>
         
-        <button type="submit" disabled={saving} style={{ ...buttonStyle, background: saving ? '#9ca3af' : '#2563eb', color: '#fff' }}>
+        <button type="submit" disabled={saving} className={`${formStyles.button} ${formStyles.buttonPrimary}`}>
           {saving ? 'Đang lưu...' : 'Lưu'}
         </button>
       </div>

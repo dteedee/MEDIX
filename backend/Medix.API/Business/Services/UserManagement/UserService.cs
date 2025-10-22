@@ -78,26 +78,37 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<UserDto> CreateUserAsync(CreateUserDTO createUserDto)
         {
-            // Check if username already exists
+            // ✅ 1. Validate cơ bản
+            if (string.IsNullOrWhiteSpace(createUserDto.UserName))
+                throw new MedixException("Username is required.");
+            if (string.IsNullOrWhiteSpace(createUserDto.Email))
+                throw new MedixException("Email is required.");
+
+            // ✅ 2. Check username trùng
             var existingUser = await _userRepository.GetByUserNameAsync(createUserDto.UserName);
             if (existingUser != null)
-            {
                 throw new MedixException($"Username '{createUserDto.UserName}' already exists");
-            }
 
-            string passwordHash = BCrypt.Net.BCrypt.HashPassword(createUserDto.Password);
+            // ✅ 3. Check email trùng
+            var existingEmail = await _userRepository.GetByEmailAsync(createUserDto.Email);
+            if (existingEmail != null)
+                throw new MedixException($"Email '{createUserDto.Email}' already exists");
 
-            User user = new User
+            // ✅ 4. Hash password mặc định
+            const string defaultPassword = "Abc@123";
+            string passwordHash = BCrypt.Net.BCrypt.HashPassword(defaultPassword);
+
+            // ✅ 5. Tạo entity mới
+            var user = new User
             {
                 Id = Guid.NewGuid(),
                 UserName = createUserDto.UserName,
                 NormalizedUserName = createUserDto.UserName.ToUpperInvariant(),
-                Email = createUserDto.UserName + "@temp.com", // Temporary email based on username
-                NormalizedEmail = (createUserDto.UserName + "@temp.com").ToUpperInvariant(),
+                Email = createUserDto.Email,
+                NormalizedEmail = createUserDto.Email.ToUpperInvariant(),
                 PasswordHash = passwordHash,
-                PhoneNumber = null,
-                FullName = createUserDto.UserName, // Use username as full name initially
-                Role = "PATIENT", // Default role
+                FullName = createUserDto.UserName, // ⚡ FIX: tránh lỗi NULL
+                Role = "PATIENT",
                 IsProfileCompleted = false,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -107,37 +118,22 @@ namespace Medix.API.Business.Services.UserManagement
                 AccessFailedCount = 0
             };
 
-            try
-            {
-                var savedUser = await _userRepository.CreateAsync(user);
+            // ✅ 6. Lưu vào DB
+            var savedUser = await _userRepository.CreateAsync(user);
 
-                return new UserDto
+            // ✅ 7. Map sang DTO trả về
+            return new UserDto
             {
                 Id = savedUser.Id,
-                Email = savedUser.Email,
-                FullName = savedUser.FullName,
-                PhoneNumber = savedUser.PhoneNumber,
-                Role = savedUser.Role,
-                EmailConfirmed = savedUser.EmailConfirmed,
-                CreatedAt = savedUser.CreatedAt,
-                DateOfBirth = savedUser.DateOfBirth,
-                GenderCode = savedUser.GenderCode,
-                IdentificationNumber = savedUser.IdentificationNumber,
                 UserName = savedUser.UserName,
-                Address = savedUser.Address,
-                AvatarUrl = savedUser.AvatarUrl,
-                IsProfileCompleted = savedUser.IsProfileCompleted,
-                LockoutEnd = savedUser.LockoutEnd,
-                LockoutEnabled = savedUser.LockoutEnabled,
-                AccessFailedCount = savedUser.AccessFailedCount
+                Email = savedUser.Email,
+                Role = savedUser.Role,
+                CreatedAt = savedUser.CreatedAt,
+                FullName = savedUser.FullName
             };
-            }
-            catch (Exception ex) when (ex.InnerException?.Message.Contains("UK_Users_NormalizedUserName") == true || 
-                                     ex.InnerException?.Message.Contains("UK_Users_NormalizedEmail") == true)
-            {
-                throw new MedixException($"Username '{createUserDto.UserName}' already exists");
-            }
         }
+
+
 
         public async Task<UserDto?> GetByIdAsync(Guid id)
         {

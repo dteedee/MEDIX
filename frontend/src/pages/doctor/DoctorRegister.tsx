@@ -232,6 +232,12 @@ function DoctorRegister() {
         <div>
             <main className={styles["main-container"]}>
                 <div className={styles["form-container"]}>
+                    <div className={styles["doctor-register-title-section"]}>
+                        <h1 className={styles["register-title"]}>Đăng Ký Tài Khoản Bác Sĩ</h1>
+                        <div className={styles["register-desc"]}>
+                            Vui lòng điền đầy đủ thông tin để tạo tài khoản
+                        </div>
+                    </div>
                     <form id="registrationForm" encType='multipart/form-data' onSubmit={handleSubmit}>
                         {/* Row 1 */}
                         <div className={styles["form-row"]}>

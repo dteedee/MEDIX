@@ -64,5 +64,22 @@ namespace Medix.API.Presentation.Controller.Classification
 
             return NoContent();
         }
+        [HttpGet("doctor/{doctorId}")]
+        public async Task<IActionResult> GetByDoctorId(Guid doctorId)
+        {
+            var result = await _service.GetByDoctorIdAsync(doctorId);
+            return Ok(result);
+        }
+
+        // ✅ Cập nhật toàn bộ lịch cho 1 bác sĩ
+        [HttpPut("doctor/{doctorId}")]
+        public async Task<IActionResult> UpdateByDoctorId(Guid doctorId, [FromBody] IEnumerable<UpdateDoctorScheduleDto> schedules)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var updated = await _service.UpdateByDoctorIdAsync(doctorId, schedules);
+            return Ok(updated);
+        }
     }
 }

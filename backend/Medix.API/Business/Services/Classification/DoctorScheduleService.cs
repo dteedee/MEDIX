@@ -93,5 +93,47 @@ namespace Medix.API.Business.Services.Classification
             await _repository.DeleteAsync(id);
             return true;
         }
+        public async Task<IEnumerable<DoctorScheduleDto>> GetByDoctorIdAsync(Guid doctorId)
+        {
+            var schedules = await _repository.GetByDoctorAndDayAsync(doctorId, -1); // -1 để lấy toàn bộ (chúng ta sẽ chỉnh repo chút)
+            return _mapper.Map<IEnumerable<DoctorScheduleDto>>(schedules);
+        }
+
+        // ✅ 2. Cập nhật toàn bộ lịch cho 1 bác sĩ
+        public async Task<IEnumerable<DoctorScheduleDto>> UpdateByDoctorIdAsync(Guid doctorId, IEnumerable<UpdateDoctorScheduleDto> schedules)
+        {
+            // Lấy toàn bộ lịch hiện tại của bác sĩ
+            var existingSchedules = await _repository.GetByDoctorAndDayAsync(doctorId, -1);
+
+            // Xóa những cái không còn trong danh sách mới
+            var toDelete = existingSchedules.Where(e => !schedules.Any(s => s.Id == e.Id)).ToList();
+            foreach (var item in toDelete)
+                await _repository.DeleteAsync(item.Id);
+
+            // Cập nhật hoặc thêm mới
+            foreach (var dto in schedules)
+            {
+                if (dto.Id == Guid.Empty) // thêm mới
+                {
+                    var createDto = new CreateDoctorScheduleDto
+                    {
+                        DoctorId = doctorId,
+                        DayOfWeek = dto.DayOfWeek,
+                        StartTime = dto.StartTime,
+                        EndTime = dto.EndTime,
+                        IsAvailable = dto.IsAvailable
+                    };
+                    await CreateAsync(createDto);
+                }
+                else // cập nhật
+                {
+                    await UpdateAsync(dto);
+                }
+            }
+
+            // Trả lại danh sách sau khi cập nhật
+            var updated = await _repository.GetByDoctorAndDayAsync(doctorId, -1);
+            return _mapper.Map<IEnumerable<DoctorScheduleDto>>(updated);
+        }
     }
 }

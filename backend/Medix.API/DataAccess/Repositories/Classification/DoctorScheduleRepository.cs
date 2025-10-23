@@ -50,9 +50,16 @@ namespace Medix.API.DataAccess.Repositories.Classification
         }
         public async Task<IEnumerable<DoctorSchedule>> GetByDoctorAndDayAsync(Guid doctorId, int dayOfWeek)
         {
-            return await _context.DoctorSchedules
-                .Where(s => s.DoctorId == doctorId && s.DayOfWeek == dayOfWeek)
-                .ToListAsync();
+            var query = _context.DoctorSchedules
+                .Include(s => s.Doctor)
+                    .ThenInclude(d => d.User)
+                .Where(s => s.DoctorId == doctorId);
+
+            if (dayOfWeek >= 0)
+                query = query.Where(s => s.DayOfWeek == dayOfWeek);
+
+            return await query.ToListAsync();
         }
+
     }
 }

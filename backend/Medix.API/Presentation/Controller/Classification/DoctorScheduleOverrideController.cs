@@ -53,5 +53,14 @@ namespace Medix.API.Presentation.Controller.Classification
 
             return NoContent();
         }
+        [HttpPut("doctor/{doctorId}")]
+        public async Task<IActionResult> UpdateByDoctor(Guid doctorId, [FromBody] List<UpdateDoctorScheduleOverrideDto> dtos)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _service.UpdateByDoctorAsync(doctorId, dtos);
+            return Ok(result);
+        }
     }
 }

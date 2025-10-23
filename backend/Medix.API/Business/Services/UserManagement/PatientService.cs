@@ -61,16 +61,49 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<PatientDTO?> GetByUserIdAsync(Guid userId)
         {
-            // TODO: Implement when repository method exists
-            await Task.Delay(1);
-            return null;
-        }
+            // Gọi phương thức repository bạn đã cung cấp
+            var patientEntity = await _patientRepository.GetPatientByUserIdAsync(userId);
 
-        public async Task<PatientDTO> UpdateAsync(Guid id, PatientDTO patientDTO)
+            if (patientEntity == null)
+            {
+                return null;
+            }
+
+            // Map thủ công Entity -> DTO (Nên dùng AutoMapper)
+            return new PatientDTO
+            {
+                Id = patientEntity.Id,
+                UserId = patientEntity.UserId,
+                EmergencyContactName = patientEntity.EmergencyContactName,
+                EmergencyContactPhone = patientEntity.EmergencyContactPhone
+             
+            };
+        }
+        public async Task<PatientDTO> UpdateAsync(Guid userId, PatientDTO patientDTO)
         {
-            // TODO: Implement when repository method exists
-            await Task.Delay(1);
-            throw new NotImplementedException("Chức năng cập nhật bệnh nhân chưa được triển khai");
+         
+            var patientEntity = await _patientRepository.GetPatientByUserIdAsync(userId);
+
+            if (patientEntity == null)
+            {
+           
+                throw new InvalidOperationException($"Không tìm thấy bệnh nhân với User ID: {userId}");
+            }
+
+
+            patientEntity.EmergencyContactName = patientDTO.EmergencyContactName;
+            patientEntity.EmergencyContactPhone = patientDTO.EmergencyContactPhone;
+
+            var updatedEntity = await _patientRepository.UpdatePatientAsync(patientEntity);
+
+            return new PatientDTO
+            {
+                Id = updatedEntity.Id,
+                UserId = updatedEntity.UserId,
+                EmergencyContactName = updatedEntity.EmergencyContactName,
+                EmergencyContactPhone = updatedEntity.EmergencyContactPhone
+
+            };
         }
 
         public async Task<bool> DeleteAsync(Guid id)

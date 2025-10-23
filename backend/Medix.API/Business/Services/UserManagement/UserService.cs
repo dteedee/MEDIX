@@ -358,6 +358,7 @@ namespace Medix.API.Business.Services.UserManagement
         public async Task<UserBasicInfoDto> GetUserBasicInfo(Guid id)
         {
             var user = await _userRepository.GetByIdAsync(id);
+            var patient = await _patientRepository.GetPatientByUserIdAsync(id);
 
             if (user == null) throw new ArgumentException("Không tìm thấy người dùng");
 
@@ -370,7 +371,11 @@ namespace Medix.API.Business.Services.UserManagement
                 PhoneNumber = user.PhoneNumber,
                 imageURL = user.AvatarUrl,
                 dob = user.DateOfBirth,
-                address = user.Address
+                address = user.Address,
+                MedicalRecordNumber = patient?.MedicalRecordNumber,
+                EmergencyContactName = patient?.EmergencyContactName,
+                EmergencyContactPhone = patient?.EmergencyContactPhone
+
             };
         }
 

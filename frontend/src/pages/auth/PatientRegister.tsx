@@ -79,6 +79,8 @@ export const PatientRegister: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [phoneNumberError, setPhoneNumberError] = useState<string | null>(null);
+  const [emergencyContactPhoneError, setEmergencyContactPhoneError] = useState<string | null>(null);
   const [passwordRequirements, setPasswordRequirements] = useState({
     minLength: false,
     hasUppercase: false,
@@ -109,6 +111,35 @@ export const PatientRegister: React.FC = () => {
 
   const { registerPatient } = useAuth();
   const navigate = useNavigate();
+
+  // Phone validation functions
+  const validatePhoneNumber = (phone: string) => {
+    if (!phone.trim()) {
+      setPhoneNumberError(null);
+      return true;
+    }
+    const phonePattern = /^0\d{9}$/;
+    if (!phonePattern.test(phone)) {
+      setPhoneNumberError('Số điện thoại phải bắt đầu bằng 0 và có đúng 10 chữ số');
+      return false;
+    }
+    setPhoneNumberError(null);
+    return true;
+  };
+
+  const validateEmergencyContactPhone = (phone: string) => {
+    if (!phone.trim()) {
+      setEmergencyContactPhoneError(null);
+      return true;
+    }
+    const phonePattern = /^0\d{9}$/;
+    if (!phonePattern.test(phone)) {
+      setEmergencyContactPhoneError('Số điện thoại liên hệ khẩn cấp phải bắt đầu bằng 0 và có đúng 10 chữ số');
+      return false;
+    }
+    setEmergencyContactPhoneError(null);
+    return true;
+  };
 
   useEffect(() => {
     // Load blood types and gender options
@@ -480,6 +511,13 @@ export const PatientRegister: React.FC = () => {
         const numericValue = value.replace(/\D/g, ''); // Remove non-digits
         setFormData(prev => ({ ...prev, [name]: numericValue }));
         
+        // Validate phone number in real-time
+        if (name === 'phoneNumber') {
+          validatePhoneNumber(numericValue);
+        } else if (name === 'emergencyContactPhone') {
+          validateEmergencyContactPhone(numericValue);
+        }
+        
         // Clear validation error for phone fields when user starts typing
         if (validationErrors[name] && numericValue.length > 0) {
           console.log(`Clearing validation error for phone field: ${name}`);
@@ -582,6 +620,12 @@ export const PatientRegister: React.FC = () => {
     e.preventDefault();
     setError('');
     setValidationErrors({});
+    
+    // Check for real-time phone validation errors first
+    if (phoneNumberError || emergencyContactPhoneError) {
+      setError('Vui lòng sửa các lỗi trong thông tin số điện thoại trước khi đăng ký');
+      return;
+    }
     
     // Check all required fields first
     const newErrors: ValidationErrors = {};
@@ -1014,10 +1058,13 @@ export const PatientRegister: React.FC = () => {
                       value={formData.phoneNumber}
                       onChange={handleChange}
                       placeholder="09xxxxxxxx"
-                      className={validationErrors.phoneNumber ? 'error' : formData.phoneNumber?.trim() ? 'success' : ''}
-                      style={formData.phoneNumber?.trim() && !validationErrors.phoneNumber ? { paddingRight: '40px' } : {}}
+                      className={phoneNumberError || validationErrors.phoneNumber ? 'error' : formData.phoneNumber?.trim() && !phoneNumberError ? 'success' : ''}
+                      style={{
+                        ...(formData.phoneNumber?.trim() && !phoneNumberError && !validationErrors.phoneNumber ? { paddingRight: '40px' } : {}),
+                        borderColor: phoneNumberError ? '#dc2626' : undefined
+                      }}
                     />
-                    {formData.phoneNumber?.trim() && !validationErrors.phoneNumber && (
+                    {formData.phoneNumber?.trim() && !phoneNumberError && !validationErrors.phoneNumber && (
                       <span style={{
                         position: 'absolute',
                         right: '10px',
@@ -1031,7 +1078,12 @@ export const PatientRegister: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  {validationErrors.phoneNumber && (
+                  {phoneNumberError && (
+                    <div className="error-message" style={{ marginTop: '4px', fontSize: '12px', color: '#dc2626' }}>
+                      {phoneNumberError}
+                    </div>
+                  )}
+                  {validationErrors.phoneNumber && !phoneNumberError && (
                     <div className="error-message" style={{ marginTop: '4px', fontSize: '12px' }}>
                       {validationErrors.phoneNumber[0]}
                     </div>
@@ -1362,14 +1414,17 @@ export const PatientRegister: React.FC = () => {
                     <input
                       type="tel"
                       name="emergencyContactPhone"
-                      
+                      maxLength={10}
                       value={formData.emergencyContactPhone}
                       onChange={handleChange}
-                      placeholder="Số điện thoại khẩn cấp"
-                      className={validationErrors.emergencyContactPhone ? 'error' : formData.emergencyContactPhone?.trim() ? 'success' : ''}
-                      style={formData.emergencyContactPhone?.trim() && !validationErrors.emergencyContactPhone ? { paddingRight: '40px' } : {}}
+                      placeholder="09xxxxxxxx"
+                      className={emergencyContactPhoneError || validationErrors.emergencyContactPhone ? 'error' : formData.emergencyContactPhone?.trim() && !emergencyContactPhoneError ? 'success' : ''}
+                      style={{
+                        ...(formData.emergencyContactPhone?.trim() && !emergencyContactPhoneError && !validationErrors.emergencyContactPhone ? { paddingRight: '40px' } : {}),
+                        borderColor: emergencyContactPhoneError ? '#dc2626' : undefined
+                      }}
                     />
-                    {formData.emergencyContactPhone?.trim() && !validationErrors.emergencyContactPhone && (
+                    {formData.emergencyContactPhone?.trim() && !emergencyContactPhoneError && !validationErrors.emergencyContactPhone && (
                       <span style={{
                         position: 'absolute',
                         right: '10px',
@@ -1383,7 +1438,12 @@ export const PatientRegister: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  {validationErrors.emergencyContactPhone && (
+                  {emergencyContactPhoneError && (
+                    <div className="error-message" style={{ marginTop: '4px', fontSize: '12px', color: '#dc2626' }}>
+                      {emergencyContactPhoneError}
+                    </div>
+                  )}
+                  {validationErrors.emergencyContactPhone && !emergencyContactPhoneError && (
                     <div className="error-message" style={{ marginTop: '4px', fontSize: '12px' }}>
                       {validationErrors.emergencyContactPhone[0]}
                     </div>

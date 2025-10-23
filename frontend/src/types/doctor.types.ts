@@ -49,16 +49,31 @@ export interface ReviewDto{
   date: string;
 }
 
+export interface DoctorScheduleDto {
+  id: string;
+  doctorId: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+}
+export interface DoctorTypeDegreeDto{
+ code: string;
+ description: string;
+}
+
 export interface DoctorProfileDto{
-  avatarUrl: string;
+  doctorID?: string;
+  avatarUrl?: string;
   fullName: string;
   averageRating: number;
   numberOfReviews: number;
   specialization: string;
-  biography: string;
+  biography?: string;
   ratingByStar: number[];
   reviews: ReviewDto[];
-  education: string;
+  education?: string;
+  schedules: DoctorScheduleDto[];
 }
 
 export interface DoctorProfileDetails{
@@ -91,6 +106,13 @@ export interface DoctorInTier {
 export interface PaginationParams {
   pageNumber: number;
   pageSize: number;
+}
+
+export interface DoctorQueryParameters extends PaginationParams {
+  educationCode?: string;
+  specializationCode?: string;
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 export interface PaginatedListDto<T> {

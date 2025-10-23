@@ -2,7 +2,7 @@
 using Medix.API.Models.DTOs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using static Medix.API.Models.DTOs.DoctorBookinDto;
+
 
 namespace Medix.API.Presentation.Controller
 {
@@ -19,15 +19,18 @@ namespace Medix.API.Presentation.Controller
 
         }
 
+        // Controllers/DoctorGroupsController.cs (hoặc BookingController)
+
         [HttpGet("by-tier")]
-        // Cập nhật kiểu trả về
         [ProducesResponseType(typeof(IEnumerable<ServiceTierWithPaginatedDoctorsDto>), 200)]
         public async Task<IActionResult> GetDoctorsGroupedByTier(
-        [FromQuery] PaginationParams paginationParams) // <-- Nhận tham số
+            // THAY ĐỔI Ở ĐÂY:
+            [FromQuery] DoctorQueryParameters queryParams)
         {
-            // Truyền tham số vào service
-            var result = await _doctorService.GetGroupedDoctorsAsync(paginationParams);
+            // Truyền tham số MỚI vào service
+            var result = await _doctorService.GetGroupedDoctorsAsync(queryParams);
             return Ok(result);
         }
+
     }
 }

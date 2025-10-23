@@ -24,6 +24,13 @@ export const PatientProfile: React.FC = () => {
 	const [editData, setEditData] = useState<UpdateUserInfo>({});
 	const [uploading, setUploading] = useState(false);
 	const [previewImage, setPreviewImage] = useState<string | null>(null);
+	const [phoneNumberError, setPhoneNumberError] = useState<string | null>(null);
+	const [emergencyContactPhoneError, setEmergencyContactPhoneError] = useState<string | null>(null);
+	const [usernameError, setUsernameError] = useState<string | null>(null);
+	const [fullNameError, setFullNameError] = useState<string | null>(null);
+	const [addressError, setAddressError] = useState<string | null>(null);
+	const [dobError, setDobError] = useState<string | null>(null);
+	const [emergencyContactNameError, setEmergencyContactNameError] = useState<string | null>(null);
 
 	// Add keyframes for spinner animation
 	React.useEffect(() => {
@@ -40,14 +47,130 @@ export const PatientProfile: React.FC = () => {
 		};
 	}, []);
 
+	// Phone validation functions
+	const validatePhoneNumber = (phone: string) => {
+		if (!phone.trim()) {
+			setPhoneNumberError(null);
+			return true;
+		}
+		const phonePattern = /^0\d{9}$/;
+		if (!phonePattern.test(phone)) {
+			setPhoneNumberError('Số điện thoại phải bắt đầu bằng 0 và có đúng 10 chữ số');
+			return false;
+		}
+		setPhoneNumberError(null);
+		return true;
+	};
+
+	const validateEmergencyContactPhone = (phone: string) => {
+		if (!phone.trim()) {
+			setEmergencyContactPhoneError(null);
+			return true;
+		}
+		const phonePattern = /^0\d{9}$/;
+		if (!phonePattern.test(phone)) {
+			setEmergencyContactPhoneError('Số điện thoại liên hệ khẩn cấp phải bắt đầu bằng 0 và có đúng 10 chữ số');
+			return false;
+		}
+		setEmergencyContactPhoneError(null);
+		return true;
+	};
+
+	const validateUsername = (username: string) => {
+		if (!username.trim()) {
+			setUsernameError(null);
+			return true;
+		}
+		if (username.length < 3) {
+			setUsernameError('Tên tài khoản phải có ít nhất 3 ký tự');
+			return false;
+		}
+		if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+			setUsernameError('Tên tài khoản chỉ được chứa chữ cái, số và dấu gạch dưới');
+			return false;
+		}
+		setUsernameError(null);
+		return true;
+	};
+
+	const validateFullName = (fullName: string) => {
+		if (!fullName.trim()) {
+			setFullNameError('Họ và tên là trường bắt buộc');
+			return false;
+		}
+		setFullNameError(null);
+		return true;
+	};
+
+	const validateAddress = (address: string) => {
+		if (!address.trim()) {
+			setAddressError(null);
+			return true;
+		}
+		setAddressError(null);
+		return true;
+	};
+
+	const validateDob = (dob: string) => {
+		if (!dob.trim()) {
+			setDobError(null);
+			return true;
+		}
+		const date = new Date(dob);
+		const now = new Date();
+		
+		// Check if date is valid
+		if (isNaN(date.getTime())) {
+			setDobError('Ngày sinh không hợp lệ');
+			return false;
+		}
+		
+		// Check if date is in the future
+		if (date > now) {
+			setDobError('Ngày sinh không thể là ngày trong tương lai');
+			return false;
+		}
+		
+		// Calculate age
+		let age = now.getFullYear() - date.getFullYear();
+		const monthDiff = now.getMonth() - date.getMonth();
+		
+		if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
+			age--;
+		}
+		
+		if (age < 18) {
+			setDobError('Bạn phải đủ 18 tuổi');
+			return false;
+		}
+		if (age > 150) {
+			setDobError('Ngày sinh không hợp lý');
+			return false;
+		}
+		
+		setDobError(null);
+		return true;
+	};
+
+	const validateEmergencyContactName = (name: string) => {
+		if (!name.trim()) {
+			setEmergencyContactNameError(null);
+			return true;
+		}
+		setEmergencyContactNameError(null);
+		return true;
+	};
+
 	useEffect(() => {
 		let mounted = true;
 		(async () => {
 			try {
+				console.log('🔄 PatientProfile - Starting to load user data...');
 				const res = await userService.getUserInfo();
+				console.log('✅ PatientProfile - API response received:', res);
 				if (mounted) {
 					setData(res);
-					console.log('User data loaded:', res);
+					console.log('✅ PatientProfile - User data set:', res);
 					console.log('Profile Image URL:', res.imageURL);
 					console.log('Profile Image URL type:', typeof res.imageURL);
 					
@@ -57,12 +180,21 @@ export const PatientProfile: React.FC = () => {
 						email: res.email,
 						phoneNumber: res.phoneNumber || '',
 						address: res.address || '',
-						dob: res.dob || ''
+						dob: res.dob || '',
+						emergencyContactName: res.emergencyContactName || '',
+						emergencyContactPhone: res.emergencyContactPhone || ''
 					});
 				}
 			} catch (e: any) {
+				console.error('❌ PatientProfile - Error loading user data:', e);
+				console.error('❌ PatientProfile - Error details:', {
+					message: e?.message,
+					status: e?.response?.status,
+					data: e?.response?.data
+				});
 				if (mounted) setError(e?.message || 'Không thể tải thông tin người dùng');
 			} finally {
+				console.log('✅ PatientProfile - Loading complete, setting loading to false');
 				if (mounted) setLoading(false);
 			}
 		})();
@@ -70,35 +202,13 @@ export const PatientProfile: React.FC = () => {
 	}, []);
 
 	const handleSave = async () => {
-		// Username validation - only validate if provided
-		if (editData.username?.trim() && editData.username.length < 3) {
-			setError('Tên tài khoản phải có ít nhất 3 ký tự');
+		// Check for real-time validation errors first
+		if (usernameError || fullNameError || addressError || dobError || 
+			phoneNumberError || emergencyContactPhoneError || emergencyContactNameError) {
+			setError('Vui lòng sửa các lỗi trong thông tin trước khi lưu');
 			return;
 		}
 
-		if (editData.username?.trim() && !/^[a-zA-Z0-9_]+$/.test(editData.username)) {
-			setError('Tên tài khoản chỉ được chứa chữ cái, số và dấu gạch dưới');
-			return;
-		}
-
-		// Validate date of birth if provided
-		if (editData.dob) {
-			const date = new Date(editData.dob);
-			const now = new Date();
-			
-			// Calculate age more accurately considering month and day
-			let age = now.getFullYear() - date.getFullYear();
-			const monthDiff = now.getMonth() - date.getMonth();
-			
-			if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
-				age--;
-			}
-			
-			if (age < 18) {
-				setError('Bạn phải đủ 18 tuổi');
-				return;
-			}
-		}
 
 		setSaving(true);
 		setError(null);
@@ -161,12 +271,21 @@ export const PatientProfile: React.FC = () => {
 				email: data.email,
 				phoneNumber: data.phoneNumber || '',
 				address: data.address || '',
-				dob: data.dob || ''
+				dob: data.dob || '',
+				emergencyContactName: data.emergencyContactName || '',
+				emergencyContactPhone: data.emergencyContactPhone || ''
 			});
 		}
 		setIsEditing(false);
 		setError(null);
 		setSuccess(null);
+		setPhoneNumberError(null);
+		setEmergencyContactPhoneError(null);
+		setUsernameError(null);
+		setFullNameError(null);
+		setAddressError(null);
+		setDobError(null);
+		setEmergencyContactNameError(null);
 	};
 
 	const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -425,24 +544,60 @@ export const PatientProfile: React.FC = () => {
 								}}>
 									<label style={{ textAlign: 'right', color: '#374151', fontWeight: 500 }}>Tên tài khoản</label>
 									{isEditing ? (
-										<input 
-											value={editData.username || ''} 
-											onChange={(e) => setEditData({...editData, username: e.target.value})}
-											style={inputStyleEditable}
-											placeholder="Nhập tên tài khoản"
-										/>
+										<div>
+											<input 
+												value={editData.username || ''} 
+												onChange={(e) => {
+													const value = e.target.value;
+													setEditData({...editData, username: value});
+													validateUsername(value);
+												}}
+												style={{
+													...inputStyleEditable,
+													borderColor: usernameError ? '#dc2626' : '#d1d5db'
+												}}
+												placeholder="Nhập tên tài khoản"
+											/>
+											{usernameError && (
+												<div style={{
+													color: '#dc2626',
+													fontSize: '12px',
+													marginTop: '4px'
+												}}>
+													{usernameError}
+												</div>
+											)}
+										</div>
 									) : (
 										<input disabled value={data.username || ''} style={inputStyleDisabled} />
 									)}
 
 									<label style={{ textAlign: 'right', color: '#374151', fontWeight: 500 }}>Họ và Tên</label>
 									{isEditing ? (
-										<input 
-											value={editData.fullName || ''} 
-											onChange={(e) => setEditData({...editData, fullName: e.target.value})}
-											style={inputStyleEditable}
-											placeholder="Nhập họ và tên"
-										/>
+										<div>
+											<input 
+												value={editData.fullName || ''} 
+												onChange={(e) => {
+													const value = e.target.value;
+													setEditData({...editData, fullName: value});
+													validateFullName(value);
+												}}
+												style={{
+													...inputStyleEditable,
+													borderColor: fullNameError ? '#dc2626' : '#d1d5db'
+												}}
+												placeholder="Nhập họ và tên"
+											/>
+											{fullNameError && (
+												<div style={{
+													color: '#dc2626',
+													fontSize: '12px',
+													marginTop: '4px'
+												}}>
+													{fullNameError}
+												</div>
+											)}
+										</div>
 									) : (
 										<input disabled value={data.fullName} style={inputStyleDisabled} />
 									)}
@@ -452,67 +607,159 @@ export const PatientProfile: React.FC = () => {
 
 									<label style={{ textAlign: 'right', color: '#374151', fontWeight: 500 }}>Số điện thoại</label>
 									{isEditing ? (
-										<input 
-										maxLength={12}
-											value={editData.phoneNumber || ''} 
-											onChange={(e) => {
-												const numericValue = e.target.value.replace(/[^0-9]/g, '');
-												setEditData({...editData, phoneNumber: numericValue});
-											}}
-											style={inputStyleEditable}
-											placeholder="Nhập số điện thoại"
-											type="tel"
-										/>
+										<div>
+											<input 
+												maxLength={10}
+												value={editData.phoneNumber || ''} 
+												onChange={(e) => {
+													const numericValue = e.target.value.replace(/[^0-9]/g, '');
+													setEditData({...editData, phoneNumber: numericValue});
+													validatePhoneNumber(numericValue);
+												}}
+												style={{
+													...inputStyleEditable,
+													borderColor: phoneNumberError ? '#dc2626' : '#d1d5db'
+												}}
+												placeholder="Nhập số điện thoại (bắt đầu bằng 0)"
+												type="tel"
+											/>
+											{phoneNumberError && (
+												<div style={{
+													color: '#dc2626',
+													fontSize: '12px',
+													marginTop: '4px'
+												}}>
+													{phoneNumberError}
+												</div>
+											)}
+										</div>
 									) : (
 										<input disabled value={data.phoneNumber || 'Chưa cập nhật'} style={inputStyleDisabled} />
 									)}
 
 									<label style={{ textAlign: 'right', color: '#374151', fontWeight: 500 }}>Địa chỉ</label>
 									{isEditing ? (
-										<input 
-											value={editData.address || ''} 
-											onChange={(e) => setEditData({...editData, address: e.target.value})}
-											style={inputStyleEditable}
-											placeholder="Nhập địa chỉ"
-										/>
+										<div>
+											<input 
+												value={editData.address || ''} 
+												onChange={(e) => {
+													const value = e.target.value;
+													setEditData({...editData, address: value});
+													validateAddress(value);
+												}}
+												style={{
+													...inputStyleEditable,
+													borderColor: addressError ? '#dc2626' : '#d1d5db'
+												}}
+												placeholder="Nhập địa chỉ"
+											/>
+											{addressError && (
+												<div style={{
+													color: '#dc2626',
+													fontSize: '12px',
+													marginTop: '4px'
+												}}>
+													{addressError}
+												</div>
+											)}
+										</div>
 									) : (
 										<input disabled value={data.address || 'Chưa cập nhật'} style={inputStyleDisabled} />
 									)}
 
 									<label style={{ textAlign: 'right', color: '#374151', fontWeight: 500 }}>Ngày sinh</label>
 									{isEditing ? (
-										<input 
-											type="date"
-											value={editData.dob || ''} 
-											onChange={(e) => {
-												const value = e.target.value;
-												setEditData({...editData, dob: value});
-												
-												// Clear previous errors
-												setError(null);
-												
-												// Validate age if date is provided
-												if (value) {
-													const date = new Date(value);
-													const now = new Date();
-													
-													// Calculate age more accurately considering month and day
-													let age = now.getFullYear() - date.getFullYear();
-													const monthDiff = now.getMonth() - date.getMonth();
-													
-													if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
-														age--;
-													}
-													
-													if (age < 18) {
-														setError('Bạn phải đủ 18 tuổi');
-													}
-												}
-											}}
-											style={inputStyleEditable}
-										/>
+										<div>
+											<input 
+												type="date"
+												value={editData.dob || ''} 
+												onChange={(e) => {
+													const value = e.target.value;
+													setEditData({...editData, dob: value});
+													validateDob(value);
+												}}
+												style={{
+													...inputStyleEditable,
+													borderColor: dobError ? '#dc2626' : '#d1d5db'
+												}}
+											/>
+											{dobError && (
+												<div style={{
+													color: '#dc2626',
+													fontSize: '12px',
+													marginTop: '4px'
+												}}>
+													{dobError}
+												</div>
+											)}
+										</div>
 									) : (
 										<input disabled value={formatDate(data.dob)} style={inputStyleDisabled} />
+									)}
+
+									<label style={{ textAlign: 'right', color: '#374151', fontWeight: 500 }}>Số hồ sơ bệnh án</label>
+									<input disabled value={data.medicalRecordNumber || 'Chưa có'} style={inputStyleDisabled} />
+
+									<label style={{ textAlign: 'right', color: '#374151', fontWeight: 500 }}>Tên người liên hệ khẩn cấp</label>
+									{isEditing ? (
+										<div>
+											<input 
+												value={editData.emergencyContactName || ''} 
+												onChange={(e) => {
+													const value = e.target.value;
+													setEditData({...editData, emergencyContactName: value});
+													validateEmergencyContactName(value);
+												}}
+												style={{
+													...inputStyleEditable,
+													borderColor: emergencyContactNameError ? '#dc2626' : '#d1d5db'
+												}}
+												placeholder="Nhập tên người liên hệ khẩn cấp"
+											/>
+											{emergencyContactNameError && (
+												<div style={{
+													color: '#dc2626',
+													fontSize: '12px',
+													marginTop: '4px'
+												}}>
+													{emergencyContactNameError}
+												</div>
+											)}
+										</div>
+									) : (
+										<input disabled value={data.emergencyContactName || 'Chưa cập nhật'} style={inputStyleDisabled} />
+									)}
+
+									<label style={{ textAlign: 'right', color: '#374151', fontWeight: 500 }}>Số điện thoại liên hệ khẩn cấp</label>
+									{isEditing ? (
+										<div>
+											<input 
+												value={editData.emergencyContactPhone || ''} 
+												onChange={(e) => {
+													const numericValue = e.target.value.replace(/[^0-9]/g, '');
+													setEditData({...editData, emergencyContactPhone: numericValue});
+													validateEmergencyContactPhone(numericValue);
+												}}
+												style={{
+													...inputStyleEditable,
+													borderColor: emergencyContactPhoneError ? '#dc2626' : '#d1d5db'
+												}}
+												placeholder="Nhập số điện thoại liên hệ khẩn cấp (bắt đầu bằng 0)"
+												type="tel"
+												maxLength={10}
+											/>
+											{emergencyContactPhoneError && (
+												<div style={{
+													color: '#dc2626',
+													fontSize: '12px',
+													marginTop: '4px'
+												}}>
+													{emergencyContactPhoneError}
+												</div>
+											)}
+										</div>
+									) : (
+										<input disabled value={data.emergencyContactPhone || 'Chưa cập nhật'} style={inputStyleDisabled} />
 									)}
 								</div>
 

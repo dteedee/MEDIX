@@ -65,7 +65,7 @@ export const Header: React.FC = () => {
                     {user ? (
                         <>
                             <div>
-                                <a href={user.role === "Doctor" ? "/doctor/profile/edit" : "/patient/profile"}>
+                                <a href={user.role === "Doctor" ? "/doctor/profile/edit" : "/app/patient/profile"}>
                                     <img
                                         src={user.avatarUrl}
                                         alt="User avatar"

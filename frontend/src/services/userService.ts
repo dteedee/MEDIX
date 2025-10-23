@@ -11,6 +11,9 @@ export interface UserBasicInfo {
   dob: string | null; // ISO date string 'YYYY-MM-DD'
   imageURL?: string | null; // Match backend DTO field name
   createdAt: string;
+  medicalRecordNumber?: string | null; // Somente leitura
+  emergencyContactName?: string | null; // Editável
+  emergencyContactPhone?: string | null; // Editável
 }
 
 export interface UpdateUserInfo {
@@ -20,15 +23,26 @@ export interface UpdateUserInfo {
   phoneNumber?: string;
   address?: string;
   dob?: string; // Will be converted to DateOnly on backend
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
 }
 
 export const userService = {
   async getUserInfo(): Promise<UserBasicInfo> {
     try {
+      console.log('🔄 userService - Calling API: /user/getUserInfor');
       const response = await apiClient.get<UserBasicInfo>('/user/getUserInfor');
+      console.log('✅ userService - API response received:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching user info:', error);
+      console.error('❌ userService - Error fetching user info:', error);
+      console.error('❌ userService - Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+      
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -48,7 +62,9 @@ export const userService = {
         email: data.email || '',
         phoneNumber: data.phoneNumber || null,
         address: data.address || null,
-        dob: data.dob || null
+        dob: data.dob || null,
+        emergencyContactName: data.emergencyContactName || null,
+        emergencyContactPhone: data.emergencyContactPhone || null
       };
       const response = await apiClient.put<UserBasicInfo>('/user/updateUserInfor', updateDto);
       console.log('UpdateUserInfo - Request payload:', updateDto);

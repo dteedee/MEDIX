@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types/common.types';
 import doctorService from '../../services/doctorService';
-import { ServiceTierWithPaginatedDoctorsDto, DoctorInTier, PaginationParams } from '../../types/doctor.types';
+import { ServiceTierWithPaginatedDoctorsDto, DoctorInTier, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters } from '../../types/doctor.types';
 
 interface Doctor {
   id: string;
@@ -64,12 +64,28 @@ const DoctorBookingList: React.FC = () => {
   const [specializations, setSpecializations] = useState<{id: string, name: string}[]>([]);
   const [metadataLoading, setMetadataLoading] = useState(true);
   
+  // Education types state
+  const [educationTypes, setEducationTypes] = useState<DoctorTypeDegreeDto[]>([]);
+  const [educationLoading, setEducationLoading] = useState(true);
+  
+  // Filter states
+  const [selectedEducationCode, setSelectedEducationCode] = useState<string>('all');
+  const [selectedSpecializationCode, setSelectedSpecializationCode] = useState<string>('all');
+  
+  // Input states for price fields (for immediate UI updates)
+  const [minPriceInput, setMinPriceInput] = useState<string>('');
+  const [maxPriceInput, setMaxPriceInput] = useState<string>('');
+  
+  // Debounced filter states (for API calls)
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  
   
   // Pagination states for each tier
-  const [basicPagination, setBasicPagination] = useState({ pageNumber: 1, pageSize: 3 });
-  const [professionalPagination, setProfessionalPagination] = useState({ pageNumber: 1, pageSize: 3 });
-  const [premiumPagination, setPremiumPagination] = useState({ pageNumber: 1, pageSize: 3 });
-  const [vipPagination, setVipPagination] = useState({ pageNumber: 1, pageSize: 3 });
+  const [basicPagination, setBasicPagination] = useState({ pageNumber: 1, pageSize: 4 });
+  const [professionalPagination, setProfessionalPagination] = useState({ pageNumber: 1, pageSize: 4 });
+  const [premiumPagination, setPremiumPagination] = useState({ pageNumber: 1, pageSize: 4 });
+  const [vipPagination, setVipPagination] = useState({ pageNumber: 1, pageSize: 4});
 
   // Load metadata (specializations only)
   const loadMetadata = async () => {
@@ -84,11 +100,43 @@ const DoctorBookingList: React.FC = () => {
     }
   };
 
+  // Load education types
+  const loadEducationTypes = async () => {
+    try {
+      setEducationLoading(true);
+      const educationData = await doctorService.getEducationTypes();
+      setEducationTypes(educationData);
+      console.log('Education types loaded:', educationData);
+    } catch (err: any) {
+      console.error('Error loading education types:', err);
+    } finally {
+      setEducationLoading(false);
+    }
+  };
+
+  // Debounce effect for price fields
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setMinPrice(minPriceInput);
+      setMaxPrice(maxPriceInput);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timeoutId);
+  }, [minPriceInput, maxPriceInput]);
+
 
   // Load data from API for each tier
   const loadTierData = async (tierName: string, paginationParams: PaginationParams) => {
     try {
-      const data = await doctorService.getDoctorsGroupedByTier(paginationParams);
+      const queryParams: DoctorQueryParameters = {
+        ...paginationParams,
+        educationCode: selectedEducationCode === 'all' ? undefined : selectedEducationCode,
+        specializationCode: selectedSpecializationCode === 'all' ? undefined : selectedSpecializationCode,
+        minPrice: minPrice ? parseFloat(minPrice) : undefined,
+        maxPrice: maxPrice ? parseFloat(maxPrice) : undefined
+      };
+      
+      const data = await doctorService.getDoctorsGroupedByTier(queryParams);
       const tierData = data.find(t => t.name === tierName);
       return tierData;
     } catch (err: any) {
@@ -100,6 +148,7 @@ const DoctorBookingList: React.FC = () => {
   // Load metadata on component mount
   useEffect(() => {
     loadMetadata();
+    loadEducationTypes();
   }, []);
 
   // Load all tiers data
@@ -128,7 +177,7 @@ const DoctorBookingList: React.FC = () => {
     };
 
     loadAllTiersData();
-  }, [basicPagination, professionalPagination, premiumPagination, vipPagination]);
+  }, [basicPagination, professionalPagination, premiumPagination, vipPagination, selectedEducationCode, selectedSpecializationCode, minPrice, maxPrice]);
 
   // Convert API data to doctors by tier
   const getDoctorsByTier = (tierName: string): Doctor[] => {
@@ -156,7 +205,7 @@ const DoctorBookingList: React.FC = () => {
   const specialtyOptions = [
     { value: 'all', label: 'Tất cả chuyên khoa' },
     ...specializations.map(spec => ({
-      value: spec.name,
+      value: spec.id,
       label: spec.name
     }))
   ];
@@ -246,19 +295,13 @@ const DoctorBookingList: React.FC = () => {
   };
 
   const handleBooking = (doctorId: string) => {
-    if (!isAuthenticated) {
-      if (window.confirm('Bạn cần đăng nhập để đặt lịch khám. Bạn có muốn đăng nhập ngay không?')) {
-        navigate('/login');
-      }
-      return;
-    }
+    // Navigate to doctor details page with booking tab active
+    navigate(`/doctor/details/${doctorId}?tab=booking`);
+  };
 
-    if (user?.role !== UserRole.PATIENT) {
-      alert('Chỉ bệnh nhân mới có thể đặt lịch khám. Vui lòng đăng ký tài khoản bệnh nhân!');
-      return;
-    }
-
-    navigate(`/app/patient/booking/${doctorId}`);
+  const handleDoctorCardClick = (doctorId: string) => {
+    // Navigate to doctor details page without specific tab
+    navigate(`/doctor/details/${doctorId}`);
   };
 
   // Pagination handlers for each tier
@@ -276,6 +319,33 @@ const DoctorBookingList: React.FC = () => {
 
   const handleVipPageChange = (page: number) => {
     setVipPagination(prev => ({ ...prev, pageNumber: page }));
+  };
+
+  // Filter handlers
+  const handleEducationChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedEducationCode(event.target.value);
+    // Reset pagination when filter changes
+    setBasicPagination(prev => ({ ...prev, pageNumber: 1 }));
+    setProfessionalPagination(prev => ({ ...prev, pageNumber: 1 }));
+    setPremiumPagination(prev => ({ ...prev, pageNumber: 1 }));
+    setVipPagination(prev => ({ ...prev, pageNumber: 1 }));
+  };
+
+  const handleSpecializationChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedSpecializationCode(event.target.value);
+    // Reset pagination when filter changes
+    setBasicPagination(prev => ({ ...prev, pageNumber: 1 }));
+    setProfessionalPagination(prev => ({ ...prev, pageNumber: 1 }));
+    setPremiumPagination(prev => ({ ...prev, pageNumber: 1 }));
+    setVipPagination(prev => ({ ...prev, pageNumber: 1 }));
+  };
+
+  const handleMinPriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setMinPriceInput(event.target.value);
+  };
+
+  const handleMaxPriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setMaxPriceInput(event.target.value);
   };
 
 
@@ -308,9 +378,10 @@ const DoctorBookingList: React.FC = () => {
           transition: 'transform 0.2s, box-shadow 0.2s',
           cursor: 'pointer',
           height: '100%',
-          minHeight: '420px',
-          maxWidth: '280px'
+          minHeight: '480px',
+          maxWidth: '340px'
         }}
+        onClick={() => handleDoctorCardClick(doctor.id)}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-4px)';
           e.currentTarget.style.boxShadow = '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
@@ -324,12 +395,12 @@ const DoctorBookingList: React.FC = () => {
         <div style={{
           backgroundColor: tierStyle.badge,
           color: 'white',
-          padding: '6px 12px',
-          borderRadius: '20px',
-          fontSize: '12px',
+          padding: '8px 16px',
+          borderRadius: '25px',
+          fontSize: '14px',
           fontWeight: '600',
           textTransform: 'uppercase',
-          marginBottom: '16px',
+          marginBottom: '20px',
           letterSpacing: '0.5px'
         }}>
           {doctor.degree}
@@ -337,45 +408,45 @@ const DoctorBookingList: React.FC = () => {
 
         {/* Avatar */}
         <div style={{
-          width: '80px',
-          height: '80px',
+          width: '100px',
+          height: '100px',
           borderRadius: '50%',
           backgroundColor: '#E5E7EB',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: '16px',
+          marginBottom: '20px',
           overflow: 'hidden',
-          border: '3px solid white',
+          border: '4px solid white',
           boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)'
         }}>
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="#9CA3AF">
+          <svg width="50" height="50" viewBox="0 0 24 24" fill="#9CA3AF">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
           </svg>
         </div>
 
         {/* Thông tin chính */}
-        <div style={{ marginBottom: '16px', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ marginBottom: '20px', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
           <h3 style={{
-            fontSize: '18px',
+            fontSize: '22px',
             fontWeight: '700',
             color: '#1F2937',
-            marginBottom: '8px'
+            marginBottom: '12px'
           }}>
             {doctor.fullName}
           </h3>
           <p style={{
-            fontSize: '14px',
+            fontSize: '16px',
             color: '#374151',
             fontWeight: '500',
-            marginBottom: '6px'
+            marginBottom: '8px'
           }}>
             Chuyên khoa: {doctor.specialty}
           </p>
           <p style={{
-            fontSize: '13px',
+            fontSize: '15px',
             color: '#6B7280',
-            marginBottom: '12px'
+            marginBottom: '16px'
           }}>
             {doctor.experience}
           </p>
@@ -390,13 +461,13 @@ const DoctorBookingList: React.FC = () => {
         <div style={{
           backgroundColor: '#FEF3C7',
           border: '2px solid #F59E0B',
-          borderRadius: '8px',
-          padding: '12px 16px',
-          marginBottom: '12px',
+          borderRadius: '10px',
+          padding: '16px 20px',
+          marginBottom: '16px',
           width: '100%'
         }}>
           <span style={{
-            fontSize: '20px',
+            fontSize: '24px',
             fontWeight: '700',
             color: '#D97706'
           }}>
@@ -406,10 +477,10 @@ const DoctorBookingList: React.FC = () => {
 
         {/* Tiểu sử */}
         <p style={{
-          fontSize: '13px',
+          fontSize: '15px',
           color: '#4B5563',
-          lineHeight: '1.4',
-          marginBottom: '20px',
+          lineHeight: '1.5',
+          marginBottom: '24px',
           textAlign: 'center'
         }}>
           {doctor.bio}
@@ -417,12 +488,15 @@ const DoctorBookingList: React.FC = () => {
 
         {/* Nút đặt lịch */}
         <button
-          onClick={() => handleBooking(doctor.id)}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent card click event
+            handleBooking(doctor.id);
+          }}
           style={{
             width: '100%',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            fontSize: '14px',
+            padding: '16px 20px',
+            borderRadius: '10px',
+            fontSize: '16px',
             fontWeight: '600',
             border: doctor.tier === 'Basic' ? '2px solid #2563EB' : 'none',
             backgroundColor: doctor.tier === 'Basic' ? 'white' : '#2563EB',
@@ -666,43 +740,13 @@ const DoctorBookingList: React.FC = () => {
         border: '1px solid #E5E7EB'
       }}>
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          display: 'flex',
           gap: '16px',
-          alignItems: 'end'
+          alignItems: 'flex-end',
+          flexWrap: 'wrap'
         }}>
-          {/* Gói khám filter */}
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '500',
-              color: '#374151',
-              marginBottom: '6px'
-            }}>
-              Gói khám ▼
-            </label>
-            <select
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #D1D5DB',
-                borderRadius: '6px',
-                fontSize: '14px',
-                backgroundColor: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              <option value="all">Tất cả gói khám</option>
-              <option value="Basic">Gói Basic</option>
-              <option value="Professional">Gói Professional</option>
-              <option value="Premium">Gói Premium</option>
-              <option value="VIP">Gói VIP</option>
-            </select>
-          </div>
-
           {/* Học vị filter */}
-          <div>
+          <div style={{ flex: '2', minWidth: '200px' }}>
             <label style={{
               display: 'block',
               fontSize: '14px',
@@ -713,26 +757,34 @@ const DoctorBookingList: React.FC = () => {
               Học vị ▼
             </label>
             <select
+              value={selectedEducationCode}
+              onChange={handleEducationChange}
               style={{
                 width: '100%',
-                padding: '8px 12px',
+                padding: '6px 8px',
                 border: '1px solid #D1D5DB',
-                borderRadius: '6px',
-                fontSize: '14px',
+                borderRadius: '4px',
+                fontSize: '12px',
                 backgroundColor: 'white',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                height: '32px'
               }}
             >
               <option value="all">Tất cả học vị</option>
-              <option value="Bác sĩ">Bác sĩ</option>
-              <option value="Thạc sĩ">Thạc sĩ, Bác sĩ</option>
-              <option value="Tiến sĩ">Tiến sĩ, Phó Giáo sư</option>
-              <option value="Giáo sư">Tiến sĩ, Giáo sư</option>
+              {educationLoading ? (
+                <option disabled>Đang tải...</option>
+              ) : (
+                educationTypes.map((education) => (
+                  <option key={education.code} value={education.code}>
+                    {education.description}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
           {/* Chuyên khoa filter */}
-          <div>
+          <div style={{ flex: '2', minWidth: '200px' }}>
             <label style={{
               display: 'block',
               fontSize: '14px',
@@ -743,14 +795,17 @@ const DoctorBookingList: React.FC = () => {
               Chuyên khoa ▼
             </label>
             <select
+              value={selectedSpecializationCode}
+              onChange={handleSpecializationChange}
               style={{
                 width: '100%',
-                padding: '8px 12px',
+                padding: '6px 8px',
                 border: '1px solid #D1D5DB',
-                borderRadius: '6px',
-                fontSize: '14px',
+                borderRadius: '4px',
+                fontSize: '12px',
                 backgroundColor: 'white',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                height: '32px'
               }}
               disabled={metadataLoading}
             >
@@ -767,7 +822,7 @@ const DoctorBookingList: React.FC = () => {
           </div>
 
           {/* Phòng khám filter */}
-          <div>
+          <div style={{ flex: '1', minWidth: '150px' }}>
             <label style={{
               display: 'block',
               fontSize: '14px',
@@ -780,12 +835,13 @@ const DoctorBookingList: React.FC = () => {
             <select
               style={{
                 width: '100%',
-                padding: '8px 12px',
+                padding: '6px 8px',
                 border: '1px solid #D1D5DB',
-                borderRadius: '6px',
-                fontSize: '14px',
+                borderRadius: '4px',
+                fontSize: '12px',
                 backgroundColor: 'white',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                height: '32px'
               }}
             >
               <option value="all">Tất cả phòng khám</option>
@@ -805,28 +861,44 @@ const DoctorBookingList: React.FC = () => {
               color: '#374151',
               marginBottom: '6px'
             }}>
-              Mức giá ▼
+              Mức giá (VNĐ)
             </label>
-            <select
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #D1D5DB',
-                borderRadius: '6px',
-                fontSize: '14px',
-                backgroundColor: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              <option value="all">Tất cả mức giá</option>
-              <option value="0-60000">Dưới 60.000đ</option>
-              <option value="60000-80000">60.000đ - 80.000đ</option>
-              <option value="80000-120000">80.000đ - 120.000đ</option>
-              <option value="120000+">Trên 120.000đ</option>
-            </select>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="number"
+                placeholder="Từ"
+                value={minPriceInput}
+                onChange={handleMinPriceChange}
+                style={{
+                  flex: 1,
+                  padding: '6px 8px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  backgroundColor: 'white',
+                  height: '32px'
+                }}
+              />
+              <span style={{ color: '#6B7280', fontSize: '12px' }}>đến</span>
+              <input
+                type="number"
+                placeholder="Đến"
+                value={maxPriceInput}
+                onChange={handleMaxPriceChange}
+                style={{
+                  flex: 1,
+                  padding: '6px 8px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  backgroundColor: 'white',
+                  height: '32px'
+                }}
+              />
+            </div>
           </div>
 
-          {/* Buttons */}
+          {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               style={{
@@ -835,12 +907,22 @@ const DoctorBookingList: React.FC = () => {
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '12px',
                 cursor: 'pointer',
-                fontWeight: '500'
+                fontWeight: '500',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#1D4ED8';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#2563EB';
               }}
             >
-              ÁP DỤNG
+              🔍 ÁP DỤNG
             </button>
             <button
               style={{
@@ -849,12 +931,22 @@ const DoctorBookingList: React.FC = () => {
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '12px',
                 cursor: 'pointer',
-                fontWeight: '500'
+                fontWeight: '500',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#4B5563';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#6B7280';
               }}
             >
-              ĐẶT LẠI
+              🗑️ ĐẶT LẠI
             </button>
           </div>
         </div>

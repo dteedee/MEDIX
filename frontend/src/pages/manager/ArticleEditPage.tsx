@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import ArticleForm from '../../components/admin/ArticleForm'
+import ArticleForm from './ArticleForm'
 import { articleService } from '../../services/articleService'
 import { ArticleDTO } from '../../types/article.types'
 import { useToast } from '../../contexts/ToastContext'

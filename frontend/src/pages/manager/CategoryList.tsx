@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { categoryService } from '../../services/categoryService'
 import { CategoryDTO } from '../../types/category.types'
-import CategoryDetails from '../../components/admin/CategoryDetails'
+import CategoryDetails from './CategoryDetails'
 import { useToast } from '../../contexts/ToastContext'
 import styles from '../../styles/CategoryList.module.css'
 

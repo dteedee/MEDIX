@@ -49,7 +49,7 @@ function DoctorRegister() {
         const agreed = formData.get('agreeToTerms') === 'on'; // checkbox returns 'on' if checked
 
         if (!agreed) {
-            setErrors({ AgreeToTerms: 'Bạn phải đồng ý với điều khoản trước khi đăng ký.' });
+            setErrors({ AgreeToTerms: 'Vui lòng đọc và đồng ý với điều khoản trước khi đăng ký' });
             return;
         }
 

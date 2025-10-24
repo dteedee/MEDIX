@@ -9,8 +9,22 @@ import { validatePatientRegistrationForm, validatePassword, getPasswordStrength 
 import '../../style/RegistrationPage.css';
 
 export const PatientRegister: React.FC = () => {
-  // Helper function to validate email format
+  // Helper function to validate email format - kiểm tra đuôi và ký tự có dấu
   const isValidEmail = (email: string): boolean => {
+    // Kiểm tra đuôi phải có ít nhất 2 ký tự sau dấu chấm
+    const domainRegex = /\.\w{2,}$/;
+    if (!domainRegex.test(email)) {
+      return false;
+    }
+    
+    // Kiểm tra không có ký tự có dấu trước @
+    const beforeAt = email.split('@')[0];
+    const hasAccentedChars = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(beforeAt);
+    if (hasAccentedChars) {
+      return false;
+    }
+    
+    // Kiểm tra format email cơ bản
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
@@ -108,6 +122,138 @@ export const PatientRegister: React.FC = () => {
 
   const { registerPatient } = useAuth();
   const navigate = useNavigate();
+
+  // Validation function giống DoctorRegister
+  const validateField = (name: string, value: string) => {
+    const newErrors: Record<string, string[]> = {};
+
+    switch (name) {
+      case 'fullName':
+        if (!value.trim()) {
+          newErrors.FullName = ['Vui lòng nhập họ và tên'];
+        } else {
+          newErrors.FullName = [];
+        }
+        break;
+
+      case 'email':
+        if (!value.trim()) {
+          newErrors.Email = ['Vui lòng nhập email'];
+        } else if (!isValidEmail(value)) {
+          // Kiểm tra các lỗi cụ thể
+          const beforeAt = value.split('@')[0];
+          const hasAccentedChars = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(beforeAt);
+          const domainRegex = /\.\w{2,}$/;
+          
+          if (hasAccentedChars) {
+            newErrors.Email = ['Email không được chứa ký tự có dấu (ả, ạ, á, à...)'];
+          } else if (!domainRegex.test(value)) {
+            newErrors.Email = ['Đuôi email phải có ít nhất 2 ký tự sau dấu chấm (ví dụ: .com, .vn)'];
+          } else {
+            newErrors.Email = ['Email không hợp lệ'];
+          }
+        } else {
+          newErrors.Email = [];
+        }
+        break;
+
+      case 'phoneNumber':
+        if (!value.trim()) {
+          newErrors.PhoneNumber = ['Vui lòng nhập số điện thoại'];
+        } else if (!/^0\d{9}$/.test(value)) {
+          newErrors.PhoneNumber = ['Số điện thoại phải bắt đầu bằng 0 và gồm 10 chữ số'];
+        } else if (value.startsWith('00')) {
+          newErrors.PhoneNumber = ['Số điện thoại không được có số 0 thứ hai sau số 0 đầu tiên'];
+        } else {
+          newErrors.PhoneNumber = [];
+        }
+        break;
+
+      case 'identificationNumber':
+        if (!value.trim()) {
+          newErrors.IdentificationNumber = ['Vui lòng nhập số CCCD'];
+        } else if (!/^\d{12}$/.test(value)) {
+          newErrors.IdentificationNumber = ['Số CCCD phải gồm đúng 12 chữ số'];
+        } else {
+          newErrors.IdentificationNumber = [];
+        }
+        break;
+
+      case 'dateOfBirth':
+        if (!value) {
+          newErrors.DateOfBirth = ['Vui lòng chọn ngày sinh'];
+        } else {
+          const birthYear = new Date(value).getFullYear();
+          const currentYear = new Date().getFullYear();
+          const age = currentYear - birthYear;
+
+          if (age < 18) {
+            newErrors.DateOfBirth = ['Bạn phải đủ 18 tuổi để đăng ký'];
+          } else if (age > 150) {
+            newErrors.DateOfBirth = ['Ngày sinh không hợp lệ'];
+          } else {
+            newErrors.DateOfBirth = [];
+          }
+        }
+        break;
+
+      case 'genderCode':
+        if (!value) {
+          newErrors.GenderCode = ['Vui lòng chọn giới tính'];
+        } else {
+          newErrors.GenderCode = [];
+        }
+        break;
+
+      case 'bloodTypeCode':
+        if (!value) {
+          newErrors.BloodTypeCode = ['Vui lòng chọn nhóm máu'];
+        } else {
+          newErrors.BloodTypeCode = [];
+        }
+        break;
+
+      case 'emergencyContactName':
+        if (!value.trim()) {
+          newErrors.EmergencyContactName = ['Vui lòng nhập họ tên người liên hệ khẩn cấp'];
+        } else {
+          newErrors.EmergencyContactName = [];
+        }
+        break;
+
+      case 'emergencyContactPhone':
+        if (!value.trim()) {
+          newErrors.EmergencyContactPhone = ['Vui lòng nhập số điện thoại liên hệ khẩn cấp'];
+        } else if (!/^0\d{9}$/.test(value)) {
+          newErrors.EmergencyContactPhone = ['Số điện thoại phải bắt đầu bằng 0 và gồm 10 chữ số'];
+        } else {
+          newErrors.EmergencyContactPhone = [];
+        }
+        break;
+
+      case 'password':
+        if (!value) {
+          newErrors.Password = ['Vui lòng nhập mật khẩu'];
+        } else if (value.length < 6) {
+          newErrors.Password = ['Mật khẩu phải có ít nhất 6 ký tự'];
+        } else {
+          newErrors.Password = [];
+        }
+        break;
+
+      case 'passwordConfirmation':
+        if (!value) {
+          newErrors.PasswordConfirmation = ['Vui lòng xác nhận mật khẩu'];
+        } else if (value !== formData.password) {
+          newErrors.PasswordConfirmation = ['Mật khẩu xác nhận không khớp'];
+        } else {
+          newErrors.PasswordConfirmation = [];
+        }
+        break;
+    }
+
+    setValidationErrors((prev: any) => ({ ...prev, ...newErrors }));
+  };
 
   useEffect(() => {
     // Load blood types and gender options
@@ -209,9 +355,7 @@ export const PatientRegister: React.FC = () => {
 
   // Auto-check email exists when user finishes typing
   useEffect(() => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
-    if (formData.email && emailRegex.test(formData.email)) {
+    if (formData.email && isValidEmail(formData.email)) {
       const timeoutId = setTimeout(async () => {
         setIsCheckingEmail(true);
         try {
@@ -319,9 +463,19 @@ export const PatientRegister: React.FC = () => {
     }
 
     // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Email không hợp lệ');
+    if (!isValidEmail(formData.email)) {
+      // Kiểm tra các lỗi cụ thể
+      const beforeAt = formData.email.split('@')[0];
+      const hasAccentedChars = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(beforeAt);
+      const domainRegex = /\.\w{2,}$/;
+      
+      if (hasAccentedChars) {
+        setError('Email không được chứa ký tự có dấu (ả, ạ, á, à...)');
+      } else if (!domainRegex.test(formData.email)) {
+        setError('Đuôi email phải có ít nhất 2 ký tự sau dấu chấm (ví dụ: .com, .vn)');
+      } else {
+        setError('Email không hợp lệ');
+      }
       return;
     }
 
@@ -427,9 +581,6 @@ export const PatientRegister: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     
-    // Debug: Log current validation state
-    console.log(`Field changed: ${name}, value: ${value}, has error: ${!!validationErrors[name]}`);
-    
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({ ...prev, [name]: checked }));
@@ -442,51 +593,35 @@ export const PatientRegister: React.FC = () => {
         });
       }
     } else if (type === 'radio') {
-      console.log('Radio button changed:', name, 'value:', value);
       setFormData(prev => ({ ...prev, [name]: value }));
-      
-      // Force clear validation error for radio buttons when selected (immediate)
-      setValidationErrors(prev => {
-        const { [name]: removedError, ...rest } = prev;
-        console.log(`Force clearing validation error for radio field: ${name}`);
-        return rest;
-      });
+      validateField(name, value);
     } else {
       // For identification number, only allow digits
       if (name === 'identificationNumber') {
         const numericValue = value.replace(/\D/g, ''); // Remove non-digits
         setFormData(prev => ({ ...prev, [name]: numericValue }));
-        
-        // Validate identification number length
-        if (numericValue.length > 0 && numericValue.length !== 12) {
-          setValidationErrors(prev => ({
-            ...prev,
-            identificationNumber: ['Số CCCD/CMND phải có đúng 12 ký tự']
-          }));
-        } else {
-          // Clear error when exactly 12 characters or when field is empty
-          if (validationErrors.identificationNumber) {
-            console.log(`Clearing identification number validation error`);
-            setValidationErrors(prev => {
-              const { identificationNumber, ...rest } = prev;
-              return rest;
-            });
-          }
-        }
+        validateField(name, numericValue);
       } 
-      // For phone number fields, only allow digits
+      // For phone number fields, only allow digits and enforce 0 prefix
       else if (name === 'phoneNumber' || name === 'emergencyContactPhone') {
         const numericValue = value.replace(/\D/g, ''); // Remove non-digits
-        setFormData(prev => ({ ...prev, [name]: numericValue }));
         
-        // Clear validation error for phone fields when user starts typing
-        if (validationErrors[name] && numericValue.length > 0) {
-          console.log(`Clearing validation error for phone field: ${name}`);
-          setValidationErrors(prev => {
-            const { [name]: removedError, ...rest } = prev;
-            return rest;
-          });
+        // Enforce that phone number must start with 0
+        if (numericValue && !numericValue.startsWith('0')) {
+          // Don't update the field if it doesn't start with 0
+          return;
         }
+        
+        // Don't allow second digit to be 0 (e.g., 0023456789)
+        if (numericValue.length >= 2 && numericValue[1] === '0') {
+          // Don't update the field if second digit is 0
+          return;
+        }
+        
+        // Limit to 10 digits maximum
+        const limitedValue = numericValue.slice(0, 10);
+        setFormData(prev => ({ ...prev, [name]: limitedValue }));
+        validateField(name, limitedValue);
       } else {
         setFormData(prev => ({ ...prev, [name]: value }));
         
@@ -501,69 +636,12 @@ export const PatientRegister: React.FC = () => {
           
           // Update form data with processed value
           setFormData(prev => ({ ...prev, [name]: processedValue }));
-          
-          if (processedValue) {
-            const date = new Date(processedValue);
-            const now = new Date();
-            
-            // Check if date is valid
-            if (isNaN(date.getTime())) {
-              setValidationErrors(prev => ({
-                ...prev,
-                dateOfBirth: ['Ngày sinh không hợp lệ. Vui lòng nhập đúng định dạng dd/mm/yyyy']
-              }));
-              return;
-            }
-            
-            // Check if date is in the future
-            if (date > now) {
-              setValidationErrors(prev => ({
-                ...prev,
-                dateOfBirth: ['Ngày sinh không thể là ngày trong tương lai']
-              }));
-              return;
-            }
-            
-            // Calculate age more accurately considering month and day
-            let age = now.getFullYear() - date.getFullYear();
-            const monthDiff = now.getMonth() - date.getMonth();
-            
-            if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
-              age--;
-            }
-            
-            if (age < 18) {
-              setValidationErrors(prev => ({
-                ...prev,
-                dateOfBirth: ['Bạn phải đủ 18 tuổi để đăng ký']
-              }));
-            } else if (age > 150) {
-              setValidationErrors(prev => ({
-                ...prev,
-                dateOfBirth: ['Ngày sinh không hợp lý']
-              }));
-            } else if (validationErrors.dateOfBirth) {
-              // Clear error when age is valid
-              setValidationErrors(prev => {
-                const { dateOfBirth, ...rest } = prev;
-                return rest;
-              });
-            }
-          }
+          validateField(name, processedValue);
           return; // Early return for date processing
         }
-        // Clear validation error for any field when user starts typing/selecting
-        else if (validationErrors[name]) {
-          // For text inputs, clear error when there's content
-          // For select/date inputs, clear error immediately when changed
-          if ((type === 'select-one' || type === 'date' || value.trim().length > 0)) {
-            console.log(`Clearing validation error for field: ${name}`);
-            setValidationErrors(prev => {
-              const { [name]: removedError, ...rest } = prev;
-              return rest;
-            });
-          }
-        }
+        
+        // Use validation function for other fields
+        validateField(name, value);
         
         // Reset auto-send trigger when email changes
         if (name === 'email') {
@@ -582,16 +660,30 @@ export const PatientRegister: React.FC = () => {
     setError('');
     setValidationErrors({});
     
+    // Debug log form data - giống DoctorRegister
+    console.log('=== PATIENT REGISTRATION FORM SUBMISSION ===');
+    console.log('Form data:', formData);
+    console.log('Email verified:', emailVerified);
+    console.log('Email exists:', emailExists);
+    console.log('ID number exists:', idNumberExists);
+    
+    // Check terms agreement first - giống DoctorRegister
+    if (!formData.agreeTerms) {
+      console.log('❌ Terms agreement not checked');
+      setValidationErrors({ agreeTerms: ['Vui lòng đọc và đồng ý với điều khoản trước khi đăng ký'] });
+      return;
+    }
+    
     // Check all required fields first
     const newErrors: ValidationErrors = {};
     
     // Check required basic fields
     if (!formData.fullName?.trim()) {
-      newErrors.fullName = ['Họ và tên là trường bắt buộc'];
+      newErrors.fullName = ['Vui lòng nhập họ và tên'];
     }
     
     if (!formData.email?.trim()) {
-      newErrors.email = ['Email là trường bắt buộc'];
+      newErrors.email = ['Vui lòng nhập email'];
     } else if (emailExists) {
       newErrors.email = ['Email này đã được sử dụng. Vui lòng sử dụng email khác.'];
     } else if (!emailVerified) {
@@ -599,24 +691,24 @@ export const PatientRegister: React.FC = () => {
     }
     
     if (!formData.phoneNumber?.trim()) {
-      newErrors.phoneNumber = ['Số điện thoại là trường bắt buộc'];
+      newErrors.phoneNumber = ['Vui lòng nhập số điện thoại'];
     }
     
     if (!formData.password) {
-      newErrors.password = ['Mật khẩu là trường bắt buộc'];
+      newErrors.password = ['Vui lòng nhập mật khẩu'];
     }
     
     if (!formData.passwordConfirmation) {
-      newErrors.passwordConfirmation = ['Xác nhận mật khẩu là trường bắt buộc'];
+      newErrors.passwordConfirmation = ['Vui lòng xác nhận mật khẩu'];
     }
     
     // Check identification number
     if (!formData.identificationNumber?.trim()) {
-      newErrors.identificationNumber = ['Số CCCD/CMND là trường bắt buộc'];
+      newErrors.identificationNumber = ['Vui lòng nhập số CCCD'];
     } else if (formData.identificationNumber && formData.identificationNumber.length !== 12) {
-      newErrors.identificationNumber = ['Số CCCD/CMND phải có đúng 12 ký tự'];
+      newErrors.identificationNumber = ['Số CCCD phải gồm đúng 12 chữ số'];
     } else if (idNumberExists) {
-      newErrors.identificationNumber = ['Số CCCD/CMND này đã được sử dụng. Vui lòng kiểm tra lại.'];
+      newErrors.identificationNumber = ['Số CCCD này đã được sử dụng. Vui lòng kiểm tra lại.'];
     }
     
     if (!formData.dateOfBirth) {
@@ -640,11 +732,6 @@ export const PatientRegister: React.FC = () => {
       newErrors.emergencyContactPhone = ['Vui lòng nhập số điện thoại liên hệ khẩn cấp'];
     }
 
-    // Check terms agreement
-    if (!formData.agreeTerms) {
-      newErrors.agreeTerms = ['Vui lòng đồng ý với điều khoản dịch vụ'];
-    }
-
     // Validate form data
     const errors = validatePatientRegistrationForm(formData);
     
@@ -654,8 +741,12 @@ export const PatientRegister: React.FC = () => {
 
     // Check for validation errors
     if (Object.keys(allErrors).length > 0) {
+      console.log('❌ Client-side validation errors:', allErrors);
+      console.log('Fields with errors:', Object.keys(allErrors));
       return;
     }
+    
+    console.log('✅ Client-side validation passed');
 
     try {
       setIsLoading(true);
@@ -666,20 +757,11 @@ export const PatientRegister: React.FC = () => {
         passwordConfirmation: formData.passwordConfirmation,
         fullName: formData.fullName,
         phoneNumber: formData.phoneNumber || undefined,
-        address: formData.address?.trim() || undefined, // Ensure no empty strings
+        address: formData.address?.trim() || undefined,
         dateOfBirth: formData.dateOfBirth || undefined,
         identificationNumber: formData.identificationNumber || undefined,
         genderCode: formData.genderCode || undefined,
       };
-
-      // Debug log to check data being sent
-      console.log('Registration data being sent:', {
-        registerRequest,
-        address: formData.address,
-        genderCode: formData.genderCode,
-        genderCodeType: typeof formData.genderCode,
-        formDataFull: formData
-      });
 
       const patientDTO: PatientDTO = {
         bloodTypeCode: formData.bloodTypeCode || undefined,
@@ -694,16 +776,60 @@ export const PatientRegister: React.FC = () => {
         patientDTO,
       };
 
-      // Sử dụng AuthContext registerPatient thay vì gọi trực tiếp registrationService
+      // Debug log to check data being sent - giống DoctorRegister
+      console.log('📤 Sending registration data to server:');
+      console.log('Register Request:', registerRequest);
+      console.log('Patient DTO:', patientDTO);
+      console.log('Full Registration Object:', patientRegistration);
+
+      // Sử dụng AuthContext registerPatient
       await registerPatient(patientRegistration);
+      
+      console.log('✅ Registration successful!');
+      console.log('🔄 Redirecting to patient dashboard...');
       
       // Redirect to patient dashboard after successful registration
       navigate('/app/patient/dashboard');
     } catch (err: any) {
-      console.error('Registration error:', err);
-      setError(err.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+      setIsLoading(false);
+      
+      console.log('❌ Registration failed!');
+      console.error('Error details:', err);
+      console.log('Error response:', err?.response);
+      console.log('Error status:', err?.response?.status);
+      console.log('Error data:', err?.response?.data);
+
+      const status = err?.response?.status;
+
+      if (status === 400 || status === 422) {
+        // Handle validation errors - giống DoctorRegister
+        const errorData = err.response.data;
+        console.log('🔍 Server validation errors detected:');
+        console.log('Raw error data:', errorData);
+        console.log('Error structure:', errorData.errors);
+        
+        // Convert server errors to our format
+        const serverErrors: ValidationErrors = {};
+        if (errorData.errors) {
+          Object.keys(errorData.errors).forEach(key => {
+            serverErrors[key] = Array.isArray(errorData.errors[key]) 
+              ? errorData.errors[key] 
+              : [errorData.errors[key]];
+            console.log(`Server error for ${key}:`, serverErrors[key]);
+          });
+        }
+        
+        console.log('📝 Converted server errors:', serverErrors);
+        setValidationErrors(serverErrors);
+      } else {
+        // Fallback for other errors
+        console.log('⚠️ Non-validation error occurred');
+        console.log('Error message:', err.message);
+        setError(err.message || 'Đã xảy ra lỗi. Vui lòng thử lại.');
+      }
     } finally {
       setIsLoading(false);
+      console.log('🏁 Registration process completed');
     }
   };
 
@@ -731,84 +857,49 @@ export const PatientRegister: React.FC = () => {
                 
                 <div className="form-group">
                   <label className="required">Họ và tên</label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type="text"
-                      name="fullName"
-                      
-                      value={formData.fullName}
-                      onChange={handleChange}
-                      placeholder="Nguyễn Văn A"
-                      className={validationErrors.fullName ? 'error' : formData.fullName?.trim() ? 'success' : ''}
-                      style={formData.fullName?.trim() && !validationErrors.fullName ? { paddingRight: '40px' } : {}}
-                    />
-                    {formData.fullName?.trim() && !validationErrors.fullName && (
-                      <span style={{
-                        position: 'absolute',
-                        right: '10px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: '#27ae60',
-                        fontSize: '16px',
-                        fontWeight: 'bold'
-                      }}>
-                        ✓
-                      </span>
-                    )}
-                  </div>
-                  {validationErrors.fullName && (
-                    <div className="error-message" style={{ marginTop: '4px', fontSize: '12px' }}>
-                      {validationErrors.fullName[0]}
-                    </div>
-                  )}
+                  <input
+                    type="text"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    placeholder="Nguyễn Văn A"
+                    className={`form-control ${validationErrors.FullName?.[0]
+                      ? 'is-invalid'
+                      : formData.fullName?.trim()
+                          ? 'is-valid'
+                          : ''
+                      }`}
+                  />
+                  {validationErrors.FullName?.[0] && <div className="text-danger">{validationErrors.FullName[0]}</div>}
                 </div>
 
                 <div className="form-group">
-                  <label className="required">Số CCCD/CMND</label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type="text"
-                      name="identificationNumber"
-                      
-                      maxLength={12}
-                      pattern="[0-9]{12}"
-                      value={formData.identificationNumber}
-                      onChange={handleChange}
-                      placeholder="Nhập số căn cước công dân (đúng 12 ký tự)"
-                      className={idNumberExists || validationErrors.identificationNumber ? 'error' : 
-                        (formData.identificationNumber?.length === 12 && !idNumberExists) ? 'success' : ''}
-                      style={(formData.identificationNumber?.length === 12 && !idNumberExists && !validationErrors.identificationNumber) ? { paddingRight: '40px' } : {}}
-                    />
-                    {formData.identificationNumber?.length === 12 && !idNumberExists && !validationErrors.identificationNumber && (
-                      <span style={{
-                        position: 'absolute',
-                        right: '10px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: '#27ae60',
-                        fontSize: '16px',
-                        fontWeight: 'bold'
-                      }}>
-                        ✓
-                      </span>
-                    )}
-                  </div>
+                  <label className="required">Số CCCD</label>
+                  <input
+                    type="text"
+                    name="identificationNumber"
+                    maxLength={12}
+                    pattern="[0-9]{12}"
+                    value={formData.identificationNumber}
+                    onChange={handleChange}
+                    placeholder="Nhập số căn cước công dân 12 số"
+                    className={`form-control ${validationErrors.IdentificationNumber?.[0]
+                      ? 'is-invalid'
+                      : formData.identificationNumber?.trim()
+                          ? 'is-valid'
+                          : ''
+                      }`}
+                  />
                   {isCheckingIdNumber && (
                     <div className="mt-1">
                       <span className="info-text" style={{ fontSize: '12px', color: '#6c757d' }}>
-                        Đang kiểm tra số CCCD/CMND...
+                        Đang kiểm tra số CCCD...
                       </span>
                     </div>
                   )}
-                  {validationErrors.identificationNumber && (
-                    <div className="error-message">
-                      {validationErrors.identificationNumber[0]}
-                    </div>
-                  )}
-                  {idNumberExists && !validationErrors.identificationNumber && (
-                    <div className="error-message">
-                      Số CCCD/CMND này đã được sử dụng
-                    </div>
+                  {validationErrors.IdentificationNumber?.[0] && <div className="text-danger">{validationErrors.IdentificationNumber[0]}</div>}
+                  {idNumberExists && !validationErrors.IdentificationNumber && (
+                    <div className="text-danger">Số CCCD này đã được sử dụng</div>
                   )}
                 </div>
 
@@ -831,17 +922,20 @@ export const PatientRegister: React.FC = () => {
 
                 <div className="form-group">
                   <label className="required">Email</label>
-                  <div className="email-input-group">
+                  <div className="reg-email-input-group">
                     <input
                       type="email"
                       name="email"
-                      
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="Email@example.com"
                       disabled={emailVerified}
-                      className={emailVerified ? 'success' : emailExists ? 'error' : ''}
-                      style={emailExists ? { borderColor: '#e74c3c', backgroundColor: '#fdf2f2' } : {}}
+                      className={`form-control ${validationErrors.Email?.[0]
+                        ? 'is-invalid'
+                        : formData.email?.trim()
+                            ? 'is-valid'
+                            : ''
+                        }`}
                     />
                     {/* Hide button when verification code is sent but not yet verified */}
                     {!emailVerificationSent && !emailVerified && (
@@ -849,7 +943,7 @@ export const PatientRegister: React.FC = () => {
                         type="button"
                         onClick={handleSendVerificationCode}
                         disabled={isCheckingEmail || emailVerified || !formData.email || emailExists}
-                        className={`verify-email-btn ${isCheckingEmail ? 'checking' : ''}`}
+                        className={`reg-verify-email-btn ${isCheckingEmail ? 'checking' : ''}`}
                       >
                         {isCheckingEmail ? 'Đang kiểm tra...' : 'Gửi mã xác thực'}
                       </button>
@@ -868,15 +962,17 @@ export const PatientRegister: React.FC = () => {
                     // Ưu tiên 1: Email đã verified (màu xanh)
                     if (emailVerified && !emailExists) {
                       return (
-                        <div className="success-message" style={{ 
-                          marginTop: '4px', 
-                          fontSize: '12px',
-                          padding: '8px 12px',
-                          borderLeft: '3px solid #27ae60',
+                        <div className="text-success" style={{ 
+                          marginTop: '8px', 
+                          fontSize: '13px',
+                          padding: '10px 16px',
                           backgroundColor: '#f8fff8',
-                          color: '#27ae60'
+                          color: '#27ae60',
+                          borderRadius: '8px',
+                          border: '1px solid #c8e6c9',
+                          fontWeight: '500'
                         }}>
-                          ✓ Email đã được xác thực
+                          ✅ Email đã được xác thực
                         </div>
                       );
                     }
@@ -884,47 +980,35 @@ export const PatientRegister: React.FC = () => {
                     // Ưu tiên 2: Email đã tồn tại (màu đỏ)
                     if (emailExists) {
                       return (
-                        <div className="error-message" style={{ 
-                          marginTop: '4px', 
-                          fontSize: '12px',
-                          padding: '8px 12px',
-                          borderLeft: '3px solid #e74c3c',
-                          backgroundColor: '#fdf2f2',
-                          color: '#e74c3c'
-                        }}>
-                          ❌ Email này đã được sử dụng. Vui lòng sử dụng email khác.
+                        <div className="text-danger">
+                          Email này đã được sử dụng. Vui lòng sử dụng email khác.
                         </div>
                       );
                     }
                     
                     // Ưu tiên 3: Validation errors từ submit (màu đỏ) - bao gồm yêu cầu xác thực
-                    if (validationErrors.email && !emailExists && !emailVerified) {
+                    if (validationErrors.Email && !emailExists && !emailVerified) {
                       return (
-                        <div className="error-message" style={{ 
-                          marginTop: '4px', 
-                          fontSize: '12px',
-                          padding: '8px 12px',
-                          borderLeft: '3px solid #e74c3c',
-                          backgroundColor: '#fdf2f2',
-                          color: '#e74c3c'
-                        }}>
-                          ❌ {validationErrors.email[0]}
+                        <div className="text-danger">
+                          {validationErrors.Email[0]}
                         </div>
                       );
                     }
                     
                     // Ưu tiên 4: Đã gửi mã xác thực và chưa verified - CHỈ hiển thị khi có hành động gửi mail
-                    if (emailVerificationSent && !emailVerified && !emailExists && !validationErrors.email) {
+                    if (emailVerificationSent && !emailVerified && !emailExists && !validationErrors.Email) {
                       return (
-                        <div className="success-message" style={{ 
-                          marginTop: '4px', 
-                          fontSize: '12px',
-                          padding: '8px 12px',
-                          borderLeft: '3px solid #27ae60',
+                        <div className="text-success" style={{ 
+                          marginTop: '8px', 
+                          fontSize: '13px',
+                          padding: '10px 16px',
                           backgroundColor: '#f8fff8',
-                          color: '#27ae60'
+                          color: '#27ae60',
+                          borderRadius: '8px',
+                          border: '1px solid #c8e6c9',
+                          fontWeight: '500'
                         }}>
-                          ✅ Mã xác thực đã được gửi đến email của bạn!
+                          📧 Mã xác thực đã được gửi đến email của bạn!
                         </div>
                       );
                     }
@@ -936,17 +1020,17 @@ export const PatientRegister: React.FC = () => {
 
                 {/* Verification Code Section - Chỉ hiển thị khi cần thiết */}
                 {emailVerificationSent && !emailVerified && !emailExists && (
-                  <div className="verification-code-section">
-                    <div className="verification-info">
+                  <div className="reg-verification-code-section">
+                    <div className="reg-verification-info">
                       <p className="info-text">
                         📧 Mã xác nhận đã được gửi đến email <strong>{formData.email}</strong>
                       </p>
                     </div>
                     
-                    <div className="verification-input-group">
+                    <div className="reg-verification-input-group">
                       <input
                         type="text"
-                        className="verification-code-input"
+                        className="reg-verification-code-input"
                         placeholder="Nhập mã xác nhận"
                         value={verificationCode}
                         onChange={(e) => {
@@ -955,18 +1039,12 @@ export const PatientRegister: React.FC = () => {
                           if (error) setError('');
                         }}
                         maxLength={6}
-                        style={{
-                          fontSize: '14px',
-                          padding: '10px 12px',
-                          textAlign: 'center',
-                          letterSpacing: '2px'
-                        }}
                       />
                       <button
                         type="button"
                         onClick={handleVerifyCode}
                         disabled={isVerifyingCode || !verificationCode}
-                        className="verify-code-btn"
+                        className="reg-verify-code-btn"
                       >
                         {isVerifyingCode ? 'Đang kiểm tra...' : 'Xác nhận'}
                       </button>
@@ -974,27 +1052,20 @@ export const PatientRegister: React.FC = () => {
 
                     {/* Hiển thị lỗi xác thực mã - CHỈ khi đang trong flow verify */}
                     {error && emailVerificationSent && !emailVerified && (
-                      <div className="error-message" style={{ 
-                        marginTop: '8px', 
-                        fontSize: '12px',
-                        padding: '8px 12px',
-                        borderLeft: '3px solid #e74c3c',
-                        backgroundColor: '#fdf2f2',
-                        color: '#e74c3c'
-                      }}>
-                        ❌ {error}
+                      <div className="error-message">
+                        {error}
                       </div>
                     )}
 
-                    <div className="resend-section">
-                      <span className="resend-text">
+                    <div className="reg-resend-section">
+                      <span className="reg-resend-text">
                         Không nhận được mã? 
                       </span>
                       <button
                         type="button"
                         onClick={handleResendCode}
                         disabled={resendCountdown > 0}
-                        className="resend-btn"
+                        className="reg-resend-btn"
                       >
                         {resendCountdown > 0 ? `Gửi lại sau ${resendCountdown}s` : 'Gửi lại'}
                       </button>
@@ -1004,37 +1075,21 @@ export const PatientRegister: React.FC = () => {
 
                 <div className="form-group">
                   <label className="required">Số điện thoại</label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type="tel"
-                      name="phoneNumber"
-                      
-                      maxLength={10}
-                      value={formData.phoneNumber}
-                      onChange={handleChange}
-                      placeholder="09xxxxxxxx"
-                      className={validationErrors.phoneNumber ? 'error' : formData.phoneNumber?.trim() ? 'success' : ''}
-                      style={formData.phoneNumber?.trim() && !validationErrors.phoneNumber ? { paddingRight: '40px' } : {}}
-                    />
-                    {formData.phoneNumber?.trim() && !validationErrors.phoneNumber && (
-                      <span style={{
-                        position: 'absolute',
-                        right: '10px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: '#27ae60',
-                        fontSize: '16px',
-                        fontWeight: 'bold'
-                      }}>
-                        ✓
-                      </span>
-                    )}
-                  </div>
-                  {validationErrors.phoneNumber && (
-                    <div className="error-message" style={{ marginTop: '4px', fontSize: '12px' }}>
-                      {validationErrors.phoneNumber[0]}
-                    </div>
-                  )}
+                  <input
+                    type="tel"
+                    name="phoneNumber"
+                    maxLength={10}
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                    placeholder="09xxxxxxxx"
+                    className={`form-control ${validationErrors.PhoneNumber?.[0]
+                      ? 'is-invalid'
+                      : formData.phoneNumber?.trim()
+                          ? 'is-valid'
+                          : ''
+                      }`}
+                  />
+                  {validationErrors.PhoneNumber?.[0] && <div className="text-danger">{validationErrors.PhoneNumber[0]}</div>}
                 </div>
 
                 <div className="form-group">
@@ -1043,11 +1098,15 @@ export const PatientRegister: React.FC = () => {
                     <input
                       type={showPassword ? "text" : "password"}
                       name="password"
-                      
                       value={formData.password}
                       onChange={handleChange}
                       placeholder="••••••••"
-                      className={validationErrors.password ? 'error' : ''}
+                      className={`form-control ${validationErrors.Password?.[0]
+                        ? 'is-invalid'
+                        : formData.password?.trim()
+                            ? 'is-valid'
+                            : ''
+                        }`}
                       style={{ paddingRight: '45px' }}
                     />
                     <button
@@ -1073,11 +1132,7 @@ export const PatientRegister: React.FC = () => {
                       {showPassword ? '👁️' : '👁️‍🗨️'}
                     </button>
                   </div>
-                  {validationErrors.password && (
-                    <div className="error-message" style={{ marginTop: '4px', fontSize: '12px' }}>
-                      {validationErrors.password[0]}
-                    </div>
-                  )}
+                  {validationErrors.Password?.[0] && <div className="text-danger">{validationErrors.Password[0]}</div>}
                   
                   {/* Password Requirements */}
                   <div className="password-requirements">
@@ -1119,11 +1174,15 @@ export const PatientRegister: React.FC = () => {
                     <input
                       type={showPasswordConfirmation ? "text" : "password"}
                       name="passwordConfirmation"
-                      
                       value={formData.passwordConfirmation}
                       onChange={handleChange}
                       placeholder="••••••••"
-                      className={validationErrors.passwordConfirmation ? 'error' : ''}
+                      className={`form-control ${validationErrors.PasswordConfirmation?.[0]
+                        ? 'is-invalid'
+                        : formData.passwordConfirmation?.trim()
+                            ? 'is-valid'
+                            : ''
+                        }`}
                       style={{ paddingRight: '45px' }}
                     />
                     <button
@@ -1154,15 +1213,11 @@ export const PatientRegister: React.FC = () => {
                       {passwordsMatch ? (
                         <span className="match-text success-text">✓ Mật khẩu khớp</span>
                       ) : (
-                        <span className="error-message">✗ Mật khẩu không khớp</span>
+                        <span className="text-danger">✗ Mật khẩu không khớp</span>
                       )}
                     </div>
                   )}
-                  {validationErrors.passwordConfirmation && (
-                    <div className="error-message" style={{ marginTop: '4px', fontSize: '12px' }}>
-                      {validationErrors.passwordConfirmation[0]}
-                    </div>
-                  )}
+                  {validationErrors.PasswordConfirmation?.[0] && <div className="text-danger">{validationErrors.PasswordConfirmation[0]}</div>}
                 </div>
               </div>
             </div>
@@ -1175,51 +1230,33 @@ export const PatientRegister: React.FC = () => {
                 
                 <div className="form-group">
                   <label className="required">Ngày sinh</label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type="date"
-                      name="dateOfBirth"
-                      value={formData.dateOfBirth}
-                      onChange={handleChange}
-                      placeholder="dd/mm/yyyy"
-                      title="Bạn có thể nhập trực tiếp hoặc chọn từ lịch"
-                      className={validationErrors.dateOfBirth ? 'error' : formData.dateOfBirth ? 'success' : ''}
-                      style={{
-                        ...(formData.dateOfBirth && !validationErrors.dateOfBirth ? { paddingRight: '40px' } : {}),
-                        cursor: 'text'
-                      }}
-                      onFocus={(e) => {
-                        // Hiển thị calendar khi focus
-                        e.target.showPicker && e.target.showPicker();
-                      }}
-                    />
-                    {formData.dateOfBirth && !validationErrors.dateOfBirth && (
-                      <span style={{
-                        position: 'absolute',
-                        right: '10px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: '#27ae60',
-                        fontSize: '16px',
-                        fontWeight: 'bold'
-                      }}>
-                        ✓
-                      </span>
-                    )}
-                  </div>
-                  {!validationErrors.dateOfBirth && (
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    value={formData.dateOfBirth}
+                    onChange={handleChange}
+                    placeholder="dd/mm/yyyy"
+                    title="Bạn có thể nhập trực tiếp hoặc chọn từ lịch"
+                    className={`form-control ${validationErrors.DateOfBirth?.[0]
+                      ? 'is-invalid'
+                      : formData.dateOfBirth?.trim()
+                          ? 'is-valid'
+                          : ''
+                      }`}
+                    onFocus={(e) => {
+                      // Hiển thị calendar khi focus
+                      e.target.showPicker && e.target.showPicker();
+                    }}
+                  />
+                  {!validationErrors.DateOfBirth && (
                     <div style={{ marginTop: '4px', fontSize: '11px', color: '#6b7280' }}>
                       💡 Bạn có thể nhập: dd/mm/yyyy, dd-mm-yyyy, ddmmyyyy hoặc chọn từ lịch
                     </div>
                   )}
-                  {validationErrors.dateOfBirth && (
-                    <div className="error-message" style={{ marginTop: '4px', fontSize: '12px' }}>
-                      {validationErrors.dateOfBirth[0]}
-                    </div>
-                  )}
+                  {validationErrors.DateOfBirth?.[0] && <div className="text-danger">{validationErrors.DateOfBirth[0]}</div>}
                 </div>
 
-                <div className="form-group" style={{ position: 'relative' }}>
+                <div className="form-group">
                   <label className="required">Giới tính</label>
                   <div className="radio-group">
                     <label className="radio-option">
@@ -1256,65 +1293,30 @@ export const PatientRegister: React.FC = () => {
                       Khác
                     </label>
                   </div>
-                  {formData.genderCode && !validationErrors.genderCode && (
-                    <span 
-                      className="success-checkmark" 
-                      style={{ 
-                        position: 'absolute', 
-                        right: '15px', 
-                        top: '36px', 
-                        color: '#4CAF50',
-                        fontSize: '18px'
-                      }}
-                    >
-                      ✓
-                    </span>
-                  )}
-                  {validationErrors.genderCode && (
-                    <div className="error-message" style={{ marginTop: '4px', fontSize: '12px' }}>
-                      {validationErrors.genderCode[0]}
-                    </div>
-                  )}
+                  {validationErrors.GenderCode?.[0] && <div className="text-danger">{validationErrors.GenderCode[0]}</div>}
                 </div>
 
                 <div className="form-group">
                   <label className="required">Nhóm máu</label>
-                  <div style={{ position: 'relative' }}>
-                    <select
-                      name="bloodTypeCode"
-                      
-                      value={formData.bloodTypeCode}
-                      onChange={handleChange}
-                      className={validationErrors.bloodTypeCode ? 'error' : formData.bloodTypeCode ? 'success' : ''}
-                      style={formData.bloodTypeCode && !validationErrors.bloodTypeCode ? { paddingRight: '40px' } : {}}
-                    >
-                      <option value="">Chọn nhóm máu</option>
-                      {bloodTypes.map((bloodType) => (
-                        <option key={bloodType.code} value={bloodType.code}>
-                          {bloodType.displayName}
-                        </option>
-                      ))}
-                    </select>
-                    {formData.bloodTypeCode && !validationErrors.bloodTypeCode && (
-                      <span style={{
-                        position: 'absolute',
-                        right: '10px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: '#27ae60',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        pointerEvents: 'none'
-                      }}>
-                        ✓
-                      </span>
-                    )}
-                  </div>
-                  {validationErrors.bloodTypeCode && (
-                    <div className="error-message" style={{ marginTop: '4px', fontSize: '12px' }}>
-                      {validationErrors.bloodTypeCode[0]}
-                    </div>
-                  )}
+                  <select
+                    name="bloodTypeCode"
+                    value={formData.bloodTypeCode}
+                    onChange={handleChange}
+                    className={`form-control ${validationErrors.BloodTypeCode?.[0]
+                      ? 'is-invalid'
+                      : formData.bloodTypeCode?.trim()
+                          ? 'is-valid'
+                          : ''
+                      }`}
+                  >
+                    <option value="">Chọn nhóm máu</option>
+                    {bloodTypes.map((bloodType) => (
+                      <option key={bloodType.code} value={bloodType.code}>
+                        {bloodType.displayName}
+                      </option>
+                    ))}
+                  </select>
+                  {validationErrors.BloodTypeCode?.[0] && <div className="text-danger">{validationErrors.BloodTypeCode[0]}</div>}
                 </div>
               </div>
               {/* Phần 3: Người liên hệ khẩn cấp */}
@@ -1323,70 +1325,39 @@ export const PatientRegister: React.FC = () => {
                 
                 <div className="form-group">
                   <label className="required">Họ tên người liên hệ</label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type="text"
-                      name="emergencyContactName"
-                      
-                      value={formData.emergencyContactName}
-                      onChange={handleChange}
-                      placeholder="Họ và tên"
-                      className={validationErrors.emergencyContactName ? 'error' : formData.emergencyContactName?.trim() ? 'success' : ''}
-                      style={formData.emergencyContactName?.trim() && !validationErrors.emergencyContactName ? { paddingRight: '40px' } : {}}
-                    />
-                    {formData.emergencyContactName?.trim() && !validationErrors.emergencyContactName && (
-                      <span style={{
-                        position: 'absolute',
-                        right: '10px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: '#27ae60',
-                        fontSize: '16px',
-                        fontWeight: 'bold'
-                      }}>
-                        ✓
-                      </span>
-                    )}
-                  </div>
-                  {validationErrors.emergencyContactName && (
-                    <div className="error-message" style={{ marginTop: '4px', fontSize: '12px' }}>
-                      {validationErrors.emergencyContactName[0]}
-                    </div>
-                  )}
+                  <input
+                    type="text"
+                    name="emergencyContactName"
+                    value={formData.emergencyContactName}
+                    onChange={handleChange}
+                    placeholder="Họ và tên"
+                    className={`form-control ${validationErrors.EmergencyContactName?.[0]
+                      ? 'is-invalid'
+                      : formData.emergencyContactName?.trim()
+                          ? 'is-valid'
+                          : ''
+                      }`}
+                  />
+                  {validationErrors.EmergencyContactName?.[0] && <div className="text-danger">{validationErrors.EmergencyContactName[0]}</div>}
                 </div>
 
                 <div className="form-group">
                   <label className="required">Số điện thoại liên hệ</label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type="tel"
-                      name="emergencyContactPhone"
-                      
-                      value={formData.emergencyContactPhone}
-                      onChange={handleChange}
-                      placeholder="Số điện thoại khẩn cấp"
-                      className={validationErrors.emergencyContactPhone ? 'error' : formData.emergencyContactPhone?.trim() ? 'success' : ''}
-                      style={formData.emergencyContactPhone?.trim() && !validationErrors.emergencyContactPhone ? { paddingRight: '40px' } : {}}
-                    />
-                    {formData.emergencyContactPhone?.trim() && !validationErrors.emergencyContactPhone && (
-                      <span style={{
-                        position: 'absolute',
-                        right: '10px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: '#27ae60',
-                        fontSize: '16px',
-                        fontWeight: 'bold'
-                      }}>
-                        ✓
-                      </span>
-                    )}
-                  </div>
-                  {validationErrors.emergencyContactPhone && (
-                    <div className="error-message" style={{ marginTop: '4px', fontSize: '12px' }}>
-                      {validationErrors.emergencyContactPhone[0]}
-                    </div>
-                  )}
+                  <input
+                    type="tel"
+                    name="emergencyContactPhone"
+                    maxLength={10}
+                    value={formData.emergencyContactPhone}
+                    onChange={handleChange}
+                    placeholder="Số điện thoại khẩn cấp"
+                    className={`form-control ${validationErrors.EmergencyContactPhone?.[0]
+                      ? 'is-invalid'
+                      : formData.emergencyContactPhone?.trim()
+                          ? 'is-valid'
+                          : ''
+                      }`}
+                  />
+                  {validationErrors.EmergencyContactPhone?.[0] && <div className="text-danger">{validationErrors.EmergencyContactPhone[0]}</div>}
                 </div>
               </div>
 
@@ -1418,18 +1389,18 @@ export const PatientRegister: React.FC = () => {
               </div>
             </div>
 
-            {/* Terms & Conditions */}
+            {/* Terms & Conditions - giống DoctorRegister */}
             <div className="form-footer">
               <div className="terms-section">
-                <label className={`terms-checkbox ${validationErrors.agreeTerms ? 'error' : ''}`}>
-                  <input
-                    type="checkbox"
+                <div className="checkbox-wrapper">
+                  <input 
+                    type="checkbox" 
+                    id="terms" 
                     name="agreeTerms"
                     checked={formData.agreeTerms}
                     onChange={handleChange}
                   />
-                  <span className="checkmark"></span>
-                  <span>
+                  <label htmlFor="terms" className="terms-text">
                     Tôi đồng ý{' '}
                     <Link to="/terms" className="terms-link">
                       Điều khoản dịch vụ
@@ -1439,29 +1410,39 @@ export const PatientRegister: React.FC = () => {
                       Chính sách bảo mật
                     </Link>{' '}
                     của MEDIX. Thông tin y tế của bạn được mã hóa và tuân thủ chuẩn bảo mật y tế.
-                  </span>
-                </label>
+                  </label>
+                </div>
                 {validationErrors.agreeTerms && (
-                  <div className="error-message" style={{ marginTop: '8px', fontSize: '12px' }}>
+                  <div className="text-danger">
                     {validationErrors.agreeTerms[0]}
                   </div>
                 )}
               </div>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="submit-button"
-              >
-                {isLoading ? 'ĐANG ĐĂNG KÝ...' : 'ĐĂNG KÝ TÀI KHOẢN'}
-              </button>
-              
-              <div className="login-link">
-                Bạn đã có tài khoản?{' '}
-                <Link to="/login" className="login-link-text">
-                  Đăng nhập ngay
-                </Link>
+              {/* Submit Section - giống DoctorRegister */}
+              <div className="submit-section">
+                {error && <div className="error-message" style={{ marginBottom: '16px', fontSize: '14px' }}>{error}</div>}
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="submit-button"
+                >
+                  {isLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    'ĐĂNG KÝ TÀI KHOẢN'
+                  )}
+                </button>
+                
+                <div className="login-link-section">
+                  Bạn đã có tài khoản?{' '}
+                  <Link to="/login" className="login-link-text">
+                    Đăng nhập ngay
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -1470,3 +1451,4 @@ export const PatientRegister: React.FC = () => {
     </div>
   );
 };
+

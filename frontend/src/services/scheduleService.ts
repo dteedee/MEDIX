@@ -66,9 +66,9 @@ const updateSchedule = async (scheduleId: string, payload: CreateSchedulePayload
  * @returns {Promise<void>}
  */
 const deleteSchedule = async (scheduleId: string): Promise<void> => {
-  // API xóa có thể yêu cầu ID trong body hoặc params, gửi trong body là một cách tiếp cận phổ biến cho endpoint /me
-  // Gửi một mảng chứa đối tượng có ID để nhất quán với các phương thức khác
-  await apiClient.delete(`${API_ENDPOINT}/me`, { data: [{ id: scheduleId }] });
+  // Backend mong đợi một mảng các chuỗi ID trong body của request DELETE
+  const payload = [scheduleId];
+  await apiClient.delete(`${API_ENDPOINT}/me`, { data: payload });
 };
 
 export const scheduleService = {

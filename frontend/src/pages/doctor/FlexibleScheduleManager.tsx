@@ -18,7 +18,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingOverride, setEditingOverride] = useState<ScheduleOverride | null>(null);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormInputs>();
+  const { register, handleSubmit, reset, setValue, getValues, formState: { errors } } = useForm<FormInputs>();
 
   const handleAddNew = () => {
     setEditingOverride(null);
@@ -69,9 +69,11 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
   const processFormSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
       const payload: CreateScheduleOverridePayload = {
-        ...data,
-        startTime: `${data.startTime}:00`,
-        endTime: `${data.endTime}:00`,
+        ...data, // isAvailable, overrideDate, reason
+        // Đảm bảo thời gian luôn có định dạng HH:mm:ss
+        startTime: data.startTime.length === 5 ? `${data.startTime}:00` : data.startTime,
+        endTime: data.endTime.length === 5 ? `${data.endTime}:00` : data.endTime,
+        isAvailable: data.isAvailable === true || (data.isAvailable as any) === 'true', // Đảm bảo isAvailable là boolean
       };
 
       if (editingOverride) {
@@ -151,7 +153,13 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
               </div>
               <div className="form-group">
                 <label>Giờ kết thúc</label>
-                <input type="time" {...register('endTime', { required: 'Giờ kết thúc là bắt buộc' })} />
+                <input
+                  type="time"
+                  {...register('endTime', {
+                    required: 'Giờ kết thúc là bắt buộc',
+                    validate: value => getValues('startTime') < value || 'Giờ kết thúc phải sau giờ bắt đầu'
+                  })}
+                />
                 {errors.endTime && <p className="error-text">{errors.endTime.message}</p>}
               </div>
             </div>

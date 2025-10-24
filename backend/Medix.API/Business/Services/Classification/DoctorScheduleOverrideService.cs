@@ -132,11 +132,6 @@ namespace Medix.API.Business.Services.Classification
 
             var existing = await _repo.GetByDoctorIdAsync(doctorId.Value);
 
-            // Xóa override không còn trong danh sách
-            var toDelete = existing.Where(e => !dtos.Any(d => d.Id == e.Id)).ToList();
-            foreach (var del in toDelete)
-                await _repo.DeleteAsync(del);
-
             // Thêm hoặc cập nhật
             foreach (var dto in dtos)
             {

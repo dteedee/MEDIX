@@ -79,7 +79,8 @@ const getMyScheduleOverrides = async (): Promise<ScheduleOverride[]> => {
   return response.data;
 };
 
-const OVERRIDE_API_ENDPOINT = '/doctor-schedule-overrides/my';
+const OVERRIDE_API_ME = '/doctor-schedule-overrides/me'; // Dùng cho GET, PUT, DELETE
+const OVERRIDE_API_MY = '/doctor-schedule-overrides/my'; // Dùng cho POST (tạo mới)
 
 /**
  * Tạo một lịch làm việc linh hoạt mới.
@@ -87,7 +88,8 @@ const OVERRIDE_API_ENDPOINT = '/doctor-schedule-overrides/my';
  * @returns {Promise<ScheduleOverride>} Lịch linh hoạt vừa được tạo.
  */
 const createScheduleOverride = async (payload: CreateScheduleOverridePayload): Promise<ScheduleOverride> => {
-  const response = await apiClient.post<ScheduleOverride>(OVERRIDE_API_ENDPOINT, payload);
+  // Lỗi 400 cho thấy backend mong đợi một đối tượng DTO duy nhất, không phải một mảng.
+  const response = await apiClient.post<ScheduleOverride>(OVERRIDE_API_MY, payload);
   return response.data;
 };
 
@@ -98,8 +100,13 @@ const createScheduleOverride = async (payload: CreateScheduleOverridePayload): P
  * @returns {Promise<ScheduleOverride>} Lịch linh hoạt đã được cập nhật.
  */
 const updateScheduleOverride = async (overrideId: string, payload: CreateScheduleOverridePayload): Promise<ScheduleOverride> => {
-  const response = await apiClient.put<ScheduleOverride>(`${OVERRIDE_API_ENDPOINT}/${overrideId}`, payload);
-  return response.data;
+  // Backend mong đợi một mảng các DTOs, và ID của override nằm trong từng DTO.
+  const updateDto = {
+    id: overrideId, // Thêm ID vào payload
+    ...payload,
+  };
+  const response = await apiClient.put<ScheduleOverride[]>(OVERRIDE_API_ME, [updateDto]);
+  return response.data[0]; // API trả về một mảng, lấy phần tử đầu tiên.
 };
 
 /**
@@ -108,7 +115,10 @@ const updateScheduleOverride = async (overrideId: string, payload: CreateSchedul
  * @returns {Promise<void>}
  */
 const deleteScheduleOverride = async (overrideId: string): Promise<void> => {
-  await apiClient.delete(`${OVERRIDE_API_ENDPOINT}/${overrideId}`);
+  // Lỗi 404 trên endpoint '/me/{id}' cho thấy nó không tồn tại.
+  // Thử endpoint gốc '/doctor-schedule-overrides/{id}', một mẫu RESTful phổ biến.
+  // Backend sẽ tự kiểm tra quyền sở hữu của bác sĩ đối với override này.
+  await apiClient.delete(`/doctor-schedule-overrides/${overrideId}`);
 };
 
 export const scheduleService = {

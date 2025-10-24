@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { userAdminService } from '../../services/userService'
 import { UserDTO, UpdateUserRequest } from '../../types/user.types'
 import { useToast } from '../../contexts/ToastContext'
-import UserDetails from '../../components/admin/UserDetails'
+import UserDetails from './UserDetails'
 
 // SVG Icons for actions
 const ViewIcon = () => (

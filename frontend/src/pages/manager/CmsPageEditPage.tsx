@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import CmsPageForm from '../../components/admin/CmsPageForm'
+import CmsPageForm from './CmsPageForm'
 import { cmspageService } from '../../services/cmspageService'
 import { CmsPageDTO } from '../../types/cmspage.types'
 import { useToast } from '../../contexts/ToastContext'

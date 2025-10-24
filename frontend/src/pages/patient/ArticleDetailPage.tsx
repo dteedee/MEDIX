@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { articleService } from '../../services/articleService'
 import { ArticleDTO } from '../../types/article.types'
-import './ArticleReader.css'
+import '../../styles/ArticleDetailPage.css'
 
 export default function ArticleDetailPage() {
   const { slug } = useParams<{ slug: string }>()

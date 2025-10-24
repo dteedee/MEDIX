@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import CategoryForm from '../../components/admin/CategoryForm'
+import CategoryForm from './CategoryForm'
 import { categoryService } from '../../services/categoryService'
 import { CategoryDTO } from '../../types/category.types'
 import { useToast } from '../../contexts/ToastContext'

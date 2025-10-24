@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import { MainLayout } from './components/layout/MainLayout';
@@ -30,6 +30,7 @@ import { AIChatBot } from './pages/ai/AIChatBot';
 import { PatientDashboard } from './pages/patient/patientdashboard';
 import { PatientProfile } from './pages/patient/patientProfile';
 import DoctorDetails from './pages/doctor/DoctorDetails';
+import ScheduleManagement from './pages/doctor/ScheduleManagement';
 import DoctorProfileEdit from './pages/doctor/DoctorProfileEdit';
 
 // CMS Management pages
@@ -74,25 +75,6 @@ export function App() {
               {/* ---------- Change password route ---------- */}
               <Route path="/change-password" element={<ChangePassword />} />
 
-              {/* ---------- Doctor routes ---------- */}
-              {/* <Route path="/doctor/*" element={
-                <Routes>
-                  <Route path="register" element={<DoctorRegister />} />
-                  <Route path="details/:username" element={<DoctorDetails />} />
-                </Routes>
-              } /> */}
-
-              {/* ---------- Doctor routes ---------- */}
-              <Route path="/doctor/*" element={
-                <>
-                  <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
-                    <Routes>
-                      <Route path="profile/edit" element={<DoctorProfileEdit />} />
-                    </Routes>
-                  </ProtectedRoute>
-                </>
-              } />
-
               <Route path="/doctor/details/:username" element={<DoctorDetails />} />
 
               {/* ---------- Home ---------- */}
@@ -100,6 +82,9 @@ export function App() {
 
               {/* ---------- Doctor Booking List (Public) ---------- */}
               <Route path="/doctors" element={<DoctorBookingList />} />
+
+              {/* ---------- Change password route (Protected) ---------- */}
+              <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
 
               {/* ---------- Main app layout ---------- */}
               <Route path="/app" element={<MainLayout />}>
@@ -153,6 +138,17 @@ export function App() {
                   </ProtectedRoute>
                 } />
 
+                {/* ---------- Doctor routes (inside /app) ---------- */}
+                <Route path="doctor/*" element={
+                  <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
+                    <Routes>
+                      <Route index element={<Navigate to="schedules" replace />} />
+                      <Route path="profile/edit" element={<DoctorProfileEdit />} />
+                      <Route path="schedules" element={<ScheduleManagement />} />
+                    </Routes>
+                  </ProtectedRoute>
+                } />
+
                 {/* ---------- Reader ---------- */}
                 <Route path="articles" element={<ArticleReaderPage />} />
                 <Route path="articles/:slug" element={<ArticleDetailPage />} />
@@ -180,9 +176,9 @@ export function App() {
 
 // Redirect to role-based dashboard
 const DashboardRedirect: React.FC = () => {
-  const userRole = JSON.parse(localStorage.getItem('userData') || '{}')?.role;
+  const { user } = useAuth(); // ✅ Sử dụng hook useAuth để lấy thông tin người dùng
 
-  switch (userRole) {
+  switch (user?.role) { // ✅ Sử dụng user.role từ context
     case UserRole.ADMIN:
       return <Navigate to="/app/admin" replace />;
     case UserRole.MANAGER:

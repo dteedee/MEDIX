@@ -62,5 +62,83 @@ namespace Medix.API.Presentation.Controller.Classification
             var result = await _service.UpdateByDoctorAsync(doctorId, dtos);
             return Ok(result);
         }
+        [HttpPost("my")]
+        //[Authorize(Roles = "Doctor")]
+        public async Task<IActionResult> CreateForCurrentDoctor([FromBody] CreateDoctorScheduleOverrideDto dto)
+        {
+            try
+            {
+                // 1️⃣ Lấy userId từ token
+                var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                ?? User.FindFirst("sub")?.Value;
+
+                if (userIdStr == null)
+                    return Unauthorized(new { Message = "User ID not found in token" });
+
+                var userId = Guid.Parse(userIdStr);
+
+                // 2️⃣ Gọi service
+                var result = await _service.CreateByDoctorUserAsync(dto, userId);
+                return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Có lỗi xảy ra khi tạo ghi đè lịch.", Details = ex.Message });
+            }
+        }
+        [HttpPut("me")]
+
+        public async Task<IActionResult> UpdateForCurrentDoctor([FromBody] List<UpdateDoctorScheduleOverrideDto> dtos)
+        {
+            try
+            {
+                var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                ?? User.FindFirst("sub")?.Value;
+
+                if (userIdStr == null)
+                    return Unauthorized(new { Message = "User ID not found in token" });
+
+                var userId = Guid.Parse(userIdStr);
+
+                var result = await _service.UpdateByDoctorUserAsync(dtos, userId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Có lỗi xảy ra khi cập nhật ghi đè lịch.", Details = ex.Message });
+            }
+        }
+
+
+        // 🗑️ DELETE /api/doctor-schedule-overrides/my/{id}
+        [HttpDelete("my/{id}")]
+        //[Authorize(Roles = "Doctor")]
+        public async Task<IActionResult> DeleteForCurrentDoctor(Guid id)
+        {
+            try
+            {
+                var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                ?? User.FindFirst("sub")?.Value;
+
+                if (userIdStr == null)
+                    return Unauthorized(new { Message = "User ID not found in token" });
+
+                var userId = Guid.Parse(userIdStr);
+
+                var success = await _service.DeleteByDoctorUserAsync(id, userId);
+                if (!success)
+                    return NotFound(new { Message = "Không tìm thấy ghi đè hoặc không có quyền xóa." });
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Có lỗi xảy ra khi xóa ghi đè lịch.", Details = ex.Message });
+            }
+        }
     }
 }

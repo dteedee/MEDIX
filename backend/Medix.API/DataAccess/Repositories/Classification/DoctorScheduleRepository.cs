@@ -1,6 +1,7 @@
 ﻿using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Medix.API.DataAccess.Repositories.Classification
 {
@@ -59,6 +60,10 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 query = query.Where(s => s.DayOfWeek == dayOfWeek);
 
             return await query.ToListAsync();
+        }
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        {
+            return await _context.Database.BeginTransactionAsync();
         }
 
     }

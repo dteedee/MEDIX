@@ -12,5 +12,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<IEnumerable<AppointmentDto>> GetByDoctorAsync(Guid doctorId);
         Task<IEnumerable<AppointmentDto>> GetByPatientAsync(Guid patientId);
         Task<IEnumerable<AppointmentDto>> GetByDateAsync(DateTime date);
+        Task<IEnumerable<AppointmentDto>> GetByDoctorUserAndDateAsync(Guid userId, DateTime date);
+
     }
 }

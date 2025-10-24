@@ -33,6 +33,7 @@ import { PatientProfile } from './pages/patient/patientProfile';
 import DoctorDetails from './pages/doctor/DoctorDetails';
 import ScheduleManagement from './pages/doctor/ScheduleManagement';
 import DoctorProfileEdit from './pages/doctor/DoctorProfileEdit';
+import MedicalRecordDetails from './pages/doctor/MedicalRecordDetails'; // New import
 
 // CMS Management pages
 import BannerList from './pages/manager/BannerList';
@@ -142,13 +143,14 @@ export function App() {
 
                 {/* ---------- Doctor routes (inside /app) ---------- */}
                 <Route path="doctor/*" element={
-                  <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
+                  // <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
                     <Routes>
-                      <Route index element={<Navigate to="schedules" replace />} />
+                      {/* <Route index element={<Navigate to="schedules" replace />} /> */}
                       <Route path="profile/edit" element={<DoctorProfileEdit />} />
                       <Route path="schedules" element={<ScheduleManagement />} />
+                      <Route path="medical-records/:appointmentId" element={<MedicalRecordDetails />} /> {/* New route */}
                     </Routes>
-                  </ProtectedRoute>
+                  // </ProtectedRoute>
                 } />
 
                 {/* ---------- Reader ---------- */}

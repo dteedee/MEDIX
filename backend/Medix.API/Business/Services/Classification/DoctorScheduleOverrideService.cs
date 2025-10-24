@@ -124,5 +124,106 @@ namespace Medix.API.Business.Services.Classification
             var updated = await _repo.GetByDoctorIdAsync(doctorId);
             return _mapper.Map<List<DoctorScheduleOverrideDto>>(updated);
         }
+        public async Task<List<DoctorScheduleOverrideDto>> UpdateByDoctorUserAsync(List<UpdateDoctorScheduleOverrideDto> dtos, Guid userId)
+        {
+            var doctorId = await _repo.GetDoctorIdByUserIdAsync(userId);
+            if (doctorId == null)
+                throw new Exception("Không tìm thấy bác sĩ tương ứng với người dùng hiện tại.");
+
+            var existing = await _repo.GetByDoctorIdAsync(doctorId.Value);
+
+            // Xóa override không còn trong danh sách
+            var toDelete = existing.Where(e => !dtos.Any(d => d.Id == e.Id)).ToList();
+            foreach (var del in toDelete)
+                await _repo.DeleteAsync(del);
+
+            // Thêm hoặc cập nhật
+            foreach (var dto in dtos)
+            {
+                if (dto.Id == Guid.Empty)
+                {
+                    var newEntity = new DoctorScheduleOverride
+                    {
+                        Id = Guid.NewGuid(),
+                        DoctorId = doctorId.Value,
+                        OverrideDate = dto.OverrideDate,
+                        StartTime = dto.StartTime,
+                        EndTime = dto.EndTime,
+                        IsAvailable = dto.IsAvailable,
+                        Reason = dto.Reason,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    await _repo.AddAsync(newEntity);
+                }
+                else
+                {
+                    var match = existing.FirstOrDefault(e => e.Id == dto.Id && e.DoctorId == doctorId.Value);
+                    if (match != null)
+                    {
+                        _mapper.Map(dto, match);
+                        match.UpdatedAt = DateTime.UtcNow;
+                        await _repo.UpdateAsync(match);
+                    }
+                }
+            }
+
+            await _repo.SaveChangesAsync();
+
+            var updated = await _repo.GetByDoctorIdAsync(doctorId.Value);
+            return _mapper.Map<List<DoctorScheduleOverrideDto>>(updated);
+        }
+
+        // 🗑️ 3. Bác sĩ tự xóa override của mình
+        public async Task<bool> DeleteByDoctorUserAsync(Guid overrideId, Guid userId)
+        {
+            var doctorId = await _repo.GetDoctorIdByUserIdAsync(userId);
+            if (doctorId == null)
+                throw new Exception("Không tìm thấy bác sĩ tương ứng với người dùng hiện tại.");
+
+            var entity = await _repo.GetByIdAsync(overrideId);
+            if (entity == null || entity.DoctorId != doctorId.Value)
+                return false;
+
+            await _repo.DeleteAsync(entity);
+            await _repo.SaveChangesAsync();
+            return true;
+        }
+        public async Task<DoctorScheduleOverrideDto> CreateByDoctorUserAsync(CreateDoctorScheduleOverrideDto dto, Guid userId)
+        {
+            // 1️⃣ Lấy DoctorId từ UserId
+            var doctorId = await _repo.GetDoctorIdByUserIdAsync(userId);
+            if (doctorId == null)
+                throw new Exception("Không tìm thấy bác sĩ tương ứng với người dùng hiện tại.");
+
+            // 2️⃣ Kiểm tra trùng (nếu có)
+            var existing = await _repo.GetByDoctorIdAsync(doctorId.Value);
+            var overlap = existing.FirstOrDefault(e =>
+                e.OverrideDate == dto.OverrideDate &&
+                dto.StartTime < e.EndTime &&
+                dto.EndTime > e.StartTime
+            );
+
+            if (overlap != null)
+            {
+                throw new InvalidOperationException(
+                    $"Bạn đã có ghi đè trong khung giờ {overlap.StartTime:HH\\:mm}-{overlap.EndTime:HH\\:mm} ngày {overlap.OverrideDate}."
+                );
+            }
+
+            // 3️⃣ Tạo mới override
+            var entity = _mapper.Map<DoctorScheduleOverride>(dto);
+            entity.Id = Guid.NewGuid();
+            entity.DoctorId = doctorId.Value;
+            entity.CreatedAt = DateTime.UtcNow;
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            await _repo.AddAsync(entity);
+            await _repo.SaveChangesAsync();
+
+            // 4️⃣ Trả về DTO
+            return _mapper.Map<DoctorScheduleOverrideDto>(entity);
+        }
+
     }
 }

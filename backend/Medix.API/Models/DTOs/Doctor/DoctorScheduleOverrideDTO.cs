@@ -25,6 +25,7 @@
 
     public class UpdateDoctorScheduleOverrideDto
     {
+        public Guid Id { get; set; }
         public DateOnly OverrideDate { get; set; }
         public TimeOnly StartTime { get; set; }
         public TimeOnly EndTime { get; set; }

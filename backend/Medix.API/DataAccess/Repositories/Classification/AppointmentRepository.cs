@@ -103,6 +103,25 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .OrderBy(a => a.AppointmentStartTime)
                 .ToListAsync();
         }
+        public async Task<Doctor?> GetDoctorByUserIdAsync(Guid userId)
+        {
+            return await _context.Doctors
+                .Include(d => d.User)
+                .FirstOrDefaultAsync(d => d.User.Id == userId);
+        }
+
+        public async Task<IEnumerable<Appointment>> GetByDoctorAndDateAsync(Guid doctorId, DateTime startDate, DateTime endDate)
+        {
+            return await _context.Appointments
+                .Include(a => a.Patient).ThenInclude(p => p.User)
+                .Include(a => a.Doctor).ThenInclude(d => d.User)
+                .Where(a => a.DoctorId == doctorId &&
+                            a.AppointmentStartTime >= startDate &&
+                            a.AppointmentStartTime < endDate &&
+                            a.TransactionId != null)
+                .OrderBy(a => a.AppointmentStartTime)
+                .ToListAsync();
+        }
 
     }
 }

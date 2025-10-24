@@ -78,5 +78,23 @@ namespace Medix.API.Business.Services.Classification
             var list = await _repository.GetByDateAsync(date);
             return _mapper.Map<IEnumerable<AppointmentDto>>(list);
         }
+        public async Task<IEnumerable<AppointmentDto>> GetByDoctorUserAndDateAsync(Guid userId, DateTime date)
+        {
+            // 1️⃣ Lấy Doctor tương ứng với UserId
+            var doctor = await _repository.GetDoctorByUserIdAsync(userId);
+            if (doctor == null)
+                throw new InvalidOperationException("Doctor not found for this user.");
+
+            // 2️⃣ Tính khoảng thời gian trong ngày
+            var startDate = date.Date;
+            var endDate = startDate.AddDays(1);
+
+            // 3️⃣ Lấy các lịch hẹn của bác sĩ trong ngày
+            var list = await _repository.GetByDoctorAndDateAsync(doctor.Id, startDate, endDate);
+
+            // 4️⃣ Map sang DTO
+            return _mapper.Map<IEnumerable<AppointmentDto>>(list);
+        }
+
     }
 }

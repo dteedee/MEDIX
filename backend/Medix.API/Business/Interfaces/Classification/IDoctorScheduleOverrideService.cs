@@ -10,6 +10,8 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<DoctorScheduleOverrideDto> UpdateAsync(Guid id, UpdateDoctorScheduleOverrideDto dto);
         Task<bool> DeleteAsync(Guid id);
         Task<List<DoctorScheduleOverrideDto>> UpdateByDoctorAsync(Guid doctorId, List<UpdateDoctorScheduleOverrideDto> dtos);
-
+        Task<DoctorScheduleOverrideDto> CreateByDoctorUserAsync(CreateDoctorScheduleOverrideDto dto, Guid userId);
+        Task<List<DoctorScheduleOverrideDto>> UpdateByDoctorUserAsync(List<UpdateDoctorScheduleOverrideDto> dtos, Guid userId);
+        Task<bool> DeleteByDoctorUserAsync(Guid overrideId, Guid userId);
     }
 }

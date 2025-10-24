@@ -1,85 +1,107 @@
-﻿using Medix.API.Business.Interfaces.Classification;
+﻿﻿using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs.Doctor;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Medix.API.Presentation.Controller.Classification
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/doctor-schedules")]
     public class DoctorScheduleController : ControllerBase
     {
-        private readonly IDoctorScheduleService _service;
+        private readonly IDoctorScheduleService _scheduleService;
+        private readonly IDoctorService _doctorService;
 
-        public DoctorScheduleController(IDoctorScheduleService service)
+        public DoctorScheduleController(
+            IDoctorScheduleService scheduleService,
+            IDoctorService doctorService)
         {
-            _service = service;
+            _scheduleService = scheduleService;
+            _doctorService = doctorService;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
+        // ✅ Lấy lịch của chính bác sĩ đang đăng nhập
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMySchedules()
         {
-            var result = await _service.GetAllAsync();
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null)
+                return Unauthorized(new { Message = "User ID not found in token" });
+
+            var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userIdClaim.Value));
+            if (doctor == null)
+                return NotFound(new { Message = "Doctor not found for this user" });
+
+            var result = await _scheduleService.GetByDoctorIdAsync(doctor.Id);
             return Ok(result);
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        // ✅ Cập nhật toàn bộ lịch cho chính bác sĩ đang đăng nhập
+        [HttpPut("me")]
+        public async Task<IActionResult> UpdateMySchedules([FromBody] IEnumerable<UpdateDoctorScheduleDto> schedules)
         {
-            var result = await _service.GetByIdAsync(id);
-            if (result == null)
-                return NotFound();
-            return Ok(result);
-        }
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null)
+                return Unauthorized(new { Message = "User ID not found in token" });
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateDoctorScheduleDto dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userIdClaim.Value));
+            if (doctor == null)
+                return NotFound(new { Message = "Doctor not found for this user" });
 
-            var created = await _service.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateDoctorScheduleDto dto)
-        {
-            if (id != dto.Id)
-                return BadRequest("ID không trùng khớp.");
-
-            var updated = await _service.UpdateAsync(dto);
-            if (updated == null)
-                return NotFound();
-
+            var updated = await _scheduleService.UpdateByDoctorIdAsync(doctor.Id, schedules);
             return Ok(updated);
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
+        // ✅ Cập nhật một lịch cụ thể cho bác sĩ đang đăng nhập
+        [HttpPut("me/{scheduleId}")]
+        public async Task<IActionResult> UpdateMySchedule(Guid scheduleId, [FromBody] UpdateDoctorScheduleDto schedule)
         {
-            var success = await _service.DeleteAsync(id);
-            if (!success)
-                return NotFound();
+            if (scheduleId != schedule.Id)
+            {
+                return BadRequest(new { Message = "Schedule ID in URL does not match ID in body." });
+            }
 
-            return NoContent();
-        }
-        [HttpGet("doctor/{doctorId}")]
-        public async Task<IActionResult> GetByDoctorId(Guid doctorId)
-        {
-            var result = await _service.GetByDoctorIdAsync(doctorId);
-            return Ok(result);
-        }
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null)
+                return Unauthorized(new { Message = "User ID not found in token" });
 
-        // ✅ Cập nhật toàn bộ lịch cho 1 bác sĩ
-        [HttpPut("doctor/{doctorId}")]
-        public async Task<IActionResult> UpdateByDoctorId(Guid doctorId, [FromBody] IEnumerable<UpdateDoctorScheduleDto> schedules)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userIdClaim.Value));
+            if (doctor == null)
+                return NotFound(new { Message = "Doctor not found for this user" });
 
-            var updated = await _service.UpdateByDoctorIdAsync(doctorId, schedules);
+            var updated = await _scheduleService.UpdateSingleByDoctorIdAsync(doctor.Id, schedule);
             return Ok(updated);
+        }
+
+        [HttpPost("me")]
+        public async Task<IActionResult> CreateMySchedules([FromBody] IEnumerable<CreateDoctorScheduleDto> schedules)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null)
+                return Unauthorized(new { Message = "User ID not found in token" });
+
+            var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userIdClaim.Value));
+            if (doctor == null)
+                return NotFound(new { Message = "Doctor not found for this user" });
+
+            var updated = await _scheduleService.CreateByDoctorIdAsync(doctor.Id, schedules);
+            return Ok(updated);
+
+
+        }
+        [HttpDelete("me")]
+        public async Task<IActionResult> DeleteMySchedules([FromBody] IEnumerable<Guid> scheduleIds)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null)
+                return Unauthorized(new { Message = "User ID not found in token" });
+
+            var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userIdClaim.Value));
+            if (doctor == null)
+                return NotFound(new { Message = "Doctor not found for this user" });
+
+            var deleted = await _scheduleService.DeleteByDoctorIdAsync(doctor.Id, scheduleIds);
+            return Ok(new { Message = $"{deleted} schedule(s) deleted successfully" });
         }
     }
 }

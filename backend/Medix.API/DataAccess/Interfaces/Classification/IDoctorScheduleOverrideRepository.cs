@@ -10,5 +10,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task UpdateAsync(DoctorScheduleOverride entity);
         Task DeleteAsync(DoctorScheduleOverride entity);
         Task SaveChangesAsync();
+        Task<Guid?> GetDoctorIdByUserIdAsync(Guid userId);
+
     }
 }

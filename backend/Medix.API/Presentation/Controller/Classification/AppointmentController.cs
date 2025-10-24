@@ -84,5 +84,30 @@ namespace Medix.API.Presentation.Controllers
             var result = await _service.GetByDateAsync(date);
             return Ok(result);
         }
+        [HttpGet("my-day-appointments")]
+        //[Authorize(Roles = "Doctor")]
+        public async Task<IActionResult> GetAppointmentsForDoctorByDay([FromQuery] DateTime date)
+        {
+            try
+            {
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                             ?? User.FindFirst("sub")?.Value;
+
+                if (userId == null)
+                    return Unauthorized(new { Message = "User ID not found in token" });
+
+                var result = await _service.GetByDoctorUserAndDateAsync(Guid.Parse(userId), date);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while fetching appointments.", Details = ex.Message });
+            }
+        }
+
     }
 }

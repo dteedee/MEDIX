@@ -1,4 +1,5 @@
 ﻿using Medix.API.Models.Entities;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Medix.API.DataAccess.Interfaces.Classification
 {
@@ -10,6 +11,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task UpdateAsync(DoctorSchedule schedule);
         Task DeleteAsync(Guid id);
         Task<IEnumerable<DoctorSchedule>> GetByDoctorAndDayAsync(Guid doctorId, int dayOfWeek);
+        Task<IDbContextTransaction> BeginTransactionAsync();
 
     }
 }

@@ -45,5 +45,13 @@ namespace Medix.API.DataAccess.Repositories.Classification
         {
             await _context.SaveChangesAsync();
         }
+        public async Task<Guid?> GetDoctorIdByUserIdAsync(Guid userId)
+        {
+            return await _context.Doctors
+                .Where(d => d.UserId == userId)
+                .Select(d => (Guid?)d.Id)
+                .FirstOrDefaultAsync();
+        }
+
     }
 }

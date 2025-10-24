@@ -225,5 +225,18 @@ namespace Medix.API.Business.Services.Classification
             return _mapper.Map<DoctorScheduleOverrideDto>(entity);
         }
 
+        public async Task<List<DoctorScheduleOverrideDto>> GetByDoctorUserAsync(Guid userId)
+        {
+            var doctorId = await _repo.GetDoctorIdByUserIdAsync(userId);
+            if (doctorId == null)
+            {
+                // Trả về danh sách rỗng nếu không tìm thấy bác sĩ, để client không bị lỗi
+                return new List<DoctorScheduleOverrideDto>();
+            }
+
+            var list = await _repo.GetByDoctorIdAsync(doctorId.Value);
+            return _mapper.Map<List<DoctorScheduleOverrideDto>>(list);
+        }
+
     }
 }

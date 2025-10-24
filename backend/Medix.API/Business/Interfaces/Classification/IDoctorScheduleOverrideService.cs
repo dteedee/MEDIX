@@ -1,4 +1,4 @@
-﻿using Medix.API.Models.DTOs.Doctor;
+﻿﻿using Medix.API.Models.DTOs.Doctor;
 
 namespace Medix.API.Business.Interfaces.Classification
 {
@@ -13,5 +13,6 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<DoctorScheduleOverrideDto> CreateByDoctorUserAsync(CreateDoctorScheduleOverrideDto dto, Guid userId);
         Task<List<DoctorScheduleOverrideDto>> UpdateByDoctorUserAsync(List<UpdateDoctorScheduleOverrideDto> dtos, Guid userId);
         Task<bool> DeleteByDoctorUserAsync(Guid overrideId, Guid userId);
+        Task<List<DoctorScheduleOverrideDto>> GetByDoctorUserAsync(Guid userId);
     }
 }

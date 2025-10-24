@@ -7,25 +7,27 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import Swal from 'sweetalert2';
 import { scheduleService } from '../../services/scheduleService';
 import { appointmentService } from '../../services/appointmentService';
-import { DoctorSchedule, CreateSchedulePayload } from '../../types/schedule';
+import { DoctorSchedule, CreateSchedulePayload, ScheduleOverride } from '../../types/schedule';
 import { Appointment } from '../../types/appointment.types';
 import "../../styles/ScheduleManagement.css";
 import FixedScheduleManager from './FixedScheduleManager'; // Giữ nguyên vì file mới được tạo cùng thư mục
+import FlexibleScheduleManager from './FlexibleScheduleManager';
 
 const monthNames = [ "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12" ];
 const dayNames = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
-// Hàm tiện ích để định dạng ngày thành YYYY-MM-DD một cách an toàn, không bị ảnh hưởng bởi múi giờ.
+// Hàm tiện ích để định dạng ngày thành YYYY-MM-DD, sử dụng UTC để tránh lỗi múi giờ.
 const toYYYYMMDD = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
 const ScheduleManagement: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const [schedules, setSchedules] = useState<DoctorSchedule[]>([]);
+  const [scheduleOverrides, setScheduleOverrides] = useState<ScheduleOverride[]>([]);
   const [currentDayAppointments, setCurrentDayAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +35,7 @@ const ScheduleManagement: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<number | null>(new Date().getDate());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
 
   // Map schedules by day of the week for quick lookup
   const schedulesByDayOfWeek = useMemo(() => {
@@ -56,10 +59,14 @@ const ScheduleManagement: React.FC = () => {
         return;
       }
 
-      // Chỉ lấy lịch làm việc định kỳ
-      const data = await scheduleService.getMySchedules();
-      setSchedules(data);
+      // Fetch both fixed schedules and schedule overrides concurrently
+      const [fixedSchedules, overrides] = await Promise.all([
+        scheduleService.getMySchedules(),
+        scheduleService.getMyScheduleOverrides(),
+      ]);
 
+      setSchedules(fixedSchedules);
+      setScheduleOverrides(overrides);
       setError(null);
     } catch (err) {
       setError('Không thể tải danh sách lịch làm việc. Vui lòng thử lại.');
@@ -69,11 +76,27 @@ const ScheduleManagement: React.FC = () => {
     }
   };
 
+  // Map schedule overrides by date for quick lookup
+  const scheduleOverridesByDate = useMemo(() => {
+    const map = new Map<string, ScheduleOverride[]>();
+    scheduleOverrides.forEach(override => {
+      const dateKey = override.overrideDate; // API returns YYYY-MM-DD
+      if (!map.has(dateKey)) {
+        map.set(dateKey, []);
+      }
+      map.get(dateKey)?.push(override);
+    });
+    return map;
+  }, [scheduleOverrides]);
+
   // Effect để lấy cuộc hẹn khi ngày được chọn thay đổi
   useEffect(() => {
     const fetchAppointmentsForSelectedDay = async () => {
-      if (!isAuthenticated || !user?.id || !selectedDate) return;
-      const selectedFullDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate);
+      if (!isAuthenticated || !user?.id || !selectedDate) {
+        setCurrentDayAppointments([]);
+        return;
+      }
+      const selectedFullDate = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate));
       const selectedDateString = toYYYYMMDD(selectedFullDate); // Sử dụng hàm tiện ích an toàn
       try {
         const appointments = await appointmentService.getMyDayAppointments(selectedDateString);
@@ -122,7 +145,7 @@ const ScheduleManagement: React.FC = () => {
 
   const selectedDaySchedules = useMemo(() => {
     if (!selectedDate) return [];
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate);
+    const date = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate));
     const dayOfWeek = date.getDay();
     return schedulesByDayOfWeek.get(dayOfWeek) || [];
   }, [selectedDate, currentMonth, schedulesByDayOfWeek]);
@@ -133,7 +156,7 @@ const ScheduleManagement: React.FC = () => {
 
   const getFormattedSelectedDate = () => {
     if (!selectedDate) return "";
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate);
+    const date = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate));
     const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     return date.toLocaleDateString('vi-VN', options);
   }
@@ -170,14 +193,17 @@ const ScheduleManagement: React.FC = () => {
               if (!day) {
                 return <div key={index} className="calendar-day empty"></div>;
               }
-              const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+              // Sử dụng Date.UTC để tạo ngày ở múi giờ UTC, đảm bảo toYYYYMMDD hoạt động chính xác
+              const date = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), day));
               const dayOfWeek = date.getDay(); // Sunday is 0, Monday is 1
               const timeSlots = schedulesByDayOfWeek.get(dayOfWeek) || [];
+              const fullDateString = toYYYYMMDD(date);
+              const hasOverrides = scheduleOverridesByDate.has(fullDateString);
               
               return (
                 <div
                   key={index}
-                  className={`calendar-day ${day === selectedDate ? "selected" : ""}`}
+                  className={`calendar-day ${day === selectedDate ? "selected" : ""} ${hasOverrides ? "has-override" : ""}`}
                   onClick={() => setSelectedDate(day)}
                 >
                   <div className="day-number">{day}</div>
@@ -188,15 +214,20 @@ const ScheduleManagement: React.FC = () => {
                       </div>
                     ))}
                   </div>
+                  {hasOverrides && <div className="override-badge"></div>}
                 </div>
               );
             })}
           </div>
         </div>
-        {/* Nút này hiện chưa có chức năng, sẽ cần phát triển thêm */}
-        <button onClick={() => setIsModalOpen(true)} className="save-button" style={{marginTop: '24px'}}>
-          Quản lý lịch cố định
-        </button>
+        <div className="management-buttons">
+          <button onClick={() => setIsModalOpen(true)} className="manage-button primary">
+            Quản lý lịch cố định
+          </button>
+          <button onClick={() => setIsOverrideModalOpen(true)} className="manage-button primary">
+            Quản lý lịch linh hoạt
+          </button>
+        </div>
       </div>
 
       <div className="schedule-details">
@@ -216,6 +247,29 @@ const ScheduleManagement: React.FC = () => {
                 ))}
               </div>
             ) : <p className="details-placeholder">Không có ca làm việc nào cho ngày này.</p>}
+
+            {(() => {
+              const selectedDayFullDateString = toYYYYMMDD(new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate)));
+              const selectedDayOverrides = scheduleOverridesByDate.get(selectedDayFullDateString) || [];
+              if (selectedDayOverrides.length === 0) return null;
+
+              return (
+                <div className="override-list">
+                  <h4 className="appointment-list-header">Lịch linh hoạt</h4>
+                  <div className="details-list">
+                    {selectedDayOverrides.map(override => (
+                      <div key={override.id} className="detail-item override-item">
+                        <p className="detail-time">{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</p>
+                        <p className={`detail-status ${override.isAvailable ? 'status-available' : 'status-unavailable'}`}>
+                          <span className="status-dot" style={{ backgroundColor: override.isAvailable ? '#10b981' : '#ef4444' }}></span>
+                          {override.isAvailable ? 'Tăng ca' : 'Nghỉ'} - Lý do: {override.reason}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {selectedDayAppointments.length > 0 && (
               <div className="appointment-list">
@@ -240,6 +294,10 @@ const ScheduleManagement: React.FC = () => {
 
       {isModalOpen && (
         <FixedScheduleManager schedules={schedules} onClose={() => setIsModalOpen(false)} onRefresh={fetchSchedules} />
+      )}
+
+      {isOverrideModalOpen && (
+        <FlexibleScheduleManager overrides={scheduleOverrides} onClose={() => setIsOverrideModalOpen(false)} onRefresh={fetchSchedules} />
       )}
     </div>
   );

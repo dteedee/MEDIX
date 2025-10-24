@@ -108,6 +108,12 @@
   border: none;
 }
 
+.calendar-day.has-override {
+  background-color: #7df4a1; /* Màu xanh lá cây rất nhạt */
+  border-color: #a7f3d0;
+  position: relative; /* Đảm bảo badge vẫn hiển thị đúng */
+}
+
 .day-number {
   font-weight: 600;
   font-size: 14px;
@@ -123,7 +129,7 @@
   overflow-y: auto;
 }
 
-.time-slot {
+.time-slot { 
   font-weight: 500;
   line-height: 1.2;
 }
@@ -140,13 +146,43 @@
   cursor: pointer;
   transition: background 0.2s;
 }
-
-.save-button:hover {
-  background: #2563eb;
+.calendar-day {
+  position: relative; /* Cần thiết để định vị tuyệt đối cho override-badge */
 }
 
-.save-button:active {
-  background: #1d4ed8;
+.management-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.manage-button {
+  flex: 1;
+  padding: 12px 20px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.manage-button:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.manage-button.primary {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.manage-button.primary:hover {
+  background: #2563eb;
+  border-color: #2563eb;
 }
 
 .calendar-container {
@@ -220,6 +256,32 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+}
+
+.detail-status.status-available {
+  color: #059669; /* green-700 */
+}
+
+.detail-status.status-unavailable {
+  color: #dc2626; /* red-600 */
+}
+
+.override-list {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.override-badge {
+  position: absolute;
+  bottom: 5px; /* Điều chỉnh vị trí theo ý muốn */
+  right: 5px;  /* Điều chỉnh vị trí theo ý muốn */
+  width: 8px;
+  height: 8px;
+  background-color: #f59e0b; /* Màu vàng cam nổi bật */
+  border-radius: 50%;
+  border: 1px solid #fff; /* Viền trắng để tăng độ tương phản */
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.2); /* Bóng nhẹ */
 }
 
 .appointment-list {

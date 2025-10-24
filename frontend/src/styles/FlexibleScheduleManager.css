@@ -1,0 +1,170 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.modal-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.add-new-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.override-list-container {
+  overflow-y: auto;
+  flex-grow: 1;
+  padding-right: 8px;
+}
+
+.override-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 10px;
+}
+
+.override-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+}
+
+.override-date {
+  font-weight: 600;
+  min-width: 90px;
+}
+
+.override-status {
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.override-status.available {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.override-status.unavailable {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.override-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  background: #e5e7eb;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.action-btn.edit { color: #3b82f6; }
+.action-btn.delete { color: #ef4444; }
+
+.no-overrides {
+  text-align: center;
+  color: #6b7280;
+  padding: 40px 0;
+}
+
+/* Form Styles */
+.override-form .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.override-form .form-group {
+  display: flex;
+  flex-direction: column;
+}
+.override-form .form-group.full-width {
+  grid-column: 1 / -1;
+}
+.override-form label {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.override-form input, .override-form select {
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+.override-form .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+.override-form .cancel-btn { background: #e5e7eb; }
+.override-form .save-btn { background: #3b82f6; color: white; }
+.override-form .cancel-btn, .override-form .save-btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; }

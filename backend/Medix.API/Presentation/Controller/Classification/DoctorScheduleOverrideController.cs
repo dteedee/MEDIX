@@ -1,4 +1,4 @@
-﻿using Medix.API.Business.Interfaces.Classification;
+﻿﻿using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs.Doctor;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -138,6 +138,29 @@ namespace Medix.API.Presentation.Controller.Classification
             catch (Exception ex)
             {
                 return StatusCode(500, new { Message = "Có lỗi xảy ra khi xóa ghi đè lịch.", Details = ex.Message });
+            }
+        }
+
+        [HttpGet("me")]
+        //[Authorize(Roles = "Doctor")]
+        public async Task<IActionResult> GetMyOverrides()
+        {
+            try
+            {
+                var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                ?? User.FindFirst("sub")?.Value;
+
+                if (userIdStr == null)
+                    return Unauthorized(new { Message = "User ID not found in token" });
+
+                var userId = Guid.Parse(userIdStr);
+
+                var result = await _service.GetByDoctorUserAsync(userId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Có lỗi xảy ra khi lấy danh sách ghi đè lịch.", Details = ex.Message });
             }
         }
     }

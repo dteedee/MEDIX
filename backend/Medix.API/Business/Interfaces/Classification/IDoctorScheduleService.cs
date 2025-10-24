@@ -10,7 +10,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<DoctorScheduleDto?> UpdateAsync(UpdateDoctorScheduleDto dto);
         Task<bool> DeleteAsync(Guid id);
         Task<IEnumerable<DoctorScheduleDto>> GetByDoctorIdAsync(Guid doctorId);
-        Task<IEnumerable<DoctorScheduleDto>> UpdateByDoctorIdAsync(Guid doctorId, IEnumerable<UpdateDoctorScheduleDto> schedules);
+        //Task<IEnumerable<DoctorScheduleDto>> UpdateByDoctorIdAsync(Guid doctorId, IEnumerable<UpdateDoctorScheduleDto> schedules);
         Task<IEnumerable<DoctorScheduleDto>> CreateByDoctorIdAsync(Guid doctorId, IEnumerable<CreateDoctorScheduleDto> schedules);
         Task<int> DeleteByDoctorIdAsync(Guid doctorId, IEnumerable<Guid> scheduleIds);
 

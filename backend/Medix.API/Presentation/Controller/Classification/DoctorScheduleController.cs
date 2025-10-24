@@ -1,4 +1,4 @@
-﻿﻿using Medix.API.Business.Interfaces.Classification;
+﻿﻿﻿﻿using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs.Doctor;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -37,20 +37,20 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         // ✅ Cập nhật toàn bộ lịch cho chính bác sĩ đang đăng nhập
-        [HttpPut("me")]
-        public async Task<IActionResult> UpdateMySchedules([FromBody] IEnumerable<UpdateDoctorScheduleDto> schedules)
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-            if (userIdClaim == null)
-                return Unauthorized(new { Message = "User ID not found in token" });
+        //[HttpPut("me")]
+        //public async Task<IActionResult> UpdateMySchedules([FromBody] IEnumerable<UpdateDoctorScheduleDto> schedules)
+        //{
+        //    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+        //    if (userIdClaim == null)
+        //        return Unauthorized(new { Message = "User ID not found in token" });
 
-            var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userIdClaim.Value));
-            if (doctor == null)
-                return NotFound(new { Message = "Doctor not found for this user" });
+        //    var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userIdClaim.Value));
+        //    if (doctor == null)
+        //        return NotFound(new { Message = "Doctor not found for this user" });
 
-            var updated = await _scheduleService.UpdateByDoctorIdAsync(doctor.Id, schedules);
-            return Ok(updated);
-        }
+        //    var updated = await _scheduleService.UpdateByDoctorIdAsync(doctor.Id, schedules);
+        //    return Ok(updated);
+        //}
 
         // ✅ Cập nhật một lịch cụ thể cho bác sĩ đang đăng nhập
         [HttpPut("me/{scheduleId}")]
@@ -70,6 +70,9 @@ namespace Medix.API.Presentation.Controller.Classification
                 return NotFound(new { Message = "Doctor not found for this user" });
 
             var updated = await _scheduleService.UpdateSingleByDoctorIdAsync(doctor.Id, schedule);
+            if (updated == null)
+                return NotFound(new { Message = "Schedule not found." });
+
             return Ok(updated);
         }
 

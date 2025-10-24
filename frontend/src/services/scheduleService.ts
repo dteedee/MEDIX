@@ -49,21 +49,15 @@ const updateSchedule = async (scheduleId: string, payload: CreateSchedulePayload
     endTime: payload.endTime.length === 5 ? `${payload.endTime}:00` : payload.endTime,
   };
 
-  // Lấy DoctorId từ profile của bác sĩ đang đăng nhập
-  const doctorProfile = await DoctorService.getDoctorProfileDetails();
-  // Giả định rằng doctorProfile có trường `id` là DoctorId
-  const doctorId = (doctorProfile as any).id; 
+  // Backend yêu cầu ID phải có trong cả URL và trong body của request.
+  const updatePayload = {
+    ...formattedTimePayload,
+    id: scheduleId,
+  };
 
-  // Gửi một mảng chứa đối tượng lịch làm việc cần cập nhật.
-  // Điều này nhất quán với các phương thức API khác trên cùng endpoint.
-  const updatePayload = [{ ...formattedTimePayload, id: scheduleId, doctorId: doctorId }];
-
-  // API có thể trả về một mảng chứa đối tượng đã được cập nhật.
-  const response = await apiClient.put<DoctorSchedule[]>(`${API_ENDPOINT}/me`, updatePayload);
-  if (response.data && response.data.length > 0) {
-    return response.data[0];
-  }
-  throw new Error("Cập nhật lịch làm việc không thành công hoặc không có dữ liệu trả về.");
+  // API trả về một đối tượng duy nhất, không phải mảng.
+  const response = await apiClient.put<DoctorSchedule>(`${API_ENDPOINT}/me/${scheduleId}`, updatePayload);
+  return response.data;
 };
 
 /**

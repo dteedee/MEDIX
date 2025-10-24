@@ -3,7 +3,6 @@ footer {
     background: #025FAE;
     color: white;
     padding: 40px 20px 20px;
-    margin-top: 60px;
 }
 
 .footer-content {
@@ -18,6 +17,7 @@ footer {
 .footer-section h3 {
     font-size: 16px;
     margin-bottom: 15px;
+    color: aliceblue;
 }
 
 .footer-section ul {

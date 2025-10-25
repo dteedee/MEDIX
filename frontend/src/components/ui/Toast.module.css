@@ -88,7 +88,7 @@
 
 .progress {
   height: 100%;
-  animation: progress 5s linear forwards;
+  animation: progress 3s linear forwards;
 }
 
 /* Toast Types */
@@ -138,10 +138,20 @@
 
 .toast.info .progress {
   background: linear-gradient(90deg, #3b82f6, #2563eb);
+  animation: progressInfo 1.5s linear forwards;
 }
 
 /* Progress Animation */
 @keyframes progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+@keyframes progressInfo {
   from {
     width: 100%;
   }

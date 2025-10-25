@@ -87,7 +87,6 @@ export default function UserList() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [updatingIds, setUpdatingIds] = useState<Record<string, boolean>>({});
   const [showFilters, setShowFilters] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [confirmationDialog, setConfirmationDialog] = useState<{
     isOpen: boolean;
     user: UserDTO | null;
@@ -361,423 +360,354 @@ export default function UserList() {
   const totalPages = Math.ceil((total ?? 0) / filters.pageSize);
 
   return (
-    <div className={styles.wrapper}>
-      {/* Sidebar */}
-      <div className={`${styles.sidebar} ${!sidebarOpen ? styles.sidebarClosed : ''}`}>
-        <div className={styles.sidebarHeader}>
-          <div className={styles.logo}>
-            <img src="/images/medix-logo.png" alt="MEDIX" />
-            {sidebarOpen && <span>MEDIX Admin</span>}
-          </div>
+    <div className={styles.container}>
+      {/* Header */}
+      <div className={styles.header}>
+        <div className={styles.headerLeft}>
+          <h1 className={styles.title}>Quản lý Người dùng</h1>
+          <p className={styles.subtitle}>Quản lý và theo dõi tất cả người dùng trong hệ thống</p>
         </div>
-
-         <nav className={styles.sidebarNav}>
-           <a href="/app/admin" className={styles.navItem}>
-             <i className="bi bi-speedometer2"></i>
-             {sidebarOpen && <span>Dashboard</span>}
-           </a>
-           <a href="/app/admin/users" className={`${styles.navItem} ${styles.active}`}>
-             <i className="bi bi-people"></i>
-             {sidebarOpen && <span>Người dùng</span>}
-           </a>
-           <a href="/app/admin/tracking" className={styles.navItem}>
-             <i className="bi bi-search"></i>
-             {sidebarOpen && <span>Truy vết</span>}
-           </a>
-           <a href="/app/admin/settings" className={styles.navItem}>
-             <i className="bi bi-gear"></i>
-             {sidebarOpen && <span>Cấu hình</span>}
-           </a>
-         </nav>
-
-         {/* User Section */}
-         <div className={styles.userSection}>
-           <div className={styles.userInfo}>
-             <div className={styles.userAvatar}>
-               <img 
-                 src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || user?.email || 'Admin')}&background=667eea&color=fff`}
-                 alt={user?.fullName || 'Admin'}
-               />
-             </div>
-             {sidebarOpen && (
-               <div className={styles.userDetails}>
-                 <div className={styles.userName}>{user?.fullName || 'Admin'}</div>
-                 <div className={styles.userRole}>Quản trị viên</div>
-               </div>
-             )}
-           </div>
-           <button 
-             className={styles.logoutBtn}
-             onClick={() => {
-               logout();
-               navigate('/login');
-             }}
-             title="Đăng xuất"
-           >
-             <i className="bi bi-box-arrow-right"></i>
-             {sidebarOpen && <span>Đăng xuất</span>}
-           </button>
-         </div>
-
-        <button 
-          className={styles.sidebarToggle}
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          <i className={`bi bi-chevron-${sidebarOpen ? 'left' : 'right'}`}></i>
+        <button onClick={onCreate} className={styles.btnCreate}>
+          <i className="bi bi-plus-lg"></i>
+          Tạo mới
         </button>
       </div>
 
-      {/* Main Content */}
-      <div className={styles.mainContent}>
-        <div className={styles.container}>
-          {/* Header */}
-          <div className={styles.header}>
-            <div className={styles.headerLeft}>
-              <h1 className={styles.title}>Quản lý Người dùng</h1>
-              <p className={styles.subtitle}>Quản lý và theo dõi tất cả người dùng trong hệ thống</p>
-            </div>
-            <button onClick={onCreate} className={styles.btnCreate}>
-              <i className="bi bi-plus-lg"></i>
-              Tạo mới
-            </button>
+      {/* Stats Cards */}
+      <div className={styles.statsGrid}>
+        <div className={`${styles.statCard} ${styles.statCard1}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-people-fill"></i>
           </div>
-
-          {/* Stats Cards */}
-          <div className={styles.statsGrid}>
-            <div className={`${styles.statCard} ${styles.statCard1}`}>
-              <div className={styles.statIcon}>
-                <i className="bi bi-people-fill"></i>
-              </div>
-              <div className={styles.statContent}>
-                <div className={styles.statLabel}>Tổng người dùng</div>
-                <div className={styles.statValue}>{total ?? 0}</div>
-                <div className={styles.statTrend}>
-                  <i className="bi bi-graph-up"></i>
-                  <span>+2.5% so với tháng trước</span>
-                </div>
-              </div>
-              <div className={styles.statBg}>
-                <i className="bi bi-people-fill"></i>
-              </div>
-            </div>
-
-            <div className={`${styles.statCard} ${styles.statCard2}`}>
-              <div className={styles.statIcon}>
-                <i className="bi bi-person-check-fill"></i>
-              </div>
-              <div className={styles.statContent}>
-                <div className={styles.statLabel}>Đang hoạt động</div>
-                <div className={styles.statValue}>
-                  {allUsers.filter(u => !isUserLocked(u)).length}
-                </div>
-                <div className={styles.statTrend}>
-                  <i className="bi bi-graph-up"></i>
-                  <span>+5.2% tuần này</span>
-                </div>
-              </div>
-              <div className={styles.statBg}>
-                <i className="bi bi-person-check-fill"></i>
-              </div>
-            </div>
-
-            <div className={`${styles.statCard} ${styles.statCard3}`}>
-              <div className={styles.statIcon}>
-                <i className="bi bi-person-plus-fill"></i>
-              </div>
-              <div className={styles.statContent}>
-                <div className={styles.statLabel}>Người dùng mới</div>
-                <div className={styles.statValue}>{newUsersCount}</div>
-                <div className={`${styles.statTrend} ${growthPercentage < 0 ? styles.negative : ''}`}>
-                  <i className={`bi bi-${growthPercentage >= 0 ? 'graph-up' : 'graph-down'}`}></i>
-                  <span>{growthPercentage >= 0 ? '+' : ''}{growthPercentage}% so với tuần trước</span>
-                </div>
-              </div>
-              <div className={styles.statBg}>
-                <i className="bi bi-person-plus-fill"></i>
-              </div>
-            </div>
-
-            <div className={`${styles.statCard} ${styles.statCard4}`}>
-              <div className={styles.statIcon}>
-                <i className="bi bi-person-badge-fill"></i>
-              </div>
-              <div className={styles.statContent}>
-                <div className={styles.statLabel}>Bác sĩ</div>
-                <div className={styles.statValue}>
-                  {allUsers.filter(u => u.role === 'DOCTOR').length}
-                </div>
-                <div className={styles.statTrend}>
-                  <i className="bi bi-graph-up"></i>
-                  <span>+1.3% tháng này</span>
-                </div>
-              </div>
-              <div className={styles.statBg}>
-                <i className="bi bi-person-badge-fill"></i>
-              </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Tổng người dùng</div>
+            <div className={styles.statValue}>{total ?? 0}</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-graph-up"></i>
+              <span>+2.5% so với tháng trước</span>
             </div>
           </div>
-
-          {/* Search and Filter */}
-          <div className={styles.searchSection}>
-            <div className={styles.searchWrapper}>
-              <i className="bi bi-search"></i>
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo tên hoặc email..."
-                value={filters.search}
-                onChange={e => handleFilterChange('search', e.target.value)}
-                className={styles.searchInput}
-              />
-              {filters.search && (
-                <button 
-                  className={styles.clearSearch}
-                  onClick={() => handleFilterChange('search', '')}
-                >
-                  <i className="bi bi-x-lg"></i>
-                </button>
-              )}
-            </div>
-
-            <button 
-              className={`${styles.btnFilter} ${showFilters ? styles.active : ''}`}
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <i className="bi bi-funnel"></i>
-              Bộ lọc
-              {(filters.roleFilter !== 'all' || filters.statusFilter !== 'all' || filters.dateFrom || filters.dateTo) && (
-                <span className={styles.filterBadge}></span>
-              )}
-            </button>
+          <div className={styles.statBg}>
+            <i className="bi bi-people-fill"></i>
           </div>
+        </div>
 
-          {/* Advanced Filters */}
-          {showFilters && (
-            <div className={styles.filterPanel}>
-              <div className={styles.filterGrid}>
-                <div className={styles.filterItem}>
-                  <label>
-                    <i className="bi bi-person-badge"></i>
-                    Vai trò
-                  </label>
-                  <select value={filters.roleFilter} onChange={e => handleFilterChange('roleFilter', e.target.value)}>
-                    <option value="all">Tất cả vai trò</option>
-                    <option value="ADMIN">Quản trị viên</option>
-                    <option value="MANAGER">Quản lý</option>
-                    <option value="DOCTOR">Bác sĩ</option>
-                    <option value="PATIENT">Bệnh nhân</option>
-                  </select>
-                </div>
-
-                <div className={styles.filterItem}>
-                  <label>
-                    <i className="bi bi-toggle-on"></i>
-                    Trạng thái
-                  </label>
-                  <select value={filters.statusFilter} onChange={e => handleFilterChange('statusFilter', e.target.value)}>
-                    <option value="all">Tất cả trạng thái</option>
-                    <option value="unlocked">Đang hoạt động</option>
-                    <option value="locked">Đang khóa</option>
-                  </select>
-                </div>
-
-                <div className={styles.filterItem}>
-                  <label>
-                    <i className="bi bi-calendar-event"></i>
-                    Từ ngày
-                  </label>
-                  <input 
-                    type="date" 
-                    value={filters.dateFrom} 
-                    onChange={e => handleFilterChange('dateFrom', e.target.value)} 
-                  />
-                </div>
-
-                <div className={styles.filterItem}>
-                  <label>
-                    <i className="bi bi-calendar-check"></i>
-                    Đến ngày
-                  </label>
-                  <input 
-                    type="date" 
-                    value={filters.dateTo} 
-                    onChange={e => handleFilterChange('dateTo', e.target.value)} 
-                  />
-                </div>
-              </div>
-
-              <div className={styles.filterActions}>
-                <button onClick={handleResetFilters} className={styles.btnResetFilter}>
-                  <i className="bi bi-arrow-counterclockwise"></i>
-                  Đặt lại bộ lọc
-                </button>
-                <button onClick={() => setShowFilters(false)} className={styles.btnApplyFilter}>
-                  <i className="bi bi-check2"></i>
-                  Áp dụng
-                </button>
-              </div>
+        <div className={`${styles.statCard} ${styles.statCard2}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-person-check-fill"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Đang hoạt động</div>
+            <div className={styles.statValue}>
+              {allUsers.filter(u => !isUserLocked(u)).length}
             </div>
-          )}
+            <div className={styles.statTrend}>
+              <i className="bi bi-graph-up"></i>
+              <span>+5.2% tuần này</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-person-check-fill"></i>
+          </div>
+        </div>
 
-          {/* Table */}
-          <div className={styles.tableCard}>
-            {loading ? (
-              <div className={styles.loading}>
-                <div className={styles.loadingSpinner}></div>
-                <p>Đang tải dữ liệu...</p>
-              </div>
-            ) : processedItems.length > 0 ? (
-              <div className={styles.tableWrapper}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '60px' }}>STT</th>
-                      <th onClick={() => handleSort('fullName')} className={styles.sortable}>
-                        Họ và tên
-                        {filters.sortBy === 'fullName' && (
-                          <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
-                        )}
-                      </th>
-                      <th onClick={() => handleSort('role')} className={styles.sortable}>
-                        Vai trò
-                        {filters.sortBy === 'role' && (
-                          <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
-                        )}
-                      </th>
-                      <th onClick={() => handleSort('email')} className={styles.sortable}>
-                        Email
-                        {filters.sortBy === 'email' && (
-                          <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
-                        )}
-                      </th>
-                      <th onClick={() => handleSort('createdAt')} className={styles.sortable}>
-                        Ngày đăng ký
-                        {filters.sortBy === 'createdAt' && (
-                          <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
-                        )}
-                      </th>
-                      <th>Trạng thái</th>
-                      <th style={{ textAlign: 'right', width: '150px' }}>Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {processedItems.map((u, index) => {
-                      const locked = isUserLocked(u);
-                      return (
-                        <tr key={u.id} className={styles.tableRow}>
-                          <td className={styles.indexCell}>
-                            {(filters.page - 1) * filters.pageSize + index + 1}
-                          </td>
-                          <td>
-                            <div className={styles.userCell}>
-                              <img 
-                                src={u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.fullName || u.email)}&background=667eea&color=fff`}
-                                alt={u.fullName || ''}
-                                className={styles.avatar}
-                              />
-                              <span className={styles.userName}>{u.fullName || '-'}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <span className={`${styles.roleBadge} ${styles[`role${u.role}`]}`}>
-                              {u.role || '-'}
-                            </span>
-                          </td>
-                          <td className={styles.emailCell}>{u.email}</td>
-                          <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
-                          <td>
-                            <span className={`${styles.statusBadge} ${locked ? styles.statusLocked : styles.statusActive}`}>
-                              <i className={`bi bi-${locked ? 'lock-fill' : 'check-circle-fill'}`}></i>
-                              {locked ? 'Đang khóa' : 'Hoạt động'}
-                            </span>
-                          </td>
-                          <td>
-                            <div className={styles.actions}>
-                              <button onClick={() => handleViewDetails(u.id)} title="Xem chi tiết" className={styles.actionBtn}>
-                                <i className="bi bi-eye"></i>
-                              </button>
-                              <button onClick={() => onEdit(u)} title="Sửa" className={styles.actionBtn}>
-                                <i className="bi bi-pencil"></i>
-                              </button>
-                              <button
-                                onClick={() => handleStatusChange(u, !locked)}
-                                disabled={Boolean(updatingIds[u.id])}
-                                title={locked ? 'Mở khóa' : 'Khóa'}
-                                className={`${styles.actionBtn} ${locked ? styles.actionUnlock : styles.actionLock}`}
-                              >
-                                <i className={`bi bi-${locked ? 'unlock' : 'lock'}`}></i>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className={styles.emptyState}>
-                <i className="bi bi-inbox"></i>
-                <p>Không tìm thấy người dùng nào</p>
-              </div>
-            )}
+        <div className={`${styles.statCard} ${styles.statCard3}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-person-plus-fill"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Người dùng mới</div>
+            <div className={styles.statValue}>{newUsersCount}</div>
+            <div className={`${styles.statTrend} ${growthPercentage < 0 ? styles.negative : ''}`}>
+              <i className={`bi bi-${growthPercentage >= 0 ? 'graph-up' : 'graph-down'}`}></i>
+              <span>{growthPercentage >= 0 ? '+' : ''}{growthPercentage}% so với tuần trước</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-person-plus-fill"></i>
+          </div>
+        </div>
 
-            {/* Pagination */}
-            {processedItems.length > 0 && (
-              <div className={styles.pagination}>
-                <div className={styles.paginationInfo}>
-                  Hiển thị {(filters.page - 1) * filters.pageSize + 1} - {Math.min(filters.page * filters.pageSize, total ?? 0)} trong tổng số {total ?? 0} kết quả
-                </div>
-
-                <div className={styles.paginationControls}>
-                  <select value={filters.pageSize} onChange={e => setFilters(prev => ({ ...prev, pageSize: Number(e.target.value), page: 1 }))}>
-                    <option value={5}>5 / trang</option>
-                    <option value={10}>10 / trang</option>
-                    <option value={15}>15 / trang</option>
-                    <option value={20}>20 / trang</option>
-                  </select>
-
-                  <div className={styles.paginationButtons}>
-                    <button 
-                      onClick={() => handleFilterChange('page', 1)} 
-                      disabled={filters.page <= 1}
-                      title="Trang đầu"
-                    >
-                      <i className="bi bi-chevron-double-left"></i>
-                    </button>
-                    <button 
-                      onClick={() => handleFilterChange('page', filters.page - 1)} 
-                      disabled={filters.page <= 1}
-                      title="Trang trước"
-                    >
-                      <i className="bi bi-chevron-left"></i>
-                    </button>
-                    
-                    <span className={styles.pageIndicator}>
-                      {filters.page} / {totalPages || 1}
-                    </span>
-
-                    <button 
-                      onClick={() => handleFilterChange('page', filters.page + 1)} 
-                      disabled={filters.page >= totalPages}
-                      title="Trang sau"
-                    >
-                      <i className="bi bi-chevron-right"></i>
-                    </button>
-                    <button 
-                      onClick={() => handleFilterChange('page', totalPages)} 
-                      disabled={filters.page >= totalPages}
-                      title="Trang cuối"
-                    >
-                      <i className="bi bi-chevron-double-right"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+        <div className={`${styles.statCard} ${styles.statCard4}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-person-badge-fill"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Bác sĩ</div>
+            <div className={styles.statValue}>
+              {allUsers.filter(u => u.role === 'DOCTOR').length}
+            </div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-graph-up"></i>
+              <span>+1.3% tháng này</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-person-badge-fill"></i>
           </div>
         </div>
       </div>
 
+      {/* Search and Filter */}
+      <div className={styles.searchSection}>
+        <div className={styles.searchWrapper}>
+          <i className="bi bi-search"></i>
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tên hoặc email..."
+            value={filters.search}
+            onChange={e => handleFilterChange('search', e.target.value)}
+            className={styles.searchInput}
+          />
+          {filters.search && (
+            <button 
+              className={styles.clearSearch}
+              onClick={() => handleFilterChange('search', '')}
+            >
+              <i className="bi bi-x-lg"></i>
+            </button>
+          )}
+        </div>
+
+        <button 
+          className={`${styles.btnFilter} ${showFilters ? styles.active : ''}`}
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <i className="bi bi-funnel"></i>
+          Bộ lọc
+          {(filters.roleFilter !== 'all' || filters.statusFilter !== 'all' || filters.dateFrom || filters.dateTo) && (
+            <span className={styles.filterBadge}></span>
+          )}
+        </button>
+      </div>
+
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div className={styles.filterPanel}>
+          <div className={styles.filterGrid}>
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-person-badge"></i>
+                Vai trò
+              </label>
+              <select value={filters.roleFilter} onChange={e => handleFilterChange('roleFilter', e.target.value)}>
+                <option value="all">Tất cả vai trò</option>
+                <option value="ADMIN">Quản trị viên</option>
+                <option value="MANAGER">Quản lý</option>
+                <option value="DOCTOR">Bác sĩ</option>
+                <option value="PATIENT">Bệnh nhân</option>
+              </select>
+            </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-toggle-on"></i>
+                Trạng thái
+              </label>
+              <select value={filters.statusFilter} onChange={e => handleFilterChange('statusFilter', e.target.value)}>
+                <option value="all">Tất cả trạng thái</option>
+                <option value="unlocked">Đang hoạt động</option>
+                <option value="locked">Đang khóa</option>
+              </select>
+            </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-calendar-event"></i>
+                Từ ngày
+              </label>
+              <input 
+                type="date" 
+                value={filters.dateFrom} 
+                onChange={e => handleFilterChange('dateFrom', e.target.value)} 
+              />
+            </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-calendar-check"></i>
+                Đến ngày
+              </label>
+              <input 
+                type="date" 
+                value={filters.dateTo} 
+                onChange={e => handleFilterChange('dateTo', e.target.value)} 
+              />
+            </div>
+          </div>
+
+          <div className={styles.filterActions}>
+            <button onClick={handleResetFilters} className={styles.btnResetFilter}>
+              <i className="bi bi-arrow-counterclockwise"></i>
+              Đặt lại bộ lọc
+            </button>
+            <button onClick={() => setShowFilters(false)} className={styles.btnApplyFilter}>
+              <i className="bi bi-check2"></i>
+              Áp dụng
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
+      <div className={styles.tableCard}>
+        {loading ? (
+          <div className={styles.loading}>
+            <div className={styles.loadingSpinner}></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+        ) : processedItems.length > 0 ? (
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th style={{ width: '60px' }}>STT</th>
+                  <th onClick={() => handleSort('fullName')} className={styles.sortable}>
+                    Họ và tên
+                    {filters.sortBy === 'fullName' && (
+                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('role')} className={styles.sortable}>
+                    Vai trò
+                    {filters.sortBy === 'role' && (
+                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('email')} className={styles.sortable}>
+                    Email
+                    {filters.sortBy === 'email' && (
+                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('createdAt')} className={styles.sortable}>
+                    Ngày đăng ký
+                    {filters.sortBy === 'createdAt' && (
+                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th>Trạng thái</th>
+                  <th style={{ textAlign: 'right', width: '150px' }}>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {processedItems.map((u, index) => {
+                  const locked = isUserLocked(u);
+                  return (
+                    <tr key={u.id} className={styles.tableRow}>
+                      <td className={styles.indexCell}>
+                        {(filters.page - 1) * filters.pageSize + index + 1}
+                      </td>
+                      <td>
+                        <div className={styles.userCell}>
+                          <img 
+                            src={u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.fullName || u.email)}&background=667eea&color=fff`}
+                            alt={u.fullName || ''}
+                            className={styles.avatar}
+                          />
+                          <span className={styles.userName}>{u.fullName || '-'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`${styles.roleBadge} ${styles[`role${u.role}`]}`}>
+                          {u.role || '-'}
+                        </span>
+                      </td>
+                      <td className={styles.emailCell}>{u.email}</td>
+                      <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
+                      <td>
+                        <span className={`${styles.statusBadge} ${locked ? styles.statusLocked : styles.statusActive}`}>
+                          <i className={`bi bi-${locked ? 'lock-fill' : 'check-circle-fill'}`}></i>
+                          {locked ? 'Đang khóa' : 'Hoạt động'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className={styles.actions}>
+                          <button onClick={() => handleViewDetails(u.id)} title="Xem chi tiết" className={styles.actionBtn}>
+                            <i className="bi bi-eye"></i>
+                          </button>
+                          <button onClick={() => onEdit(u)} title="Sửa" className={styles.actionBtn}>
+                            <i className="bi bi-pencil"></i>
+                          </button>
+                          <button
+                            onClick={() => handleStatusChange(u, !locked)}
+                            disabled={Boolean(updatingIds[u.id])}
+                            title={locked ? 'Mở khóa' : 'Khóa'}
+                            className={`${styles.actionBtn} ${locked ? styles.actionUnlock : styles.actionLock}`}
+                          >
+                            <i className={`bi bi-${locked ? 'unlock' : 'lock'}`}></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className={styles.emptyState}>
+            <i className="bi bi-inbox"></i>
+            <p>Không tìm thấy người dùng nào</p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {processedItems.length > 0 && (
+          <div className={styles.pagination}>
+            <div className={styles.paginationInfo}>
+              Hiển thị {(filters.page - 1) * filters.pageSize + 1} - {Math.min(filters.page * filters.pageSize, total ?? 0)} trong tổng số {total ?? 0} kết quả
+            </div>
+
+            <div className={styles.paginationControls}>
+              <select value={filters.pageSize} onChange={e => setFilters(prev => ({ ...prev, pageSize: Number(e.target.value), page: 1 }))}>
+                <option value={5}>5 / trang</option>
+                <option value={10}>10 / trang</option>
+                <option value={15}>15 / trang</option>
+                <option value={20}>20 / trang</option>
+              </select>
+
+              <div className={styles.paginationButtons}>
+                <button 
+                  onClick={() => handleFilterChange('page', 1)} 
+                  disabled={filters.page <= 1}
+                  title="Trang đầu"
+                >
+                  <i className="bi bi-chevron-double-left"></i>
+                </button>
+                <button 
+                  onClick={() => handleFilterChange('page', filters.page - 1)} 
+                  disabled={filters.page <= 1}
+                  title="Trang trước"
+                >
+                  <i className="bi bi-chevron-left"></i>
+                </button>
+                
+                <span className={styles.pageIndicator}>
+                  {filters.page} / {totalPages || 1}
+                </span>
+
+                <button 
+                  onClick={() => handleFilterChange('page', filters.page + 1)} 
+                  disabled={filters.page >= totalPages}
+                  title="Trang sau"
+                >
+                  <i className="bi bi-chevron-right"></i>
+                </button>
+                <button 
+                  onClick={() => handleFilterChange('page', totalPages)} 
+                  disabled={filters.page >= totalPages}
+                  title="Trang cuối"
+                >
+                  <i className="bi bi-chevron-double-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
       {viewing && (
         <UserDetails user={viewing} onClose={() => setViewing(null)} isLoading={loadingDetails} />
       )}

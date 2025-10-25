@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import Toast from '../components/ui/Toast.module.css';
+import Toast from '../components/ui/toast';
 
 // Định nghĩa kiểu dữ liệu cho một toast
 interface ToastMessage {
@@ -34,10 +34,25 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     const newToast: ToastMessage = { id, message, type };
     setToasts(prevToasts => [...prevToasts, newToast]);
 
-    // Tự động xóa toast sau 5 giây
+    // Thời gian hiển thị khác nhau theo loại toast
+    const getToastDuration = (toastType: ToastMessage['type']) => {
+      switch (toastType) {
+        case 'info': // Trạng thái "đang"
+          return 1500; // 0.5 giây
+        case 'success': // Thành công
+        case 'error': // Thất bại
+        case 'warning': // Cảnh báo
+        default:
+          return 3000; // 2 giây
+      }
+    };
+
+    const duration = getToastDuration(type);
+    
+    // Tự động xóa toast sau thời gian tương ứng
     setTimeout(() => {
       setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
-    }, 5000);
+    }, duration);
   }, []);
 
   const removeToast = (id: number) => {

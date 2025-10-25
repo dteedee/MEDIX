@@ -64,8 +64,6 @@ export function App() {
         <ToastProvider>
           <Router>
           <div className="min-h-screen w-full flex flex-col">
-            <Header />
-
             <Routes>
               <Route path="/error/:code" element={<ErrorPageWrapper />} />
 
@@ -177,8 +175,6 @@ export function App() {
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
-
-            <Footer />
           </div>
         </Router>
         </ToastProvider>

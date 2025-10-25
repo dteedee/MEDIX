@@ -4,7 +4,7 @@ import { bannerService } from '../../services/bannerService'
 import { BannerDTO } from '../../types/banner.types'
 import BannerDetails from './BannerDetails'
 import { useToast } from '../../contexts/ToastContext'
-import styles from '../../styles/BannerList.module.css'
+import styles from '../../styles/manager/BannerList.module.css'
 
 // SVG Icons for actions
 const ViewIcon = () => (

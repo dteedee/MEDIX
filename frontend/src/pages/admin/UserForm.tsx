@@ -3,7 +3,7 @@ import { UserDTO, CreateUserRequest, UpdateUserRequest } from '../../types/user.
 import { userAdminService } from '../../services/userService'
 import { useToast } from '../../contexts/ToastContext'
 
-import styles from '../../styles/UserForm.module.css';
+import styles from '../../styles/admin/UserForm.module.css';
 interface Props {
   user?: UserDTO
   onSaved?: () => void

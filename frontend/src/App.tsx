@@ -13,7 +13,7 @@ import Footer from './components/layout/Footer';
 import Sidebar from './components/layout/Sidebar';
 
 // Auth pages
-import HomePage from './pages/HomePage';
+import HomePage from './pages/public/HomePage';
 import Login from './pages/auth/Login';
 import { PatientRegister } from './pages/auth/PatientRegister';
 import ForgotPassword from './pages/auth/ForgotPassword';
@@ -21,7 +21,7 @@ import ResetPassword from './pages/auth/ResetPassword';
 import ChangePassword from './pages/auth/ChangePassword';
 import AuthLayout from './components/layout/AuthLayout';
 import AuthStatus from './pages/auth/AuthStatus';
-import { Unauthorized } from './pages/Unauthorized';
+import { Unauthorized } from './pages/error/Unauthorized';
 
 // Dashboard pages  
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -48,9 +48,14 @@ import UserEditPage from './pages/admin/UserEditPage';
 
 // Reader pages
 import ArticleReaderPage from './pages/patient/ArticleReaderPage';
-import ArticleDetailPage from './pages/patient/ArticleDetailPage';
+import ArticleDetailPage from './pages/public/ArticleDetailPage';
 import DoctorBookingList from './pages/patient/DoctorBookingList';
-import ErrorPageWrapper from './pages/ErrorPageWrapper';
+import ErrorPageWrapper from './pages/error/ErrorPageWrapper';
+
+// Legal pages
+import PrivacyPolicy from './pages/public/PrivacyPolicy';
+import TermsOfService from './pages/public/TermsOfService';
+import AboutUs from './pages/public/AboutUs';
 
 export function App() {
   return (
@@ -84,6 +89,11 @@ export function App() {
 
               {/* ---------- Doctor Booking List (Public) ---------- */}
               <Route path="/doctors" element={<DoctorBookingList />} />
+
+              {/* ---------- Legal pages (Public) ---------- */}
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/about" element={<AboutUs />} />
 
               {/* ---------- Change password route (Protected) ---------- */}
               <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styles from '../styles/home.module.css'
-import { HomeMetadata } from '../types/home.types';
-import HomeService from '../services/homeService';
-import { useLanguage } from '../contexts/LanguageContext';
+import styles from '../../styles/public/home.module.css'
+import { HomeMetadata } from '../../types/home.types';
+import HomeService from '../../services/homeService';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 function HomePage() {
     const navigate = useNavigate();

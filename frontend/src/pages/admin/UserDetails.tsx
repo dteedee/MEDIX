@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserDTO } from '../../types/user.types';
-import styles from '../../styles/UserDetails.module.css';
+import styles from '../../styles/admin/UserDetails.module.css';
 
 interface Props {
   user: UserDTO | null;

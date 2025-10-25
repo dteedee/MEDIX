@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { BannerDTO, CreateBannerRequest, UpdateBannerRequest } from '../../types/banner.types'
 import { useToast } from '../../contexts/ToastContext'
 import { bannerService } from '../../services/bannerService'
-import formStyles from '../../styles/Form.module.css'
-import styles from '../../styles/BannerFormNew.module.css'
+import formStyles from '../../styles/manager/Form.module.css'
+import styles from '../../styles/manager/BannerFormNew.module.css'
 
 interface Props {
   banner?: BannerDTO

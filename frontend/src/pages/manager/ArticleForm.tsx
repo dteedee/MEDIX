@@ -5,8 +5,8 @@ import { CategoryDTO } from '../../types/category.types'
 import { articleService, ArticleFormPayload } from '../../services/articleService'
 import { useToast } from '../../contexts/ToastContext'
 import { CKEditor } from '@ckeditor/ckeditor5-react'
-import formStyles from '../../styles/Form.module.css' // Import shared form styles
-import styles from '../../styles/ArticleForm.module.css' // Import component-specific styles
+import formStyles from '../../styles/manager/Form.module.css'
+import styles from '../../styles/manager/ArticleForm.module.css'
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
 
 interface Props {

@@ -1,4 +1,4 @@
-import styles from '../../styles/doctor-register.module.css'
+import styles from '../../styles/doctor/doctor-register.module.css'
 
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';

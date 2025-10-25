@@ -4,7 +4,7 @@ import { categoryService } from '../../services/categoryService'
 import { CategoryDTO } from '../../types/category.types'
 import CategoryDetails from './CategoryDetails'
 import { useToast } from '../../contexts/ToastContext'
-import styles from '../../styles/CategoryList.module.css'
+import styles from '../../styles/manager/CategoryList.module.css'
 
 // SVG Icons for actions
 const ViewIcon = () => (

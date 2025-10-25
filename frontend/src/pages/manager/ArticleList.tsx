@@ -6,7 +6,7 @@ import ArticleDetails from './ArticleDetails'
 import { categoryService } from '../../services/categoryService'
 import { CategoryDTO } from '../../types/category.types'
 import { useToast } from '../../contexts/ToastContext'
-import styles from '../../styles/ArticleList.module.css'
+import styles from '../../styles/manager/ArticleList.module.css'
 
 // SVG Icons for actions
 const ViewIcon = () => (

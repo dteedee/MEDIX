@@ -125,6 +125,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     setSaving(true)
     try {
       if (isEditMode && user) {
+        showToast('Đang cập nhật thông tin người dùng...', 'info')
         // Khi chỉnh sửa, chỉ gửi những trường được phép thay đổi: role và lockoutEnabled
         const payload: UpdateUserRequest = {
           role,
@@ -134,11 +135,14 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
         console.debug('[UserForm] update payload', user.id, payload)
         const resp = await userAdminService.update(user.id, payload)
         console.debug('[UserForm] update response', resp)
+        showToast('Cập nhật thông tin người dùng thành công!', 'success')
         onSaved?.(payload)
       } else { // When creating new user
+        showToast('Đang tạo người dùng mới...', 'info')
         // Chỉ cần userName và email cho tạo mới
         const payload: CreateUserRequest = { userName, email, role: 'PATIENT' }
         await userAdminService.create(payload)
+        showToast('Tạo người dùng mới thành công!', 'success')
         onSaved?.(payload)
       }
     } catch (error: any) {

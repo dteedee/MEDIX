@@ -216,6 +216,14 @@
   margin-top: 4px;
 }
 
+.charCount {
+  color: #718096;
+  font-size: 12px;
+  margin-top: 4px;
+  text-align: right;
+  font-weight: 500;
+}
+
 /* Actions Container */
 .actionsContainer {
   display: flex;

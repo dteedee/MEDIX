@@ -84,26 +84,122 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     return undefined;
   };
 
+  const validateUsername = (username: string): string | undefined => {
+    if (!username.trim()) {
+      return "Tên đăng nhập không được để trống.";
+    }
+    
+    // Kiểm tra độ dài
+    if (username.length > 20) {
+      return "Tên đăng nhập không được vượt quá 20 ký tự.";
+    }
+    
+    if (username.length < 3) {
+      return "Tên đăng nhập phải có ít nhất 3 ký tự.";
+    }
+    
+    // Kiểm tra ký tự hợp lệ (chỉ cho phép chữ cái, số, dấu gạch dưới và dấu gạch ngang)
+    const validCharsRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!validCharsRegex.test(username)) {
+      return "Tên đăng nhập chỉ được chứa chữ cái, số, dấu gạch dưới (_) và dấu gạch ngang (-).";
+    }
+    
+    // Không được bắt đầu hoặc kết thúc bằng dấu gạch
+    if (username.startsWith('-') || username.startsWith('_') || 
+        username.endsWith('-') || username.endsWith('_')) {
+      return "Tên đăng nhập không được bắt đầu hoặc kết thúc bằng dấu gạch.";
+    }
+    
+    // Không được có dấu gạch liên tiếp
+    if (username.includes('--') || username.includes('__') || username.includes('-_') || username.includes('_-')) {
+      return "Tên đăng nhập không được có dấu gạch liên tiếp.";
+    }
+    
+    return undefined;
+  };
+
   const validateEmail = (email: string): string | undefined => {
     if (!email.trim()) {
       return "Email không được để trống.";
     }
-    // Basic email regex
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!regex.test(email)) {
-      return "Email không hợp lệ.";
+    
+    // Kiểm tra có chứa dấu tiếng Việt không
+    const vietnameseRegex = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+    if (vietnameseRegex.test(email)) {
+      return "Email không được chứa dấu tiếng Việt (ả, á, à, ạ, ...).";
     }
+    
+    // Kiểm tra định dạng email cơ bản
+    const basicEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!basicEmailRegex.test(email)) {
+      return "Email không đúng định dạng.";
+    }
+    
+    // Kiểm tra phần local (trước @)
+    const localPart = email.split('@')[0];
+    if (localPart.length > 64) {
+      return "Phần trước @ không được vượt quá 64 ký tự.";
+    }
+    
+    if (localPart.startsWith('.') || localPart.endsWith('.')) {
+      return "Phần trước @ không được bắt đầu hoặc kết thúc bằng dấu chấm.";
+    }
+    
+    if (localPart.includes('..')) {
+      return "Phần trước @ không được có dấu chấm liên tiếp.";
+    }
+    
+    // Kiểm tra phần domain (sau @)
+    const domainPart = email.split('@')[1];
+    if (domainPart.length > 253) {
+      return "Phần domain không được vượt quá 253 ký tự.";
+    }
+    
+    // Kiểm tra phần TLD (sau dấu chấm cuối)
+    const tldPart = domainPart.split('.').pop();
+    if (!tldPart || tldPart.length < 2) {
+      return "Phần sau dấu chấm cuối phải có ít nhất 2 ký tự.";
+    }
+    
+    if (tldPart.length > 63) {
+      return "Phần sau dấu chấm cuối không được vượt quá 63 ký tự.";
+    }
+    
+    // Kiểm tra domain có chứa ký tự không hợp lệ
+    const domainRegex = /^[a-zA-Z0-9.-]+$/;
+    if (!domainRegex.test(domainPart)) {
+      return "Domain chỉ được chứa chữ cái, số, dấu chấm và dấu gạch ngang.";
+    }
+    
+    // Kiểm tra domain không được bắt đầu hoặc kết thúc bằng dấu gạch
+    if (domainPart.startsWith('-') || domainPart.endsWith('-')) {
+      return "Domain không được bắt đầu hoặc kết thúc bằng dấu gạch ngang.";
+    }
+    
+    // Kiểm tra domain không được có dấu chấm liên tiếp
+    if (domainPart.includes('..')) {
+      return "Domain không được có dấu chấm liên tiếp.";
+    }
+    
     return undefined;
   };
 
   const validateOnBlur = (field: 'userName' | 'email' | 'password', value: string) => {
-    if (field === 'userName' && !value.trim()) {
-      setErrors(prev => ({ ...prev, userName: 'Tên đăng nhập không được để trống.' }));
+    if (field === 'userName') {
+      const usernameError = validateUsername(value);
+      if (usernameError) {
+        setErrors(prev => ({ ...prev, userName: usernameError }));
+      } else {
+        setErrors(prev => ({ ...prev, userName: undefined })); // Clear error if valid
+      }
     }
     if (field === 'email') {
       const emailError = validateEmail(value);
-      if (emailError) setErrors(prev => ({ ...prev, email: emailError }));
-      else setErrors(prev => ({ ...prev, email: undefined })); // Clear error if valid
+      if (emailError) {
+        setErrors(prev => ({ ...prev, email: emailError }));
+      } else {
+        setErrors(prev => ({ ...prev, email: undefined })); // Clear error if valid
+      }
     }
   };
 
@@ -112,9 +208,18 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
 
     if (!isEditMode) {
       const newErrors: typeof errors = {};
-      if (!userName.trim()) newErrors.userName = "Tên đăng nhập không được để trống.";
+      
+      // Validate username
+      const usernameError = validateUsername(userName);
+      if (usernameError) {
+        newErrors.userName = usernameError;
+      }
+      
+      // Validate email
       const emailError = validateEmail(email);
-      if (emailError) newErrors.email = emailError;
+      if (emailError) {
+        newErrors.email = emailError;
+      }
       
       setErrors(newErrors);
       if (Object.keys(newErrors).length > 0) {
@@ -198,12 +303,22 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                     <label className={styles.label}>Tên đăng nhập (Username)</label>
                     <input 
                       value={userName} 
-                      onChange={e => { setUserName(e.target.value); if (errors.userName) setErrors(prev => ({ ...prev, userName: undefined })); }} 
+                      onChange={e => { 
+                        const value = e.target.value;
+                        if (value.length <= 20) { // Giới hạn 20 ký tự
+                          setUserName(value); 
+                          if (errors.userName) setErrors(prev => ({ ...prev, userName: undefined })); 
+                        }
+                      }} 
                       required 
+                      maxLength={20}
                       onBlur={e => validateOnBlur('userName', e.target.value)}
                       className={`${styles.input} ${errors.userName ? styles.inputError : ''}`}
-                      placeholder="Nhập tên đăng nhập"
+                      placeholder="Nhập tên đăng nhập (3-20 ký tự, chỉ chữ cái, số, _ và -)"
                     />
+                    <div className={styles.charCount}>
+                      {userName.length}/20 ký tự
+                    </div>
                     {errors.userName && <div className={styles.errorText}>{errors.userName}</div>}
                   </div>
                   <div className={styles.inputGroup}>
@@ -211,11 +326,14 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                     <input 
                       type="email"
                       value={email} 
-                      onChange={e => { setEmail(e.target.value); if (errors.email) setErrors(prev => ({ ...prev, email: undefined })); }} 
+                      onChange={e => { 
+                        setEmail(e.target.value); 
+                        if (errors.email) setErrors(prev => ({ ...prev, email: undefined })); 
+                      }} 
                       required 
                       onBlur={e => validateOnBlur('email', e.target.value)}
                       className={`${styles.input} ${errors.email ? styles.inputError : ''}`}
-                      placeholder="Nhập email"
+                      placeholder="Nhập email (không có dấu tiếng Việt)"
                     />
                     {errors.email && <div className={styles.errorText}>{errors.email}</div>}
                   </div>

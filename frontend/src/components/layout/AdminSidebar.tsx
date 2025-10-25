@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSidebar } from './AdminLayout';
+import { useNavigate } from 'react-router-dom';
 import styles from './AdminSidebar.module.css';
 
 interface AdminSidebarProps {
@@ -10,9 +11,39 @@ interface AdminSidebarProps {
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage = 'dashboard' }) => {
   const { sidebarOpen, setSidebarOpen } = useSidebar();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
+    navigate('/login');
+  };
+
+  const handleViewProfile = () => {
+    setShowUserMenu(false);
+    // Navigate to profile page or show profile modal
+    console.log('View profile');
+  };
+
+  const handleChangePassword = () => {
+    setShowUserMenu(false);
+    // Navigate to change password page or show change password modal
+    console.log('Change password');
   };
 
   return (
@@ -60,20 +91,53 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage = 'dashboard' }
         </a>
       </nav>
 
-      <div className={styles.userSection}>
-        <div className={styles.userInfo}>
+      <div className={styles.userSection} ref={userMenuRef}>
+        <div 
+          className={styles.userInfo}
+          onClick={() => setShowUserMenu(!showUserMenu)}
+        >
           <div className={styles.userAvatar}>
-            <img src="/images/medix-logo.png" alt="Admin" />
+            <img 
+              src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || user?.email || 'Admin')}&background=667eea&color=fff`}
+              alt={user?.fullName || 'Admin'}
+            />
           </div>
-          <div className={styles.userDetails}>
-            <div className={styles.userName}>{user?.fullName || 'Admin'}</div>
-            <div className={styles.userRole}>Quản trị viên</div>
-          </div>
+          {sidebarOpen && (
+            <div className={styles.userDetails}>
+              <div className={styles.userName}>{user?.fullName || 'Admin'}</div>
+              <div className={styles.userRole}>Quản trị viên</div>
+            </div>
+          )}
+          {sidebarOpen && (
+            <div className={styles.userMenuToggle}>
+              <i className={`bi bi-chevron-${showUserMenu ? 'up' : 'down'}`}></i>
+            </div>
+          )}
         </div>
-        <button className={styles.logoutBtn} onClick={handleLogout}>
-          <i className="bi bi-box-arrow-right"></i>
-          {sidebarOpen && <span>Đăng xuất</span>}
-        </button>
+
+        {showUserMenu && sidebarOpen && (
+          <div className={styles.userMenu}>
+            <button className={styles.menuItem} onClick={handleViewProfile}>
+              <i className="bi bi-person"></i>
+              <span>Xem tài khoản</span>
+            </button>
+            <button className={styles.menuItem} onClick={handleChangePassword}>
+              <i className="bi bi-key"></i>
+              <span>Đổi mật khẩu</span>
+            </button>
+            <div className={styles.menuDivider}></div>
+            <button className={styles.menuItem} onClick={handleLogout}>
+              <i className="bi bi-box-arrow-right"></i>
+              <span>Đăng xuất</span>
+            </button>
+          </div>
+        )}
+
+        {!sidebarOpen && (
+          <button className={styles.logoutBtn} onClick={handleLogout} title="Đăng xuất">
+            <i className="bi bi-box-arrow-right"></i>
+          </button>
+        )}
       </div>
 
       <button 

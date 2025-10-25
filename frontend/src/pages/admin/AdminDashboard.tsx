@@ -1,83 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import React from 'react';
 import styles from '../../styles/admin/AdminDashboard.module.css';
 
 export default function AdminDashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
   return (
-    <div className={styles.wrapper}>
-      {/* Sidebar */}
-      <div className={`${styles.sidebar} ${!sidebarOpen ? styles.sidebarClosed : ''}`}>
-        <div className={styles.sidebarHeader}>
-          <div className={styles.logo}>
-            <img src="/images/medix-logo.png" alt="MEDIX" />
-            {sidebarOpen && <span>MEDIX Admin</span>}
-          </div>
-        </div>
-
-        <nav className={styles.sidebarNav}>
-          <a href="/app/admin" className={`${styles.navItem} ${styles.active}`}>
-            <i className="bi bi-speedometer2"></i>
-            {sidebarOpen && <span>Dashboard</span>}
-          </a>
-          <a href="/app/admin/users" className={styles.navItem}>
-            <i className="bi bi-people"></i>
-            {sidebarOpen && <span>Người dùng</span>}
-          </a>
-          <a href="/app/admin/tracking" className={styles.navItem}>
-            <i className="bi bi-search"></i>
-            {sidebarOpen && <span>Truy vết</span>}
-          </a>
-          <a href="/app/admin/settings" className={styles.navItem}>
-            <i className="bi bi-gear"></i>
-            {sidebarOpen && <span>Cấu hình</span>}
-          </a>
-        </nav>
-
-        {/* User Section */}
-        <div className={styles.userSection}>
-          <div className={styles.userInfo}>
-            <div className={styles.userAvatar}>
-              <img 
-                src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || user?.email || 'Admin')}&background=667eea&color=fff`}
-                alt={user?.fullName || 'Admin'}
-              />
-            </div>
-            {sidebarOpen && (
-              <div className={styles.userDetails}>
-                <div className={styles.userName}>{user?.fullName || 'Admin'}</div>
-                <div className={styles.userRole}>Quản trị viên</div>
-              </div>
-            )}
-          </div>
-          <button 
-            className={styles.logoutBtn}
-            onClick={() => {
-              logout();
-              navigate('/login');
-            }}
-            title="Đăng xuất"
-          >
-            <i className="bi bi-box-arrow-right"></i>
-            {sidebarOpen && <span>Đăng xuất</span>}
-          </button>
-        </div>
-
-        <button 
-          className={styles.sidebarToggle}
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          <i className={`bi bi-chevron-${sidebarOpen ? 'left' : 'right'}`}></i>
-        </button>
-      </div>
-
-      {/* Main Content */}
-      <div className={styles.mainContent}>
-        <div className={styles.container}>
+    <div className={styles.container}>
           {/* Header */}
           <div className={styles.header}>
             <div className={styles.headerLeft}>
@@ -238,8 +164,6 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
     </div>
   );
 }

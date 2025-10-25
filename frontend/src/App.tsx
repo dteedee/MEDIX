@@ -11,6 +11,8 @@ import { UserRole } from './types/common.types';
 import { Header } from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import Sidebar from './components/layout/Sidebar';
+import AdminLayout from './components/layout/AdminLayout';
+import PublicLayout from './components/layout/PublicLayout';
 
 // Auth pages
 import HomePage from './pages/public/HomePage';
@@ -24,7 +26,7 @@ import AuthStatus from './pages/auth/AuthStatus';
 import { Unauthorized } from './pages/error/Unauthorized';
 
 // Dashboard pages  
-import { AdminDashboard } from './pages/admin/AdminDashboard';
+import AdminDashboard from './pages/admin/AdminDashboard';
 import { ManageDashboard } from './pages/manager/ManageDashboard';
 import DoctorRegister from './pages/doctor/DoctorRegister';
 import { AIChatBot } from './pages/ai/AIChatBot';
@@ -45,6 +47,8 @@ import BannerEditPage from './pages/manager/BannerEditPage';
 import CmsPageEditPage from './pages/manager/CmsPageEditPage';
 import UserList from './pages/admin/UserList';
 import UserEditPage from './pages/admin/UserEditPage';
+import TrackingPage from './pages/admin/TrackingPage';
+import SettingsPage from './pages/admin/SettingsPage';
 
 // Reader pages
 import ArticleReaderPage from './pages/patient/ArticleReaderPage';
@@ -82,16 +86,14 @@ export function App() {
 
               <Route path="/doctor/details/:username" element={<DoctorDetails />} />
 
-              {/* ---------- Home ---------- */}
-              <Route index element={<HomePage />} />
-
-              {/* ---------- Doctor Booking List (Public) ---------- */}
-              <Route path="/doctors" element={<DoctorBookingList />} />
-
-              {/* ---------- Legal pages (Public) ---------- */}
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/terms" element={<TermsOfService />} />
-              <Route path="/about" element={<AboutUs />} />
+              {/* ---------- Public pages with header/footer ---------- */}
+              <Route element={<PublicLayout />}>
+                <Route index element={<HomePage />} />
+                <Route path="/doctors" element={<DoctorBookingList />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/about" element={<AboutUs />} />
+              </Route>
 
               {/* ---------- Change password route (Protected) ---------- */}
               <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
@@ -105,16 +107,14 @@ export function App() {
                 } />
 
                 {/* ---------- Admin routes ---------- */}
-                <Route path="admin/*" element={
-                  // <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
-                    <Routes>
-                      <Route index element={<AdminDashboard />} />
-                      <Route path="users" element={<UserList />} />
-                      <Route path="users/new" element={<UserEditPage />} />
-                      <Route path="users/edit/:id" element={<UserEditPage />} />
-                    </Routes>
-                  // </ProtectedRoute>
-                } />
+                <Route path="admin/*" element={<AdminLayout />}>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="users" element={<UserList />} />
+                  <Route path="users/new" element={<UserEditPage />} />
+                  <Route path="users/edit/:id" element={<UserEditPage />} />
+                  <Route path="tracking" element={<TrackingPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                </Route>
 
                 {/* ---------- Manager routes ---------- */}
                 <Route path="manager/*" element={

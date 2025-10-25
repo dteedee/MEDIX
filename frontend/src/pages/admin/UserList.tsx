@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { userAdminService } from '../../services/userService'
-import { UserDTO, UpdateUserRequest } from '../../types/user.types'
+import { UserDTO, UpdateUserRequest, CreateUserRequest } from '../../types/user.types'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../contexts/AuthContext'
 import UserDetails from './UserDetails'
+import UserForm from './UserForm'
+import ConfirmationDialog from '../../components/ui/ConfirmationDialog'
 import styles from '../../styles/admin/UserList.module.css'
 
 interface UserListFilters {
@@ -43,16 +45,34 @@ const getInitialState = (): UserListFilters => {
 
 const isUserLocked = (user?: UserDTO): boolean => {
   if (!user) return false;
-  if (user.lockoutEnabled === true) return true;
+  
+  // Kiểm tra lockoutEnabled trước
+  if (user.lockoutEnabled === true) {
+    console.log('User bị khóa bởi lockoutEnabled:', user.email);
+    return true;
+  }
+  
+  // Kiểm tra lockoutEnd
   const lockoutEndVal = user.lockoutEnd;
   if (lockoutEndVal) {
     try {
       const lockoutEndDate = new Date(lockoutEndVal);
-      return lockoutEndDate.getTime() > Date.now();
-    } catch {
+      const isLocked = lockoutEndDate.getTime() > Date.now();
+      console.log('User lockoutEnd check:', {
+        email: user.email,
+        lockoutEnd: lockoutEndVal,
+        lockoutEndDate: lockoutEndDate.toISOString(),
+        now: new Date().toISOString(),
+        isLocked
+      });
+      return isLocked;
+    } catch (error) {
+      console.error('Error parsing lockoutEnd:', error);
       return true;
     }
   }
+  
+  console.log('User không bị khóa:', user.email);
   return false;
 };
 
@@ -62,10 +82,21 @@ export default function UserList() {
   const [filters, setFilters] = useState<UserListFilters>(getInitialState);
   const [loading, setLoading] = useState(true);
   const [viewing, setViewing] = useState<UserDTO | null>(null);
+  const [editing, setEditing] = useState<UserDTO | null>(null);
+  const [creating, setCreating] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [updatingIds, setUpdatingIds] = useState<Record<string, boolean>>({});
   const [showFilters, setShowFilters] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [confirmationDialog, setConfirmationDialog] = useState<{
+    isOpen: boolean;
+    user: UserDTO | null;
+    action: 'lock' | 'unlock' | null;
+  }>({
+    isOpen: false,
+    user: null,
+    action: null
+  });
 
   const { showToast } = useToast();
   const { user, logout } = useAuth();
@@ -104,32 +135,70 @@ export default function UserList() {
     });
   };
 
-  const handleStatusChange = async (userToUpdate: UserDTO, isBeingLocked: boolean) => {
+  const handleStatusChange = (userToUpdate: UserDTO, isBeingLocked: boolean) => {
     const currentUser = allUsers.find(u => u.id === userToUpdate.id) ?? userToUpdate;
+    const currentlyLocked = isUserLocked(currentUser);
 
-    if (isUserLocked(currentUser) === isBeingLocked) {
+    // Nếu trạng thái hiện tại giống với action muốn thực hiện thì không làm gì
+    if (currentlyLocked === isBeingLocked) {
+      console.log('Trạng thái không thay đổi:', { currentlyLocked, isBeingLocked });
       return;
     }
 
+    console.log('Thay đổi trạng thái:', { 
+      user: currentUser.email, 
+      currentlyLocked, 
+      isBeingLocked 
+    });
+
+    setConfirmationDialog({
+      isOpen: true,
+      user: currentUser,
+      action: isBeingLocked ? 'lock' : 'unlock'
+    });
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!confirmationDialog.user || !confirmationDialog.action) return;
+
+    const { user: currentUser, action } = confirmationDialog;
+    const isBeingLocked = action === 'lock';
     const actionText = isBeingLocked ? 'khóa' : 'mở khóa';
-    if (!confirm(`Bạn có chắc muốn ${actionText} tài khoản "${currentUser.fullName}" không?`)) {
-      return;
-    }
 
-    setUpdatingIds(prev => ({ ...prev, [userToUpdate.id]: true }));
+    console.log('Xác nhận thay đổi trạng thái:', {
+      userId: currentUser.id,
+      email: currentUser.email,
+      action,
+      isBeingLocked
+    });
+
+    setConfirmationDialog({ isOpen: false, user: null, action: null });
+    showToast(`Đang ${actionText} tài khoản "${currentUser.fullName || currentUser.email}"...`, 'info');
+
+    setUpdatingIds(prev => ({ ...prev, [currentUser.id]: true }));
 
     try {
       const payload: UpdateUserRequest = {
         role: currentUser.role,
         lockoutEnabled: isBeingLocked,
       };
-      await userAdminService.update(userToUpdate.id, payload);
-      showToast(`Đã ${actionText} tài khoản thành công.`);
+      
+      // Nếu mở khóa thì clear lockoutEnd
+      if (!isBeingLocked) {
+        (payload as any).lockoutEnd = null;
+      }
+
+      console.log('Payload gửi lên server:', payload);
+      
+      await userAdminService.update(currentUser.id, payload);
+      showToast(`Đã ${actionText} tài khoản thành công.`, 'success');
       await load(); 
-    } catch (error) {
-      showToast('Không thể cập nhật trạng thái tài khoản.', 'error');
+    } catch (error: any) {
+      console.error('Lỗi khi cập nhật trạng thái:', error);
+      const message = error?.response?.data?.message || error?.message || 'Không thể cập nhật trạng thái tài khoản.';
+      showToast(message, 'error');
     } finally {
-      setUpdatingIds(prev => ({ ...prev, [userToUpdate.id]: false }));
+      setUpdatingIds(prev => ({ ...prev, [currentUser.id]: false }));
     }
   };
 
@@ -141,8 +210,8 @@ export default function UserList() {
     }
   };
 
-  const onCreate = () => navigate('/app/admin/users/new');
-  const onEdit = (u: UserDTO) => navigate(`/app/admin/users/edit/${u.id}`);
+  const onCreate = () => setCreating(true);
+  const onEdit = (u: UserDTO) => setEditing(u);
 
   const handleViewDetails = async (userId: string) => {
     setLoadingDetails(true);
@@ -157,6 +226,46 @@ export default function UserList() {
     } finally {
       setLoadingDetails(false);
     }
+  }
+
+  const handleCreateUser = async (userData: CreateUserRequest) => {
+    try {
+      showToast('Đang tạo người dùng mới...', 'info');
+      await userAdminService.create(userData);
+      showToast('Tạo người dùng thành công!', 'success');
+      setCreating(false);
+      await load();
+    } catch (error: any) {
+      console.error('Failed to create user:', error);
+      const message = error?.response?.data?.message || error?.message || 'Không thể tạo người dùng';
+      showToast(message, 'error');
+    }
+  }
+
+  const handleEditUser = async (userData: UpdateUserRequest) => {
+    if (!editing) return;
+    
+    try {
+      showToast('Đang cập nhật thông tin người dùng...', 'info');
+      await userAdminService.update(editing.id, userData);
+      showToast('Cập nhật thành công!', 'success');
+      setEditing(null);
+      await load();
+    } catch (error: any) {
+      console.error('Failed to update user:', error);
+      const message = error?.response?.data?.message || error?.message || 'Không thể cập nhật người dùng';
+      showToast(message, 'error');
+    }
+  }
+
+  const handleCreateFormSaved = () => {
+    setCreating(false);
+    load();
+  }
+
+  const handleEditFormSaved = () => {
+    setEditing(null);
+    load();
   }
 
   const processedItems = useMemo(() => {
@@ -672,6 +781,56 @@ export default function UserList() {
       {viewing && (
         <UserDetails user={viewing} onClose={() => setViewing(null)} isLoading={loadingDetails} />
       )}
+
+      {creating && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2>Tạo Người dùng Mới</h2>
+              <button onClick={() => setCreating(false)} className={styles.closeButton}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <UserForm 
+              onSaved={handleCreateFormSaved}
+              onCancel={() => setCreating(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {editing && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2>Chỉnh sửa Người dùng</h2>
+              <button onClick={() => setEditing(null)} className={styles.closeButton}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <UserForm 
+              user={editing}
+              onSaved={handleEditFormSaved}
+              onCancel={() => setEditing(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      <ConfirmationDialog
+        isOpen={confirmationDialog.isOpen}
+        title={confirmationDialog.action === 'lock' ? 'Xác nhận khóa tài khoản' : 'Xác nhận mở khóa tài khoản'}
+        message={
+          confirmationDialog.action === 'lock' 
+            ? `Bạn có chắc muốn khóa tài khoản "${confirmationDialog.user?.fullName || confirmationDialog.user?.email}" không?`
+            : `Bạn có chắc muốn mở khóa tài khoản "${confirmationDialog.user?.fullName || confirmationDialog.user?.email}" không?`
+        }
+        confirmText={confirmationDialog.action === 'lock' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+        cancelText="Hủy"
+        onConfirm={handleConfirmStatusChange}
+        onCancel={() => setConfirmationDialog({ isOpen: false, user: null, action: null })}
+        type={confirmationDialog.action === 'lock' ? 'danger' : 'warning'}
+      />
     </div>
   );
 }

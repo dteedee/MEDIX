@@ -4,9 +4,10 @@ import { userAdminService } from '../../services/userService'
 import { useToast } from '../../contexts/ToastContext'
 
 import styles from '../../styles/admin/UserForm.module.css';
+
 interface Props {
   user?: UserDTO
-  onSaved?: () => void
+  onSaved?: (data?: any) => void
   onCancel?: () => void
 }
 
@@ -27,6 +28,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
   const [updatedAt, setUpdatedAt] = useState(user?.updatedAt ?? '');
   const [emailConfirmed, setEmailConfirmed] = useState(user?.emailConfirmed ?? false);
   const [accessFailedCount, setAccessFailedCount] = useState(user?.accessFailedCount ?? 0);
+  
   const deriveLocked = (u?: UserDTO) => {
     if (!u) return false
     if (u.lockoutEnabled === true) return true
@@ -50,6 +52,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     return false
   }
   const [lockoutEnabled, setLockoutEnabled] = useState<boolean>(deriveLocked(user))
+  
   // Keep internal state in sync when `user` prop changes (e.g., when fetched async)
   useEffect(() => {
     setUserName(user?.userName ?? '')
@@ -66,6 +69,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     setAccessFailedCount(user?.accessFailedCount ?? 0);
     setLockoutEnabled(deriveLocked(user))
   }, [user])
+  
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<{ userName?: string, email?: string, password?: string }>({})
 
@@ -101,12 +105,6 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       if (emailError) setErrors(prev => ({ ...prev, email: emailError }));
       else setErrors(prev => ({ ...prev, email: undefined })); // Clear error if valid
     }
-    // Password validation is only relevant if the field is present (not for new user creation anymore)
-    // if (field === 'password' && !isEditMode) { // This condition ensures it's not called for new user creation
-    //   const passwordError = validatePassword(value);
-    //   if (passwordError) setErrors(prev => ({ ...prev, password: passwordError }));
-    //   else setErrors(prev => ({ ...prev, password: undefined }));
-    // }
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -117,7 +115,6 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       if (!userName.trim()) newErrors.userName = "Tên đăng nhập không được để trống.";
       const emailError = validateEmail(email);
       if (emailError) newErrors.email = emailError;
-      // Password is no longer required for new user creation from this form
       
       setErrors(newErrors);
       if (Object.keys(newErrors).length > 0) {
@@ -133,16 +130,17 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
           role,
           lockoutEnabled: lockoutEnabled,
         }
-  if (!lockoutEnabled) (payload as any).lockoutEnd = null
-  console.debug('[UserForm] update payload', user.id, payload)
-  const resp = await userAdminService.update(user.id, payload)
-  console.debug('[UserForm] update response', resp)
+        if (!lockoutEnabled) (payload as any).lockoutEnd = null
+        console.debug('[UserForm] update payload', user.id, payload)
+        const resp = await userAdminService.update(user.id, payload)
+        console.debug('[UserForm] update response', resp)
+        onSaved?.(payload)
       } else { // When creating new user
-        // Assuming CreateUserRequest type is updated to accept email and not password directly
-        const payload: CreateUserRequest = { userName, email, role } // Changed payload
+        // Chỉ cần userName và email cho tạo mới
+        const payload: CreateUserRequest = { userName, email, role: 'PATIENT' }
         await userAdminService.create(payload)
+        onSaved?.(payload)
       }
-      onSaved?.()
     } catch (error: any) {
       // Xử lý lỗi từ server
       console.error('Lỗi khi lưu người dùng:', error);
@@ -181,127 +179,167 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
   };
 
   return (
-    <form onSubmit={submit} className={styles.formContainer}>
-      <div className={styles.grid}>
-        {!isEditMode && (
-          <>
-            <div>
-              <label className={styles.label}>Tên đăng nhập (Username)</label>
-              <input 
-                value={userName} 
-                onChange={e => { setUserName(e.target.value); if (errors.userName) setErrors(prev => ({ ...prev, userName: undefined })); }} 
-                required 
-                onBlur={e => validateOnBlur('userName', e.target.value)}
-                className={`${styles.input} ${errors.userName ? styles.inputError : ''}`}
-              />
-              {errors.userName && <div className={styles.errorText}>{errors.userName}</div>}
-            </div>
-            <div>
-              <label className={styles.label}>Email</label> {/* Changed from Password to Email */}
-              <input 
-                type="email" // Set type to email for better UX and validation
-                value={email} 
-                onChange={e => { setEmail(e.target.value); if (errors.email) setErrors(prev => ({ ...prev, email: undefined })); }} 
-                required 
-                onBlur={e => validateOnBlur('email', e.target.value)} // Validate email on blur
-                className={`${styles.input} ${errors.email ? styles.inputError : ''}`}
-              />
-              {errors.email && <div className={styles.errorText}>{errors.email}</div>}
-            </div>
-          </>
-        )}
-        {isEditMode && (
-          <>
-            <div>
-              <label className={styles.label}>Tên đăng nhập (Username)</label>
-              <input value={userName} disabled className={styles.input} />
-            </div>
-            <div>
-              <label className={styles.label}>Email</label>
-              <input type="email" value={email} disabled className={styles.input} />
-            </div>
-            <div>
-              <label className={styles.label}>Họ và tên</label>
-              <input value={fullName} onChange={e => setFullName(e.target.value)} required className={styles.input} disabled />
-            </div>
-            <div>
-              <label className={styles.label}>Số điện thoại</label>
-              <input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} className={styles.input} disabled />
-            </div>
-            <div>
-              <label className={styles.label}>Ngày sinh</label>
-              <input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} className={styles.input} disabled />
-            </div>
-            <div>
-              <label className={styles.label}>Số CMND/CCCD</label>
-              <input value={identificationNumber} onChange={e => setIdentificationNumber(e.target.value)} className={styles.input} disabled />
-            </div>
-            <div>
-              <label className={styles.label}>Giới tính</label>
-              <input
-                value={
-                  genderCode === 'MALE' ? 'Nam' :
-                  genderCode === 'FEMALE' ? 'Nữ' :
-                  genderCode === 'OTHER' ? 'Khác' : ''
-                }
-                disabled
-                className={styles.input}
-              />
-            </div>
-            <div>
-              <label className={styles.label}>Trạng thái tài khoản</label>
-              <div className={styles.statusContainer}>
-                <select 
-                  value={lockoutEnabled ? '1' : '0'} 
-                  onChange={e => setLockoutEnabled(e.target.value === '1')} 
-                  className={`${styles.statusSelect} ${lockoutEnabled ? styles.statusLocked : styles.statusActive}`}
-                >
-                  <option value="0">Hoạt động</option>
-                  <option value="1">Đang khóa</option>
-                </select>
-                <span className={styles.statusLabel}>{lockoutEnabled ? 'Tài khoản đang bị khóa' : 'Tài khoản hoạt động'}</span>
+    <div className={styles.formWrapper}>
+      <form onSubmit={submit} className={styles.formContainer}>
+        <div className={styles.formSections}>
+          {!isEditMode && (
+            <div className={styles.section}>
+              <div className={styles.sectionHeader}>
+                <i className="bi bi-person-plus"></i>
+                <h3>Thông tin cơ bản</h3>
+              </div>
+              <div className={styles.sectionContent}>
+                <div className={styles.grid}>
+                  <div className={styles.inputGroup}>
+                    <label className={styles.label}>Tên đăng nhập (Username)</label>
+                    <input 
+                      value={userName} 
+                      onChange={e => { setUserName(e.target.value); if (errors.userName) setErrors(prev => ({ ...prev, userName: undefined })); }} 
+                      required 
+                      onBlur={e => validateOnBlur('userName', e.target.value)}
+                      className={`${styles.input} ${errors.userName ? styles.inputError : ''}`}
+                      placeholder="Nhập tên đăng nhập"
+                    />
+                    {errors.userName && <div className={styles.errorText}>{errors.userName}</div>}
+                  </div>
+                  <div className={styles.inputGroup}>
+                    <label className={styles.label}>Email</label>
+                    <input 
+                      type="email"
+                      value={email} 
+                      onChange={e => { setEmail(e.target.value); if (errors.email) setErrors(prev => ({ ...prev, email: undefined })); }} 
+                      required 
+                      onBlur={e => validateOnBlur('email', e.target.value)}
+                      className={`${styles.input} ${errors.email ? styles.inputError : ''}`}
+                      placeholder="Nhập email"
+                    />
+                    {errors.email && <div className={styles.errorText}>{errors.email}</div>}
+                  </div>
+                </div>
               </div>
             </div>
-            <div>
-              <label className={styles.label}>Vai trò</label>
-              <select value={role} onChange={e => setRole(e.target.value)} className={styles.select}>
-                {/* <option value="ADMIN">Quản trị</option> */}
-                <option value="MANAGER">Quản lý</option>
-                <option value="DOCTOR">Bác sĩ</option>
-                <option value="PATIENT">Bệnh nhân</option>
-              </select>
-            </div>
-            <div>
-              <label className={styles.label}>Email đã xác thực</label>
-              <input value={emailConfirmed ? 'Đã xác thực' : 'Chưa xác thực'} disabled className={styles.input} />
-            </div>
-            <div>
-              <label className={styles.label}>Số lần đăng nhập sai</label>
-              <input type="number" value={accessFailedCount} disabled className={styles.input} />
-            </div>
-            <div>
-              <label className={styles.label}>Ngày tạo tài khoản</label>
-              <input value={createdAt ? new Date(createdAt).toLocaleString('vi-VN') : ''} disabled className={styles.input} />
-            </div>
-            <div>
-              <label className={styles.label}>Cập nhật lần cuối</label>
-              <input value={updatedAt ? new Date(updatedAt).toLocaleString('vi-VN') : ''} disabled className={styles.input} />
-            </div>
-          </>
-        )}
-      </div>
+          )}
+          
+          {isEditMode && (
+            <>
+              <div className={styles.section}>
+                <div className={styles.sectionHeader}>
+                  <i className="bi bi-person"></i>
+                  <h3>Thông tin cá nhân</h3>
+                </div>
+                <div className={styles.sectionContent}>
+                  <div className={styles.grid}>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Tên đăng nhập (Username)</label>
+                      <input value={userName} disabled className={styles.input} />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Email</label>
+                      <input type="email" value={email} disabled className={styles.input} />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Họ và tên</label>
+                      <input value={fullName} onChange={e => setFullName(e.target.value)} required className={styles.input} disabled />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Số điện thoại</label>
+                      <input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} className={styles.input} disabled />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Ngày sinh</label>
+                      <input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} className={styles.input} disabled />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Số CMND/CCCD</label>
+                      <input value={identificationNumber} onChange={e => setIdentificationNumber(e.target.value)} className={styles.input} disabled />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Giới tính</label>
+                      <input
+                        value={
+                          genderCode === 'MALE' ? 'Nam' :
+                          genderCode === 'FEMALE' ? 'Nữ' :
+                          genderCode === 'OTHER' ? 'Khác' : ''
+                        }
+                        disabled
+                        className={styles.input}
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Email đã xác thực</label>
+                      <input value={emailConfirmed ? 'Đã xác thực' : 'Chưa xác thực'} disabled className={styles.input} />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Số lần đăng nhập sai</label>
+                      <input type="number" value={accessFailedCount} disabled className={styles.input} />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Ngày tạo tài khoản</label>
+                      <input value={createdAt ? new Date(createdAt).toLocaleString('vi-VN') : ''} disabled className={styles.input} />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Cập nhật lần cuối</label>
+                      <input value={updatedAt ? new Date(updatedAt).toLocaleString('vi-VN') : ''} disabled className={styles.input} />
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-      <div className={styles.actionsContainer}>
-        {isEditMode && (
-          <button type="button" onClick={handleResetPassword} className={`${styles.button} ${styles.buttonDanger}`}>Đặt lại mật khẩu</button>
-        )}
-        <button type="button" onClick={onCancel} className={`${styles.button} ${styles.buttonSecondary}`}>
-          Hủy
-        </button>
-        <button type="submit" disabled={saving} className={`${styles.button} ${styles.buttonPrimary}`}>
-          {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-        </button>
-      </div>
-    </form>
+              <div className={styles.section}>
+                <div className={styles.sectionHeader}>
+                  <i className="bi bi-shield-check"></i>
+                  <h3>Quản lý tài khoản</h3>
+                </div>
+                <div className={styles.sectionContent}>
+                  <div className={styles.grid}>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Vai trò</label>
+                      <select value={role} onChange={e => setRole(e.target.value)} className={styles.select}>
+                        <option value="MANAGER">Quản lý</option>
+                        <option value="DOCTOR">Bác sĩ</option>
+                        <option value="PATIENT">Bệnh nhân</option>
+                      </select>
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Trạng thái tài khoản</label>
+                      <div className={styles.statusContainer}>
+                        <select 
+                          value={lockoutEnabled ? '1' : '0'} 
+                          onChange={e => setLockoutEnabled(e.target.value === '1')} 
+                          className={`${styles.statusSelect} ${lockoutEnabled ? styles.statusLocked : styles.statusActive}`}
+                        >
+                          <option value="0">Hoạt động</option>
+                          <option value="1">Đang khóa</option>
+                        </select>
+                        <span className={styles.statusLabel}>
+                          {lockoutEnabled ? 'Tài khoản đang bị khóa' : 'Tài khoản hoạt động'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className={styles.actionsContainer}>
+          {isEditMode && (
+            <button type="button" onClick={handleResetPassword} className={`${styles.button} ${styles.buttonDanger}`}>
+              <i className="bi bi-key"></i>
+              Đặt lại mật khẩu
+            </button>
+          )}
+          <button type="button" onClick={onCancel} className={`${styles.button} ${styles.buttonSecondary}`}>
+            <i className="bi bi-x-lg"></i>
+            Hủy
+          </button>
+          <button type="submit" disabled={saving} className={`${styles.button} ${styles.buttonPrimary}`}>
+            <i className="bi bi-check-lg"></i>
+            {saving ? 'Đang lưu...' : (isEditMode ? 'Cập nhật' : 'Tạo mới')}
+          </button>
+        </div>
+      </form>
+    </div>
   )
 }

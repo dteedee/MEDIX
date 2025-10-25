@@ -104,6 +104,10 @@ class ApiClient {
     return response.data;
   }
 
+  public getToken (): string | null {
+    return this.getAccessToken();
+  }
+  
   // Token management
   private getAccessToken(): string | null {
     const token = localStorage.getItem('accessToken');

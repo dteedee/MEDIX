@@ -77,6 +77,7 @@ namespace Medix.API.Business.Services.Community
                 message.Body = new TextPart("html") { Text = body };
 
                 using var client = new SmtpClient();
+                Console.WriteLine($"Connecting to SMTP server {emailSettings["SMTPServer"]}:{emailSettings["Port"]}...");
                 await client.ConnectAsync(emailSettings["SMTPServer"],
                     int.Parse(emailSettings["Port"]), SecureSocketOptions.StartTls);
                 await client.AuthenticateAsync(emailSettings["Username"], emailSettings["Password"]);

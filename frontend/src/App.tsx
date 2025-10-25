@@ -50,6 +50,8 @@ import ArticleReaderPage from './pages/patient/ArticleReaderPage';
 import ArticleDetailPage from './pages/patient/ArticleDetailPage';
 import DoctorBookingList from './pages/patient/DoctorBookingList';
 import ErrorPageWrapper from './pages/ErrorPageWrapper';
+import DoctorProfileList from './pages/manager/DoctorProfileList';
+import DoctorProfileDetails from './pages/manager/DoctorProfileDetails';
 
 export function App() {
   return (
@@ -140,6 +142,8 @@ export function App() {
                       <Route path="cms-pages" element={<CmsPageList />} />
                       <Route path="cms-pages/new" element={<CmsPageEditPage />} />
                       <Route path="cms-pages/edit/:id" element={<CmsPageEditPage />} />
+                      <Route path='doctor-profiles' element={<DoctorProfileList />} />
+                      <Route path='doctor-profiles/details/:id' element={<DoctorProfileDetails />} />
                     </Routes>
                   </ProtectedRoute>
                 } />

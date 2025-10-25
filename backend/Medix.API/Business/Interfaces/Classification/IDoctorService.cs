@@ -1,3 +1,4 @@
+using Medix.API.Business.Helper;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
 
@@ -11,5 +12,8 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<DoctorProfileDto?> GetDoctorProfileByUserNameAsync(string userName);
         Task<Doctor?> GetDoctorByUserIdAsync(Guid userId);
         Task<bool> UpdateDoctorProfileAsync(Doctor existingDoctor, DoctorProfileUpdateRequest req);
+        Task<PagedList<Doctor>> GetPendingDoctorsAsync(DoctorProfileQuery query);
+        Task ReviewDoctorProfile(DoctorProfileReviewRequest request, Guid doctorId);
+        Task<Doctor?> GetDoctorByIdAsync(Guid id);
     }
 }

@@ -1,4 +1,4 @@
-using Medix.API.DataAccess;
+using Medix.API.Business.Helper;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -57,6 +57,42 @@ namespace Medix.API.DataAccess.Repositories.Classification
             _context.Doctors.Update(doctor);
             await _context.SaveChangesAsync();
             return doctor;
+        }
+
+        public async Task<PagedList<Doctor>> GetPendingDoctorsAsync(DoctorProfileQuery query)
+        {
+            var doctorQueryable = _context.Doctors
+                .Where(d => d.User.Status == 2)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(query.SearchTerm))
+            {
+                doctorQueryable = doctorQueryable
+                    .Where(d => d.User.UserName.Contains(query.SearchTerm) ||
+                        d.Specialization.Name.Contains(query.SearchTerm) || 
+                        d.User.NormalizedEmail.Contains(query.SearchTerm.ToUpper()));
+            }
+
+            var doctors = await doctorQueryable
+                .Include(d => d.User)
+                .Include(d => d.Specialization)
+                .Skip((query.Page - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .ToListAsync();
+
+            return new PagedList<Doctor>
+            {
+                Items = doctors,
+                TotalPages = (int)Math.Ceiling((double)await doctorQueryable.CountAsync() / query.PageSize),
+            };
+        }
+
+        public async Task<Doctor?> GetDoctorByIdAsync(Guid doctorId)
+        {
+            return await _context.Doctors
+                .Include(d => d.User)
+                .Include(d => d.Specialization)
+                .FirstOrDefaultAsync(d => d.Id == doctorId);
         }
     }
 }

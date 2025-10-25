@@ -39,17 +39,17 @@ export interface SpecializationDto {
   name: string;
 }
 
-export interface DoctorRegisterMetadata{
+export interface DoctorRegisterMetadata {
   specializations: SpecializationDto[];
 }
 
-export interface ReviewDto{
+export interface ReviewDto {
   rating: number;
   comment: string;
   date: string;
 }
 
-export interface DoctorProfileDto{
+export interface DoctorProfileDto {
   avatarUrl: string;
   fullName: string;
   averageRating: number;
@@ -61,7 +61,7 @@ export interface DoctorProfileDto{
   education: string;
 }
 
-export interface DoctorProfileDetails{
+export interface DoctorProfileDetails {
   userName: string;
   email: string;
   avatarUrl: string;
@@ -73,4 +73,38 @@ export interface DoctorProfileDetails{
   bio: string;
   yearsOfExperience: number;
   consultationFee: string;
+}
+
+export interface DoctorRegisterProfile {
+  id: string;
+  fullName: string;
+  email: string;
+  specialization: string;
+  createdAt: string;
+}
+
+export interface DoctorRegisterProfileList {
+  totalPages: number;
+  doctors: DoctorRegisterProfile[];
+}
+
+export interface DoctorProfileQuery {
+  page: number;
+  searchTerm: string;
+}
+
+export interface DoctorRegisterProfileDetails {
+  fullName: string;
+  userName: string;
+  dob: string;
+  gender: string;
+  identificationNumber: string;
+  email: string;
+  phoneNumber: string;
+  specialization: string;
+  licenseUrl: string;
+  licenseNumber: string;
+  bio: string;
+  education: string;
+  yearsOfExperience: number;
 }

@@ -4,7 +4,7 @@ import { authService } from '../../services/authService';
 import { apiClient } from '../../lib/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import styles from '../../styles/login.module.css';
+import styles from '../../styles/auth/login.module.css';
 
 const GOOGLE_CLIENT_ID = import.meta.env?.VITE_GOOGLE_CLIENT_ID as string | undefined;
 

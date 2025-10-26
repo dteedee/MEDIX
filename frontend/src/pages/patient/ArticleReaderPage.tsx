@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArticleDTO } from '../../types/article.types'
-import { Sidebar } from '../../components/layout/Sidebar'
-import '../../styles/ArticleReaderPage.css'
 
 export default function ArticleReaderPage() {
   const location = useLocation();

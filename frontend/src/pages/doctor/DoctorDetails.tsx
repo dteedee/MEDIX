@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 
-import styles from '../../styles/doctor-details.module.css'
+import styles from '../../styles/doctor/doctor-details.module.css'
 import { useEffect, useState } from "react";
 import doctorService from "../../services/doctorService";
 import { DoctorProfileDto } from "../../types/doctor.types";

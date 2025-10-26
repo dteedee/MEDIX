@@ -3,8 +3,8 @@ import { CategoryDTO, CreateCategoryRequest } from '../../types/category.types'
 import { categoryService } from '../../services/categoryService'
 import { useToast } from '../../contexts/ToastContext'
 
-import formStyles from '../../styles/Form.module.css'
-import styles from '../../styles/CategoryForm.module.css'
+import formStyles from '../../styles/manager/Form.module.css'
+import styles from '../../styles/manager/CategoryForm.module.css'
 interface Props {
   category?: CategoryDTO
   onSaved?: () => void

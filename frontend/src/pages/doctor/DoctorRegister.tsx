@@ -1,4 +1,4 @@
-import styles from '../../styles/doctor-register.module.css'
+import styles from '../../styles/doctor/doctor-register.module.css'
 
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
@@ -49,7 +49,7 @@ function DoctorRegister() {
         const agreed = formData.get('agreeToTerms') === 'on'; // checkbox returns 'on' if checked
 
         if (!agreed) {
-            setErrors({ AgreeToTerms: 'Bạn phải đồng ý với điều khoản trước khi đăng ký.' });
+            setErrors({ AgreeToTerms: 'Vui lòng đọc và đồng ý với điều khoản trước khi đăng ký' });
             return;
         }
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { BannerDTO } from '../../types/banner.types';
-import styles from '../../styles/BannerDetails.module.css';
+import styles from '../../styles/manager/BannerDetails.module.css';
 
 interface Props {
   banner: BannerDTO | null;

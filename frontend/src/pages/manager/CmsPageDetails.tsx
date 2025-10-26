@@ -1,6 +1,6 @@
 import React from 'react'
 import { CmsPageDTO } from '../../types/cmspage.types'
-import styles from '../../styles/CmsPageDetails.module.css'
+import styles from '../../styles/manager/CmsPageDetails.module.css'
 
 interface Props {
   page: CmsPageDTO | null;

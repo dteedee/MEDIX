@@ -161,18 +161,16 @@ export const Header: React.FC = () => {
                                 <a href="/login" className={styles["btn-login"]}>
                                     {t('header.login')}
                                 </a>
-                                <a href="#" className={styles["btn-register"]} data-bs-toggle="dropdown" aria-expanded="false">
-                                    {t('header.register')}
-                                </a>
-                                <ul className="dropdown-menu">
-                                    <li><a className="dropdown-item" href="/patient-register">{t('header.register.patient')}</a></li>
-                                    <li><a className="dropdown-item" href="/doctor/register">{t('header.register.doctor')}</a></li>
-                                </ul>
+                                <div className="dropdown">
+                                    <a href="#" className={styles["btn-register"]} data-bs-toggle="dropdown" aria-expanded="false">
+                                        {t('header.register')}
+                                    </a>
+                                    <ul className={`dropdown-menu ${styles["register-dropdown"]}`}>
+                                        <li><a className="dropdown-item" href="/patient-register">{t('header.register.patient')}</a></li>
+                                        <li><a className="dropdown-item" href="/doctor/register">{t('header.register.doctor')}</a></li>
+                                    </ul>
+                                </div>
                             </div>
-                            <ul className="dropdown-menu">
-                                <li><a className="dropdown-item" href="/patient-register">{t('header.register.patient')}</a></li>
-                                <li><a className="dropdown-item" href="/doctor/register">{t('header.register.doctor')}</a></li>
-                            </ul>
                             
                             {/* Language Selector */}
                             <div className={styles['language-selector']}>

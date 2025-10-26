@@ -4,7 +4,7 @@ import { cmspageService } from '../../services/cmspageService'
 import { CmsPageDTO } from '../../types/cmspage.types'
 import CmsPageDetails from './CmsPageDetails'
 import { useToast } from '../../contexts/ToastContext'
-import styles from '../../styles/CmsPageList.module.css'
+import styles from '../../styles/manager/CmsPageList.module.css'
 
 // SVG Icons for actions
 const ViewIcon = () => (

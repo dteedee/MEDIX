@@ -24,8 +24,8 @@ const Footer: React.FC = () => {
         <div className={styles["footer-section"]}>
           <h3>{t('footer.links.title')}</h3>
           <ul>
-            <li><a href="#">{t('footer.links.home')}</a></li>
-            <li><a href="#">{t('footer.links.about')}</a></li>
+            <li><a href="/">{t('footer.links.home')}</a></li>
+            <li><a href="/about">{t('footer.links.about')}</a></li>
             <li><a href="#">{t('footer.links.doctors')}</a></li>
             <li><a href="#">{t('footer.links.healthArticles')}</a></li>
           </ul>
@@ -46,7 +46,16 @@ const Footer: React.FC = () => {
           <h3>{t('footer.contact.title')}</h3>
           <ul>
             <li>
-              <a>Email: Chamsockhachhangmedix@gmail.com</a>
+              <a>Email: medix.sp@gmail.com</a>
+            </li>
+            <li>
+              <a>Hotline: 0969.995.633</a>
+            </li>
+            <li>
+              <a>Website: www.medix.com</a>
+            </li>
+            <li>
+              <a>Địa chỉ: FPT University</a>
             </li>
           </ul>
         </div>

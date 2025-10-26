@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { CmsPageDTO, CreateCmsPageRequest } from '../../types/cmspage.types'
 import { cmspageService } from '../../services/cmspageService'
 import { useToast } from '../../contexts/ToastContext'
-import formStyles from '../../styles/Form.module.css'
-import styles from '../../styles/CmsPageForm.module.css'
+import formStyles from '../../styles/manager/Form.module.css'
+import styles from '../../styles/manager/CmsPageForm.module.css'
 
 interface Props { page?: CmsPageDTO; onSaved?: () => void; onCancel?: () => void }
 

@@ -1,6 +1,6 @@
 import React from 'react'
 import { CategoryDTO } from '../../types/category.types'
-import styles from '../../styles/CategoryDetails.module.css'
+import styles from '../../styles/manager/CategoryDetails.module.css'
 
 interface Props { category?: CategoryDTO; onClose?: () => void }
 

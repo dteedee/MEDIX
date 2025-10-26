@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArticleDTO } from '../../types/article.types';
-import styles from '../../styles/ArticleDetails.module.css';
+import styles from '../../styles/manager/ArticleDetails.module.css';
 
 interface Props {
   article: ArticleDTO | null;

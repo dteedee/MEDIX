@@ -120,21 +120,21 @@ function HomePage() {
             <section className={styles["hero"]}>
                 {/* Floating Elements */}
                 <div className={styles["floating-elements"]}>
-                    <div className={styles["floating-card"]} style={{ top: '15%', left: '5%' }}>
-                    <div className={styles["floating-icon"]}>🏥</div>
-                    <div className={styles["floating-text"]}>{t('hero.healthcare')}</div>
+                    <div className={styles["floating-card"]}>
+                        <div className={styles["floating-icon"]}>🏥</div>
+                        <div className={styles["floating-text"]}>{t('hero.healthcare')}</div>
                     </div>
-                    <div className={styles["floating-card"]} style={{ top: '25%', right: '8%' }}>
-                    <div className={styles["floating-icon"]}>👨‍⚕️</div>
-                    <div className={styles["floating-text"]}>{t('hero.doctor')}</div>
+                    <div className={styles["floating-card"]}>
+                        <div className={styles["floating-icon"]}>👨‍⚕️</div>
+                        <div className={styles["floating-text"]}>{t('hero.doctor')}</div>
                     </div>
-                    <div className={styles["floating-card"]} style={{ bottom: '20%', left: '8%' }}>
-                    <div className={styles["floating-icon"]}>🤖</div>
-                    <div className={styles["floating-text"]}>{t('hero.ai')}</div>
+                    <div className={styles["floating-card"]}>
+                        <div className={styles["floating-icon"]}>🤖</div>
+                        <div className={styles["floating-text"]}>{t('hero.ai')}</div>
                     </div>
-                    <div className={styles["floating-card"]} style={{ bottom: '25%', right: '5%' }}>
-                    <div className={styles["floating-icon"]}>📱</div>
-                    <div className={styles["floating-text"]}>{t('hero.booking')}</div>
+                    <div className={styles["floating-card"]}>
+                        <div className={styles["floating-icon"]}>📱</div>
+                        <div className={styles["floating-text"]}>{t('hero.booking')}</div>
                     </div>
                 </div>
                 <div className={styles["hero-content"]}>
@@ -159,27 +159,30 @@ function HomePage() {
                             </div>
                         </div>
                     </div>
-                    <div id="carouselBanner" className="carousel slide" data-bs-ride="carousel" data-bs-interval="5000">
-                        <div className="carousel-inner">
+                    <div id="carouselBanner" className={`carousel slide ${styles["modern-carousel"]}`} data-bs-ride="carousel" data-bs-interval="6000">
+                        <div className={`carousel-inner ${styles["carousel-inner-custom"]}`}>
                             {homeMetadata?.bannerUrls.map((bannerUrl, index) => (
                                 <div className={`carousel-item${index === 0 ? ' active' : ''}`} key={index}>
-                                    <img
-                                        src={bannerUrl}
-                                        className="d-block w-100"
-                                        alt={`Banner ${index + 1}`}
-                                    />
+                                    <div className={styles["banner-container"]}>
+                                        <img
+                                            src={bannerUrl}
+                                            className={styles["banner-image"]}
+                                            alt={`Banner ${index + 1}`}
+                                        />
+                                        <div className={styles["banner-overlay"]}></div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                        <button className="carousel-control-prev" type="button" data-bs-target="#carouselBanner" data-bs-slide="prev">
+                        <button className={`carousel-control-prev ${styles["carousel-control-custom"]}`} type="button" data-bs-target="#carouselBanner" data-bs-slide="prev">
                             <span className="carousel-control-prev-icon" aria-hidden="true" />
                             <span className="visually-hidden">Previous</span>
                         </button>
-                        <button className="carousel-control-next" type="button" data-bs-target="#carouselBanner" data-bs-slide="next">
+                        <button className={`carousel-control-next ${styles["carousel-control-custom"]}`} type="button" data-bs-target="#carouselBanner" data-bs-slide="next">
                             <span className="carousel-control-next-icon" aria-hidden="true" />
                             <span className="visually-hidden">Next</span>
                         </button>
-                        <div className="carousel-indicators">
+                        <div className={`carousel-indicators ${styles["carousel-indicators-custom"]}`}>
                             {homeMetadata?.bannerUrls.map((_, index) => (
                                 <button
                                     key={index}

@@ -189,6 +189,169 @@ body {
     }
 }
 
+/* --- Modern Banner Carousel Styles --- */
+.modern-carousel {
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(33, 150, 243, 0.25);
+    position: relative;
+    animation: fadeInScale 0.8s ease-out;
+}
+
+@keyframes fadeInScale {
+    0% {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.carousel-inner-custom {
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.banner-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 500px;
+    overflow: hidden;
+}
+
+.banner-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s ease;
+    min-height: 500px;
+}
+
+.banner-container:hover .banner-image {
+    transform: scale(1.05);
+}
+
+.banner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        135deg,
+        rgba(33, 150, 243, 0.15) 0%,
+        rgba(25, 118, 210, 0.25) 50%,
+        rgba(13, 71, 161, 0.35) 100%
+    );
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.carousel-item {
+    transition: opacity 0.8s ease-in-out;
+}
+
+.carousel-item-next:not(.carousel-item-start),
+.active.carousel-item-end {
+    transform: translateX(100%);
+}
+
+.carousel-item-prev:not(.carousel-item-end),
+.active.carousel-item-start {
+    transform: translateX(-100%);
+}
+
+/* Modern Carousel Controls - Hidden */
+.carousel-control-custom {
+    display: none !important;
+}
+
+/* Modern Indicators */
+.carousel-indicators-custom {
+    bottom: 25px;
+    margin-bottom: 0;
+    gap: 10px;
+}
+
+.carousel-indicators-custom button {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    margin: 0;
+    transition: all 0.4s ease;
+}
+
+.carousel-indicators-custom button.active {
+    background: linear-gradient(135deg, #2196f3, #1976d2);
+    width: 30px;
+    border-radius: 6px;
+    border: 2px solid white;
+    box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+}
+
+/* Pulse animation for active indicator */
+.carousel-indicators-custom button.active::before {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid rgba(33, 150, 243, 0.4);
+    animation: pulse 1.5s ease-in-out infinite;
+    top: -9px;
+    left: -9px;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+/* Responsive Banner */
+@media (max-width: 768px) {
+    .banner-container {
+        min-height: 350px;
+    }
+    
+    .banner-image {
+        min-height: 350px;
+    }
+}
+
+@media (max-width: 480px) {
+    .banner-container {
+        min-height: 280px;
+    }
+    
+    .banner-image {
+        min-height: 280px;
+    }
+    
+    .carousel-indicators-custom {
+        bottom: 15px;
+    }
+    
+    .carousel-indicators-custom button {
+        width: 8px;
+        height: 8px;
+    }
+    
+    .carousel-indicators-custom button.active {
+        width: 20px;
+    }
+}
+
 /* --- Floating Cards (Hero background icons) --- */
 .floating-elements {
     position: absolute;
@@ -226,24 +389,28 @@ body {
 
 /* Vị trí và chuyển động */
 .floating-card:nth-child(1) {
-    top: 12%;
-    left: 5%;
+    top: 8%;
+    left: 2%;
     animation: floatAround1 16s ease-in-out infinite;
+    z-index: 10;
 }
 .floating-card:nth-child(2) {
-    top: 22%;
-    right: 8%;
+    top: 15%;
+    right: 2%;
     animation: floatAround2 18s ease-in-out infinite reverse;
+    z-index: 10;
 }
 .floating-card:nth-child(3) {
-    bottom: 20%;
-    left: 10%;
+    bottom: 25%;
+    left: 2%;
     animation: floatAround3 20s ease-in-out infinite;
+    z-index: 10;
 }
 .floating-card:nth-child(4) {
-    bottom: 25%;
-    right: 6%;
+    bottom: 30%;
+    right: 2%;
     animation: floatAround4 22s ease-in-out infinite reverse;
+    z-index: 10;
 }
 
 /* Giới hạn vùng bay */
@@ -929,13 +1096,7 @@ body {
         gap: 20px;
     }
     
-    .hero .carousel-inner {
-        height: 400px;
-    }
-    
-    .hero .carousel-item {
-        height: 400px;
-    }
+
 }
 
 @media (max-width: 768px) {
@@ -975,27 +1136,6 @@ body {
         font-size: 18px;
     }
     
-    .hero .carousel-inner {
-        height: 300px;
-    }
-    
-    .hero .carousel-item {
-        height: 300px;
-    }
-    
-    .hero .carousel-control-prev,
-    .hero .carousel-control-next {
-        width: 45px;
-        height: 45px;
-    }
-    
-    .hero .carousel-control-prev {
-        left: 10px;
-    }
-    
-    .hero .carousel-control-next {
-        right: 10px;
-    }
     
     /* Hide floating elements on mobile */
     .floating-elements {
@@ -1063,26 +1203,6 @@ body {
         font-size: 12px;
     }
     
-    .hero .carousel-inner {
-        height: 250px;
-    }
-    
-    .hero .carousel-item {
-        height: 250px;
-    }
-    
-    .hero .carousel-control-prev,
-    .hero .carousel-control-next {
-        width: 40px;
-        height: 40px;
-    }
-    
-    .hero .carousel-control-prev-icon,
-    .hero .carousel-control-next-icon {
-        width: 16px;
-        height: 16px;
-        background-size: 16px 16px;
-    }
 }
 
 .ai-bubble {
@@ -1117,12 +1237,6 @@ body {
     border: 1px solid white;
 }
 
-.carousel-img {
-    height: 300px;
-    /* Set a fixed height */
-    object-fit: cover;
-    /* Crop and scale to fill */
-}
 
 /* --- Back to Top Button --- */
 .back-to-top {

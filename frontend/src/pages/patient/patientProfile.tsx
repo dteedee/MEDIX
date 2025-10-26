@@ -258,9 +258,13 @@ export const PatientProfile: React.FC = () => {
         ? updatedUser.username 
         : editData.username || data?.username || '';
       
+      // Preserve imageURL from current data - API might not return avatarUrl
+      const preservedImageURL = updatedUser.imageURL || data?.imageURL;
+      
       const updatedData: ExtendedUserInfo = {
         ...updatedUser,
         username: finalUsername,
+        imageURL: preservedImageURL, // Keep current avatar if API doesn't return it
         cccd: (updatedUser as any).cccd || data?.cccd,
         gender: (updatedUser as any).gender || data?.gender,
         bloodType: (updatedUser as any).bloodType || data?.bloodType,
@@ -279,7 +283,7 @@ export const PatientProfile: React.FC = () => {
         fullName: updatedData.fullName || undefined,
         email: updatedData.email || undefined,
         phoneNumber: updatedData.phoneNumber || undefined,
-        avatarUrl: updatedData.imageURL || undefined
+        avatarUrl: preservedImageURL || undefined
       });
       
     } catch (e: any) {

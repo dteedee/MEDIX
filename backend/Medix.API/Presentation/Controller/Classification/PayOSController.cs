@@ -1,4 +1,5 @@
 ﻿using API.Models.DTOs;
+using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.PayOSDto;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -38,6 +39,55 @@ namespace Medix.API.Presentation.Controller.Classification
                 Console.WriteLine(exception);
                 return Ok(new Response(-1, "fail", null));
             }
+        }
+
+        [HttpGet("{orderId}")]
+        public async Task<IActionResult> GetOrder([FromRoute] int orderId)
+        {
+            try
+            {
+                PaymentLinkInformation paymentLinkInformation = await _payOS.getPaymentLinkInformation(orderId);
+                return Ok(new Response(0, "Ok", paymentLinkInformation));
+            }
+            catch (System.Exception exception)
+            {
+
+                Console.WriteLine(exception);
+                return Ok(new Response(-1, "fail", null));
+            }
+
+        }
+        [HttpPut("cancel/{orderId}")]
+        public async Task<IActionResult> CancelOrder([FromRoute] int orderId)
+        {
+            try
+            {
+                PaymentLinkInformation paymentLinkInformation = await _payOS.cancelPaymentLink(orderId);
+                return Ok(new Response(0, "Ok", paymentLinkInformation));
+            }
+            catch (System.Exception exception)
+            {
+
+                Console.WriteLine(exception);
+                return Ok(new Response(-1, "fail", null));
+            }
+
+        }
+        [HttpPost("confirm-webhook")]
+        public async Task<IActionResult> ConfirmWebhook(ConfirmWebhook body)
+        {
+            try
+            {
+                await _payOS.confirmWebhook(body.webhook_url);
+                return Ok(new Response(0, "Ok", null));
+            }
+            catch (System.Exception exception)
+            {
+
+                Console.WriteLine(exception);
+                return Ok(new Response(-1, "fail", null));
+            }
+
         }
 
     }

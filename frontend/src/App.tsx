@@ -13,6 +13,7 @@ import Footer from './components/layout/Footer';
 import Sidebar from './components/layout/Sidebar';
 import AdminLayout from './components/layout/AdminLayout';
 import PatientLayout from './components/layout/PatientLayout';
+import ManagerLayout from './components/layout/ManagerLayout';
 import PublicLayout from './components/layout/PublicLayout';
 
 // Auth pages
@@ -40,15 +41,14 @@ import DoctorDetails from './pages/doctor/DoctorDetails';
 import ScheduleManagement from './pages/doctor/ScheduleManagement';
 import DoctorProfileEdit from './pages/doctor/DoctorProfileEdit';
 
-// CMS Management pages
-import BannerList from './pages/manager/BannerList';
-import ArticleList from './pages/manager/ArticleList';
-import CategoryList from './pages/manager/CategoryList';
-import CmsPageList from './pages/manager/CmsPageList';
-import ArticleEditPage from './pages/manager/ArticleEditPage';
-import CategoryEditPage from './pages/manager/CategoryEditPage';
-import BannerEditPage from './pages/manager/BannerEditPage';
-import CmsPageEditPage from './pages/manager/CmsPageEditPage';
+// Manager pages
+import ArticleManagement from './pages/manager/ArticleManagement';
+import BannerManagement from './pages/manager/BannerManagement';
+import DoctorManagement from './pages/manager/DoctorManagement';
+import ReportsAndAnalytics from './pages/manager/ReportsAndAnalytics';
+import ServicePackageManagement from './pages/manager/ServicePackageManagement';
+import CommissionManagement from './pages/manager/CommissionManagement';
+import FeedbackManagement from './pages/manager/FeedbackManagement';
 import UserList from './pages/admin/UserList';
 import UserEditPage from './pages/admin/UserEditPage';
 import TrackingPage from './pages/admin/TrackingPage';
@@ -122,24 +122,20 @@ export function App() {
 
                 {/* ---------- Manager routes ---------- */}
                 <Route path="manager/*" element={
-                  // <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
-                    <Routes>
-                      <Route index element={<ManageDashboard />} />
-                      <Route path="banners" element={<BannerList />} />
-                      <Route path="banners/new" element={<BannerEditPage />} />
-                      <Route path="banners/edit/:id" element={<BannerEditPage />} />
-                      <Route path="articles" element={<ArticleList />} />
-                      <Route path="articles/new" element={<ArticleEditPage />} />
-                      <Route path="articles/edit/:id" element={<ArticleEditPage />} />
-                      <Route path="categories" element={<CategoryList />} />
-                      <Route path="categories/new" element={<CategoryEditPage />} />
-                      <Route path="categories/edit/:id" element={<CategoryEditPage />} />
-                      <Route path="cms-pages" element={<CmsPageList />} />
-                      <Route path="cms-pages/new" element={<CmsPageEditPage />} />
-                      <Route path="cms-pages/edit/:id" element={<CmsPageEditPage />} />
-                    </Routes>
-                  // </ProtectedRoute>
-                } />
+                  <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
+                    <ManagerLayout />
+                  </ProtectedRoute>
+                }>
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<ManageDashboard />} />
+                  <Route path="doctors" element={<DoctorManagement />} />
+                  <Route path="reports" element={<ReportsAndAnalytics />} />
+                  <Route path="articles" element={<ArticleManagement />} />
+                  <Route path="banners" element={<BannerManagement />} />
+                  <Route path="services" element={<ServicePackageManagement />} />
+                  <Route path="commissions" element={<CommissionManagement />} />
+                  <Route path="feedback" element={<FeedbackManagement />} />
+                </Route>
 
                 {/* ---------- Patient routes ---------- */}
                 <Route path="patient/*" element={

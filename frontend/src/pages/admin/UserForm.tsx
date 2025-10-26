@@ -233,8 +233,21 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
         showToast('Đang cập nhật thông tin người dùng...', 'info')
         // Khi chỉnh sửa, chỉ gửi những trường được phép thay đổi: role và lockoutEnabled
         const payload: UpdateUserRequest = {
+          // Giữ lại các giá trị hiện có của người dùng
+          fullName: user.fullName ?? '',
+          phoneNumber: user.phoneNumber ?? undefined,
+          address: user.address ?? undefined,
+          avatarUrl: user.avatarUrl ?? undefined,
+          dateOfBirth: user.dateOfBirth ?? undefined,
+          genderCode: user.genderCode ?? undefined,
+          identificationNumber: user.identificationNumber ?? undefined,
+          emailConfirmed: user.emailConfirmed ?? false,
+          isProfileCompleted: (user as any).isProfileCompleted ?? false,
+          accessFailedCount: user.accessFailedCount ?? 0,
+
+          // Các trường có thể thay đổi
           role,
-          lockoutEnabled: lockoutEnabled,
+          lockoutEnabled,
         }
         if (!lockoutEnabled) (payload as any).lockoutEnd = null
         console.debug('[UserForm] update payload', user.id, payload)
@@ -417,9 +430,10 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                     <div className={styles.inputGroup}>
                       <label className={styles.label}>Vai trò</label>
                       <select value={role} onChange={e => setRole(e.target.value)} className={styles.select}>
-                        <option value="MANAGER">Quản lý</option>
-                        <option value="DOCTOR">Bác sĩ</option>
-                        <option value="PATIENT">Bệnh nhân</option>
+                        <option value="Admin">Quản trị viên</option>
+                        <option value="Manager">Quản lý</option>
+                        <option value="Doctor">Bác sĩ</option>
+                        <option value="Patient">Bệnh nhân</option>
                       </select>
                     </div>
                     <div className={styles.inputGroup}>

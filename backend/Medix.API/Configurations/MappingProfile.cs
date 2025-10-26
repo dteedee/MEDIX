@@ -19,7 +19,10 @@ namespace Medix.API.Configurations
     {
         public MappingProfile()
         {
-            CreateMap<User, UserDto>();
+            CreateMap<User, UserDto>()
+                .ForMember(dest => dest.Role, opt => opt.MapFrom(
+                    src => src.UserRoles.FirstOrDefault().RoleCodeNavigation.DisplayName ?? "Patient"
+                ));
             CreateMap<Patient, PatientDTO>();
             CreateMap<Cmspage, CmspageDto>();
             CreateMap<ContentCategory, ContentCategoryDTO>();

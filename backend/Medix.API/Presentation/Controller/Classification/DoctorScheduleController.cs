@@ -20,7 +20,6 @@ namespace Medix.API.Presentation.Controller.Classification
             _doctorService = doctorService;
         }
 
-        // ✅ Lấy lịch của chính bác sĩ đang đăng nhập
         [HttpGet("me")]
         public async Task<IActionResult> GetMySchedules()
         {

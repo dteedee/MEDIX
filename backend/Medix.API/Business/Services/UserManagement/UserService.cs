@@ -191,9 +191,10 @@ namespace Medix.API.Business.Services.UserManagement
         public async Task<UserDto> UpdateAsync(Guid id, UpdateUserDTO userUpdateDto)
         {
             var user = await _userRepository.GetByIdAsync(id);
-            if (user == null) throw new NotFoundException($"User with ID {id} not found");
+            if (user == null)
+                throw new NotFoundException($"User with ID {id} not found");
 
-            // Update basic information
+            // 1️⃣ Update basic info
             user.FullName = userUpdateDto.FullName;
             user.PhoneNumber = userUpdateDto.PhoneNumber;
             user.Address = userUpdateDto.Address;
@@ -203,39 +204,56 @@ namespace Medix.API.Business.Services.UserManagement
             user.IdentificationNumber = userUpdateDto.IdentificationNumber;
             user.EmailConfirmed = userUpdateDto.EmailConfirmed;
             user.IsProfileCompleted = userUpdateDto.IsProfileCompleted;
-
-            // Update role and security settings
-            user.Role = userUpdateDto.Role;
             user.LockoutEnabled = userUpdateDto.LockoutEnabled;
             user.LockoutEnd = userUpdateDto.LockoutEnd;
             user.AccessFailedCount = userUpdateDto.AccessFailedCount;
-
             user.UpdatedAt = DateTime.UtcNow;
-      
 
-            var updatedUser = await _userRepository.UpdateAsync(user);
+            // 2️⃣ Update role
+            if (!string.IsNullOrWhiteSpace(userUpdateDto.Role))
+            {
+                var role = await _userRoleRepository.GetRoleByDisplayNameAsync(userUpdateDto.Role);
+                if (role != null)
+                {
+                    await _userRoleRepository.RemoveAllRolesForUserAsync(user.Id);
+                    await _userRoleRepository.CreateAsync(new UserRole
+                    {
+                        UserId = user.Id,
+                        RoleCode = role.Code,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
 
+            // 3️⃣ Lưu lại user (chỉ cập nhật thông tin cá nhân, không đụng roles)
+            await _userRepository.UpdateAsync(user);
+
+            // 4️⃣ Load lại user để lấy role mới
+            var refreshedUser = await _userRepository.GetByIdAsync(id);
+
+            // 5️⃣ Map ra DTO
             return new UserDto
             {
-                Id = updatedUser.Id,
-                Email = updatedUser.Email,
-                FullName = updatedUser.FullName,
-                PhoneNumber = updatedUser.PhoneNumber,
-                Role = updatedUser.Role,
-                EmailConfirmed = updatedUser.EmailConfirmed,
-                CreatedAt = updatedUser.CreatedAt,
-                GenderCode = updatedUser.GenderCode,
-                IdentificationNumber = updatedUser.IdentificationNumber,
-                DateOfBirth = updatedUser.DateOfBirth,
-                UserName = updatedUser.UserName,
-                Address = updatedUser.Address,
-                AvatarUrl = updatedUser.AvatarUrl,
-                IsProfileCompleted = updatedUser.IsProfileCompleted,
-                LockoutEnd = updatedUser.LockoutEnd,
-                LockoutEnabled = updatedUser.LockoutEnabled,
-                AccessFailedCount = updatedUser.AccessFailedCount
+                Id = refreshedUser.Id,
+                Email = refreshedUser.Email,
+                FullName = refreshedUser.FullName,
+                PhoneNumber = refreshedUser.PhoneNumber,
+                Role = refreshedUser.UserRoles.FirstOrDefault()?.RoleCodeNavigation?.DisplayName ?? "Patient",
+                EmailConfirmed = refreshedUser.EmailConfirmed,
+                CreatedAt = refreshedUser.CreatedAt,
+                DateOfBirth = refreshedUser.DateOfBirth,
+                GenderCode = refreshedUser.GenderCode,
+                IdentificationNumber = refreshedUser.IdentificationNumber,
+                UserName = refreshedUser.UserName,
+                Address = refreshedUser.Address,
+                AvatarUrl = refreshedUser.AvatarUrl,
+                IsProfileCompleted = refreshedUser.IsProfileCompleted,
+                LockoutEnd = refreshedUser.LockoutEnd,
+                LockoutEnabled = refreshedUser.LockoutEnabled,
+                AccessFailedCount = refreshedUser.AccessFailedCount
             };
         }
+
 
 
         public async Task<bool> DeleteAsync(Guid id)
@@ -258,6 +276,31 @@ namespace Medix.API.Business.Services.UserManagement
                 CreatedAt = u.CreatedAt
             });
         }
+        public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
+        {
+            var users = await _userRepository.GetAllAsync();
+
+            return users.Select(u => new UserDto
+            {
+                Id = u.Id,
+                Email = u.Email,
+                FullName = u.FullName,
+                PhoneNumber = u.PhoneNumber,
+                Role = u.UserRoles.FirstOrDefault()?.RoleCodeNavigation?.DisplayName ?? "Patient",
+                EmailConfirmed = u.EmailConfirmed,
+                CreatedAt = u.CreatedAt,
+                DateOfBirth = u.DateOfBirth,
+                GenderCode = u.GenderCode,
+                IdentificationNumber = u.IdentificationNumber,
+                UserName = u.UserName,
+                Address = u.Address,
+                AvatarUrl = u.AvatarUrl,
+                IsProfileCompleted = u.IsProfileCompleted,
+                LockoutEnd = u.LockoutEnd,
+                LockoutEnabled = u.LockoutEnabled,
+                AccessFailedCount = u.AccessFailedCount
+            }).ToList();
+        }
 
         public async Task<(int total, IEnumerable<UserDto> data)> GetPagedAsync(int page, int pageSize)
         {
@@ -269,7 +312,7 @@ namespace Medix.API.Business.Services.UserManagement
                 Email = u.Email,
                 FullName = u.FullName,
                 PhoneNumber = u.PhoneNumber,
-                Role = u.Role,
+                Role = u.UserRoles.FirstOrDefault()?.RoleCodeNavigation?.DisplayName ?? "Patient",
                 EmailConfirmed = u.EmailConfirmed,
                 CreatedAt = u.CreatedAt,
                 DateOfBirth = u.DateOfBirth,

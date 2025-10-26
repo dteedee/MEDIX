@@ -192,7 +192,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpGet("profile/details")]
-        //[Authorize(Roles = "Doctor")]
+        [Authorize(Roles = "Doctor")]
         public async Task<IActionResult> GetDoctorProfilesDetails()
         {
             try
@@ -232,7 +232,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPut("profile/update")]
-        //[Authorize(Roles = "Doctor")]
+        [Authorize(Roles = "Doctor")]
         public async Task<IActionResult> UpdateDoctorProfile([FromBody] DoctorProfileUpdateRequest request)
         {
             try
@@ -263,7 +263,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPut("profile/update-avatar")]
-        //[Authorize(Roles = "Doctor")]
+        [Authorize(Roles = "Doctor")]
         public async Task<IActionResult> UpdateDoctorAvatar([FromForm] UpdateAvatarRequest req)
         {
             try
@@ -299,7 +299,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPut("profile/update-password")]
-        //[Authorize(Roles = "Doctor")]
+        [Authorize(Roles = "DOCTOR")]
         public async Task<IActionResult> UpdateDoctorPassword([FromBody] PasswordUpdatePresenter pre)
         {
             try

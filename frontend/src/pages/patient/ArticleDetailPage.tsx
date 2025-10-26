@@ -54,11 +54,7 @@ export default function ArticleDetailPage() {
         if (articleData) {
           setArticle(articleData);
           setLikeCount(articleData.likeCount ?? 0);
-          // Check if article has been liked from localStorage
-          const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]');
-          if (likedArticles.includes(slug)) {
-            setIsLiked(true);
-          }
+          setIsLiked(articleData.isLikedByUser || false); // Use the flag from the API
         } else {
           setError('Article not found.')
         }
@@ -94,14 +90,6 @@ export default function ArticleDetailPage() {
         const updatedArticle: ArticleDTO = await response.json();
         // Sync with server state to ensure consistency
         setLikeCount(updatedArticle.likeCount ?? newLikeCount);
-
-        // Update localStorage
-        const likedArticles: string[] = JSON.parse(localStorage.getItem('likedArticles') || '[]');
-        if (newIsLiked) {
-          localStorage.setItem('likedArticles', JSON.stringify([...new Set([...likedArticles, slug])]));
-        } else {
-          localStorage.setItem('likedArticles', JSON.stringify(likedArticles.filter(s => s !== slug)));
-        }
       } else {
         console.error("Failed to like the article. Status:", response.status);
         // Revert UI on failure

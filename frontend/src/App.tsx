@@ -53,7 +53,7 @@ import SettingsPage from './pages/admin/SettingsPage';
 
 // Reader pages
 import ArticleReaderPage from './pages/patient/ArticleReaderPage';
-import ArticleDetailPage from './pages/public/ArticleDetailPage';
+import ArticleDetailPage from './pages/patient/ArticleDetailPage';
 import DoctorBookingList from './pages/patient/DoctorBookingList';
 import ErrorPageWrapper from './pages/error/ErrorPageWrapper';
 
@@ -151,7 +151,7 @@ export function App() {
 
                 {/* ---------- Doctor routes (inside /app) ---------- */}
                 <Route path="doctor/*" element={
-                  // <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
+                  <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
                     <Routes>
                       {/* <Route index element={<Navigate to="schedules" replace />} /> */}
                       <Route path="profile/edit" element={<DoctorProfileEdit />} />
@@ -163,7 +163,7 @@ export function App() {
 
                 {/* ---------- Reader ---------- */}
                 <Route path="articles" element={<ArticleReaderPage />} />
-                <Route path="articles/:slug" element={<ArticleDetailPage />} />
+                <Route path="articles/:slug" element={<ProtectedRoute><ArticleDetailPage /></ProtectedRoute>} />
 
                 {/* ---------- AI Chat ---------- */}
                 <Route path="ai-chat" element={

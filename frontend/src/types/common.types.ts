@@ -27,7 +27,7 @@ export enum UserRole {
   ADMIN = "Admin",
   DOCTOR = "Doctor", 
   PATIENT = "Patient",
-  MANAGER = "Manager",
+  MANAGER = "MANAGER",
   USER = "User" // Default role
 }
 

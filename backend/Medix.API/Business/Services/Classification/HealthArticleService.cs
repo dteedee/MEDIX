@@ -6,6 +6,7 @@ using Medix.API.Models.DTOs.HealthArticle;
 using Medix.API.Models.Entities;
 using Medix.API.Business.Helper;
 using Microsoft.AspNetCore.Http.HttpResults;
+using System.Security.Claims;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -14,6 +15,8 @@ namespace Medix.API.Business.Services.Classification
         private readonly IHealthArticleRepository _healthArticleRepository;
         private readonly IContentCategoryRepository _contentCategoryRepository;
         private readonly IMapper _mapper;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
 
         public HealthArticleService(IHealthArticleRepository healthArticleRepository, IContentCategoryRepository contentCategoryRepository, IMapper mapper)
         {
@@ -21,7 +24,14 @@ namespace Medix.API.Business.Services.Classification
             _contentCategoryRepository = contentCategoryRepository;
             _mapper = mapper;
         }
+        private Guid GetCurrentUserId()
+        {
+            var userId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                throw new UnauthorizedAccessException("User ID not found in token.");
 
+            return Guid.Parse(userId);
+        }
         public async Task<(int total, IEnumerable<HealthArticlePublicDto> data)> GetPagedAsync(int page = 1, int pageSize = 10)
         {
             var (articles, total) = await _healthArticleRepository.GetPagedAsync(page, pageSize);

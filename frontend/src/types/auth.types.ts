@@ -64,6 +64,7 @@ export interface User {
   address?: string;
   avatarUrl?: string;
   isProfileCompleted: boolean;
+  isTemporaryUsername?: boolean;
   createdAt: string;
 }
 

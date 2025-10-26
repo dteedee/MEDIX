@@ -128,8 +128,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Dispatch auth changed event for Header component
       window.dispatchEvent(new Event('authChanged'));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login failed:', error);
+      
+      if (error?.message?.includes('Tài khoản bị khóa')) {
+        throw new Error('Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ');
+      }
+      
       throw error;
     } finally {
       setIsLoading(false);

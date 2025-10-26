@@ -23,8 +23,16 @@ class DoctorService {
     }
 
     async getDoctorProfileDetails(): Promise<DoctorProfileDetails> {
-        // apiClient automatically adds Authorization header
-        const response = await apiClient.get<DoctorProfileDetails>('doctor/profile/details');
+        const accessToken = localStorage.getItem('accessToken');
+
+        if (!accessToken) {
+            throw new Error('No access token found - please login');
+        }
+        const response = await apiClient.get<DoctorProfileDetails>('doctor/profile/details', {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
         return response.data;
     }
 

@@ -7,23 +7,25 @@ using Microsoft.AspNetCore.Authorization;
 using Newtonsoft.Json;
 using Medix.API.Business.Services.Classification;
 using System.Security.Claims;
+using Medix.API.DataAccess.Interfaces.Classification;
 
 namespace Medix.API.Presentation.Controller.Classification
 {
     [Route("api/[controller]")]
     [ApiController]
-
     public class HealthArticleController : ControllerBase
     {
         private readonly IHealthArticleService _healthArticleService;
         private readonly ILogger<HealthArticleController> _logger;
         private readonly CloudinaryService _cloudinaryService;
+        private readonly IRefArticleStatusRepository _statusRepository;
 
-        public HealthArticleController(IHealthArticleService healthArticleService, ILogger<HealthArticleController> logger, CloudinaryService cloudinaryService)
+        public HealthArticleController(IHealthArticleService healthArticleService, ILogger<HealthArticleController> logger, CloudinaryService cloudinaryService, IRefArticleStatusRepository statusRepository)
         {
             _healthArticleService = healthArticleService;
             _logger = logger;
             _cloudinaryService = cloudinaryService;
+            _statusRepository = statusRepository;
         }
 
         [HttpGet]
@@ -78,6 +80,15 @@ namespace Medix.API.Presentation.Controller.Classification
         {
             var articles = await _healthArticleService.GetHomepageArticlesAsync(limit);
             return Ok(articles);
+        }
+
+        [HttpGet("statuses")]
+        //[Authorize(Roles = "MANAGER")]
+        public async Task<IActionResult> GetStatuses()
+        {
+            var statuses = await _statusRepository.GetActiveStatusesAsync();
+            var result = statuses.Select(s => new { s.Code, s.DisplayName });
+            return Ok(result);
         }
 
         [HttpGet("search")]

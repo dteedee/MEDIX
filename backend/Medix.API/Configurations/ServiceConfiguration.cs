@@ -44,6 +44,8 @@ namespace Medix.API.Configurations
             services.AddScoped<IMedicalRecordRepository, MedicalRecordRepository>();
             services.AddScoped<IPrescriptionRepository, PrescriptionRepository>();
             services.AddScoped<IDoctorScheduleOverrideRepository, DoctorScheduleOverrideRepository>();
+            services.AddScoped<IRefArticleStatusRepository, RefArticleStatusRepository>();
+
 
 
         }

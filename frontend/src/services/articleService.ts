@@ -281,9 +281,12 @@ export const articleService = {
     // and a 4xx status code (e.g., 409 Conflict) if it's not.
     // The `axios` call will automatically throw an error for 4xx/5xx responses,
     // which is caught in the ArticleForm component.
-    await apiClient.get(`${BASE}/check-uniqueness`, { params })
-  }
-  ,
+    await apiClient.get(`${BASE}/check-uniqueness`, { params });
+  },
+  getStatuses: async (): Promise<{ code: string; displayName: string }[]> => {
+    const r = await apiClient.get(`${BASE}/statuses`);
+    return r.data;
+  },
   /**
    * Upload an image file.
    * @param file File to upload

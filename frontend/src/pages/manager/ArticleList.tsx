@@ -66,6 +66,7 @@ export default function ArticleList() {
   const [viewing, setViewing] = useState<ArticleDTO | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [allCategories, setAllCategories] = useState<CategoryDTO[]>([])
+  const [allStatuses, setAllStatuses] = useState<{ code: string; displayName: string }[]>([]);
 
   const [page, setPage] = useState(getInitialState().page);
   const [pageSize, setPageSize] = useState(getInitialState().pageSize);
@@ -98,6 +99,10 @@ export default function ArticleList() {
       setAllCategories(res.items);
       load();
     });
+    articleService.getStatuses().then(statuses => {
+      setAllStatuses(statuses);
+    });
+
   }, []); // Load categories and all articles once on mount
 
   useEffect(() => {
@@ -284,10 +289,19 @@ export default function ArticleList() {
 
     // 2. Sorting
     filtered.sort((a, b) => {
-      const valA = a.publishedAt ?? a.createdAt!;
-      const valB = b.publishedAt ?? b.createdAt!;
-      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      if (sortBy === 'statusCode') {
+        const valA = a.statusCode ?? '';
+        const valB = b.statusCode ?? '';
+        const comparison = valA.localeCompare(valB);
+        return sortDirection === 'asc' ? comparison : -comparison;
+      }
+
+      // Default sort by publishedAt/createdAt
+      const dateA = new Date(a.publishedAt ?? a.createdAt!).getTime();
+      const dateB = new Date(b.publishedAt ?? b.createdAt!).getTime();
+
+      if (dateA < dateB) return sortDirection === 'asc' ? -1 : 1;
+      if (dateA > dateB) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
 
@@ -301,17 +315,20 @@ export default function ArticleList() {
   const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString() : '-'
 
   const pill = (statusCode?: string) => {
-    let text = 'Bản nháp';
-    let bg = '#fff7e6'; // yellow-100
-    let color = '#b45309'; // yellow-700
+    const statusInfo = allStatuses.find(s => s.code === statusCode);
+    const displayName = statusInfo?.displayName ?? statusCode ?? 'Không xác định';
 
+    let pillClass = styles.statusDraft; // Mặc định là 'Bản nháp'
     if (statusCode === 'PUBLISHED') {
-      return <span className={`${styles.statusPill} ${styles.statusPublished}`}>Đã xuất bản</span>;
+      pillClass = styles.statusPublished;
     } else if (statusCode === 'ARCHIVE') {
-      return <span className={`${styles.statusPill} ${styles.statusArchive}`}>Khóa</span>;
+      pillClass = styles.statusArchive;
+    } else if (statusCode === 'AnHai') {
+      // Bạn có thể thêm style riêng cho trạng thái 'AnHai' nếu muốn
+      // Ví dụ: pillClass = styles.statusAnHai;
     }
-    // Default is DRAFT
-    return <span className={`${styles.statusPill} ${styles.statusDraft}`}>{text}</span>;
+
+    return <span className={`${styles.statusPill} ${pillClass}`}>{displayName}</span>;
   }
 
   const getCategoryNames = (article: ArticleDTO) => {
@@ -466,7 +483,9 @@ export default function ArticleList() {
                 <th className={styles.th} style={{ width: '120px' }}>Ảnh</th>
                 <th className={styles.th}>Tiêu đề</th>
                 <th className={styles.th}>Danh mục</th>
-                <th className={styles.th}>Trạng thái</th>
+                <th onClick={() => handleSort('statusCode')} className={`${styles.th} ${styles.sortable}`}>
+                  Trạng thái <SortIcon direction={sortBy === 'statusCode' ? sortDirection : undefined} />
+                </th>
                 <th onClick={() => handleSort('publishedAt')} className={`${styles.th} ${styles.sortable}`}>Ngày đăng <SortIcon direction={sortBy === 'publishedAt' ? sortDirection : undefined} /></th>
                 <th className={styles.th} style={{ textAlign: 'right' }}>Thao tác</th>
               </tr>

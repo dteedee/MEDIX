@@ -15,6 +15,11 @@ interface Props {
   onCancel?: () => void
 }
 
+interface Status {
+  code: string;
+  displayName: string;
+}
+
 export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const { showToast } = useToast()
   const [title, setTitle] = useState(article?.title ?? '')
@@ -39,6 +44,7 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
   const [errors, setErrors] = useState<{ title?: string; slug?: string; summary?: string; content?: string; thumbnailUrl?: string; categoryIds?: string; displayOrder?: string }>({})
   const [validating, setValidating] = useState<{ title?: boolean; slug?: boolean }>({})
   const fileRef = React.createRef<HTMLInputElement>()
+  const [statusesList, setStatusesList] = useState<Status[]>([]);
 
   // Helper to convert ISO string to a format suitable for datetime-local input
   const isoToLocalInput = (iso?: string | null) => {
@@ -124,6 +130,19 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
       }
     }
     loadCategories()
+  }, [])
+
+  useEffect(() => {
+    const loadStatuses = async () => {
+      try {
+        const statuses = await articleService.getStatuses();
+        setStatusesList(statuses);
+      } catch (error) {
+        console.error("Failed to load article statuses:", error);
+        showToast('Không thể tải danh sách trạng thái.', 'error');
+      }
+    };
+    loadStatuses();
   }, [])
 
   const toggleCategory = (id: string) => {
@@ -424,11 +443,33 @@ export default function ArticleForm({ article, onSaved, onCancel }: Props) {
           <div className={styles.sectionDivider}>
             <h3 className={styles.sectionHeader}>Trạng thái & Hiển thị</h3>
             <div className={styles.statusDisplayGrid}>
-                <select value={statusCode} onChange={e => setStatusCode(e.target.value)} className={formStyles.select}>
-                  <option value="DRAFT">Bản nháp</option>
-                  
-                  <option value="PUBLISHED">Xuất bản</option>
-                  <option value="ARCHIVE">Khóa</option>
+                <select value={statusCode} onChange={e => setStatusCode(e.target.value)} className={formStyles.select} disabled={statusesList.length === 0}>
+                  {(() => {
+                    // Tạo một Set để chứa các code đã có, tránh trùng lặp
+                    const displayedCodes = new Set<string>();
+                    const options = [];
+
+                    // Ưu tiên hiển thị trạng thái hiện tại của bài viết (nếu có)
+                    if (article?.statusCode && !statusesList.some(s => s.code === article.statusCode)) {
+                      options.push(<option key={article.statusCode} value={article.statusCode}>{article.statusCode}</option>);
+                      displayedCodes.add(article.statusCode);
+                    }
+
+                    // Thêm các trạng thái từ API nếu chưa được hiển thị
+                    statusesList.forEach(s => {
+                      if (!displayedCodes.has(s.code)) {
+                        options.push(<option key={s.code} value={s.code}>{s.displayName}</option>);
+                        displayedCodes.add(s.code);
+                      }
+                    });
+
+                    // Nếu không có tùy chọn nào, hiển thị "Đang tải..."
+                    if (options.length === 0) {
+                      return <option>Đang tải...</option>;
+                    }
+
+                    return options;
+                  })()}
                 </select>
                 <select value={displayType} onChange={e => setDisplayType(e.target.value)} className={formStyles.select}>
                   <option value="STANDARD">Tiêu chuẩn</option>

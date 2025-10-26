@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BannerDTO, CreateBannerRequest, UpdateBannerRequest } from '../../types/banner.types';
 import { useToast } from '../../contexts/ToastContext';
 import { bannerService } from '../../services/bannerService';
-import styles from '../../styles/admin/BannerForm.module.css';
+import styles from '../../styles/admin/ArticleForm.module.css';
 
 interface Props {
   banner?: BannerDTO | null;
@@ -245,7 +245,7 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
                       }}
                       className={styles.removeImageBtn}
                     >
-                      <i className="bi bi-trash"></i> Xóa ảnh
+                      <i className="bi bi-x"></i>
                     </button>
                   )}
                 </div>
@@ -256,7 +256,7 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
         </div>
 
         {/* Display in 2 columns */}
-        <div className={styles.twoColumnGrid}>
+        <div className={styles.gridTwoCols}>
           {/* Banner URL */}
           <div className={styles.formGroup}>
             <label className={styles.label}>
@@ -332,9 +332,9 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
             <i className="bi bi-calendar-range"></i>
             Thời gian hiển thị (tùy chọn)
           </label>
-          <div className={styles.dateRangeContainer}>
-            <div className={styles.dateInputGroup}>
-              <label className={styles.dateLabel}>
+          <div className={styles.gridTwoCols}>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
                 <i className="bi bi-calendar-event"></i>
                 Từ ngày
               </label>
@@ -342,15 +342,12 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
                 type="date"
                 value={formData.startDate}
                 onChange={e => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                className={`${styles.input} ${styles.dateInput}`}
+                className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
                 disabled={mode === 'view'}
               />
-              {mode === 'view' && formData.startDate && (
-                <span className={styles.dateDisplay}>{formatDateForDisplay(formData.startDate)}</span>
-              )}
             </div>
-            <div className={styles.dateInputGroup}>
-              <label className={styles.dateLabel}>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
                 <i className="bi bi-calendar-check"></i>
                 Đến ngày
               </label>
@@ -358,15 +355,12 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
                 type="date"
                 value={formData.endDate}
                 onChange={e => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                className={`${styles.input} ${styles.dateInput}`}
+                className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
                 disabled={mode === 'view'}
               />
-              {mode === 'view' && formData.endDate && (
-                <span className={styles.dateDisplay}>{formatDateForDisplay(formData.endDate)}</span>
-              )}
             </div>
           </div>
-          {errors.dateRange && <span className={styles.errorText}>{errors.dateRange}</span>}
+          {errors.dateRange && <p className={styles.errorText}>{errors.dateRange}</p>}
           {mode !== 'view' && (
             <span className={styles.helpText}>Banner sẽ tự động ẩn khi hết hạn</span>
           )}
@@ -398,19 +392,19 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
         {mode !== 'view' && (
           <div className={styles.formActions}>
             <button type="button" onClick={onCancel} className={styles.cancelButton} disabled={loading}>
-              <i className="bi bi-x-lg"></i>
+              <i className="bi bi-x-circle"></i>
               Hủy
             </button>
-            <button type="submit" disabled={loading} className={styles.submitButton}>
+            <button type="submit" disabled={loading} className={styles.saveButton}>
               {loading ? (
                 <>
-                  <div className={styles.spinner}></div>
+                  <i className="bi bi-hourglass-split"></i>
                   Đang lưu...
                 </>
               ) : (
                 <>
-                  <i className="bi bi-check-lg"></i>
-                  {mode === 'create' ? 'Tạo banner' : 'Cập nhật'}
+                  <i className="bi bi-check-circle"></i>
+                  {mode === 'create' ? 'Tạo Banner' : 'Lưu thay đổi'}
                 </>
               )}
             </button>
@@ -419,8 +413,8 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
 
         {mode === 'view' && (
           <div className={styles.formActions}>
-            <button type="button" onClick={onCancel} className={styles.submitButton}>
-              <i className="bi bi-x-lg"></i>
+            <button type="button" onClick={onCancel} className={styles.saveButton}>
+              <i className="bi bi-x-circle"></i>
               Đóng
             </button>
           </div>

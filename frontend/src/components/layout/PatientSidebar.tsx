@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSidebar } from './PatientLayout';
 import { useNavigate, Link } from 'react-router-dom';
-import { ChangePasswordModal } from '../../pages/auth/ChangePasswordModal';
 import styles from './PatientSidebar.module.css';
 
 interface PatientSidebarProps {
@@ -14,7 +13,6 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -49,9 +47,14 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
     navigate('/app/patient/profile');
   };
 
-  const handleChangePassword = () => {
+  const handleGoHome = () => {
     setShowUserMenu(false);
-    setShowChangePasswordModal(true);
+    navigate('/');
+  };
+
+  const handleViewDashboard = () => {
+    setShowUserMenu(false);
+    navigate('/app/patient');
   };
 
   return (
@@ -129,13 +132,13 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
 
         {showUserMenu && sidebarOpen && (
           <div className={styles.userMenu}>
+            <button className={styles.menuItem} onClick={handleGoHome}>
+              <i className="bi bi-house-door"></i>
+              <span>Trang chủ</span>
+            </button>
             <button className={styles.menuItem} onClick={handleViewProfile}>
               <i className="bi bi-person"></i>
               <span>Xem tài khoản</span>
-            </button>
-            <button className={styles.menuItem} onClick={handleChangePassword}>
-              <i className="bi bi-key"></i>
-              <span>Đổi mật khẩu</span>
             </button>
             <div className={styles.menuDivider}></div>
             <button className={styles.menuItem} onClick={handleLogout}>
@@ -160,15 +163,6 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
         <i className={`bi bi-chevron-${sidebarOpen ? 'left' : 'right'}`}></i>
       </button>
 
-      {/* Change Password Modal */}
-      <ChangePasswordModal
-        isOpen={showChangePasswordModal}
-        onClose={() => setShowChangePasswordModal(false)}
-        onSuccess={() => {
-          setShowChangePasswordModal(false);
-          // Optionally show success message or redirect
-        }}
-      />
     </div>
   );
 };

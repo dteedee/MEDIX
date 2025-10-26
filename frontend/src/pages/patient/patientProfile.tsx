@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { userService, UserBasicInfo, UpdateUserInfo } from '../../services/userService';
+import { apiClient } from '../../lib/apiClient';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { ChangePasswordModal } from '../auth/ChangePasswordModal';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
@@ -160,16 +161,28 @@ export const PatientProfile: React.FC = () => {
       try {
         const res = await userService.getUserInfo();
         if (mounted) {
-          // Mock data for extended fields - replace with actual API call
+          // Get patient-specific data from API
+          // TODO: Backend needs to return patient fields in the response
+          // For now, we'll try to get from a separate endpoint if available
+          let patientData: any = {};
+          try {
+            // Try to get patient data - this endpoint should exist if patient is registered
+            const patientResponse = await apiClient.get('/patient/getPatientInfo');
+            patientData = patientResponse.data;
+            console.log('Patient data received:', patientData);
+          } catch (error) {
+            console.log('Patient info not available, using mock data');
+          }
+          
           const extendedData: ExtendedUserInfo = {
             ...res,
-            cccd: (res as any).cccd || '123456789012',
-            gender: (res as any).gender || 'male',
-            bloodType: (res as any).bloodType || 'A+',
-            emergencyContactName: (res as any).emergencyContactName || 'Nguyễn Văn A',
-            emergencyContactPhone: (res as any).emergencyContactPhone || '0987654321',
-            medicalHistory: (res as any).medicalHistory || 'Không có tiền sử bệnh lý',
-            allergies: (res as any).allergies || 'Không có dị ứng'
+            cccd: (res as any).cccd || patientData.cccd,
+            gender: (res as any).gender || patientData.gender || 'male',
+            bloodType: (res as any).bloodType || patientData.bloodType || 'A+',
+            emergencyContactName: patientData.emergencyContactName || (res as any).emergencyContactName || '',
+            emergencyContactPhone: patientData.emergencyContactPhone || (res as any).emergencyContactPhone || '',
+            medicalHistory: patientData.medicalHistory || (res as any).medicalHistory || '',
+            allergies: patientData.allergies || (res as any).allergies || ''
           };
           setData(extendedData);
           setEditData({
@@ -248,13 +261,13 @@ export const PatientProfile: React.FC = () => {
       const updatedData: ExtendedUserInfo = {
         ...updatedUser,
         username: finalUsername,
-        cccd: (updatedUser as any).cccd || data?.cccd || '123456789012',
-        gender: (updatedUser as any).gender || data?.gender || 'male',
-        bloodType: (updatedUser as any).bloodType || data?.bloodType || 'A+',
-        emergencyContactName: (updatedUser as any).emergencyContactName || data?.emergencyContactName || 'Nguyễn Văn A',
-        emergencyContactPhone: (updatedUser as any).emergencyContactPhone || data?.emergencyContactPhone || '0987654321',
-        medicalHistory: (updatedUser as any).medicalHistory || data?.medicalHistory || 'Không có tiền sử bệnh lý',
-        allergies: (updatedUser as any).allergies || data?.allergies || 'Không có dị ứng'
+        cccd: (updatedUser as any).cccd || data?.cccd,
+        gender: (updatedUser as any).gender || data?.gender,
+        bloodType: (updatedUser as any).bloodType || data?.bloodType,
+        emergencyContactName: editData.emergencyContactName || (updatedUser as any).emergencyContactName || data?.emergencyContactName,
+        emergencyContactPhone: editData.emergencyContactPhone || (updatedUser as any).emergencyContactPhone || data?.emergencyContactPhone,
+        medicalHistory: editData.medicalHistory || (updatedUser as any).medicalHistory || data?.medicalHistory,
+        allergies: editData.allergies || (updatedUser as any).allergies || data?.allergies
       };
       
       setData(updatedData);

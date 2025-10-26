@@ -17,7 +17,7 @@ export default function CmsPageForm({ page, onSaved, onCancel }: Props) {
   const [isPublished, setIsPublished] = useState<boolean>(page?.isPublished ?? false)
   // TODO: Replace with actual logged-in user ID from AuthContext when available
   // Use a REAL user ID from your database for development until auth is ready.
-  const [authorId, setAuthorId] = useState<string>((page as any)?.authorId ?? '30aa82c5-9bb6-4df0-abdf-9a65892f69c8') // <-- Replace with a valid user ID from your DB
+  const [authorId, setAuthorId] = useState<string>((page as any)?.authorId ?? '1A2C1A65-7B00-415F-8164-4FC3C1054203') // <-- Replace with a valid user ID from your DB
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<{ pageTitle?: string, pageSlug?: string, pageContent?: string }>({})
 

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Medix.API.Business.Validators;
+using System.ComponentModel.DataAnnotations;
 
 namespace Medix.API.Models.DTOs
 {
@@ -13,6 +14,7 @@ namespace Medix.API.Models.DTOs
     public class UserDto
     {
         public Guid Id { get; set; }
+        public Guid? WalletID { get; set; }
         public string Email { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
@@ -23,6 +25,7 @@ namespace Medix.API.Models.DTOs
         public string? GenderCode { get; set; }
         public string? IdentificationNumber { get; set; }
         public string UserName { get; set; } = string.Empty;
+        public bool IsTemporaryUsername { get; set; } = false;
         public string? Address { get; set; }
         public string? AvatarUrl { get; set; }
         public bool IsProfileCompleted { get; set; }
@@ -31,17 +34,26 @@ namespace Medix.API.Models.DTOs
         public int AccessFailedCount { get; set; }
     }
     public class UserBasicInfoDto
-    {
+    {   
         public Guid Id { get; set; }
         public string? username { get; set; } = string.Empty;
         public string? FullName { get; set; } = string.Empty;
         public string? Email { get; set; } = string.Empty;
         public string? imageURL { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
+        public string? identificationNumber { get; set; }
         public string? address { get; set; }
         public DateOnly? dob { get; set; }
+        public string? MedicalRecordNumber { get; set; }
+        public string? EmergencyContactName { get; set; }
 
-  
+        public string? EmergencyContactPhone { get; set; }
+
+        public
+            string? Allergies { get; set; }
+        public string? MedicalHistory { get; set; }
+
+
         public DateTime CreatedAt { get; set; }
     }
 
@@ -53,10 +65,19 @@ namespace Medix.API.Models.DTOs
         [EmailAddress]
         public string? Email { get; set; } = string.Empty;
         [Phone(ErrorMessage ="Số diện thoại không hơp lệ")]
+        [VietnamesePhoneNumberAttribute]
         public string? PhoneNumber { get; set; } 
         public string? address { get; set; }
         public DateOnly? dob { get; set; }
-       
+
+        public string? EmergencyContactName { get; set; }
+        [Phone(ErrorMessage = "Số diện thoại không hơp lệ")]
+        [VietnamesePhoneNumberAttribute]
+        public string? EmergencyContactPhone { get; set; }
+        public string? Allergies { get; set; }
+
+        public string? MedicalHistory { get; set; }
+
     }
 
 

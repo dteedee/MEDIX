@@ -38,7 +38,11 @@ namespace Medix.API.Configurations
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IArticleRepository, ArticleRepitory>();
             services.AddScoped<IReviewRepository, ReviewRepository>();
+            services.AddScoped<IServiceTierRepository, ServiceTierRepository>();
             services.AddScoped<INotificationRepository, NotificationRepostiory>();
+            services.AddScoped<IDoctorScheduleRepository, DoctorScheduleRepository>();
+            services.AddScoped<IWalletRepository, WalletRepository>();
+            services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
         }
 
         private static void RegisterServices(IServiceCollection services)
@@ -59,6 +63,12 @@ namespace Medix.API.Configurations
             services.AddScoped<CloudinaryService>();
             services.AddScoped<IArticleService, ArticleService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IVnpay, Vnpay>();
+            services.AddScoped<IWalletService, WalletService>();
+
+
+
+
         }
     }
 }

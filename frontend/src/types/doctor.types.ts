@@ -49,16 +49,32 @@ export interface ReviewDto{
   date: string;
 }
 
+export interface DoctorScheduleDto {
+  id: string;
+  doctorId: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+}
+export interface DoctorTypeDegreeDto{
+ code: string;
+ description: string;
+}
+
 export interface DoctorProfileDto{
-  avatarUrl: string;
+  doctorID?: string;
+  avatarUrl?: string;
   fullName: string;
+  price: number;
   averageRating: number;
   numberOfReviews: number;
   specialization: string;
-  biography: string;
+  biography?: string;
   ratingByStar: number[];
   reviews: ReviewDto[];
-  education: string;
+  education?: string;
+  schedules: DoctorScheduleDto[];
 }
 
 export interface DoctorProfileDetails{
@@ -73,4 +89,44 @@ export interface DoctorProfileDetails{
   bio: string;
   yearsOfExperience: number;
   consultationFee: string;
+}
+
+// Types for Service Tier API with Pagination
+export interface DoctorInTier {
+  userId: string;
+  doctorId: string;
+  doctorName: string;
+  specialization: string;
+  education: string;
+  experience: string;
+  price: number;
+  bio: string;
+  rating: number;
+}
+
+export interface PaginationParams {
+  pageNumber: number;
+  pageSize: number;
+}
+
+export interface DoctorQueryParameters extends PaginationParams {
+  educationCode?: string;
+  specializationCode?: string;
+  minPrice?: number;
+  maxPrice?: number;
+}
+
+export interface PaginatedListDto<T> {
+  items: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+export interface ServiceTierWithPaginatedDoctorsDto {
+  id: string;
+  name: string;
+  description: string;
+  doctors: PaginatedListDto<DoctorInTier>;
 }

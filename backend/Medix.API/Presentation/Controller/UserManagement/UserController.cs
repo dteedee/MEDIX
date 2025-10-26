@@ -21,11 +21,12 @@ namespace Medix.API.Presentation.Controller.UserManagement
     {
         private readonly IUserService _userService;
         private readonly ILogger<UserController> _logger;
-
-        public UserController(ILogger<UserController> logger, IUserService userService)
+        private readonly IPatientService _patientService;
+        public UserController(ILogger<UserController> logger, IUserService userService, IPatientService patientService)
         {
             _logger = logger;
             _userService = userService;
+            _patientService = patientService;
         }
 
         // ========================= USER SELF MANAGEMENT =========================
@@ -62,6 +63,30 @@ namespace Medix.API.Presentation.Controller.UserManagement
             updateDto.Id = userId;
 
             var updatedUser = await _userService.UpdateUserBasicInfo(updateDto);
+            if (updateDto.EmergencyContactPhone != null || updateDto.EmergencyContactName != null || updateDto.Allergies != null || updateDto.MedicalHistory!=null)
+            {
+               
+                var patient = await _patientService.GetByUserIdAsync(userId);
+
+               
+                if (patient == null)
+                {
+                 
+                    return NotFound(new { message = $"Không tìm thấy hồ sơ bệnh nhân (Patient) cho user ID: {userId}" });
+                }
+
+                patient.EmergencyContactName = updateDto.EmergencyContactName;
+                patient.EmergencyContactPhone = updateDto.EmergencyContactPhone;
+                patient.Allergies = updateDto.Allergies;
+                patient.MedicalHistory = updateDto.MedicalHistory;
+
+                var patientDTO =   await _patientService.UpdateAsync(userId, patient);
+                if (patientDTO == null)
+                {
+                    return StatusCode(500, new { message = "Cập nhật thông tin liên hệ khẩn cấp thất bại." });
+                } 
+               
+            }
             return Ok(updatedUser);
         }
 

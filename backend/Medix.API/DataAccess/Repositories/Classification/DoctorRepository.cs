@@ -1,5 +1,6 @@
-using Medix.API.DataAccess;
+﻿using Medix.API.DataAccess;
 using Medix.API.DataAccess.Interfaces.Classification;
+using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -57,6 +58,67 @@ namespace Medix.API.DataAccess.Repositories.Classification
             _context.Doctors.Update(doctor);
             await _context.SaveChangesAsync();
             return doctor;
+        }
+
+        public async Task<List<Doctor>> GetDoctorsByServiceTierNameAsync(string name)
+        {
+         return await _context.Doctors
+                .Include(d => d.ServiceTier)
+                .Include(d => d.User)
+                .Include(d => d.Specialization)
+                .Where(d => d.ServiceTier.Name.ToLower() == name.ToLower()&& d.User.Status !=0)
+                .ToListAsync();
+        }
+        public async Task<(List<Doctor> Doctors, int TotalCount)> GetPaginatedDoctorsByTierIdAsync(
+                Guid tierId, DoctorQueryParameters queryParams)
+        {
+            var query = _context.Doctors
+                .AsNoTracking()
+                .Where(d => d.ServiceTierId == tierId && d.User.Status == 1);
+
+            // 2. Áp dụng FILTER động
+            // Filter 1: Education
+            if (!string.IsNullOrEmpty(queryParams.EducationCode))
+            {
+                query = query.Where(d => d.Education == queryParams.EducationCode);
+            }
+            if (queryParams.MinPrice.HasValue)
+            {
+                query = query.Where(d => d.ConsultationFee >= queryParams.MinPrice.Value);
+            }
+            if (queryParams.MaxPrice.HasValue)
+            {
+                query = query.Where(d => d.ConsultationFee <= queryParams.MaxPrice.Value);
+            }
+
+            // Filter 2: Specialization
+            if (!string.IsNullOrEmpty(queryParams.SpecializationCode))
+            {
+                // Quan trọng: Phải filter trên 'Specialization.Code'
+                query = query.Where(d => d.Specialization.Id == Guid.Parse(queryParams.SpecializationCode));
+            }
+
+            // 3. Lấy total count SAU KHI FILTER
+            var totalCount = await query.CountAsync();
+
+            // 4. Áp dụng PHÂN TRANG và Includes
+            var doctors = await query
+                .OrderBy(d => d.User.FullName) // Luôn OrderBy trước khi phân trang
+                .Skip((queryParams.PageNumber - 1) * queryParams.PageSize)
+                .Take(queryParams.PageSize)
+                .Include(d => d.User)
+                .Include(d => d.Specialization)
+                .ToListAsync();
+
+            return (doctors, totalCount);
+        }
+
+        public Task<Doctor?> GetDoctorProfileByDoctorIDAsync(Guid doctorID)
+        {
+            return _context.Doctors
+                .Include(d => d.User)
+                .Include(d => d.Specialization)
+                .FirstOrDefaultAsync(d => d.Id == doctorID);
         }
     }
 }

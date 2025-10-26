@@ -6,7 +6,9 @@ import registrationService from '../../services/registrationService';
 import { PatientRegistration, BloodType, Gender, RegisterRequestPatient, PatientDTO, ValidationErrors } from '../../types/auth.types';
 import { Gender as GenderEnum } from '../../types/common.types';
 import { validatePatientRegistrationForm, validatePassword, getPasswordStrength } from '../../utils/validation';
+import { Header } from '../../components/layout/Header';
 import '../../style/RegistrationPage.css';
+import Footer from '../../components/layout/Footer';
 
 export const PatientRegister: React.FC = () => {
   // Helper function to validate email format - kiểm tra đuôi và ký tự có dấu
@@ -92,6 +94,8 @@ export const PatientRegister: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [phoneNumberError, setPhoneNumberError] = useState<string | null>(null);
+  const [emergencyContactPhoneError, setEmergencyContactPhoneError] = useState<string | null>(null);
   const [passwordRequirements, setPasswordRequirements] = useState({
     minLength: false,
     hasUppercase: false,
@@ -164,6 +168,8 @@ export const PatientRegister: React.FC = () => {
           newErrors.PhoneNumber = ['Số điện thoại phải bắt đầu bằng 0 và gồm 10 chữ số'];
         } else if (value.startsWith('00')) {
           newErrors.PhoneNumber = ['Số điện thoại không được có số 0 thứ hai sau số 0 đầu tiên'];
+        } else if (formData.emergencyContactPhone && value === formData.emergencyContactPhone) {
+          newErrors.PhoneNumber = ['Số điện thoại chính không được giống số điện thoại liên hệ khẩn cấp'];
         } else {
           newErrors.PhoneNumber = [];
         }
@@ -226,6 +232,8 @@ export const PatientRegister: React.FC = () => {
           newErrors.EmergencyContactPhone = ['Vui lòng nhập số điện thoại liên hệ khẩn cấp'];
         } else if (!/^0\d{9}$/.test(value)) {
           newErrors.EmergencyContactPhone = ['Số điện thoại phải bắt đầu bằng 0 và gồm 10 chữ số'];
+        } else if (formData.phoneNumber && value === formData.phoneNumber) {
+          newErrors.EmergencyContactPhone = ['Số điện thoại liên hệ khẩn cấp không được giống số điện thoại chính'];
         } else {
           newErrors.EmergencyContactPhone = [];
         }
@@ -731,6 +739,12 @@ export const PatientRegister: React.FC = () => {
     if (!formData.emergencyContactPhone?.trim()) {
       newErrors.emergencyContactPhone = ['Vui lòng nhập số điện thoại liên hệ khẩn cấp'];
     }
+    
+    // Check if phone numbers are the same
+    if (formData.phoneNumber && formData.emergencyContactPhone && 
+        formData.phoneNumber === formData.emergencyContactPhone) {
+      newErrors.emergencyContactPhone = ['Số điện thoại liên hệ khẩn cấp không được giống số điện thoại chính'];
+    }
 
     // Validate form data
     const errors = validatePatientRegistrationForm(formData);
@@ -840,6 +854,9 @@ export const PatientRegister: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Main Header */}
+      <Header />
+      
       {/* Main Content */}
       <div className="registration-container">
         <form onSubmit={handleSubmit} className="registration-form">
@@ -1447,7 +1464,10 @@ export const PatientRegister: React.FC = () => {
             </div>
           </div>
         </form>
+
+    
       </div>
+      <Footer />
     </div>
   );
 };

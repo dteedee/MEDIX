@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata } from "../types/doctor.types";
+import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, ServiceTierWithPaginatedDoctorsDto, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters } from "../types/doctor.types";
 
 class DoctorService {
     async getMetadata(): Promise<DoctorRegisterMetadata> {
@@ -12,9 +12,9 @@ class DoctorService {
         await apiClient.postMultipart<any>('/doctor/register', payload);
     }
 
-    async getDoctorProfile(userName: string | undefined): Promise<DoctorProfileDto> {
+    async getDoctorProfile(doctorID: string | undefined): Promise<DoctorProfileDto> {
         try {
-            const response = await apiClient.get<DoctorProfileDto>('doctor/profile/' + userName);
+            const response = await apiClient.get<DoctorProfileDto>('/doctor/profile/' + doctorID);
             return response.data;
         } catch (error: any) {
             console.error('Get doctor profile data error: ', error);
@@ -47,6 +47,28 @@ class DoctorService {
 
     async updatePassword(payload: FormData): Promise<any> {
         await apiClient.put('doctor/profile/update-password', payload);
+    }
+
+    async getDoctorsGroupedByTier(queryParams: DoctorQueryParameters): Promise<ServiceTierWithPaginatedDoctorsDto[]> {
+        try {
+            const response = await apiClient.get<ServiceTierWithPaginatedDoctorsDto[]>('/booking/by-tier', {
+                params: queryParams
+            });
+            return response.data;
+        } catch (error: any) {
+            console.error('Get doctors grouped by tier error: ', error);
+            throw this.handleApiError(error);
+        }
+    }
+
+    async getEducationTypes(): Promise<DoctorTypeDegreeDto[]> {
+        try {
+            const response = await apiClient.get<DoctorTypeDegreeDto[]>('/doctor/education-type');
+            return response.data;
+        } catch (error: any) {
+            console.error('Get education types error: ', error);
+            throw this.handleApiError(error);
+        }
     }
 
     private handleApiError(error: any): Error {

@@ -203,9 +203,11 @@ namespace Medix.API.Presentation.Controller.Classification
                     return Unauthorized(new { Message = "User ID not found in token" });
                 }
 
+                _logger.LogInformation($"userId: {userId}");
                 var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userId.Value));
                 if (doctor == null)
                 {
+                    _logger.LogInformation("eror be here");
                     return NotFound(new { Message = "Doctor not found" });
                 }
 

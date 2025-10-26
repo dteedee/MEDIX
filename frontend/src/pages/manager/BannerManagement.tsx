@@ -65,6 +65,71 @@ export default function BannerManagement() {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
+  // Helper function to calculate percentage change
+  const calculatePercentageChange = (current: number, previous: number): number => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return ((current - previous) / previous) * 100;
+  };
+
+  // Calculate stats with real data
+  const getStats = () => {
+    const now = new Date();
+    
+    // Calculate date ranges
+    const oneMonthAgo = new Date(now);
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    
+    const oneWeekAgo = new Date(now);
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    oneWeekAgo.setHours(0, 0, 0, 0);
+
+    // Total banners created before last month
+    const bannersCreatedBeforeLastMonth = allBanners.filter(b => {
+      if (!b.createdAt) return false;
+      const createdDate = new Date(b.createdAt);
+      return createdDate < oneMonthAgo;
+    }).length;
+    
+    // Total banner now
+    const totalNow = allBanners.length;
+    
+    // Calculate change: how many new banners in last month
+    const newBannersLastMonth = totalNow - bannersCreatedBeforeLastMonth;
+    const totalBannerChange = bannersCreatedBeforeLastMonth > 0 
+      ? ((newBannersLastMonth / bannersCreatedBeforeLastMonth) * 100)
+      : (newBannersLastMonth > 0 ? 100 : 0);
+
+    // Active banners: count banners that existed last week and are currently active
+    const activeNow = allBanners.filter(b => b.isActive).length;
+    
+    // Count banners that existed a week ago (by createdAt)
+    const existingLastWeek = allBanners.filter(b => {
+      if (!b.createdAt) return false;
+      const createdDate = new Date(b.createdAt);
+      return createdDate < oneWeekAgo;
+    });
+    
+    const activeLastWeek = existingLastWeek.filter(b => b.isActive).length;
+    const activeChange = activeLastWeek > 0 
+      ? ((activeNow - activeLastWeek) / activeLastWeek) * 100
+      : (activeNow > 0 ? 100 : 0);
+
+    // Inactive banners: similar logic
+    const inactiveNow = allBanners.filter(b => !b.isActive).length;
+    const inactiveLastWeek = existingLastWeek.filter(b => !b.isActive).length;
+    const inactiveChange = inactiveLastWeek > 0
+      ? ((inactiveNow - inactiveLastWeek) / inactiveLastWeek) * 100
+      : (inactiveNow > 0 ? 100 : 0);
+
+    return {
+      totalBannerChange,
+      activeChange,
+      inactiveChange
+    };
+  };
+
+  const stats = getStats();
+
   const load = async () => {
     setLoading(true);
     try {
@@ -331,8 +396,15 @@ export default function BannerManagement() {
             <div className={styles.statLabel}>Tổng số banner</div>
             <div className={styles.statValue}>{total ?? 0}</div>
             <div className={styles.statTrend}>
-              <i className="bi bi-graph-up"></i>
-              <span>+2.5% so với tháng trước</span>
+              {stats.totalBannerChange >= 0 ? (
+                <i className="bi bi-graph-up"></i>
+              ) : (
+                <i className="bi bi-graph-down"></i>
+              )}
+              <span>
+                {stats.totalBannerChange >= 0 ? '+' : ''}
+                {stats.totalBannerChange.toFixed(1)}% so với tháng trước
+              </span>
             </div>
           </div>
           <div className={styles.statBg}>
@@ -349,9 +421,16 @@ export default function BannerManagement() {
             <div className={styles.statValue}>
               {allBanners.filter(b => b.isActive).length}
             </div>
-            <div className={styles.statTrend}>
-              <i className="bi bi-graph-up"></i>
-              <span>+5.2% tuần này</span>
+            <div className={`${styles.statTrend} ${stats.activeChange < 0 ? styles.negative : ''}`}>
+              {stats.activeChange >= 0 ? (
+                <i className="bi bi-graph-up"></i>
+              ) : (
+                <i className="bi bi-graph-down"></i>
+              )}
+              <span>
+                {stats.activeChange >= 0 ? '+' : ''}
+                {stats.activeChange.toFixed(1)}% tuần này
+              </span>
             </div>
           </div>
           <div className={styles.statBg}>
@@ -368,9 +447,16 @@ export default function BannerManagement() {
             <div className={styles.statValue}>
               {allBanners.filter(b => !b.isActive).length}
             </div>
-            <div className={`${styles.statTrend} ${styles.negative}`}>
-              <i className="bi bi-graph-down"></i>
-              <span>-1.3% tuần này</span>
+            <div className={`${styles.statTrend} ${stats.inactiveChange >= 0 ? styles.negative : ''}`}>
+              {stats.inactiveChange < 0 ? (
+                <i className="bi bi-graph-down"></i>
+              ) : (
+                <i className="bi bi-graph-up"></i>
+              )}
+              <span>
+                {stats.inactiveChange >= 0 ? '+' : ''}
+                {stats.inactiveChange.toFixed(1)}% tuần này
+              </span>
             </div>
           </div>
           <div className={styles.statBg}>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSidebar } from './PatientLayout';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { ChangePasswordModal } from '../../pages/auth/ChangePasswordModal';
 import styles from './PatientSidebar.module.css';
 
@@ -31,9 +31,21 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
     };
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    // Close menu first
+    setShowUserMenu(false);
+    
+    try {
+      // Call logout from AuthContext
+      await logout();
+      
+      // Navigate to login
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if logout fails, clear local state and navigate
+      navigate('/login');
+    }
   };
 
   const handleViewProfile = () => {
@@ -61,34 +73,38 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
       </div>
 
       <nav className={styles.sidebarNav}>
-        <a 
-          href="/app/patient" 
+        <Link 
+          to="/app/patient" 
           className={`${styles.navItem} ${currentPage === 'dashboard' ? styles.active : ''}`}
+          onClick={() => setShowUserMenu(false)}
         >
           <i className="bi bi-speedometer2"></i>
           {sidebarOpen && <span>Dashboard</span>}
-        </a>
-        <a 
-          href="/app/patient/appointments" 
+        </Link>
+        <Link 
+          to="/app/patient/appointments" 
           className={`${styles.navItem} ${currentPage === 'appointments' ? styles.active : ''}`}
+          onClick={() => setShowUserMenu(false)}
         >
           <i className="bi bi-calendar-check"></i>
           {sidebarOpen && <span>Lịch hẹn</span>}
-        </a>
-        <a 
-          href="/app/patient/results" 
+        </Link>
+        <Link 
+          to="/app/patient/results" 
           className={`${styles.navItem} ${currentPage === 'results' ? styles.active : ''}`}
+          onClick={() => setShowUserMenu(false)}
         >
           <i className="bi bi-clipboard-data"></i>
           {sidebarOpen && <span>Xem kết quả</span>}
-        </a>
-        <a 
-          href="/app/patient/finance" 
+        </Link>
+        <Link 
+          to="/app/patient/finance" 
           className={`${styles.navItem} ${currentPage === 'finance' ? styles.active : ''}`}
+          onClick={() => setShowUserMenu(false)}
         >
           <i className="bi bi-credit-card"></i>
           {sidebarOpen && <span>Tài chính</span>}
-        </a>
+        </Link>
       </nav>
 
       <div className={styles.userSection} ref={userMenuRef}>

@@ -11,9 +11,19 @@ export const PatientDashboard: React.FC = () => {
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <h1>Dashboard</h1>
-          <p>Chào mừng trở lại, {user?.fullName || 'Bệnh nhân'}!</p>
+          <p>
+            <span className={styles.waveEmoji}>👋</span>
+            Chào mừng trở lại, <strong>{user?.fullName || 'Bệnh nhân'}</strong>!
+          </p>
         </div>
         <div className={styles.headerRight}>
+          <div className={styles.walletBalance}>
+            <i className={`bi bi-wallet2 ${styles.walletIcon}`}></i>
+            <div>
+              <div style={{ fontSize: '12px', opacity: 0.9 }}>Số dư ví</div>
+              <div className={styles.walletAmount}>2,450,000 đ</div>
+            </div>
+          </div>
           <div className={styles.dateTime}>
             <i className="bi bi-calendar3"></i>
             <span>{new Date().toLocaleDateString('vi-VN')}</span>

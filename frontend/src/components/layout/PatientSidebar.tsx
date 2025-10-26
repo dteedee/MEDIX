@@ -36,15 +36,11 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
     setShowUserMenu(false);
     
     try {
-      // Call logout from AuthContext
+      // Call logout from AuthContext - it will handle redirect
       await logout();
-      
-      // Navigate to login
-      navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if logout fails, clear local state and navigate
-      navigate('/login');
+      // Logout will still clear state and redirect even if API call fails
     }
   };
 

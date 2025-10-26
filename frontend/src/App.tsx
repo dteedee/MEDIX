@@ -143,9 +143,9 @@ export function App() {
 
                 {/* ---------- Patient routes ---------- */}
                 <Route path="patient/*" element={
-                  // <ProtectedRoute requiredRoles={[UserRole.PATIENT]}>
+                  <ProtectedRoute requiredRoles={[UserRole.PATIENT]}>
                     <PatientLayout />
-                  // </ProtectedRoute>
+                  </ProtectedRoute>
                 }>
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<PatientDashboard />} />

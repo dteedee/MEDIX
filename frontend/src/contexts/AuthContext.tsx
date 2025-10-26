@@ -192,10 +192,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       localStorage.removeItem('userData');
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       apiClient.clearTokens();
       
       // Dispatch auth changed event for Header component
       window.dispatchEvent(new Event('authChanged'));
+      
+      // Force reload to clear all state and prevent back navigation
+      console.log('🔄 Force reload after logout');
+      window.location.href = '/login';
     }
   };
 

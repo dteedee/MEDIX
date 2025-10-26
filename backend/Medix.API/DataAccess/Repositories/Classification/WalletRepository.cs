@@ -1,0 +1,52 @@
+﻿using Medix.API.DataAccess.Interfaces.Classification;
+using Medix.API.Models.Entities;
+
+namespace Medix.API.DataAccess.Repositories.Classification
+{
+    public class WalletRepository : IWalletRepository
+    {
+        private readonly MedixContext _context;
+
+        public WalletRepository(MedixContext context)
+        {
+            _context = context;
+        }
+
+        public Task<Wallet> CreateWalletAsync(Wallet wallet)
+        {
+          _context.Wallets.AddAsync(wallet);
+            _context.SaveChangesAsync();
+            return Task.FromResult(wallet);
+        }
+
+        public Task<bool> DecreaseWalletBalanceAsync(Guid userId, decimal amount)
+        {
+            var wallet = _context.Wallets.FirstOrDefault(w => w.UserId == userId);
+          
+            wallet.Balance -= amount;
+            _context.Wallets.Update(wallet);
+            _context.SaveChangesAsync();
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> DeleteWalletBalanceAsync(Guid userId, decimal amount)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<decimal> GetWalletBalanceAsync(Guid userId)
+        {
+          return Task.FromResult(_context.Wallets.FirstOrDefault(w => w.UserId == userId).Balance);
+        }
+
+        public Task<bool> IncreaseWalletBalanceAsync(Guid userId, decimal amount)
+        {
+           var wallet = _context.Wallets.FirstOrDefault(w => w.UserId == userId);
+          
+            wallet.Balance += amount;
+            _context.Wallets.Update(wallet);
+            _context.SaveChangesAsync();
+            return Task.FromResult(true);
+        }
+    }
+}

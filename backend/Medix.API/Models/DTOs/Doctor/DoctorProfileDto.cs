@@ -8,6 +8,7 @@
         public string FullName { get; set; }
         public decimal AverageRating { get; set; }
         public int NumberOfReviews { get; set; }
+        public decimal? consulationFee { get; set; }
         public string Specialization { get; set; }
         public string? Biography { get; set; }
         public int[] RatingByStar { get; set; }

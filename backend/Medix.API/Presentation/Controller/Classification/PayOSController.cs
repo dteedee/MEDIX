@@ -14,32 +14,49 @@ namespace Medix.API.Presentation.Controller.Classification
     public class PayOSController : ControllerBase
     {
         private readonly PayOS _payOS;
-        public PayOSController(PayOS payOS)
+        private readonly string _clientId;
+        private readonly string _apiKey;
+        private readonly string _checksumKey;
+        public PayOSController(PayOS payOS, IConfiguration configuration)
         {
             _payOS = payOS;
+            _clientId = configuration["Environment:PAYOS_CLIENT_ID"]
+                 ?? throw new Exception("Cannot find PAYOS_CLIENT_ID in configuration");
+
+            _apiKey = configuration["Environment:PAYOS_API_KEY"]
+                      ?? throw new Exception("Cannot find PAYOS_API_KEY in configuration");
+
+            _checksumKey = configuration["Environment:PAYOS_CHECKSUM_KEY"]
+                           ?? throw new Exception("Cannot find PAYOS_CHECKSUM_KEY in configuration");
         }
 
-        [HttpPost("create")]
-        public async Task<IActionResult> CreatePaymentLink(CreatePaymentLinkRequest body)
+
+
+        [HttpPost("create-payment-link")]
+       
+        public async Task<IActionResult> Create(ItemData item)
         {
-            try
-            {
-                int orderCode = int.Parse(DateTimeOffset.Now.ToString("ffffff"));
-                ItemData item = new ItemData(body.productName, 1, body.price);
-                List<ItemData> items = new List<ItemData>();
-                items.Add(item);
-                PaymentData paymentData = new PaymentData(orderCode, body.price, body.description, items, body.cancelUrl, body.returnUrl);
+        
+           List<ItemData > items = new List<ItemData>();
+            items.Add(item);
+            var payOS = new PayOS(_clientId, _apiKey, _checksumKey);
 
-                CreatePaymentResult createPayment = await _payOS.createPaymentLink(paymentData);
+            var domain = "http://localhost:5123";
 
-                return Ok(new Response(0, "success", createPayment));
-            }
-            catch (System.Exception exception)
-            {
-                Console.WriteLine(exception);
-                return Ok(new Response(-1, "fail", null));
-            }
+            var paymentLinkRequest = new PaymentData(
+                orderCode: int.Parse(DateTimeOffset.Now.ToString("ffffff")),
+                amount: item.price,
+                description: "Thanh toan don hang",
+             items,
+                returnUrl: domain + "?success=true",
+                cancelUrl: domain + "?canceled=true"
+            );
+            var response = await payOS.createPaymentLink(paymentLinkRequest);
+            return Ok(response.checkoutUrl);   
         }
+
+
+
 
         [HttpGet("{orderId}")]
         public async Task<IActionResult> GetOrder([FromRoute] int orderId)

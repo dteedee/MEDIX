@@ -1,4 +1,4 @@
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 
 import styles from '../../styles/doctor-details.module.css'
 import { useEffect, useState } from "react";
@@ -6,7 +6,7 @@ import doctorService from "../../services/doctorService";
 import { DoctorProfileDto } from "../../types/doctor.types";
 import {Header } from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
-
+import paymentService from "../../services/paymentService";
 
 function DoctorDetails() {
     const [profileData, setProfileData] = useState<DoctorProfileDto>();
@@ -17,9 +17,108 @@ function DoctorDetails() {
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
     const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [showPaymentButton, setShowPaymentButton] = useState(false);
+    const [isCreatingPayment, setIsCreatingPayment] = useState(false);
 
     const { username } = useParams();
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+
+    // Function to check if user is logged in
+    const checkUserLogin = () => {
+        const accessToken = localStorage.getItem('accessToken');
+        const tokenExpiration = localStorage.getItem('tokenExpiration');
+        const userData = localStorage.getItem('userData');
+        
+        // Check if token exists and is not expired
+        if (accessToken && tokenExpiration) {
+            const expirationTime = parseInt(tokenExpiration);
+            if (Date.now() < expirationTime) {
+                // Also check if user data exists
+                if (userData) {
+                    try {
+                        const user = JSON.parse(userData);
+                        return user && user.role; // User is logged in and has role
+                    } catch (error) {
+                        console.error("Error parsing user data:", error);
+                        return false;
+                    }
+                }
+            }
+        }
+        
+        return false; // User is not logged in or token is expired
+    };
+
+    // Function to handle booking confirmation with login check
+    const handleBookingConfirm = () => {
+        if (!profileData || !selectedDate || !selectedTimeSlot) return;
+        
+        // Check if user is logged in
+        if (!checkUserLogin()) {
+            // User is not logged in, show alert and redirect to login page
+            alert("Bạn cần đăng nhập để đặt lịch hẹn với bác sĩ. Vui lòng đăng nhập để tiếp tục.");
+            navigate('/login');
+            return;
+        }
+        
+        // Check if user is a patient (only patients can book appointments)
+        const userData = localStorage.getItem('userData');
+        if (userData) {
+            try {
+                const user = JSON.parse(userData);
+                if (user.role !== 'Patient') {
+                    alert("Chỉ có bệnh nhân mới có thể đặt lịch hẹn với bác sĩ.");
+                    return;
+                }
+            } catch (error) {
+                console.error("Error parsing user data:", error);
+                alert("Có lỗi xảy ra khi xác thực thông tin người dùng.");
+                return;
+            }
+        }
+        
+        // User is logged in and is a patient, proceed with booking
+        console.log("User is logged in as patient, proceeding with booking...");
+        
+        // Show payment button after confirmation
+        setShowPaymentButton(true);
+    };
+
+    // Function to create payment link using service
+    const handleCreatePaymentLink = async () => {
+        if (!profileData || !selectedDate || !selectedTimeSlot) return;
+        
+        setIsCreatingPayment(true);
+        
+        try {
+            // Tạo ItemData cho việc khám bác sĩ
+            const itemData = paymentService.createDoctorConsultationItem(
+                profileData.fullName,
+                profileData.consulationFee || 200000
+            );
+
+            // Gọi service để tạo link thanh toán
+            console.log('Creating payment link with itemData:', itemData);
+            const result = await paymentService.createPaymentLink(itemData);
+            console.log('Payment result:', result);
+
+            if (result.success && result.checkoutUrl) {
+                console.log('Redirecting to checkout URL:', result.checkoutUrl);
+                
+                // Chuyển hướng trực tiếp đến trang thanh toán PayOS
+                paymentService.redirectToPayment(result.checkoutUrl);
+            } else {
+                console.error('Payment failed:', result.error);
+                alert(result.error || 'Có lỗi xảy ra khi tạo link thanh toán.');
+            }
+        } catch (error) {
+            console.error('Error creating payment link:', error);
+            alert('Có lỗi xảy ra khi tạo link thanh toán. Vui lòng thử lại.');
+        }
+        
+        setIsCreatingPayment(false);
+    };
 
     // Helper function to convert JavaScript dayOfWeek to backend dayOfWeek
     // JavaScript: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
@@ -88,6 +187,8 @@ function DoctorDetails() {
     const handleDateSelect = (date: Date | null) => {
         setSelectedDate(date);
         setSelectedTimeSlot(null);
+        setShowPaymentButton(false); // Reset payment button when date changes
+        setIsCreatingPayment(false); // Reset loading state
         if (date) {
             const slots = getAvailableTimeSlots(date);
             setAvailableTimeSlots(slots);
@@ -98,6 +199,8 @@ function DoctorDetails() {
 
     const handleTimeSlotSelect = (timeSlot: string) => {
         setSelectedTimeSlot(timeSlot);
+        setShowPaymentButton(false); // Reset payment button when time slot changes
+        setIsCreatingPayment(false); // Reset loading state
     };
 
     // Calculate consultation duration from selected time slot
@@ -242,7 +345,12 @@ function DoctorDetails() {
                     <div className={styles["booking-info"]}>
                         <div className={styles["price-info"]}>
                             <span className={styles["price-label"]}>Phí khám:</span>
-                            <span className={styles["price-value"]}>Liên hệ để biết giá</span>
+                            <span className={styles["price-value"]}>
+                                {profileData?.consulationFee ? 
+                                    `${profileData.consulationFee.toLocaleString('vi-VN')} VNĐ` : 
+                                    'Liên hệ để biết giá'
+                                }
+                            </span>
                         </div>
                         <div className={styles["duration-info"]}>
                             <span className={styles["duration-label"]}>Thời gian khám:</span>
@@ -250,9 +358,36 @@ function DoctorDetails() {
                         </div>
                     </div>
                     
-                    <button className={styles["booking-button"]}>
+                    <button 
+                        className={styles["booking-button"]}
+                        onClick={handleBookingConfirm}
+                    >
                         XÁC NHẬN
                     </button>
+                    
+                    {/* Payment Button - chỉ hiển thị sau khi bấm XÁC NHẬN */}
+                    {showPaymentButton && (
+                        <div style={{ marginTop: "10px" }}>
+                            <button 
+                                id="create-payment-link-btn"
+                                onClick={handleCreatePaymentLink}
+                                disabled={isCreatingPayment}
+                                style={{
+                                    backgroundColor: isCreatingPayment ? "#6c757d" : "#28a745",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "10px 20px",
+                                    borderRadius: "4px",
+                                    cursor: isCreatingPayment ? "not-allowed" : "pointer",
+                                    fontSize: "14px",
+                                    fontWeight: "500",
+                                    width: "100%"
+                                }}
+                            >
+                                {isCreatingPayment ? "Đang tạo link thanh toán..." : "Tạo Link thanh toán"}
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

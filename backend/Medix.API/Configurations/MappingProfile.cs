@@ -32,6 +32,8 @@ namespace Medix.API.Configurations
             CreateMap<PasswordUpdatePresenter, PasswordUpdateRequest>();
             CreateMap<DoctorRegisterPresenter, DoctorRegisterRequest>();
             CreateMap<User, UserBasicInfoDto>();
+
+           
         }
     }
 }

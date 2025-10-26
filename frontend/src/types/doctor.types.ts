@@ -66,6 +66,7 @@ export interface DoctorProfileDto{
   doctorID?: string;
   avatarUrl?: string;
   fullName: string;
+  price: number;
   averageRating: number;
   numberOfReviews: number;
   specialization: string;

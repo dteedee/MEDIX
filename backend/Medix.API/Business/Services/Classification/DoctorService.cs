@@ -205,7 +205,7 @@ namespace Medix.API.Business.Services.Classification
             }
 
             var profileDto = new DoctorProfileDto
-            {
+            { consulationFee =doctor.ConsultationFee,
                 FullName = doctor.User.FullName,
                 AverageRating = reviews.Count > 0
                     ? Math.Round((decimal)reviews.Average(r => r.Rating), 1)

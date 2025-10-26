@@ -14,6 +14,7 @@ namespace Medix.API.Models.DTOs
     public class UserDto
     {
         public Guid Id { get; set; }
+        public Guid? WalletID { get; set; }
         public string Email { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }

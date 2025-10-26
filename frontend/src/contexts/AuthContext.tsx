@@ -12,6 +12,7 @@ interface AuthContextType {
   register: (userData: RegisterRequest) => Promise<void>;
   registerPatient: (patientData: PatientRegistration) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updatedUserData: Partial<User>) => void;
   checkRole: (requiredRoles: UserRole[]) => boolean;
   hasPermission: (permission: string) => boolean;
 }
@@ -203,6 +204,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return requiredRoles.some(role => user.role === role);
   };
 
+  const updateUser = (updatedUserData: Partial<User>) => {
+    if (!user) return;
+    
+    const updatedUser = { ...user, ...updatedUserData };
+    setUser(updatedUser);
+    
+    // Update localStorage
+    localStorage.setItem('userData', JSON.stringify(updatedUser));
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    
+    // Dispatch auth changed event for other components
+    window.dispatchEvent(new Event('authChanged'));
+    
+    console.log('✅ AuthContext - User updated:', updatedUser.fullName);
+  };
+
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
     
@@ -248,6 +265,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     registerPatient,
     logout,
+    updateUser,
     checkRole,
     hasPermission,
   };

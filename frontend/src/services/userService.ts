@@ -20,6 +20,10 @@ export interface UpdateUserInfo {
   phoneNumber?: string;
   address?: string;
   dob?: string; // Will be converted to DateOnly on backend
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  medicalHistory?: string;
+  allergies?: string;
 }
 
 export const userService = {
@@ -41,7 +45,7 @@ export const userService = {
 
   async updateUserInfo(data: UpdateUserInfo): Promise<UserBasicInfo> {
     try {
-      const updateDto = {
+      const updateDto: any = {
         id: null,
         username: data.username || '',
         fullName: data.fullName || '',
@@ -50,6 +54,21 @@ export const userService = {
         address: data.address || null,
         dob: data.dob || null
       };
+      
+      // Add patient-specific fields if they exist
+      if (data.emergencyContactName !== undefined) {
+        updateDto.emergencyContactName = data.emergencyContactName;
+      }
+      if (data.emergencyContactPhone !== undefined) {
+        updateDto.emergencyContactPhone = data.emergencyContactPhone;
+      }
+      if (data.medicalHistory !== undefined) {
+        updateDto.medicalHistory = data.medicalHistory;
+      }
+      if (data.allergies !== undefined) {
+        updateDto.allergies = data.allergies;
+      }
+      
       const response = await apiClient.put<UserBasicInfo>('/user/updateUserInfor', updateDto);
       console.log('UpdateUserInfo - Request payload:', updateDto);
       console.log('UpdateUserInfo - API response:', response.data);

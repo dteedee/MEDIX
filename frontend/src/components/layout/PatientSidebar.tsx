@@ -98,7 +98,7 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
         >
           <div className={styles.userAvatar}>
             <img 
-              src={user?.imageURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || user?.email || 'Patient')}&background=667eea&color=fff`}
+              src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || user?.email || 'Patient')}&background=667eea&color=fff`}
               alt={user?.fullName || 'Patient'}
             />
           </div>

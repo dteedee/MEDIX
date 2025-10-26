@@ -40,7 +40,7 @@ const formatDate = (iso: string | null | undefined) => {
 };
 
 export const PatientProfile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { showToast } = useToast();
   const [data, setData] = useState<ExtendedUserInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -261,11 +261,13 @@ export const PatientProfile: React.FC = () => {
       setIsEditing(false);
       showToast('Cập nhật thông tin thành công!', 'success');
       
-      // Update user context with new avatar if changed
-      // TODO: Implement updateUser method in AuthContext
-      // if (updateUser && editData.imageURL) {
-      //   updateUser({ ...user, avatarUrl: editData.imageURL });
-      // }
+      // Update user context with new data
+      updateUser({
+        fullName: updatedData.fullName || undefined,
+        email: updatedData.email || undefined,
+        phoneNumber: updatedData.phoneNumber || undefined,
+        avatarUrl: updatedData.imageURL || undefined
+      });
       
     } catch (e: any) {
       showToast(e?.message || 'Không thể cập nhật thông tin', 'error');
@@ -330,10 +332,12 @@ export const PatientProfile: React.FC = () => {
       if (data && result.imageUrl) {
         const updatedData = { ...data, imageURL: result.imageUrl };
         setData(updatedData);
+        
+        // Update user context with new avatar
+        updateUser({ avatarUrl: result.imageUrl });
       }
       
-      setSuccess('Cập nhật ảnh đại diện thành công!');
-      setTimeout(() => setSuccess(null), 3000);
+      showToast('Cập nhật ảnh đại diện thành công!', 'success');
       
       URL.revokeObjectURL(previewUrl);
       setPreviewImage(null);

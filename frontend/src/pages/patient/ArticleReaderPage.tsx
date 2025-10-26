@@ -44,7 +44,9 @@ export default function ArticleReaderPage() {
         const allUrl = `/api/HealthArticle/published?page=1&pageSize=${totalArticles}`;
         const allRes = await fetch(allUrl);
         const allResponse = await allRes.json();
-        setAllArticles(allResponse.item2 || []);
+        // Filter out locked articles
+        const filteredArticles = (allResponse.item2 || []).filter((article: any) => !article.isLocked);
+        setAllArticles(filteredArticles);
       } else {
         setAllArticles([]);
       }
@@ -75,7 +77,9 @@ export default function ArticleReaderPage() {
         const url = `/api/HealthArticle/search?q=${encodeURIComponent(searchQuery)}`;
         const res = await fetch(url);
         const suggestedArticles = await res.json();
-        setSuggestions(suggestedArticles || []);
+        // Filter out locked articles
+        const filteredSuggestions = (suggestedArticles || []).filter((article: any) => !article.isLocked);
+        setSuggestions(filteredSuggestions);
       } catch (error) {
         console.error("Failed to fetch search suggestions:", error);
         setSuggestions([]);

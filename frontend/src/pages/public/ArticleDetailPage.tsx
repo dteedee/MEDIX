@@ -23,6 +23,11 @@ export default function ArticleDetailPage() {
       try {
         const data = await articleService.getBySlug(slug);
         if (data) {
+          // Check if article is locked
+          if (data.isLocked) {
+            setError('Bài viết không khả dụng.');
+            return;
+          }
           setArticle(data);
         } else {
           setError('Không tìm thấy bài viết.');

@@ -40,6 +40,43 @@ const categoryCache = {
 
 
 export const articleService = {
+  getAll: async (): Promise<ArticleDTO[]> => {
+    const r = await apiClient.get(BASE);
+    const data = r.data;
+    
+    // Fetch all categories to map names from IDs
+    const allCategories = (await categoryCache.fetchAll()).items;
+    
+    // Handle multiple response shapes from backend
+    const rawItems = Array.isArray(data)
+      ? data
+      : data?.data ?? data?.item2 ?? [];
+    
+    return (rawItems || []).map((x: any) => ({
+      id: x.id,
+      title: x.title,
+      slug: x.slug,
+      summary: x.summary,
+      content: x.content,
+      thumbnailUrl: x.thumbnailUrl,
+      coverImageUrl: x.coverImageUrl,
+      metaTitle: x.metaTitle,
+      metaDescription: x.metaDescription,
+      statusCode: x.statusCode,
+      authorName: x.authorName,
+      publishedAt: x.publishedAt,
+      viewCount: x.viewCount,
+      likeCount: x.likeCount,
+      isHomepageVisible: x.isHomepageVisible,
+      isLocked: x.isLocked ?? false,
+      displayOrder: x.displayOrder,
+      displayType: x.displayType,
+      createdAt: x.createdAt,
+      updatedAt: x.updatedAt,
+      categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
+      categoryIds: x.categoryIds
+    }));
+  },
   list: async (page = 1, pageSize = 10, params?: { keyword?: string; status?: string; slug?: string }): Promise<{ items: ArticleDTO[]; total?: number }> => {
     const query: any = { page, pageSize };
     let url = BASE;
@@ -76,6 +113,7 @@ export const articleService = {
         viewCount: x.viewCount,
         likeCount: x.likeCount,
         isHomepageVisible: x.isHomepageVisible,
+        isLocked: x.isLocked ?? false,
         displayOrder: x.displayOrder,
         displayType: x.displayType,
         createdAt: x.createdAt,
@@ -108,6 +146,7 @@ export const articleService = {
       likeCount: x.likeCount,
 
       isHomepageVisible: x.isHomepageVisible,
+      isLocked: x.isLocked ?? false,
       displayOrder: x.displayOrder,
       displayType: x.displayType,
       createdAt: x.createdAt,
@@ -139,6 +178,7 @@ export const articleService = {
       viewCount: x.viewCount,
       likeCount: x.likeCount,
       isHomepageVisible: x.isHomepageVisible,
+      isLocked: x.isLocked ?? false,
       displayOrder: x.displayOrder,
       displayType: x.displayType,
       publishedAt: x.publishedAt,
@@ -265,6 +305,12 @@ export const articleService = {
       // Re-throw the error so the calling component can handle it for UI feedback
       throw error;
     }
+  },
+  lock: async (id: string): Promise<void> => {
+    await apiClient.put(`${BASE}/${id}/lock`)
+  },
+  unlock: async (id: string): Promise<void> => {
+    await apiClient.put(`${BASE}/${id}/unlock`)
   },
   remove: async (id: string): Promise<void> => {
     await apiClient.delete(`${BASE}/${id}`)

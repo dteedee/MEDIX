@@ -139,18 +139,23 @@ export default function ArticleManagement() {
     }
   };
 
-  const handleDeleteArticle = async () => {
+  const handleLockArticle = async () => {
     if (!selectedArticle) return;
 
     try {
-      await articleService.delete(selectedArticle.id);
-      showToast('Xóa bài viết thành công!', 'success');
+      if (selectedArticle.isLocked) {
+        await articleService.unlock(selectedArticle.id);
+        showToast('Mở khóa bài viết thành công!', 'success');
+      } else {
+        await articleService.lock(selectedArticle.id);
+        showToast('Khóa bài viết thành công!', 'success');
+      }
       setShowDeleteDialog(false);
       setSelectedArticle(null);
       fetchData();
     } catch (err) {
-      showToast('Không thể xóa bài viết', 'error');
-      console.error('Error deleting article:', err);
+      showToast('Không thể thay đổi trạng thái bài viết', 'error');
+      console.error('Error locking/unlocking article:', err);
     }
   };
 
@@ -370,9 +375,13 @@ export default function ArticleManagement() {
                     setSelectedArticle(article);
                     setShowDeleteDialog(true);
                   }}
-                  title="Xóa"
+                  title={article.isLocked ? "Mở khóa" : "Khóa"}
                 >
-                  <i className="bi bi-trash"></i>
+                  {article.isLocked ? (
+                    <i className="bi bi-unlock"></i>
+                  ) : (
+                    <i className="bi bi-lock"></i>
+                  )}
                 </button>
               </div>
             </div>
@@ -494,16 +503,21 @@ export default function ArticleManagement() {
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Lock Confirmation Dialog */}
       {showDeleteDialog && selectedArticle && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
             <div className={styles.modalHeader}>
-              <h3>Xác nhận xóa</h3>
+              <h3>{selectedArticle.isLocked ? 'Mở khóa bài viết' : 'Khóa bài viết'}</h3>
             </div>
             <div className={styles.modalBody}>
-              <p>Bạn có chắc chắn muốn xóa bài viết <strong>"{selectedArticle.title}"</strong>?</p>
-              <p className={styles.warningText}>Hành động này không thể hoàn tác.</p>
+              <p>Bạn có chắc chắn muốn {selectedArticle.isLocked ? 'mở khóa' : 'khóa'} bài viết <strong>"{selectedArticle.title}"</strong>?</p>
+              <p className={styles.warningText}>
+                {selectedArticle.isLocked 
+                  ? 'Bài viết sẽ hiển thị lại trên trang chủ và trang bài viết.' 
+                  : 'Bài viết sẽ không hiển thị trên trang chủ và trang bài viết.'
+                }
+              </p>
             </div>
             <div className={styles.modalActions}>
               <button 
@@ -516,10 +530,10 @@ export default function ArticleManagement() {
                 Hủy
               </button>
               <button 
-                className={styles.deleteBtn}
-                onClick={handleDeleteArticle}
+                className={selectedArticle.isLocked ? styles.unlockBtn : styles.lockBtn}
+                onClick={handleLockArticle}
               >
-                Xóa
+                {selectedArticle.isLocked ? 'Mở khóa' : 'Khóa'}
               </button>
             </div>
           </div>

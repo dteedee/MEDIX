@@ -52,6 +52,11 @@ export default function ArticleDetailPage() {
       try {
         const articleData = await articleService.getBySlug(slug);
         if (articleData) {
+          // Check if article is locked
+          if (articleData.isLocked) {
+            setError('Article not available.')
+            return;
+          }
           setArticle(articleData);
           setLikeCount(articleData.likeCount ?? 0);
           // Check if article has been liked from localStorage

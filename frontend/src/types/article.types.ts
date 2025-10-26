@@ -21,6 +21,7 @@ export interface ArticleDTO {
   viewCount?: number
   likeCount?: number
   isHomepageVisible?: boolean
+  isLocked: boolean
   displayOrder?: number
   createdAt?: string
   updatedAt?: string

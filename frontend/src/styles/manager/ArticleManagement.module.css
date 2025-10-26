@@ -508,6 +508,40 @@
   transform: translateY(-1px);
 }
 
+.lockBtn {
+  padding: 10px 20px;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.lockBtn:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+}
+
+.unlockBtn {
+  padding: 10px 20px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.unlockBtn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
 .warningText {
   color: #e53e3e;
   font-size: 14px;

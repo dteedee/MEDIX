@@ -57,8 +57,11 @@ export default function BannerManagement() {
       itemsPerPage: 10,
       selectedBanner: null,
       showDetails: false,
-      showDeleteConfirm: false,
-      bannerToDelete: null
+      showLockConfirm: false,
+      bannerToLock: null,
+      showImagePopup: false,
+      selectedImageUrl: '',
+      selectedImageTitle: ''
     };
   };
 
@@ -125,27 +128,50 @@ export default function BannerManagement() {
     navigate(`/manager/banners/edit/${banner.id}`);
   };
 
-  const handleDelete = (banner: BannerDTO) => {
-    setState(prev => ({ ...prev, showDeleteConfirm: true, bannerToDelete: banner }));
+  const handleLock = (banner: BannerDTO) => {
+    setState(prev => ({ ...prev, showLockConfirm: true, bannerToLock: banner }));
   };
 
-  const confirmDelete = async () => {
-    if (!state.bannerToDelete) return;
+  const confirmLock = async () => {
+    if (!state.bannerToLock) return;
 
     try {
-      await bannerService.delete(state.bannerToDelete.id);
-      showToast('Xóa banner thành công!', 'success');
+      if (state.bannerToLock.isLocked) {
+        await bannerService.unlock(state.bannerToLock.id);
+        showToast('Mở khóa banner thành công!', 'success');
+      } else {
+        await bannerService.lock(state.bannerToLock.id);
+        showToast('Khóa banner thành công!', 'success');
+      }
       await loadBanners();
     } catch (error) {
-      console.error('Error deleting banner:', error);
-      showToast('Không thể xóa banner', 'error');
+      console.error('Error locking/unlocking banner:', error);
+      showToast('Không thể thay đổi trạng thái banner', 'error');
     } finally {
-      setState(prev => ({ ...prev, showDeleteConfirm: false, bannerToDelete: null }));
+      setState(prev => ({ ...prev, showLockConfirm: false, bannerToLock: null }));
     }
   };
 
-  const cancelDelete = () => {
-    setState(prev => ({ ...prev, showDeleteConfirm: false, bannerToDelete: null }));
+  const cancelLock = () => {
+    setState(prev => ({ ...prev, showLockConfirm: false, bannerToLock: null }));
+  };
+
+  const handleImageClick = (imageUrl: string, imageTitle: string) => {
+    setState(prev => ({ 
+      ...prev, 
+      showImagePopup: true, 
+      selectedImageUrl: imageUrl, 
+      selectedImageTitle: imageTitle 
+    }));
+  };
+
+  const closeImagePopup = () => {
+    setState(prev => ({ 
+      ...prev, 
+      showImagePopup: false, 
+      selectedImageUrl: '', 
+      selectedImageTitle: '' 
+    }));
   };
 
   const handleCreateNew = () => {
@@ -195,7 +221,14 @@ export default function BannerManagement() {
     });
   };
 
-  const getStatusBadge = (isActive: boolean) => {
+  const getStatusBadge = (isActive: boolean, isLocked: boolean) => {
+    if (isLocked) {
+      return (
+        <span className={`${styles.statusBadge} ${styles.statusLocked}`}>
+          Đã khóa
+        </span>
+      );
+    }
     return (
       <span className={`${styles.statusBadge} ${isActive ? styles.statusActive : styles.statusInactive}`}>
         {isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
@@ -382,7 +415,19 @@ export default function BannerManagement() {
                       </td>
                       <td>
                         {banner.bannerImageUrl ? (
-                          <img src={banner.bannerImageUrl} alt={banner.bannerTitle} className={styles.bannerImage} />
+                          <div 
+                            className={styles.imageContainer}
+                            onClick={() => handleImageClick(banner.bannerImageUrl!, banner.bannerTitle)}
+                            title="Click để xem ảnh lớn"
+                          >
+                            <img src={banner.bannerImageUrl} alt={banner.bannerTitle} className={styles.bannerImage} />
+                            <div className={styles.imageOverlay}>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </svg>
+                            </div>
+                          </div>
                         ) : (
                           <div className={styles.noImage}>Không có ảnh</div>
                         )}
@@ -401,7 +446,7 @@ export default function BannerManagement() {
                       <td>
                         <span className={styles.orderBadge}>{banner.displayOrder || 'N/A'}</span>
                       </td>
-                      <td>{getStatusBadge(banner.isActive)}</td>
+                      <td>{getStatusBadge(banner.isActive, banner.isLocked)}</td>
                       <td>{formatDate(banner.startDate)}</td>
                       <td>{formatDate(banner.endDate)}</td>
                       <td>{formatDate(banner.createdAt)}</td>
@@ -422,11 +467,22 @@ export default function BannerManagement() {
                             <EditIcon />
                           </button>
                           <button
-                            className={`${styles.actionButton} ${styles.deleteButton}`}
-                            onClick={() => handleDelete(banner)}
-                            title="Xóa"
+                            className={`${styles.actionButton} ${banner.isLocked ? styles.unlockButton : styles.lockButton}`}
+                            onClick={() => handleLock(banner)}
+                            title={banner.isLocked ? "Mở khóa" : "Khóa"}
                           >
-                            <DeleteIcon />
+                            {banner.isLocked ? (
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <circle cx="12" cy="16" r="1"></circle>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                              </svg>
+                            ) : (
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+                              </svg>
+                            )}
                           </button>
                         </div>
                       </td>
@@ -503,24 +559,49 @@ export default function BannerManagement() {
         <BannerDetails banner={state.selectedBanner} onClose={handleCloseDetails} />
       )}
 
-      {/* Delete Confirmation Modal */}
-      {state.showDeleteConfirm && state.bannerToDelete && (
+      {/* Lock Confirmation Modal */}
+      {state.showLockConfirm && state.bannerToLock && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
             <div className={styles.modalHeader}>
-              <h3>Xác nhận xóa banner</h3>
+              <h3>{state.bannerToLock.isLocked ? 'Mở khóa banner' : 'Khóa banner'}</h3>
             </div>
             <div className={styles.modalBody}>
-              <p>Bạn có chắc chắn muốn xóa banner <strong>"{state.bannerToDelete.bannerTitle}"</strong>?</p>
-              <p className={styles.warningText}>Hành động này không thể hoàn tác.</p>
+              <p>Bạn có chắc chắn muốn {state.bannerToLock.isLocked ? 'mở khóa' : 'khóa'} banner <strong>"{state.bannerToLock.bannerTitle}"</strong>?</p>
+              <p className={styles.warningText}>
+                {state.bannerToLock.isLocked 
+                  ? 'Banner sẽ hiển thị lại trên trang chủ và trang bài viết.' 
+                  : 'Banner sẽ không hiển thị trên trang chủ và trang bài viết.'
+                }
+              </p>
             </div>
             <div className={styles.modalActions}>
-              <button className={styles.cancelButton} onClick={cancelDelete}>
+              <button className={styles.cancelButton} onClick={cancelLock}>
                 Hủy
               </button>
-              <button className={styles.deleteButton} onClick={confirmDelete}>
-                Xóa
+              <button className={state.bannerToLock.isLocked ? styles.unlockButton : styles.lockButton} onClick={confirmLock}>
+                {state.bannerToLock.isLocked ? 'Mở khóa' : 'Khóa'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Popup Modal */}
+      {state.showImagePopup && (
+        <div className={styles.imageModalOverlay} onClick={closeImagePopup}>
+          <div className={styles.imageModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.imageModalHeader}>
+              <h3>{state.selectedImageTitle}</h3>
+              <button className={styles.closeButton} onClick={closeImagePopup}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <div className={styles.imageModalBody}>
+              <img src={state.selectedImageUrl} alt={state.selectedImageTitle} className={styles.popupImage} />
             </div>
           </div>
         </div>

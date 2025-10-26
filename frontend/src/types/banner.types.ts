@@ -4,6 +4,7 @@ export interface BannerDTO {
   bannerImageUrl?: string
   bannerUrl?: string
   isActive: boolean
+  isLocked: boolean
   displayOrder?: number
   startDate?: string | null
   endDate?: string | null

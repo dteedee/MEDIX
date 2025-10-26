@@ -11,6 +11,7 @@ function mapToDTO(x: any): BannerDTO {
     bannerUrl: x.bannerUrl ?? x.link,
     displayOrder: x.displayOrder ?? x.order,
     isActive: x.isActive ?? false,
+    isLocked: x.isLocked ?? false,
     createdAt: x.createdAt,
     startDate: x.startDate,
     endDate: x.endDate,
@@ -18,6 +19,17 @@ function mapToDTO(x: any): BannerDTO {
 }
 
 export const bannerService = {
+  getAll: async (): Promise<BannerDTO[]> => {
+    const r = await apiClient.get(BASE);
+    const data = r.data;
+    
+    // Handle multiple response shapes from backend
+    const rawItems = Array.isArray(data)
+      ? data
+      : data?.data ?? data?.item2 ?? [];
+    
+    return (rawItems || []).map(mapToDTO);
+  },
   list: async (page = 1, pageSize = 10, params?: { keyword?: string; status?: 'all' | 'active' | 'inactive' }): Promise<{ items: BannerDTO[]; total?: number }> => {
     const query: any = { page, pageSize };
     let url = BASE;
@@ -109,6 +121,12 @@ export const bannerService = {
       }
       throw error;
     }
+  },
+  lock: async (id: string): Promise<void> => {
+    await apiClient.put(`${BASE}/${id}/lock`)
+  },
+  unlock: async (id: string): Promise<void> => {
+    await apiClient.put(`${BASE}/${id}/unlock`)
   },
   remove: async (id: string): Promise<void> => {
     await apiClient.delete(`${BASE}/${id}`)

@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { userService, UserBasicInfo, UpdateUserInfo } from '../../services/userService';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { ChangePasswordModal } from '../auth/ChangePasswordModal';
+import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 import styles from '../../styles/patient/PatientProfile.module.css';
 
 interface ExtendedUserInfo extends UserBasicInfo {
@@ -38,6 +41,7 @@ const formatDate = (iso: string | null | undefined) => {
 
 export const PatientProfile: React.FC = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [data, setData] = useState<ExtendedUserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,6 +52,8 @@ export const PatientProfile: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
 
   // Validation functions
   const validateUsername = (username: string): string | null => {
@@ -76,6 +82,7 @@ export const PatientProfile: React.FC = () => {
     if (!/^\d{12}$/.test(cccd)) return 'CCCD phải có đúng 12 chữ số';
     return null;
   };
+
 
   const validateField = (fieldName: string, value: string): string | null => {
     switch (fieldName) {
@@ -146,6 +153,7 @@ export const PatientProfile: React.FC = () => {
     }
   };
 
+
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -186,14 +194,15 @@ export const PatientProfile: React.FC = () => {
     return () => { mounted = false; };
   }, []);
 
-  const handleSave = async () => {
+  const handleSaveClick = () => {
+    // Validate before showing confirmation
     if (editData.username?.trim() && editData.username.length < 3) {
-      setError('Tên tài khoản phải có ít nhất 3 ký tự');
+      showToast('Tên tài khoản phải có ít nhất 3 ký tự', 'error');
       return;
     }
 
     if (editData.username?.trim() && !/^[a-zA-Z0-9_]+$/.test(editData.username)) {
-      setError('Tên tài khoản chỉ được chứa chữ cái, số và dấu gạch dưới');
+      showToast('Tên tài khoản chỉ được chứa chữ cái, số và dấu gạch dưới', 'error');
       return;
     }
 
@@ -208,19 +217,27 @@ export const PatientProfile: React.FC = () => {
       }
       
       if (age < 18) {
-        setError('Bạn phải đủ 18 tuổi');
+        showToast('Bạn phải đủ 18 tuổi', 'error');
         return;
       }
     }
 
     if (!validateAllFields()) {
-      setError('Vui lòng kiểm tra lại thông tin đã nhập');
+      showToast('Vui lòng kiểm tra lại thông tin đã nhập', 'error');
       return;
     }
 
+    // Show confirmation dialog
+    setShowSaveConfirmation(true);
+  };
+
+  const handleSave = async () => {
     setSaving(true);
     setError(null);
     setSuccess(null);
+    setShowSaveConfirmation(false);
+
+    showToast('Đang cập nhật thông tin...', 'info');
 
     try {
       const updatedUser = await userService.updateUserInfo(editData);
@@ -242,7 +259,7 @@ export const PatientProfile: React.FC = () => {
       
       setData(updatedData);
       setIsEditing(false);
-      setSuccess('Cập nhật thông tin thành công!');
+      showToast('Cập nhật thông tin thành công!', 'success');
       
       // Update user context with new avatar if changed
       // TODO: Implement updateUser method in AuthContext
@@ -250,9 +267,8 @@ export const PatientProfile: React.FC = () => {
       //   updateUser({ ...user, avatarUrl: editData.imageURL });
       // }
       
-      setTimeout(() => setSuccess(null), 3000);
     } catch (e: any) {
-      setError(e?.message || 'Không thể cập nhật thông tin');
+      showToast(e?.message || 'Không thể cập nhật thông tin', 'error');
     } finally {
       setSaving(false);
     }
@@ -776,8 +792,8 @@ export const PatientProfile: React.FC = () => {
                     Hủy
                   </button>
                   <button 
-                    type="button" 
-                    onClick={handleSave}
+                    type="button"
+                    onClick={handleSaveClick}
                     className={styles.saveBtn}
                     disabled={saving}
                   >
@@ -796,7 +812,11 @@ export const PatientProfile: React.FC = () => {
                 </div>
               ) : (
                 <div className={styles.viewActions}>
-                  <button type="button" className={styles.changePasswordBtn}>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowChangePasswordModal(true)}
+                    className={styles.changePasswordBtn}
+                  >
                     <i className="bi bi-key"></i>
                     Đổi mật khẩu
                   </button>
@@ -814,6 +834,28 @@ export const PatientProfile: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        onClose={() => setShowChangePasswordModal(false)}
+        onSuccess={() => {
+          setShowChangePasswordModal(false);
+          showToast('Đổi mật khẩu thành công!', 'success');
+        }}
+      />
+
+      {/* Save Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showSaveConfirmation}
+        title="Xác nhận lưu thay đổi"
+        message="Bạn có chắc muốn lưu các thay đổi thông tin cá nhân không?"
+        confirmText="Lưu thay đổi"
+        cancelText="Hủy"
+        onConfirm={handleSave}
+        onCancel={() => setShowSaveConfirmation(false)}
+        type="info"
+      />
     </div>
   );
 };

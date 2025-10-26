@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSidebar } from './PatientLayout';
 import { useNavigate } from 'react-router-dom';
+import { ChangePasswordModal } from '../../pages/auth/ChangePasswordModal';
 import styles from './PatientSidebar.module.css';
 
 interface PatientSidebarProps {
@@ -13,6 +14,7 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -41,7 +43,7 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
 
   const handleChangePassword = () => {
     setShowUserMenu(false);
-    navigate('/app/patient/change-password');
+    setShowChangePasswordModal(true);
   };
 
   return (
@@ -145,6 +147,16 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
       >
         <i className={`bi bi-chevron-${sidebarOpen ? 'left' : 'right'}`}></i>
       </button>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        onClose={() => setShowChangePasswordModal(false)}
+        onSuccess={() => {
+          setShowChangePasswordModal(false);
+          // Optionally show success message or redirect
+        }}
+      />
     </div>
   );
 };

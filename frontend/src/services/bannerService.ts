@@ -4,12 +4,13 @@ const BASE = '/SiteBanners'
 
 // Helper function to map API response to our DTO consistently
 function mapToDTO(x: any): BannerDTO {
+  console.log('Mapping banner data:', x);
   return {
     id: x.id,
     bannerTitle: x.bannerTitle ?? x.title ?? '',
     bannerImageUrl: x.bannerImageUrl ?? x.imageUrl,
     bannerUrl: x.bannerUrl ?? x.link,
-    displayOrder: x.displayOrder ?? x.order,
+    displayOrder: x.displayOrder ?? x.order ?? 0,
     isActive: x.isActive ?? false,
     isLocked: x.isLocked ?? false,
     createdAt: x.createdAt,
@@ -123,10 +124,40 @@ export const bannerService = {
     }
   },
   lock: async (id: string): Promise<void> => {
-    await apiClient.put(`${BASE}/${id}/lock`)
+    try {
+      console.log('Locking banner with ID:', id);
+      console.log('Endpoint:', `${BASE}/${id}/lock`);
+      const response = await apiClient.put(`${BASE}/${id}/lock`, {});
+      console.log('Lock response:', response);
+      return response;
+    } catch (error: any) {
+      console.error('Error locking banner:', error);
+      console.error('Error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message
+      });
+      throw error;
+    }
   },
   unlock: async (id: string): Promise<void> => {
-    await apiClient.put(`${BASE}/${id}/unlock`)
+    try {
+      console.log('Unlocking banner with ID:', id);
+      console.log('Endpoint:', `${BASE}/${id}/unlock`);
+      const response = await apiClient.put(`${BASE}/${id}/unlock`, {});
+      console.log('Unlock response:', response);
+      return response;
+    } catch (error: any) {
+      console.error('Error unlocking banner:', error);
+      console.error('Error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message
+      });
+      throw error;
+    }
   },
   remove: async (id: string): Promise<void> => {
     await apiClient.delete(`${BASE}/${id}`)

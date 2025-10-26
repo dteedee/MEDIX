@@ -1,251 +1,311 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { bannerService } from '../../services/bannerService'
-import { BannerDTO } from '../../types/banner.types'
-import BannerDetails from './BannerDetails'
-import { useToast } from '../../contexts/ToastContext'
-import styles from '../../styles/manager/BannerList.module.css'
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { bannerService } from '../../services/bannerService';
+import { BannerDTO, CreateBannerRequest, UpdateBannerRequest } from '../../types/banner.types';
+import { useToast } from '../../contexts/ToastContext';
+import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
+import BannerForm from './BannerForm';
+import styles from '../../styles/admin/BannerManagement.module.css';
 
-// SVG Icons for actions
-const ViewIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
+interface BannerListFilters {
+  page: number;
+  pageSize: number;
+  search: string;
+  statusFilter: 'all' | 'active' | 'inactive';
+  dateFrom: string;
+  dateTo: string;
+  sortBy: string;
+  sortDirection: 'asc' | 'desc';
+}
 
-const EditIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-  </svg>
-);
-
-const DeleteIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="3 6 5 6 21 6" />
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-  </svg>
-);
-
-const SortIcon = ({ direction }: { direction?: 'asc' | 'desc' }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', marginLeft: 4, color: direction ? '#111827' : '#9ca3af' }}>
-    {direction === 'asc' && <path d="M18 15l-6-6-6 6" />}
-    {direction === 'desc' && <path d="M6 9l6 6 6-6" />}
-  </svg>
-);
+const getInitialState = (): BannerListFilters => {
+  try {
+    const savedState = localStorage.getItem('bannerListState');
+    if (savedState) {
+      return JSON.parse(savedState);
+    }
+  } catch (e) {
+    console.error("Failed to parse bannerListState from localStorage", e);
+  }
+  return {
+    page: 1,
+    pageSize: 10,
+    search: '',
+    statusFilter: 'all',
+    dateFrom: '',
+    dateTo: '',
+    sortBy: 'displayOrder',
+    sortDirection: 'asc' as const,
+  };
+};
 
 export default function BannerManagement() {
-  const SESSION_STORAGE_KEY = 'bannerListState';
+  const [allBanners, setAllBanners] = useState<BannerDTO[]>([]);
+  const [total, setTotal] = useState<number | undefined>(undefined);
+  const [filters, setFilters] = useState<BannerListFilters>(getInitialState);
+  const [loading, setLoading] = useState(true);
+  const [viewing, setViewing] = useState<BannerDTO | null>(null);
+  const [editing, setEditing] = useState<BannerDTO | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showImagePopup, setShowImagePopup] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState('');
+  const [selectedImageTitle, setSelectedImageTitle] = useState('');
+  const [updatingIds, setUpdatingIds] = useState<Record<string, boolean>>({});
+  const [confirmationDialog, setConfirmationDialog] = useState<{
+    isOpen: boolean;
+    banner: BannerDTO | null;
+    action: 'lock' | 'unlock' | null;
+  }>({
+    isOpen: false,
+    banner: null,
+    action: null
+  });
 
-  const getInitialState = () => {
-    try {
-      const savedState = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (savedState) {
-        return JSON.parse(savedState);
-      }
-    } catch (error) {
-      console.error("Failed to parse saved state for banners:", error);
-    }
-    return {
-      banners: [],
-      loading: true,
-      searchTerm: '',
-      sortField: 'createdAt',
-      sortDirection: 'desc' as 'asc' | 'desc',
-      currentPage: 1,
-      itemsPerPage: 10,
-      selectedBanner: null,
-      showDetails: false,
-      showLockConfirm: false,
-      bannerToLock: null,
-      showImagePopup: false,
-      selectedImageUrl: '',
-      selectedImageTitle: ''
-    };
-  };
-
-  const [state, setState] = useState(getInitialState);
-  const navigate = useNavigate();
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
-  // Save state to sessionStorage whenever it changes
-  useEffect(() => {
+  const load = async () => {
+    setLoading(true);
     try {
-      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(state));
-    } catch (error) {
-      console.error("Failed to save state for banners:", error);
-    }
-  }, [state]);
-
-  // Load banners on component mount
-  useEffect(() => {
-    loadBanners();
-  }, []);
-
-  const loadBanners = async () => {
-    setState(prev => ({ ...prev, loading: true }));
-    try {
+      console.log('Loading banners...');
       const banners = await bannerService.getAll();
-      setState(prev => ({ ...prev, banners, loading: false }));
+      console.log('Loaded banners:', banners);
+      console.log('Banners with isLocked field:', banners.map(b => ({ id: b.id, title: b.bannerTitle, isLocked: b.isLocked })));
+      setAllBanners(banners || []);
+      setTotal(banners?.length);
     } catch (error) {
       console.error('Error loading banners:', error);
-      setState(prev => ({ ...prev, loading: false }));
       showToast('Không thể tải danh sách banner', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSearch = (searchTerm: string) => {
-    setState(prev => ({ ...prev, searchTerm, currentPage: 1 }));
+  useEffect(() => {
+    localStorage.setItem('bannerListState', JSON.stringify(filters));
+  }, [filters]);
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [filters.page, filters.pageSize]);
+
+  const handleFilterChange = (key: keyof BannerListFilters, value: any) => {
+    setFilters(prev => {
+      const newState = { ...prev, [key]: value };
+      if (key !== 'page') newState.page = 1;
+      return newState;
+    });
   };
 
-  const handleSort = (field: string) => {
-    setState(prev => ({
-      ...prev,
-      sortField: field,
-      sortDirection: prev.sortField === field && prev.sortDirection === 'asc' ? 'desc' : 'asc',
-      currentPage: 1
-    }));
+  const handleStatusChange = (bannerToUpdate: BannerDTO, isBeingLocked: boolean) => {
+    // For banners, lock/unlock is based on isActive status
+    // Lock = set isActive to false, Unlock = set isActive to true
+    setConfirmationDialog({
+      isOpen: true,
+      banner: bannerToUpdate,
+      action: isBeingLocked ? 'lock' : 'unlock'
+    });
   };
 
-  const handlePageChange = (page: number) => {
-    setState(prev => ({ ...prev, currentPage: page }));
+  const handleConfirmStatusChange = async () => {
+    if (!confirmationDialog.banner || !confirmationDialog.action) return;
+
+    const { banner: currentBanner, action } = confirmationDialog;
+    const isBeingLocked = action === 'lock';
+    const actionText = isBeingLocked ? 'khóa' : 'mở khóa';
+
+    console.log('Confirming status change:', {
+      bannerId: currentBanner.id,
+      title: currentBanner.bannerTitle,
+      currentIsActive: currentBanner.isActive,
+      isBeingLocked,
+      action
+    });
+
+    setConfirmationDialog({ isOpen: false, banner: null, action: null });
+    showToast(`Đang ${actionText} banner "${currentBanner.bannerTitle}"...`, 'info');
+
+    setUpdatingIds(prev => ({ ...prev, [currentBanner.id]: true }));
+
+    try {
+      // Try lock/unlock first
+      if (isBeingLocked) {
+        console.log('Calling lock for banner:', currentBanner.id);
+        try {
+          await bannerService.lock(currentBanner.id);
+          console.log('Lock successful');
+        } catch (lockError: any) {
+          // If lock endpoint doesn't exist (404), use update instead
+          if (lockError?.response?.status === 404) {
+            console.log('Lock endpoint not found, using update instead');
+            await bannerService.update(currentBanner.id, { 
+              isActive: false,
+              bannerTitle: currentBanner.bannerTitle,
+              displayOrder: currentBanner.displayOrder
+            });
+          } else {
+            throw lockError;
+          }
+        }
+      } else {
+        console.log('Calling unlock for banner:', currentBanner.id);
+        try {
+          await bannerService.unlock(currentBanner.id);
+          console.log('Unlock successful');
+        } catch (unlockError: any) {
+          // If unlock endpoint doesn't exist (404), use update instead
+          if (unlockError?.response?.status === 404) {
+            console.log('Unlock endpoint not found, using update instead');
+            await bannerService.update(currentBanner.id, { 
+              isActive: true,
+              bannerTitle: currentBanner.bannerTitle,
+              displayOrder: currentBanner.displayOrder
+            });
+          } else {
+            throw unlockError;
+          }
+        }
+      }
+      showToast(`Đã ${actionText} banner thành công.`, 'success');
+      
+      // Reload data
+      console.log('Reloading banners after lock/unlock...');
+      await load();
+    } catch (error: any) {
+      console.error('Error locking/unlocking banner:', error);
+      const message = error?.response?.data?.message || error?.message || 'Không thể cập nhật trạng thái banner.';
+      showToast(message, 'error');
+    } finally {
+      setUpdatingIds(prev => ({ ...prev, [currentBanner.id]: false }));
+    }
   };
 
-  const handleItemsPerPageChange = (itemsPerPage: number) => {
-    setState(prev => ({ ...prev, itemsPerPage, currentPage: 1 }));
+  const handleSort = (column: string) => {
+    if (filters.sortBy === column) {
+      handleFilterChange('sortDirection', filters.sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setFilters(prev => ({ ...prev, sortBy: column, sortDirection: 'desc' as const }));
+    }
   };
 
   const handleViewDetails = (banner: BannerDTO) => {
-    setState(prev => ({ ...prev, selectedBanner: banner, showDetails: true }));
-  };
-
-  const handleCloseDetails = () => {
-    setState(prev => ({ ...prev, showDetails: false, selectedBanner: null }));
+    setViewing(banner);
   };
 
   const handleEdit = (banner: BannerDTO) => {
-    navigate(`/manager/banners/edit/${banner.id}`);
-  };
-
-  const handleLock = (banner: BannerDTO) => {
-    setState(prev => ({ ...prev, showLockConfirm: true, bannerToLock: banner }));
-  };
-
-  const confirmLock = async () => {
-    if (!state.bannerToLock) return;
-
-    try {
-      if (state.bannerToLock.isLocked) {
-        await bannerService.unlock(state.bannerToLock.id);
-        showToast('Mở khóa banner thành công!', 'success');
-      } else {
-        await bannerService.lock(state.bannerToLock.id);
-        showToast('Khóa banner thành công!', 'success');
-      }
-      await loadBanners();
-    } catch (error) {
-      console.error('Error locking/unlocking banner:', error);
-      showToast('Không thể thay đổi trạng thái banner', 'error');
-    } finally {
-      setState(prev => ({ ...prev, showLockConfirm: false, bannerToLock: null }));
-    }
-  };
-
-  const cancelLock = () => {
-    setState(prev => ({ ...prev, showLockConfirm: false, bannerToLock: null }));
-  };
-
-  const handleImageClick = (imageUrl: string, imageTitle: string) => {
-    setState(prev => ({ 
-      ...prev, 
-      showImagePopup: true, 
-      selectedImageUrl: imageUrl, 
-      selectedImageTitle: imageTitle 
-    }));
-  };
-
-  const closeImagePopup = () => {
-    setState(prev => ({ 
-      ...prev, 
-      showImagePopup: false, 
-      selectedImageUrl: '', 
-      selectedImageTitle: '' 
-    }));
+    setEditing(banner);
   };
 
   const handleCreateNew = () => {
-    navigate('/manager/banners/new');
+    setCreating(true);
   };
 
-  // Filter and sort banners
-  const filteredAndSortedBanners = useMemo(() => {
-    let filtered = state.banners.filter(banner =>
-      banner.bannerTitle.toLowerCase().includes(state.searchTerm.toLowerCase()) ||
-      (banner.bannerUrl && banner.bannerUrl.toLowerCase().includes(state.searchTerm.toLowerCase()))
-    );
+  const handleImageClick = (imageUrl: string, imageTitle: string) => {
+    setSelectedImageUrl(imageUrl);
+    setSelectedImageTitle(imageTitle);
+    setShowImagePopup(true);
+  };
 
-    filtered.sort((a, b) => {
-      let aValue: any = a[state.sortField as keyof BannerDTO];
-      let bValue: any = b[state.sortField as keyof BannerDTO];
+  const closeImagePopup = () => {
+    setShowImagePopup(false);
+    setSelectedImageUrl('');
+    setSelectedImageTitle('');
+  };
 
-      if (state.sortField === 'createdAt' || state.sortField === 'startDate' || state.sortField === 'endDate') {
-        aValue = new Date(aValue || 0).getTime();
-        bValue = new Date(bValue || 0).getTime();
-      } else if (typeof aValue === 'string') {
-        aValue = aValue.toLowerCase();
-        bValue = (bValue || '').toLowerCase();
+  const handleResetFilters = () => {
+    setFilters({
+      ...filters,
+      statusFilter: 'all',
+      dateFrom: '',
+      dateTo: '',
+    });
+  };
+
+  const processedItems = useMemo(() => {
+    const from = filters.dateFrom ? new Date(filters.dateFrom) : undefined;
+    const to = filters.dateTo ? (() => {
+      const date = new Date(filters.dateTo);
+      date.setHours(23, 59, 59, 999);
+      return date;
+    })() : undefined;
+
+    const filtered = allBanners.filter(b => {
+      const searchTerm = filters.search.toLowerCase();
+      const okSearch = !searchTerm ||
+        (b.bannerTitle && b.bannerTitle.toLowerCase().includes(searchTerm));
+
+      // Use isActive for status filtering (isLocked may not be available from backend)
+      const okStatus = filters.statusFilter === 'all' || 
+        (filters.statusFilter === 'active' ? b.isActive : 
+         filters.statusFilter === 'inactive' ? !b.isActive : true);
+
+      let okDate = true;
+      if (from || to) {
+        const created = b.createdAt ? new Date(b.createdAt) : undefined;
+        okDate = !!created && (!from || created >= from) && (!to || created <= to);
       }
 
-      if (aValue < bValue) return state.sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return state.sortDirection === 'asc' ? 1 : -1;
+      return okSearch && okStatus && okDate;
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      let valA: any, valB: any;
+      
+      if (filters.sortBy === 'startDate' || filters.sortBy === 'endDate') {
+        valA = a[filters.sortBy] ? new Date(a[filters.sortBy]!).getTime() : 0;
+        valB = b[filters.sortBy] ? new Date(b[filters.sortBy]!).getTime() : 0;
+      } else if (filters.sortBy === 'bannerTitle') {
+        valA = (a.bannerTitle || '').toLowerCase();
+        valB = (b.bannerTitle || '').toLowerCase();
+      } else if (filters.sortBy === 'isActive') {
+        valA = a.isActive ? 1 : 0;
+        valB = b.isActive ? 1 : 0;
+      } else if (filters.sortBy === 'displayOrder') {
+        valA = a.displayOrder || 0;
+        valB = b.displayOrder || 0;
+      }
+
+      if (valA < valB) return filters.sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return filters.sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
 
-    return filtered;
-  }, [state.banners, state.searchTerm, state.sortField, state.sortDirection]);
+    const startIndex = (filters.page - 1) * filters.pageSize;
+    const endIndex = startIndex + filters.pageSize;
+    
+    return sorted.slice(startIndex, endIndex);
+  }, [allBanners, filters]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredAndSortedBanners.length / state.itemsPerPage);
-  const startIndex = (state.currentPage - 1) * state.itemsPerPage;
-  const paginatedBanners = filteredAndSortedBanners.slice(startIndex, startIndex + state.itemsPerPage);
+  const totalPages = Math.ceil((total ?? 0) / filters.pageSize);
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'Chưa có';
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return new Date(dateString).toLocaleDateString('vi-VN');
   };
 
   const getStatusBadge = (isActive: boolean, isLocked: boolean) => {
-    if (isLocked) {
+    // If isLocked field is available and true, show locked status
+    if (isLocked !== undefined && isLocked) {
       return (
         <span className={`${styles.statusBadge} ${styles.statusLocked}`}>
+          <i className="bi bi-lock-fill"></i>
           Đã khóa
         </span>
       );
     }
+    // Otherwise use isActive status
     return (
       <span className={`${styles.statusBadge} ${isActive ? styles.statusActive : styles.statusInactive}`}>
-        {isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
+        <i className={`bi bi-${isActive ? 'check-circle-fill' : 'x-circle-fill'}`}></i>
+        {isActive ? 'Hoạt động' : 'Tạm dừng'}
       </span>
     );
   };
-
-  if (state.loading) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.loading}>
-          <div className={styles.spinner}></div>
-          <p>Đang tải danh sách banner...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.container}>
@@ -255,357 +315,424 @@ export default function BannerManagement() {
           <h1 className={styles.title}>Quản lý Banner</h1>
           <p className={styles.subtitle}>Quản lý và theo dõi các banner quảng cáo</p>
         </div>
-        <div className={styles.headerRight}>
-          <button className={styles.createButton} onClick={handleCreateNew}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Tạo Banner mới
-          </button>
-        </div>
-      </div>
-
-      {/* Search and Filter */}
-      <div className={styles.searchFilterSection}>
-        <div className={styles.searchBar}>
-          <div className={styles.searchInput}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="M21 21l-4.35-4.35"></path>
-            </svg>
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo tiêu đề hoặc đường dẫn..."
-              value={state.searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-          </div>
-        </div>
+        <button onClick={handleCreateNew} className={styles.btnCreate}>
+          <i className="bi bi-plus-lg"></i>
+          Tạo mới
+        </button>
       </div>
 
       {/* Stats Cards */}
       <div className={styles.statsGrid}>
         <div className={`${styles.statCard} ${styles.statCard1}`}>
           <div className={styles.statIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <circle cx="8.5" cy="8.5" r="1.5"></circle>
-              <polyline points="21,15 16,10 5,21"></polyline>
-            </svg>
+            <i className="bi bi-images"></i>
           </div>
           <div className={styles.statContent}>
-            <div className={styles.statLabel}>Tổng số Banner</div>
-            <div className={styles.statValue}>{state.banners.length}</div>
+            <div className={styles.statLabel}>Tổng số banner</div>
+            <div className={styles.statValue}>{total ?? 0}</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-graph-up"></i>
+              <span>+2.5% so với tháng trước</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-images"></i>
           </div>
         </div>
 
         <div className={`${styles.statCard} ${styles.statCard2}`}>
           <div className={styles.statIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20,6 9,17 4,12"></polyline>
-            </svg>
+            <i className="bi bi-check-circle-fill"></i>
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Đang hoạt động</div>
-            <div className={styles.statValue}>{state.banners.filter(b => b.isActive).length}</div>
+            <div className={styles.statValue}>
+              {allBanners.filter(b => b.isActive).length}
+            </div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-graph-up"></i>
+              <span>+5.2% tuần này</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-check-circle-fill"></i>
           </div>
         </div>
 
         <div className={`${styles.statCard} ${styles.statCard3}`}>
           <div className={styles.statIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
+            <i className="bi bi-pause-circle-fill"></i>
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Ngừng hoạt động</div>
-            <div className={styles.statValue}>{state.banners.filter(b => !b.isActive).length}</div>
+            <div className={styles.statValue}>
+              {allBanners.filter(b => !b.isActive).length}
+            </div>
+            <div className={`${styles.statTrend} ${styles.negative}`}>
+              <i className="bi bi-graph-down"></i>
+              <span>-1.3% tuần này</span>
+            </div>
           </div>
-        </div>
-
-        <div className={`${styles.statCard} ${styles.statCard4}`}>
-          <div className={styles.statIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-              <line x1="8" y1="21" x2="16" y2="21"></line>
-              <line x1="12" y1="17" x2="12" y2="21"></line>
-            </svg>
-          </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Kết quả tìm kiếm</div>
-            <div className={styles.statValue}>{filteredAndSortedBanners.length}</div>
+          <div className={styles.statBg}>
+            <i className="bi bi-pause-circle-fill"></i>
           </div>
         </div>
       </div>
 
-      {/* Banners Table */}
-      <div className={styles.tableCard}>
-        <div className={styles.tableHeader}>
-          <h3>Danh sách Banner</h3>
-          <div className={styles.tableActions}>
-            <span className={styles.resultsCount}>
-              Hiển thị {startIndex + 1}-{Math.min(startIndex + state.itemsPerPage, filteredAndSortedBanners.length)} trong tổng số {filteredAndSortedBanners.length} banner
-            </span>
-          </div>
+      {/* Search and Filter */}
+      <div className={styles.searchSection}>
+        <div className={styles.searchWrapper}>
+          <i className="bi bi-search"></i>
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tiêu đề..."
+            value={filters.search}
+            onChange={e => handleFilterChange('search', e.target.value)}
+            className={styles.searchInput}
+          />
+          {filters.search && (
+            <button 
+              className={styles.clearSearch}
+              onClick={() => handleFilterChange('search', '')}
+            >
+              <i className="bi bi-x-lg"></i>
+            </button>
+          )}
         </div>
 
-        {paginatedBanners.length === 0 ? (
-          <div className={styles.emptyState}>
-            <div className={styles.emptyIcon}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21,15 16,10 5,21"></polyline>
-              </svg>
+        <button 
+          className={`${styles.btnFilter} ${showFilters ? styles.active : ''}`}
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <i className="bi bi-funnel"></i>
+          Bộ lọc
+          {(filters.statusFilter !== 'all' || filters.dateFrom || filters.dateTo) && (
+            <span className={styles.filterBadge}></span>
+          )}
+        </button>
+      </div>
+
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div className={styles.filterPanel}>
+          <div className={styles.filterGrid}>
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-toggle-on"></i>
+                Trạng thái
+              </label>
+              <select value={filters.statusFilter} onChange={e => handleFilterChange('statusFilter', e.target.value)}>
+                <option value="all">Tất cả trạng thái</option>
+                <option value="active">Đang hoạt động</option>
+                <option value="inactive">Ngừng hoạt động</option>
+              </select>
             </div>
-            <h3>Không tìm thấy banner nào</h3>
-            <p>Hãy thử thay đổi từ khóa tìm kiếm hoặc tạo banner mới</p>
-            <button className={styles.createButton} onClick={handleCreateNew}>
-              Tạo Banner đầu tiên
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-calendar-event"></i>
+                Từ ngày
+              </label>
+              <input 
+                type="date" 
+                value={filters.dateFrom} 
+                onChange={e => handleFilterChange('dateFrom', e.target.value)} 
+              />
+            </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-calendar-check"></i>
+                Đến ngày
+              </label>
+              <input 
+                type="date" 
+                value={filters.dateTo} 
+                onChange={e => handleFilterChange('dateTo', e.target.value)} 
+              />
+            </div>
+          </div>
+
+          <div className={styles.filterActions}>
+            <button onClick={handleResetFilters} className={styles.btnResetFilter}>
+              <i className="bi bi-arrow-counterclockwise"></i>
+              Đặt lại bộ lọc
+            </button>
+            <button onClick={() => setShowFilters(false)} className={styles.btnApplyFilter}>
+              <i className="bi bi-check2"></i>
+              Áp dụng
             </button>
           </div>
-        ) : (
-          <>
-            <div className={styles.tableContainer}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th className={styles.sortable} onClick={() => handleSort('bannerTitle')}>
-                      Tiêu đề
-                      <SortIcon direction={state.sortField === 'bannerTitle' ? state.sortDirection : undefined} />
-                    </th>
-                    <th>Ảnh</th>
-                    <th className={styles.sortable} onClick={() => handleSort('bannerUrl')}>
-                      Đường dẫn
-                      <SortIcon direction={state.sortField === 'bannerUrl' ? state.sortDirection : undefined} />
-                    </th>
-                    <th className={styles.sortable} onClick={() => handleSort('displayOrder')}>
-                      Thứ tự
-                      <SortIcon direction={state.sortField === 'displayOrder' ? state.sortDirection : undefined} />
-                    </th>
-                    <th className={styles.sortable} onClick={() => handleSort('isActive')}>
-                      Trạng thái
-                      <SortIcon direction={state.sortField === 'isActive' ? state.sortDirection : undefined} />
-                    </th>
-                    <th className={styles.sortable} onClick={() => handleSort('startDate')}>
-                      Ngày bắt đầu
-                      <SortIcon direction={state.sortField === 'startDate' ? state.sortDirection : undefined} />
-                    </th>
-                    <th className={styles.sortable} onClick={() => handleSort('endDate')}>
-                      Ngày kết thúc
-                      <SortIcon direction={state.sortField === 'endDate' ? state.sortDirection : undefined} />
-                    </th>
-                    <th className={styles.sortable} onClick={() => handleSort('createdAt')}>
-                      Ngày tạo
-                      <SortIcon direction={state.sortField === 'createdAt' ? state.sortDirection : undefined} />
-                    </th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedBanners.map((banner) => (
-                    <tr key={banner.id}>
-                      <td>
-                        <div className={styles.titleCell}>
-                          <span className={styles.titleText}>{banner.bannerTitle}</span>
-                        </div>
-                      </td>
-                      <td>
-                        {banner.bannerImageUrl ? (
-                          <div 
-                            className={styles.imageContainer}
-                            onClick={() => handleImageClick(banner.bannerImageUrl!, banner.bannerTitle)}
-                            title="Click để xem ảnh lớn"
-                          >
-                            <img src={banner.bannerImageUrl} alt={banner.bannerTitle} className={styles.bannerImage} />
-                            <div className={styles.imageOverlay}>
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                <circle cx="12" cy="12" r="3" />
-                              </svg>
-                            </div>
+        </div>
+      )}
+
+      {/* Table */}
+      <div className={styles.tableCard}>
+        {loading ? (
+          <div className={styles.loading}>
+            <div className={styles.loadingSpinner}></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+        ) : processedItems.length > 0 ? (
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th style={{ width: '60px' }}>STT</th>
+                  <th onClick={() => handleSort('bannerTitle')} className={styles.sortable}>
+                    Tiêu đề
+                    {filters.sortBy === 'bannerTitle' && (
+                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th>Ảnh</th>
+                  <th onClick={() => handleSort('displayOrder')} className={styles.sortable}>
+                    Thứ tự
+                    {filters.sortBy === 'displayOrder' && (
+                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('isActive')} className={styles.sortable}>
+                    Trạng thái
+                    {filters.sortBy === 'isActive' && (
+                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('startDate')} className={styles.sortable}>
+                    Ngày bắt đầu
+                    {filters.sortBy === 'startDate' && (
+                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('endDate')} className={styles.sortable}>
+                    Ngày kết thúc
+                    {filters.sortBy === 'endDate' && (
+                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th style={{ textAlign: 'right', width: '150px' }}>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {processedItems.map((banner, index) => (
+                  <tr key={banner.id} className={styles.tableRow}>
+                    <td className={styles.indexCell}>
+                      {(filters.page - 1) * filters.pageSize + index + 1}
+                    </td>
+                    <td>
+                      <div className={styles.titleCell}>
+                        <span className={styles.titleText}>{banner.bannerTitle}</span>
+                      </div>
+                    </td>
+                    <td>
+                      {banner.bannerImageUrl ? (
+                        <div 
+                          className={styles.imageContainer}
+                          onClick={() => handleImageClick(banner.bannerImageUrl!, banner.bannerTitle)}
+                          title="Click để xem ảnh lớn"
+                        >
+                          <img src={banner.bannerImageUrl} alt={banner.bannerTitle} className={styles.bannerImage} />
+                          <div className={styles.imageOverlay}>
+                            <i className="bi bi-eye"></i>
                           </div>
-                        ) : (
-                          <div className={styles.noImage}>Không có ảnh</div>
-                        )}
-                      </td>
-                      <td>
-                        <div className={styles.linkCell}>
-                          {banner.bannerUrl ? (
-                            <a href={banner.bannerUrl} target="_blank" rel="noopener noreferrer" className={styles.link}>
-                              {banner.bannerUrl.length > 30 ? `${banner.bannerUrl.substring(0, 30)}...` : banner.bannerUrl}
-                            </a>
-                          ) : (
-                            <span className={styles.noLink}>Không có</span>
-                          )}
                         </div>
-                      </td>
-                      <td>
-                        <span className={styles.orderBadge}>{banner.displayOrder || 'N/A'}</span>
-                      </td>
-                      <td>{getStatusBadge(banner.isActive, banner.isLocked)}</td>
-                      <td>{formatDate(banner.startDate)}</td>
-                      <td>{formatDate(banner.endDate)}</td>
-                      <td>{formatDate(banner.createdAt)}</td>
-                      <td>
-                        <div className={styles.actionButtons}>
-                          <button
-                            className={styles.actionButton}
-                            onClick={() => handleViewDetails(banner)}
-                            title="Xem chi tiết"
-                          >
-                            <ViewIcon />
-                          </button>
-                          <button
-                            className={styles.actionButton}
-                            onClick={() => handleEdit(banner)}
-                            title="Chỉnh sửa"
-                          >
-                            <EditIcon />
-                          </button>
-                          <button
-                            className={`${styles.actionButton} ${banner.isLocked ? styles.unlockButton : styles.lockButton}`}
-                            onClick={() => handleLock(banner)}
-                            title={banner.isLocked ? "Mở khóa" : "Khóa"}
-                          >
-                            {banner.isLocked ? (
-                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                <circle cx="12" cy="16" r="1"></circle>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                              </svg>
-                            ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
-                              </svg>
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      ) : (
+                        <div className={styles.noImage}>Không có</div>
+                      )}
+                    </td>
+                    <td>
+                      <span className={styles.orderBadge}>{banner.displayOrder || 'N/A'}</span>
+                    </td>
+                    <td>{getStatusBadge(banner.isActive, banner.isLocked || false)}</td>
+                    <td className={styles.dateCell}>{formatDate(banner.startDate)}</td>
+                    <td className={styles.dateCell}>{formatDate(banner.endDate)}</td>
+                    <td>
+                      <div className={styles.actions}>
+                        <button onClick={() => handleViewDetails(banner)} title="Xem chi tiết" className={styles.actionBtn}>
+                          <i className="bi bi-eye"></i>
+                        </button>
+                        <button onClick={() => handleEdit(banner)} title="Sửa" className={styles.actionBtn}>
+                          <i className="bi bi-pencil"></i>
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(banner, !banner.isActive)}
+                          disabled={Boolean(updatingIds[banner.id])}
+                          title={banner.isActive ? 'Khóa (Tạm dừng)' : 'Mở khóa (Kích hoạt)'}
+                          className={`${styles.actionBtn} ${banner.isActive ? styles.actionLock : styles.actionUnlock}`}
+                        >
+                          <i className={`bi bi-${banner.isActive ? 'lock' : 'unlock'}`}></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className={styles.emptyState}>
+            <i className="bi bi-inbox"></i>
+            <p>Không tìm thấy banner nào</p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {processedItems.length > 0 && (
+          <div className={styles.pagination}>
+            <div className={styles.paginationInfo}>
+              Hiển thị {(filters.page - 1) * filters.pageSize + 1} - {Math.min(filters.page * filters.pageSize, total ?? 0)} trong tổng số {total ?? 0} kết quả
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className={styles.pagination}>
-                <div className={styles.paginationInfo}>
-                  <span>Hiển thị</span>
-                  <select
-                    value={state.itemsPerPage}
-                    onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                    className={styles.pageSizeSelect}
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
-                  <span>banner mỗi trang</span>
-                </div>
+            <div className={styles.paginationControls}>
+              <select value={filters.pageSize} onChange={e => setFilters(prev => ({ ...prev, pageSize: Number(e.target.value), page: 1 }))}>
+                <option value={5}>5 / trang</option>
+                <option value={10}>10 / trang</option>
+                <option value={15}>15 / trang</option>
+                <option value={20}>20 / trang</option>
+              </select>
 
-                <div className={styles.paginationControls}>
-                  <button
-                    className={styles.paginationButton}
-                    onClick={() => handlePageChange(state.currentPage - 1)}
-                    disabled={state.currentPage === 1}
-                  >
-                    Trước
-                  </button>
+              <div className={styles.paginationButtons}>
+                <button 
+                  onClick={() => handleFilterChange('page', 1)} 
+                  disabled={filters.page <= 1}
+                  title="Trang đầu"
+                >
+                  <i className="bi bi-chevron-double-left"></i>
+                </button>
+                <button 
+                  onClick={() => handleFilterChange('page', filters.page - 1)} 
+                  disabled={filters.page <= 1}
+                  title="Trang trước"
+                >
+                  <i className="bi bi-chevron-left"></i>
+                </button>
+                
+                <span className={styles.pageIndicator}>
+                  {filters.page} / {totalPages || 1}
+                </span>
 
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                    if (
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= state.currentPage - 2 && page <= state.currentPage + 2)
-                    ) {
-                      return (
-                        <button
-                          key={page}
-                          className={`${styles.paginationButton} ${page === state.currentPage ? styles.active : ''}`}
-                          onClick={() => handlePageChange(page)}
-                        >
-                          {page}
-                        </button>
-                      );
-                    } else if (page === state.currentPage - 3 || page === state.currentPage + 3) {
-                      return <span key={page} className={styles.paginationEllipsis}>...</span>;
-                    }
-                    return null;
-                  })}
-
-                  <button
-                    className={styles.paginationButton}
-                    onClick={() => handlePageChange(state.currentPage + 1)}
-                    disabled={state.currentPage === totalPages}
-                  >
-                    Sau
-                  </button>
-                </div>
+                <button 
+                  onClick={() => handleFilterChange('page', filters.page + 1)} 
+                  disabled={filters.page >= totalPages}
+                  title="Trang sau"
+                >
+                  <i className="bi bi-chevron-right"></i>
+                </button>
+                <button 
+                  onClick={() => handleFilterChange('page', totalPages)} 
+                  disabled={filters.page >= totalPages}
+                  title="Trang cuối"
+                >
+                  <i className="bi bi-chevron-double-right"></i>
+                </button>
               </div>
-            )}
-          </>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Banner Details Modal */}
-      {state.showDetails && state.selectedBanner && (
-        <BannerDetails banner={state.selectedBanner} onClose={handleCloseDetails} />
-      )}
-
-      {/* Lock Confirmation Modal */}
-      {state.showLockConfirm && state.bannerToLock && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <div className={styles.modalHeader}>
-              <h3>{state.bannerToLock.isLocked ? 'Mở khóa banner' : 'Khóa banner'}</h3>
-            </div>
-            <div className={styles.modalBody}>
-              <p>Bạn có chắc chắn muốn {state.bannerToLock.isLocked ? 'mở khóa' : 'khóa'} banner <strong>"{state.bannerToLock.bannerTitle}"</strong>?</p>
-              <p className={styles.warningText}>
-                {state.bannerToLock.isLocked 
-                  ? 'Banner sẽ hiển thị lại trên trang chủ và trang bài viết.' 
-                  : 'Banner sẽ không hiển thị trên trang chủ và trang bài viết.'
-                }
-              </p>
-            </div>
-            <div className={styles.modalActions}>
-              <button className={styles.cancelButton} onClick={cancelLock}>
-                Hủy
-              </button>
-              <button className={state.bannerToLock.isLocked ? styles.unlockButton : styles.lockButton} onClick={confirmLock}>
-                {state.bannerToLock.isLocked ? 'Mở khóa' : 'Khóa'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Image Popup Modal */}
-      {state.showImagePopup && (
+      {/* Image Popup */}
+      {showImagePopup && (
         <div className={styles.imageModalOverlay} onClick={closeImagePopup}>
           <div className={styles.imageModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.imageModalHeader}>
-              <h3>{state.selectedImageTitle}</h3>
+              <h3>{selectedImageTitle}</h3>
               <button className={styles.closeButton} onClick={closeImagePopup}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
+                <i className="bi bi-x-lg"></i>
               </button>
             </div>
             <div className={styles.imageModalBody}>
-              <img src={state.selectedImageUrl} alt={state.selectedImageTitle} className={styles.popupImage} />
+              <img src={selectedImageUrl} alt={selectedImageTitle} className={styles.popupImage} />
             </div>
           </div>
         </div>
       )}
+
+      {/* View Modal */}
+      {viewing && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2>Chi tiết Banner</h2>
+              <button onClick={() => setViewing(null)} className={styles.closeButton}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <BannerForm
+                banner={viewing}
+                mode="view"
+                onSaved={() => {}}
+                onCancel={() => setViewing(null)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editing && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2>Chỉnh sửa Banner</h2>
+              <button onClick={() => setEditing(null)} className={styles.closeButton}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <BannerForm
+                banner={editing}
+                mode="edit"
+                onSaved={async () => {
+                  setEditing(null);
+                  await load();
+                }}
+                onCancel={() => setEditing(null)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Modal */}
+      {creating && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2>Tạo Banner mới</h2>
+              <button onClick={() => setCreating(false)} className={styles.closeButton}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <BannerForm
+                mode="create"
+                onSaved={async () => {
+                  setCreating(false);
+                  await load();
+                }}
+                onCancel={() => setCreating(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <ConfirmationDialog
+        isOpen={confirmationDialog.isOpen}
+        title={confirmationDialog.action === 'lock' ? 'Xác nhận tạm dừng banner' : 'Xác nhận kích hoạt banner'}
+        message={
+          confirmationDialog.action === 'lock' 
+            ? `Bạn có chắc muốn tạm dừng (khóa) banner "${confirmationDialog.banner?.bannerTitle}" không? Banner sẽ không hiển thị trên trang chủ và các trang khác.`
+            : `Bạn có chắc muốn kích hoạt (mở khóa) banner "${confirmationDialog.banner?.bannerTitle}" không? Banner sẽ được hiển thị trở lại.`
+        }
+        confirmText={confirmationDialog.action === 'lock' ? 'Tạm dừng banner' : 'Kích hoạt banner'}
+        cancelText="Hủy"
+        onConfirm={handleConfirmStatusChange}
+        onCancel={() => setConfirmationDialog({ isOpen: false, banner: null, action: null })}
+        type={confirmationDialog.action === 'lock' ? 'danger' : 'warning'}
+      />
     </div>
   );
 }

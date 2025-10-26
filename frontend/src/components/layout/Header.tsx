@@ -189,7 +189,10 @@ export const Header: React.FC = () => {
                                     <div className={styles["user-info"]}>
                                         <div className={styles["user-name"]}>{user.fullName || 'Người dùng'}</div>
                                         <div className={styles["user-role"]}>
-                                            {user.role === "Doctor" ? "Bác sĩ" : "Bệnh nhân"}
+                                            {user.role === "Doctor" ? "Bác sĩ" : 
+                                             user.role === "Admin" ? "Quản trị viên" :
+                                             user.role === "Manager" ? "Quản lý" :
+                                             user.role === "Patient" ? "Bệnh nhân" : "Người dùng"}
                                         </div>
                                     </div>
                                     <i className={`bi bi-chevron-${showUserDropdown ? 'up' : 'down'} ${styles["dropdown-icon"]}`}></i>

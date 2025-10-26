@@ -4,6 +4,7 @@ import { articleService } from '../../services/articleService';
 import { ArticleDTO } from '../../types/article.types';
 import { useToast } from '../../contexts/ToastContext';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
+import ArticleForm from './ArticleForm';
 import styles from '../../styles/admin/ArticleManagement.module.css';
 
 interface ArticleListFilters {
@@ -178,12 +179,12 @@ export default function ArticleManagement() {
 
     const { article: currentArticle, action } = confirmationDialog;
     const isBeingLocked = action === 'lock';
-    const actionText = isBeingLocked ? 'khóa' : 'mở khóa';
+    const actionText = isBeingLocked ? 'chuyển thành bản nháp' : 'xuất bản';
 
     console.log('Confirming status change:', {
       articleId: currentArticle.id,
       title: currentArticle.title,
-      currentIsLocked: currentArticle.isLocked,
+      currentStatusCode: currentArticle.statusCode,
       isBeingLocked,
       action
     });
@@ -194,36 +195,34 @@ export default function ArticleManagement() {
     setUpdatingIds(prev => ({ ...prev, [currentArticle.id]: true }));
 
     try {
-      // Try lock/unlock first
-      if (isBeingLocked) {
-        console.log('Calling lock for article:', currentArticle.id);
-        try {
-          await articleService.lock(currentArticle.id);
-          console.log('Lock successful');
-        } catch (lockError: any) {
-          // If lock endpoint doesn't exist (404), handle gracefully
-          if (lockError?.response?.status === 404) {
-            console.log('Lock endpoint not found');
-            throw new Error('Endpoint khóa bài viết không tồn tại');
-          } else {
-            throw lockError;
-          }
-        }
-      } else {
-        console.log('Calling unlock for article:', currentArticle.id);
-        try {
-          await articleService.unlock(currentArticle.id);
-          console.log('Unlock successful');
-        } catch (unlockError: any) {
-          // If unlock endpoint doesn't exist (404), handle gracefully
-          if (unlockError?.response?.status === 404) {
-            console.log('Unlock endpoint not found');
-            throw new Error('Endpoint mở khóa bài viết không tồn tại');
-          } else {
-            throw unlockError;
-          }
-        }
-      }
+      // Update status using articleService.update
+      const newStatusCode = isBeingLocked ? 'Draft' : 'Published';
+      const updatePayload = {
+        title: currentArticle.title || '',
+        slug: currentArticle.slug || '',
+        summary: currentArticle.summary || '',
+        content: currentArticle.content || '',
+        displayType: currentArticle.displayType || 'Article',
+        thumbnailUrl: currentArticle.thumbnailUrl || '',
+        coverImageUrl: currentArticle.coverImageUrl || '',
+        isHomepageVisible: currentArticle.isHomepageVisible || false,
+        displayOrder: currentArticle.displayOrder || 0,
+        metaTitle: currentArticle.metaTitle || '',
+        metaDescription: currentArticle.metaDescription || '',
+        authorId: '1', // Default author ID
+        statusCode: newStatusCode,
+        publishedAt: newStatusCode === 'Published' ? new Date().toISOString() : undefined,
+        categoryIds: currentArticle.categoryIds || []
+      };
+
+      console.log('Updating article status:', {
+        id: currentArticle.id,
+        newStatusCode,
+        payload: updatePayload
+      });
+
+      await articleService.update(currentArticle.id, updatePayload);
+      console.log('Status update successful');
       showToast(`Đã ${actionText} bài viết thành công.`, 'success');
       
       // Reload data
@@ -246,6 +245,18 @@ export default function ArticleManagement() {
     }
   };
 
+  const handleImageClick = (imageUrl: string, imageTitle: string) => {
+    setSelectedImageUrl(imageUrl);
+    setSelectedImageTitle(imageTitle);
+    setShowImagePopup(true);
+  };
+
+  const closeImagePopup = () => {
+    setShowImagePopup(false);
+    setSelectedImageUrl('');
+    setSelectedImageTitle('');
+  };
+
   const handleViewDetails = (article: ArticleDTO) => {
     setViewing(article);
   };
@@ -258,16 +269,27 @@ export default function ArticleManagement() {
     setCreating(true);
   };
 
-  const handleImageClick = (imageUrl: string, imageTitle: string) => {
-    setSelectedImageUrl(imageUrl);
-    setSelectedImageTitle(imageTitle);
-    setShowImagePopup(true);
-  };
-
-  const closeImagePopup = () => {
-    setShowImagePopup(false);
-    setSelectedImageUrl('');
-    setSelectedImageTitle('');
+  const handleSaveRequest = async (formData: any) => {
+    try {
+      if (editing) {
+        console.log('Updating article with ID:', editing.id);
+        console.log('Update payload:', formData);
+        await articleService.update(editing.id, formData);
+        console.log('Update successful');
+        showToast('Cập nhật bài viết thành công!', 'success');
+        setEditing(null);
+      } else if (creating) {
+        console.log('Creating new article with payload:', formData);
+        await articleService.create(formData);
+        showToast('Tạo bài viết thành công!', 'success');
+        setCreating(false);
+      }
+      await load();
+    } catch (error: any) {
+      console.error('Error saving article:', error);
+      const message = error?.response?.data?.message || error?.message || 'Không thể lưu bài viết';
+      showToast(message, 'error');
+    }
   };
 
   const handleResetFilters = () => {
@@ -345,17 +367,7 @@ export default function ArticleManagement() {
   };
 
   const getStatusBadge = (statusCode?: string, isLocked?: boolean) => {
-    // If isLocked field is available and true, show locked status
-    if (isLocked !== undefined && isLocked) {
-      return (
-        <span className={`${styles.statusBadge} ${styles.statusLocked}`}>
-          <i className="bi bi-lock-fill"></i>
-          Đã khóa
-        </span>
-      );
-    }
-    
-    // Otherwise use statusCode
+    // Use statusCode for primary status display
     if (statusCode === 'Published') {
       return (
         <span className={`${styles.statusBadge} ${styles.statusActive}`}>
@@ -364,7 +376,7 @@ export default function ArticleManagement() {
         </span>
       );
     } else if (statusCode === 'Draft') {
-    return (
+      return (
         <span className={`${styles.statusBadge} ${styles.statusInactive}`}>
           <i className="bi bi-file-text"></i>
           Bản nháp
@@ -372,10 +384,20 @@ export default function ArticleManagement() {
       );
     }
     
+    // Fallback to isLocked if statusCode is not available
+    if (isLocked !== undefined && isLocked) {
     return (
-      <span className={`${styles.statusBadge} ${styles.statusLocked}`}>
+        <span className={`${styles.statusBadge} ${styles.statusLocked}`}>
+          <i className="bi bi-lock-fill"></i>
+          Đã khóa
+        </span>
+      );
+    }
+    
+    return (
+      <span className={`${styles.statusBadge} ${styles.statusInactive}`}>
         <i className="bi bi-question-circle"></i>
-        {statusCode || 'Chưa xác định'}
+        Không xác định
       </span>
     );
   };
@@ -665,12 +687,12 @@ export default function ArticleManagement() {
                   <i className="bi bi-pencil"></i>
                 </button>
                 <button 
-                          onClick={() => handleStatusChange(article, !article.isLocked)}
-                          disabled={Boolean(updatingIds[article.id])}
-                          title={article.isLocked ? 'Mở khóa' : 'Khóa'}
-                          className={`${styles.actionBtn} ${article.isLocked ? styles.actionUnlock : styles.actionLock}`}
-                        >
-                          <i className={`bi bi-${article.isLocked ? 'unlock' : 'lock'}`}></i>
+                  onClick={() => handleStatusChange(article, article.statusCode === 'Draft')}
+                  disabled={Boolean(updatingIds[article.id])}
+                  title={article.statusCode === 'Published' ? 'Chuyển thành bản nháp' : 'Xuất bản'}
+                  className={`${styles.actionBtn} ${article.statusCode === 'Published' ? styles.actionLock : styles.actionUnlock}`}
+                >
+                  <i className={`bi bi-${article.statusCode === 'Published' ? 'file-text' : 'check-circle'}`}></i>
                 </button>
               </div>
                     </td>
@@ -763,11 +785,79 @@ export default function ArticleManagement() {
       {/* Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={confirmationDialog.isOpen}
-        title={confirmationDialog.action === 'lock' ? 'Khóa bài viết' : 'Mở khóa bài viết'}
-        message={`Bạn có chắc chắn muốn ${confirmationDialog.action === 'lock' ? 'khóa' : 'mở khóa'} bài viết "${confirmationDialog.article?.title}"?`}
+        title={confirmationDialog.action === 'lock' ? 'Chuyển thành bản nháp' : 'Xuất bản bài viết'}
+        message={`Bạn có chắc chắn muốn ${confirmationDialog.action === 'lock' ? 'chuyển thành bản nháp' : 'xuất bản'} bài viết "${confirmationDialog.article?.title}"?`}
         onConfirm={handleConfirmStatusChange}
         onCancel={() => setConfirmationDialog({ isOpen: false, article: null, action: null })}
       />
+
+      {/* View Modal */}
+      {viewing && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2>Chi tiết Bài viết</h2>
+              <button onClick={() => setViewing(null)} className={styles.closeButton}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <ArticleForm
+                article={viewing}
+                mode="view"
+                onSaved={() => {}}
+                onCancel={() => setViewing(null)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editing && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2>Chỉnh sửa Bài viết</h2>
+              <button onClick={() => setEditing(null)} className={styles.closeButton}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <ArticleForm
+                article={editing}
+                mode="edit"
+                onSaved={() => setEditing(null)}
+                onCancel={() => setEditing(null)}
+                onSaveRequest={handleSaveRequest}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Modal */}
+      {creating && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2>Tạo Bài viết mới</h2>
+              <button onClick={() => setCreating(false)} className={styles.closeButton}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <ArticleForm
+                article={null}
+                mode="create"
+                onSaved={() => setCreating(false)}
+                onCancel={() => setCreating(false)}
+                onSaveRequest={handleSaveRequest}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

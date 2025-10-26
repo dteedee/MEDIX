@@ -13,10 +13,16 @@
 
 .registration-form {
   background: white;
-  border-radius: 12px;
+  border-radius: 28px;
   padding: 40px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 60px rgba(33,150,243, 0.18);
+  border: 2px solid #e3f2fd;
   font-family: 'Be Vietnam Pro', sans-serif;
+  transition: box-shadow 0.3s;
+}
+
+.registration-form:hover {
+  box-shadow: 0 40px 100px 0 rgba(33, 150, 243, 0.23);
 }
 
 .form-header {
@@ -25,15 +31,15 @@
 }
 
 .form-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #2c3e50;
+  color: #1565c0;
+  font-size: 38px;
+  font-weight: 800;
   margin-bottom: 8px;
-  font-family: 'Be Vietnam Pro', sans-serif;
+  letter-spacing: 1.3px;
 }
 
 .form-header p {
-  color: #7f8c8d;
+  color: #ff0000;
   font-size: 16px;
   font-family: 'Be Vietnam Pro', sans-serif;
 }
@@ -62,9 +68,8 @@
 /* Form footer spanning both columns */
 .form-footer {
   grid-column: 1 / -1;
-  margin-top: 30px;
   border-top: 1px solid #e9ecef;
-  padding-top: 30px;
+  padding-top: 10px;
 }
 
 .form-section {
@@ -73,16 +78,19 @@
 
 .section-title {
   font-size: 20px;
-  font-weight: 600;
-  color: #2c3e50;
+  font-weight: 700;
+  color: #1565c0;
   margin-bottom: 24px;
   padding-bottom: 12px;
-  border-bottom: 2px solid #3498db;
+  border-bottom: 2px solid #4fc3f7;
   font-family: 'Be Vietnam Pro', sans-serif;
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .form-row {
@@ -94,11 +102,17 @@
 .form-group label {
   display: block;
   margin-bottom: 8px;
-  font-weight: 500;
-  color: #34495e;
+  font-weight: 400;
+  color: #1565c0;
   font-size: 14px;
   position: relative;
   font-family: 'Be Vietnam Pro', sans-serif;
+  transition: color 0.2s;
+}
+
+.form-group:focus-within label {
+  color: #0288d1;
+  font-weight: 700;
 }
 
 /* Required field indicator */
@@ -113,21 +127,31 @@
 .form-group textarea,
 .form-group select {
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: border-color 0.3s ease;
-  box-sizing: border-box;
+  padding: 18px 18px;
+  border: 2px solid #bbdefb;
+  border-radius: 16px;
+  font-size: 16px;
+  background: #f9fafb;
+  transition: border-color 0.2s, box-shadow 0.2s;
   font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+/* Placeholder text styling - màu xám nhạt */
+.form-group input::placeholder,
+.form-group textarea::placeholder,
+.form-group select::placeholder {
+  color: #a0a0a0;
+  opacity: 0.8;
+  font-style: italic;
 }
 
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
+  border-color: #4fc3f7;
+  box-shadow: 0 0 0 3px rgba(33,150,243,0.11);
   outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  background: #fff;
 }
 
 .form-group input.error,
@@ -155,7 +179,6 @@
   background-color: #fdf2f2 !important;
   padding: 4px 8px !important;
   border-radius: 4px !important;
-  border-left: 3px solid #e74c3c !important;
   font-family: 'Be Vietnam Pro', sans-serif !important;
 }
 
@@ -217,131 +240,6 @@
   transform: translate(-50%, -50%);
 }
 
-/* Email verification styles */
-.email-input-group {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.verify-email-btn {
-  padding: 8px 16px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  white-space: nowrap;
-  transition: background-color 0.3s ease;
-}
-
-.verify-email-btn:hover:not(:disabled) {
-  background-color: #2980b9;
-}
-
-.verify-email-btn:disabled {
-  background-color: #bdc3c7;
-  cursor: not-allowed;
-}
-
-.verify-email-btn.verified {
-  background-color: #27ae60;
-}
-
-.verify-email-btn.checking {
-  background-color: #f39c12;
-}
-
-/* Verification code section */
-.verification-code-section {
-  margin-top: 20px;
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
-.verification-info {
-  margin-bottom: 15px;
-}
-
-.verification-input-group {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.verification-code-input {
-  flex: 1;
-  padding: 12px 16px;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
-  font-size: 16px;
-  text-align: center;
-  letter-spacing: 2px;
-  font-weight: bold;
-}
-
-.verification-code-input:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
-.verify-code-btn {
-  padding: 12px 20px;
-  background-color: #27ae60;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.3s ease;
-}
-
-.verify-code-btn:hover:not(:disabled) {
-  background-color: #229954;
-}
-
-.verify-code-btn:disabled {
-  background-color: #bdc3c7;
-  cursor: not-allowed;
-}
-
-.resend-section {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 15px;
-}
-
-.resend-text {
-  font-size: 14px;
-  color: #6c757d;
-}
-
-.resend-btn {
-  background: none;
-  border: none;
-  color: #3498db;
-  cursor: pointer;
-  font-size: 14px;
-  text-decoration: underline;
-  transition: color 0.3s ease;
-}
-
-.resend-btn:hover:not(:disabled) {
-  color: #2980b9;
-}
-
-.resend-btn:disabled {
-  color: #bdc3c7;
-  cursor: not-allowed;
-  text-decoration: none;
-}
 
 /* Password strength indicator */
 .password-strength {
@@ -441,199 +339,180 @@
   color: #e74c3c;
 }
 
-/* Email verification */
-.email-input-group {
+/* Email Input Group with Button - Registration Page */
+.reg-email-input-group {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   align-items: stretch;
 }
 
-.email-input-group input {
+.reg-email-input-group .form-control {
   flex: 1;
+  margin-bottom: 0;
 }
 
-.verify-email-btn {
-  padding: 12px 16px;
-  border: 1px solid #3498db;
-  background-color: #3498db;
+.reg-verify-email-btn {
+  background: linear-gradient(135deg, #42a5f5, #1976d2);
   color: white;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
+  border: none;
+  padding: 32px 20px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(66, 165, 245, 0.3);
   transition: all 0.3s ease;
   white-space: nowrap;
-  min-width: 80px;
-}
-
-.verify-email-btn:hover:not(:disabled) {
-  background-color: #2980b9;
-  border-color: #2980b9;
-}
-
-.verify-email-btn:disabled {
-  background-color: #bdc3c7;
-  border-color: #bdc3c7;
-  cursor: not-allowed;
-}
-
-.verify-email-btn.verified {
-  background-color: #27ae60;
-  border-color: #27ae60;
-}
-
-.verify-email-btn.sent {
-  background-color: #f39c12;
-  border-color: #f39c12;
-}
-
-.verify-email-btn.checking {
-  background-color: #6c757d;
-  border-color: #6c757d;
-  cursor: wait;
-}
-
-.verify-email-btn.checking:disabled {
-  opacity: 0.8;
-}
-
-/* Input with status styling */
-.input-with-status {
-  position: relative;
-}
-
-.input-with-status input {
-  padding-right: 120px; /* Để chỗ cho status text */
-}
-
-.checking-status {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 12px;
-  color: #6c757d;
-  font-style: italic;
-  pointer-events: none;
-}
-
-.success-status {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 12px;
-  color: #27ae60;
-  font-weight: 500;
-  pointer-events: none;
-}
-
-.email-verified-message {
-  margin-top: 4px;
-}
-
-.success-text {
-  color: #27ae60;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-/* Verification code section */
-.verification-code-section {
-  margin-top: 12px;
-  padding: 16px;
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-}
-
-.verification-info {
-  margin-bottom: 12px;
-}
-
-.info-text {
-  color: #495057;
-  font-size: 13px;
+  min-width: 160px;
+  height: 54px;
+  font-family: 'Be Vietnam Pro', sans-serif;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
 }
 
-.verification-input-group {
-  display: flex;
-  gap: 8px;
+.reg-verify-email-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #64b5f6, #0d47a1);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(66, 165, 245, 0.4);
+}
+
+.reg-verify-email-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.reg-verify-email-btn.checking {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Verification Code Section - Registration Page */
+.reg-verification-code-section {
+  margin-top: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8f9ff, #e3f2fd);
+  border: 2px solid #e3f2fd;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.12);
+}
+
+.reg-verification-info {
   margin-bottom: 12px;
 }
 
-.verification-code-input {
+.reg-verification-info .info-text {
+  font-size: 13px;
+  color: #1565c0;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reg-verification-input-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.reg-verification-code-input {
   flex: 1;
-  padding: 10px 12px;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
+  padding: 12px 14px;
+  border: 2px solid #e3f2fd;
+  border-radius: 12px;
   font-size: 14px;
   text-align: center;
   letter-spacing: 2px;
   font-weight: 600;
+  background: white;
+  transition: all 0.3s ease;
+  font-family: 'Be Vietnam Pro', sans-serif;
 }
 
-.verification-code-input:focus {
+.reg-verification-code-input:focus {
+  border-color: #42a5f5;
+  box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.15);
   outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
-.verify-code-btn {
-  padding: 10px 16px;
-  background-color: #27ae60;
+.reg-verify-code-btn {
+  background: linear-gradient(135deg, #42a5f5, #1976d2);
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  box-shadow: 0 4px 12px rgba(66, 165, 245, 0.3);
+  transition: all 0.3s ease;
   white-space: nowrap;
-  min-width: 100px;
+  font-family: 'Be Vietnam Pro', sans-serif;
 }
 
-.verify-code-btn:hover:not(:disabled) {
-  background-color: #229954;
+.reg-verify-code-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #64b5f6, #0d47a1);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(66, 165, 245, 0.4);
 }
 
-.verify-code-btn:disabled {
-  background-color: #bdc3c7;
+.reg-verify-code-btn:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
-.resend-section {
-  text-align: center;
+/* Resend Section - Registration Page */
+.reg-resend-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e3f2fd;
+}
+
+.reg-resend-text {
   font-size: 12px;
-}
-
-.resend-text {
   color: #6c757d;
+  font-weight: 500;
 }
 
-.resend-btn {
-  background: none;
+.reg-resend-btn {
+  background: linear-gradient(135deg, #ff7043, #ff5722);
+  color: white;
   border: none;
-  color: #3498db;
-  text-decoration: underline;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 12px;
-  padding: 0;
-  margin-left: 4px;
+  box-shadow: 0 2px 6px rgba(255, 112, 67, 0.3);
+  transition: all 0.3s ease;
+  font-family: 'Be Vietnam Pro', sans-serif;
 }
 
-.resend-btn:hover:not(:disabled) {
-  color: #2980b9;
+.reg-resend-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff5722, #d84315);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 112, 67, 0.4);
 }
 
-.resend-btn:disabled {
-  color: #bdc3c7;
+.reg-resend-btn:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
-  text-decoration: none;
+  transform: none;
+  background: linear-gradient(135deg, #bdbdbd, #9e9e9e);
 }
+
 
 .password-match {
   margin-top: 8px;
@@ -645,61 +524,41 @@
   font-weight: 500;
 }
 
-/* Terms section */
+/* Terms section - giống DoctorRegister */
 .terms-section {
-  margin: 32px 0;
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+  margin: 30px 0;
+  padding: 16px 20px;
+  border-radius: 10px;
+  background: #f1f6ff;
 }
 
-.terms-checkbox {
+.checkbox-wrapper {
   display: flex;
   align-items: flex-start;
-  cursor: pointer;
-  font-size: 14px;
+  gap: 12px;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: #1976d2;
+}
+
+.terms-text {
+  font-size: 13.5px;
+  color: #374151;
   line-height: 1.5;
 }
 
-.terms-checkbox input[type="checkbox"] {
-  display: none;
+.terms-link {
+  color: #0a66c2;
+  text-decoration: none;
+  font-weight: 600;
 }
 
-.checkmark {
-  width: 18px;
-  height: 18px;
-  border: 2px solid #ddd;
-  border-radius: 4px;
-  margin-right: 12px;
-  margin-top: 2px;
-  position: relative;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-.terms-checkbox input[type="checkbox"]:checked + .checkmark {
-  background-color: #3498db;
-  border-color: #3498db;
-}
-
-.terms-checkbox input[type="checkbox"]:checked + .checkmark::after {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 2px;
-  width: 6px;
-  height: 10px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-.terms-checkbox.error .checkmark {
-  border-color: #e74c3c;
-}
-
-.terms-checkbox.error {
-  color: #e74c3c;
+.terms-link:hover {
+  text-decoration: underline;
 }
 
 .terms-section .error-message {
@@ -709,56 +568,52 @@
   display: block;
 }
 
-.terms-link {
-  color: #3498db;
-  text-decoration: none;
+/* Submit section - giống DoctorRegister */
+.submit-section {
+  text-align: center;
+  margin-top: 40px;
 }
 
-.terms-link:hover {
-  text-decoration: underline;
-}
-
-/* Submit button */
 .submit-button {
-  width: 100%;
-  background: linear-gradient(135deg, #3498db, #2980b9);
+  background: linear-gradient(135deg, #42a5f5, #1976d2);
   color: white;
   border: none;
-  padding: 16px 24px;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
+  padding: 14px 60px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
   cursor: pointer;
+  box-shadow: 0 10px 24px rgba(66, 165, 245, 0.3);
   transition: all 0.3s ease;
-  margin-bottom: 20px;
-  font-family: 'Be Vietnam Pro', sans-serif;
 }
 
-.submit-button:hover {
-  background: linear-gradient(135deg, #2980b9, #2471a3);
+.submit-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #64b5f6, #0d47a1);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+  box-shadow: 0 12px 28px rgba(66, 165, 245, 0.4);
 }
 
-.submit-button:active {
-  transform: translateY(0);
+.submit-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
 }
 
-/* Login link */
-.login-link {
-  text-align: center;
+/* Login link section - giống DoctorRegister */
+.login-link-section {
+  margin-top: 22px;
   font-size: 14px;
-  color: #7f8c8d;
-  font-family: 'Be Vietnam Pro', sans-serif;
+  color: #6b7280;
 }
 
 .login-link-text {
-  color: #3498db;
+  color: #1976d2;
+  font-weight: 600;
   text-decoration: none;
-  font-weight: 500;
-  font-family: 'Be Vietnam Pro', sans-serif;
 }
 
 .login-link-text:hover {
   text-decoration: underline;
 }
+

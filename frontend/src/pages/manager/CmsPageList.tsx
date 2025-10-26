@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { cmspageService } from '../../services/cmspageService'
 import { CmsPageDTO } from '../../types/cmspage.types'
-import CmsPageDetails from '../../components/admin/CmsPageDetails'
+import CmsPageDetails from './CmsPageDetails'
 import { useToast } from '../../contexts/ToastContext'
-import styles from '../../styles/CmsPageList.module.css'
+import styles from '../../styles/manager/CmsPageList.module.css'
 
 // SVG Icons for actions
 const ViewIcon = () => (

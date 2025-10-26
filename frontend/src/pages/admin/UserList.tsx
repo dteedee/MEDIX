@@ -1,46 +1,13 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { userAdminService } from '../../services/userService'
-import { UserDTO, UpdateUserRequest } from '../../types/user.types'
+import { UserDTO, UpdateUserRequest, CreateUserRequest } from '../../types/user.types'
 import { useToast } from '../../contexts/ToastContext'
-import UserDetails from '../../components/admin/UserDetails'
-
-// SVG Icons for actions
-const ViewIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-
-const EditIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-  </svg>
-);
-
-const SortIcon = ({ direction }: { direction?: 'asc' | 'desc' }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', marginLeft: 4, color: direction ? '#111827' : '#9ca3af' }}>
-    {/* Up-arrow for 'asc' */}
-    {direction === 'asc' && <path d="M18 15l-6-6-6 6" />}
-    {/* Down-arrow for 'desc' */}
-    {direction === 'desc' && <path d="M6 9l6 6 6-6" />}
-  </svg>
-);
-const LockIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#ef4444' }}>
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-  </svg>
-);
-
-const UnlockIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#22c55e' }}>
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-    <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
-  </svg>
-);
+import { useAuth } from '../../contexts/AuthContext'
+import UserDetails from './UserDetails'
+import UserForm from './UserForm'
+import ConfirmationDialog from '../../components/ui/ConfirmationDialog'
+import styles from '../../styles/admin/UserList.module.css'
 
 interface UserListFilters {
   page: number;
@@ -53,6 +20,7 @@ interface UserListFilters {
   sortBy: string;
   sortDirection: 'asc' | 'desc';
 }
+
 const getInitialState = (): UserListFilters => {
   try {
     const savedState = localStorage.getItem('userListState');
@@ -62,10 +30,9 @@ const getInitialState = (): UserListFilters => {
   } catch (e) {
     console.error("Failed to parse userListState from localStorage", e);
   }
-  // Default state if nothing is saved or parsing fails
   return {
     page: 1,
-    pageSize: 5,
+    pageSize: 10,
     search: '',
     roleFilter: 'all' as const,
     statusFilter: 'all',
@@ -76,94 +43,85 @@ const getInitialState = (): UserListFilters => {
   };
 };
 
-/**
- * Determines if a user is locked based on lockoutEnabled or a future lockoutEnd date.
- * This logic is centralized to be used by both filtering and UI rendering.
- */
 const isUserLocked = (user?: UserDTO): boolean => {
   if (!user) return false;
-
-  // Nếu lockoutEnabled = true → đang khóa
-  if (user.lockoutEnabled === true) return true;
-
-  // Nếu lockoutEnd còn hiệu lực → khóa tạm thời
+  
+  // Kiểm tra lockoutEnabled trước
+  if (user.lockoutEnabled === true) {
+    console.log('User bị khóa bởi lockoutEnabled:', user.email);
+    return true;
+  }
+  
+  // Kiểm tra lockoutEnd
   const lockoutEndVal = user.lockoutEnd;
   if (lockoutEndVal) {
     try {
       const lockoutEndDate = new Date(lockoutEndVal);
-      // Chỉ so sánh nếu ngày hợp lệ. `getTime()` sẽ là NaN nếu ngày không hợp lệ.
-      return lockoutEndDate.getTime() > Date.now();
-    } catch {
-      // Nếu có lỗi khi phân tích ngày, nhưng giá trị tồn tại, an toàn nhất là coi như đang bị khóa.
+      const isLocked = lockoutEndDate.getTime() > Date.now();
+      console.log('User lockoutEnd check:', {
+        email: user.email,
+        lockoutEnd: lockoutEndVal,
+        lockoutEndDate: lockoutEndDate.toISOString(),
+        now: new Date().toISOString(),
+        isLocked
+      });
+      return isLocked;
+    } catch (error) {
+      console.error('Error parsing lockoutEnd:', error);
       return true;
     }
   }
-
+  
+  console.log('User không bị khóa:', user.email);
   return false;
 };
 
-const pill = (user: UserDTO) => {
-  const isLocked = isUserLocked(user);
-  const text = isLocked ? 'Đang khóa' : 'Hoạt động';
-  const bg = isLocked ? '#fee2e2' : '#e7f9ec';
-  const color = isLocked ? '#dc2626' : '#16a34a';
-
-  return (
-    <span
-      style={{
-        background: bg,
-        color,
-        padding: '6px 10px',
-        borderRadius: 16,
-        fontSize: 12,
-      }}
-    >
-      {text}
-    </span>
-  );
-};
-
-
 export default function UserList() {
-  const [allUsers, setAllUsers] = useState<UserDTO[]>([]); // Stores all users from server
-  const [total, setTotal] = useState<number | undefined>(undefined)
+  const [allUsers, setAllUsers] = useState<UserDTO[]>([]);
+  const [total, setTotal] = useState<number | undefined>(undefined);
   const [filters, setFilters] = useState<UserListFilters>(getInitialState);
-  const [loading, setLoading] = useState(true)
-  const [viewing, setViewing] = useState<UserDTO | null>(null)
-  const [loadingDetails, setLoadingDetails] = useState(false)
-  const [updatingIds, setUpdatingIds] = useState<Record<string, boolean>>({})
+  const [loading, setLoading] = useState(true);
+  const [viewing, setViewing] = useState<UserDTO | null>(null);
+  const [editing, setEditing] = useState<UserDTO | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [updatingIds, setUpdatingIds] = useState<Record<string, boolean>>({});
+  const [showFilters, setShowFilters] = useState(false);
+  const [confirmationDialog, setConfirmationDialog] = useState<{
+    isOpen: boolean;
+    user: UserDTO | null;
+    action: 'lock' | 'unlock' | null;
+  }>({
+    isOpen: false,
+    user: null,
+    action: null
+  });
 
-  const { showToast } = useToast()
-  const navigate = useNavigate()
+  const { showToast } = useToast();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const load = async () => {
-    // Fetch a large list of users for client-side filtering.
-    // We ignore local filters for the API call, except for maybe a base search if desired.
-    const r = await userAdminService.list(1, 10000); // Fetch up to 10000 users
-    console.debug('[UserList] loaded users', r.items)
-    setAllUsers(r.items || [])
-    setTotal(r.total)
-    setLoading(false)
+    const r = await userAdminService.list(1, 10000);
+    setAllUsers(r.items || []);
+    setTotal(r.total);
+    setLoading(false);
   }
 
-  const location = useLocation()
-
-  // Load data once on component mount or when returning to the page.
   useEffect(() => {
-    // Save state to localStorage whenever filters change
     try {
       localStorage.setItem('userListState', JSON.stringify(filters));
     } catch (e) {
       console.error("Failed to save userListState to localStorage", e);
     }
-    load()
-  }, [location.pathname])
+    load();
+  }, [location.pathname]);
 
-  // Persist filters to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('userListState', JSON.stringify(filters));
   }, [filters]);
   
-  // Scroll to top on page or page size change
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [filters.page, filters.pageSize]);
@@ -171,43 +129,75 @@ export default function UserList() {
   const handleFilterChange = (key: keyof UserListFilters, value: any) => {
     setFilters(prev => {
       const newState = { ...prev, [key]: value };
-      // Reset page to 1 if any filter changes, except for pagination itself
       if (key !== 'page') newState.page = 1;
       return newState;
     });
   };
 
-  const handleStatusChange = async (userToUpdate: UserDTO, isBeingLocked: boolean) => {
-    // Lấy user mới nhất trong state (nếu có), fallback userToUpdate
+  const handleStatusChange = (userToUpdate: UserDTO, isBeingLocked: boolean) => {
     const currentUser = allUsers.find(u => u.id === userToUpdate.id) ?? userToUpdate;
+    const currentlyLocked = isUserLocked(currentUser);
 
-    // Nếu không có thay đổi thì bỏ qua
-    if (isUserLocked(currentUser) === isBeingLocked) {
+    // Nếu trạng thái hiện tại giống với action muốn thực hiện thì không làm gì
+    if (currentlyLocked === isBeingLocked) {
+      console.log('Trạng thái không thay đổi:', { currentlyLocked, isBeingLocked });
       return;
     }
 
+    console.log('Thay đổi trạng thái:', { 
+      user: currentUser.email, 
+      currentlyLocked, 
+      isBeingLocked 
+    });
+
+    setConfirmationDialog({
+      isOpen: true,
+      user: currentUser,
+      action: isBeingLocked ? 'lock' : 'unlock'
+    });
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!confirmationDialog.user || !confirmationDialog.action) return;
+
+    const { user: currentUser, action } = confirmationDialog;
+    const isBeingLocked = action === 'lock';
     const actionText = isBeingLocked ? 'khóa' : 'mở khóa';
-    if (!confirm(`Bạn có chắc muốn ${actionText} tài khoản "${currentUser.fullName}" không?`)) {
-      return;
-    }
 
-    setUpdatingIds(prev => ({ ...prev, [userToUpdate.id]: true }));
+    console.log('Xác nhận thay đổi trạng thái:', {
+      userId: currentUser.id,
+      email: currentUser.email,
+      action,
+      isBeingLocked
+    });
+
+    setConfirmationDialog({ isOpen: false, user: null, action: null });
+    showToast(`Đang ${actionText} tài khoản "${currentUser.fullName || currentUser.email}"...`, 'info');
+
+    setUpdatingIds(prev => ({ ...prev, [currentUser.id]: true }));
 
     try {
-      // Gửi một payload đơn giản chỉ chứa các trường cần thiết để thay đổi trạng thái.
-      // Giữ nguyên vai trò hiện tại của người dùng.
       const payload: UpdateUserRequest = {
         role: currentUser.role,
         lockoutEnabled: isBeingLocked,
       };
-      await userAdminService.update(userToUpdate.id, payload);
-      showToast(`Đã ${actionText} tài khoản thành công.`);
-      // Tải lại toàn bộ danh sách để đảm bảo dữ liệu (bao gồm cả trạng thái) là mới nhất.
+      
+      // Nếu mở khóa thì clear lockoutEnd
+      if (!isBeingLocked) {
+        (payload as any).lockoutEnd = null;
+      }
+
+      console.log('Payload gửi lên server:', payload);
+      
+      await userAdminService.update(currentUser.id, payload);
+      showToast(`Đã ${actionText} tài khoản thành công.`, 'success');
       await load(); 
-    } catch (error) {
-      showToast('Không thể cập nhật trạng thái tài khoản.', 'error');
+    } catch (error: any) {
+      console.error('Lỗi khi cập nhật trạng thái:', error);
+      const message = error?.response?.data?.message || error?.message || 'Không thể cập nhật trạng thái tài khoản.';
+      showToast(message, 'error');
     } finally {
-      setUpdatingIds(prev => ({ ...prev, [userToUpdate.id]: false }));
+      setUpdatingIds(prev => ({ ...prev, [currentUser.id]: false }));
     }
   };
 
@@ -219,30 +209,69 @@ export default function UserList() {
     }
   };
 
-
-  const onCreate = () => navigate('/app/admin/users/new')
-  const onEdit = (u: UserDTO) => navigate(`/app/admin/users/edit/${u.id}`)
+  const onCreate = () => setCreating(true);
+  const onEdit = (u: UserDTO) => setEditing(u);
 
   const handleViewDetails = async (userId: string) => {
     setLoadingDetails(true);
-    setViewing({ id: userId } as UserDTO); // Đặt tạm để modal mở ra
+    setViewing({ id: userId } as UserDTO);
     try {
       const fullUser = await userAdminService.get(userId);
       setViewing(fullUser);
     } catch (error) {
       console.error("Failed to load user details:", error);
       showToast('Không thể tải chi tiết người dùng', 'error');
-      setViewing(null); // Đóng modal nếu có lỗi
+      setViewing(null);
     } finally {
       setLoadingDetails(false);
     }
   }
 
+  const handleCreateUser = async (userData: CreateUserRequest) => {
+    try {
+      showToast('Đang tạo người dùng mới...', 'info');
+      await userAdminService.create(userData);
+      showToast('Tạo người dùng thành công!', 'success');
+      setCreating(false);
+      await load();
+    } catch (error: any) {
+      console.error('Failed to create user:', error);
+      const message = error?.response?.data?.message || error?.message || 'Không thể tạo người dùng';
+      showToast(message, 'error');
+    }
+  }
+
+  const handleEditUser = async (userData: UpdateUserRequest) => {
+    if (!editing) return;
+    
+    try {
+      showToast('Đang cập nhật thông tin người dùng...', 'info');
+      await userAdminService.update(editing.id, userData);
+      showToast('Cập nhật thành công!', 'success');
+      setEditing(null);
+      await load();
+    } catch (error: any) {
+      console.error('Failed to update user:', error);
+      const message = error?.response?.data?.message || error?.message || 'Không thể cập nhật người dùng';
+      showToast(message, 'error');
+    }
+  }
+
+  const handleCreateFormSaved = () => {
+    setCreating(false);
+    load();
+  }
+
+  const handleEditFormSaved = () => {
+    setEditing(null);
+    load();
+  }
+
   const processedItems = useMemo(() => {
-    const from = filters.dateFrom ? new Date(filters.dateFrom) : undefined
+    const from = filters.dateFrom ? new Date(filters.dateFrom) : undefined;
     const to = filters.dateTo ? (() => {
       const date = new Date(filters.dateTo);
-      date.setHours(23, 59, 59, 999); // Set to the end of the day
+      date.setHours(23, 59, 59, 999);
       return date;
     })() : undefined;
 
@@ -267,18 +296,27 @@ export default function UserList() {
     });
 
     const sorted = [...filtered].sort((a, b) => {
+      let valA: any, valB: any;
+      
       if (filters.sortBy === 'createdAt') {
-        const valA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const valB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-
-        if (valA < valB) return filters.sortDirection === 'asc' ? -1 : 1;
-        if (valA > valB) return filters.sortDirection === 'asc' ? 1 : -1;
+        valA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        valB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      } else if (filters.sortBy === 'fullName') {
+        valA = (a.fullName || '').toLowerCase();
+        valB = (b.fullName || '').toLowerCase();
+      } else if (filters.sortBy === 'email') {
+        valA = (a.email || '').toLowerCase();
+        valB = (b.email || '').toLowerCase();
+      } else if (filters.sortBy === 'role') {
+        valA = (a.role || '').toLowerCase();
+        valB = (b.role || '').toLowerCase();
       }
-      // Add other sortable columns here if needed
+
+      if (valA < valB) return filters.sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return filters.sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
 
-    // Apply pagination
     const startIndex = (filters.page - 1) * filters.pageSize;
     const endIndex = startIndex + filters.pageSize;
     
@@ -286,178 +324,443 @@ export default function UserList() {
   }, [allUsers, filters]);
 
   const handleResetFilters = () => {
-    localStorage.removeItem('userListState');
-    // We can either reload the page or reset state manually
-    // Reloading is simpler and ensures a clean slate
-    // Reload user list instead of full page reload
-    fetchUsers();
-    // Or manual reset: setFilters(getInitialState());
+    setFilters({
+      ...filters,
+      roleFilter: 'all',
+      statusFilter: 'all',
+      dateFrom: '',
+      dateTo: '',
+    });
   };
 
+  // Calculate new users (last 7 days)
+  const newUsersCount = useMemo(() => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    return allUsers.filter(u => u.createdAt && new Date(u.createdAt) >= sevenDaysAgo).length;
+  }, [allUsers]);
 
-    return (
-    <div style={{ padding: 24, backgroundColor: '#f9fafb', minHeight: '100vh' }}>
+  // Calculate growth percentage
+  const growthPercentage = useMemo(() => {
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const previousWeek = allUsers.filter(u => 
+      u.createdAt && 
+      new Date(u.createdAt) >= fourteenDaysAgo && 
+      new Date(u.createdAt) < sevenDaysAgo
+    ).length;
+    
+    if (previousWeek === 0) return newUsersCount > 0 ? 100 : 0;
+    return Math.round(((newUsersCount - previousWeek) / previousWeek) * 100);
+  }, [allUsers, newUsersCount]);
+
+  const totalPages = Math.ceil((total ?? 0) / filters.pageSize);
+
+  return (
+    <div className={styles.container}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontSize: '1.875rem', fontWeight: 'bold', color: '#111827' }}>Quản lý Người dùng</h1>
-        <button 
-          onClick={onCreate} 
-          style={{ 
-            padding: '10px 20px', 
-            background: '#2563eb', 
-            color: '#fff', 
-            borderRadius: 8, 
-            border: 'none', 
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8
-          }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <div className={styles.header}>
+        <div className={styles.headerLeft}>
+          <h1 className={styles.title}>Quản lý Người dùng</h1>
+          <p className={styles.subtitle}>Quản lý và theo dõi tất cả người dùng trong hệ thống</p>
+        </div>
+        <button onClick={onCreate} className={styles.btnCreate}>
+          <i className="bi bi-plus-lg"></i>
           Tạo mới
         </button>
       </div>
 
-      {/* Filter Section */}
-      <div style={{ marginBottom: 24, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 20 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'end' }}>
-          <div style={{ flex: '2 1 200px' }}>
-            <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Tìm kiếm</label>
-            <input
-              placeholder="Tìm kiếm theo tên..."
-              value={filters.search}
-              onChange={e => handleFilterChange('search', e.target.value)}
-              style={{ width: '80%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
-            />
+      {/* Stats Cards */}
+      <div className={styles.statsGrid}>
+        <div className={`${styles.statCard} ${styles.statCard1}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-people-fill"></i>
           </div>
-          <div style={{ flex: '1 1 150px' }}>
-            <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Vai trò</label>
-            <select value={filters.roleFilter} onChange={e => handleFilterChange('roleFilter', e.target.value)} style={{ padding: 10, width: '100%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}>
-              <option value="all">Tất cả</option>
-              <option value="ADMIN">Quản trị</option>
-              <option value="MANAGER">Quản lý</option>
-              <option value="DOCTOR">Bác sĩ</option>
-              <option value="PATIENT">Bệnh nhân</option>
-            </select>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Tổng người dùng</div>
+            <div className={styles.statValue}>{total ?? 0}</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-graph-up"></i>
+              <span>+2.5% so với tháng trước</span>
+            </div>
           </div>
-          <div style={{ flex: '1 1 150px' }}>
-            <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Trạng thái</label>
-            <select value={filters.statusFilter} onChange={e => handleFilterChange('statusFilter', e.target.value)} style={{ padding: 10, width: '100%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}>
-              <option value="all">Tất cả</option>
-              <option value="unlocked">Hoạt động</option>
-              <option value="locked">Đang khóa</option>
-            </select>
+          <div className={styles.statBg}>
+            <i className="bi bi-people-fill"></i>
           </div>
-          <div style={{ flex: '1 1 150px' }}>
-            <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Từ ngày</label>
-            <input type="date" value={filters.dateFrom} onChange={e => handleFilterChange('dateFrom', e.target.value)} style={{ padding: 9, width: '80%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} />
+        </div>
+
+        <div className={`${styles.statCard} ${styles.statCard2}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-person-check-fill"></i>
           </div>
-          <div style={{ flex: '1 1 150px' }}>
-            <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Đến ngày</label>
-            <input type="date" value={filters.dateTo} onChange={e => handleFilterChange('dateTo', e.target.value)} style={{ padding: 9, width: '80%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} />
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Đang hoạt động</div>
+            <div className={styles.statValue}>
+              {allUsers.filter(u => !isUserLocked(u)).length}
+            </div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-graph-up"></i>
+              <span>+5.2% tuần này</span>
+            </div>
           </div>
-          <div style={{ flex: '0 0 auto' }}>
+          <div className={styles.statBg}>
+            <i className="bi bi-person-check-fill"></i>
+          </div>
+        </div>
+
+        <div className={`${styles.statCard} ${styles.statCard3}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-person-plus-fill"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Người dùng mới</div>
+            <div className={styles.statValue}>{newUsersCount}</div>
+            <div className={`${styles.statTrend} ${growthPercentage < 0 ? styles.negative : ''}`}>
+              <i className={`bi bi-${growthPercentage >= 0 ? 'graph-up' : 'graph-down'}`}></i>
+              <span>{growthPercentage >= 0 ? '+' : ''}{growthPercentage}% so với tuần trước</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-person-plus-fill"></i>
+          </div>
+        </div>
+
+        <div className={`${styles.statCard} ${styles.statCard4}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-person-badge-fill"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Bác sĩ</div>
+            <div className={styles.statValue}>
+              {allUsers.filter(u => u.role === 'DOCTOR').length}
+            </div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-graph-up"></i>
+              <span>+1.3% tháng này</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-person-badge-fill"></i>
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Filter */}
+      <div className={styles.searchSection}>
+        <div className={styles.searchWrapper}>
+          <i className="bi bi-search"></i>
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tên hoặc email..."
+            value={filters.search}
+            onChange={e => handleFilterChange('search', e.target.value)}
+            className={styles.searchInput}
+          />
+          {filters.search && (
             <button 
-              onClick={handleResetFilters}
-              style={{
-                padding: '10px 16px',
-                background: '#f3f4f6',
-                color: '#4b5563',
-                border: '1px solid #d1d5db',
-                borderRadius: 8,
-                fontWeight: 500,
-                cursor: 'pointer'
-              }}
+              className={styles.clearSearch}
+              onClick={() => handleFilterChange('search', '')}
             >
-              Xóa bộ lọc
+              <i className="bi bi-x-lg"></i>
+            </button>
+          )}
+        </div>
+
+        <button 
+          className={`${styles.btnFilter} ${showFilters ? styles.active : ''}`}
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <i className="bi bi-funnel"></i>
+          Bộ lọc
+          {(filters.roleFilter !== 'all' || filters.statusFilter !== 'all' || filters.dateFrom || filters.dateTo) && (
+            <span className={styles.filterBadge}></span>
+          )}
+        </button>
+      </div>
+
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div className={styles.filterPanel}>
+          <div className={styles.filterGrid}>
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-person-badge"></i>
+                Vai trò
+              </label>
+              <select value={filters.roleFilter} onChange={e => handleFilterChange('roleFilter', e.target.value)}>
+                <option value="all">Tất cả vai trò</option>
+                <option value="ADMIN">Quản trị viên</option>
+                <option value="MANAGER">Quản lý</option>
+                <option value="DOCTOR">Bác sĩ</option>
+                <option value="PATIENT">Bệnh nhân</option>
+              </select>
+            </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-toggle-on"></i>
+                Trạng thái
+              </label>
+              <select value={filters.statusFilter} onChange={e => handleFilterChange('statusFilter', e.target.value)}>
+                <option value="all">Tất cả trạng thái</option>
+                <option value="unlocked">Đang hoạt động</option>
+                <option value="locked">Đang khóa</option>
+              </select>
+            </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-calendar-event"></i>
+                Từ ngày
+              </label>
+              <input 
+                type="date" 
+                value={filters.dateFrom} 
+                onChange={e => handleFilterChange('dateFrom', e.target.value)} 
+              />
+            </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-calendar-check"></i>
+                Đến ngày
+              </label>
+              <input 
+                type="date" 
+                value={filters.dateTo} 
+                onChange={e => handleFilterChange('dateTo', e.target.value)} 
+              />
+            </div>
+          </div>
+
+          <div className={styles.filterActions}>
+            <button onClick={handleResetFilters} className={styles.btnResetFilter}>
+              <i className="bi bi-arrow-counterclockwise"></i>
+              Đặt lại bộ lọc
+            </button>
+            <button onClick={() => setShowFilters(false)} className={styles.btnApplyFilter}>
+              <i className="bi bi-check2"></i>
+              Áp dụng
             </button>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Table */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflowX: 'auto' }}>
-        {processedItems.length > 0 ? (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead style={{ backgroundColor: '#f9fafb' }}>
-              <tr>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '50px' }}>STT</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Họ và tên</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vai trò</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</th>
-                <th onClick={() => handleSort('createdAt')} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer' }}>Ngày đăng kí <SortIcon direction={filters.sortBy === 'createdAt' ? filters.sortDirection : undefined} /></th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trạng thái</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {processedItems.map((u, index) => (
-                <tr key={u.id} style={{ borderTop: '1px solid #e5e7eb' }}>
-                  <td style={{ padding: '12px 16px', color: '#4b5563', fontSize: 14, textAlign: 'center' }}>
-                    {(filters.page - 1) * filters.pageSize + index + 1}
-                  </td>
-                  <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14 }}>{u.fullName ?? '-'}</td>
-                  <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.role ?? '-'}</td>
-                  <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.email}</td>
-                  <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}</td>
-                  <td style={{ padding: '16px' }}>{pill(u)}</td>
-                  <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <button onClick={() => handleViewDetails(u.id)} title="Xem chi tiết" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
-                    <button onClick={() => onEdit(u)} title="Sửa vai trò" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
-                    <button
-                      onClick={() => handleStatusChange(u, !isUserLocked(u))}
-                      disabled={Boolean(updatingIds[u.id])}
-                      title={isUserLocked(u) ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
-                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, opacity: updatingIds[u.id] ? 0.6 : 1 }}
-                    >
-                      {isUserLocked(u) ? <UnlockIcon /> : <LockIcon />}
-                    </button>
-                  </td>
+      <div className={styles.tableCard}>
+        {loading ? (
+          <div className={styles.loading}>
+            <div className={styles.loadingSpinner}></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+        ) : processedItems.length > 0 ? (
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th style={{ width: '60px' }}>STT</th>
+                  <th onClick={() => handleSort('fullName')} className={styles.sortable}>
+                    Họ và tên
+                    {filters.sortBy === 'fullName' && (
+                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('role')} className={styles.sortable}>
+                    Vai trò
+                    {filters.sortBy === 'role' && (
+                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('email')} className={styles.sortable}>
+                    Email
+                    {filters.sortBy === 'email' && (
+                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('createdAt')} className={styles.sortable}>
+                    Ngày đăng ký
+                    {filters.sortBy === 'createdAt' && (
+                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th>Trạng thái</th>
+                  <th style={{ textAlign: 'right', width: '150px' }}>Thao tác</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : !loading ? (
-          <div style={{ padding: '48px 16px', textAlign: 'center', color: '#6b7280', fontSize: 14 }}>
-            Không tìm thấy kết quả
+              </thead>
+              <tbody>
+                {processedItems.map((u, index) => {
+                  const locked = isUserLocked(u);
+                  return (
+                    <tr key={u.id} className={styles.tableRow}>
+                      <td className={styles.indexCell}>
+                        {(filters.page - 1) * filters.pageSize + index + 1}
+                      </td>
+                      <td>
+                        <div className={styles.userCell}>
+                          <img 
+                            src={u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.fullName || u.email)}&background=667eea&color=fff`}
+                            alt={u.fullName || ''}
+                            className={styles.avatar}
+                          />
+                          <span className={styles.userName}>{u.fullName || '-'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`${styles.roleBadge} ${styles[`role${u.role}`]}`}>
+                          {u.role || '-'}
+                        </span>
+                      </td>
+                      <td className={styles.emailCell}>{u.email}</td>
+                      <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
+                      <td>
+                        <span className={`${styles.statusBadge} ${locked ? styles.statusLocked : styles.statusActive}`}>
+                          <i className={`bi bi-${locked ? 'lock-fill' : 'check-circle-fill'}`}></i>
+                          {locked ? 'Đang khóa' : 'Hoạt động'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className={styles.actions}>
+                          <button onClick={() => handleViewDetails(u.id)} title="Xem chi tiết" className={styles.actionBtn}>
+                            <i className="bi bi-eye"></i>
+                          </button>
+                          <button onClick={() => onEdit(u)} title="Sửa" className={styles.actionBtn}>
+                            <i className="bi bi-pencil"></i>
+                          </button>
+                          <button
+                            onClick={() => handleStatusChange(u, !locked)}
+                            disabled={Boolean(updatingIds[u.id])}
+                            title={locked ? 'Mở khóa' : 'Khóa'}
+                            className={`${styles.actionBtn} ${locked ? styles.actionUnlock : styles.actionLock}`}
+                          >
+                            <i className={`bi bi-${locked ? 'unlock' : 'lock'}`}></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         ) : (
-          <div style={{ padding: '48px 16px', textAlign: 'center', color: '#6b7280', fontSize: 14 }}>
-            Đang tải dữ liệu...
+          <div className={styles.emptyState}>
+            <i className="bi bi-inbox"></i>
+            <p>Không tìm thấy người dùng nào</p>
           </div>
-        ) }
+        )}
+
+        {/* Pagination */}
+        {processedItems.length > 0 && (
+          <div className={styles.pagination}>
+            <div className={styles.paginationInfo}>
+              Hiển thị {(filters.page - 1) * filters.pageSize + 1} - {Math.min(filters.page * filters.pageSize, total ?? 0)} trong tổng số {total ?? 0} kết quả
+            </div>
+
+            <div className={styles.paginationControls}>
+              <select value={filters.pageSize} onChange={e => setFilters(prev => ({ ...prev, pageSize: Number(e.target.value), page: 1 }))}>
+                <option value={5}>5 / trang</option>
+                <option value={10}>10 / trang</option>
+                <option value={15}>15 / trang</option>
+                <option value={20}>20 / trang</option>
+              </select>
+
+              <div className={styles.paginationButtons}>
+                <button 
+                  onClick={() => handleFilterChange('page', 1)} 
+                  disabled={filters.page <= 1}
+                  title="Trang đầu"
+                >
+                  <i className="bi bi-chevron-double-left"></i>
+                </button>
+                <button 
+                  onClick={() => handleFilterChange('page', filters.page - 1)} 
+                  disabled={filters.page <= 1}
+                  title="Trang trước"
+                >
+                  <i className="bi bi-chevron-left"></i>
+                </button>
+                
+                <span className={styles.pageIndicator}>
+                  {filters.page} / {totalPages || 1}
+                </span>
+
+                <button 
+                  onClick={() => handleFilterChange('page', filters.page + 1)} 
+                  disabled={filters.page >= totalPages}
+                  title="Trang sau"
+                >
+                  <i className="bi bi-chevron-right"></i>
+                </button>
+                <button 
+                  onClick={() => handleFilterChange('page', totalPages)} 
+                  disabled={filters.page >= totalPages}
+                  title="Trang cuối"
+                >
+                  <i className="bi bi-chevron-double-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Pagination */}
-      <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#4b5563', fontSize: 14 }}>
-        <div>
-          Hiển thị {processedItems.length} trên tổng số {total ?? 0} kết quả
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label htmlFor="pageSize" style={{ fontSize: 14 }}>Số mục:</label>
-            <select id="pageSize" value={filters.pageSize} onChange={e => setFilters(prev => ({ ...prev, pageSize: Number(e.target.value), page: 1 }))} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}>
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={15}>15</option>
-            </select>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => handleFilterChange('page', Math.max(1, filters.page - 1))} disabled={filters.page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: filters.page <= 1 ? 0.6 : 1 }}>
-            Trang trước
-          </button>
-          <button onClick={() => handleFilterChange('page', filters.page + 1)} disabled={processedItems.length < filters.pageSize} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: processedItems.length < filters.pageSize ? 0.6 : 1 }}>
-            Trang sau
-          </button>
-        </div>
-      </div>
-
+      {/* Modals */}
       {viewing && (
         <UserDetails user={viewing} onClose={() => setViewing(null)} isLoading={loadingDetails} />
       )}
+
+      {creating && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2>Tạo Người dùng Mới</h2>
+              <button onClick={() => setCreating(false)} className={styles.closeButton}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <UserForm 
+              onSaved={handleCreateFormSaved}
+              onCancel={() => setCreating(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {editing && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2>Chỉnh sửa Người dùng</h2>
+              <button onClick={() => setEditing(null)} className={styles.closeButton}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <UserForm 
+              user={editing}
+              onSaved={handleEditFormSaved}
+              onCancel={() => setEditing(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      <ConfirmationDialog
+        isOpen={confirmationDialog.isOpen}
+        title={confirmationDialog.action === 'lock' ? 'Xác nhận khóa tài khoản' : 'Xác nhận mở khóa tài khoản'}
+        message={
+          confirmationDialog.action === 'lock' 
+            ? `Bạn có chắc muốn khóa tài khoản "${confirmationDialog.user?.fullName || confirmationDialog.user?.email}" không?`
+            : `Bạn có chắc muốn mở khóa tài khoản "${confirmationDialog.user?.fullName || confirmationDialog.user?.email}" không?`
+        }
+        confirmText={confirmationDialog.action === 'lock' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+        cancelText="Hủy"
+        onConfirm={handleConfirmStatusChange}
+        onCancel={() => setConfirmationDialog({ isOpen: false, user: null, action: null })}
+        type={confirmationDialog.action === 'lock' ? 'danger' : 'warning'}
+      />
     </div>
-  )
+  );
 }

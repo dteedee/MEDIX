@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArticleDTO } from '../../types/article.types'
-import { Sidebar } from '../../components/layout/Sidebar'
-import './ArticleReader.css'
 
 export default function ArticleReaderPage() {
   const location = useLocation();
@@ -166,7 +164,7 @@ export default function ArticleReaderPage() {
       </div>
 
       {/* --- Cột giữa: Nội dung chính (60%) --- */}
-      <div className="article-main-content">
+      <div className="article-center-column">
         <div className="breadcrumb">
           <Link to="/app/patient">Trang chủ</Link>
           <span className="separator">/</span>
@@ -176,91 +174,95 @@ export default function ArticleReaderPage() {
         <h1 className="reader-main-title">Kiến Thức Y Khoa</h1>
         <p className="reader-main-subtitle">Khám phá các bài viết chuyên sâu về sức khỏe, dinh dưỡng và lối sống lành mạnh từ các chuyên gia hàng đầu.</p>
 
-        <div className="article-page-chunk">
-          {featuredArticle && (
-            <Link to={`/app/articles/${featuredArticle.slug}`} className="featured-article-link">
-              <div className="featured-article">
-                <img src={featuredArticle.coverImageUrl || featuredArticle.thumbnailUrl || '/images/placeholder.png'} alt={featuredArticle.title} />
-                <div className="featured-content">
-                  <h2>{featuredArticle.title}</h2>
-                  <p>{featuredArticle.summary}</p>
-                  <div className="article-card-stats">
-                    <LikeIcon />
-                    <span>{featuredArticle.likeCount ?? 0}</span>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          <div className="article-grid">
-            {otherArticles.map(article => (
-              <Link key={article.id} to={`/app/articles/${article.slug}`} className="article-card-link">
-                <div className="article-card">
-                  <div className="article-card-image-wrapper">
-                    <img src={article.thumbnailUrl || '/images/placeholder.png'} alt={article.title} className="article-card-image" />
-                  </div>
-                  <div className="article-card-content">
-                    <span className="article-card-category">{(article.categories?.[0]?.name ?? 'Kiến thức').toUpperCase()}</span>
-                    <h3 className="article-card-title">{article.title}</h3>
-                    <div className="article-card-stats">
-                      <LikeIcon />
-                      <span>{article.likeCount ?? 0}</span>
+        <div className="article-content-wrapper">
+          <div className="article-main-content">
+            <div className="article-page-chunk">
+              {featuredArticle && (
+                <Link to={`/app/articles/${featuredArticle.slug}`} className="featured-article-link">
+                  <div className="featured-article">
+                    <img src={featuredArticle.coverImageUrl || featuredArticle.thumbnailUrl || '/images/placeholder.png'} alt={featuredArticle.title} />
+                    <div className="featured-content">
+                      <h2>{featuredArticle.title}</h2>
+                      <p>{featuredArticle.summary}</p>
+                      <div className="article-card-stats">
+                        <LikeIcon />
+                        <span>{featuredArticle.likeCount ?? 0}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+                </Link>
+              )}
 
-        <div className="pagination-container">
-          <button onClick={() => handlePageChange(Math.max(1, currentPage - 1))} disabled={currentPage <= 1} className="pagination-button">
-            Trang trước
-          </button>
-          <span className="pagination-info">Trang {currentPage} / {totalPages}</span>
-          <button onClick={() => handlePageChange(currentPage + 1)} disabled={!hasMore || loading} className="pagination-button">
-            Trang sau
-          </button>
-        </div>
-      </div>
-
-      {/* --- Cột phải: Tìm kiếm & Lọc (20%) --- */}
-      <div className="article-sidebar-right">
-        <div className="search-container">
-          <input
-            type="text"
-            placeholder="Tìm kiếm bài viết..."
-            className="search-input"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {isSearching && <div className="search-spinner"></div>}
-          {suggestions.length > 0 && (
-            <ul className="suggestions-list">
-              {suggestions.map(article => (
-                <li key={article.id}>
-                  <Link to={`/app/articles/${article.slug}`}>{article.title}</Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="category-filter-container">
-          <label className="category-filter-label">Lọc theo danh mục:</label>
-          <div className="category-checkbox-group">
-            {categories.map(cat => (
-              <div key={cat} className="category-checkbox-item">
-                <input
-                  type="checkbox"
-                  id={`cat-${cat}`}
-                  value={cat}
-                  checked={selectedCategories.includes(cat)}
-                  onChange={handleCategoryChange}
-                />
-                <label htmlFor={`cat-${cat}`}>{cat}</label>
+              <div className="article-grid">
+                {otherArticles.map(article => (
+                  <Link key={article.id} to={`/app/articles/${article.slug}`} className="article-card-link">
+                    <div className="article-card">
+                      <div className="article-card-image-wrapper">
+                        <img src={article.thumbnailUrl || '/images/placeholder.png'} alt={article.title} className="article-card-image" />
+                      </div>
+                      <div className="article-card-content">
+                        <span className="article-card-category">{(article.categories?.[0]?.name ?? 'Kiến thức').toUpperCase()}</span>
+                        <h3 className="article-card-title">{article.title}</h3>
+                        <div className="article-card-stats">
+                          <LikeIcon />
+                          <span>{article.likeCount ?? 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
               </div>
-            ))}
+            </div>
+
+            <div className="pagination-container">
+              <button onClick={() => handlePageChange(Math.max(1, currentPage - 1))} disabled={currentPage <= 1} className="pagination-button">
+                Trang trước
+              </button>
+              <span className="pagination-info">Trang {currentPage} / {totalPages}</span>
+              <button onClick={() => handlePageChange(currentPage + 1)} disabled={!hasMore || loading} className="pagination-button">
+                Trang sau
+              </button>
+            </div>
+          </div>
+
+          {/* --- Cột phải: Tìm kiếm & Lọc (20%) --- */}
+          <div className="article-sidebar-right">
+            <div className="search-container">
+              <input
+                type="text"
+                placeholder="Tìm kiếm bài viết..."
+                className="search-input"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {isSearching && <div className="search-spinner"></div>}
+              {suggestions.length > 0 && (
+                <ul className="suggestions-list">
+                  {suggestions.map(article => (
+                    <li key={article.id}>
+                      <Link to={`/app/articles/${article.slug}`}>{article.title}</Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="category-filter-container">
+              <label className="category-filter-label">Lọc theo danh mục:</label>
+              <div className="category-checkbox-group">
+                {categories.map(cat => (
+                  <div key={cat} className="category-checkbox-item">
+                    <input
+                      type="checkbox"
+                      id={`cat-${cat}`}
+                      value={cat}
+                      checked={selectedCategories.includes(cat)}
+                      onChange={handleCategoryChange}
+                    />
+                    <label htmlFor={`cat-${cat}`}>{cat}</label>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>

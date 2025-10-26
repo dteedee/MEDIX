@@ -12,6 +12,7 @@ interface AuthContextType {
   register: (userData: RegisterRequest) => Promise<void>;
   registerPatient: (patientData: PatientRegistration) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updatedUserData: Partial<User>) => void;
   checkRole: (requiredRoles: UserRole[]) => boolean;
   hasPermission: (permission: string) => boolean;
 }
@@ -191,16 +192,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       localStorage.removeItem('userData');
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       apiClient.clearTokens();
       
       // Dispatch auth changed event for Header component
       window.dispatchEvent(new Event('authChanged'));
+      
+      // Force reload to clear all state and prevent back navigation
+      console.log('🔄 Force reload after logout');
+      window.location.href = '/login';
     }
   };
 
   const checkRole = (requiredRoles: UserRole[]): boolean => {
     if (!user) return false;
     return requiredRoles.some(role => user.role === role);
+  };
+
+  const updateUser = (updatedUserData: Partial<User>) => {
+    if (!user) return;
+    
+    const updatedUser = { ...user, ...updatedUserData };
+    setUser(updatedUser);
+    
+    // Update localStorage
+    localStorage.setItem('userData', JSON.stringify(updatedUser));
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    
+    // Dispatch auth changed event for other components
+    window.dispatchEvent(new Event('authChanged'));
+    
+    console.log('✅ AuthContext - User updated:', updatedUser.fullName);
   };
 
   const hasPermission = (permission: string): boolean => {
@@ -248,6 +271,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     registerPatient,
     logout,
+    updateUser,
     checkRole,
     hasPermission,
   };

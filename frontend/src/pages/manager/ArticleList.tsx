@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { articleService, ArticleFormPayload } from '../../services/articleService' // Import ArticleFormPayload
 import { ArticleDTO } from '../../types/article.types'
-import ArticleDetails from '../../components/admin/ArticleDetails'
+import ArticleDetails from './ArticleDetails'
 import { categoryService } from '../../services/categoryService'
 import { CategoryDTO } from '../../types/category.types'
 import { useToast } from '../../contexts/ToastContext'
-import styles from '../../styles/ArticleList.module.css'
+import styles from '../../styles/manager/ArticleList.module.css'
 
 // SVG Icons for actions
 const ViewIcon = () => (

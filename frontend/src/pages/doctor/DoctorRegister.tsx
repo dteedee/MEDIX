@@ -1,4 +1,4 @@
-import styles from '../../styles/doctor-register.module.css'
+import styles from '../../styles/doctor/doctor-register.module.css'
 
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
@@ -49,7 +49,7 @@ function DoctorRegister() {
         const agreed = formData.get('agreeToTerms') === 'on'; // checkbox returns 'on' if checked
 
         if (!agreed) {
-            setErrors({ AgreeToTerms: 'Bạn phải đồng ý với điều khoản trước khi đăng ký.' });
+            setErrors({ AgreeToTerms: 'Vui lòng đọc và đồng ý với điều khoản trước khi đăng ký' });
             return;
         }
 
@@ -232,6 +232,12 @@ function DoctorRegister() {
         <div>
             <main className={styles["main-container"]}>
                 <div className={styles["form-container"]}>
+                    <div className={styles["doctor-register-title-section"]}>
+                        <h1 className={styles["register-title"]}>Đăng Ký Tài Khoản Bác Sĩ</h1>
+                        <div className={styles["register-desc"]}>
+                            Vui lòng điền đầy đủ thông tin để tạo tài khoản
+                        </div>
+                    </div>
                     <form id="registrationForm" encType='multipart/form-data' onSubmit={handleSubmit}>
                         {/* Row 1 */}
                         <div className={styles["form-row"]}>

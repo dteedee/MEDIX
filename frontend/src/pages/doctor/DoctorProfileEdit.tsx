@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import styles from '../../styles/doctor-edit-profile.module.css'
+import styles from '../../styles/doctor/doctor-edit-profile.module.css'
 import DoctorService from '../../services/doctorService';
 import { DoctorProfileDetails } from '../../types/doctor.types';
 import Swal from 'sweetalert2';

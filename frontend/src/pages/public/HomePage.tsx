@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import styles from '../../styles/public/home.module.css'
 import { HomeMetadata } from '../../types/home.types';
 import HomeService from '../../services/homeService';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { ArticleDTO } from '../../types/article.types';
+import { articleService } from '../../services/articleService';
 
 function HomePage() {
     const navigate = useNavigate();
@@ -11,6 +13,7 @@ function HomePage() {
 
     //get home page details
     const [homeMetadata, setHomeMetadata] = useState<HomeMetadata>();
+    const [featuredArticles, setFeaturedArticles] = useState<ArticleDTO[]>([]);
 
     useEffect(() => {
         const fetchMetadata = async () => {
@@ -23,7 +26,17 @@ function HomePage() {
         };
 
         fetchMetadata();
-    }, [])
+
+        const fetchArticles = async () => {
+            try {
+                const articles = await articleService.getHomepageArticles(6); // Lấy 6 bài viết
+                setFeaturedArticles(articles);
+            } catch (error) {
+                console.error('Failed to fetch homepage articles:', error);
+            }
+        };
+        fetchArticles();
+    }, []);
 
     //handle doctors sliding
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -98,7 +111,7 @@ function HomePage() {
                     <li><span>|</span></li>
                     <li>
                         <a
-                            onClick={() => navigate('/articles')}
+                            onClick={() => navigate('/app/articles')}
                             className={`${styles["nav-link"]} ${location.pathname === '/articles' ? styles["active"] : ''}`}
                         >
                             {t('nav.health-articles')}
@@ -332,20 +345,25 @@ function HomePage() {
                 </div>
             </section >
             {/* Knowledge Section */}
-            < section className={styles["knowledge"]} >
+            <section className={styles["knowledge"]}>
                 <h2>{t('knowledge.title')}</h2>
                 <div className={styles["knowledge-grid"]}>
-                    {homeMetadata?.articles.map((article, index) => (
-                        <div key={`/app/article-${article.title}-${index}`} className={styles["knowledge-card"]}>
-                            <img className={styles["knowledge-image"]} src={article.thumbnailUrl} />
+                    {featuredArticles.map((article) => (
+                        <Link to={`/app/articles/${article.slug}`} key={article.id} className={styles["knowledge-card"]}>
+                            <div className={styles["knowledge-image-container"]}>
+                                <img className={styles["knowledge-image"]} src={article.thumbnailUrl || '/placeholder-image.jpg'} alt={article.title} />
+                            </div>
                             <div className={styles["knowledge-content"]}>
                                 <h5>{article.title}</h5>
-                                <p> {article.summary}</p>
+                                <p>{article.summary}</p>
                             </div>
                             <div className={styles["knowledge-footer"]}>
-                                <p className={styles["knowledge-date"]}>📅{article.publishedAt}</p>
+                                <span className={styles["knowledge-date"]}>
+                                    📅 {article.publishedAt ? new Date(article.publishedAt).toLocaleDateString('vi-VN') : ''}
+                                </span>
+                                <span className={styles["read-more"]}>Đọc thêm &rarr;</span>
                             </div>
-                        </div>
+                        </Link>
                     ))}
                 </div>
             </section >

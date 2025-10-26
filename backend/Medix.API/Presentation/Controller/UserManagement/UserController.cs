@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Claims;
+using System.Security.Claims; 
 using System.Threading.Tasks;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.Community;
@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Medix.API.DataAccess;
 using Microsoft.EntityFrameworkCore;
+using Medix.API.Business.Interfaces.Community;
 using Microsoft.Extensions.Logging;
 
 namespace Medix.API.Presentation.Controller.UserManagement
@@ -23,13 +24,15 @@ namespace Medix.API.Presentation.Controller.UserManagement
     {
         private readonly IUserService _userService;
         private readonly MedixContext _context;
+        private readonly IEmailService _emailService;
         private readonly ILogger<UserController> _logger;
 
-        public UserController(ILogger<UserController> logger, IUserService userService, MedixContext context)
+        public UserController(ILogger<UserController> logger, IUserService userService, MedixContext context, IEmailService emailService)
         {
             _logger = logger;
             _userService = userService;
             _context = context;
+            _emailService = emailService;
         }
 
         // ========================= USER SELF MANAGEMENT =========================
@@ -169,15 +172,35 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
             try
             {
-                var userDto = await _userService.CreateUserAsync(request);
+                // 1. Generate a temporary password
+                var temporaryPassword = GenerateRandomPassword();
+
+                // 2. Create user with the temporary password
+                var userDto = await _userService.CreateUserAsync(request, temporaryPassword);
+
+                // 3. Send the temporary password to the user's email
+                try
+                {
+                    await _emailService.SendNewUserPasswordAsync(userDto.Email, temporaryPassword);
+                    _logger.LogInformation("Successfully sent temporary password to {Email}", userDto.Email);
+                }
+                catch (Exception emailEx)
+                {
+                    // Log the email sending failure but don't fail the whole request
+                    // The user is created, they can use "Forgot Password" flow
+                    _logger.LogWarning(emailEx, "Failed to send temporary password email to {Email} for new user {UserId}", userDto.Email, userDto.Id);
+                }
+
                 return CreatedAtAction(nameof(GetById), new { id = userDto.Id }, userDto);
             }
             catch (MedixException ex)
             {
+                _logger.LogWarning(ex, "Failed to create user. Validation error.");
                 return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "An unexpected error occurred while creating the user.");
                 return StatusCode(500, new { message = "An error occurred while creating the user", error = ex.Message });
             }
         }
@@ -189,8 +212,26 @@ namespace Medix.API.Presentation.Controller.UserManagement
         [ProducesResponseType(404)]
         public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserDTO updateUserDto)
         {
-            var updatedUser = await _userService.UpdateAsync(id, updateUserDto);
-            return Ok(updatedUser);
+            // Lấy ID của người dùng đang thực hiện hành động từ token
+            var currentUserIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (currentUserIdClaim == null || !Guid.TryParse(currentUserIdClaim.Value, out var currentUserId))
+            {
+                return Unauthorized(new { message = "Không thể xác thực người dùng hiện tại." });
+            }
+
+            try
+            {
+                var updatedUser = await _userService.UpdateAsync(id, updateUserDto, currentUserId);
+                return Ok(updatedUser);
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (MedixException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]
@@ -212,6 +253,29 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
             var result = await _userService.SearchAsync(keyword, page, pageSize);
             return Ok(result);
+        }
+
+        private string GenerateRandomPassword(int length = 12)
+        {
+            const string upper = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+            const string lower = "abcdefghijkmnopqrstuvwxyz";
+            const string number = "0123456789";
+            const string special = "!@#$%^&*_-";
+
+            var random = new Random();
+            var password = new char[length];
+            password[0] = upper[random.Next(upper.Length)];
+            password[1] = lower[random.Next(lower.Length)];
+            password[2] = number[random.Next(number.Length)];
+            password[3] = special[random.Next(special.Length)];
+
+            var allChars = upper + lower + number + special;
+            for (int i = 4; i < length; i++)
+            {
+                password[i] = allChars[random.Next(allChars.Length)];
+            }
+
+            return new string(password.OrderBy(x => random.Next()).ToArray());
         }
     }
 }

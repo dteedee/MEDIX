@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+﻿﻿using AutoMapper;
 using Medix.API.Application.DTOs.Doctor;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.UserManagement;
@@ -144,27 +144,27 @@ namespace Medix.API.Presentation.Controller.Classification
         {
             if (request.Email != null && await _userSerivce.EmailExistsAsync(request.Email))
             {
-                prev.Add(new ValidationResult("Email đã được sử dụng", new[] { "Email" }));
+                prev.Add(new ValidationResult("Email đã được sử dụng", new string[] { "Email" }));
             }
 
             if (request.PhoneNumber != null && await _userSerivce.PhoneNumberExistsAsync(request.PhoneNumber))
             {
-                prev.Add(new ValidationResult("Số điện thoại đã được sử dụng", new[] { "PhoneNumber" }));
+                prev.Add(new ValidationResult("Số điện thoại đã được sử dụng", new string[] { "PhoneNumber" }));
             }
 
             if (request.LicenseNumber != null && await _doctorService.LicenseNumberExistsAsync(request.LicenseNumber))
             {
-                prev.Add(new ValidationResult("Số giấy phép hành nghề đã được sử dụng", new[] { "LicenseNumber" }));
+                prev.Add(new ValidationResult("Số giấy phép hành nghề đã được sử dụng", new string[] { "LicenseNumber" }));
             }
 
             if (request.UserName != null && await _userSerivce.UserNameExistsAsync(request.UserName))
             {
-                prev.Add(new ValidationResult("Tên đăng nhập đã được sử dụng", new[] { "UserName" }));
+                prev.Add(new ValidationResult("Tên đăng nhập đã được sử dụng", new string[] { "UserName" }));
             }
 
             if (request.IdentificationNumber != null && await _userSerivce.IdentificationNumberExistsAsync(request.IdentificationNumber))
             {
-                prev.Add(new ValidationResult("Số CCCD/CMND đã được sử dụng", new[] { "IdentificationNumber" }));
+                prev.Add(new ValidationResult("Số CCCD/CMND đã được sử dụng", new string[] { "IdentificationNumber" }));
             }
 
             return prev;
@@ -348,17 +348,17 @@ namespace Medix.API.Presentation.Controller.Classification
         {
             if (req.NewPassword == oldPassword)
             {
-                prevResult.Add(new ValidationResult("Mật khẩu mới không được trùng với mật khẩu hiện tại", new[] { "NewPassword" }));
+                prevResult.Add(new ValidationResult("Mật khẩu mới không được trùng với mật khẩu hiện tại", new string[] { "NewPassword" }));
             }
 
             if (req.NewPassword != req.ConfirmNewPassword)
             {
-                prevResult.Add(new ValidationResult("Mật khẩu không khớp", new[] { "ConfirmNewPassword" }));
+                prevResult.Add(new ValidationResult("Mật khẩu không khớp", new string[] { "ConfirmNewPassword" }));
             }
 
             if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, oldPassword))
             {
-                prevResult.Add(new ValidationResult("Mật khẩu cũ không đúng", new[] { "CurrentPassword" }));
+                prevResult.Add(new ValidationResult("Mật khẩu cũ không đúng", new string[] { "CurrentPassword" }));
             }
             return prevResult;
         }

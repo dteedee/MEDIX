@@ -151,7 +151,7 @@ export function App() {
 
                 {/* ---------- Doctor routes (inside /app) ---------- */}
                 <Route path="doctor/*" element={
-                  <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
+                  // <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
                     <Routes>
                       {/* <Route index element={<Navigate to="schedules" replace />} /> */}
                       <Route path="profile/edit" element={<DoctorProfileEdit />} />

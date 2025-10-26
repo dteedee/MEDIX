@@ -117,10 +117,9 @@ export default function ArticleDetailPage() {
       </button>
 
       <div className="breadcrumb">
-        <Link to="/app/patient">Trang chủ</Link>
+        <Link to="/">Trang chủ</Link>
         <span className="separator">/</span>
-        <Link to="/app/articles">Kiến thức y khoa</Link>
-        <span className="separator">/</span>
+       
         <span className="current-page">{article.title}</span>
       </div>
 

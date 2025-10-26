@@ -231,6 +231,9 @@ namespace Medix.API.Business.Services.Classification
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
                 LikeCount = a.LikeCount,
+                IsHomepageVisible = a.IsHomepageVisible,
+                DisplayOrder = a.DisplayOrder,
+                DisplayType = a.DisplayType,
 
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
@@ -319,6 +322,12 @@ namespace Medix.API.Business.Services.Classification
                 UpdatedAt = DateTime.UtcNow
             };
 
+            // Nếu bài viết được tạo với trạng thái Published, gán luôn ngày xuất bản
+            if (article.StatusCode == "Published")
+            {
+                article.PublishedAt = DateTime.UtcNow;
+            }
+
             // Attach categories if provided
             if (createDto.CategoryIds != null && createDto.CategoryIds.Any())
             {
@@ -393,19 +402,25 @@ namespace Medix.API.Business.Services.Classification
                 });
             }
 
-            article.Title = updateDto.Title;
-            article.Slug = updateDto.Slug;
-            article.Summary = updateDto.Summary;
-            article.Content = updateDto.Content;
-            article.CoverImageUrl = updateDto.CoverImageUrl;
-            article.ThumbnailUrl = updateDto.ThumbnailUrl;
-            article.MetaTitle = updateDto.MetaTitle;
-            article.MetaDescription = updateDto.MetaDescription;
-            article.StatusCode = updateDto.StatusCode;
-            article.IsHomepageVisible = updateDto.IsHomepageVisible;
-            article.DisplayOrder = updateDto.DisplayOrder;
-            article.DisplayType = updateDto.DisplayType;
-            article.AuthorId = updateDto.AuthorId;
+            // Ghi lại trạng thái cũ trước khi map
+            var oldStatusCode = article.StatusCode;
+
+            // Map các giá trị từ DTO vào entity
+            _mapper.Map(updateDto, article);
+
+            // Cập nhật PublishedAt một cách an toàn
+            // 1. Nếu bài viết được chuyển sang "Published" lần đầu tiên
+            if (updateDto.StatusCode == "Published" && oldStatusCode != "Published")
+            {
+                article.PublishedAt = DateTime.UtcNow;
+            }
+            // 2. Nếu bài viết đã được published, đảm bảo PublishedAt không bị ghi đè về null
+            else if (updateDto.StatusCode == "Published" && article.PublishedAt == null)
+            {
+                // Gán ngày hiện tại nếu nó đang là null một cách bất thường
+                article.PublishedAt = DateTime.UtcNow;
+            }
+
             article.UpdatedAt = DateTime.UtcNow;
 
             // Update categories if provided

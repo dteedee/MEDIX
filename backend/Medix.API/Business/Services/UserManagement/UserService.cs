@@ -3,6 +3,7 @@ using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Exceptions;
+using AutoMapper;
 // using Medix.API.Business.Util; // Removed for performance
 
 namespace Medix.API.Business.Services.UserManagement
@@ -12,13 +13,15 @@ namespace Medix.API.Business.Services.UserManagement
         private readonly IUserRoleRepository _userRoleRepository;
         private readonly IUserRepository _userRepository;
         private readonly IPatientRepository _patientRepository;
+        private readonly IMapper _mapper;
    
 
-        public UserService(IUserRepository userRepository, IPatientRepository patientRepository, IUserRoleRepository userRoleRepository)
+        public UserService(IUserRepository userRepository, IPatientRepository patientRepository, IUserRoleRepository userRoleRepository, IMapper mapper)
         {
             _userRepository = userRepository;
             _patientRepository = patientRepository;
             _userRoleRepository = userRoleRepository;
+            _mapper = mapper;
         }
 
         public async Task<UserDto> RegisterUserAsync(RegisterRequestPatientDTO registerDto)
@@ -75,62 +78,58 @@ namespace Medix.API.Business.Services.UserManagement
             };
         }
 
-        public async Task<UserDto> CreateUserAsync(CreateUserDTO createUserDto)
-        {
-            // ✅ 1. Validate cơ bản
-            if (string.IsNullOrWhiteSpace(createUserDto.UserName))
-                throw new MedixException("Username is required.");
-            if (string.IsNullOrWhiteSpace(createUserDto.Email))
-                throw new MedixException("Email is required.");
+       // ... (các using và khai báo khác trong file UserService.cs)
 
-            // ✅ 2. Check username trùng
-            var existingUser = await _userRepository.GetByUserNameAsync(createUserDto.UserName);
-            if (existingUser != null)
-                throw new MedixException($"Username '{createUserDto.UserName}' already exists");
+public async Task<UserDto> CreateUserAsync(CreateUserDTO createUserDto, string password)
+{
+    // Validate input
+    if (await _userRepository.GetByUserNameAsync(createUserDto.UserName) != null)
+    {
+        throw new MedixException("Username đã tồn tại.");
+    }
 
-            // ✅ 3. Check email trùng
-            var existingEmail = await _userRepository.GetByEmailAsync(createUserDto.Email);
-            if (existingEmail != null)
-                throw new MedixException($"Email '{createUserDto.Email}' already exists");
+    if (await EmailExistsAsync(createUserDto.Email))
+    {
+        throw new MedixException("Email đã tồn tại.");
+    }
 
-            // ✅ 4. Hash password mặc định
-            const string defaultPassword = "Abc@123";
-            string passwordHash = BCrypt.Net.BCrypt.HashPassword(defaultPassword);
+    var user = new User
+    {
+        Id = Guid.NewGuid(),
+        UserName = createUserDto.UserName,
+        NormalizedUserName = createUserDto.UserName.ToUpperInvariant(),
+        Email = createUserDto.Email,
+        FullName = createUserDto.UserName, // Use username as default FullName
+        NormalizedEmail = createUserDto.Email.ToUpperInvariant(),
+        EmailConfirmed = true, // Tạm thời xác thực email luôn khi admin tạo
+        PhoneNumberConfirmed = false,
+        Status = 1, // Active
+        IsProfileCompleted = false,
+        LockoutEnabled = false,
+        AccessFailedCount = 0,
+        CreatedAt = DateTime.UtcNow,
+        PasswordHash = BCrypt.Net.BCrypt.HashPassword(password) // Băm mật khẩu tạm thời
+    };
 
-            // ✅ 5. Tạo entity mới
-            var user = new User
-            {
-                Id = Guid.NewGuid(),
-                UserName = createUserDto.UserName,
-                NormalizedUserName = createUserDto.UserName.ToUpperInvariant(),
-                Email = createUserDto.Email,
-                NormalizedEmail = createUserDto.Email.ToUpperInvariant(),
-                PasswordHash = passwordHash,
-                FullName = createUserDto.UserName, // ⚡ FIX: tránh lỗi NULL
-                Role = "PATIENT",
-                IsProfileCompleted = false,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                EmailConfirmed = false,
-                PhoneNumberConfirmed = false,
-                LockoutEnabled = false,
-                AccessFailedCount = 0
-            };
+    var createdUser = await _userRepository.CreateAsync(user);
 
-            // ✅ 6. Lưu vào DB
-            var savedUser = await _userRepository.CreateAsync(user);
+    // Gán vai trò cho người dùng
+    var userRole = new UserRole
+    {
+        UserId = createdUser.Id,
+        RoleCode = createUserDto.Role, // Lấy vai trò từ DTO
+        CreatedAt = DateTime.UtcNow
+    };
+    await _userRoleRepository.CreateAsync(userRole);
 
-            // ✅ 7. Map sang DTO trả về
-            return new UserDto
-            {
-                Id = savedUser.Id,
-                UserName = savedUser.UserName,
-                Email = savedUser.Email,
-                Role = savedUser.Role,
-                CreatedAt = savedUser.CreatedAt,
-                FullName = savedUser.FullName
-            };
-        }
+    var userDto = _mapper.Map<UserDto>(createdUser);
+    userDto.Role = createUserDto.Role;
+
+    return userDto;
+}
+
+// ... (các phương thức khác trong file UserService.cs)
+
 
 
 
@@ -138,61 +137,28 @@ namespace Medix.API.Business.Services.UserManagement
         {
             var user = await _userRepository.GetByIdAsync(id);
             if (user == null) return null;
-
-            return new UserDto
-            {
-                Id = user.Id,
-                Email = user.Email,
-                FullName = user.FullName,
-                PhoneNumber = user.PhoneNumber,
-                Role = user.Role,
-                EmailConfirmed = user.EmailConfirmed,
-                CreatedAt = user.CreatedAt,
-                DateOfBirth = user.DateOfBirth,
-                GenderCode = user.GenderCode,
-                IdentificationNumber = user.IdentificationNumber,
-                UserName = user.UserName,
-                Address = user.Address,
-                AvatarUrl = user.AvatarUrl,
-                IsProfileCompleted = user.IsProfileCompleted,
-                LockoutEnd = user.LockoutEnd,
-                LockoutEnabled = user.LockoutEnabled,
-                AccessFailedCount = user.AccessFailedCount
-            };
+            return _mapper.Map<UserDto>(user);
         }
 
         public async Task<UserDto?> GetByEmailAsync(string email)
         {
             var user = await _userRepository.GetByEmailAsync(email);
             if (user == null) return null;
-
-            return new UserDto
-            {
-                Id = user.Id,
-                Email = user.Email,
-                FullName = user.FullName,
-                PhoneNumber = user.PhoneNumber,
-                Role = user.Role,
-                EmailConfirmed = user.EmailConfirmed,
-                CreatedAt = user.CreatedAt,
-                DateOfBirth = user.DateOfBirth,
-                GenderCode = user.GenderCode,
-                IdentificationNumber = user.IdentificationNumber,
-                UserName = user.UserName,
-                Address = user.Address,
-                AvatarUrl = user.AvatarUrl,
-                IsProfileCompleted = user.IsProfileCompleted,
-                LockoutEnd = user.LockoutEnd,
-                LockoutEnabled = user.LockoutEnabled,
-                AccessFailedCount = user.AccessFailedCount
-            };
+            return _mapper.Map<UserDto>(user);
         }
 
-        public async Task<UserDto> UpdateAsync(Guid id, UpdateUserDTO userUpdateDto)
+        public async Task<UserDto> UpdateAsync(Guid id, UpdateUserDTO userUpdateDto, Guid currentUserId)
         {
             var user = await _userRepository.GetByIdAsync(id);
             if (user == null)
                 throw new NotFoundException($"User with ID {id} not found");
+
+            // Kiểm tra nếu người dùng đang cố gắng tự khóa tài khoản của chính mình
+            if (userUpdateDto.LockoutEnabled && !user.LockoutEnabled && user.Id == currentUserId)
+            {
+                // Ngăn chặn hành động và ném ra ngoại lệ
+                throw new MedixException("Bạn không thể tự khóa tài khoản của chính mình.");
+            }
 
             // 1️⃣ Update basic info
             user.FullName = userUpdateDto.FullName;
@@ -232,26 +198,7 @@ namespace Medix.API.Business.Services.UserManagement
             var refreshedUser = await _userRepository.GetByIdAsync(id);
 
             // 5️⃣ Map ra DTO
-            return new UserDto
-            {
-                Id = refreshedUser.Id,
-                Email = refreshedUser.Email,
-                FullName = refreshedUser.FullName,
-                PhoneNumber = refreshedUser.PhoneNumber,
-                Role = refreshedUser.UserRoles.FirstOrDefault()?.RoleCodeNavigation?.DisplayName ?? "Patient",
-                EmailConfirmed = refreshedUser.EmailConfirmed,
-                CreatedAt = refreshedUser.CreatedAt,
-                DateOfBirth = refreshedUser.DateOfBirth,
-                GenderCode = refreshedUser.GenderCode,
-                IdentificationNumber = refreshedUser.IdentificationNumber,
-                UserName = refreshedUser.UserName,
-                Address = refreshedUser.Address,
-                AvatarUrl = refreshedUser.AvatarUrl,
-                IsProfileCompleted = refreshedUser.IsProfileCompleted,
-                LockoutEnd = refreshedUser.LockoutEnd,
-                LockoutEnabled = refreshedUser.LockoutEnabled,
-                AccessFailedCount = refreshedUser.AccessFailedCount
-            };
+            return _mapper.Map<UserDto>(refreshedUser);
         }
 
 
@@ -265,98 +212,27 @@ namespace Medix.API.Business.Services.UserManagement
         {
             // TODO: Fix when UserRepository.GetAllAsync is implemented
             var users = await _userRepository.GetAllAsync();
-            return users.Select(u => new UserDto
-            {
-                Id = u.Id,
-                Email = u.Email,
-                FullName = u.FullName,
-                PhoneNumber = u.PhoneNumber,
-                Role = u.Role,
-                EmailConfirmed = u.EmailConfirmed,
-                CreatedAt = u.CreatedAt
-            });
+            return _mapper.Map<IEnumerable<UserDto>>(users);
         }
         public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
         {
             var users = await _userRepository.GetAllAsync();
 
-            return users.Select(u => new UserDto
-            {
-                Id = u.Id,
-                Email = u.Email,
-                FullName = u.FullName,
-                PhoneNumber = u.PhoneNumber,
-                Role = u.UserRoles.FirstOrDefault()?.RoleCodeNavigation?.DisplayName ?? "Patient",
-                EmailConfirmed = u.EmailConfirmed,
-                CreatedAt = u.CreatedAt,
-                DateOfBirth = u.DateOfBirth,
-                GenderCode = u.GenderCode,
-                IdentificationNumber = u.IdentificationNumber,
-                UserName = u.UserName,
-                Address = u.Address,
-                AvatarUrl = u.AvatarUrl,
-                IsProfileCompleted = u.IsProfileCompleted,
-                LockoutEnd = u.LockoutEnd,
-                LockoutEnabled = u.LockoutEnabled,
-                AccessFailedCount = u.AccessFailedCount
-            }).ToList();
+            return _mapper.Map<IEnumerable<UserDto>>(users).ToList();
         }
 
         public async Task<(int total, IEnumerable<UserDto> data)> GetPagedAsync(int page, int pageSize)
         {
             var (total, users) = await _userRepository.GetPagedAsync(page, pageSize);
 
-            var data = users.Select(u => new UserDto
-            {
-                Id = u.Id,
-                Email = u.Email,
-                FullName = u.FullName,
-                PhoneNumber = u.PhoneNumber,
-                Role = u.UserRoles.FirstOrDefault()?.RoleCodeNavigation?.DisplayName ?? "Patient",
-                EmailConfirmed = u.EmailConfirmed,
-                CreatedAt = u.CreatedAt,
-                DateOfBirth = u.DateOfBirth,
-                GenderCode = u.GenderCode,
-                IdentificationNumber = u.IdentificationNumber,
-                UserName = u.UserName,
-                Address = u.Address,
-                AvatarUrl = u.AvatarUrl,
-                IsProfileCompleted = u.IsProfileCompleted,
-                LockoutEnd = u.LockoutEnd,
-                LockoutEnabled = u.LockoutEnabled,
-                AccessFailedCount = u.AccessFailedCount,
-              
-            });
-
+            var data = _mapper.Map<IEnumerable<UserDto>>(users);
             return (total, data);
         }
 
         public async Task<(int total, IEnumerable<UserDto> data)> SearchAsync(string keyword, int page, int pageSize)
         {
             var (total, users) = await _userRepository.SearchAsync(keyword, page, pageSize);
-
-            var data = users.Select(u => new UserDto
-            {
-                Id = u.Id,
-                Email = u.Email,
-                FullName = u.FullName,
-                PhoneNumber = u.PhoneNumber,
-                Role = u.Role,
-                EmailConfirmed = u.EmailConfirmed,
-                CreatedAt = u.CreatedAt,
-                DateOfBirth = u.DateOfBirth,
-                GenderCode = u.GenderCode,
-                IdentificationNumber = u.IdentificationNumber,
-                UserName = u.UserName,
-                Address = u.Address,
-                AvatarUrl = u.AvatarUrl,
-                IsProfileCompleted = u.IsProfileCompleted,
-                LockoutEnd = u.LockoutEnd,
-                LockoutEnabled = u.LockoutEnabled,
-                AccessFailedCount = u.AccessFailedCount,
-              
-            });
-
+            var data = _mapper.Map<IEnumerable<UserDto>>(users);
             return (total, data);
         }
 
@@ -369,16 +245,7 @@ namespace Medix.API.Business.Services.UserManagement
 
             var users = await _userRepository.SearchByNameAsync(keyword);
 
-            return users.Select(u => new UserDto
-            {
-                Id = u.Id,
-                Email = u.Email,
-                FullName = u.FullName,
-                PhoneNumber = u.PhoneNumber,
-                Role = u.Role,
-                EmailConfirmed = u.EmailConfirmed,
-                CreatedAt = u.CreatedAt
-            });
+            return _mapper.Map<IEnumerable<UserDto>>(users);
         }
 
         public async Task<bool> EmailExistsAsync(string email)

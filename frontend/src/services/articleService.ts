@@ -158,6 +158,17 @@ export const articleService = {
       throw err
     }
   },
+  getHomepageArticles: async (limit = 5): Promise<ArticleDTO[]> => {
+    try {
+      const response = await apiClient.get<ArticleDTO[]>(`${BASE}/homepage`, {
+        params: { limit }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch homepage articles:', error);
+      throw error;
+    }
+  },
  create: async (payload: ArticleFormPayload): Promise<ArticleDTO> => {
     const formData = new FormData();
 

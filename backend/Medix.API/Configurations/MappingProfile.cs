@@ -36,6 +36,11 @@ namespace Medix.API.Configurations
                  .ForMember(dest => dest.IsHomepageVisible, opt => opt.MapFrom(src => src.IsHomepageVisible))
                  .ForMember(dest => dest.DisplayOrder, opt => opt.MapFrom(src => src.DisplayOrder));
 
+
+             CreateMap<HealthArticleUpdateDto, HealthArticle>()
+                .ForMember(dest => dest.Categories, opt => opt.Ignore()) // Bỏ qua Categories vì sẽ xử lý thủ công
+                .ForMember(dest => dest.PublishedAt, opt => opt.Ignore()); // Bỏ qua PublishedAt vì sẽ xử lý thủ công
+
             CreateMap<SiteBanner, SiteBannerDto>();
             CreateMap<PasswordUpdatePresenter, PasswordUpdateRequest>();
             CreateMap<DoctorRegisterPresenter, DoctorRegisterRequest>();

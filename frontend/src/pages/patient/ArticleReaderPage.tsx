@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArticleDTO } from '../../types/article.types'
+import '../../styles/ArticleReaderPage.css'
 
 export default function ArticleReaderPage() {
   const location = useLocation();
@@ -19,7 +20,7 @@ export default function ArticleReaderPage() {
   const [isSearching, setIsSearching] = useState(false);
   // State for category filter
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategories.filter(Boolean));
-  const pageSize = 4 // 1 featured + 4 grid items per page
+  const pageSize = 5 // 1 featured + 4 grid items per page
 
   const LikeIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" 
@@ -166,7 +167,7 @@ export default function ArticleReaderPage() {
       {/* --- Cột giữa: Nội dung chính (60%) --- */}
       <div className="article-center-column">
         <div className="breadcrumb">
-          <Link to="/app/patient">Trang chủ</Link>
+          <Link to="/">Trang chủ</Link>
           <span className="separator">/</span>
           <span className="current-page">Kiến thức y khoa</span>
         </div>

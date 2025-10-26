@@ -11,6 +11,11 @@ interface Props {
   onCancel?: () => void
 }
 
+interface Role {
+  code: string;
+  displayName: string;
+}
+
 export default function UserForm({ user, onSaved, onCancel }: Props) {
   const { showToast } = useToast()
   const isEditMode = !!user;
@@ -29,6 +34,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
   const [emailConfirmed, setEmailConfirmed] = useState(user?.emailConfirmed ?? false);
   const [accessFailedCount, setAccessFailedCount] = useState(user?.accessFailedCount ?? 0);
   
+  const [rolesList, setRolesList] = useState<Role[]>([]);
   const deriveLocked = (u?: UserDTO) => {
     if (!u) return false
     if (u.lockoutEnabled === true) return true
@@ -69,6 +75,20 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     setAccessFailedCount(user?.accessFailedCount ?? 0);
     setLockoutEnabled(deriveLocked(user))
   }, [user])
+
+  // Fetch roles from the backend when the component mounts
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const roles = await userAdminService.getRoles();
+        setRolesList(roles);
+      } catch (error) {
+        console.error("Failed to fetch roles:", error);
+        showToast('Không thể tải danh sách vai trò.', 'error');
+      }
+    };
+    fetchRoles();
+  }, []);
   
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<{ userName?: string, email?: string, password?: string }>({})
@@ -429,11 +449,11 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                   <div className={styles.grid}>
                     <div className={styles.inputGroup}>
                       <label className={styles.label}>Vai trò</label>
-                      <select value={role} onChange={e => setRole(e.target.value)} className={styles.select}>
-                        <option value="Admin">Quản trị viên</option>
-                        <option value="Manager">Quản lý</option>
-                        <option value="Doctor">Bác sĩ</option>
-                        <option value="Patient">Bệnh nhân</option>
+                      <select value={role} onChange={e => setRole(e.target.value)} className={styles.select} disabled={rolesList.length === 0}>
+                        {rolesList.length === 0 && <option>Đang tải...</option>}
+                        {rolesList.map(r => (
+                          <option key={r.code} value={r.displayName}>{r.displayName}</option>
+                        ))}
                       </select>
                     </div>
                     <div className={styles.inputGroup}>

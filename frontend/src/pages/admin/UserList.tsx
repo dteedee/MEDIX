@@ -9,6 +9,11 @@ import UserForm from './UserForm'
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog'
 import styles from '../../styles/admin/UserList.module.css'
 
+interface Role {
+  code: string;
+  displayName: string;
+}
+
 interface UserListFilters {
   page: number;
   pageSize: number;
@@ -79,6 +84,7 @@ const isUserLocked = (user?: UserDTO): boolean => {
 export default function UserList() {
   const [allUsers, setAllUsers] = useState<UserDTO[]>([]);
   const [total, setTotal] = useState<number | undefined>(undefined);
+  const [rolesList, setRolesList] = useState<Role[]>([]);
   const [filters, setFilters] = useState<UserListFilters>(getInitialState);
   const [loading, setLoading] = useState(true);
   const [viewing, setViewing] = useState<UserDTO | null>(null);
@@ -117,6 +123,20 @@ export default function UserList() {
     }
     load();
   }, [location.pathname]);
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const roles = await userAdminService.getRoles();
+        setRolesList(roles);
+      } catch (error) {
+        console.error("Failed to fetch roles:", error);
+        // Optional: show a toast message
+        // showToast('Không thể tải danh sách vai trò.', 'error');
+      }
+    };
+    fetchRoles();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('userListState', JSON.stringify(filters));
@@ -491,11 +511,11 @@ export default function UserList() {
                 Vai trò
               </label>
               <select value={filters.roleFilter} onChange={e => handleFilterChange('roleFilter', e.target.value)}>
-                <option value="all">Tất cả vai trò</option>
-                <option value="ADMIN">Quản trị viên</option>
-                <option value="MANAGER">Quản lý</option>
-                <option value="DOCTOR">Bác sĩ</option>
-                <option value="PATIENT">Bệnh nhân</option>
+                <option value="all">Tất cả</option>
+                {rolesList.length === 0 && <option disabled>Đang tải...</option>}
+                {rolesList.map(r => (
+                  <option key={r.code} value={r.displayName}>{r.displayName}</option>
+                ))}
               </select>
             </div>
 
@@ -609,7 +629,7 @@ export default function UserList() {
                         </div>
                       </td>
                       <td>
-                        <span className={`${styles.roleBadge} ${styles[`role${u.role}`]}`}>
+                        <span className={`${styles.roleBadge} ${styles[`role${u.role?.toUpperCase()}`]}`}>
                           {u.role || '-'}
                         </span>
                       </td>

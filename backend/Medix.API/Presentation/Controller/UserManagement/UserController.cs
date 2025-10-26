@@ -11,6 +11,8 @@ using Medix.API.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Medix.API.DataAccess;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Medix.API.Presentation.Controller.UserManagement
@@ -20,12 +22,14 @@ namespace Medix.API.Presentation.Controller.UserManagement
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly MedixContext _context;
         private readonly ILogger<UserController> _logger;
 
-        public UserController(ILogger<UserController> logger, IUserService userService)
+        public UserController(ILogger<UserController> logger, IUserService userService, MedixContext context)
         {
             _logger = logger;
             _userService = userService;
+            _context = context;
         }
 
         // ========================= USER SELF MANAGEMENT =========================
@@ -127,6 +131,19 @@ namespace Medix.API.Presentation.Controller.UserManagement
         {
             var result = await _userService.GetPagedAsync(page, pageSize);
             return Ok(result);
+        }
+
+        [HttpGet("roles")]
+        //[Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetRoles()
+        {
+            var roles = await _context.RefRoles
+                .Where(r => r.IsActive)
+                .Select(r => new { r.Code, r.DisplayName })
+                .OrderBy(r => r.DisplayName)
+                .ToListAsync();
+
+            return Ok(roles);
         }
 
         [HttpGet("{id}")]

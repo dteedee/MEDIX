@@ -147,4 +147,8 @@ export const userAdminService = {
   remove: async (id: string): Promise<void> => {
     await apiClient.delete(`${BASE}/${id}`);
   },
+  getRoles: async (): Promise<{ code: string; displayName: string }[]> => {
+    const r = await apiClient.get(`${BASE}/roles`);
+    return r.data;
+  },
 };

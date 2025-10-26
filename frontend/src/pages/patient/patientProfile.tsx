@@ -10,6 +10,7 @@ import styles from '../../styles/patient/PatientProfile.module.css';
 
 interface ExtendedUserInfo extends UserBasicInfo {
   cccd?: string;
+  identificationNumber?: string;
   gender?: 'male' | 'female' | 'other';
   bloodType?: string;
   emergencyContactName?: string;
@@ -23,6 +24,7 @@ interface ExtendedUpdateUserInfo extends UpdateUserInfo {
   fullName?: string;
   phoneNumber?: string;
   address?: string;
+  cccd?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   medicalHistory?: string;
@@ -60,8 +62,8 @@ export const PatientProfile: React.FC = () => {
   const validateUsername = (username: string): string | null => {
     if (!username) return 'Tên tài khoản không được để trống';
     if (username.length < 6) return 'Tên tài khoản phải có ít nhất 6 ký tự';
-    if (username.length > 20) return 'Tên tài khoản không được quá 20 ký tự';
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) return 'Tên tài khoản chỉ được chứa chữ cái, số và dấu gạch dưới';
+    // if (username.length > 20) return 'Tên tài khoản không được quá 20 ký tự';
+    // if (!/^[a-zA-Z0-9_]+$/.test(username)) return 'Tên tài khoản chỉ được chứa chữ cái, số và dấu gạch dưới';
     return null;
   };
 
@@ -84,6 +86,12 @@ export const PatientProfile: React.FC = () => {
     return null;
   };
 
+  const validateIdentificationNumber = (idNumber: string): string | null => {
+    if (!idNumber) return 'Số CMND/CCCD không được để trống';
+    if (!/^\d{9}$|^\d{12}$/.test(idNumber)) return 'Số CMND/CCCD phải có đúng 9 hoặc 12 chữ số';
+    return null;
+  };
+
 
   const validateField = (fieldName: string, value: string): string | null => {
     switch (fieldName) {
@@ -96,6 +104,8 @@ export const PatientProfile: React.FC = () => {
         return validatePhoneNumber(value);
       case 'cccd':
         return validateCCCD(value);
+      case 'identificationNumber':
+        return validateIdentificationNumber(value);
       default:
         return null;
     }
@@ -127,6 +137,21 @@ export const PatientProfile: React.FC = () => {
         errors.emergencyContactPhone = error;
         isValid = false;
       }
+    }
+
+    if (editData.cccd) {
+      const error = validateField('cccd', editData.cccd);
+      if (error) {
+        errors.cccd = error;
+        isValid = false;
+      }
+    }
+
+    // Check if phone numbers are the same
+    if (editData.phoneNumber && editData.emergencyContactPhone && 
+        editData.phoneNumber === editData.emergencyContactPhone) {
+      errors.emergencyContactPhone = 'Số điện thoại liên hệ khẩn cấp không được giống số điện thoại chính';
+      isValid = false;
     }
 
     setFieldErrors(errors);
@@ -176,13 +201,14 @@ export const PatientProfile: React.FC = () => {
           
           const extendedData: ExtendedUserInfo = {
             ...res,
-            cccd: (res as any).cccd || patientData.cccd,
+            cccd: res.identificationNumber || (res as any).cccd || patientData.cccd,
+            identificationNumber: res.identificationNumber || (res as any).identificationNumber,
             gender: (res as any).gender || patientData.gender || 'male',
             bloodType: (res as any).bloodType || patientData.bloodType || 'A+',
-            emergencyContactName: patientData.emergencyContactName || (res as any).emergencyContactName || '',
-            emergencyContactPhone: patientData.emergencyContactPhone || (res as any).emergencyContactPhone || '',
-            medicalHistory: patientData.medicalHistory || (res as any).medicalHistory || '',
-            allergies: patientData.allergies || (res as any).allergies || ''
+            emergencyContactName: res.emergencyContactName || patientData.emergencyContactName || (res as any).emergencyContactName || '',
+            emergencyContactPhone: res.emergencyContactPhone || patientData.emergencyContactPhone || (res as any).emergencyContactPhone || '',
+            medicalHistory: res.medicalHistory || patientData.medicalHistory || (res as any).medicalHistory || '',
+            allergies: res.allergies || patientData.allergies || (res as any).allergies || ''
           };
           setData(extendedData);
           setEditData({
@@ -192,10 +218,11 @@ export const PatientProfile: React.FC = () => {
             phoneNumber: res.phoneNumber || '',
             address: res.address || '',
             dob: res.dob || '',
-            emergencyContactName: (res as any).emergencyContactName || '',
-            emergencyContactPhone: (res as any).emergencyContactPhone || '',
-            medicalHistory: (res as any).medicalHistory || '',
-            allergies: (res as any).allergies || ''
+            cccd: res.identificationNumber || '',
+            emergencyContactName: res.emergencyContactName || (res as any).emergencyContactName || '',
+            emergencyContactPhone: res.emergencyContactPhone || (res as any).emergencyContactPhone || '',
+            medicalHistory: res.medicalHistory || (res as any).medicalHistory || '',
+            allergies: res.allergies || (res as any).allergies || ''
           });
         }
       } catch (e: any) {
@@ -214,10 +241,10 @@ export const PatientProfile: React.FC = () => {
       return;
     }
 
-    if (editData.username?.trim() && !/^[a-zA-Z0-9_]+$/.test(editData.username)) {
-      showToast('Tên tài khoản chỉ được chứa chữ cái, số và dấu gạch dưới', 'error');
-      return;
-    }
+    // if (editData.username?.trim() && !/^[a-zA-Z0-9_]+$/.test(editData.username)) {
+    //   showToast('Tên tài khoản chỉ được chứa chữ cái, số và dấu gạch dưới', 'error');
+    //   return;
+    // }
 
     if (editData.dob) {
       const date = new Date(editData.dob);
@@ -253,7 +280,22 @@ export const PatientProfile: React.FC = () => {
     showToast('Đang cập nhật thông tin...', 'info');
 
     try {
-      const updatedUser = await userService.updateUserInfo(editData);
+      // Map cccd to identificationNumber for API and include medical fields
+      const apiData = {
+        ...editData,
+        identificationNumber: editData.cccd,
+        medicalHistory: editData.medicalHistory?.trim() || undefined,
+        allergies: editData.allergies?.trim() || undefined
+      };
+      
+      // Nếu username không được nhập hoặc rỗng, giữ nguyên username hiện tại
+      if (!apiData.username || apiData.username.trim() === '') {
+        apiData.username = data?.username || '';
+      }
+      
+      delete apiData.cccd; // Remove cccd field before sending to API
+      
+      const updatedUser = await userService.updateUserInfo(apiData);
       const finalUsername = updatedUser.username && updatedUser.username !== updatedUser.email 
         ? updatedUser.username 
         : editData.username || data?.username || '';
@@ -265,13 +307,14 @@ export const PatientProfile: React.FC = () => {
         ...updatedUser,
         username: finalUsername,
         imageURL: preservedImageURL, // Keep current avatar if API doesn't return it
-        cccd: (updatedUser as any).cccd || data?.cccd,
+        cccd: updatedUser.identificationNumber || editData.cccd || data?.cccd,
+        identificationNumber: updatedUser.identificationNumber || editData.cccd || data?.identificationNumber,
         gender: (updatedUser as any).gender || data?.gender,
         bloodType: (updatedUser as any).bloodType || data?.bloodType,
-        emergencyContactName: editData.emergencyContactName || (updatedUser as any).emergencyContactName || data?.emergencyContactName,
-        emergencyContactPhone: editData.emergencyContactPhone || (updatedUser as any).emergencyContactPhone || data?.emergencyContactPhone,
-        medicalHistory: editData.medicalHistory || (updatedUser as any).medicalHistory || data?.medicalHistory,
-        allergies: editData.allergies || (updatedUser as any).allergies || data?.allergies
+        emergencyContactName: editData.emergencyContactName || updatedUser.emergencyContactName || data?.emergencyContactName,
+        emergencyContactPhone: editData.emergencyContactPhone || updatedUser.emergencyContactPhone || data?.emergencyContactPhone,
+        medicalHistory: editData.medicalHistory || updatedUser.medicalHistory || data?.medicalHistory,
+        allergies: editData.allergies || updatedUser.allergies || data?.allergies
       };
       
       setData(updatedData);
@@ -302,6 +345,7 @@ export const PatientProfile: React.FC = () => {
         phoneNumber: data.phoneNumber || '',
         address: data.address || '',
         dob: data.dob || '',
+        cccd: data.cccd || '',
         emergencyContactName: data.emergencyContactName || '',
         emergencyContactPhone: data.emergencyContactPhone || '',
         medicalHistory: data.medicalHistory || '',
@@ -649,16 +693,42 @@ export const PatientProfile: React.FC = () => {
                   )}
                 </div>
 
-                {/* CCCD - Read Only */}
+                {/* CCCD - Editable */}
                 <div className={styles.fieldGroup}>
-                  <label className={styles.fieldLabel}>
+                  <label className={`${styles.fieldLabel} ${fieldErrors.cccd ? styles.fieldLabelError : ''}`}>
                     <i className="bi bi-card-text"></i>
                     CCCD
+                    {fieldErrors.cccd && <span className={styles.errorIcon}>⚠️</span>}
                   </label>
-                  <div className={styles.inputContainer}>
-                    <input disabled value={data.cccd || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
-                    <i className="bi bi-lock"></i>
-                  </div>
+                  {isEditing ? (
+                    <div className={styles.inputContainer}>
+                      <input 
+                        maxLength={12}
+                        value={editData.cccd || ''} 
+                        onChange={(e) => {
+                          const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                          setEditData({...editData, cccd: numericValue});
+                          // Clear error when user starts typing
+                          if (fieldErrors.cccd) {
+                            setFieldErrors({...fieldErrors, cccd: ''});
+                          }
+                        }}
+                        onBlur={(e) => handleFieldBlur('cccd', e.target.value)}
+                        className={`${styles.fieldInput} ${fieldErrors.cccd ? styles.fieldInputError : ''}`}
+                        placeholder="Nhập số CCCD"
+                        type="text"
+                      />
+                      <i className="bi bi-pencil"></i>
+                    </div>
+                  ) : (
+                    <div className={styles.inputContainer}>
+                      <input disabled value={data.cccd || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
+                      <i className="bi bi-lock"></i>
+                    </div>
+                  )}
+                  {fieldErrors.cccd && (
+                    <div className={styles.fieldError}>{fieldErrors.cccd}</div>
+                  )}
                 </div>
 
                 {/* Giới tính - Read Only */}

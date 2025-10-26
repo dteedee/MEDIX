@@ -369,9 +369,12 @@ namespace Medix.API.Business.Services.UserManagement
                 FullName = user.FullName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
+                identificationNumber = user.IdentificationNumber,
                 imageURL = user.AvatarUrl,
                 dob = user.DateOfBirth,
                 address = user.Address,
+                Allergies = patient?.Allergies,
+                MedicalHistory = patient?.MedicalHistory,
                 MedicalRecordNumber = patient?.MedicalRecordNumber,
                 EmergencyContactName = patient?.EmergencyContactName,
                 EmergencyContactPhone = patient?.EmergencyContactPhone

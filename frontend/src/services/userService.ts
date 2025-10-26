@@ -10,10 +10,13 @@ export interface UserBasicInfo {
   address: string | null;
   dob: string | null; // ISO date string 'YYYY-MM-DD'
   imageURL?: string | null; // Match backend DTO field name
+  identificationNumber?: string | null; // Số CMND/CCCD
   createdAt: string;
   medicalRecordNumber?: string | null; // Somente leitura
   emergencyContactName?: string | null; // Editável
   emergencyContactPhone?: string | null; // Editável
+  allergies?: string | null; // Match backend DTO field name
+  medicalHistory?: string | null; // Match backend DTO field name
 }
 
 export interface UpdateUserInfo {
@@ -23,6 +26,7 @@ export interface UpdateUserInfo {
   phoneNumber?: string;
   address?: string;
   dob?: string; // Will be converted to DateOnly on backend
+  identificationNumber?: string; // Số CMND/CCCD
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   medicalHistory?: string;

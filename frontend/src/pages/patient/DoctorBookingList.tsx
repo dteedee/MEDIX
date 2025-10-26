@@ -4,7 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types/common.types';
 import doctorService from '../../services/doctorService';
 import { ServiceTierWithPaginatedDoctorsDto, DoctorInTier, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters } from '../../types/doctor.types';
-
+import { Header } from '../../components/layout/Header';
+import styles from '../../styles/doctor/doctor-details.module.css'
 interface Doctor {
   id: string;
   fullName: string;
@@ -657,6 +658,11 @@ const DoctorBookingList: React.FC = () => {
           }
         `}
       </style>
+
+      <div className={styles["breadcrumb"]}>
+                <a href="/">Trang chủ</a>  / <span> Bác Sĩ</span>
+            </div>
+      
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%)',
@@ -728,6 +734,9 @@ const DoctorBookingList: React.FC = () => {
           Tìm và đặt lịch khám với các bác sĩ chuyên nghiệp
         </p>
       </div>
+
+      {/* Breadcrumb Navigator */}
+    
 
       {/* Filter Bar */}
       <div style={{
@@ -818,37 +827,6 @@ const DoctorBookingList: React.FC = () => {
                   </option>
                 ))
               )}
-            </select>
-          </div>
-
-          {/* Phòng khám filter */}
-          <div style={{ flex: '1', minWidth: '150px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '500',
-              color: '#374151',
-              marginBottom: '6px'
-            }}>
-              Phòng khám ▼
-            </label>
-            <select
-              style={{
-                width: '100%',
-                padding: '6px 8px',
-                border: '1px solid #D1D5DB',
-                borderRadius: '4px',
-                fontSize: '12px',
-                backgroundColor: 'white',
-                cursor: 'pointer',
-                height: '32px'
-              }}
-            >
-              <option value="all">Tất cả phòng khám</option>
-              <option value="BV Bạch Mai">Bệnh viện Bạch Mai</option>
-              <option value="BV Việt Đức">Bệnh viện Việt Đức</option>
-              <option value="BV 108">Bệnh viện 108</option>
-              <option value="BV K">Bệnh viện K</option>
             </select>
           </div>
 

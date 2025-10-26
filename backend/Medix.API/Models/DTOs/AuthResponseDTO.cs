@@ -40,12 +40,17 @@ namespace Medix.API.Models.DTOs
         public string? Email { get; set; } = string.Empty;
         public string? imageURL { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
+        public string? identificationNumber { get; set; }
         public string? address { get; set; }
         public DateOnly? dob { get; set; }
         public string? MedicalRecordNumber { get; set; }
         public string? EmergencyContactName { get; set; }
 
         public string? EmergencyContactPhone { get; set; }
+
+        public
+            string? Allergies { get; set; }
+        public string? MedicalHistory { get; set; }
 
 
         public DateTime CreatedAt { get; set; }
@@ -68,6 +73,9 @@ namespace Medix.API.Models.DTOs
         [Phone(ErrorMessage = "Số diện thoại không hơp lệ")]
         [VietnamesePhoneNumberAttribute]
         public string? EmergencyContactPhone { get; set; }
+        public string? Allergies { get; set; }
+
+        public string? MedicalHistory { get; set; }
 
     }
 

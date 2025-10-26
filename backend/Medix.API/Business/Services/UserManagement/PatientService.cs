@@ -93,6 +93,8 @@ namespace Medix.API.Business.Services.UserManagement
 
             patientEntity.EmergencyContactName = patientDTO.EmergencyContactName;
             patientEntity.EmergencyContactPhone = patientDTO.EmergencyContactPhone;
+            patientEntity.Allergies = patientDTO.Allergies;
+            patientEntity.MedicalHistory = patientDTO.MedicalHistory;
 
             var updatedEntity = await _patientRepository.UpdatePatientAsync(patientEntity);
 
@@ -102,6 +104,7 @@ namespace Medix.API.Business.Services.UserManagement
                 UserId = updatedEntity.UserId,
                 EmergencyContactName = updatedEntity.EmergencyContactName,
                 EmergencyContactPhone = updatedEntity.EmergencyContactPhone
+
 
             };
         }

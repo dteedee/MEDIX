@@ -63,7 +63,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
             updateDto.Id = userId;
 
             var updatedUser = await _userService.UpdateUserBasicInfo(updateDto);
-            if (updateDto.EmergencyContactPhone != null || updateDto.EmergencyContactName != null)
+            if (updateDto.EmergencyContactPhone != null || updateDto.EmergencyContactName != null || updateDto.Allergies != null || updateDto.MedicalHistory!=null)
             {
                
                 var patient = await _patientService.GetByUserIdAsync(userId);
@@ -77,8 +77,10 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
                 patient.EmergencyContactName = updateDto.EmergencyContactName;
                 patient.EmergencyContactPhone = updateDto.EmergencyContactPhone;
+                patient.Allergies = updateDto.Allergies;
+                patient.MedicalHistory = updateDto.MedicalHistory;
 
-             var patientDTO =   await _patientService.UpdateAsync(userId, patient);
+                var patientDTO =   await _patientService.UpdateAsync(userId, patient);
                 if (patientDTO == null)
                 {
                     return StatusCode(500, new { message = "Cập nhật thông tin liên hệ khẩn cấp thất bại." });

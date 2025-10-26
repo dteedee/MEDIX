@@ -472,8 +472,9 @@ function DoctorDetails() {
 
     return (
         <div>
+            <Header />
             <div className={styles["breadcrumb"]}>
-                <a href="#">Trang chủ</a> / <a href="#">Bác sĩ</a> / <span>Chi Tiết Bác Sĩ</span>
+                <a href="/">Trang chủ</a> / <a href="/doctors">Bác sĩ</a> / <span>Chi Tiết Bác Sĩ</span>
             </div>
             {/* Main Content */}
             <div className={styles["container"]}>
@@ -519,6 +520,7 @@ function DoctorDetails() {
                     </div>
                 </div>
             </div>
+            <Footer />
         </div>
     )
 }

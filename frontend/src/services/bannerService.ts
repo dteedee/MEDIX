@@ -90,31 +90,54 @@ export const bannerService = {
   },
   update: async (id: string, payload: UpdateBannerRequest): Promise<BannerDTO> => {
     try {
-      const formData = new FormData();
-      // Append fields under 'request' prefix to match [FromForm] SiteBannerUpdateDto request
-      if (payload.bannerTitle !== undefined) formData.append('request.BannerTitle', payload.bannerTitle);
+      console.log(`Updating banner ID: ${id}`);
+      console.log('Payload received:', payload);
       
-      // Handle image URL: send existing URL if no new file, otherwise send empty to let backend know it might be removed or replaced.
-      if (payload.bannerImageUrl && !payload.bannerFile) {
-        formData.append('request.BannerImageUrl', payload.bannerImageUrl);
-      } else if (!payload.bannerFile) {
-        formData.append('request.BannerImageUrl', '');
-      }
-
-      if (payload.bannerUrl) formData.append('request.BannerUrl', payload.bannerUrl);
-      if (payload.displayOrder !== undefined) formData.append('request.DisplayOrder', payload.displayOrder.toString());
-      if (payload.isActive !== undefined) formData.append('request.IsActive', String(payload.isActive));
-      if (payload.startDate) formData.append('request.StartDate', payload.startDate);
-      if (payload.endDate) formData.append('request.EndDate', payload.endDate);
-
-      // Append the file if it exists
+      // If there's a file to upload, use FormData
       if (payload.bannerFile) {
+        console.log('Has file upload, using FormData...');
+        const formData = new FormData();
+        
+        // Required fields - always send
+        formData.append('request.BannerTitle', payload.bannerTitle || '');
+        formData.append('request.BannerImageUrl', payload.bannerImageUrl || '');
+        formData.append('request.BannerUrl', payload.bannerUrl || '');
+        formData.append('request.DisplayOrder', (payload.displayOrder || 0).toString());
+        formData.append('request.IsActive', payload.isActive !== undefined ? String(payload.isActive) : 'true');
+        formData.append('request.StartDate', payload.startDate || '');
+        formData.append('request.EndDate', payload.endDate || '');
         formData.append('bannerFile', payload.bannerFile);
-      }
 
-      const r = await apiClient.putMultipart(`${BASE}/${id}`, formData);
-      return mapToDTO(r.data)
+        console.log('FormData entries:', Array.from(formData.entries()));
+        console.log('Sending PUT multipart request to:', `${BASE}/${id}`);
+
+        const r = await apiClient.putMultipart(`${BASE}/${id}`, formData);
+        console.log('Update response:', r.data);
+        return mapToDTO(r.data);
+      } else {
+        // No file upload, send JSON
+        console.log('No file upload, sending JSON...');
+        const jsonPayload = {
+          BannerTitle: payload.bannerTitle,
+          BannerImageUrl: payload.bannerImageUrl,
+          BannerUrl: payload.bannerUrl,
+          DisplayOrder: payload.displayOrder || 0,
+          IsActive: payload.isActive !== undefined ? payload.isActive : true,
+          StartDate: payload.startDate || '',
+          EndDate: payload.endDate || '',
+        };
+        
+        console.log('JSON payload:', jsonPayload);
+        console.log('Sending PUT request to:', `${BASE}/${id}`);
+
+        const r = await apiClient.put(`${BASE}/${id}`, jsonPayload);
+        console.log('Update response:', r.data);
+        return mapToDTO(r.data);
+      }
     } catch (error: any) {
+      console.error('Error updating banner:', error);
+      console.error('Error response:', error?.response?.data);
+      
       if (error.response?.data?.errors) {
         const backendErrors = error.response.data.errors;
         console.error(`Lỗi validation từ backend khi cập nhật banner (ID: ${id}):`, JSON.stringify(backendErrors, null, 2));

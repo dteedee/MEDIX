@@ -112,7 +112,7 @@ export default function ArticleDetailPage() {
 
   return (
     <div className="article-reader-container">
-       <button onClick={() => navigate(-1)} className="back-button">
+       <button onClick={() => navigate('/app/articles')} className="back-button">
         &larr; Quay lại danh sách
       </button>
 

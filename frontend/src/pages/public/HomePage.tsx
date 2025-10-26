@@ -29,7 +29,7 @@ function HomePage() {
 
         const fetchArticles = async () => {
             try {
-                const articles = await articleService.getHomepageArticles(6); // Lấy 6 bài viết
+                const articles = await articleService.getHomepageArticles(3); // Lấy 6 bài viết
                 setFeaturedArticles(articles);
             } catch (error) {
                 console.error('Failed to fetch homepage articles:', error);

@@ -1,4 +1,5 @@
-﻿using Medix.API.DataAccess;
+﻿using Medix.API.Business.Helper;
+using Medix.API.DataAccess;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
@@ -62,12 +63,12 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
         public async Task<List<Doctor>> GetDoctorsByServiceTierNameAsync(string name)
         {
-         return await _context.Doctors
-                .Include(d => d.ServiceTier)
-                .Include(d => d.User)
-                .Include(d => d.Specialization)
-                .Where(d => d.ServiceTier.Name.ToLower() == name.ToLower()&& d.User.Status !=0)
-                .ToListAsync();
+            return await _context.Doctors
+                   .Include(d => d.ServiceTier)
+                   .Include(d => d.User)
+                   .Include(d => d.Specialization)
+                   .Where(d => d.ServiceTier.Name.ToLower() == name.ToLower() && d.User.Status != 0)
+                   .ToListAsync();
         }
         public async Task<(List<Doctor> Doctors, int TotalCount)> GetPaginatedDoctorsByTierIdAsync(
                 Guid tierId, DoctorQueryParameters queryParams)
@@ -119,6 +120,82 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Include(d => d.User)
                 .Include(d => d.Specialization)
                 .FirstOrDefaultAsync(d => d.Id == doctorID);
+        }
+
+        public async Task<PagedList<Doctor>> GetPendingDoctorsAsync(DoctorQuery query)
+        {
+            var doctorQueryable = _context.Doctors
+                .Where(d => d.User.Status == 2)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(query.SearchTerm))
+            {
+                doctorQueryable = doctorQueryable
+                    .Where(d => d.User.FullName.ToLower().Contains(query.SearchTerm.ToLower()) ||
+                        d.Specialization.Name.ToLower().Contains(query.SearchTerm.ToLower()) ||
+                        d.User.NormalizedEmail.Contains(query.SearchTerm.ToUpper()));
+            }
+
+            if (query.PageSize == 0)
+            {
+                query.PageSize = 10;
+            }
+
+            var doctors = await doctorQueryable
+                .Include(d => d.User)
+                .Include(d => d.Specialization)
+                .Skip((query.Page - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .ToListAsync();
+
+            return new PagedList<Doctor>
+            {
+                Items = doctors,
+                TotalPages = (int)Math.Ceiling((double)await doctorQueryable.CountAsync() / query.PageSize),
+            };
+        }
+
+        public async Task<Doctor?> GetDoctorByIdAsync(Guid doctorId)
+        {
+            return await _context.Doctors
+                .Include(d => d.User)
+                .Include(d => d.Specialization)
+                .FirstOrDefaultAsync(d => d.Id == doctorId);
+        }
+
+        public async Task<PagedList<Doctor>> GetReviewedDoctorsAsync(DoctorQuery query)
+        {
+            var doctorQueryable = _context.Doctors
+                .Where(d => d.User.Status == 0 || d.User.Status == 1)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(query.SearchTerm))
+            {
+                doctorQueryable = doctorQueryable
+                    .Where(d => d.User.FullName.ToLower().Contains(query.SearchTerm.ToLower()) ||
+                        d.Specialization.Name.ToLower().Contains(query.SearchTerm.ToLower()) ||
+                        d.User.NormalizedEmail.Contains(query.SearchTerm.ToUpper()));
+            }
+
+            if (query.PageSize == 0)
+            {
+                query.PageSize = 10;
+            }
+
+            var doctors = await doctorQueryable
+                .Include(d => d.User)
+                .Include(d => d.Specialization)
+                .Include(d => d.Appointments)
+                    .ThenInclude(a => a.Review)
+                .Skip((query.Page - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .ToListAsync();
+
+            return new PagedList<Doctor>
+            {
+                Items = doctors,
+                TotalPages = (int)Math.Ceiling((double)await doctorQueryable.CountAsync() / query.PageSize),
+            };
         }
     }
 }

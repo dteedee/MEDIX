@@ -1,3 +1,4 @@
+using Medix.API.Business.Helper;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 
@@ -15,5 +16,8 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task<List<Doctor>> GetDoctorsByServiceTierNameAsync(string name);
         Task<(List<Doctor> Doctors, int TotalCount)> GetPaginatedDoctorsByTierIdAsync(
                Guid tierId, DoctorQueryParameters queryParams);
+        Task<PagedList<Doctor>> GetPendingDoctorsAsync(DoctorQuery query);
+        Task<Doctor?> GetDoctorByIdAsync(Guid doctorId);
+        Task<PagedList<Doctor>> GetReviewedDoctorsAsync(DoctorQuery query);
     }
 }

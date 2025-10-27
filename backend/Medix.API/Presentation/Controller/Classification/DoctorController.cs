@@ -162,38 +162,6 @@ namespace Medix.API.Presentation.Controller.Classification
 
         [HttpGet("profile/{doctorID}")]
         public async Task<IActionResult> GetDoctorProfile(string doctorID)
-        private async Task<List<ValidationResult>> ValidateAsync(DoctorRegisterRequest request, List<ValidationResult> prev)
-        {
-            if (request.Email != null && await _userSerivce.EmailExistsAsync(request.Email))
-            {
-                prev.Add(new ValidationResult("Email đã được sử dụng", new string[] { "Email" }));
-            }
-
-            if (request.PhoneNumber != null && await _userSerivce.PhoneNumberExistsAsync(request.PhoneNumber))
-            {
-                prev.Add(new ValidationResult("Số điện thoại đã được sử dụng", new string[] { "PhoneNumber" }));
-            }
-
-            if (request.LicenseNumber != null && await _doctorService.LicenseNumberExistsAsync(request.LicenseNumber))
-            {
-                prev.Add(new ValidationResult("Số giấy phép hành nghề đã được sử dụng", new string[] { "LicenseNumber" }));
-            }
-
-            if (request.UserName != null && await _userSerivce.UserNameExistsAsync(request.UserName))
-            {
-                prev.Add(new ValidationResult("Tên đăng nhập đã được sử dụng", new string[] { "UserName" }));
-            }
-
-            if (request.IdentificationNumber != null && await _userSerivce.IdentificationNumberExistsAsync(request.IdentificationNumber))
-            {
-                prev.Add(new ValidationResult("Số CCCD/CMND đã được sử dụng", new string[] { "IdentificationNumber" }));
-            }
-
-            return prev;
-        }
-
-        [HttpGet("profile/{username}")]
-        public async Task<IActionResult> GetDoctorProfile(string username)
         {
             try
             {
@@ -213,8 +181,59 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
+        //private async Task<List<ValidationResult>> ValidateAsync(DoctorRegisterRequest request, List<ValidationResult> prev)
+        //{
+        //    if (request.Email != null && await _userSerivce.EmailExistsAsync(request.Email))
+        //    {
+        //        prev.Add(new ValidationResult("Email đã được sử dụng", new string[] { "Email" }));
+        //    }
+
+        //    if (request.PhoneNumber != null && await _userSerivce.PhoneNumberExistsAsync(request.PhoneNumber))
+        //    {
+        //        prev.Add(new ValidationResult("Số điện thoại đã được sử dụng", new string[] { "PhoneNumber" }));
+        //    }
+
+        //    if (request.LicenseNumber != null && await _doctorService.LicenseNumberExistsAsync(request.LicenseNumber))
+        //    {
+        //        prev.Add(new ValidationResult("Số giấy phép hành nghề đã được sử dụng", new string[] { "LicenseNumber" }));
+        //    }
+
+        //    if (request.UserName != null && await _userSerivce.UserNameExistsAsync(request.UserName))
+        //    {
+        //        prev.Add(new ValidationResult("Tên đăng nhập đã được sử dụng", new string[] { "UserName" }));
+        //    }
+
+        //    if (request.IdentificationNumber != null && await _userSerivce.IdentificationNumberExistsAsync(request.IdentificationNumber))
+        //    {
+        //        prev.Add(new ValidationResult("Số CCCD/CMND đã được sử dụng", new string[] { "IdentificationNumber" }));
+        //    }
+
+        //    return prev;
+        //}
+
+        //[HttpGet("profile/{username}")]
+        //public async Task<IActionResult> GetDoctorProfile(string username)
+        //{
+        //    try
+        //    {
+        //        var profileDto = await _doctorService.GetDoctorProfileByDoctorIDAsync(doctorID);
+
+        //        if (profileDto == null)
+        //        {
+        //            return NotFound(new { Message = "Doctor not found" });
+        //        }
+
+        //        return Ok(profileDto);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "An error occurred while fetching doctor profile for username: {Username}", doctorID);
+        //        return StatusCode(500, new { Message = "An error occurred while processing your request." });
+        //    }
+        //}
+
         [HttpGet("profile/details")]
-        [Authorize(Roles = "Doctor")]
+        [Authorize(Roles = "DOCTOR")]
         public async Task<IActionResult> GetDoctorProfilesDetails()
         {
             try
@@ -256,7 +275,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPut("profile/update")]
-        [Authorize(Roles = "Doctor")]
+        //[Authorize(Roles = "DOCTOR")]
         public async Task<IActionResult> UpdateDoctorProfile([FromBody] DoctorProfileUpdatePresenter pre)
         {
             try
@@ -307,7 +326,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPut("profile/update-avatar")]
-        [Authorize(Roles = "Doctor")]
+        //[Authorize(Roles = "DOCTOR")]
         public async Task<IActionResult> UpdateDoctorAvatar([FromForm] UpdateAvatarRequest req)
         {
             try

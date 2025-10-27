@@ -47,7 +47,7 @@ namespace Medix.API.Configurations
             CreateMap<User, UserBasicInfoDto>();
 
            
-            CreateMap<DoctorSchedule, DoctorScheduleDto>()
+            CreateMap<DoctorSchedule, DoctorScheduleWorkDto>()
                 .ForMember(dest => dest.DoctorName,
                     opt => opt.MapFrom(src => src.Doctor != null && src.Doctor.User != null
                         ? src.Doctor.User.FullName

@@ -2,7 +2,7 @@
 
 namespace Medix.API.Models.DTOs.Doctor
 {
-    public class DoctorScheduleDto
+    public class DoctorScheduleWorkDto
     {
         public Guid Id { get; set; }
         public string DoctorName { get; set; } = string.Empty;  // 👈 thay DoctorId bằng tên bác sĩ

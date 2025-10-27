@@ -6,6 +6,7 @@ using Medix.API.Business.Services.Community;
 using Medix.API.Business.Validators;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
+using Medix.API.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -60,6 +61,25 @@ namespace Medix.API.Presentation.Controller.Classification
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
 
+        }
+        [HttpGet("education-type")]
+        public async Task<IActionResult> GetEducationTypes()
+        {
+            try
+            {
+                var educationTypes = DoctorDegree.List()
+                    .Select(degree => new
+                    {
+                        Code = degree.Code,
+                        Description = degree.Description
+                    }).ToList();
+                return Ok(educationTypes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching education types.");
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
         }
 
         [HttpPost("register")]
@@ -170,12 +190,12 @@ namespace Medix.API.Presentation.Controller.Classification
             return prev;
         }
 
-        [HttpGet("profile/{username}")]
-        public async Task<IActionResult> GetDoctorProfile(string username)
+        [HttpGet("profile/{doctorID}")]
+        public async Task<IActionResult> GetDoctorProfile(string doctorID)
         {
             try
             {
-                var profileDto = await _doctorService.GetDoctorProfileByUserNameAsync(username);
+                var profileDto = await _doctorService.GetDoctorProfileByDoctorIDAsync(doctorID);
 
                 if (profileDto == null)
                 {
@@ -186,7 +206,7 @@ namespace Medix.API.Presentation.Controller.Classification
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while fetching doctor profile for username: {Username}", username);
+                _logger.LogError(ex, "An error occurred while fetching doctor profile for username: {Username}", doctorID);
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
         }
@@ -203,9 +223,11 @@ namespace Medix.API.Presentation.Controller.Classification
                     return Unauthorized(new { Message = "User ID not found in token" });
                 }
 
+                _logger.LogInformation($"userId: {userId}");
                 var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userId.Value));
                 if (doctor == null)
                 {
+                    _logger.LogInformation("eror be here");
                     return NotFound(new { Message = "Doctor not found" });
                 }
 

@@ -4,13 +4,15 @@ const BASE = '/SiteBanners'
 
 // Helper function to map API response to our DTO consistently
 function mapToDTO(x: any): BannerDTO {
+  console.log('Mapping banner data:', x);
   return {
     id: x.id,
     bannerTitle: x.bannerTitle ?? x.title ?? '',
     bannerImageUrl: x.bannerImageUrl ?? x.imageUrl,
     bannerUrl: x.bannerUrl ?? x.link,
-    displayOrder: x.displayOrder ?? x.order,
+    displayOrder: x.displayOrder ?? x.order ?? 0,
     isActive: x.isActive ?? false,
+    isLocked: x.isLocked ?? false,
     createdAt: x.createdAt,
     startDate: x.startDate,
     endDate: x.endDate,
@@ -18,6 +20,17 @@ function mapToDTO(x: any): BannerDTO {
 }
 
 export const bannerService = {
+  getAll: async (): Promise<BannerDTO[]> => {
+    const r = await apiClient.get(BASE);
+    const data = r.data;
+    
+    // Handle multiple response shapes from backend
+    const rawItems = Array.isArray(data)
+      ? data
+      : data?.data ?? data?.item2 ?? [];
+    
+    return (rawItems || []).map(mapToDTO);
+  },
   list: async (page = 1, pageSize = 10, params?: { keyword?: string; status?: 'all' | 'active' | 'inactive' }): Promise<{ items: BannerDTO[]; total?: number }> => {
     const query: any = { page, pageSize };
     let url = BASE;
@@ -77,36 +90,95 @@ export const bannerService = {
   },
   update: async (id: string, payload: UpdateBannerRequest): Promise<BannerDTO> => {
     try {
-      const formData = new FormData();
-      // Append fields under 'request' prefix to match [FromForm] SiteBannerUpdateDto request
-      if (payload.bannerTitle !== undefined) formData.append('request.BannerTitle', payload.bannerTitle);
+      console.log(`Updating banner ID: ${id}`);
+      console.log('Payload received:', payload);
       
-      // Handle image URL: send existing URL if no new file, otherwise send empty to let backend know it might be removed or replaced.
-      if (payload.bannerImageUrl && !payload.bannerFile) {
-        formData.append('request.BannerImageUrl', payload.bannerImageUrl);
-      } else if (!payload.bannerFile) {
-        formData.append('request.BannerImageUrl', '');
-      }
-
-      if (payload.bannerUrl) formData.append('request.BannerUrl', payload.bannerUrl);
-      if (payload.displayOrder !== undefined) formData.append('request.DisplayOrder', payload.displayOrder.toString());
-      if (payload.isActive !== undefined) formData.append('request.IsActive', String(payload.isActive));
-      if (payload.startDate) formData.append('request.StartDate', payload.startDate);
-      if (payload.endDate) formData.append('request.EndDate', payload.endDate);
-
-      // Append the file if it exists
+      // If there's a file to upload, use FormData
       if (payload.bannerFile) {
+        console.log('Has file upload, using FormData...');
+        const formData = new FormData();
+        
+        // Required fields - always send
+        formData.append('request.BannerTitle', payload.bannerTitle || '');
+        formData.append('request.BannerImageUrl', payload.bannerImageUrl || '');
+        formData.append('request.BannerUrl', payload.bannerUrl || '');
+        formData.append('request.DisplayOrder', (payload.displayOrder || 0).toString());
+        formData.append('request.IsActive', payload.isActive !== undefined ? String(payload.isActive) : 'true');
+        formData.append('request.StartDate', payload.startDate || '');
+        formData.append('request.EndDate', payload.endDate || '');
         formData.append('bannerFile', payload.bannerFile);
-      }
 
-      const r = await apiClient.putMultipart(`${BASE}/${id}`, formData);
-      return mapToDTO(r.data)
+        console.log('FormData entries:', Array.from(formData.entries()));
+        console.log('Sending PUT multipart request to:', `${BASE}/${id}`);
+
+        const r = await apiClient.putMultipart(`${BASE}/${id}`, formData);
+        console.log('Update response:', r.data);
+        return mapToDTO(r.data);
+      } else {
+        // No file upload, send JSON
+        console.log('No file upload, sending JSON...');
+        const jsonPayload = {
+          BannerTitle: payload.bannerTitle,
+          BannerImageUrl: payload.bannerImageUrl,
+          BannerUrl: payload.bannerUrl,
+          DisplayOrder: payload.displayOrder || 0,
+          IsActive: payload.isActive !== undefined ? payload.isActive : true,
+          StartDate: payload.startDate || '',
+          EndDate: payload.endDate || '',
+        };
+        
+        console.log('JSON payload:', jsonPayload);
+        console.log('Sending PUT request to:', `${BASE}/${id}`);
+
+        const r = await apiClient.put(`${BASE}/${id}`, jsonPayload);
+        console.log('Update response:', r.data);
+        return mapToDTO(r.data);
+      }
     } catch (error: any) {
+      console.error('Error updating banner:', error);
+      console.error('Error response:', error?.response?.data);
+      
       if (error.response?.data?.errors) {
         const backendErrors = error.response.data.errors;
         console.error(`Lỗi validation từ backend khi cập nhật banner (ID: ${id}):`, JSON.stringify(backendErrors, null, 2));
         throw backendErrors;
       }
+      throw error;
+    }
+  },
+  lock: async (id: string): Promise<void> => {
+    try {
+      console.log('Locking banner with ID:', id);
+      console.log('Endpoint:', `${BASE}/${id}/lock`);
+      const response = await apiClient.put(`${BASE}/${id}/lock`, {});
+      console.log('Lock response:', response);
+      return response;
+    } catch (error: any) {
+      console.error('Error locking banner:', error);
+      console.error('Error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message
+      });
+      throw error;
+    }
+  },
+  unlock: async (id: string): Promise<void> => {
+    try {
+      console.log('Unlocking banner with ID:', id);
+      console.log('Endpoint:', `${BASE}/${id}/unlock`);
+      const response = await apiClient.put(`${BASE}/${id}/unlock`, {});
+      console.log('Unlock response:', response);
+      return response;
+    } catch (error: any) {
+      console.error('Error unlocking banner:', error);
+      console.error('Error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message
+      });
       throw error;
     }
   },

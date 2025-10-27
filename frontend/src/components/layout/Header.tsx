@@ -2,7 +2,7 @@ import styles from '../../styles/header.module.css'
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { NotificationMetadata } from '../../types/notification.types';
 import NotificationService from '../../services/notificationService';
 import { formatDistanceToNow } from 'date-fns';
@@ -10,9 +10,11 @@ import { vi, enUS } from 'date-fns/locale';
 
 export const Header: React.FC = () => {
     const [notificationMetadata, setNotificationMetadata] = useState<NotificationMetadata>();
+    const [showUserDropdown, setShowUserDropdown] = useState(false);
     const { user, logout } = useAuth();
     const { language, setLanguage, t } = useLanguage();
     const navigate = useNavigate();
+    const userDropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         // Only fetch if user is logged in
@@ -31,6 +33,20 @@ export const Header: React.FC = () => {
         fetchMetadata();
     }, [user?.id]); // Use user.id instead of entire user object to prevent unnecessary re-renders
 
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+                setShowUserDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
     const getNotificationIconClass = (type: string): string => {
         switch (type) {
             case 'Appointment':
@@ -45,6 +61,42 @@ export const Header: React.FC = () => {
                 return 'bi-megaphone';
             default:
                 return 'bi-info-circle'; // fallback icon
+        }
+    };
+
+    const handleUserDropdownToggle = () => {
+        setShowUserDropdown(!showUserDropdown);
+    };
+
+    const handleLogout = async () => {
+        setShowUserDropdown(false);
+        await logout();
+        navigate('/login');
+    };
+
+    const handleProfileClick = () => {
+        setShowUserDropdown(false);
+        if (user?.role === "Admin") {
+            navigate('/app/admin/profile');
+        } else if (user?.role === "Manager") {
+            navigate('/app/manager/profile');
+        } else if (user?.role === "Doctor") {
+            navigate('/app/doctor/profile/edit');
+        } else {
+            navigate('/app/patient/profile');
+        }
+    };
+
+    const handleDashboardClick = () => {
+        setShowUserDropdown(false);
+        if (user?.role === "Admin") {
+            navigate('/app/admin/dashboard');
+        } else if (user?.role === "Manager") {
+            navigate('/app/manager/dashboard');
+        } else if (user?.role === "Doctor") {
+            navigate('/app/doctor/dashboard');
+        } else {
+            navigate('/app/patient');
         }
     };
 
@@ -64,24 +116,24 @@ export const Header: React.FC = () => {
                 <div className={styles["header-links"]}>
                     {user ? (
                         <>
-                            <div>
-                                <a href={user.role === "Doctor" ? "/doctor/profile/edit" : "/patient/profile"}>
+                            {/* Language Selector */}
+                            <div className={styles['language-selector']}>
+                                <button
+                                    className={styles['language-button']}
+                                    onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
+                                    title={language === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'}
+                                >
                                     <img
-                                        src={user.avatarUrl}
-                                        alt="User avatar"
-                                        className="rounded-circle dropdown-toggle"
-                                        // data-bs-toggle="dropdown"
-                                        // aria-expanded="false"
-                                        style={{ width: '40px', height: '40px', cursor: 'pointer' }} />
-                                </a>
-                                {/* <ul className="dropdown-menu dropdown-menu-start">
-                                    <li>
-                                        <button className="dropdown-item">
-                                            {user.avatarUrl}
-                                        </button>
-                                    </li>
-                                </ul> */}
+                                        src={language === 'vi'
+                                            ? '/images/vn-flag.jpg'
+                                            : '/images/us-flag.jpg'}
+                                        alt={language === 'vi' ? 'Vietnamese' : 'English'}
+                                        className={styles['flag-icon']}
+                                    />
+                                </button>
                             </div>
+
+                            {/* Notifications */}
                             <div className="dropdown" style={{ position: 'relative', display: 'inline-block' }}>
                                 <i
                                     className="bi bi-bell-fill fs-4"
@@ -105,7 +157,7 @@ export const Header: React.FC = () => {
                                 )}
 
                                 <ul className="dropdown-menu dropdown-menu-start" style={{
-                                    maxHeight: '500px', // 🔧 Short height for testing
+                                    maxHeight: '500px',
                                     overflowY: 'auto', width: '400px'
                                 }}>
                                     <li><h6 className="dropdown-header">{t('header.notifications')}</h6></li>
@@ -131,29 +183,47 @@ export const Header: React.FC = () => {
                                 </ul>
                             </div>
 
-                            {/* Language Selector */}
-                            <div className={styles['language-selector']}>
-                                <button
-                                    className={styles['language-button']}
-                                    onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
-                                    title={language === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'}
+                            {/* User Avatar Dropdown */}
+                            <div className={styles["user-dropdown"]} ref={userDropdownRef}>
+                                <div 
+                                    className={styles["user-avatar-container"]}
+                                    onClick={handleUserDropdownToggle}
                                 >
                                     <img
-                                        src={language === 'vi'
-                                            ? '/images/vn-flag.jpg'
-                                            : '/images/us-flag.jpg'}
-                                        alt={language === 'vi' ? 'Vietnamese' : 'English'}
-                                        className={styles['flag-icon']}
+                                        src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || user.email || 'User')}&background=667eea&color=fff`}
+                                        alt="User avatar"
+                                        className={styles["user-avatar"]}
                                     />
-                                </button>
+                                    <div className={styles["user-info"]}>
+                                        <div className={styles["user-name"]}>{user.fullName || 'Người dùng'}</div>
+                                        <div className={styles["user-role"]}>
+                                            {user.role === "Doctor" ? "Bác sĩ" : 
+                                             user.role === "Admin" ? "Quản trị viên" :
+                                             user.role === "Manager" ? "Quản lý" :
+                                             user.role === "Patient" ? "Bệnh nhân" : "Người dùng"}
+                                        </div>
+                                    </div>
+                                    <i className={`bi bi-chevron-${showUserDropdown ? 'up' : 'down'} ${styles["dropdown-icon"]}`}></i>
+                                </div>
+                                
+                                {showUserDropdown && (
+                                    <div className={styles["user-dropdown-menu"]}>
+                                        <button className={styles["dropdown-item"]} onClick={handleDashboardClick}>
+                                            <i className="bi bi-speedometer2"></i>
+                                            <span>Dashboard</span>
+                                        </button>
+                                        <button className={styles["dropdown-item"]} onClick={handleProfileClick}>
+                                            <i className="bi bi-person"></i>
+                                            <span>Xem tài khoản</span>
+                                        </button>
+                                        <div className={styles["dropdown-divider"]}></div>
+                                        <button className={styles["dropdown-item"]} onClick={handleLogout}>
+                                            <i className="bi bi-box-arrow-right"></i>
+                                            <span>Đăng xuất</span>
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                            <button className={styles['header-link']}
-                                onClick={async () => {
-                                    await logout();
-                                    navigate('/login');
-                                }}>
-                                {t('header.logout')}
-                            </button>
                         </>
                     ) : (
                         <>
@@ -161,18 +231,16 @@ export const Header: React.FC = () => {
                                 <a href="/login" className={styles["btn-login"]}>
                                     {t('header.login')}
                                 </a>
-                                <a href="#" className={styles["btn-register"]} data-bs-toggle="dropdown" aria-expanded="false">
-                                    {t('header.register')}
-                                </a>
-                                <ul className="dropdown-menu">
-                                    <li><a className="dropdown-item" href="/patient-register">{t('header.register.patient')}</a></li>
-                                    <li><a className="dropdown-item" href="/doctor/register">{t('header.register.doctor')}</a></li>
-                                </ul>
+                                <div className="dropdown">
+                                    <a href="#" className={styles["btn-register"]} data-bs-toggle="dropdown" aria-expanded="false">
+                                        {t('header.register')}
+                                    </a>
+                                    <ul className={`dropdown-menu ${styles["register-dropdown"]}`}>
+                                        <li><a className="dropdown-item" href="/patient-register">{t('header.register.patient')}</a></li>
+                                        <li><a className="dropdown-item" href="/doctor/register">{t('header.register.doctor')}</a></li>
+                                    </ul>
+                                </div>
                             </div>
-                            <ul className="dropdown-menu">
-                                <li><a className="dropdown-item" href="/patient-register">{t('header.register.patient')}</a></li>
-                                <li><a className="dropdown-item" href="/doctor/register">{t('header.register.doctor')}</a></li>
-                            </ul>
                             
                             {/* Language Selector */}
                             <div className={styles['language-selector']}>

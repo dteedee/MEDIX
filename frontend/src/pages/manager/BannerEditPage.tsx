@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import BannerForm from '../../components/admin/BannerFormNew'
+import BannerForm from './BannerFormNew'
 import { bannerService } from '../../services/bannerService'
 import { BannerDTO } from '../../types/banner.types'
 import { useToast } from '../../contexts/ToastContext'

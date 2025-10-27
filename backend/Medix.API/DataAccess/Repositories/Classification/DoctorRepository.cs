@@ -1,5 +1,6 @@
-using Medix.API.Business.Helper;
+﻿using Medix.API.DataAccess;
 using Medix.API.DataAccess.Interfaces.Classification;
+using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -59,40 +60,65 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return doctor;
         }
 
-        public async Task<PagedList<Doctor>> GetPendingDoctorsAsync(DoctorProfileQuery query)
+        public async Task<List<Doctor>> GetDoctorsByServiceTierNameAsync(string name)
         {
-            var doctorQueryable = _context.Doctors
-                .Where(d => d.User.Status == 2)
-                .AsQueryable();
+         return await _context.Doctors
+                .Include(d => d.ServiceTier)
+                .Include(d => d.User)
+                .Include(d => d.Specialization)
+                .Where(d => d.ServiceTier.Name.ToLower() == name.ToLower()&& d.User.Status !=0)
+                .ToListAsync();
+        }
+        public async Task<(List<Doctor> Doctors, int TotalCount)> GetPaginatedDoctorsByTierIdAsync(
+                Guid tierId, DoctorQueryParameters queryParams)
+        {
+            var query = _context.Doctors
+                .AsNoTracking()
+                .Where(d => d.ServiceTierId == tierId && d.User.Status == 1);
 
-            if (!string.IsNullOrEmpty(query.SearchTerm))
+            // 2. Áp dụng FILTER động
+            // Filter 1: Education
+            if (!string.IsNullOrEmpty(queryParams.EducationCode))
             {
-                doctorQueryable = doctorQueryable
-                    .Where(d => d.User.UserName.Contains(query.SearchTerm) ||
-                        d.Specialization.Name.Contains(query.SearchTerm) || 
-                        d.User.NormalizedEmail.Contains(query.SearchTerm.ToUpper()));
+                query = query.Where(d => d.Education == queryParams.EducationCode);
+            }
+            if (queryParams.MinPrice.HasValue)
+            {
+                query = query.Where(d => d.ConsultationFee >= queryParams.MinPrice.Value);
+            }
+            if (queryParams.MaxPrice.HasValue)
+            {
+                query = query.Where(d => d.ConsultationFee <= queryParams.MaxPrice.Value);
             }
 
-            var doctors = await doctorQueryable
+            // Filter 2: Specialization
+            if (!string.IsNullOrEmpty(queryParams.SpecializationCode))
+            {
+                // Quan trọng: Phải filter trên 'Specialization.Code'
+                query = query.Where(d => d.Specialization.Id == Guid.Parse(queryParams.SpecializationCode));
+            }
+
+            // 3. Lấy total count SAU KHI FILTER
+            var totalCount = await query.CountAsync();
+
+            // 4. Áp dụng PHÂN TRANG và Includes
+            var doctors = await query
+                .OrderBy(d => d.User.FullName) // Luôn OrderBy trước khi phân trang
+                .Skip((queryParams.PageNumber - 1) * queryParams.PageSize)
+                .Take(queryParams.PageSize)
                 .Include(d => d.User)
                 .Include(d => d.Specialization)
-                .Skip((query.Page - 1) * query.PageSize)
-                .Take(query.PageSize)
                 .ToListAsync();
 
-            return new PagedList<Doctor>
-            {
-                Items = doctors,
-                TotalPages = (int)Math.Ceiling((double)await doctorQueryable.CountAsync() / query.PageSize),
-            };
+            return (doctors, totalCount);
         }
 
-        public async Task<Doctor?> GetDoctorByIdAsync(Guid doctorId)
+        public Task<Doctor?> GetDoctorProfileByDoctorIDAsync(Guid doctorID)
         {
-            return await _context.Doctors
+            return _context.Doctors
                 .Include(d => d.User)
                 .Include(d => d.Specialization)
-                .FirstOrDefaultAsync(d => d.Id == doctorId);
+                .FirstOrDefaultAsync(d => d.Id == doctorID);
         }
     }
 }

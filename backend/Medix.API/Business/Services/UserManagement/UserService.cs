@@ -37,6 +37,7 @@ namespace Medix.API.Business.Services.UserManagement
                 FullName = registerDto.FullName,
                 DateOfBirth = registerDto.DateOfBirth,
                 GenderCode = registerDto.GenderCode,
+                Status = 0,
                 IdentificationNumber = registerDto.IdentificationNumber,
                 Role = "Patient", // Gán vai trò mặc định là Patient
                 IsProfileCompleted = false,
@@ -44,11 +45,11 @@ namespace Medix.API.Business.Services.UserManagement
                 Address = registerDto.address,
                 UpdatedAt = DateTime.UtcNow,
                 EmailConfirmed = true,
-                PhoneNumberConfirmed = false,
+                PhoneNumberConfirmed = false,   
                 LockoutEnabled = false,
                 AccessFailedCount = 0
             };
-
+           
             var savedUser = await _userRepository.CreateAsync(user);
             // TODO: Fix when UserRoleRepository.CreateAsync is implemented
         
@@ -357,6 +358,7 @@ namespace Medix.API.Business.Services.UserManagement
         public async Task<UserBasicInfoDto> GetUserBasicInfo(Guid id)
         {
             var user = await _userRepository.GetByIdAsync(id);
+            var patient = await _patientRepository.GetPatientByUserIdAsync(id);
 
             if (user == null) throw new ArgumentException("Không tìm thấy người dùng");
 
@@ -367,9 +369,16 @@ namespace Medix.API.Business.Services.UserManagement
                 FullName = user.FullName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
+                identificationNumber = user.IdentificationNumber,
                 imageURL = user.AvatarUrl,
                 dob = user.DateOfBirth,
-                address = user.Address
+                address = user.Address,
+                Allergies = patient?.Allergies,
+                MedicalHistory = patient?.MedicalHistory,
+                MedicalRecordNumber = patient?.MedicalRecordNumber,
+                EmergencyContactName = patient?.EmergencyContactName,
+                EmergencyContactPhone = patient?.EmergencyContactPhone
+
             };
         }
 

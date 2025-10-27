@@ -4,7 +4,8 @@ import { authService } from '../../services/authService';
 import { apiClient } from '../../lib/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import styles from '../../styles/login.module.css';
+import { useLanguage } from '../../contexts/LanguageContext';
+import styles from '../../styles/auth/login.module.css';
 
 const GOOGLE_CLIENT_ID = import.meta.env?.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -12,6 +13,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { showToast } = useToast();
+  const { t } = useLanguage();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -94,10 +96,20 @@ const Login: React.FC = () => {
       localStorage.setItem('userData', JSON.stringify(auth.user));
       localStorage.setItem('currentUser', JSON.stringify(auth.user));
       window.dispatchEvent(new Event('authChanged'));
-      showToast('Đăng nhập Google thành công! Chào mừng bạn đến với MEDIX', 'success');
+      
+      if (auth.user.isTemporaryUsername) {
+        showToast('Đăng nhập Google thành công! Vui lòng cập nhật tên đăng nhập trong trang profile để hoàn thiện tài khoản.', 'success');
+      } else {
+        showToast('Đăng nhập Google thành công! Chào mừng bạn đến với MEDIX.', 'success');
+      }
     } catch (err: any) {
       const message = err?.message || 'Đăng nhập Google thất bại';
-      showToast(message, 'error');
+      
+      if (message.includes('Tài khoản bị khóa')) {
+        showToast('Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ', 'error');
+      } else {
+        showToast(message, 'error');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -144,14 +156,18 @@ const Login: React.FC = () => {
     } catch (err: any) {
       const status = err?.response?.status;
       const message = err?.message || '';
-
+      
       if (
         status === 401 ||
         message.includes('Email hoặc mật khẩu') ||
         message.includes('Tên đăng nhập/Email hoặc mật khẩu') ||
         message.toLowerCase().includes('unauthorized')
       ) {
-        showToast('Sai tên đăng nhập/email hoặc mật khẩu, vui lòng kiểm tra lại', 'error');
+        if (message.includes('Tài khoản bị khóa')) {
+          showToast('Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ', 'error');
+        } else {
+          showToast('Sai tên đăng nhập/email hoặc mật khẩu, vui lòng kiểm tra lại', 'error');
+        }
       } else {
         showToast(message || 'Đăng nhập thất bại', 'error');
       }
@@ -339,7 +355,16 @@ const Login: React.FC = () => {
             <div id="googleSignInDiv" className={styles["google-btn-wrapper"]}></div>
 
             <div className={styles["signup-link"]}>
-              Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
+              Chưa có tài khoản? 
+              <div className="dropdown">
+                <a href="#" className={styles["btn-register"]} data-bs-toggle="dropdown" aria-expanded="false">
+                  {t('header.register')}
+                </a>
+                <ul className={`dropdown-menu ${styles["register-dropdown"]}`}>
+                  <li><a className="dropdown-item" href="/patient-register">{t('header.register.patient')}</a></li>
+                  <li><a className="dropdown-item" href="/doctor/register">{t('header.register.doctor')}</a></li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>

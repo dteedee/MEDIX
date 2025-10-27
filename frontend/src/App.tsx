@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
@@ -11,47 +11,59 @@ import { UserRole } from './types/common.types';
 import { Header } from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import Sidebar from './components/layout/Sidebar';
+import AdminLayout from './components/layout/AdminLayout';
+import PatientLayout from './components/layout/PatientLayout';
+import ManagerLayout from './components/layout/ManagerLayout';
+import PublicLayout from './components/layout/PublicLayout';
 
 // Auth pages
-import HomePage from './pages/HomePage';
+import HomePage from './pages/public/HomePage';
 import Login from './pages/auth/Login';
 import { PatientRegister } from './pages/auth/PatientRegister';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
-import ChangePassword from './pages/auth/ChangePassword';
+import { ChangePasswordModal } from './pages/auth/ChangePasswordModal';
 import AuthLayout from './components/layout/AuthLayout';
 import AuthStatus from './pages/auth/AuthStatus';
-import { Unauthorized } from './pages/Unauthorized';
+import { Unauthorized } from './pages/error/Unauthorized';
 
 // Dashboard pages  
-import { AdminDashboard } from './pages/admin/AdminDashboard';
+import AdminDashboard from './pages/admin/AdminDashboard';
 import { ManageDashboard } from './pages/manager/ManageDashboard';
 import DoctorRegister from './pages/doctor/DoctorRegister';
 import { AIChatBot } from './pages/ai/AIChatBot';
 import { PatientDashboard } from './pages/patient/patientdashboard';
 import { PatientProfile } from './pages/patient/patientProfile';
+import { PatientAppointments } from './pages/patient/PatientAppointments';
+import { PatientResults } from './pages/patient/PatientResults';
+import { PatientFinance } from './pages/patient/PatientFinance';
 import DoctorDetails from './pages/doctor/DoctorDetails';
+import ScheduleManagement from './pages/doctor/ScheduleManagement';
 import DoctorProfileEdit from './pages/doctor/DoctorProfileEdit';
 
-// CMS Management pages
-import BannerList from './pages/manager/BannerList';
-import ArticleList from './pages/manager/ArticleList';
-import CategoryList from './pages/manager/CategoryList';
-import CmsPageList from './pages/manager/CmsPageList';
-import ArticleEditPage from './pages/manager/ArticleEditPage';
-import CategoryEditPage from './pages/manager/CategoryEditPage';
-import BannerEditPage from './pages/manager/BannerEditPage';
-import CmsPageEditPage from './pages/manager/CmsPageEditPage';
+// Manager pages
+import ArticleManagement from './pages/manager/ArticleManagement';
+import BannerManagement from './pages/manager/BannerManagement';
+import DoctorManagement from './pages/manager/DoctorManagement';
+import ReportsAndAnalytics from './pages/manager/ReportsAndAnalytics';
+import ServicePackageManagement from './pages/manager/ServicePackageManagement';
+import CommissionManagement from './pages/manager/CommissionManagement';
+import FeedbackManagement from './pages/manager/FeedbackManagement';
 import UserList from './pages/admin/UserList';
 import UserEditPage from './pages/admin/UserEditPage';
+import TrackingPage from './pages/admin/TrackingPage';
+import SettingsPage from './pages/admin/SettingsPage';
 
 // Reader pages
 import ArticleReaderPage from './pages/patient/ArticleReaderPage';
-import ArticleDetailPage from './pages/patient/ArticleDetailPage';
+import ArticleDetailPage from './pages/public/ArticleDetailPage';
 import DoctorBookingList from './pages/patient/DoctorBookingList';
-import ErrorPageWrapper from './pages/ErrorPageWrapper';
-import DoctorProfileList from './pages/manager/DoctorProfileList';
-import DoctorProfileDetails from './pages/manager/DoctorProfileDetails';
+import ErrorPageWrapper from './pages/error/ErrorPageWrapper';
+
+// Legal pages
+import PrivacyPolicy from './pages/public/PrivacyPolicy';
+import TermsOfService from './pages/public/TermsOfService';
+import AboutUs from './pages/public/AboutUs';
 
 export function App() {
   return (
@@ -60,8 +72,6 @@ export function App() {
         <ToastProvider>
           <Router>
           <div className="min-h-screen w-full flex flex-col">
-            <Header />
-
             <Routes>
               <Route path="/error/:code" element={<ErrorPageWrapper />} />
 
@@ -76,34 +86,21 @@ export function App() {
               </Route>
 
               {/* ---------- Change password route ---------- */}
-              <Route path="/change-password" element={<ChangePassword />} />
-
-              {/* ---------- Doctor routes ---------- */}
-              {/* <Route path="/doctor/*" element={
-                <Routes>
-                  <Route path="register" element={<DoctorRegister />} />
-                  <Route path="details/:username" element={<DoctorDetails />} />
-                </Routes>
-              } /> */}
-
-              {/* ---------- Doctor routes ---------- */}
-              <Route path="/doctor/*" element={
-                <>
-                  <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
-                    <Routes>
-                      <Route path="profile/edit" element={<DoctorProfileEdit />} />
-                    </Routes>
-                  </ProtectedRoute>
-                </>
-              } />
+              <Route path="/change-password" element={<ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} />} />
 
               <Route path="/doctor/details/:username" element={<DoctorDetails />} />
 
-              {/* ---------- Home ---------- */}
-              <Route index element={<HomePage />} />
+              {/* ---------- Public pages with header/footer ---------- */}
+              <Route element={<PublicLayout />}>
+                <Route index element={<HomePage />} />
+                <Route path="/doctors" element={<DoctorBookingList />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/about" element={<AboutUs />} />
+              </Route>
 
-              {/* ---------- Doctor Booking List (Public) ---------- */}
-              <Route path="/doctors" element={<DoctorBookingList />} />
+              {/* ---------- Change password route (Protected) ---------- */}
+              <Route path="/change-password" element={<ProtectedRoute><ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} /></ProtectedRoute>} />
 
               {/* ---------- Main app layout ---------- */}
               <Route path="/app" element={<MainLayout />}>
@@ -114,47 +111,53 @@ export function App() {
                 } />
 
                 {/* ---------- Admin routes ---------- */}
-                <Route path="admin/*" element={
-                  <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
-                    <Routes>
-                      <Route index element={<AdminDashboard />} />
-                      <Route path="users" element={<UserList />} />
-                      <Route path="users/new" element={<UserEditPage />} />
-                      <Route path="users/edit/:id" element={<UserEditPage />} />
-                    </Routes>
-                  </ProtectedRoute>
-                } />
+                <Route path="admin/*" element={<AdminLayout />}>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="users" element={<UserList />} />
+                  <Route path="users/new" element={<UserEditPage />} />
+                  <Route path="users/edit/:id" element={<UserEditPage />} />
+                  <Route path="tracking" element={<TrackingPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                </Route>
 
                 {/* ---------- Manager routes ---------- */}
                 <Route path="manager/*" element={
                   <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
-                    <Routes>
-                      <Route index element={<ManageDashboard />} />
-                      <Route path="banners" element={<BannerList />} />
-                      <Route path="banners/new" element={<BannerEditPage />} />
-                      <Route path="banners/edit/:id" element={<BannerEditPage />} />
-                      <Route path="articles" element={<ArticleList />} />
-                      <Route path="articles/new" element={<ArticleEditPage />} />
-                      <Route path="articles/edit/:id" element={<ArticleEditPage />} />
-                      <Route path="categories" element={<CategoryList />} />
-                      <Route path="categories/new" element={<CategoryEditPage />} />
-                      <Route path="categories/edit/:id" element={<CategoryEditPage />} />
-                      <Route path="cms-pages" element={<CmsPageList />} />
-                      <Route path="cms-pages/new" element={<CmsPageEditPage />} />
-                      <Route path="cms-pages/edit/:id" element={<CmsPageEditPage />} />
-                      <Route path='doctor-profiles' element={<DoctorProfileList />} />
-                      <Route path='doctor-profiles/details/:id' element={<DoctorProfileDetails />} />
-                    </Routes>
+                    <ManagerLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<ManageDashboard />} />
+                  <Route path="doctors" element={<DoctorManagement />} />
+                  <Route path="reports" element={<ReportsAndAnalytics />} />
+                  <Route path="articles" element={<ArticleManagement />} />
+                  <Route path="banners" element={<BannerManagement />} />
+                  <Route path="services" element={<ServicePackageManagement />} />
+                  <Route path="commissions" element={<CommissionManagement />} />
+                  <Route path="feedback" element={<FeedbackManagement />} />
+                </Route>
 
                 {/* ---------- Patient routes ---------- */}
                 <Route path="patient/*" element={
                   <ProtectedRoute requiredRoles={[UserRole.PATIENT]}>
+                    <PatientLayout />
+                  </ProtectedRoute>
+                }>
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<PatientDashboard />} />
+                  <Route path="profile" element={<PatientProfile />} />
+                  <Route path="appointments" element={<PatientAppointments />} />
+                  <Route path="results" element={<PatientResults />} />
+                  <Route path="finance" element={<PatientFinance />} />
+                </Route>
+
+                {/* ---------- Doctor routes (inside /app) ---------- */}
+                <Route path="doctor/*" element={
+                  <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
                     <Routes>
-                      <Route index element={<Navigate to="dashboard" replace />} />
-                      <Route path="dashboard" element={<PatientDashboard />} />
-                      <Route path="profile" element={<PatientProfile />} />
+                      <Route index element={<Navigate to="schedules" replace />} />
+                      <Route path="profile/edit" element={<DoctorProfileEdit />} />
+                      <Route path="schedules" element={<ScheduleManagement />} />
                     </Routes>
                   </ProtectedRoute>
                 } />
@@ -175,8 +178,6 @@ export function App() {
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
-
-            <Footer />
           </div>
         </Router>
         </ToastProvider>
@@ -187,9 +188,9 @@ export function App() {
 
 // Redirect to role-based dashboard
 const DashboardRedirect: React.FC = () => {
-  const userRole = JSON.parse(localStorage.getItem('userData') || '{}')?.role;
+  const { user } = useAuth(); // ✅ Sử dụng hook useAuth để lấy thông tin người dùng
 
-  switch (userRole) {
+  switch (user?.role) { // ✅ Sử dụng user.role từ context
     case UserRole.ADMIN:
       return <Navigate to="/app/admin" replace />;
     case UserRole.MANAGER:

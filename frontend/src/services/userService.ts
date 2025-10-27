@@ -10,7 +10,13 @@ export interface UserBasicInfo {
   address: string | null;
   dob: string | null; // ISO date string 'YYYY-MM-DD'
   imageURL?: string | null; // Match backend DTO field name
+  identificationNumber?: string | null; // Số CMND/CCCD
   createdAt: string;
+  medicalRecordNumber?: string | null; // Somente leitura
+  emergencyContactName?: string | null; // Editável
+  emergencyContactPhone?: string | null; // Editável
+  allergies?: string | null; // Match backend DTO field name
+  medicalHistory?: string | null; // Match backend DTO field name
 }
 
 export interface UpdateUserInfo {
@@ -20,15 +26,29 @@ export interface UpdateUserInfo {
   phoneNumber?: string;
   address?: string;
   dob?: string; // Will be converted to DateOnly on backend
+  identificationNumber?: string; // Số CMND/CCCD
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  medicalHistory?: string;
+  allergies?: string;
 }
 
 export const userService = {
   async getUserInfo(): Promise<UserBasicInfo> {
     try {
+      console.log('🔄 userService - Calling API: /user/getUserInfor');
       const response = await apiClient.get<UserBasicInfo>('/user/getUserInfor');
+      console.log('✅ userService - API response received:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching user info:', error);
+      console.error('❌ userService - Error fetching user info:', error);
+      console.error('❌ userService - Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+      
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -41,15 +61,32 @@ export const userService = {
 
   async updateUserInfo(data: UpdateUserInfo): Promise<UserBasicInfo> {
     try {
-      const updateDto = {
+      const updateDto: any = {
         id: null,
         username: data.username || '',
         fullName: data.fullName || '',
         email: data.email || '',
         phoneNumber: data.phoneNumber || null,
         address: data.address || null,
-        dob: data.dob || null
+        dob: data.dob || null,
+        emergencyContactName: data.emergencyContactName || null,
+        emergencyContactPhone: data.emergencyContactPhone || null
       };
+      
+      // Add patient-specific fields if they exist
+      if (data.emergencyContactName !== undefined) {
+        updateDto.emergencyContactName = data.emergencyContactName;
+      }
+      if (data.emergencyContactPhone !== undefined) {
+        updateDto.emergencyContactPhone = data.emergencyContactPhone;
+      }
+      if (data.medicalHistory !== undefined) {
+        updateDto.medicalHistory = data.medicalHistory;
+      }
+      if (data.allergies !== undefined) {
+        updateDto.allergies = data.allergies;
+      }
+      
       const response = await apiClient.put<UserBasicInfo>('/user/updateUserInfor', updateDto);
       console.log('UpdateUserInfo - Request payload:', updateDto);
       console.log('UpdateUserInfo - API response:', response.data);

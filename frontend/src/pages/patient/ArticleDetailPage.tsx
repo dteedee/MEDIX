@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { articleService } from '../../services/articleService'
 import { ArticleDTO } from '../../types/article.types'
-import './ArticleReader.css'
+import '../../styles/ArticleDetailPage.css'
 
 export default function ArticleDetailPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -52,6 +52,11 @@ export default function ArticleDetailPage() {
       try {
         const articleData = await articleService.getBySlug(slug);
         if (articleData) {
+          // Check if article is locked
+          if (articleData.isLocked) {
+            setError('Article not available.')
+            return;
+          }
           setArticle(articleData);
           setLikeCount(articleData.likeCount ?? 0);
           // Check if article has been liked from localStorage
@@ -127,15 +132,6 @@ export default function ArticleDetailPage() {
        <button onClick={() => navigate(-1)} className="back-button">
         &larr; Quay lại danh sách
       </button>
-
-      <div className="breadcrumb">
-        <Link to="/app/patient">Trang chủ</Link>
-        <span className="separator">/</span>
-        <Link to="/app/articles">Kiến thức y khoa</Link>
-        <span className="separator">/</span>
-        <span className="current-page">{article.title}</span>
-      </div>
-
       <article className="article-detail">
         <h1>{article.title}</h1>
         <div className="article-meta-container">

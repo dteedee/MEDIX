@@ -492,15 +492,21 @@ function DoctorRegister() {
                                 </div>
                                 <div className={styles["form-group"]}>
                                     <label className={styles["form-label"]}>Số năm kinh nghiệm <span className={styles["required"]}>*</span></label>
-                                    <input type="number"
+                                    <input type="text"
+                                        inputMode="numeric"
+                                        pattern="\d*"
                                         className={`${styles["form-input"]} form-control ${errors.YearsOfExperience?.[0]
                                             ? 'is-invalid'
                                             : formData.yearsOfExperience?.trim()
                                                 ? 'is-valid'
                                                 : ''
                                             }`}
-                                        onChange={handleChange}
-                                        name='yearsOfExperience' />
+                                        onChange={(e) => {
+                                            handleNumberChange(e);
+                                            handleChange(e);
+                                        }}
+                                        name='yearsOfExperience'
+                                        value={formData.yearsOfExperience} />
                                     {errors.YearsOfExperience?.[0] && (
                                         <div className="text-danger">{errors.YearsOfExperience[0]}</div>
                                     )}

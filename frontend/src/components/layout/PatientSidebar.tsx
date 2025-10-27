@@ -50,6 +50,8 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
   const handleGoHome = () => {
     setShowUserMenu(false);
     navigate('/');
+    // Scroll to top when navigating to home
+    window.scrollTo(0, 0);
   };
 
   const handleViewDashboard = () => {
@@ -75,7 +77,10 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
         <Link 
           to="/app/patient" 
           className={`${styles.navItem} ${currentPage === 'dashboard' ? styles.active : ''}`}
-          onClick={() => setShowUserMenu(false)}
+          onClick={() => {
+            setShowUserMenu(false);
+            window.scrollTo(0, 0);
+          }}
         >
           <i className="bi bi-speedometer2"></i>
           {sidebarOpen && <span>Dashboard</span>}

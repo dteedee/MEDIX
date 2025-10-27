@@ -36,15 +36,16 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage = 'dashboard' }
 
   const handleViewProfile = () => {
     setShowUserMenu(false);
-    // Navigate to profile page or show profile modal
-    console.log('View profile');
+    navigate('/app/admin/profile');
   };
 
-  const handleChangePassword = () => {
+  const handleGoHome = () => {
     setShowUserMenu(false);
-    // Navigate to change password page or show change password modal
-    console.log('Change password');
+    navigate('/');
+    // Scroll to top when navigating to home
+    window.scrollTo(0, 0);
   };
+
 
   return (
     <div className={`${styles.sidebar} ${!sidebarOpen ? styles.sidebarClosed : ''}`}>
@@ -64,6 +65,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage = 'dashboard' }
         <a 
           href="/app/admin" 
           className={`${styles.navItem} ${currentPage === 'dashboard' ? styles.active : ''}`}
+          onClick={() => window.scrollTo(0, 0)}
         >
           <i className="bi bi-speedometer2"></i>
           {sidebarOpen && <span>Dashboard</span>}
@@ -71,6 +73,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage = 'dashboard' }
         <a 
           href="/app/admin/users" 
           className={`${styles.navItem} ${currentPage === 'users' ? styles.active : ''}`}
+          onClick={() => window.scrollTo(0, 0)}
         >
           <i className="bi bi-people"></i>
           {sidebarOpen && <span>Người dùng</span>}
@@ -78,6 +81,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage = 'dashboard' }
         <a 
           href="/app/admin/tracking" 
           className={`${styles.navItem} ${currentPage === 'tracking' ? styles.active : ''}`}
+          onClick={() => window.scrollTo(0, 0)}
         >
           <i className="bi bi-search"></i>
           {sidebarOpen && <span>Truy vết</span>}
@@ -85,6 +89,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage = 'dashboard' }
         <a 
           href="/app/admin/settings" 
           className={`${styles.navItem} ${currentPage === 'settings' ? styles.active : ''}`}
+          onClick={() => window.scrollTo(0, 0)}
         >
           <i className="bi bi-gear"></i>
           {sidebarOpen && <span>Cấu hình</span>}
@@ -117,13 +122,13 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage = 'dashboard' }
 
         {showUserMenu && sidebarOpen && (
           <div className={styles.userMenu}>
+            <button className={styles.menuItem} onClick={handleGoHome}>
+              <i className="bi bi-house-door"></i>
+              <span>Trang chủ</span>
+            </button>
             <button className={styles.menuItem} onClick={handleViewProfile}>
               <i className="bi bi-person"></i>
               <span>Xem tài khoản</span>
-            </button>
-            <button className={styles.menuItem} onClick={handleChangePassword}>
-              <i className="bi bi-key"></i>
-              <span>Đổi mật khẩu</span>
             </button>
             <div className={styles.menuDivider}></div>
             <button className={styles.menuItem} onClick={handleLogout}>

@@ -25,23 +25,27 @@
   box-shadow: 0 40px 100px 0 rgba(33, 150, 243, 0.23);
 }
 
-.form-header {
+/* Header section - EXACT COPY from doctor-register.module.css with higher specificity */
+.registration-form .form-header {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
-.form-header h1 {
-  color: #1565c0;
-  font-size: 38px;
-  font-weight: 800;
-  margin-bottom: 8px;
-  letter-spacing: 1.3px;
+.registration-form .form-header h1 {
+  color: #1976d2 !important;
+  font-size: 2.6rem !important;
+  font-weight: 800 !important;
+  margin-bottom: 5px !important;
+  letter-spacing: 1px !important;
 }
 
-.form-header p {
-  color: #ff0000;
-  font-size: 16px;
-  font-family: 'Be Vietnam Pro', sans-serif;
+.registration-form .form-header p {
+  color: #e53935 !important;
+  font-size: 1.1rem !important;
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
+  font-weight: 500 !important;
+  font-family: 'Be Vietnam Pro', sans-serif !important;
 }
 
 /* Two-column layout */
@@ -524,96 +528,82 @@
   font-weight: 500;
 }
 
-/* Terms section - giống DoctorRegister */
-.terms-section {
+/* Terms & Conditions - EXACT COPY from doctor-register.module.css with higher specificity */
+.registration-form .terms-section {
   margin: 30px 0;
   padding: 16px 20px;
   border-radius: 10px;
   background: #f1f6ff;
 }
 
-.checkbox-wrapper {
+.registration-form .checkbox-wrapper {
   display: flex;
   align-items: flex-start;
   gap: 12px;
 }
 
-.checkbox-wrapper input[type="checkbox"] {
+.registration-form .checkbox-wrapper input[type="checkbox"] {
   width: 20px;
   height: 20px;
   margin-top: 2px;
   accent-color: #1976d2;
 }
 
-.terms-text {
+.registration-form .terms-text {
   font-size: 13.5px;
   color: #374151;
-  line-height: 1.5;
 }
 
-.terms-link {
+.registration-form .terms-link {
   color: #0a66c2;
   text-decoration: none;
   font-weight: 600;
 }
 
-.terms-link:hover {
+.registration-form .terms-link:hover {
   text-decoration: underline;
 }
 
-.terms-section .error-message {
-  color: #e74c3c;
-  font-size: 12px;
-  margin-top: 8px;
-  display: block;
-}
-
-/* Submit section - giống DoctorRegister */
-.submit-section {
+/* Submit section - EXACT COPY from doctor-register.module.css with higher specificity */
+.registration-form .submit-section {
   text-align: center;
   margin-top: 40px;
 }
 
-.submit-button {
-  background: linear-gradient(135deg, #42a5f5, #1976d2);
-  color: white;
-  border: none;
-  padding: 14px 60px;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  cursor: pointer;
-  box-shadow: 0 10px 24px rgba(66, 165, 245, 0.3);
-  transition: all 0.3s ease;
+.registration-form .btn-submit {
+  background: linear-gradient(135deg, #42a5f5, #1976d2) !important;
+  color: white !important;
+  border: none !important;
+  padding: 14px 60px !important;
+  border-radius: 12px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.6px !important;
+  cursor: pointer !important;
+  box-shadow: 0 10px 24px rgba(66, 165, 245, 0.3) !important;
+  transition: all 0.3s ease !important;
 }
 
-.submit-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #64b5f6, #0d47a1);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(66, 165, 245, 0.4);
+.registration-form .btn-submit:hover {
+  background: linear-gradient(135deg, #64b5f6, #0d47a1) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 28px rgba(66, 165, 245, 0.4) !important;
 }
 
-.submit-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Login link section - giống DoctorRegister */
-.login-link-section {
+/* Login link - EXACT COPY from doctor-register.module.css with higher specificity */
+.registration-form .login-link-section {
   margin-top: 22px;
   font-size: 14px;
   color: #6b7280;
 }
 
-.login-link-text {
+.registration-form .login-link {
   color: #1976d2;
   font-weight: 600;
   text-decoration: none;
 }
 
-.login-link-text:hover {
+.registration-form .login-link:hover {
   text-decoration: underline;
 }
 

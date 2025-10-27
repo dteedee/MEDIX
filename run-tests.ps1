@@ -112,3 +112,4 @@ if ($frontendSuccess -and $backendSuccess) {
     }
     exit 1
 }
+

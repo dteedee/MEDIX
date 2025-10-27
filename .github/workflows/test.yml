@@ -94,3 +94,4 @@ jobs:
         echo "Frontend tests: ✅ Passed"
         echo "Backend tests: ✅ Passed"
         echo "Coverage reports are available in the artifacts"
+

@@ -233,3 +233,4 @@ describe('Error Handling Utilities', () => {
     expect(formatErrorMessage(errors)).toBe('Email is required, Email is invalid')
   })
 })
+

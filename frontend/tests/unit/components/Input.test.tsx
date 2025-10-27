@@ -100,3 +100,4 @@ describe('TextArea Component', () => {
     expect(textarea).toHaveValue('Hello world')
   })
 })
+

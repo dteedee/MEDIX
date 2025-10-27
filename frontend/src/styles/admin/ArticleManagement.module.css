@@ -699,6 +699,21 @@
     color: #991b1b;
   }
   
+  .statusArchived {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  
+  .statusCustom {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  
+  .statusDefault {
+    background: #e5e7eb;
+    color: #4b5563;
+  }
+  
   .statusBadge:hover {
     transform: scale(1.05);
   }

@@ -63,13 +63,13 @@ export const bannerService = {
   create: async (payload: CreateBannerRequest): Promise<BannerDTO> => {
     try {
       const formData = new FormData();
-      // Append fields under 'request' prefix to match [FromForm] SiteBannerCreateDto request
-      formData.append('request.BannerTitle', payload.bannerTitle);
-      if (payload.bannerUrl) formData.append('request.BannerUrl', payload.bannerUrl);
-      if (payload.displayOrder !== undefined) formData.append('request.DisplayOrder', payload.displayOrder.toString());
-      formData.append('request.IsActive', String(payload.isActive));
-      if (payload.startDate) formData.append('request.StartDate', payload.startDate);
-      if (payload.endDate) formData.append('request.EndDate', payload.endDate);
+      // Append fields directly to match [FromForm] SiteBannerCreateDto properties
+      formData.append('BannerTitle', payload.bannerTitle);
+      if (payload.bannerUrl) formData.append('BannerUrl', payload.bannerUrl);
+      if (payload.displayOrder !== undefined) formData.append('DisplayOrder', payload.displayOrder.toString());
+      formData.append('IsActive', String(payload.isActive));
+      if (payload.startDate) formData.append('StartDate', payload.startDate);
+      if (payload.endDate) formData.append('EndDate', payload.endDate);
 
       // Append the file if it exists
       if (payload.bannerFile) {
@@ -92,48 +92,24 @@ export const bannerService = {
     try {
       console.log(`Updating banner ID: ${id}`);
       console.log('Payload received:', payload);
-      
-      // If there's a file to upload, use FormData
+
+      // Always use FormData for update because the backend endpoint expects [FromForm]
+      const formData = new FormData();
+
+      formData.append('BannerTitle', payload.bannerTitle || '');
+      if (payload.bannerUrl) formData.append('BannerUrl', payload.bannerUrl);
+      if (payload.displayOrder !== undefined) formData.append('DisplayOrder', payload.displayOrder.toString());
+      formData.append('IsActive', payload.isActive !== undefined ? String(payload.isActive) : 'true');
+      if (payload.startDate) formData.append('StartDate', payload.startDate);
+      if (payload.endDate) formData.append('EndDate', payload.endDate);
+      if (payload.bannerImageUrl) formData.append('BannerImageUrl', payload.bannerImageUrl);
+
       if (payload.bannerFile) {
-        console.log('Has file upload, using FormData...');
-        const formData = new FormData();
-        
-        // Required fields - always send
-        formData.append('request.BannerTitle', payload.bannerTitle || '');
-        formData.append('request.BannerImageUrl', payload.bannerImageUrl || '');
-        formData.append('request.BannerUrl', payload.bannerUrl || '');
-        formData.append('request.DisplayOrder', (payload.displayOrder || 0).toString());
-        formData.append('request.IsActive', payload.isActive !== undefined ? String(payload.isActive) : 'true');
-        formData.append('request.StartDate', payload.startDate || '');
-        formData.append('request.EndDate', payload.endDate || '');
         formData.append('bannerFile', payload.bannerFile);
-
-        console.log('FormData entries:', Array.from(formData.entries()));
-        console.log('Sending PUT multipart request to:', `${BASE}/${id}`);
-
-        const r = await apiClient.putMultipart(`${BASE}/${id}`, formData);
-        console.log('Update response:', r.data);
-        return mapToDTO(r.data);
-      } else {
-        // No file upload, send JSON
-        console.log('No file upload, sending JSON...');
-        const jsonPayload = {
-          BannerTitle: payload.bannerTitle,
-          BannerImageUrl: payload.bannerImageUrl,
-          BannerUrl: payload.bannerUrl,
-          DisplayOrder: payload.displayOrder || 0,
-          IsActive: payload.isActive !== undefined ? payload.isActive : true,
-          StartDate: payload.startDate || '',
-          EndDate: payload.endDate || '',
-        };
-        
-        console.log('JSON payload:', jsonPayload);
-        console.log('Sending PUT request to:', `${BASE}/${id}`);
-
-        const r = await apiClient.put(`${BASE}/${id}`, jsonPayload);
-        console.log('Update response:', r.data);
-        return mapToDTO(r.data);
       }
+
+      const r = await apiClient.putMultipart(`${BASE}/${id}`, formData);
+      return mapToDTO(r.data);
     } catch (error: any) {
       console.error('Error updating banner:', error);
       console.error('Error response:', error?.response?.data);
@@ -151,8 +127,8 @@ export const bannerService = {
       console.log('Locking banner with ID:', id);
       console.log('Endpoint:', `${BASE}/${id}/lock`);
       const response = await apiClient.put(`${BASE}/${id}/lock`, {});
-      console.log('Lock response:', response);
-      return response;
+      console.log('Lock response status:', response.status);
+      return;
     } catch (error: any) {
       console.error('Error locking banner:', error);
       console.error('Error details:', {
@@ -169,8 +145,8 @@ export const bannerService = {
       console.log('Unlocking banner with ID:', id);
       console.log('Endpoint:', `${BASE}/${id}/unlock`);
       const response = await apiClient.put(`${BASE}/${id}/unlock`, {});
-      console.log('Unlock response:', response);
-      return response;
+      console.log('Unlock response status:', response.status);
+      return;
     } catch (error: any) {
       console.error('Error unlocking banner:', error);
       console.error('Error details:', {

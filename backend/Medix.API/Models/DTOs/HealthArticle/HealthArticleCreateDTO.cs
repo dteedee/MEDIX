@@ -50,6 +50,7 @@ namespace Medix.API.Models.DTOs.HealthArticle
         [Required(ErrorMessage = "StatusCode is required.")]
        
         public string StatusCode { get; set; } = null!;
+        [FromForm(Name = "PublishedAt")]
 
         public DateTime? PublishedAt { get; set; }
 

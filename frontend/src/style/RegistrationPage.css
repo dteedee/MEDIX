@@ -25,23 +25,26 @@
   box-shadow: 0 40px 100px 0 rgba(33, 150, 243, 0.23);
 }
 
+/* Header section - EXACT COPY from doctor-register.module.css */
 .form-header {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
 .form-header h1 {
-  color: #1565c0;
-  font-size: 38px;
+  color: #1976d2;
+  font-size: 2.6rem;
   font-weight: 800;
-  margin-bottom: 8px;
-  letter-spacing: 1.3px;
+  margin-bottom: 5px;
+  letter-spacing: 1px;
 }
 
 .form-header p {
-  color: #ff0000;
-  font-size: 16px;
-  font-family: 'Be Vietnam Pro', sans-serif;
+  color: #e53935;
+  font-size: 1.1rem;
+  margin-bottom: 0;
+  margin-top: 0;
+  font-weight: 500;
 }
 
 /* Two-column layout */
@@ -524,7 +527,7 @@
   font-weight: 500;
 }
 
-/* Terms section - giống DoctorRegister */
+/* Terms & Conditions - EXACT COPY from doctor-register.module.css */
 .terms-section {
   margin: 30px 0;
   padding: 16px 20px;
@@ -548,7 +551,6 @@
 .terms-text {
   font-size: 13.5px;
   color: #374151;
-  line-height: 1.5;
 }
 
 .terms-link {
@@ -561,59 +563,46 @@
   text-decoration: underline;
 }
 
-.terms-section .error-message {
-  color: #e74c3c;
-  font-size: 12px;
-  margin-top: 8px;
-  display: block;
-}
-
-/* Submit section - giống DoctorRegister */
-.submit-section {
+/* Submit section - EXACT COPY from doctor-register.module.css with higher specificity */
+.registration-form .submit-section {
   text-align: center;
   margin-top: 40px;
 }
 
-.submit-button {
-  background: linear-gradient(135deg, #42a5f5, #1976d2);
-  color: white;
-  border: none;
-  padding: 14px 60px;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  cursor: pointer;
-  box-shadow: 0 10px 24px rgba(66, 165, 245, 0.3);
-  transition: all 0.3s ease;
+.registration-form .btn-submit {
+  background: linear-gradient(135deg, #42a5f5, #1976d2) !important;
+  color: white !important;
+  border: none !important;
+  padding: 14px 60px !important;
+  border-radius: 12px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.6px !important;
+  cursor: pointer !important;
+  box-shadow: 0 10px 24px rgba(66, 165, 245, 0.3) !important;
+  transition: all 0.3s ease !important;
 }
 
-.submit-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #64b5f6, #0d47a1);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(66, 165, 245, 0.4);
+.registration-form .btn-submit:hover {
+  background: linear-gradient(135deg, #64b5f6, #0d47a1) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 28px rgba(66, 165, 245, 0.4) !important;
 }
 
-.submit-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Login link section - giống DoctorRegister */
+/* Login link - EXACT COPY from doctor-register.module.css */
 .login-link-section {
   margin-top: 22px;
   font-size: 14px;
   color: #6b7280;
 }
 
-.login-link-text {
+.login-link {
   color: #1976d2;
   font-weight: 600;
   text-decoration: none;
 }
 
-.login-link-text:hover {
+.login-link:hover {
   text-decoration: underline;
 }
 

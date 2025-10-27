@@ -6,9 +6,7 @@ import registrationService from '../../services/registrationService';
 import { PatientRegistration, BloodType, Gender, RegisterRequestPatient, PatientDTO, ValidationErrors } from '../../types/auth.types';
 import { Gender as GenderEnum } from '../../types/common.types';
 import { validatePatientRegistrationForm, validatePassword, getPasswordStrength } from '../../utils/validation';
-import { Header } from '../../components/layout/Header';
 import '../../style/RegistrationPage.css';
-import Footer from '../../components/layout/Footer';
 
 export const PatientRegister: React.FC = () => {
   // Helper function to validate email format - kiểm tra đuôi và ký tự có dấu
@@ -854,8 +852,6 @@ export const PatientRegister: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Main Header */}
-      <Header />
       
       {/* Main Content */}
       <div className="registration-container">
@@ -1447,69 +1443,54 @@ export const PatientRegister: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Terms & Conditions - giống DoctorRegister */}
-            <div className="form-footer">
-              <div className="terms-section">
-                <div className="checkbox-wrapper">
-                  <input 
-                    type="checkbox" 
-                    id="terms" 
-                    name="agreeTerms"
-                    checked={formData.agreeTerms}
-                    onChange={handleChange}
-                  />
-                  <label htmlFor="terms" className="terms-text">
-                    Tôi đồng ý{' '}
-                    <Link to="/terms" className="terms-link">
-                      Điều khoản dịch vụ
-                    </Link>{' '}
-                    và{' '}
-                    <Link to="/privacy" className="terms-link">
-                      Chính sách bảo mật
-                    </Link>{' '}
-                    của MEDIX. Thông tin y tế của bạn được mã hóa và tuân thủ chuẩn bảo mật y tế.
-                  </label>
-                </div>
-                {validationErrors.agreeTerms && (
-                  <div className="text-danger">
-                    {validationErrors.agreeTerms[0]}
-                  </div>
-                )}
+          {/* Terms & Conditions - Outside 2-column layout, like DoctorRegister */}
+          <div className="terms-section">
+            <div className="checkbox-wrapper">
+              <input 
+                type="checkbox" 
+                id="terms" 
+                name="agreeTerms"
+                checked={formData.agreeTerms}
+                onChange={handleChange}
+              />
+              <label htmlFor="terms" className="terms-text">
+                Tôi đồng ý <a href="#" className="terms-link">Điều khoản dịch vụ</a> và <a href="#" className="terms-link">Chính sách bảo mật</a> của MEDIX. Thông tin y tế của bạn được mã hóa
+                và tuân thủ chuẩn bảo mật y tế.
+              </label>
+            </div>
+            {validationErrors.agreeTerms && (
+              <div className="text-danger">
+                {validationErrors.agreeTerms[0]}
               </div>
+            )}
+          </div>
 
-              {/* Submit Section - giống DoctorRegister */}
-              <div className="submit-section">
-                {error && <div className="error-message" style={{ marginBottom: '16px', fontSize: '14px' }}>{error}</div>}
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="submit-button"
-                >
-                  {isLoading ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                      Đang xử lý...
-                    </>
-                  ) : (
-                    'ĐĂNG KÝ TÀI KHOẢN'
-                  )}
-                </button>
-                
-                <div className="login-link-section">
-                  Bạn đã có tài khoản?{' '}
-                  <Link to="/login" className="login-link-text">
-                    Đăng nhập ngay
-                  </Link>
-                </div>
-              </div>
+          {/* Submit Button - Outside 2-column layout, like DoctorRegister */}
+          <div className="submit-section">
+            {error && <div className="text-danger">{error}</div>}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="btn-submit"
+            >
+              {isLoading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Đang xử lý...
+                </>
+              ) : (
+                'ĐĂNG KÝ TÀI KHOẢN'
+              )}
+            </button>
+            
+            <div className="login-link-section">
+              Bạn đã có tài khoản? <a href="/login" className="login-link">Đăng nhập ngay</a>
             </div>
           </div>
         </form>
-
-    
       </div>
-      <Footer />
     </div>
   );
 };

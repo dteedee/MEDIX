@@ -11,11 +11,51 @@ namespace Medix.API.DataAccess.Repositories.Classification
         {
             _context = context;
         }
-        public async Task<List<Review>> GetReviewsByDoctorAsync(Guid id)
+        public async Task<List<Review>> GetReviewsByDoctorAsync(Guid doctorId)
         {
             return await _context.Reviews
-                .Where(r => r.Appointment.DoctorId == id)
+                .Include(r => r.Appointment)
+                    .ThenInclude(a => a.Doctor)
+                        .ThenInclude(d => d.User)
+                .Include(r => r.Appointment)
+                    .ThenInclude(a => a.Patient)
+                        .ThenInclude(p => p.User)
+                .Where(r => r.Appointment.DoctorId == doctorId)
                 .ToListAsync();
+        }
+
+        public async Task<Review?> GetByAppointmentIdAsync(Guid appointmentId)
+        {
+            return await _context.Reviews
+                .Include(r => r.Appointment)
+                    .ThenInclude(a => a.Doctor)
+                        .ThenInclude(d => d.User)
+                .Include(r => r.Appointment)
+                    .ThenInclude(a => a.Patient)
+                        .ThenInclude(p => p.User)
+                .FirstOrDefaultAsync(r => r.AppointmentId == appointmentId);
+        }
+
+        public async Task AddAsync(Review review)
+        {
+            await _context.Reviews.AddAsync(review);
+        }
+
+        public async Task UpdateAsync(Review review)
+        {
+            _context.Reviews.Update(review);
+            await Task.CompletedTask;
+        }
+
+        public async Task DeleteAsync(Review review)
+        {
+            _context.Reviews.Remove(review);
+            await Task.CompletedTask;
+        }
+
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
         }
     }
 }

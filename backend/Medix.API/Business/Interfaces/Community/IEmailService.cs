@@ -7,6 +7,8 @@ namespace Medix.API.Business.Interfaces.Community
         Task<bool> SendForgotPasswordCodeAsync(string email, string code);
         Task SendPasswordResetEmailAsync(string email, string resetToken);
         Task SendEmailVerificationAsync(string email, string verificationToken);
+                Task<bool> SendNewUserPasswordAsync(string email, string password); // <-- Thêm dòng này
+
     }
 }
 

@@ -1,6 +1,7 @@
 using Medix.API.DataAccess;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.Entities;
+using Medix.API.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medix.API.DataAccess.Repositories.UserManagement
@@ -65,5 +66,17 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
             await CreateAsync(userRole);
             return role;
         }
+        public async Task<RefRole?> GetRoleByDisplayNameAsync(string displayName)
+        {
+            return await _context.RefRoles.FirstOrDefaultAsync(r => r.DisplayName == displayName);
+        }
+
+        public async Task RemoveAllRolesForUserAsync(Guid userId)
+        {
+            var userRoles = _context.UserRoles.Where(ur => ur.UserId == userId);
+            _context.UserRoles.RemoveRange(userRoles);
+            await _context.SaveChangesAsync();
+        }
+
     }
 }

@@ -1,16 +1,33 @@
 export interface DoctorSchedule {
   id: string;
-  doctorId: string;
-  scheduleDate: string; // "2024-10-28T00:00:00"
-  startTime: string; // "08:00:00"
-  endTime: string; // "17:00:00"
-  consultationFee: number;
+  doctorId: string; // Changed from doctorName to match backend consistency
+  dayOfWeek: number;         // 👈 thay vì scheduleDate
+  startTime: string;         // "09:00:00"
+  endTime: string;           // "17:00:00"
   isAvailable: boolean;
 }
 
 export interface CreateSchedulePayload {
-  scheduleDate: string; // "YYYY-MM-DD"
-  startTime: string; // "HH:mm"
-  endTime:string; // "HH:mm"
-  consultationFee: number;
+  dayOfWeek: number;         // 👈 thay vì scheduleDate
+  startTime: string;         // "HH:mm"
+  endTime: string;           // "HH:mm"
+  isAvailable: boolean;      // 👈 thêm trường này vì API có
+}
+
+export interface ScheduleOverride {
+  id: string;
+  doctorId: string;
+  overrideDate: string; // YYYY-MM-DD
+  startTime: string; // HH:mm:ss
+  endTime: string; // HH:mm:ss
+  isAvailable: boolean; // true for extra shift, false for absence
+  reason: string;
+}
+
+export interface CreateScheduleOverridePayload {
+  overrideDate: string; // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  isAvailable: boolean;
+  reason: string;
 }

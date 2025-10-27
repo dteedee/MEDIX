@@ -40,6 +40,7 @@ import { PatientFinance } from './pages/patient/PatientFinance';
 import DoctorDetails from './pages/doctor/DoctorDetails';
 import ScheduleManagement from './pages/doctor/ScheduleManagement';
 import DoctorProfileEdit from './pages/doctor/DoctorProfileEdit';
+import MedicalRecordDetails from './pages/doctor/MedicalRecordDetails'; // New import
 
 // Manager pages
 import ArticleManagement from './pages/manager/ArticleManagement';
@@ -56,7 +57,7 @@ import SettingsPage from './pages/admin/SettingsPage';
 
 // Reader pages
 import ArticleReaderPage from './pages/patient/ArticleReaderPage';
-import ArticleDetailPage from './pages/public/ArticleDetailPage';
+import ArticleDetailPage from './pages/patient/ArticleDetailPage';
 import DoctorBookingList from './pages/patient/DoctorBookingList';
 import ErrorPageWrapper from './pages/error/ErrorPageWrapper';
 
@@ -153,18 +154,19 @@ export function App() {
 
                 {/* ---------- Doctor routes (inside /app) ---------- */}
                 <Route path="doctor/*" element={
-                  <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
+                  // <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
                     <Routes>
-                      <Route index element={<Navigate to="schedules" replace />} />
+                      {/* <Route index element={<Navigate to="schedules" replace />} /> */}
                       <Route path="profile/edit" element={<DoctorProfileEdit />} />
                       <Route path="schedules" element={<ScheduleManagement />} />
+                      <Route path="medical-records/:appointmentId" element={<MedicalRecordDetails />} /> {/* New route */}
                     </Routes>
-                  </ProtectedRoute>
+                  // </ProtectedRoute>
                 } />
 
                 {/* ---------- Reader ---------- */}
                 <Route path="articles" element={<ArticleReaderPage />} />
-                <Route path="articles/:slug" element={<ArticleDetailPage />} />
+                <Route path="articles/:slug" element={<ProtectedRoute><ArticleDetailPage /></ProtectedRoute>} />
 
                 {/* ---------- AI Chat ---------- */}
                 <Route path="ai-chat" element={

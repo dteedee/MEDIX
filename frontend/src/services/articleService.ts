@@ -198,6 +198,17 @@ export const articleService = {
       throw err
     }
   },
+  getHomepageArticles: async (limit = 5): Promise<ArticleDTO[]> => {
+    try {
+      const response = await apiClient.get<ArticleDTO[]>(`${BASE}/homepage`, {
+        params: { limit }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch homepage articles:', error);
+      throw error;
+    }
+  },
  create: async (payload: ArticleFormPayload): Promise<ArticleDTO> => {
     const formData = new FormData();
 
@@ -327,9 +338,12 @@ export const articleService = {
     // and a 4xx status code (e.g., 409 Conflict) if it's not.
     // The `axios` call will automatically throw an error for 4xx/5xx responses,
     // which is caught in the ArticleForm component.
-    await apiClient.get(`${BASE}/check-uniqueness`, { params })
-  }
-  ,
+    await apiClient.get(`${BASE}/check-uniqueness`, { params });
+  },
+  getStatuses: async (): Promise<{ code: string; displayName: string }[]> => {
+    const r = await apiClient.get(`${BASE}/statuses`);
+    return r.data;
+  },
   /**
    * Upload an image file.
    * @param file File to upload

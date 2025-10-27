@@ -344,5 +344,23 @@ public async Task<UserDto> CreateUserAsync(CreateUserDTO createUserDto, string p
             return linkImage;
         }
 
+        public async Task<UserDto> AdminResetPasswordAsync(Guid userId, string newPassword)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException("User not found");
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+            // Tùy chọn: bạn có thể thêm logic để buộc người dùng đổi mật khẩu ở lần đăng nhập tiếp theo
+            // user.MustChangePassword = true;
+
+            await _userRepository.UpdateAsync(user);
+
+            return _mapper.Map<UserDto>(user);
+        }
+
     }
 }

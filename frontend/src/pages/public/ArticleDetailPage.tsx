@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { articleService } from '../../services/articleService';
 import { ArticleDTO } from '../../types/article.types';
+import styles from '../../styles/public/ArticleDetailPage.module.css';
 
 export default function ArticleDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -23,9 +24,10 @@ export default function ArticleDetailPage() {
       try {
         const data = await articleService.getBySlug(slug);
         if (data) {
-          // Check if article is locked
-          if (data.isLocked) {
-            setError('Bài viết không khả dụng.');
+          // Check if the article is published. The backend should already handle this,
+          // but this is an extra layer of protection on the client.
+          if (data.statusCode !== 'PUBLISHED') {
+            setError('Bài viết này không được công khai hoặc không tồn tại.');
             return;
           }
           setArticle(data);
@@ -45,83 +47,52 @@ export default function ArticleDetailPage() {
 
   const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('vi-VN') : 'N/A';
 
-  // --- Inline CSS Styles ---
-  const pageStyle: React.CSSProperties = {
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    backgroundColor: '#fff',
-    color: '#333',
-    lineHeight: 1.7,
-  };
-
-  const containerStyle: React.CSSProperties = {
-    maxWidth: '800px',
-    margin: '40px auto',
-    padding: '0 20px',
-  };
-
-  const headerStyle: React.CSSProperties = {
-    marginBottom: '32px',
-    borderBottom: '1px solid #e5e7eb',
-    paddingBottom: '24px',
-  };
-
-  const titleStyle: React.CSSProperties = {
-    fontSize: '2.5rem',
-    fontWeight: 700,
-    color: '#111827',
-    lineHeight: 1.2,
-    margin: '0 0 16px 0',
-  };
-
-  const metaInfoStyle: React.CSSProperties = {
-    fontSize: '0.9rem',
-    color: '#6b7280',
-  };
-
-  const coverImageStyle: React.CSSProperties = {
-    width: '100%',
-    maxHeight: '450px',
-    objectFit: 'cover',
-    borderRadius: '12px',
-    marginBottom: '32px',
-  };
-
-  const contentStyle: React.CSSProperties = {
-    fontSize: '1.1rem',
-    whiteSpace: 'pre-wrap', // To respect newlines and spacing
-  };
-
-  const backButtonStyle: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '24px',
-    padding: '8px 16px',
-    backgroundColor: '#f3f4f6',
-    color: '#374151',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    textDecoration: 'none',
-  };
-
-  if (loading) return <div style={containerStyle}>Đang tải bài viết...</div>;
-  if (error) return <div style={containerStyle}><h2>Lỗi</h2><p>{error}</p></div>;
-  if (!article) return <div style={containerStyle}><h2>Không tìm thấy bài viết</h2></div>;
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <div className={`${styles.container} ${styles.stateContainer}`}>
+          <div className={styles.loadingSpinner}></div>
+          <p>Đang tải bài viết...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className={styles.page}>
+        <div className={`${styles.container} ${styles.stateContainer}`}>
+          <div className={styles.errorIcon}>&#x26A0;</div>
+          <h2>Lỗi</h2>
+          <p>{error}</p>
+          <button onClick={() => navigate(-1)} className={styles.backButton} style={{ marginTop: '20px' }}>
+            &larr; Quay lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!article) {
+    return <div className={styles.container}><h2>Không tìm thấy bài viết</h2></div>;
+  }
 
   return (
-    <div style={pageStyle}>
-      <div style={containerStyle}>
-        <button onClick={() => navigate(-1)} style={backButtonStyle}>
+    <div className={styles.page}>
+      <div className={styles.container}>
+        <button onClick={() => navigate(-1)} className={styles.backButton}>
           &larr; Quay lại
         </button>
-        <header style={headerStyle}>
-          <h1 style={titleStyle}>{article.title}</h1>
-          <p style={metaInfoStyle}>Tác giả: {article.authorName || 'N/A'} | Ngày đăng: {fmtDate(article.publishedAt ?? article.createdAt)}</p>
+        <header className={styles.header}>
+          <h1 className={styles.title}>{article.title}</h1>
+          <p className={styles.metaInfo}>
+            <span>Tác giả: {article.authorName || 'N/A'}</span>
+            <span>|</span>
+            <span>Ngày đăng: {fmtDate(article.publishedAt ?? article.createdAt)}</span>
+          </p>
         </header>
-        {article.coverImageUrl && <img src={article.coverImageUrl} alt={article.title} style={coverImageStyle} />}
-        <div style={contentStyle} dangerouslySetInnerHTML={{ __html: article.content || '' }}></div>
+        {article.coverImageUrl && <img src={article.coverImageUrl} alt={article.title} className={styles.coverImage} />}
+        <div className={styles.content} dangerouslySetInnerHTML={{ __html: article.content || '' }}></div>
       </div>
     </div>
   );

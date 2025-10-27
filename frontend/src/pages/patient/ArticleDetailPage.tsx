@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { articleService } from '../../services/articleService'
 import { ArticleDTO } from '../../types/article.types'
 import '../../styles/ArticleDetailPage.css'
@@ -30,19 +30,8 @@ export default function ArticleDetailPage() {
   useEffect(() => {
     if (!slug) return
 
-    const viewedArticles = JSON.parse(localStorage.getItem('viewedArticles') || '[]');
-    const hasViewed = viewedArticles.includes(slug);
-
-    if (!hasViewed) {
-      // Use fetch to call the view increment endpoint and handle session storage on success
-      fetch(`/api/HealthArticle/${slug}/view`, { method: 'POST' })
-        .then(response => {
-          if (response.ok) {
-            localStorage.setItem('viewedArticles', JSON.stringify([...viewedArticles, slug]));
-          }
-        })
-        .catch((err: any) => console.error("Failed to increment view count:", err));
-    }
+    // The view count is now handled by the backend when GetBySlug is called.
+    // The client-side POST call is no longer needed.
   }, [slug]);
 
   // This effect fetches the article data
@@ -59,7 +48,7 @@ export default function ArticleDetailPage() {
           }
           setArticle(articleData);
           setLikeCount(articleData.likeCount ?? 0);
-          setIsLiked(articleData.isLikedByUser || false); // Use the flag from the API
+          // setIsLiked(articleData.isLikedByUser || false); // Use the flag from the API
         } else {
           setError('Article not found.')
         }

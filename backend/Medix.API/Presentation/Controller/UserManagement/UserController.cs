@@ -27,8 +27,8 @@ namespace Medix.API.Presentation.Controller.UserManagement
         private readonly IEmailService _emailService;
         private readonly ILogger<UserController> _logger;
         private readonly IPatientService _patientService;
-       
-        public UserController(ILogger<UserController> logger, IUserService userService, MedixContext context, IEmailService emailService,IPatientService patientService)
+
+        public UserController(ILogger<UserController> logger, IUserService userService, MedixContext context, IEmailService emailService, IPatientService patientService)
         {
             _logger = logger;
             _userService = userService;
@@ -209,7 +209,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 // 3. Send the temporary password to the user's email
                 try
                 {
-                    await _emailService.SendNewUserPasswordAsync(userDto.Email, temporaryPassword);
+                    await _emailService.SendNewUserPasswordAsync(userDto.Email, userDto.UserName, temporaryPassword);
                     _logger.LogInformation("Successfully sent temporary password to {Email}", userDto.Email);
                 }
                 catch (Exception emailEx)
@@ -283,6 +283,35 @@ namespace Medix.API.Presentation.Controller.UserManagement
             return Ok(result);
         }
 
+        [HttpPost("{id}/admin-reset-password")]
+        //[Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AdminResetPassword(Guid id)
+        {
+            try
+            {
+                // 1. Generate a new temporary password
+                var temporaryPassword = GenerateRandomPassword();
+
+                // 2. Update the user's password in the database
+                // This requires a method in IUserService to update the password hash.
+                var updatedUser = await _userService.AdminResetPasswordAsync(id, temporaryPassword);
+
+                // 3. Send the new password via email using the existing service method
+                await _emailService.SendNewUserPasswordAsync(updatedUser.Email, updatedUser.UserName, temporaryPassword);
+
+                return Ok(new { message = "Mật khẩu đã được đặt lại và gửi đến email của người dùng." });
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi quản trị viên đặt lại mật khẩu cho người dùng {UserId}", id);
+                return StatusCode(500, new { message = "Đã xảy ra lỗi trong quá trình đặt lại mật khẩu." });
+            }
+        }
+
         private string GenerateRandomPassword(int length = 12)
         {
             const string upper = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
@@ -303,7 +332,17 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 password[i] = allChars[random.Next(allChars.Length)];
             }
 
-            return new string(password.OrderBy(x => random.Next()).ToArray());
+            // Xáo trộn mảng mật khẩu để tránh các ký tự đầu tiên luôn theo một thứ tự cố định
+            // (ví dụ: luôn bắt đầu bằng chữ hoa, chữ thường, số, ký tự đặc biệt)
+            // Đây là một dạng của thuật toán Fisher-Yates shuffle.
+            for (int i = password.Length - 1; i > 0; i--)
+            {
+                int j = random.Next(i + 1);
+                // Hoán đổi vị trí
+                (password[i], password[j]) = (password[j], password[i]);
+            }
+
+            return new string(password);
         }
     }
 }

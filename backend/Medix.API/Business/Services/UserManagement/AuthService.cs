@@ -54,13 +54,34 @@ namespace Medix.API.Business.Services.UserManagement
                 }
             }
 
-            if (user != null && BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash))
+            // Kiểm tra tài khoản có tồn tại không
+            if (user == null)
             {
-                // Kiểm tra tài khoản có bị khóa không
-                if (user.LockoutEnabled)
-                {
-                    throw new UnauthorizedException("Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ");
-                }
+                throw new UnauthorizedException("Tên đăng nhập/Email hoặc mật khẩu không đúng");
+            }
+
+            // Kiểm tra tài khoản có bị khóa vĩnh viễn không
+            if (user.LockoutEnabled)
+            {
+                throw new UnauthorizedException("Tài khoản bị khóa vĩnh viễn, vui lòng liên hệ bộ phận hỗ trợ");
+            }
+
+            // Kiểm tra tài khoản có đang trong thời gian khóa tạm thời không
+            if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
+            {
+                var remainingTime = user.LockoutEnd.Value - DateTime.UtcNow;
+                var minutes = (int)remainingTime.TotalMinutes;
+                var seconds = remainingTime.Seconds;
+                throw new UnauthorizedException($"Tài khoản của bạn đã bị khóa trong {minutes} phút {seconds} giây. Hãy thử lại sau khoảng thời gian này hoặc liên hệ hỗ trợ. Thời gian còn lại: {minutes} phút {seconds} giây.");
+            }
+
+            // Kiểm tra mật khẩu
+            if (BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash))
+            {
+                // Đăng nhập thành công - reset AccessFailedCount
+                user.AccessFailedCount = 0;
+                user.LockoutEnd = null;
+                await _userRepository.UpdateAsync(user);
 
                 // Lấy role từ bảng UserRoles (ưu tiên DB)
                 var roleEntity = await _userRoleRepository.GetByIdAsync(user.Id);
@@ -100,8 +121,44 @@ namespace Medix.API.Business.Services.UserManagement
                     }
                 };
             }
+            else
+            {
+                // Mật khẩu sai - tăng AccessFailedCount và áp dụng logic khóa tài khoản
+                await HandleFailedLoginAsync(user);
+                throw new UnauthorizedException("Tên đăng nhập/Email hoặc mật khẩu không đúng");
+            }
+        }
 
-            throw new UnauthorizedException("Tên đăng nhập/Email hoặc mật khẩu không đúng");
+        // =====================
+        // 🔹 HANDLE FAILED LOGIN
+        // =====================
+        private async Task HandleFailedLoginAsync(User user)
+        {
+            user.AccessFailedCount++;
+            
+            // Logic khóa tài khoản theo yêu cầu:
+            // Lần 5: khóa 1 phút
+            // Lần 6: khóa 3 phút  
+            // Lần 7: khóa 5 phút
+            // Lần 8: khóa vĩnh viễn
+            switch (user.AccessFailedCount)
+            {
+                case 5:
+                    user.LockoutEnd = DateTime.UtcNow.AddMinutes(1);
+                    break;
+                case 6:
+                    user.LockoutEnd = DateTime.UtcNow.AddMinutes(3);
+                    break;
+                case 7:
+                    user.LockoutEnd = DateTime.UtcNow.AddMinutes(5);
+                    break;
+                case 8:
+                    user.LockoutEnabled = true;
+                    user.LockoutEnd = null; // Khóa vĩnh viễn
+                    break;
+            }
+
+            await _userRepository.UpdateAsync(user);
         }
 
         // =====================
@@ -277,11 +334,25 @@ namespace Medix.API.Business.Services.UserManagement
                 existingUser.Role = roleEntity?.RoleCode ?? "Patient";
             }
 
-            // Kiểm tra tài khoản có bị khóa không (cho Google login)
+            // Kiểm tra tài khoản có bị khóa vĩnh viễn không (cho Google login)
             if (existingUser.LockoutEnabled)
             {
-                throw new UnauthorizedException("Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ");
+                throw new UnauthorizedException("Tài khoản bị khóa vĩnh viễn, vui lòng liên hệ bộ phận hỗ trợ");
             }
+
+            // Kiểm tra tài khoản có đang trong thời gian khóa tạm thời không (cho Google login)
+            if (existingUser.LockoutEnd.HasValue && existingUser.LockoutEnd.Value > DateTime.UtcNow)
+            {
+                var remainingTime = existingUser.LockoutEnd.Value - DateTime.UtcNow;
+                var minutes = (int)remainingTime.TotalMinutes;
+                var seconds = remainingTime.Seconds;
+                throw new UnauthorizedException($"Tài khoản của bạn đã bị khóa trong {minutes} phút {seconds} giây. Hãy thử lại sau khoảng thời gian này hoặc liên hệ hỗ trợ. Thời gian còn lại: {minutes} phút {seconds} giây.");
+            }
+
+            // Google login thành công - reset AccessFailedCount
+            existingUser.AccessFailedCount = 0;
+            existingUser.LockoutEnd = null;
+            await _userRepository.UpdateAsync(existingUser);
 
             var accessToken = _jwtService.GenerateAccessToken(existingUser, new List<string> { existingUser.Role });
             var refreshToken = _jwtService.GenerateRefreshToken();

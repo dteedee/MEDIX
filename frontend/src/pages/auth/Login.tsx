@@ -23,10 +23,46 @@ const Login: React.FC = () => {
   const [googleReady, setGoogleReady] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [lockoutMessage, setLockoutMessage] = useState('');
+  const [lockoutTimeLeft, setLockoutTimeLeft] = useState<{ minutes: number; seconds: number } | null>(null);
 
   // Regex kiểm tra email hợp lệ
   const isValidEmail = (text: string) =>
     /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(text);
+
+  // Parse lockout message để lấy thời gian còn lại
+  const parseLockoutMessage = (message: string) => {
+    const timeMatch = message.match(/Thời gian còn lại: (\d+) phút (\d+) giây/);
+    if (timeMatch) {
+      const minutes = parseInt(timeMatch[1]);
+      const seconds = parseInt(timeMatch[2]);
+      return { minutes, seconds };
+    }
+    return null;
+  };
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!lockoutTimeLeft) return;
+
+    const timer = setInterval(() => {
+      setLockoutTimeLeft(prev => {
+        if (!prev) return null;
+        
+        if (prev.seconds > 0) {
+          return { ...prev, seconds: prev.seconds - 1 };
+        } else if (prev.minutes > 0) {
+          return { minutes: prev.minutes - 1, seconds: 59 };
+        } else {
+          // Hết thời gian khóa
+          setLockoutMessage('');
+          return null;
+        }
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [lockoutTimeLeft]);
 
   // Lấy thông tin ghi nhớ từ localStorage
   useEffect(() => {
@@ -105,8 +141,16 @@ const Login: React.FC = () => {
     } catch (err: any) {
       const message = err?.message || 'Đăng nhập Google thất bại';
       
-      if (message.includes('Tài khoản bị khóa')) {
-        showToast('Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ', 'error');
+      if (message.includes('Tài khoản bị khóa vĩnh viễn')) {
+        showToast('Tài khoản bị khóa vĩnh viễn, vui lòng liên hệ bộ phận hỗ trợ', 'error');
+      } else if (message.includes('Tài khoản của bạn đã bị khóa trong')) {
+        // Xử lý thông báo khóa tạm thời cho Google login
+        setLockoutMessage(message);
+        const timeLeft = parseLockoutMessage(message);
+        if (timeLeft) {
+          setLockoutTimeLeft(timeLeft);
+        }
+        showToast(message, 'error');
       } else {
         showToast(message, 'error');
       }
@@ -163,8 +207,16 @@ const Login: React.FC = () => {
         message.includes('Tên đăng nhập/Email hoặc mật khẩu') ||
         message.toLowerCase().includes('unauthorized')
       ) {
-        if (message.includes('Tài khoản bị khóa')) {
-          showToast('Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ', 'error');
+        if (message.includes('Tài khoản bị khóa vĩnh viễn')) {
+          showToast('Tài khoản bị khóa vĩnh viễn, vui lòng liên hệ bộ phận hỗ trợ', 'error');
+        } else if (message.includes('Tài khoản của bạn đã bị khóa trong')) {
+          // Xử lý thông báo khóa tạm thời
+          setLockoutMessage(message);
+          const timeLeft = parseLockoutMessage(message);
+          if (timeLeft) {
+            setLockoutTimeLeft(timeLeft);
+          }
+          showToast(message, 'error');
         } else {
           showToast('Sai tên đăng nhập/email hoặc mật khẩu, vui lòng kiểm tra lại', 'error');
         }
@@ -238,6 +290,32 @@ const Login: React.FC = () => {
               <h2>Đăng nhập</h2>
               <p>Chào mừng bạn trở lại!</p>
             </div>
+
+            {/* Lockout Message */}
+            {lockoutMessage && (
+              <div className={styles["lockout-message"]}>
+                <div className={styles["lockout-icon"]}>
+                  <i className="bi bi-shield-exclamation"></i>
+                </div>
+                <div className={styles["lockout-content"]}>
+                  <p className={styles["lockout-text"]}>
+                    {lockoutMessage.split('. Hãy thử lại')[0]}.
+                  </p>
+                  {lockoutTimeLeft && (
+                    <div className={styles["countdown-timer"]}>
+                      <span className={styles["countdown-label"]}>Thời gian còn lại:</span>
+                      <span className={styles["countdown-time"]}>
+                        {lockoutTimeLeft.minutes.toString().padStart(2, '0')}:
+                        {lockoutTimeLeft.seconds.toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                  )}
+                  <p className={styles["lockout-help"]}>
+                    Hãy thử lại sau khoảng thời gian này hoặc liên hệ hỗ trợ.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit}>
               {/* Email / Username */}

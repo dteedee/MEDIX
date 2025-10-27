@@ -66,6 +66,9 @@ export interface User {
   isProfileCompleted: boolean;
   isTemporaryUsername?: boolean;
   createdAt: string;
+  lockoutEnd?: string;
+  lockoutEnabled?: boolean;
+  accessFailedCount?: number;
 }
 
 export interface ApiError {

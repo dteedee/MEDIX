@@ -454,6 +454,44 @@
     color: #1976d2;
     text-decoration: underline;
   }
+
+  /* Register Dropdown */
+  .btn-register {
+    color: #667eea !important;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s;
+    display: inline-block;
+    margin-left: 4px;
+  }
+  
+  .btn-register:hover {
+    color: #1976d2 !important;
+    text-decoration: underline;
+  }
+
+  .register-dropdown {
+    min-width: 180px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 8px 0;
+    margin-top: 4px;
+  }
+
+  .register-dropdown .dropdown-item {
+    padding: 8px 16px;
+    font-size: 14px;
+    color: #374151;
+    text-decoration: none;
+    display: block;
+    transition: background-color 0.2s;
+  }
+
+  .register-dropdown .dropdown-item:hover {
+    background-color: #f3f4f6;
+    color: #1976d2;
+  }
   
   /* Responsive Design */
   @media (max-width: 1024px) {
@@ -509,5 +547,117 @@
     .input-group input,
     .btn-login {
       padding: 12px 14px;
+    }
+  }
+
+  /* Lockout Message Styles */
+  .lockout-message {
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+    border: 2px solid #f44336;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    animation: slideInDown 0.5s ease-out;
+  }
+
+  .lockout-icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    background: #f44336;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+  }
+
+  .lockout-content {
+    flex: 1;
+  }
+
+  .lockout-text {
+    color: #d32f2f;
+    font-weight: 600;
+    font-size: 16px;
+    margin: 0 0 12px 0;
+    line-height: 1.4;
+  }
+
+  .countdown-timer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: rgba(244, 67, 54, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(244, 67, 54, 0.2);
+  }
+
+  .countdown-label {
+    color: #d32f2f;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .countdown-time {
+    color: #d32f2f;
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    background: rgba(244, 67, 54, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(244, 67, 54, 0.3);
+  }
+
+  .lockout-help {
+    color: #666;
+    font-size: 14px;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  @keyframes slideInDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Responsive lockout message */
+  @media (max-width: 640px) {
+    .lockout-message {
+      padding: 16px;
+      gap: 12px;
+    }
+
+    .lockout-icon {
+      width: 40px;
+      height: 40px;
+      font-size: 20px;
+    }
+
+    .lockout-text {
+      font-size: 14px;
+    }
+
+    .countdown-timer {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    .countdown-time {
+      font-size: 16px;
     }
   }

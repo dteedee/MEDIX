@@ -8,6 +8,7 @@ class DoctorProfileService {
             params: {
                 page: query.page,
                 searchTerm: query.searchTerm,
+                pageSize: query.pageSize,
             },
             headers: {
                 Authorization: token ? `Bearer ${token}` : '',

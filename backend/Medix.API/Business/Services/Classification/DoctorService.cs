@@ -4,10 +4,10 @@ using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.Doctor;
-using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
-using static Medix.API.Models.DTOs.DoctorBookinDto;
 using Medix.API.Models.Enums;
+using Medix.API.Business.Helper;
+using Medix.API.Business.Interfaces.Community;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -18,12 +18,14 @@ namespace Medix.API.Business.Services.Classification
         private readonly IReviewRepository _reviewRepository;
         private readonly MedixContext _context;
         private readonly IDoctorScheduleRepository _doctorScheduleRepository;
+        private readonly IEmailService _emailService;
 
         private readonly IServiceTierRepository _serviceTierRepo;
         private readonly IServiceTierRepository _serviceTierRepository;
 
         public DoctorService(IDoctorRepository doctorRepository, IUserRepository userRepository,
-            MedixContext context, IReviewRepository reviewRepository, IServiceTierRepository serviceTierRepository, IServiceTierRepository serviceTierRepo, IDoctorScheduleRepository doctorScheduleRepository)
+            MedixContext context, IReviewRepository reviewRepository, IServiceTierRepository serviceTierRepository, IServiceTierRepository serviceTierRepo, IDoctorScheduleRepository doctorScheduleRepository,
+            IEmailService emailService)
         {
             _doctorRepository = doctorRepository;
             _userRepository = userRepository;
@@ -32,6 +34,7 @@ namespace Medix.API.Business.Services.Classification
             _serviceTierRepository = serviceTierRepository;
             _serviceTierRepo = serviceTierRepo;
             _doctorScheduleRepository = doctorScheduleRepository;
+            _emailService = emailService;
         }
 
 
@@ -205,7 +208,8 @@ namespace Medix.API.Business.Services.Classification
             }
 
             var profileDto = new DoctorProfileDto
-            { consulationFee =doctor.ConsultationFee,
+            {
+                consulationFee = doctor.ConsultationFee,
                 FullName = doctor.User.FullName,
                 AverageRating = reviews.Count > 0
                     ? Math.Round((decimal)reviews.Average(r => r.Rating), 1)
@@ -213,7 +217,7 @@ namespace Medix.API.Business.Services.Classification
                 Specialization = doctor.Specialization.Name,
                 Biography = doctor.Bio,
                 Education = DoctorDegree.GetDescription(doctor.Education),
-                AvatarUrl = doctor.User.AvatarUrl, 
+                AvatarUrl = doctor.User.AvatarUrl,
                 NumberOfReviews = reviews.Count,
                 RatingByStar = ratingByStar,
             };
@@ -226,7 +230,7 @@ namespace Medix.API.Business.Services.Classification
                     Date = r.CreatedAt.ToString("dd/MM/yyyy"),
                 })
                 .Take(4)
-                .ToList(); 
+                .ToList();
             profileDto.Schedules = schedule
                 .Select(s => new DoctorScheduleDto
                 {
@@ -240,6 +244,94 @@ namespace Medix.API.Business.Services.Classification
                 .ToList();
 
             return profileDto;
+        }
+
+        public async Task<PagedList<Doctor>> GetPendingDoctorsAsync(DoctorQuery query)
+        {
+            return await _doctorRepository.GetPendingDoctorsAsync(query);
+        }
+
+        public async Task ReviewDoctorProfile(DoctorProfileReviewRequest request, Guid doctorId)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId) ?? throw new Exception("Doctor not found");
+            try
+            {
+                if (request.IsApproved)
+                {
+                    var newPassword = PasswordGenerator.Generate();
+                    var passwordHashed = BCrypt.Net.BCrypt.HashPassword(newPassword);
+
+                    doctor.User.PasswordHash = passwordHashed;
+                    doctor.Education = request.Education;
+                    doctor.User.Status = 1; // Active
+
+                    await _doctorRepository.UpdateDoctorAsync(doctor);
+                    var emailBody = GetAcceptEmailBody(newPassword, doctor.User.FullName);
+                    if (!await _emailService.SendEmailAsync(doctor.User.Email, "Phê duyệt hồ sơ bác sĩ", emailBody))
+                    {
+                        throw new Exception("Failed to send approval email");
+                    }
+                }
+                else
+                {
+                    doctor.User.Status = 3; // Rejected
+                    await _doctorRepository.UpdateDoctorAsync(doctor);
+
+                    var emailBody = GetRejectEmailBody(request.RejectReason ?? "Không có lý do cụ thể", doctor.User.FullName);
+                    if (!await _emailService.SendEmailAsync(doctor.User.Email, "Từ chối hồ sơ bác sĩ", emailBody))
+                    {
+                        throw new Exception("Failed to send rejection email");
+                    }
+                }
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public Task<PagedList<Doctor>> GetReviewedDoctorsAsync(DoctorQuery query) => _doctorRepository.GetReviewedDoctorsAsync(query);
+
+        public async Task<Doctor?> GetDoctorByIdAsync(Guid id) => await _doctorRepository.GetDoctorByIdAsync(id);
+
+        public static string GetAcceptEmailBody(string newPassword, string fullName)
+        {
+            return $@"
+                <p>Bác sĩ {fullName} thân mến,</p>
+                <p>Hồ sơ bác sĩ của bạn đã được phê duyệt thành công. Chúng tôi rất vui mừng được chào đón bạn đến với nền tảng Medix.</p>
+
+                <p>Vui lòng sử dụng mật khẩu dưới đây để đăng nhập vào hệ thống:</p>
+
+                <div style=""margin: 1em 0; padding: 1em; border-radius: 8px; background-color: #f0f4f8; border: 1px solid #d0d7de; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Segoe UI', sans-serif;"">
+                  <label style=""display: block; font-weight: 600; font-size: 1.1em; color: #333; margin-bottom: 0.5em;"">
+                    🔐 Mật khẩu đăng nhập:
+                  </label>
+                  <div style=""display: inline-block; padding: 0.75em 1.5em; font-size: 1.4em; font-weight: bold; color: #2c3e50; background-color: #ffffff; border: 2px solid #4da6ff; border-radius: 6px; letter-spacing: 2px;"">
+                    {{newPassword}}
+                  </div>
+                </div>
+
+                <p>Vui lòng đổi mật khẩu sau khi đăng nhập để đảm bảo bảo mật thông tin cá nhân.</p>
+                <p>Trân trọng,<br/>Đội ngũ Medix</p>
+            ";
+        }
+
+        private static string GetRejectEmailBody(string reason, string fullName)
+        {
+            return $@"
+                <p>Bác sĩ {fullName} thân mến,</p>
+                <p>Chúng tôi rất tiếc phải thông báo rằng hồ sơ bác sĩ của bạn chưa được phê duyệt. Sau khi xem xét kỹ lưỡng, chúng tôi nhận thấy hồ sơ của bạn hiện chưa đáp ứng đầy đủ các tiêu chuẩn cần thiết.</p>
+
+                <p><strong>Lý do từ quản lý:</strong> {reason}</p>
+
+                <p>Nếu bạn có bất kỳ thắc mắc nào hoặc không hài lòng với quyết định này, xin vui lòng liên hệ với đội ngũ hỗ trợ của chúng tôi. Trong trường hợp bạn muốn thử lại, vui lòng tiến hành đăng ký lại để cập nhật thông tin và hoàn thiện hồ sơ.</p>
+
+                <p>Chân thành cảm ơn sự thông cảm của bạn.</p>
+                <p>Trân trọng,<br/>Đội ngũ Medix</p>
+            ";
         }
     }
 }

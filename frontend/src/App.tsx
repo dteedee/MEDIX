@@ -65,6 +65,8 @@ import ErrorPageWrapper from './pages/error/ErrorPageWrapper';
 import PrivacyPolicy from './pages/public/PrivacyPolicy';
 import TermsOfService from './pages/public/TermsOfService';
 import AboutUs from './pages/public/AboutUs';
+import DoctorProfileList from './pages/manager/DoctorProfileList';
+import DoctorProfileDetails from './pages/manager/DoctorProfileDetails';
 
 export function App() {
   return (
@@ -72,85 +74,87 @@ export function App() {
       <AuthProvider>
         <ToastProvider>
           <Router>
-          <div className="min-h-screen w-full flex flex-col">
-            <Routes>
-              <Route path="/error/:code" element={<ErrorPageWrapper />} />
+            <div className="min-h-screen w-full flex flex-col">
+              <Routes>
+                <Route path="/error/:code" element={<ErrorPageWrapper />} />
 
-              {/* ---------- Public routes ---------- */}
-              <Route element={<AuthLayout />}>
-                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                <Route path="/patient-register" element={<PublicRoute><PatientRegister /></PublicRoute>} />
-                <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
-                <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
-                <Route path="/auth-status" element={<PublicRoute><AuthStatus /></PublicRoute>} />
-                <Route path="/doctor/register" element={<PublicRoute><DoctorRegister /></PublicRoute>} />
-              </Route>
-
-              {/* ---------- Change password route ---------- */}
-              <Route path="/change-password" element={<ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} />} />
-
-              <Route path="/doctor/details/:username" element={<DoctorDetails />} />
-
-              {/* ---------- Public pages with header/footer ---------- */}
-              <Route element={<PublicLayout />}>
-                <Route index element={<HomePage />} />
-                <Route path="/doctors" element={<DoctorBookingList />} />
-                <Route path="/privacy" element={<PrivacyPolicy />} />
-                <Route path="/terms" element={<TermsOfService />} />
-                <Route path="/about" element={<AboutUs />} />
-              </Route>
-
-              {/* ---------- Change password route (Protected) ---------- */}
-              <Route path="/change-password" element={<ProtectedRoute><ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} /></ProtectedRoute>} />
-
-              {/* ---------- Main app layout ---------- */}
-              <Route path="/app" element={<MainLayout />}>
-                <Route path="dashboard" element={
-                  <ProtectedRoute>
-                    <DashboardRedirect />
-                  </ProtectedRoute>
-                } />
-
-                {/* ---------- Admin routes ---------- */}
-                <Route path="admin/*" element={<AdminLayout />}>
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="users" element={<UserList />} />
-                  <Route path="users/new" element={<UserEditPage />} />
-                  <Route path="users/edit/:id" element={<UserEditPage />} />
-                  <Route path="tracking" element={<TrackingPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
+                {/* ---------- Public routes ---------- */}
+                <Route element={<AuthLayout />}>
+                  <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                  <Route path="/patient-register" element={<PublicRoute><PatientRegister /></PublicRoute>} />
+                  <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+                  <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+                  <Route path="/auth-status" element={<PublicRoute><AuthStatus /></PublicRoute>} />
+                  <Route path="/doctor/register" element={<PublicRoute><DoctorRegister /></PublicRoute>} />
                 </Route>
 
-                {/* ---------- Manager routes ---------- */}
-                <Route path="manager/*" element={
-                  <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
-                    <ManagerLayout />
-                  </ProtectedRoute>
-                }>
-                  <Route index element={<Navigate to="dashboard" replace />} />
-                  <Route path="dashboard" element={<ManageDashboard />} />
-                  <Route path="doctors" element={<DoctorManagement />} />
-                  <Route path="reports" element={<ReportsAndAnalytics />} />
-                  <Route path="articles" element={<ArticleManagement />} />
-                  <Route path="banners" element={<BannerManagement />} />
-                  <Route path="services" element={<ServicePackageManagement />} />
-                  <Route path="commissions" element={<CommissionManagement />} />
-                  <Route path="feedback" element={<FeedbackManagement />} />
+                {/* ---------- Change password route ---------- */}
+                <Route path="/change-password" element={<ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} />} />
+
+                <Route path="/doctor/details/:username" element={<DoctorDetails />} />
+
+                {/* ---------- Public pages with header/footer ---------- */}
+                <Route element={<PublicLayout />}>
+                  <Route index element={<HomePage />} />
+                  <Route path="/doctors" element={<DoctorBookingList />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/about" element={<AboutUs />} />
                 </Route>
 
-                {/* ---------- Patient routes ---------- */}
-                <Route path="patient/*" element={
-                  <ProtectedRoute requiredRoles={[UserRole.PATIENT]}>
-                    <PatientLayout />
-                  </ProtectedRoute>
-                }>
-                  <Route index element={<Navigate to="dashboard" replace />} />
-                  <Route path="dashboard" element={<PatientDashboard />} />
-                  <Route path="profile" element={<PatientProfile />} />
-                  <Route path="appointments" element={<PatientAppointments />} />
-                  <Route path="results" element={<PatientResults />} />
-                  <Route path="finance" element={<PatientFinance />} />
-                </Route>
+                {/* ---------- Change password route (Protected) ---------- */}
+                <Route path="/change-password" element={<ProtectedRoute><ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} /></ProtectedRoute>} />
+
+                {/* ---------- Main app layout ---------- */}
+                <Route path="/app" element={<MainLayout />}>
+                  <Route path="dashboard" element={
+                    <ProtectedRoute>
+                      <DashboardRedirect />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* ---------- Admin routes ---------- */}
+                  <Route path="admin/*" element={<AdminLayout />}>
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="users" element={<UserList />} />
+                    <Route path="users/new" element={<UserEditPage />} />
+                    <Route path="users/edit/:id" element={<UserEditPage />} />
+                    <Route path="tracking" element={<TrackingPage />} />
+                    <Route path="settings" element={<SettingsPage />} />
+                  </Route>
+
+                  {/* ---------- Manager routes ---------- */}
+                  <Route path="manager/*" element={
+                    <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
+                      <ManagerLayout />
+                    </ProtectedRoute>
+                  }>
+                    <Route index element={<Navigate to="dashboard" replace />} />
+                    <Route path="dashboard" element={<ManageDashboard />} />
+                    <Route path="doctors" element={<DoctorManagement />} />
+                    <Route path="reports" element={<ReportsAndAnalytics />} />
+                    <Route path="articles" element={<ArticleManagement />} />
+                    <Route path="banners" element={<BannerManagement />} />
+                    <Route path="services" element={<ServicePackageManagement />} />
+                    <Route path="commissions" element={<CommissionManagement />} />
+                    <Route path="feedback" element={<FeedbackManagement />} />
+                    <Route path='doctor-profiles' element={<DoctorProfileList />} />
+                    <Route path='doctor-profiles/details/:id' element={<DoctorProfileDetails />} />
+                  </Route>
+
+                  {/* ---------- Patient routes ---------- */}
+                  <Route path="patient/*" element={
+                    <ProtectedRoute requiredRoles={[UserRole.PATIENT]}>
+                      <PatientLayout />
+                    </ProtectedRoute>
+                  }>
+                    <Route index element={<Navigate to="dashboard" replace />} />
+                    <Route path="dashboard" element={<PatientDashboard />} />
+                    <Route path="profile" element={<PatientProfile />} />
+                    <Route path="appointments" element={<PatientAppointments />} />
+                    <Route path="results" element={<PatientResults />} />
+                    <Route path="finance" element={<PatientFinance />} />
+                  </Route>
 
                 {/* ---------- Doctor routes (inside /app) ---------- */}
                 <Route path="doctor/*" element={
@@ -168,20 +172,20 @@ export function App() {
                 <Route path="articles" element={<ArticleReaderPage />} />
                 <Route path="articles/:slug" element={<ProtectedRoute><ArticleDetailPage /></ProtectedRoute>} />
 
-                {/* ---------- AI Chat ---------- */}
-                <Route path="ai-chat" element={
-                  <ProtectedRoute>
-                    <AIChatBot />
-                  </ProtectedRoute>
-                } />
+                  {/* ---------- AI Chat ---------- */}
+                  <Route path="ai-chat" element={
+                    <ProtectedRoute>
+                      <AIChatBot />
+                    </ProtectedRoute>
+                  } />
 
-                {/* ---------- Error pages ---------- */}
-                <Route path="unauthorized" element={<Unauthorized />} />
-                <Route path="*" element={<NotFound />} />
-              </Route>
-            </Routes>
-          </div>
-        </Router>
+                  {/* ---------- Error pages ---------- */}
+                  <Route path="unauthorized" element={<Unauthorized />} />
+                  <Route path="*" element={<NotFound />} />
+                </Route>
+              </Routes>
+            </div>
+          </Router>
         </ToastProvider>
       </AuthProvider>
     </LanguageProvider>

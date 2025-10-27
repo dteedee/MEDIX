@@ -130,3 +130,39 @@ export interface ServiceTierWithPaginatedDoctorsDto {
   description: string;
   doctors: PaginatedListDto<DoctorInTier>;
 }
+
+export interface DoctorRegisterProfileList {
+  totalPages: number;
+  doctors: DoctorRegisterProfile[];
+}
+
+export interface DoctorQuery {
+  page: number;
+  searchTerm: string;
+  pageSize: number;
+}
+
+export interface DoctorRegisterProfileDetails {
+  id: string;
+  fullName: string;
+  userName: string;
+  dob: string;
+  gender: string;
+  identificationNumber: string;
+  email: string;
+  phoneNumber: string;
+  specialization: string;
+  licenseUrl: string;
+  licenseNumber: string;
+  bio: string;
+  education: string;
+  yearsOfExperience: number;
+}
+
+export interface DoctorRegisterProfile {
+  id: string;
+  fullName: string;
+  email: string;
+  specialization: string;
+  createdAt: string;
+}

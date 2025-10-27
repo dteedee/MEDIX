@@ -6,6 +6,8 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { PageLoader } from '../../components/ui';
+import { Header } from '../../components/layout/Header';
+import Footer from '../../components/layout/Footer';
 
 export default function DoctorProfileEdit() {
 
@@ -265,6 +267,19 @@ export default function DoctorProfileEdit() {
         validateField(name, value);
     };
 
+    const validateNumber = (input: string) => {
+        // Remove any non-digit characters
+        return input.replace(/[^0-9]/g, '');
+    };
+
+    const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value;
+        const { name, value } = e.target;
+        const sanitized = validateNumber(raw);
+        setFormData((prev: any) => ({ ...prev, [name]: sanitized }));
+        validateField(name, sanitized);
+    };
+
     if (pageLoading) return <PageLoader />;
 
     if (errorCode) {
@@ -274,6 +289,7 @@ export default function DoctorProfileEdit() {
 
     return (
         <>
+            <Header />
             <div className={styles["main-container"]}>
                 {/* Content */}
                 <main className={styles["content"]}>
@@ -383,16 +399,17 @@ export default function DoctorProfileEdit() {
                                                 target.value = target.value.slice(0, 10);
                                             }
                                         }}
-                                        type="number"
+                                        type="text"
                                         className={`${styles["form-input"]} form-control ${errors.PhoneNumber?.[0]
                                             ? 'is-invalid'
                                             : formData.phoneNumber?.trim()
                                                 ? 'is-valid'
                                                 : ''
                                             }`}
-                                        onChange={handleChange}
+                                        onChange={handleNumberChange}
                                         defaultValue={profileDetails?.phoneNumber}
-                                        name='phoneNumber' />
+                                        name='phoneNumber'
+                                        value={formData.phoneNumber} />
                                     {errors.PhoneNumber?.[0] && (
                                         <div className={styles["form-error"]}>{errors.PhoneNumber[0]}</div>
                                     )}
@@ -439,8 +456,9 @@ export default function DoctorProfileEdit() {
                                                 ? 'is-valid'
                                                 : ''
                                             }`}
-                                        onChange={handleChange}
+                                        onChange={handleNumberChange}
                                         defaultValue={profileDetails?.yearsOfExperience}
+                                        value={formData.yearsOfExperience}
                                         name="yearsOfExperience"
                                     />
                                     {errors.YearsOfExperience?.[0] && (
@@ -473,6 +491,7 @@ export default function DoctorProfileEdit() {
                 </main>
             </div>
             {/* Modal */}
+            <Footer />
             <div
                 className="modal fade"
                 id="changePasswordModal"

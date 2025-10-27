@@ -160,36 +160,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        private async Task<List<ValidationResult>> ValidateAsync(DoctorRegisterRequest request, List<ValidationResult> prev)
-        {
-            if (request.Email != null && await _userSerivce.EmailExistsAsync(request.Email))
-            {
-                prev.Add(new ValidationResult("Email đã được sử dụng", new[] { "Email" }));
-            }
-
-            if (request.PhoneNumber != null && await _userSerivce.PhoneNumberExistsAsync(request.PhoneNumber))
-            {
-                prev.Add(new ValidationResult("Số điện thoại đã được sử dụng", new[] { "PhoneNumber" }));
-            }
-
-            if (request.LicenseNumber != null && await _doctorService.LicenseNumberExistsAsync(request.LicenseNumber))
-            {
-                prev.Add(new ValidationResult("Số giấy phép hành nghề đã được sử dụng", new[] { "LicenseNumber" }));
-            }
-
-            if (request.UserName != null && await _userSerivce.UserNameExistsAsync(request.UserName))
-            {
-                prev.Add(new ValidationResult("Tên đăng nhập đã được sử dụng", new[] { "UserName" }));
-            }
-
-            if (request.IdentificationNumber != null && await _userSerivce.IdentificationNumberExistsAsync(request.IdentificationNumber))
-            {
-                prev.Add(new ValidationResult("Số CCCD/CMND đã được sử dụng", new[] { "IdentificationNumber" }));
-            }
-
-            return prev;
-        }
-
         [HttpGet("profile/{doctorID}")]
         public async Task<IActionResult> GetDoctorProfile(string doctorID)
         {
@@ -255,7 +225,7 @@ namespace Medix.API.Presentation.Controller.Classification
 
         [HttpPut("profile/update")]
         [Authorize(Roles = "Doctor")]
-        public async Task<IActionResult> UpdateDoctorProfile([FromBody] DoctorProfileUpdateRequest request)
+        public async Task<IActionResult> UpdateDoctorProfile([FromBody] DoctorProfileUpdatePresenter pre)
         {
             try
             {
@@ -268,6 +238,26 @@ namespace Medix.API.Presentation.Controller.Classification
                 if (doctor == null)
                 {
                     return NotFound(new { Message = "Doctor not found" });
+                }
+
+                var request = _mapper.Map<DoctorProfileUpdateRequest>(pre);
+                var validationResults = new List<ValidationResult>();
+                var context = new ValidationContext(request, null, null);
+
+                Validator.TryValidateObject(request, context, validationResults, true);
+                validationResults = await ValidateUpdateRequest(validationResults, request, doctor);
+
+                if (validationResults.Count != 0)
+                {
+                    var modelState = new ModelStateDictionary();
+                    foreach (var validationResult in validationResults)
+                    {
+                        foreach (var memberName in validationResult.MemberNames)
+                        {
+                            modelState.AddModelError(memberName, validationResult.ErrorMessage ?? "Invalid value");
+                        }
+                    }
+                    return ValidationProblem(modelState);
                 }
 
                 var result = await _doctorService.UpdateDoctorProfileAsync(doctor, request);
@@ -366,6 +356,36 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
+        private async Task<List<ValidationResult>> ValidateAsync(DoctorRegisterRequest request, List<ValidationResult> prev)
+        {
+            if (request.Email != null && await _userSerivce.EmailExistsAsync(request.Email))
+            {
+                prev.Add(new ValidationResult("Email đã được sử dụng", new[] { "Email" }));
+            }
+
+            if (request.PhoneNumber != null && await _userSerivce.PhoneNumberExistsAsync(request.PhoneNumber))
+            {
+                prev.Add(new ValidationResult("Số điện thoại đã được sử dụng", new[] { "PhoneNumber" }));
+            }
+
+            if (request.LicenseNumber != null && await _doctorService.LicenseNumberExistsAsync(request.LicenseNumber))
+            {
+                prev.Add(new ValidationResult("Số giấy phép hành nghề đã được sử dụng", new[] { "LicenseNumber" }));
+            }
+
+            if (request.UserName != null && await _userSerivce.UserNameExistsAsync(request.UserName))
+            {
+                prev.Add(new ValidationResult("Tên đăng nhập đã được sử dụng", new[] { "UserName" }));
+            }
+
+            if (request.IdentificationNumber != null && await _userSerivce.IdentificationNumberExistsAsync(request.IdentificationNumber))
+            {
+                prev.Add(new ValidationResult("Số CCCD/CMND đã được sử dụng", new[] { "IdentificationNumber" }));
+            }
+
+            return prev;
+        }
+
         private List<ValidationResult> ValidateNewPassword(List<ValidationResult> prevResult, PasswordUpdateRequest req, string oldPassword)
         {
             if (req.NewPassword == oldPassword)
@@ -382,6 +402,19 @@ namespace Medix.API.Presentation.Controller.Classification
             {
                 prevResult.Add(new ValidationResult("Mật khẩu cũ không đúng", new[] { "CurrentPassword" }));
             }
+            return prevResult;
+        }
+
+        private async Task<List<ValidationResult>> ValidateUpdateRequest(List<ValidationResult> prevResult, DoctorProfileUpdateRequest request
+            ,Doctor doctor)
+        {
+            if (request.PhoneNumber != null 
+                && request.PhoneNumber != doctor.User.PhoneNumber 
+                && await _userSerivce.PhoneNumberExistsAsync(request.PhoneNumber))
+            {
+                prevResult.Add(new ValidationResult("Số điện thoại đã được sử dụng", new[] { "PhoneNumber" }));
+            }
+
             return prevResult;
         }
     }

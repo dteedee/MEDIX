@@ -310,7 +310,7 @@ namespace Medix.API.Business.Services.Classification
                     🔐 Mật khẩu đăng nhập:
                   </label>
                   <div style=""display: inline-block; padding: 0.75em 1.5em; font-size: 1.4em; font-weight: bold; color: #2c3e50; background-color: #ffffff; border: 2px solid #4da6ff; border-radius: 6px; letter-spacing: 2px;"">
-                    {{newPassword}}
+                    {newPassword}
                   </div>
                 </div>
 

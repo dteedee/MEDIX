@@ -46,11 +46,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage = 'dashboard' }
     window.scrollTo(0, 0);
   };
 
-  const handleChangePassword = () => {
-    setShowUserMenu(false);
-    // Navigate to change password page or show change password modal
-    console.log('Change password');
-  };
 
   return (
     <div className={`${styles.sidebar} ${!sidebarOpen ? styles.sidebarClosed : ''}`}>
@@ -134,10 +129,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage = 'dashboard' }
             <button className={styles.menuItem} onClick={handleViewProfile}>
               <i className="bi bi-person"></i>
               <span>Xem tài khoản</span>
-            </button>
-            <button className={styles.menuItem} onClick={handleChangePassword}>
-              <i className="bi bi-key"></i>
-              <span>Đổi mật khẩu</span>
             </button>
             <div className={styles.menuDivider}></div>
             <button className={styles.menuItem} onClick={handleLogout}>

@@ -80,6 +80,10 @@ export const AdminProfile: React.FC = () => {
     switch (fieldName) {
       case 'username':
         return validateUsername(value);
+      case 'fullName':
+        if (!value || value.trim() === '') return 'Họ và tên không được để trống';
+        if (value.trim().length < 2) return 'Họ và tên phải có ít nhất 2 ký tự';
+        return null;
       case 'email':
         return validateEmail(value);
       case 'phoneNumber':
@@ -95,32 +99,44 @@ export const AdminProfile: React.FC = () => {
     const errors: Record<string, string> = {};
     let isValid = true;
 
-    if (editData.username) {
-      const error = validateField('username', editData.username);
-      if (error) {
-        errors.username = error;
+    // Validate required fields - these must not be empty
+    const requiredFields = ['username', 'fullName', 'email', 'phoneNumber', 'cccd'];
+    
+    for (const field of requiredFields) {
+      const value = editData[field as keyof typeof editData];
+      if (!value || value.trim() === '') {
+        errors[field] = `${getFieldDisplayName(field)} không được để trống`;
         isValid = false;
+      } else {
+        // Validate format if field has value
+        const error = validateField(field, value);
+        if (error) {
+          errors[field] = error;
+          isValid = false;
+        }
       }
     }
 
-    if (editData.phoneNumber) {
-      const error = validateField('phoneNumber', editData.phoneNumber);
-      if (error) {
-        errors.phoneNumber = error;
-        isValid = false;
-      }
-    }
-
-    if (editData.cccd) {
-      const error = validateField('cccd', editData.cccd);
-      if (error) {
-        errors.cccd = error;
-        isValid = false;
-      }
+    // Validate optional fields if they have values
+    if (editData.address && editData.address.trim() === '') {
+      errors.address = 'Địa chỉ không được để trống nếu đã nhập';
+      isValid = false;
     }
 
     setFieldErrors(errors);
     return isValid;
+  };
+
+  const getFieldDisplayName = (field: string): string => {
+    const fieldNames: Record<string, string> = {
+      username: 'Tên tài khoản',
+      fullName: 'Họ và tên',
+      email: 'Email',
+      phoneNumber: 'Số điện thoại',
+      cccd: 'CCCD',
+      address: 'Địa chỉ'
+    };
+    return fieldNames[field] || field;
   };
 
   const validateSingleField = (fieldName: string, value: string) => {
@@ -189,12 +205,29 @@ export const AdminProfile: React.FC = () => {
   }, []);
 
   const handleSaveClick = () => {
-    // Validate before showing confirmation
-    if (editData.username?.trim() && editData.username.length < 3) {
-      showToast('Tên tài khoản phải có ít nhất 3 ký tự', 'error');
+    // Check required fields first
+    const requiredFields = ['username', 'fullName', 'email', 'phoneNumber', 'cccd'];
+    const missingFields: string[] = [];
+    
+    for (const field of requiredFields) {
+      const value = editData[field as keyof typeof editData];
+      if (!value || value.trim() === '') {
+        missingFields.push(getFieldDisplayName(field));
+      }
+    }
+    
+    if (missingFields.length > 0) {
+      showToast(`Vui lòng điền đầy đủ thông tin: ${missingFields.join(', ')}`, 'error');
       return;
     }
 
+    // Validate format
+    if (!validateAllFields()) {
+      showToast('Vui lòng kiểm tra lại thông tin đã nhập', 'error');
+      return;
+    }
+
+    // Validate age
     if (editData.dob) {
       const date = new Date(editData.dob);
       const now = new Date();
@@ -209,11 +242,6 @@ export const AdminProfile: React.FC = () => {
         showToast('Bạn phải đủ 18 tuổi', 'error');
         return;
       }
-    }
-
-    if (!validateAllFields()) {
-      showToast('Vui lòng kiểm tra lại thông tin đã nhập', 'error');
-      return;
     }
 
     // Show confirmation dialog

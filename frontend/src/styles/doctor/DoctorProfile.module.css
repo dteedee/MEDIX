@@ -649,6 +649,93 @@
   box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
 }
 
+/* File Upload Styles */
+.fileUploadContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fileUploadBtn, .fileUpdateBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.fileUploadBtn:hover, .fileUpdateBtn:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.fileUploadBtn:disabled, .fileUpdateBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.filePreview {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+  background: #f7fafc;
+  border: 2px dashed #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.filePreviewImage {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.fileIconContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.fileOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.filePreview:hover .fileOverlay {
+  opacity: 1;
+}
+
+.fileHint {
+  font-size: 12px;
+  color: #718096;
+  margin: 0;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .formGrid {

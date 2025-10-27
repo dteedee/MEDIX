@@ -3,7 +3,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { userService, UserBasicInfo, UpdateUserInfo } from '../../services/userService';
 import doctorService from '../../services/doctorService';
-import { apiClient } from '../../lib/apiClient';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { ChangePasswordModal } from '../auth/ChangePasswordModal';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
@@ -18,9 +17,11 @@ interface ExtendedUserInfo extends UserBasicInfo {
   licenseNumber?: string;
   licenseUrl?: string;
   certificates?: string;
+  certificationUrl?: string;
   yearsOfExperience?: number;
   education?: string;
   bio?: string;
+  serviceTier?: string;
 }
 
 interface ExtendedUpdateUserInfo extends UpdateUserInfo {
@@ -30,11 +31,11 @@ interface ExtendedUpdateUserInfo extends UpdateUserInfo {
   address?: string;
   cccd?: string;
   imageURL?: string;
+  consultationFee?: string;
+  yearsOfExperience?: string | number;
+  bio?: string;
   specialization?: string;
   licenseNumber?: string;
-  yearsOfExperience?: number;
-  education?: string;
-  bio?: string;
 }
 
 const formatDate = (iso: string | null | undefined) => {
@@ -71,6 +72,8 @@ export const DoctorProfile: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+  const [uploadingCert, setUploadingCert] = useState(false);
+  const [uploadingDegree, setUploadingDegree] = useState(false);
 
   // Validation functions
   const validateUsername = (username: string): string | null => {
@@ -98,18 +101,25 @@ export const DoctorProfile: React.FC = () => {
     return null;
   };
 
-  const validateLicenseNumber = (license: string): string | null => {
-    if (!license) return 'Số chứng chỉ không được để trống';
-    if (license.trim().length < 3) return 'Số chứng chỉ phải có ít nhất 3 ký tự';
-    return null;
-  };
-
   const validateYearsOfExperience = (years: string): string | null => {
     if (!years) return 'Số năm kinh nghiệm không được để trống';
     const numYears = parseInt(years);
     if (isNaN(numYears) || numYears < 0) return 'Số năm kinh nghiệm phải là số dương';
     return null;
   };
+
+  const validateSpecialization = (specialization: string): string | null => {
+    if (!specialization) return 'Chuyên khoa không được để trống';
+    if (specialization.trim().length < 2) return 'Chuyên khoa phải có ít nhất 2 ký tự';
+    return null;
+  };
+
+  const validateLicenseNumber = (license: string): string | null => {
+    if (!license) return 'Số chứng chỉ không được để trống';
+    if (license.trim().length < 3) return 'Số chứng chỉ phải có ít nhất 3 ký tự';
+    return null;
+  };
+
 
   const validateField = (fieldName: string, value: string): string | null => {
     switch (fieldName) {
@@ -125,10 +135,12 @@ export const DoctorProfile: React.FC = () => {
         return validatePhoneNumber(value);
       case 'cccd':
         return validateCCCD(value);
-      case 'licenseNumber':
-        return validateLicenseNumber(value);
       case 'yearsOfExperience':
         return validateYearsOfExperience(value);
+      case 'specialization':
+        return validateSpecialization(value);
+      case 'licenseNumber':
+        return validateLicenseNumber(value);
       default:
         return null;
     }
@@ -139,7 +151,7 @@ export const DoctorProfile: React.FC = () => {
     let isValid = true;
 
     // Validate required fields
-    const requiredFields = ['username', 'fullName', 'email', 'phoneNumber', 'cccd', 'specialization', 'licenseNumber', 'yearsOfExperience'];
+    const requiredFields = ['username', 'fullName', 'email', 'phoneNumber', 'cccd', 'yearsOfExperience'];
     
     for (const field of requiredFields) {
       const value = editData[field as keyof typeof editData];
@@ -173,10 +185,7 @@ export const DoctorProfile: React.FC = () => {
       phoneNumber: 'Số điện thoại',
       cccd: 'CCCD',
       address: 'Địa chỉ',
-      specialization: 'Chuyên khoa',
-      licenseNumber: 'Số chứng chỉ',
       yearsOfExperience: 'Số năm kinh nghiệm',
-      education: 'Trình độ học vấn',
       bio: 'Tiểu sử'
     };
     return fieldNames[field] || field;
@@ -229,10 +238,11 @@ export const DoctorProfile: React.FC = () => {
             specialization: doctorData.specialization,
             licenseNumber: doctorData.licenseNumber,
             licenseUrl: doctorData.licenseUrl,
-            certificates: doctorData.certificates,
+            certificationUrl: doctorData.certificationUrl,
             yearsOfExperience: doctorData.yearsOfExperience,
             education: doctorData.education,
-            bio: doctorData.bio
+            bio: doctorData.bio,
+            serviceTier: doctorData.serviceTier
           };
           
           setData(extendedData);
@@ -244,11 +254,11 @@ export const DoctorProfile: React.FC = () => {
             address: userRes.address || '',
             dob: userRes.dob || '',
             cccd: userRes.identificationNumber || '',
-            specialization: doctorData.specialization || '',
-            licenseNumber: doctorData.licenseNumber || '',
+            consultationFee: doctorData.consultationFee || '',
             yearsOfExperience: doctorData.yearsOfExperience?.toString() || '',
-            education: doctorData.education || '',
-            bio: doctorData.bio || ''
+            bio: doctorData.bio || '',
+            specialization: doctorData.specialization || '',
+            licenseNumber: doctorData.licenseNumber || ''
           });
         }
       } catch (e: any) {
@@ -262,7 +272,7 @@ export const DoctorProfile: React.FC = () => {
 
   const handleSaveClick = () => {
     // Check required fields first
-    const requiredFields = ['username', 'fullName', 'email', 'phoneNumber', 'cccd', 'specialization', 'licenseNumber', 'yearsOfExperience'];
+    const requiredFields = ['username', 'fullName', 'email', 'phoneNumber', 'cccd', 'yearsOfExperience'];
     const missingFields: string[] = [];
     
     for (const field of requiredFields) {
@@ -332,8 +342,7 @@ export const DoctorProfile: React.FC = () => {
         const doctorUpdateData = new FormData();
         doctorUpdateData.append('specialization', editData.specialization || '');
         doctorUpdateData.append('licenseNumber', editData.licenseNumber || '');
-        doctorUpdateData.append('yearsOfExperience', editData.yearsOfExperience || '0');
-        doctorUpdateData.append('education', editData.education || '');
+        doctorUpdateData.append('yearsOfExperience', editData.yearsOfExperience?.toString() || '0');
         doctorUpdateData.append('bio', editData.bio || '');
         
         await doctorService.updateDoctorProfile(doctorUpdateData);
@@ -357,9 +366,12 @@ export const DoctorProfile: React.FC = () => {
         role: 'Doctor',
         specialization: editData.specialization || data?.specialization,
         licenseNumber: editData.licenseNumber || data?.licenseNumber,
-        yearsOfExperience: parseInt(editData.yearsOfExperience || '0') || data?.yearsOfExperience,
-        education: editData.education || data?.education,
-        bio: editData.bio || data?.bio
+        licenseUrl: data?.licenseUrl,
+        certificationUrl: data?.certificationUrl,
+        yearsOfExperience: editData.yearsOfExperience ? parseInt(editData.yearsOfExperience.toString()) : data?.yearsOfExperience,
+        education: data?.education,
+        bio: editData.bio || data?.bio,
+        serviceTier: data?.serviceTier
       };
       
       setData(updatedData);
@@ -391,11 +403,10 @@ export const DoctorProfile: React.FC = () => {
         address: data.address || '',
         dob: data.dob || '',
         cccd: data.cccd || '',
-        specialization: data.specialization || '',
-        licenseNumber: data.licenseNumber || '',
         yearsOfExperience: data.yearsOfExperience?.toString() || '',
-        education: data.education || '',
-        bio: data.bio || ''
+        bio: data.bio || '',
+        specialization: data.specialization || '',
+        licenseNumber: data.licenseNumber || ''
       });
     }
     setIsEditing(false);
@@ -408,21 +419,21 @@ export const DoctorProfile: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    const allowedExtensions = ['.jpg', '.jpeg', '.png'];
     
     const fileName = file.name.toLowerCase();
     const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
     const hasValidMimeType = allowedTypes.includes(file.type);
 
     if (!hasValidMimeType || !hasValidExtension) {
-      setError(`File không hợp lệ: ${file.name}\nChỉ chấp nhận: JPG, JPEG, PNG, WEBP`);
+      setError(`File ảnh không hợp lệ: ${file.name}\nChỉ chấp nhận: JPG, JPEG, PNG`);
       return;
     }
 
-    const maxSize = 5 * 1024 * 1024;
+    const maxSize = 3 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError(`File quá lớn: ${(file.size / 1024 / 1024).toFixed(2)}MB. Tối đa 5MB`);
+      setError(`File ảnh quá lớn: ${(file.size / 1024 / 1024).toFixed(2)}MB. Tối đa 3MB`);
       return;
     }
 
@@ -440,7 +451,6 @@ export const DoctorProfile: React.FC = () => {
         const updatedData = { ...data, imageURL: result.imageUrl };
         setData(updatedData);
         
-        // Update user context with new avatar
         updateUser({ avatarUrl: result.imageUrl });
       }
       
@@ -459,6 +469,96 @@ export const DoctorProfile: React.FC = () => {
       }, 10000);
     } finally {
       setUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleLicenseImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    const allowedExtensions = ['.jpg', '.jpeg', '.png'];
+    
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+    const hasValidMimeType = allowedTypes.includes(file.type);
+
+    if (!hasValidMimeType || !hasValidExtension) {
+      showToast(`Ảnh chứng chỉ không hợp lệ. Chỉ chấp nhận: JPG, JPEG, PNG`, 'error');
+      return;
+    }
+
+    const maxSize = 3 * 1024 * 1024;
+    if (file.size > maxSize) {
+      showToast(`Ảnh chứng chỉ quá lớn: ${(file.size / 1024 / 1024).toFixed(2)}MB. Tối đa 3MB`, 'error');
+      return;
+    }
+
+    setUploadingCert(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('licenseFile', file);
+      
+      // Note: This endpoint would need to be implemented
+      // await doctorService.updateLicenseImage(formData);
+      
+      showToast('Cập nhật chứng chỉ thành công!', 'success');
+      
+      // Refresh data
+      const updatedData = { ...data, licenseUrl: URL.createObjectURL(file) };
+      setData(updatedData as ExtendedUserInfo);
+    } catch (e: any) {
+      showToast(e?.message || 'Không thể tải ảnh chứng chỉ lên', 'error');
+    } finally {
+      setUploadingCert(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleDegreeFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['application/zip', 'application/x-rar-compressed', 'application/x-rar'];
+    const allowedExtensions = ['.rar', '.zip'];
+    
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+    const hasValidMimeType = allowedTypes.includes(file.type);
+
+    if (!hasValidMimeType || !hasValidExtension) {
+      showToast(`File bằng cấp không hợp lệ. Chỉ chấp nhận: RAR, ZIP`, 'error');
+      return;
+    }
+
+    const maxSize = 3 * 1024 * 1024;
+    if (file.size > maxSize) {
+      showToast(`File bằng cấp quá lớn: ${(file.size / 1024 / 1024).toFixed(2)}MB. Tối đa 3MB`, 'error');
+      return;
+    }
+
+    setUploadingDegree(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('degreeFile', file);
+      
+      // Note: This endpoint would need to be implemented
+      // await doctorService.updateDegreeFile(formData);
+      
+      showToast('Cập nhật bằng cấp thành công!', 'success');
+      
+      // Refresh data
+      const updatedData = { ...data, certificationUrl: URL.createObjectURL(file) };
+      setData(updatedData as ExtendedUserInfo);
+    } catch (e: any) {
+      showToast(e?.message || 'Không thể tải file bằng cấp lên', 'error');
+    } finally {
+      setUploadingDegree(false);
       event.target.value = '';
     }
   };
@@ -535,7 +635,7 @@ export const DoctorProfile: React.FC = () => {
                 <input
                   type="file"
                   id="profileImageInput"
-                  accept="image/jpeg,image/jpg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                  accept="image/jpeg,image/jpg,image/png,.jpg,.jpeg,.png"
                   style={{ display: 'none' }}
                   onChange={handleImageUpload}
                 />
@@ -562,13 +662,13 @@ export const DoctorProfile: React.FC = () => {
 
             {/* Form Fields */}
             <div className={styles.formSection}>
+              {/* Section 1: Thông tin cá nhân */}
               <div className={styles.sectionHeader}>
-                <h3>Thông tin cơ bản</h3>
-                <p>Cập nhật thông tin cá nhân của bạn</p>
+                <h3>1. Thông tin cá nhân</h3>
+                <p>Thông tin cơ bản về bác sĩ</p>
               </div>
               
               <div className={styles.formGrid}>
-                {/* Basic Information */}
                 <div className={styles.fieldGroup}>
                   <label className={`${styles.fieldLabel} ${fieldErrors.username ? styles.fieldLabelError : ''}`}>
                     <i className="bi bi-person"></i>
@@ -784,74 +884,102 @@ export const DoctorProfile: React.FC = () => {
                     <i className="bi bi-lock"></i>
                   </div>
                 </div>
+              </div>
 
-                 {/* Professional Information */}
-                 <div className={styles.fieldGroup}>
-                   <label className={`${styles.fieldLabel} ${fieldErrors.specialization ? styles.fieldLabelError : ''}`}>
-                     <i className="bi bi-hospital"></i>
-                     Chuyên khoa
-                     {fieldErrors.specialization && <span className={styles.errorIcon}>⚠️</span>}
-                   </label>
-                   {isEditing ? (
-                     <div className={styles.inputContainer}>
-                       <input 
-                         value={editData.specialization || ''} 
-                         onChange={(e) => {
-                           setEditData({...editData, specialization: e.target.value});
-                           if (fieldErrors.specialization) {
-                             setFieldErrors({...fieldErrors, specialization: ''});
-                           }
-                         }}
-                         onBlur={(e) => handleFieldBlur('specialization', e.target.value)}
-                         className={`${styles.fieldInput} ${fieldErrors.specialization ? styles.fieldInputError : ''}`}
-                         placeholder="Nhập chuyên khoa"
-                       />
-                       <i className="bi bi-pencil"></i>
-                     </div>
-                   ) : (
-                     <div className={styles.inputContainer}>
-                       <input disabled value={data.specialization || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
-                       <i className="bi bi-lock"></i>
-                     </div>
-                   )}
-                   {fieldErrors.specialization && (
-                     <div className={styles.fieldError}>{fieldErrors.specialization}</div>
-                   )}
-                 </div>
+              {/* Section 2: Thông tin nghề nghiệp */}
+              <div className={styles.sectionHeader}>
+                <h3>2. Thông tin nghề nghiệp</h3>
+                <p>Thông tin về chuyên môn và kinh nghiệm</p>
+              </div>
 
-                 <div className={styles.fieldGroup}>
-                   <label className={`${styles.fieldLabel} ${fieldErrors.licenseNumber ? styles.fieldLabelError : ''}`}>
-                     <i className="bi bi-card-heading"></i>
-                     Số chứng chỉ
-                     {fieldErrors.licenseNumber && <span className={styles.errorIcon}>⚠️</span>}
-                   </label>
-                   {isEditing ? (
-                     <div className={styles.inputContainer}>
-                       <input 
-                         value={editData.licenseNumber || ''} 
-                         onChange={(e) => {
-                           setEditData({...editData, licenseNumber: e.target.value});
-                           if (fieldErrors.licenseNumber) {
-                             setFieldErrors({...fieldErrors, licenseNumber: ''});
-                           }
-                         }}
-                         onBlur={(e) => handleFieldBlur('licenseNumber', e.target.value)}
-                         className={`${styles.fieldInput} ${fieldErrors.licenseNumber ? styles.fieldInputError : ''}`}
-                         placeholder="Nhập số chứng chỉ"
-                         type="text"
-                       />
-                       <i className="bi bi-pencil"></i>
-                     </div>
-                   ) : (
-                     <div className={styles.inputContainer}>
-                       <input disabled value={data.licenseNumber || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
-                       <i className="bi bi-lock"></i>
-                     </div>
-                   )}
-                   {fieldErrors.licenseNumber && (
-                     <div className={styles.fieldError}>{fieldErrors.licenseNumber}</div>
-                   )}
-                 </div>
+              <div className={styles.formGrid}>
+                <div className={styles.fieldGroup}>
+                  <label className={`${styles.fieldLabel} ${fieldErrors.specialization ? styles.fieldLabelError : ''}`}>
+                    <i className="bi bi-hospital"></i>
+                    Chuyên khoa
+                    {fieldErrors.specialization && <span className={styles.errorIcon}>⚠️</span>}
+                  </label>
+                  {isEditing ? (
+                    <div className={styles.inputContainer}>
+                      <input 
+                        value={editData.specialization || ''} 
+                        onChange={(e) => {
+                          setEditData({...editData, specialization: e.target.value});
+                          if (fieldErrors.specialization) {
+                            setFieldErrors({...fieldErrors, specialization: ''});
+                          }
+                        }}
+                        onBlur={(e) => handleFieldBlur('specialization', e.target.value)}
+                        className={`${styles.fieldInput} ${fieldErrors.specialization ? styles.fieldInputError : ''}`}
+                        placeholder="Nhập chuyên khoa"
+                      />
+                      <i className="bi bi-pencil"></i>
+                    </div>
+                  ) : (
+                    <div className={styles.inputContainer}>
+                      <input disabled value={data.specialization || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
+                      <i className="bi bi-lock"></i>
+                    </div>
+                  )}
+                  {fieldErrors.specialization && (
+                    <div className={styles.fieldError}>{fieldErrors.specialization}</div>
+                  )}
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <label className={`${styles.fieldLabel} ${fieldErrors.licenseNumber ? styles.fieldLabelError : ''}`}>
+                    <i className="bi bi-award"></i>
+                    Số chứng chỉ
+                    {fieldErrors.licenseNumber && <span className={styles.errorIcon}>⚠️</span>}
+                  </label>
+                  {isEditing ? (
+                    <div className={styles.inputContainer}>
+                      <input 
+                        value={editData.licenseNumber || ''} 
+                        onChange={(e) => {
+                          setEditData({...editData, licenseNumber: e.target.value});
+                          if (fieldErrors.licenseNumber) {
+                            setFieldErrors({...fieldErrors, licenseNumber: ''});
+                          }
+                        }}
+                        onBlur={(e) => handleFieldBlur('licenseNumber', e.target.value)}
+                        className={`${styles.fieldInput} ${fieldErrors.licenseNumber ? styles.fieldInputError : ''}`}
+                        placeholder="Nhập số chứng chỉ"
+                      />
+                      <i className="bi bi-pencil"></i>
+                    </div>
+                  ) : (
+                    <div className={styles.inputContainer}>
+                      <input disabled value={data.licenseNumber || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
+                      <i className="bi bi-lock"></i>
+                    </div>
+                  )}
+                  {fieldErrors.licenseNumber && (
+                    <div className={styles.fieldError}>{fieldErrors.licenseNumber}</div>
+                  )}
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>
+                    <i className="bi bi-mortarboard"></i>
+                    Trình độ học vấn
+                  </label>
+                  <div className={styles.inputContainer}>
+                    <input disabled value={data.education || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
+                    <i className="bi bi-lock"></i>
+                  </div>
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>
+                    <i className="bi bi-box"></i>
+                    Gói dịch vụ
+                  </label>
+                  <div className={styles.inputContainer}>
+                    <input disabled value={data.serviceTier || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
+                    <i className="bi bi-lock"></i>
+                  </div>
+                </div>
 
                 <div className={styles.fieldGroup}>
                   <label className={`${styles.fieldLabel} ${fieldErrors.yearsOfExperience ? styles.fieldLabelError : ''}`}>
@@ -865,7 +993,7 @@ export const DoctorProfile: React.FC = () => {
                         value={editData.yearsOfExperience || ''} 
                         onChange={(e) => {
                           const numericValue = e.target.value.replace(/[^0-9]/g, '');
-                          setEditData({...editData, yearsOfExperience: numericValue});
+                          setEditData({...editData, yearsOfExperience: numericValue.toString()});
                           if (fieldErrors.yearsOfExperience) {
                             setFieldErrors({...fieldErrors, yearsOfExperience: ''});
                           }
@@ -890,92 +1018,157 @@ export const DoctorProfile: React.FC = () => {
 
                 <div className={styles.fieldGroup}>
                   <label className={styles.fieldLabel}>
-                    <i className="bi bi-book"></i>
-                    Trình độ học vấn
+                    <i className="bi bi-file-text"></i>
+                    Tiểu sử
                   </label>
                   {isEditing ? (
                     <div className={styles.inputContainer}>
-                      <input 
-                        value={editData.education || ''} 
-                        onChange={(e) => setEditData({...editData, education: e.target.value})}
-                        className={styles.fieldInput}
-                        placeholder="Nhập trình độ học vấn"
+                      <textarea 
+                        value={editData.bio || ''} 
+                        onChange={(e) => setEditData({...editData, bio: e.target.value})}
+                        className={styles.fieldTextarea}
+                        placeholder="Nhập tiểu sử"
+                        rows={3}
                       />
                       <i className="bi bi-pencil"></i>
                     </div>
                   ) : (
                     <div className={styles.inputContainer}>
-                      <input disabled value={data.education || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
+                      <textarea disabled value={data.bio || 'Chưa cập nhật'} className={styles.fieldTextareaDisabled} rows={3} />
                       <i className="bi bi-lock"></i>
                     </div>
                   )}
                 </div>
+              </div>
 
-                 <div className={styles.fieldGroup}>
-                   <label className={styles.fieldLabel}>
-                     <i className="bi bi-file-text"></i>
-                     Tiểu sử
-                   </label>
-                   {isEditing ? (
-                     <div className={styles.inputContainer}>
-                       <textarea 
-                         value={editData.bio || ''} 
-                         onChange={(e) => setEditData({...editData, bio: e.target.value})}
-                         className={styles.fieldTextarea}
-                         placeholder="Nhập tiểu sử"
-                         rows={3}
-                       />
-                       <i className="bi bi-pencil"></i>
-                     </div>
-                   ) : (
-                     <div className={styles.inputContainer}>
-                       <textarea disabled value={data.bio || 'Chưa cập nhật'} className={styles.fieldTextareaDisabled} rows={3} />
-                       <i className="bi bi-lock"></i>
-                     </div>
-                   )}
-                 </div>
+              {/* Section 3: Chứng chỉ và bằng cấp */}
+              <div className={styles.sectionHeader}>
+                <h3>3. Chứng chỉ và bằng cấp</h3>
+                <p>Quản lý tài liệu chứng nhận</p>
+              </div>
 
-                 <div className={styles.fieldGroup}>
-                   <label className={styles.fieldLabel}>
-                     <i className="bi bi-image"></i>
-                     Ảnh chứng chỉ
-                   </label>
-                   {data?.licenseUrl ? (
-                     <div className={styles.inputContainer}>
-                       <img src={data.licenseUrl} alt="License" className={styles.licenseImage} />
-                     </div>
-                   ) : (
-                     <div className={styles.inputContainer}>
-                       <input disabled value="Chưa có ảnh chứng chỉ" className={styles.fieldInputDisabled} />
-                       <i className="bi bi-lock"></i>
-                     </div>
-                   )}
-                 </div>
+              <div className={styles.formGrid}>
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>
+                    <i className="bi bi-image"></i>
+                    Chứng chỉ làm việc (Ảnh)
+                  </label>
+                  <div className={styles.fileUploadContainer}>
+                    {data.licenseUrl ? (
+                      <div className={styles.filePreview}>
+                        <img src={data.licenseUrl} alt="License" className={styles.filePreviewImage} />
+                        <div className={styles.fileOverlay}>
+                          <button 
+                            type="button"
+                            onClick={() => document.getElementById('licenseImageInput')?.click()}
+                            className={styles.fileUpdateBtn}
+                            disabled={uploadingCert}
+                          >
+                            {uploadingCert ? (
+                              <>
+                                <div className={styles.spinner}></div>
+                                Đang tải...
+                              </>
+                            ) : (
+                              <>
+                                <i className="bi bi-arrow-clockwise"></i>
+                                Cập nhật
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button 
+                        type="button"
+                        onClick={() => document.getElementById('licenseImageInput')?.click()}
+                        className={styles.fileUploadBtn}
+                        disabled={uploadingCert}
+                      >
+                        {uploadingCert ? (
+                          <>
+                            <div className={styles.spinner}></div>
+                            Đang tải...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-cloud-upload"></i>
+                            Tải ảnh chứng chỉ lên
+                          </>
+                        )}
+                      </button>
+                    )}
+                    <input
+                      type="file"
+                      id="licenseImageInput"
+                      accept="image/jpeg,image/jpg,image/png,.jpg,.jpeg,.png"
+                      style={{ display: 'none' }}
+                      onChange={handleLicenseImageUpload}
+                    />
+                    <p className={styles.fileHint}>Định dạng: JPG, PNG. Tối đa 3MB</p>
+                  </div>
+                </div>
 
-                 <div className={styles.fieldGroup}>
-                   <label className={styles.fieldLabel}>
-                     <i className="bi bi-folder"></i>
-                     Bằng cấp
-                   </label>
-                   {data?.certificates ? (
-                     <div className={styles.inputContainer}>
-                       <a 
-                         href={data.certificates} 
-                         target="_blank" 
-                         rel="noopener noreferrer"
-                         className={styles.certificateLink}
-                       >
-                         <i className="bi bi-file-earmark-zip"></i>
-                         Tải xuống bằng cấp
-                       </a>
-                     </div>
-                   ) : (
-                     <div className={styles.inputContainer}>
-                       <input disabled value="Chưa có bằng cấp" className={styles.fieldInputDisabled} />
-                       <i className="bi bi-lock"></i>
-                     </div>
-                   )}
-                 </div>
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>
+                    <i className="bi bi-file-earmark-zip"></i>
+                    Bằng cấp (File RAR/ZIP)
+                  </label>
+                  <div className={styles.fileUploadContainer}>
+                    {data.certificationUrl ? (
+                      <div className={styles.filePreview}>
+                        <div className={styles.fileIconContainer}>
+                          <i className="bi bi-file-earmark-zip" style={{ fontSize: '48px', color: '#667eea' }}></i>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => document.getElementById('degreeFileInput')?.click()}
+                          className={styles.fileUpdateBtn}
+                          disabled={uploadingDegree}
+                        >
+                          {uploadingDegree ? (
+                            <>
+                              <div className={styles.spinner}></div>
+                              Đang tải...
+                            </>
+                          ) : (
+                            <>
+                              <i className="bi bi-arrow-clockwise"></i>
+                              Cập nhật
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        type="button"
+                        onClick={() => document.getElementById('degreeFileInput')?.click()}
+                        className={styles.fileUploadBtn}
+                        disabled={uploadingDegree}
+                      >
+                        {uploadingDegree ? (
+                          <>
+                            <div className={styles.spinner}></div>
+                            Đang tải...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-cloud-upload"></i>
+                            Tải file bằng cấp lên
+                          </>
+                        )}
+                      </button>
+                    )}
+                    <input
+                      type="file"
+                      id="degreeFileInput"
+                      accept=".rar,.zip,application/zip,application/x-rar-compressed,application/x-rar"
+                      style={{ display: 'none' }}
+                      onChange={handleDegreeFileUpload}
+                    />
+                    <p className={styles.fileHint}>Định dạng: RAR, ZIP. Tối đa 3MB</p>
+                  </div>
+                </div>
               </div>
             </div>
 

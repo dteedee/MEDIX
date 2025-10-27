@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { ArticleDTO } from '../../types/article.types';
 import { useToast } from '../../contexts/ToastContext';
 import { articleService } from '../../services/articleService';
+import { categoryService } from '../../services/categoryService'; // Import categoryService
+import { CategoryDTO } from '../../types/category.types'; // Import CategoryDTO
 import styles from '../../styles/admin/ArticleForm.module.css';
+import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
 
 interface Props {
   article?: ArticleDTO | null;
@@ -15,20 +18,22 @@ interface Props {
 export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRequest }: Props) {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth(); // Get current user from AuthContext
+  const [statuses, setStatuses] = useState<Array<{ code: string; displayName: string }>>([]);
+  const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     title: article?.title || '',
     slug: article?.slug || '',
     summary: article?.summary || '',
     content: article?.content || '',
-    displayType: article?.displayType || 'Article',
+    displayType: article?.displayType || 'STANDARD',
     isHomepageVisible: article?.isHomepageVisible ?? false,
     displayOrder: article?.displayOrder || 0,
     metaTitle: article?.metaTitle || '',
     metaDescription: article?.metaDescription || '',
-    authorId: '1', // Default author ID - should be from auth context
-    statusCode: article?.statusCode || 'Draft',
-    publishedAt: article?.publishedAt ? article.publishedAt.split('T')[0] : '',
+    authorId: user?.id || '', // Use logged-in user ID
+    statusCode: article?.statusCode || 'DRAFT',
     categoryIds: article?.categoryIds || [],
   });
 
@@ -44,20 +49,46 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
         slug: article.slug || '',
         summary: article.summary || '',
         content: article.content || '',
-        displayType: article.displayType || 'Article',
+        displayType: article.displayType || 'STANDARD',
         isHomepageVisible: article.isHomepageVisible ?? false,
         displayOrder: article.displayOrder || 0,
         metaTitle: article.metaTitle || '',
         metaDescription: article.metaDescription || '',
-        authorId: '1',
-        statusCode: article.statusCode || 'Draft',
-        publishedAt: article.publishedAt ? article.publishedAt.split('T')[0] : '',
+        authorId: user?.id || '', // Use logged-in user ID
+        statusCode: article.statusCode || 'DRAFT',
         categoryIds: article.categoryIds || [],
       });
       setThumbnailPreview(article.thumbnailUrl || '');
       setCoverPreview(article.coverImageUrl || '');
     }
   }, [article]);
+
+  useEffect(() => {
+    const fetchStatusesAndCategories = async () => {
+      try {
+        // Fetch statuses
+        const fetchedStatuses = await articleService.getStatuses();
+        setStatuses(fetchedStatuses);
+
+        // If in create mode and no article status is set, default to 'DRAFT'
+        if (mode === 'create' && !formData.statusCode) {
+          setFormData(prev => ({ ...prev, statusCode: 'DRAFT' }));
+        }
+
+        // Fetch categories
+        const fetchedCategories = await articleService.getCachedCategories(); // Use cached categories
+        setCategories(fetchedCategories.items.filter((cat: CategoryDTO) => cat.isActive)); // Filter for active categories
+      } catch (error) {
+        console.error('Error fetching statuses or categories:', error);
+        showToast('Không thể tải dữ liệu trạng thái hoặc danh mục.', 'error');
+      }
+    };
+
+    fetchStatusesAndCategories();
+  }, [mode, formData.statusCode]); // Re-run if mode or initial status changes
+
+  // Ensure authorId is always set if user is available
+  useEffect(() => { if (user?.id && formData.authorId !== user.id) setFormData(prev => ({ ...prev, authorId: user.id })); }, [user?.id, formData.authorId]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -96,10 +127,6 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
       newErrors.metaDescription = 'Meta description không được vượt quá 160 ký tự';
     }
 
-    if (formData.statusCode === 'Published' && !formData.publishedAt) {
-      newErrors.publishedAt = 'Ngày xuất bản không được để trống khi trạng thái là Đã xuất bản';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -130,7 +157,6 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
       metaDescription: formData.metaDescription,
       authorId: formData.authorId,
       statusCode: formData.statusCode,
-      publishedAt: formData.publishedAt || undefined,
       categoryIds: formData.categoryIds,
       thumbnailFile: thumbnailFile || undefined,
       coverFile: coverFile || undefined,
@@ -188,6 +214,21 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
+  };
+
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value, checked } = e.target as HTMLInputElement; // Cast to HTMLInputElement for checkbox
+    setFormData(prev => {
+      const newCategoryIds = checked
+        ? [...prev.categoryIds, value]
+        : prev.categoryIds.filter(id => id !== value);
+      return { ...prev, categoryIds: newCategoryIds };
+    });
+  };
+
+  // Helper to check if a category is selected
+  const isCategorySelected = (categoryId: string) => {
+    return formData.categoryIds.includes(categoryId);
   };
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -415,9 +456,8 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
               disabled={mode === 'view'}
               className={styles.select}
             >
-              <option value="Article">Bài viết</option>
-              <option value="News">Tin tức</option>
-              <option value="Guide">Hướng dẫn</option>
+              <option value="STANDARD">Tiêu chuẩn</option>
+              <option value="FEATURED">Nổi bật</option>
             </select>
             <p className={styles.helpText}>Chọn loại hiển thị cho bài viết</p>
           </div>
@@ -485,30 +525,38 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
             disabled={mode === 'view'}
             className={styles.select}
           >
-            <option value="Draft">Bản nháp</option>
-            <option value="Published">Đã xuất bản</option>
+            {statuses.map(status => (
+              <option key={status.code} value={status.code}>{status.displayName}</option>
+            ))}
           </select>
           {errors.statusCode && <p className={styles.errorText}>{errors.statusCode}</p>}
           <p className={styles.helpText}>Chọn trạng thái cho bài viết</p>
+          {mode === 'create' && !formData.statusCode && <p className={styles.errorText}>Trạng thái mặc định là Bản nháp</p>}
         </div>
 
-        {/* Published Date */}
-        {formData.statusCode === 'Published' && (
+        {/* Categories */}
+        {categories.length > 0 && (
           <div className={styles.formGroup}>
             <label className={styles.label}>
-              <i className="bi bi-calendar-event"></i>
-              Ngày xuất bản
+              <i className="bi bi-tags"></i>
+              Danh mục
             </label>
-            <input
-              type="date"
-              name="publishedAt"
-              value={formData.publishedAt}
-              onChange={handleChange}
-              disabled={mode === 'view'}
-              className={`${styles.input} ${errors.publishedAt ? styles.inputError : ''}`}
-            />
-            {errors.publishedAt && <p className={styles.errorText}>{errors.publishedAt}</p>}
-            <p className={styles.helpText}>Chọn ngày xuất bản bài viết</p>
+            <div className={styles.checkboxGroup}>
+              {categories.map((category: CategoryDTO) => (
+                <label key={category.id} className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    name="categoryIds"
+                    value={category.id}
+                    checked={isCategorySelected(category.id)}
+                    onChange={handleCategoryChange}
+                    disabled={mode === 'view'}
+                    className={styles.checkboxInput}
+                  />
+                  {category.name}
+                </label>
+              ))}
+            </div>
           </div>
         )}
 

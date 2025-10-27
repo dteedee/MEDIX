@@ -27,21 +27,25 @@ export interface ArticleFormPayload {
 const BASE = '/HealthArticle'
 
 // Helper to fetch all categories once and cache them for mapping
-const categoryCache = {
+export const categoryCache = {
   promise: null as Promise<{ items: any[], total?: number }> | null,
   fetchAll: function() {
     if (!this.promise) {
-      // Fetch a large number to get all categories, assuming less than 1000
-      this.promise = categoryService.list(1, 1000);
+      // Fetch a large number to get all categories, assuming less than 9999
+      this.promise = categoryService.list(1, 9999);
     }
     return this.promise;
   }
 };
 
-
 export const articleService = {
+  getCachedCategories: async (): Promise<{ items: any[], total?: number }> => {
+    return categoryCache.fetchAll();
+  },
   getAll: async (): Promise<ArticleDTO[]> => {
-    const r = await apiClient.get(BASE);
+    // Request a large page size to fetch all articles for client-side processing
+    // This matches the frontend's current architecture of filtering/sorting on the client.
+    const r = await apiClient.get(BASE, { params: { page: 1, pageSize: 9999 } });
     const data = r.data;
     
     // Fetch all categories to map names from IDs
@@ -74,7 +78,7 @@ export const articleService = {
       createdAt: x.createdAt,
       updatedAt: x.updatedAt,
       categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
-      categoryIds: x.categoryIds
+      categoryIds: x.categoryIds || (x.categories ? x.categories.map((cat: any) => cat.id) : []),
     }));
   },
   list: async (page = 1, pageSize = 10, params?: { keyword?: string; status?: string; slug?: string }): Promise<{ items: ArticleDTO[]; total?: number }> => {
@@ -120,7 +124,7 @@ export const articleService = {
         updatedAt: x.updatedAt,
         // If categories are not fully populated, map them from the cache
         categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
-        categoryIds: x.categoryIds
+        categoryIds: x.categoryIds || (x.categories ? x.categories.map((cat: any) => cat.id) : []),
       }))
       return { items, total: items.length }
     }
@@ -153,7 +157,7 @@ export const articleService = {
       updatedAt: x.updatedAt,
       // If categories are not fully populated, map them from the cache
       categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
-      categoryIds: x.categoryIds
+      categoryIds: x.categoryIds || (x.categories ? x.categories.map((cat: any) => cat.id) : []),
     })) ?? []
     return { items, total }
   },
@@ -185,7 +189,7 @@ export const articleService = {
       createdAt: x.createdAt,
       updatedAt: x.updatedAt,
       categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
-      categoryIds: x.categoryIds,
+      categoryIds: x.categoryIds || (x.categories ? x.categories.map((cat: any) => cat.id) : []),
     };
     return article;
   },
@@ -281,7 +285,7 @@ export const articleService = {
     formData.append('model.MetaDescription', payload.metaDescription);
     formData.append('model.AuthorId', payload.authorId);
     formData.append('model.StatusCode', payload.statusCode);
-    if (payload.publishedAt) {
+    if (payload.publishedAt !== undefined) {
         formData.append('model.PublishedAt', payload.publishedAt);
     }
     payload.categoryIds.forEach(catId => formData.append('model.CategoryIds', catId));

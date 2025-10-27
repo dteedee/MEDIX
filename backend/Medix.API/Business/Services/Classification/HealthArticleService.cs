@@ -48,7 +48,7 @@ namespace Medix.API.Business.Services.Classification
                 PublishedAt = a.PublishedAt, 
                 IsHomepageVisible = a.IsHomepageVisible,
                 DisplayOrder = a.DisplayOrder,
-
+                
                 CoverImageUrl = a.CoverImageUrl,
                 ThumbnailUrl = a.ThumbnailUrl,
                 StatusCode = a.StatusCode,
@@ -63,6 +63,7 @@ namespace Medix.API.Business.Services.Classification
                 Categories = a.Categories
          .Select(c => new HealthArticlePublicDto.CategoryInfo
          {
+             Id = c.Id,
              Name = c.Name,
              Slug = c.Slug
          })
@@ -88,7 +89,7 @@ namespace Medix.API.Business.Services.Classification
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
                 LikeCount = a.LikeCount,
-
+                PublishedAt = a.PublishedAt,
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
@@ -96,6 +97,7 @@ namespace Medix.API.Business.Services.Classification
                 Categories = a.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })
@@ -126,7 +128,7 @@ namespace Medix.API.Business.Services.Classification
                 StatusCode = article.StatusCode,
                 ViewCount = article.ViewCount,
                 LikeCount = article.LikeCount,
-
+                PublishedAt = article.PublishedAt,
                 IsHomepageVisible = article.IsHomepageVisible,
                 DisplayOrder = article.DisplayOrder,
                 DisplayType = article.DisplayType,
@@ -136,6 +138,7 @@ namespace Medix.API.Business.Services.Classification
                 Categories = article.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })
@@ -167,7 +170,7 @@ namespace Medix.API.Business.Services.Classification
                 StatusCode = article.StatusCode,
                 ViewCount = article.ViewCount + 1, // Show incremented count
                 LikeCount = article.LikeCount,
-
+                PublishedAt = article.PublishedAt,
                 IsHomepageVisible = article.IsHomepageVisible,
                 DisplayOrder = article.DisplayOrder,
                 DisplayType = article.DisplayType,
@@ -177,6 +180,7 @@ namespace Medix.API.Business.Services.Classification
                 Categories = article.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })
@@ -199,7 +203,7 @@ namespace Medix.API.Business.Services.Classification
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
                 LikeCount = a.LikeCount,
-
+                PublishedAt = a.PublishedAt,
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
@@ -207,6 +211,7 @@ namespace Medix.API.Business.Services.Classification
                 Categories = a.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })
@@ -234,13 +239,14 @@ namespace Medix.API.Business.Services.Classification
                 IsHomepageVisible = a.IsHomepageVisible,
                 DisplayOrder = a.DisplayOrder,
                 DisplayType = a.DisplayType,
-
+                PublishedAt = a.PublishedAt,
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
                 Categories = a.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })
@@ -263,7 +269,7 @@ namespace Medix.API.Business.Services.Classification
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
                 LikeCount = a.LikeCount,
-
+                PublishedAt = a.PublishedAt,
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
@@ -271,6 +277,7 @@ namespace Medix.API.Business.Services.Classification
                 Categories = a.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })
@@ -313,7 +320,7 @@ namespace Medix.API.Business.Services.Classification
                 StatusCode = createDto.StatusCode ?? "Draft",
                 ViewCount = 0,
                 LikeCount = 0,
-
+                PublishedAt = createDto.PublishedAt,
                 IsHomepageVisible = createDto.IsHomepageVisible,
                 DisplayOrder = createDto.DisplayOrder,
                 DisplayType = createDto.DisplayType ?? "Standard",
@@ -323,7 +330,7 @@ namespace Medix.API.Business.Services.Classification
             };
 
             // Nếu bài viết được tạo với trạng thái Published, gán luôn ngày xuất bản
-            if (article.StatusCode == "Published")
+            if (article.StatusCode == "Published" && article.PublishedAt == null)
             {
                 article.PublishedAt = DateTime.UtcNow;
             }
@@ -405,21 +412,18 @@ namespace Medix.API.Business.Services.Classification
             // Ghi lại trạng thái cũ trước khi map
             var oldStatusCode = article.StatusCode;
 
-            // Map các giá trị từ DTO vào entity
-            _mapper.Map(updateDto, article);
-
-            // Cập nhật PublishedAt một cách an toàn
-            // 1. Nếu bài viết được chuyển sang "Published" lần đầu tiên
+            // Logic cập nhật PublishedAt an toàn
+            // Chỉ gán PublishedAt khi chuyển trạng thái sang "Published" lần đầu tiên.
             if (updateDto.StatusCode == "Published" && oldStatusCode != "Published")
             {
-                article.PublishedAt = DateTime.UtcNow;
+                if (article.PublishedAt == null)
+                {
+                    article.PublishedAt = DateTime.UtcNow;
+                }
             }
-            // 2. Nếu bài viết đã được published, đảm bảo PublishedAt không bị ghi đè về null
-            else if (updateDto.StatusCode == "Published" && article.PublishedAt == null)
-            {
-                // Gán ngày hiện tại nếu nó đang là null một cách bất thường
-                article.PublishedAt = DateTime.UtcNow;
-            }
+
+            // Map các giá trị từ DTO vào entity
+            _mapper.Map(updateDto, article);
 
             article.UpdatedAt = DateTime.UtcNow;
 
@@ -501,6 +505,7 @@ namespace Medix.API.Business.Services.Classification
                 Categories = updated.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })
@@ -548,6 +553,7 @@ namespace Medix.API.Business.Services.Classification
                 Categories = updated.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })

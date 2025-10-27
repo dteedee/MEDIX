@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Medix.API.Models.DTOs.HealthArticle
 {
@@ -46,6 +47,7 @@ namespace Medix.API.Models.DTOs.HealthArticle
         [Required(ErrorMessage = "StatusCode is required.")]
         
         public string StatusCode { get; set; } = null!;
+        [FromForm(Name = "PublishedAt")]
 
         public DateTime? PublishedAt { get; set; }
 

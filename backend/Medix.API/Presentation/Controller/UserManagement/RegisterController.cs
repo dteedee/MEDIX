@@ -4,7 +4,7 @@ using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
-using Medix.API.Models.Wallet;
+using Medix.API.Models.DTOs.Wallet;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 

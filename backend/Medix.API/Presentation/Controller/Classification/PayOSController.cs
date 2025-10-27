@@ -3,7 +3,7 @@ using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.UserManagement;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.PayOSDto;
-using Medix.API.Models.Wallet;
+using Medix.API.Models.DTOs.Wallet;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

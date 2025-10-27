@@ -65,6 +65,7 @@ namespace Medix.API.Configurations
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IVnpay, Vnpay>();
             services.AddScoped<IWalletService, WalletService>();
+            services.AddScoped<IWalletTransactionService, WalletTransactionService>();
 
 
 

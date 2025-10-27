@@ -1,6 +1,6 @@
 ﻿using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess.Interfaces.Classification;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Wallet;
 using Medix.API.Models.Entities;
 
 namespace Medix.API.Business.Services.UserManagement
@@ -55,6 +55,29 @@ namespace Medix.API.Business.Services.UserManagement
         public Task<decimal> GetWalletBalanceAsync(Guid userId)
         {
           return  _walletRepository.GetWalletBalanceAsync(userId);
+        }
+
+        public Task<WalletDTo?> GetWalletByUserIdAsync(Guid userId)
+        {
+           var result =  _walletRepository.GetWalletByUserIdAsync(userId);
+            var walletDto = result.ContinueWith(task =>
+            {
+                var wallet = task.Result;
+                if (wallet == null)
+                    return null;
+                return new WalletDTo
+                {
+                    Id = wallet.Id,
+                    UserId = wallet.UserId,
+                    Balance = wallet.Balance,
+                    Currency = wallet.Currency,
+                    IsActive = wallet.IsActive,
+                    CreatedAt = wallet.CreatedAt,
+                    UpdatedAt = wallet.UpdatedAt
+                };
+            });
+
+            return walletDto;
         }
 
         public Task<bool> IncreaseWalletBalanceAsync(Guid userId, decimal amount)

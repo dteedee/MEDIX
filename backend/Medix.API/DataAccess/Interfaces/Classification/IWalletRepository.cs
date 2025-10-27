@@ -10,6 +10,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         public Task<bool> DeleteWalletBalanceAsync(Guid userId,decimal amount);
 
         public Task<Wallet> CreateWalletAsync(Wallet wallet);
+        public Task<Wallet> GetWalletByUserIdAsync(Guid userId);
 
     }
 }

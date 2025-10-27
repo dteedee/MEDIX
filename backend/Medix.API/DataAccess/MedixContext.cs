@@ -1034,6 +1034,7 @@ public partial class MedixContext : DbContext
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.OrderCode).HasColumnType("bigint");
             entity.Property(e => e.BalanceAfter).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.BalanceBefore).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");

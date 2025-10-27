@@ -1,4 +1,4 @@
-﻿namespace Medix.API.Models.DTOs
+﻿namespace Medix.API.Models.DTOs.Wallet
 {
     public class WalletDTo
     {

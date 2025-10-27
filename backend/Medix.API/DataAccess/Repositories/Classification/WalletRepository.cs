@@ -39,6 +39,11 @@ namespace Medix.API.DataAccess.Repositories.Classification
           return Task.FromResult(_context.Wallets.FirstOrDefault(w => w.UserId == userId).Balance);
         }
 
+        public Task<Wallet> GetWalletByUserIdAsync(Guid userId)
+        {
+            return Task.FromResult(_context.Wallets.FirstOrDefault(w => w.UserId == userId&& w.IsActive==true));
+        }
+
         public Task<bool> IncreaseWalletBalanceAsync(Guid userId, decimal amount)
         {
            var wallet = _context.Wallets.FirstOrDefault(w => w.UserId == userId);

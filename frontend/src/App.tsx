@@ -33,7 +33,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import { ManageDashboard } from './pages/manager/ManageDashboard';
 import DoctorRegister from './pages/doctor/DoctorRegister';
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
-import DoctorProfile from './pages/doctor/DoctorProfile';
+import { DoctorProfile } from './pages/doctor/DoctorProfile';
 import DoctorAppointments from './pages/doctor/DoctorAppointments';
 import DoctorPatients from './pages/doctor/DoctorPatients';
 import DoctorWallet from './pages/doctor/DoctorWallet';

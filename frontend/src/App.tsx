@@ -37,6 +37,8 @@ import { PatientProfile } from './pages/patient/patientProfile';
 import { PatientAppointments } from './pages/patient/PatientAppointments';
 import { PatientResults } from './pages/patient/PatientResults';
 import { PatientFinance } from './pages/patient/PatientFinance';
+import { ManagerProfile } from './pages/manager/ManagerProfile';
+import { AdminProfile } from './pages/admin/AdminProfile';
 import DoctorDetails from './pages/doctor/DoctorDetails';
 import ScheduleManagement from './pages/doctor/ScheduleManagement';
 import DoctorProfileEdit from './pages/doctor/DoctorProfileEdit';
@@ -116,6 +118,7 @@ export function App() {
                   {/* ---------- Admin routes ---------- */}
                   <Route path="admin/*" element={<AdminLayout />}>
                     <Route index element={<AdminDashboard />} />
+                    <Route path="profile" element={<AdminProfile />} />
                     <Route path="users" element={<UserList />} />
                     <Route path="users/new" element={<UserEditPage />} />
                     <Route path="users/edit/:id" element={<UserEditPage />} />
@@ -131,6 +134,7 @@ export function App() {
                   }>
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard" element={<ManageDashboard />} />
+                    <Route path="profile" element={<ManagerProfile />} />
                     <Route path="doctors" element={<DoctorManagement />} />
                     <Route path="reports" element={<ReportsAndAnalytics />} />
                     <Route path="articles" element={<ArticleManagement />} />

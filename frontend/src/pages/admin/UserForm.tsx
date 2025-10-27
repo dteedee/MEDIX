@@ -308,10 +308,11 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
   const handleResetPassword = async () => {
     if (!user?.id) return;
 
-    if (confirm(`Bạn có chắc muốn gửi email đặt lại mật khẩu cho người dùng "${user.fullName || user.email}" không?`)) {
+    if (confirm(`Bạn có chắc muốn đặt lại mật khẩu cho người dùng "${user.fullName || user.email}" không? Mật khẩu mới sẽ được tạo và gửi đến email của họ.`)) {
       try {
-        // Giả định service có hàm này, bạn cần thêm nó vào userAdminService.ts
-        await (userAdminService as any).sendResetPasswordEmail(user.id);
+        showToast('Đang gửi yêu cầu đặt lại mật khẩu...', 'info');
+        // Gọi hàm mới để admin reset mật khẩu
+        await userAdminService.adminResetPassword(user.id);
         showToast('Yêu cầu đặt lại mật khẩu đã được gửi thành công!', 'success');
       } catch (error) {
         console.error('Failed to send password reset email:', error);

@@ -188,4 +188,13 @@ export const userAdminService = {
     const r = await apiClient.get(`${BASE}/roles`);
     return r.data;
   },
+  /**
+   * Sends a request for an admin to reset a user's password.
+   * A new temporary password will be generated and emailed to the user.
+   * @param id The ID of the user.
+   */
+  adminResetPassword: async (id: string): Promise<void> => {
+    // This calls the POST /api/User/{id}/admin-reset-password endpoint you created.
+    await apiClient.post(`${BASE}/${id}/admin-reset-password`);
+  },
 };

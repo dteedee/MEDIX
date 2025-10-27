@@ -283,6 +283,35 @@ namespace Medix.API.Presentation.Controller.UserManagement
             return Ok(result);
         }
 
+        [HttpPost("{id}/admin-reset-password")]
+        //[Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AdminResetPassword(Guid id)
+        {
+            try
+            {
+                // 1. Generate a new temporary password
+                var temporaryPassword = GenerateRandomPassword();
+
+                // 2. Update the user's password in the database
+                // This requires a method in IUserService to update the password hash.
+                var updatedUser = await _userService.AdminResetPasswordAsync(id, temporaryPassword);
+
+                // 3. Send the new password via email using the existing service method
+                await _emailService.SendNewUserPasswordAsync(updatedUser.Email, updatedUser.UserName, temporaryPassword);
+
+                return Ok(new { message = "Mật khẩu đã được đặt lại và gửi đến email của người dùng." });
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi quản trị viên đặt lại mật khẩu cho người dùng {UserId}", id);
+                return StatusCode(500, new { message = "Đã xảy ra lỗi trong quá trình đặt lại mật khẩu." });
+            }
+        }
+
         private string GenerateRandomPassword(int length = 12)
         {
             const string upper = "ABCDEFGHJKLMNOPQRSTUVWXYZ";

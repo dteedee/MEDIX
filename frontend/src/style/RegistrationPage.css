@@ -25,26 +25,27 @@
   box-shadow: 0 40px 100px 0 rgba(33, 150, 243, 0.23);
 }
 
-/* Header section - EXACT COPY from doctor-register.module.css */
-.form-header {
+/* Header section - EXACT COPY from doctor-register.module.css with higher specificity */
+.registration-form .form-header {
   text-align: center;
   margin-bottom: 32px;
 }
 
-.form-header h1 {
-  color: #1976d2;
-  font-size: 2.6rem;
-  font-weight: 800;
-  margin-bottom: 5px;
-  letter-spacing: 1px;
+.registration-form .form-header h1 {
+  color: #1976d2 !important;
+  font-size: 2.6rem !important;
+  font-weight: 800 !important;
+  margin-bottom: 5px !important;
+  letter-spacing: 1px !important;
 }
 
-.form-header p {
-  color: #e53935;
-  font-size: 1.1rem;
-  margin-bottom: 0;
-  margin-top: 0;
-  font-weight: 500;
+.registration-form .form-header p {
+  color: #e53935 !important;
+  font-size: 1.1rem !important;
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
+  font-weight: 500 !important;
+  font-family: 'Be Vietnam Pro', sans-serif !important;
 }
 
 /* Two-column layout */
@@ -527,39 +528,39 @@
   font-weight: 500;
 }
 
-/* Terms & Conditions - EXACT COPY from doctor-register.module.css */
-.terms-section {
+/* Terms & Conditions - EXACT COPY from doctor-register.module.css with higher specificity */
+.registration-form .terms-section {
   margin: 30px 0;
   padding: 16px 20px;
   border-radius: 10px;
   background: #f1f6ff;
 }
 
-.checkbox-wrapper {
+.registration-form .checkbox-wrapper {
   display: flex;
   align-items: flex-start;
   gap: 12px;
 }
 
-.checkbox-wrapper input[type="checkbox"] {
+.registration-form .checkbox-wrapper input[type="checkbox"] {
   width: 20px;
   height: 20px;
   margin-top: 2px;
   accent-color: #1976d2;
 }
 
-.terms-text {
+.registration-form .terms-text {
   font-size: 13.5px;
   color: #374151;
 }
 
-.terms-link {
+.registration-form .terms-link {
   color: #0a66c2;
   text-decoration: none;
   font-weight: 600;
 }
 
-.terms-link:hover {
+.registration-form .terms-link:hover {
   text-decoration: underline;
 }
 
@@ -589,20 +590,20 @@
   box-shadow: 0 12px 28px rgba(66, 165, 245, 0.4) !important;
 }
 
-/* Login link - EXACT COPY from doctor-register.module.css */
-.login-link-section {
+/* Login link - EXACT COPY from doctor-register.module.css with higher specificity */
+.registration-form .login-link-section {
   margin-top: 22px;
   font-size: 14px;
   color: #6b7280;
 }
 
-.login-link {
+.registration-form .login-link {
   color: #1976d2;
   font-weight: 600;
   text-decoration: none;
 }
 
-.login-link:hover {
+.registration-form .login-link:hover {
   text-decoration: underline;
 }
 

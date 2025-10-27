@@ -151,6 +151,8 @@ function DoctorDetails() {
         // Generate time slots based on doctor's schedule
         // Each schedule represents a separate consultation session (ca khám)
         const timeSlots: string[] = [];
+        const now = new Date();
+        const isToday = date.toDateString() === now.toDateString();
         
         doctorSchedules.forEach(schedule => {
             // Each schedule is a complete consultation session
@@ -158,8 +160,20 @@ function DoctorDetails() {
             const startTime = schedule.startTime.slice(0, 5); // Remove seconds, keep HH:MM
             const endTime = schedule.endTime.slice(0, 5); // Remove seconds, keep HH:MM
             
-            // Add this complete consultation session as one time slot
-            timeSlots.push(`${startTime} - ${endTime}`);
+            // If it's today, check if the time slot has already passed
+            if (isToday) {
+                const [startHour, startMinute] = startTime.split(':').map(Number);
+                const scheduleStartTime = new Date();
+                scheduleStartTime.setHours(startHour, startMinute, 0, 0);
+                
+                // Only add time slot if it hasn't started yet
+                if (now < scheduleStartTime) {
+                    timeSlots.push(`${startTime} - ${endTime}`);
+                }
+            } else {
+                // For future dates, add all available time slots
+                timeSlots.push(`${startTime} - ${endTime}`);
+            }
         });
         
         return timeSlots;

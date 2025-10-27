@@ -16,10 +16,22 @@
   flex-direction: column;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+  /* Prevent horizontal scrolling */
+  max-width: 280px;
+  box-sizing: border-box;
+}
+
+/* Prevent all child elements from causing horizontal scroll */
+.sidebar * {
+  max-width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .sidebarClosed {
   width: 70px;
+  max-width: 70px;
 }
 
 .sidebarHeader {
@@ -27,6 +39,9 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .sidebarClosed .sidebarHeader {
@@ -185,6 +200,9 @@
   padding: 20px 0;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+  width: 100%;
 }
 
 .sidebarClosed .sidebarNav {
@@ -262,6 +280,9 @@
   background: rgba(0, 0, 0, 0.1);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .sidebarClosed .userSection {

@@ -198,44 +198,21 @@ export default function BannerManagement() {
     setUpdatingIds(prev => ({ ...prev, [currentBanner.id]: true }));
 
     try {
-      // Try lock/unlock first
-      if (isBeingLocked) {
-        console.log('Calling lock for banner:', currentBanner.id);
-        try {
-          await bannerService.lock(currentBanner.id);
-          console.log('Lock successful');
-        } catch (lockError: any) {
-          // If lock endpoint doesn't exist (404), use update instead
-          if (lockError?.response?.status === 404) {
-            console.log('Lock endpoint not found, using update instead');
-            await bannerService.update(currentBanner.id, { 
-              isActive: false,
-              bannerTitle: currentBanner.bannerTitle,
-              displayOrder: currentBanner.displayOrder
-            });
-          } else {
-            throw lockError;
-          }
-        }
-      } else {
-        console.log('Calling unlock for banner:', currentBanner.id);
-        try {
-          await bannerService.unlock(currentBanner.id);
-          console.log('Unlock successful');
-        } catch (unlockError: any) {
-          // If unlock endpoint doesn't exist (404), use update instead
-          if (unlockError?.response?.status === 404) {
-            console.log('Unlock endpoint not found, using update instead');
-            await bannerService.update(currentBanner.id, { 
-              isActive: true,
-              bannerTitle: currentBanner.bannerTitle,
-              displayOrder: currentBanner.displayOrder
-            });
-          } else {
-            throw unlockError;
-          }
-        }
-      }
+      // Directly use the update service to toggle isActive status
+      const newIsActive = !isBeingLocked;
+      console.log(`Using update service to set isActive to ${newIsActive} for banner:`, currentBanner.id);
+
+      await bannerService.update(currentBanner.id, {
+        isActive: newIsActive,
+        bannerTitle: currentBanner.bannerTitle,
+        displayOrder: currentBanner.displayOrder,
+        bannerImageUrl: currentBanner.bannerImageUrl,
+        bannerUrl: currentBanner.bannerUrl,
+        // Include other required fields if any, to prevent validation errors
+        startDate: currentBanner.startDate ?? undefined,
+        endDate: currentBanner.endDate ?? undefined,
+      });
+
       showToast(`Đã ${actionText} banner thành công.`, 'success');
       
       // Reload data
@@ -627,7 +604,7 @@ export default function BannerManagement() {
                       )}
                     </td>
                     <td>
-                      <span className={styles.orderBadge}>{banner.displayOrder || 'N/A'}</span>
+                      <span className={styles.orderBadge}>{banner.displayOrder !== undefined && banner.displayOrder !== null ? banner.displayOrder : 'N/A'}</span>
                     </td>
                     <td>{getStatusBadge(banner.isActive, banner.isLocked || false)}</td>
                     <td className={styles.dateCell}>{formatDate(banner.startDate)}</td>
@@ -641,9 +618,9 @@ export default function BannerManagement() {
                           <i className="bi bi-pencil"></i>
                         </button>
                         <button
-                          onClick={() => handleStatusChange(banner, !banner.isActive)}
+                          onClick={() => handleStatusChange(banner, banner.isActive)}
                           disabled={Boolean(updatingIds[banner.id])}
-                          title={banner.isActive ? 'Khóa (Tạm dừng)' : 'Mở khóa (Kích hoạt)'}
+                          title={banner.isActive ? 'Tạm dừng (Khóa)' : 'Kích hoạt (Mở khóa)'}
                           className={`${styles.actionBtn} ${banner.isActive ? styles.actionLock : styles.actionUnlock}`}
                         >
                           <i className={`bi bi-${banner.isActive ? 'lock' : 'unlock'}`}></i>

@@ -167,7 +167,8 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
 
       const payload: CreateBannerRequest | UpdateBannerRequest = {
         bannerTitle: title,
-        bannerImageUrl: selectedFile ? undefined : (imagePreviewUrl || undefined),
+        // For create, we don't send URL. For edit, send existing URL only if no new file is selected.
+        bannerImageUrl: banner && !selectedFile ? imagePreviewUrl : undefined,
         bannerUrl: link || undefined,
         displayOrder: order,
         startDate: toIso(startDateLocal) || undefined,
@@ -185,8 +186,9 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
           res = await bannerService.update(banner.id, payload as UpdateBannerRequest)
         } else {
           // In create mode, ensure the payload matches CreateBannerRequest
-          const createPayload: CreateBannerRequest = { ...payload, bannerTitle: title, isActive: isActive };
-          delete (createPayload as any).bannerImageUrl; // Remove property not in CreateBannerRequest
+          const createPayload: CreateBannerRequest = { ...payload, bannerTitle: title, isActive: isActive, bannerImageUrl: undefined };
+          // Explicitly remove bannerImageUrl for create as backend will generate it
+          // delete (createPayload as any).bannerImageUrl;
           res = await bannerService.create(createPayload);
         }
         console.debug('Banner save response:', res)

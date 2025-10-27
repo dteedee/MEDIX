@@ -212,7 +212,6 @@
 .navItem:hover {
   background: rgba(255, 255, 255, 0.15);
   color: white;
-  transform: translateX(6px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
@@ -224,7 +223,6 @@
   background: rgba(255, 255, 255, 0.2);
   color: white;
   font-weight: 600;
-  transform: translateX(4px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -390,7 +388,6 @@
 .menuItem:hover {
   background: rgba(255, 255, 255, 0.1);
   color: white;
-  transform: translateX(4px);
 }
 
 .menuItem i {
@@ -421,7 +418,6 @@
 
 .logoutBtn:hover {
   background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 

@@ -320,7 +320,9 @@ function DoctorRegister() {
                                                 : ''
                                             }`}
                                         onChange={handleChange}
-                                        placeholder="mm/dd/yyyy" name='dob' />
+                                        placeholder="mm/dd/yyyy" 
+                                        name='dob'
+                                        max="9999-12-31" />
                                     {errors.Dob?.[0] && (
                                         <div className="text-danger">{errors.Dob[0]}</div>
                                     )}

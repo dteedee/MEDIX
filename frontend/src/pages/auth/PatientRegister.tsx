@@ -1292,6 +1292,7 @@ export const PatientRegister: React.FC = () => {
                     onChange={handleChange}
                     placeholder="dd/mm/yyyy"
                     title="Bạn có thể nhập trực tiếp hoặc chọn từ lịch"
+                    max="9999-12-31"
                     className={`form-control ${validationErrors.DateOfBirth?.[0]
                       ? 'is-invalid'
                       : formData.dateOfBirth?.trim()

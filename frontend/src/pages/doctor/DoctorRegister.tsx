@@ -49,7 +49,9 @@ function DoctorRegister() {
         const agreed = formData.get('agreeToTerms') === 'on'; // checkbox returns 'on' if checked
 
         if (!agreed) {
-            setErrors({ AgreeToTerms: 'Vui lòng đọc và đồng ý với điều khoản trước khi đăng ký' });
+            setErrors((prev: any) => ({
+                ...prev, AgreeToTerms: 'Vui lòng đọc và đồng ý với điều khoản trước khi đăng ký'
+            }));
             return;
         }
 
@@ -103,8 +105,10 @@ function DoctorRegister() {
 
                 if (!trimmed) {
                     newErrors.UserName = ['Vui lòng nhập tên đăng nhập'];
-                } else if (trimmed.length > 15) {
-                    newErrors.UserName = ['Tên đăng nhập không được vượt quá 15 ký tự'];
+                } else if (trimmed.length < 6) {
+                    newErrors.UserName = ['Tên đăng nhập phải có ít nhất 6 ký tự'];
+                } else if (trimmed.length > 20) {
+                    newErrors.UserName = ['Tên đăng nhập không được vượt quá 20 ký tự'];
                 } else if (!/^[a-zA-Z0-9]+$/.test(trimmed)) {
                     newErrors.UserName = ['Tên đăng nhập chỉ được chứa chữ cái và số, không có khoảng trắng hoặc ký tự đặc biệt'];
                 } else {
@@ -186,7 +190,7 @@ function DoctorRegister() {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setFormData((prev: any) => ({ ...prev, [name]: value }));
+        //setFormData((prev: any) => ({ ...prev, [name]: value }));
         validateField(name, value);
     };
 
@@ -196,17 +200,32 @@ function DoctorRegister() {
         setFormData((prev: any) => ({ ...prev, licenseImage: file }));
 
         if (!file) {
-            setErrors((prev: any) => ({ ...prev, LicenseImage: ['Vui lòng chọn một tệp ZIP hoặc RAR.'] }));
+            setErrors((prev: any) => ({
+                ...prev,
+                LicenseImage: ['Vui lòng chọn một tệp ZIP hoặc RAR.'],
+            }));
             return;
         }
 
         const validExtensions = ['.zip', '.rar'];
         const fileExtension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+        const maxSize = 3 * 1024 * 1024; // 3MB in bytes
 
         if (!validExtensions.includes(fileExtension)) {
-            setErrors((prev: any) => ({ ...prev, LicenseImage: ['Tệp phải có định dạng ZIP hoặc RAR.'] }));
+            setErrors((prev: any) => ({
+                ...prev,
+                LicenseImage: ['Tệp phải có định dạng ZIP hoặc RAR.'],
+            }));
+        } else if (file.size > maxSize) {
+            setErrors((prev: any) => ({
+                ...prev,
+                LicenseImage: ['Kích thước tệp không được vượt quá 3MB.'],
+            }));
         } else {
-            setErrors((prev: any) => ({ ...prev, LicenseImage: [''] }));
+            setErrors((prev: any) => ({
+                ...prev,
+                LicenseImage: [''],
+            }));
         }
     };
 
@@ -220,6 +239,19 @@ function DoctorRegister() {
             setErrors((prev: any) => ({ ...prev, 'SpecializationId': [''] }));
         }
     };
+
+    const validateNumber = (input: string) => {
+        // Remove any non-digit characters
+        return input.replace(/[^0-9]/g, '');
+    };
+
+    const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value;
+        const { name, value } = e.target;
+        const sanitized = validateNumber(raw);
+        setFormData((prev: any) => ({ ...prev, [name]: sanitized }));
+    };
+
 
     if (pageLoading) return <PageLoader />;
 
@@ -312,7 +344,9 @@ function DoctorRegister() {
                                 </div>
                                 <div className={styles["form-group"]}>
                                     <label className={styles["form-label"]}>Số CCCD <span className={styles["required"]}>*</span></label>
-                                    <input type="number"
+                                    <input type="text"
+                                        inputMode="numeric"
+                                        pattern="\d*"
                                         onInput={(e) => {
                                             const target = e.target as HTMLInputElement;
                                             if (target.value.length > 12) {
@@ -325,9 +359,10 @@ function DoctorRegister() {
                                                 ? 'is-valid'
                                                 : ''
                                             }`}
-                                        onChange={handleChange}
+                                        onChange={(e) => { handleNumberChange(e); handleChange(e); }}
                                         placeholder="Nhập số căn cước công dân 12 số"
-                                        name='identificationNumber' />
+                                        name='identificationNumber'
+                                        value={formData.identificationNumber} />
                                     {errors.IdentificationNumber?.[0] && (
                                         <div className="text-danger">{errors.IdentificationNumber[0]}</div>
                                     )}
@@ -349,7 +384,9 @@ function DoctorRegister() {
                                 </div>
                                 <div className={styles["form-group"]}>
                                     <label className={styles["form-label"]}>Số điện thoại <span className={styles["required"]}>*</span></label>
-                                    <input type="number" name='phoneNumber'
+                                    <input type="text" name='phoneNumber'
+                                        inputMode="numeric"
+                                        pattern="\d*"
                                         onInput={(e) => {
                                             const target = e.target as HTMLInputElement;
                                             if (target.value.length > 10) {
@@ -362,7 +399,11 @@ function DoctorRegister() {
                                                 ? 'is-valid'
                                                 : ''
                                             }`}
-                                        onChange={handleChange}
+                                        onChange={(e) => {
+                                            handleNumberChange(e);
+                                            handleChange(e);
+                                        }}
+                                        value={formData.phoneNumber}
                                         placeholder="09xxxxxxxx" />
                                     {errors.PhoneNumber?.[0] && (
                                         <div className="text-danger">{errors.PhoneNumber[0]}</div>

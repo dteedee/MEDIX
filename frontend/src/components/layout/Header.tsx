@@ -76,8 +76,12 @@ export const Header: React.FC = () => {
 
     const handleProfileClick = () => {
         setShowUserDropdown(false);
-        if (user?.role === "Doctor") {
-            navigate('/doctor/profile/edit');
+        if (user?.role === "Admin") {
+            navigate('/app/admin/profile');
+        } else if (user?.role === "Manager") {
+            navigate('/app/manager/profile');
+        } else if (user?.role === "Doctor") {
+            navigate('/app/doctor/profile/edit');
         } else {
             navigate('/app/patient/profile');
         }
@@ -85,8 +89,12 @@ export const Header: React.FC = () => {
 
     const handleDashboardClick = () => {
         setShowUserDropdown(false);
-        if (user?.role === "Doctor") {
-            navigate('/doctor/dashboard');
+        if (user?.role === "Admin") {
+            navigate('/app/admin/dashboard');
+        } else if (user?.role === "Manager") {
+            navigate('/app/manager/dashboard');
+        } else if (user?.role === "Doctor") {
+            navigate('/app/doctor/dashboard');
         } else {
             navigate('/app/patient');
         }
@@ -189,7 +197,10 @@ export const Header: React.FC = () => {
                                     <div className={styles["user-info"]}>
                                         <div className={styles["user-name"]}>{user.fullName || 'Người dùng'}</div>
                                         <div className={styles["user-role"]}>
-                                            {user.role === "Doctor" ? "Bác sĩ" : "Bệnh nhân"}
+                                            {user.role === "Doctor" ? "Bác sĩ" : 
+                                             user.role === "Admin" ? "Quản trị viên" :
+                                             user.role === "Manager" ? "Quản lý" :
+                                             user.role === "Patient" ? "Bệnh nhân" : "Người dùng"}
                                         </div>
                                     </div>
                                     <i className={`bi bi-chevron-${showUserDropdown ? 'up' : 'down'} ${styles["dropdown-icon"]}`}></i>

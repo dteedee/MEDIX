@@ -1,148 +1,304 @@
-import React, { useState, useEffect, FormEvent } from 'react';
+"use client"
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import Swal from 'sweetalert2';
 import { scheduleService } from '../../services/scheduleService';
-import { DoctorSchedule } from '../../types/schedule';
-import { format } from 'date-fns';
+import { appointmentService } from '../../services/appointmentService';
+import { DoctorSchedule, CreateSchedulePayload, ScheduleOverride } from '../../types/schedule';
+import { Appointment } from '../../types/appointment.types';
+import "../../styles/ScheduleManagement.css";
+import FixedScheduleManager from './FixedScheduleManager'; // Giữ nguyên vì file mới được tạo cùng thư mục
+import FlexibleScheduleManager from './FlexibleScheduleManager';
+
+const monthNames = [ "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12" ];
+const dayNames = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+
+// Hàm tiện ích để định dạng ngày thành YYYY-MM-DD, sử dụng UTC để tránh lỗi múi giờ.
+const toYYYYMMDD = (date: Date) => {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const ScheduleManagement: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
   const [schedules, setSchedules] = useState<DoctorSchedule[]>([]);
+  const [scheduleOverrides, setScheduleOverrides] = useState<ScheduleOverride[]>([]);
+  const [currentDayAppointments, setCurrentDayAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [formState, setFormState] = useState({
-    scheduleDate: '',
-    startTime: '08:00',
-    endTime: '17:00',
-    consultationFee: 150000,
-  });
+
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<number | null>(new Date().getDate());
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
+
+  // Map schedules by day of the week for quick lookup
+  const schedulesByDayOfWeek = useMemo(() => {
+    const map = new Map<number, DoctorSchedule[]>();
+    schedules.forEach(schedule => {
+      const day = schedule.dayOfWeek;
+      if (!map.has(day)) {
+        map.set(day, []);
+      }
+      map.get(day)?.push(schedule);
+    });
+    return map;
+  }, [schedules]);
 
   const fetchSchedules = async () => {
     try {
       setIsLoading(true);
-      const data = await scheduleService.getMySchedules();
-      // Sắp xếp lịch theo ngày gần nhất trước
-      const sortedData = data.sort((a, b) => new Date(b.scheduleDate).getTime() - new Date(a.scheduleDate).getTime());
-      setSchedules(sortedData);
+      if (!isAuthenticated || !user?.id) {
+        setError('Bạn cần đăng nhập để xem và quản lý lịch làm việc.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch both fixed schedules and schedule overrides concurrently
+      const [fixedSchedules, overrides] = await Promise.all([
+        scheduleService.getMySchedules(),
+        scheduleService.getMyScheduleOverrides(),
+      ]);
+
+      setSchedules(fixedSchedules);
+      setScheduleOverrides(overrides);
       setError(null);
     } catch (err) {
       setError('Không thể tải danh sách lịch làm việc. Vui lòng thử lại.');
-      console.error(err);
+      console.error('Error fetching schedules:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Map schedule overrides by date for quick lookup
+  const scheduleOverridesByDate = useMemo(() => {
+    const map = new Map<string, ScheduleOverride[]>();
+    scheduleOverrides.forEach(override => {
+      const dateKey = override.overrideDate; // API returns YYYY-MM-DD
+      if (!map.has(dateKey)) {
+        map.set(dateKey, []);
+      }
+      map.get(dateKey)?.push(override);
+    });
+    return map;
+  }, [scheduleOverrides]);
+
+  // Effect để lấy cuộc hẹn khi ngày được chọn thay đổi
+  useEffect(() => {
+    const fetchAppointmentsForSelectedDay = async () => {
+      if (!isAuthenticated || !user?.id || !selectedDate) {
+        setCurrentDayAppointments([]);
+        return;
+      }
+      const selectedFullDate = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate));
+      const selectedDateString = toYYYYMMDD(selectedFullDate); // Sử dụng hàm tiện ích an toàn
+      try {
+        const appointments = await appointmentService.getMyDayAppointments(selectedDateString);
+        setCurrentDayAppointments(appointments.sort((a, b) => a.appointmentStartTime.localeCompare(b.appointmentStartTime)));
+      } catch (err) {
+        console.error('Error fetching appointments for selected day:', err);
+        setCurrentDayAppointments([]); // Xóa các cuộc hẹn nếu có lỗi
+      }
+    };
+    fetchAppointmentsForSelectedDay();
+  }, [selectedDate, currentMonth, isAuthenticated, user?.id]);
+
   useEffect(() => {
     fetchSchedules();
-  }, []);
+  }, [isAuthenticated, user?.id]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormState((prevState) => ({
-      ...prevState,
-      [name]: value,
-    }));
+  const getDaysInMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!formState.scheduleDate || !formState.startTime || !formState.endTime) {
-      setError('Vui lòng điền đầy đủ thông tin.');
-      return;
-    }
-
-    try {
-      await scheduleService.createSchedule({
-        ...formState,
-        consultationFee: Number(formState.consultationFee),
-      });
-      // Reset form and refetch schedules
-      setFormState({
-        scheduleDate: '',
-        startTime: '08:00',
-        endTime: '17:00',
-        consultationFee: 150000,
-      });
-      fetchSchedules();
-    } catch (err) {
-      setError('Tạo lịch làm việc thất bại. Vui lòng thử lại.');
-      console.error(err);
-    }
+  const getFirstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
+
+  const daysInMonth = getDaysInMonth(currentMonth);
+  const firstDay = getFirstDayOfMonth(currentMonth);
+  const days = [];
+
+  // Add empty cells for days before month starts (Monday is 1, Sunday is 0)
+  for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
+    days.push(null);
+  }
+
+  // Add days of month
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(i);
+  }
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+  };
+
+  const selectedDaySchedules = useMemo(() => {
+    if (!selectedDate) return [];
+    const date = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate));
+    const dayOfWeek = date.getDay();
+    return schedulesByDayOfWeek.get(dayOfWeek) || [];
+  }, [selectedDate, currentMonth, schedulesByDayOfWeek]);
+
+  const selectedDayAppointments = useMemo(() => {
+    return currentDayAppointments; // Đã được fetch và sắp xếp trong useEffect
+  }, [currentDayAppointments]);
+
+  const getFormattedSelectedDate = () => {
+    if (!selectedDate) return "";
+    const date = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate));
+    const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return date.toLocaleDateString('vi-VN', options);
+  }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">Quản lý Lịch làm việc</h1>
-
-      {/* Form to add new schedule */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Thêm Lịch Mới</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="scheduleDate" className="block text-sm font-medium text-gray-700">Ngày làm việc</label>
-              <input type="date" id="scheduleDate" name="scheduleDate" value={formState.scheduleDate} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-            </div>
-            <div>
-              <label htmlFor="consultationFee" className="block text-sm font-medium text-gray-700">Phí tư vấn (VND)</label>
-              <input type="number" id="consultationFee" name="consultationFee" value={formState.consultationFee} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-            </div>
-            <div>
-              <label htmlFor="startTime" className="block text-sm font-medium text-gray-700">Giờ bắt đầu</label>
-              <input type="time" id="startTime" name="startTime" value={formState.startTime} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-            </div>
-            <div>
-              <label htmlFor="endTime" className="block text-sm font-medium text-gray-700">Giờ kết thúc</label>
-              <input type="time" id="endTime" name="endTime" value={formState.endTime} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-            </div>
-          </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button type="submit" className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            Thêm Lịch
+    <div className="schedule-calendar">
+      <div className="calendar-header">
+        <div className="month-selector">
+          <button onClick={handlePrevMonth} className="nav-button">
+            <ChevronLeft size={20} />
           </button>
-        </form>
+          <h2>
+            {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+          </h2>
+          <button onClick={handleNextMonth} className="nav-button">
+            <ChevronRight size={20} />
+          </button>
+        </div>
+        <p className="warning-text">*Lịch làm việc được áp dụng hàng tuần theo các thứ đã đăng ký.</p>
       </div>
 
-      {/* List of existing schedules */}
-      <div>
-        <h2 className="text-2xl font-semibold mb-4">Danh sách Lịch đã tạo</h2>
-        {isLoading ? (
-          <p>Đang tải...</p>
-        ) : schedules.length === 0 ? (
-          <p className="text-gray-500">Chưa có lịch làm việc nào.</p>
-        ) : (
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <ul className="divide-y divide-gray-200">
-              {schedules.map((schedule) => (
-                <li key={schedule.id}>
-                  <div className="px-4 py-4 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <p className="text-lg font-medium text-indigo-600 truncate">
-                        Ngày: {format(new Date(schedule.scheduleDate), 'dd/MM/yyyy')}
-                      </p>
-                      <div className="ml-2 flex-shrink-0 flex">
-                        <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${schedule.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                          {schedule.isAvailable ? 'Còn trống' : 'Đã kín'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-2 sm:flex sm:justify-between">
-                      <div className="sm:flex">
-                        <p className="flex items-center text-sm text-gray-500">
-                          Thời gian: {schedule.startTime} - {schedule.endTime}
-                        </p>
-                      </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                        <p>Phí: {schedule.consultationFee.toLocaleString('vi-VN')} VND</p>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+      <div className="calendar-container">
+        {error && <p className="warning-text">{error}</p>}
+        {isLoading && <p>Đang tải lịch làm việc...</p>}
+        
+        <div className="calendar-grid">
+          <div className="day-headers">
+            {dayNames.map((day) => (
+              <div key={day} className="day-header">{day}</div>
+            ))}
           </div>
-        )}
+          <div className="calendar-days">
+            {days.map((day, index) => {
+              if (!day) {
+                return <div key={index} className="calendar-day empty"></div>;
+              }
+              // Sử dụng Date.UTC để tạo ngày ở múi giờ UTC, đảm bảo toYYYYMMDD hoạt động chính xác
+              const date = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), day));
+              const dayOfWeek = date.getDay(); // Sunday is 0, Monday is 1
+              const timeSlots = schedulesByDayOfWeek.get(dayOfWeek) || [];
+              const fullDateString = toYYYYMMDD(date);
+              const hasOverrides = scheduleOverridesByDate.has(fullDateString);
+              
+              return (
+                <div
+                  key={index}
+                  className={`calendar-day ${day === selectedDate ? "selected" : ""} ${hasOverrides ? "has-override" : ""}`}
+                  onClick={() => setSelectedDate(day)}
+                >
+                  <div className="day-number">{day}</div>
+                  <div className="time-slots">
+                    {timeSlots.map((slot) => (
+                      <div key={slot.id} className="time-slot" style={{ color: slot.isAvailable ? '#10b981' : '#f87171' }}>
+                        {slot.startTime.substring(0, 5)}-{slot.endTime.substring(0, 5)}
+                      </div>
+                    ))}
+                  </div>
+                  {hasOverrides && <div className="override-badge"></div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="management-buttons">
+          <button onClick={() => setIsModalOpen(true)} className="manage-button primary">
+            Quản lý lịch cố định
+          </button>
+          <button onClick={() => setIsOverrideModalOpen(true)} className="manage-button primary">
+            Quản lý lịch linh hoạt
+          </button>
+        </div>
       </div>
+
+      <div className="schedule-details">
+        {selectedDate ? (
+          <>
+            <h3 className="details-header">{getFormattedSelectedDate()}</h3>
+            {selectedDaySchedules.length > 0 ? (
+              <div className="details-list">
+                {selectedDaySchedules.map(schedule => (
+                  <div key={schedule.id} className="detail-item">
+                    <p className="detail-time">{schedule.startTime.substring(0, 5)} - {schedule.endTime.substring(0, 5)}</p>
+                    <p className="detail-status">
+                      <span className="status-dot" style={{ backgroundColor: schedule.isAvailable ? '#10b981' : '#ef4444' }}></span>
+                      {schedule.isAvailable ? 'Sẵn sàng nhận lịch' : 'Không nhận lịch'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="details-placeholder">Không có ca làm việc nào cho ngày này.</p>}
+
+            {(() => {
+              const selectedDayFullDateString = toYYYYMMDD(new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate)));
+              const selectedDayOverrides = scheduleOverridesByDate.get(selectedDayFullDateString) || [];
+              if (selectedDayOverrides.length === 0) return null;
+
+              return (
+                <div className="override-list">
+                  <h4 className="appointment-list-header">Lịch linh hoạt</h4>
+                  <div className="details-list">
+                    {selectedDayOverrides.map(override => (
+                      <div key={override.id} className="detail-item override-item">
+                        <p className="detail-time">{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</p>
+                        <p className={`detail-status ${override.isAvailable ? 'status-available' : 'status-unavailable'}`}>
+                          <span className="status-dot" style={{ backgroundColor: override.isAvailable ? '#10b981' : '#ef4444' }}></span>
+                          {override.isAvailable ? 'Tăng ca' : 'Nghỉ'} - Lý do: {override.reason}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {selectedDayAppointments.length > 0 && (
+              <div className="appointment-list">
+                <h4 className="appointment-list-header">Các cuộc hẹn</h4>
+                <div className="details-list">
+                  {selectedDayAppointments.map(app => (
+                    <div key={app.id} className="appointment-item">
+                      <p className="appointment-time">{new Date(app.appointmentStartTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(app.appointmentEndTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</p>
+                      <p className="appointment-patient">BN: {app.patientName}</p>
+                      <p className="appointment-status">{app.statusDisplayName || app.statusCode}</p>
+                      <Link to={`/app/doctor/medical-records/${app.id}`} className="view-record-button">
+                        Xem chi tiết hồ sơ
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : <p className="details-placeholder">Chọn một ngày để xem chi tiết</p>}
+      </div>
+
+      {isModalOpen && (
+        <FixedScheduleManager schedules={schedules} onClose={() => setIsModalOpen(false)} onRefresh={fetchSchedules} />
+      )}
+
+      {isOverrideModalOpen && (
+        <FlexibleScheduleManager overrides={scheduleOverrides} onClose={() => setIsOverrideModalOpen(false)} onRefresh={fetchSchedules} />
+      )}
     </div>
   );
 };

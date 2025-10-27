@@ -52,13 +52,14 @@ export default function ArticleDetailPage() {
       try {
         const articleData = await articleService.getBySlug(slug);
         if (articleData) {
+          // Check if article is locked
+          if (articleData.isLocked) {
+            setError('Article not available.')
+            return;
+          }
           setArticle(articleData);
           setLikeCount(articleData.likeCount ?? 0);
-          // Check if article has been liked from localStorage
-          const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]');
-          if (likedArticles.includes(slug)) {
-            setIsLiked(true);
-          }
+          setIsLiked(articleData.isLikedByUser || false); // Use the flag from the API
         } else {
           setError('Article not found.')
         }
@@ -94,14 +95,6 @@ export default function ArticleDetailPage() {
         const updatedArticle: ArticleDTO = await response.json();
         // Sync with server state to ensure consistency
         setLikeCount(updatedArticle.likeCount ?? newLikeCount);
-
-        // Update localStorage
-        const likedArticles: string[] = JSON.parse(localStorage.getItem('likedArticles') || '[]');
-        if (newIsLiked) {
-          localStorage.setItem('likedArticles', JSON.stringify([...new Set([...likedArticles, slug])]));
-        } else {
-          localStorage.setItem('likedArticles', JSON.stringify(likedArticles.filter(s => s !== slug)));
-        }
       } else {
         console.error("Failed to like the article. Status:", response.status);
         // Revert UI on failure
@@ -124,9 +117,17 @@ export default function ArticleDetailPage() {
 
   return (
     <div className="article-reader-container">
-       <button onClick={() => navigate(-1)} className="back-button">
+       <button onClick={() => navigate('/app/articles')} className="back-button">
         &larr; Quay lại danh sách
       </button>
+
+      <div className="breadcrumb">
+        <Link to="/">Trang chủ</Link>
+        <span className="separator">/</span>
+       
+        <span className="current-page">{article.title}</span>
+      </div>
+
       <article className="article-detail">
         <h1>{article.title}</h1>
         <div className="article-meta-container">

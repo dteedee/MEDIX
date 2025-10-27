@@ -25,6 +25,7 @@ namespace Medix.API.Models.DTOs
         public string? GenderCode { get; set; }
         public string? IdentificationNumber { get; set; }
         public string UserName { get; set; } = string.Empty;
+        public bool IsTemporaryUsername { get; set; } = false;
         public string? Address { get; set; }
         public string? AvatarUrl { get; set; }
         public bool IsProfileCompleted { get; set; }

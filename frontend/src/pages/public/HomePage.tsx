@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import styles from '../../styles/public/home.module.css'
 import { HomeMetadata } from '../../types/home.types';
 import HomeService from '../../services/homeService';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { ArticleDTO } from '../../types/article.types';
+import { articleService } from '../../services/articleService';
 
 function HomePage() {
     const navigate = useNavigate();
@@ -11,6 +13,7 @@ function HomePage() {
 
     //get home page details
     const [homeMetadata, setHomeMetadata] = useState<HomeMetadata>();
+    const [featuredArticles, setFeaturedArticles] = useState<ArticleDTO[]>([]);
 
     useEffect(() => {
         const fetchMetadata = async () => {
@@ -23,7 +26,17 @@ function HomePage() {
         };
 
         fetchMetadata();
-    }, [])
+
+        const fetchArticles = async () => {
+            try {
+                const articles = await articleService.getHomepageArticles(3); // Lấy 6 bài viết
+                setFeaturedArticles(articles);
+            } catch (error) {
+                console.error('Failed to fetch homepage articles:', error);
+            }
+        };
+        fetchArticles();
+    }, []);
 
     //handle doctors sliding
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -98,7 +111,7 @@ function HomePage() {
                     <li><span>|</span></li>
                     <li>
                         <a
-                            onClick={() => navigate('/articles')}
+                            onClick={() => navigate('/app/articles')}
                             className={`${styles["nav-link"]} ${location.pathname === '/articles' ? styles["active"] : ''}`}
                         >
                             {t('nav.health-articles')}
@@ -120,21 +133,21 @@ function HomePage() {
             <section className={styles["hero"]}>
                 {/* Floating Elements */}
                 <div className={styles["floating-elements"]}>
-                    <div className={styles["floating-card"]} style={{ top: '15%', left: '5%' }}>
-                    <div className={styles["floating-icon"]}>🏥</div>
-                    <div className={styles["floating-text"]}>{t('hero.healthcare')}</div>
+                    <div className={styles["floating-card"]}>
+                        <div className={styles["floating-icon"]}>🏥</div>
+                        <div className={styles["floating-text"]}>{t('hero.healthcare')}</div>
                     </div>
-                    <div className={styles["floating-card"]} style={{ top: '25%', right: '8%' }}>
-                    <div className={styles["floating-icon"]}>👨‍⚕️</div>
-                    <div className={styles["floating-text"]}>{t('hero.doctor')}</div>
+                    <div className={styles["floating-card"]}>
+                        <div className={styles["floating-icon"]}>👨‍⚕️</div>
+                        <div className={styles["floating-text"]}>{t('hero.doctor')}</div>
                     </div>
-                    <div className={styles["floating-card"]} style={{ bottom: '20%', left: '8%' }}>
-                    <div className={styles["floating-icon"]}>🤖</div>
-                    <div className={styles["floating-text"]}>{t('hero.ai')}</div>
+                    <div className={styles["floating-card"]}>
+                        <div className={styles["floating-icon"]}>🤖</div>
+                        <div className={styles["floating-text"]}>{t('hero.ai')}</div>
                     </div>
-                    <div className={styles["floating-card"]} style={{ bottom: '25%', right: '5%' }}>
-                    <div className={styles["floating-icon"]}>📱</div>
-                    <div className={styles["floating-text"]}>{t('hero.booking')}</div>
+                    <div className={styles["floating-card"]}>
+                        <div className={styles["floating-icon"]}>📱</div>
+                        <div className={styles["floating-text"]}>{t('hero.booking')}</div>
                     </div>
                 </div>
                 <div className={styles["hero-content"]}>
@@ -159,27 +172,30 @@ function HomePage() {
                             </div>
                         </div>
                     </div>
-                    <div id="carouselBanner" className="carousel slide" data-bs-ride="carousel" data-bs-interval="5000">
-                        <div className="carousel-inner">
+                    <div id="carouselBanner" className={`carousel slide ${styles["modern-carousel"]}`} data-bs-ride="carousel" data-bs-interval="6000">
+                        <div className={`carousel-inner ${styles["carousel-inner-custom"]}`}>
                             {homeMetadata?.bannerUrls.map((bannerUrl, index) => (
                                 <div className={`carousel-item${index === 0 ? ' active' : ''}`} key={index}>
-                                    <img
-                                        src={bannerUrl}
-                                        className="d-block w-100"
-                                        alt={`Banner ${index + 1}`}
-                                    />
+                                    <div className={styles["banner-container"]}>
+                                        <img
+                                            src={bannerUrl}
+                                            className={styles["banner-image"]}
+                                            alt={`Banner ${index + 1}`}
+                                        />
+                                        <div className={styles["banner-overlay"]}></div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                        <button className="carousel-control-prev" type="button" data-bs-target="#carouselBanner" data-bs-slide="prev">
+                        <button className={`carousel-control-prev ${styles["carousel-control-custom"]}`} type="button" data-bs-target="#carouselBanner" data-bs-slide="prev">
                             <span className="carousel-control-prev-icon" aria-hidden="true" />
                             <span className="visually-hidden">Previous</span>
                         </button>
-                        <button className="carousel-control-next" type="button" data-bs-target="#carouselBanner" data-bs-slide="next">
+                        <button className={`carousel-control-next ${styles["carousel-control-custom"]}`} type="button" data-bs-target="#carouselBanner" data-bs-slide="next">
                             <span className="carousel-control-next-icon" aria-hidden="true" />
                             <span className="visually-hidden">Next</span>
                         </button>
-                        <div className="carousel-indicators">
+                        <div className={`carousel-indicators ${styles["carousel-indicators-custom"]}`}>
                             {homeMetadata?.bannerUrls.map((_, index) => (
                                 <button
                                     key={index}
@@ -332,20 +348,25 @@ function HomePage() {
                 </div>
             </section >
             {/* Knowledge Section */}
-            < section className={styles["knowledge"]} >
+            <section className={styles["knowledge"]}>
                 <h2>{t('knowledge.title')}</h2>
                 <div className={styles["knowledge-grid"]}>
-                    {homeMetadata?.articles.map((article, index) => (
-                        <div key={`/app/article-${article.title}-${index}`} className={styles["knowledge-card"]}>
-                            <img className={styles["knowledge-image"]} src={article.thumbnailUrl} />
+                    {featuredArticles.map((article) => (
+                        <Link to={`/app/articles/${article.slug}`} key={article.id} className={styles["knowledge-card"]}>
+                            <div className={styles["knowledge-image-container"]}>
+                                <img className={styles["knowledge-image"]} src={article.thumbnailUrl || '/placeholder-image.jpg'} alt={article.title} />
+                            </div>
                             <div className={styles["knowledge-content"]}>
                                 <h5>{article.title}</h5>
-                                <p> {article.summary}</p>
+                                <p>{article.summary}</p>
                             </div>
                             <div className={styles["knowledge-footer"]}>
-                                <p className={styles["knowledge-date"]}>📅{article.publishedAt}</p>
+                                <span className={styles["knowledge-date"]}>
+                                    📅 {article.publishedAt ? new Date(article.publishedAt).toLocaleDateString('vi-VN') : ''}
+                                </span>
+                                <span className={styles["read-more"]}>Đọc thêm &rarr;</span>
                             </div>
-                        </div>
+                        </Link>
                     ))}
                 </div>
             </section >

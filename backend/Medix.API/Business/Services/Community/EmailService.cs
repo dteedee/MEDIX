@@ -77,6 +77,7 @@ namespace Medix.API.Business.Services.Community
                 message.Body = new TextPart("html") { Text = body };
 
                 using var client = new SmtpClient();
+                Console.WriteLine($"Connecting to SMTP server {emailSettings["SMTPServer"]}:{emailSettings["Port"]}...");
                 await client.ConnectAsync(emailSettings["SMTPServer"],
                     int.Parse(emailSettings["Port"]), SecureSocketOptions.StartTls);
                 await client.AuthenticateAsync(emailSettings["Username"], emailSettings["Password"]);
@@ -132,6 +133,28 @@ namespace Medix.API.Business.Services.Community
 
             return await SendEmailAsync(email, subject, body);
         }
+
+        public async Task<bool> SendNewUserPasswordAsync(string email, string password)
+        {
+            var subject = "Chào mừng đến với Medix - Thông tin tài khoản của bạn";
+            var body = $@"
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+                    <h2 style='color: #2c3e50;'>Chào mừng bạn đến với Medix!</h2>
+                    <p>Tài khoản của bạn đã được tạo thành công.</p>
+                    <p>Dưới đây là thông tin đăng nhập của bạn:</p>
+                    <div style='background-color: #f8f9fa; padding: 20px; border-left: 4px solid #3498db; margin: 20px 0;'>
+                        <p><strong>Email:</strong> {email}</p>
+                        <p><strong>Mật khẩu tạm thời:</strong> <strong style='font-size: 18px; color: #e74c3c;'>{password}</strong></p>
+                    </div>
+                    <p><strong>Lưu ý quan trọng:</strong></p>
+                    <ul>
+                        <li>Đây là mật khẩu tạm thời. Bạn nên đổi mật khẩu ngay sau khi đăng nhập lần đầu tiên để đảm bảo an toàn.</li>
+                        <li>Không chia sẻ thông tin tài khoản này với bất kỳ ai.</li>
+                    </ul>
+                    <p>Cảm ơn bạn đã tham gia cộng đồng Medix!</p>
+                </div>
+            ";
+            return await SendEmailAsync(email, subject, body);
+        }
     }
 }
-

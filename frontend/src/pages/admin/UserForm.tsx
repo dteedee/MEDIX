@@ -11,6 +11,11 @@ interface Props {
   onCancel?: () => void
 }
 
+interface Role {
+  code: string;
+  displayName: string;
+}
+
 export default function UserForm({ user, onSaved, onCancel }: Props) {
   const { showToast } = useToast()
   const isEditMode = !!user;
@@ -29,6 +34,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
   const [emailConfirmed, setEmailConfirmed] = useState(user?.emailConfirmed ?? false);
   const [accessFailedCount, setAccessFailedCount] = useState(user?.accessFailedCount ?? 0);
   
+  const [rolesList, setRolesList] = useState<Role[]>([]);
   const deriveLocked = (u?: UserDTO) => {
     if (!u) return false
     if (u.lockoutEnabled === true) return true
@@ -69,6 +75,20 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     setAccessFailedCount(user?.accessFailedCount ?? 0);
     setLockoutEnabled(deriveLocked(user))
   }, [user])
+
+  // Fetch roles from the backend when the component mounts
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const roles = await userAdminService.getRoles();
+        setRolesList(roles);
+      } catch (error) {
+        console.error("Failed to fetch roles:", error);
+        showToast('Không thể tải danh sách vai trò.', 'error');
+      }
+    };
+    fetchRoles();
+  }, []);
   
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<{ userName?: string, email?: string, password?: string }>({})
@@ -233,8 +253,21 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
         showToast('Đang cập nhật thông tin người dùng...', 'info')
         // Khi chỉnh sửa, chỉ gửi những trường được phép thay đổi: role và lockoutEnabled
         const payload: UpdateUserRequest = {
+          // Giữ lại các giá trị hiện có của người dùng
+          fullName: user.fullName ?? '',
+          phoneNumber: user.phoneNumber ?? undefined,
+          address: user.address ?? undefined,
+          avatarUrl: user.avatarUrl ?? undefined,
+          dateOfBirth: user.dateOfBirth ?? undefined,
+          genderCode: user.genderCode ?? undefined,
+          identificationNumber: user.identificationNumber ?? undefined,
+          emailConfirmed: user.emailConfirmed ?? false,
+          isProfileCompleted: (user as any).isProfileCompleted ?? false,
+          accessFailedCount: user.accessFailedCount ?? 0,
+
+          // Các trường có thể thay đổi
           role,
-          lockoutEnabled: lockoutEnabled,
+          lockoutEnabled,
         }
         if (!lockoutEnabled) (payload as any).lockoutEnd = null
         console.debug('[UserForm] update payload', user.id, payload)
@@ -245,7 +278,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       } else { // When creating new user
         showToast('Đang tạo người dùng mới...', 'info')
         // Chỉ cần userName và email cho tạo mới
-        const payload: CreateUserRequest = { userName, email, role: 'PATIENT' }
+        const payload: CreateUserRequest = { userName, email, role }
         await userAdminService.create(payload)
         showToast('Tạo người dùng mới thành công!', 'success')
         onSaved?.(payload)
@@ -305,7 +338,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                       value={userName} 
                       onChange={e => { 
                         const value = e.target.value;
-                        if (value.length <= 20) { // Giới hạn 20 ký tự
+                        if (value.length <= 6) { // Giới hạn 20 ký tự
                           setUserName(value); 
                           if (errors.userName) setErrors(prev => ({ ...prev, userName: undefined })); 
                         }
@@ -314,10 +347,10 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                       maxLength={20}
                       onBlur={e => validateOnBlur('userName', e.target.value)}
                       className={`${styles.input} ${errors.userName ? styles.inputError : ''}`}
-                      placeholder="Nhập tên đăng nhập (3-20 ký tự, chỉ chữ cái, số, _ và -)"
+                      placeholder="Nhập tên đăng nhập (3-6 ký tự, chỉ chữ cái, số, _ và -)"
                     />
                     <div className={styles.charCount}>
-                      {userName.length}/20 ký tự
+                      {userName.length}/6 ký tự
                     </div>
                     {errors.userName && <div className={styles.errorText}>{errors.userName}</div>}
                   </div>
@@ -337,6 +370,20 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                     />
                     {errors.email && <div className={styles.errorText}>{errors.email}</div>}
                   </div>
+                </div>
+                <div className={styles.grid}>
+                  <div className={styles.inputGroup}>
+                      <label className={styles.label}>Vai trò</label>
+                      <select value={role} onChange={e => setRole(e.target.value)} className={styles.select} disabled={rolesList.length === 0}>
+                        {rolesList.length === 0 && <option>Đang tải...</option>}
+                        {rolesList.map(r => (
+                          <option key={r.code} value={r.code}>{r.displayName}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className={styles.inputGroup}>
+                      {/* Placeholder for grid alignment */}
+                    </div>
                 </div>
               </div>
             </div>
@@ -416,10 +463,11 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                   <div className={styles.grid}>
                     <div className={styles.inputGroup}>
                       <label className={styles.label}>Vai trò</label>
-                      <select value={role} onChange={e => setRole(e.target.value)} className={styles.select}>
-                        <option value="MANAGER">Quản lý</option>
-                        <option value="DOCTOR">Bác sĩ</option>
-                        <option value="PATIENT">Bệnh nhân</option>
+                      <select value={role} onChange={e => setRole(e.target.value)} className={styles.select} disabled={rolesList.length === 0}>
+                        {rolesList.length === 0 && <option>Đang tải...</option>}
+                        {rolesList.map(r => (
+                          <option key={r.code} value={r.code}>{r.displayName}</option>
+                        ))}
                       </select>
                     </div>
                     <div className={styles.inputGroup}>

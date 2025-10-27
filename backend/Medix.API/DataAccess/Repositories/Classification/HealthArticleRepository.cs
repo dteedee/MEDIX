@@ -91,7 +91,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Include(a => a.Author)
                 .Include(a => a.Categories)
                 .OrderBy(a => a.DisplayOrder)
-                .ThenByDescending(a => a.CreatedAt)
+                .ThenByDescending(a => a.UpdatedAt)
                 .Take(limit)
                 .ToListAsync();
         }
@@ -146,6 +146,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
         public async Task<HealthArticle> UpdateAsync(HealthArticle article)
         {
+            
             _context.HealthArticles.Update(article);
             await _context.SaveChangesAsync();
             return article;

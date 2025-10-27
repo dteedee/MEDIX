@@ -15,6 +15,7 @@ namespace Medix.API.Business.Services.UserManagement
         private readonly IJwtService _jwtService;
         private readonly IEmailService _emailService;
         private readonly IUserRoleRepository _userRoleRepository;
+        private readonly IPatientRepository _patientRepository;
         private readonly DataAccess.MedixContext _context;
 
         public AuthService(
@@ -22,12 +23,14 @@ namespace Medix.API.Business.Services.UserManagement
             IJwtService jwtService,
             IEmailService emailService,
             IUserRoleRepository userRoleRepository,
+            IPatientRepository patientRepository,
             DataAccess.MedixContext context)
         {
             _userRepository = userRepository;
             _jwtService = jwtService;
             _emailService = emailService;
             _userRoleRepository = userRoleRepository;
+            _patientRepository = patientRepository;
             _context = context;
         }
 
@@ -53,6 +56,12 @@ namespace Medix.API.Business.Services.UserManagement
 
             if (user != null && BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash))
             {
+                // Kiểm tra tài khoản có bị khóa không
+                if (user.LockoutEnabled)
+                {
+                    throw new UnauthorizedException("Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ");
+                }
+
                 // Lấy role từ bảng UserRoles (ưu tiên DB)
                 var roleEntity = await _userRoleRepository.GetByIdAsync(user.Id);
                 var roleCode = roleEntity?.RoleCode ?? user.Role ?? "Patient";
@@ -86,6 +95,8 @@ namespace Medix.API.Business.Services.UserManagement
                         EmailConfirmed = user.EmailConfirmed,
                         CreatedAt = user.CreatedAt,
                         AvatarUrl = user.AvatarUrl,
+                        UserName = user.UserName,
+                        IsTemporaryUsername = user.UserName.StartsWith("temp_")
                     }
                 };
             }
@@ -152,7 +163,9 @@ namespace Medix.API.Business.Services.UserManagement
                     FullName = user.FullName,
                     Role = "Patient",
                     EmailConfirmed = user.EmailConfirmed,
-                    CreatedAt = user.CreatedAt
+                    CreatedAt = user.CreatedAt,
+                    UserName = user.UserName,
+                    IsTemporaryUsername = user.UserName.StartsWith("temp_")
                 }
             };
         }
@@ -204,7 +217,9 @@ namespace Medix.API.Business.Services.UserManagement
                     FullName = user.FullName,
                     Role = roleCode,
                     EmailConfirmed = user.EmailConfirmed,
-                    CreatedAt = user.CreatedAt
+                    CreatedAt = user.CreatedAt,
+                    UserName = user.UserName,
+                    IsTemporaryUsername = user.UserName.StartsWith("temp_")
                 }
             };
         }
@@ -224,8 +239,8 @@ namespace Medix.API.Business.Services.UserManagement
                 var newUser = new User
                 {
                     Id = Guid.NewGuid(),
-                    UserName = email,
-                    NormalizedUserName = email.ToUpperInvariant(),
+                    UserName = $"temp_{Guid.NewGuid().ToString("N")[..8]}", // Tạo username tạm thời
+                    NormalizedUserName = $"TEMP_{Guid.NewGuid().ToString("N")[..8].ToUpper()}",
                     Email = email,
                     NormalizedEmail = email.ToUpperInvariant(),
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
@@ -241,6 +256,18 @@ namespace Medix.API.Business.Services.UserManagement
                 await _userRepository.CreateAsync(newUser);
                 await _userRoleRepository.AssignRole("Patient", newUser.Id);
 
+                // Tạo record Patient cho user mới
+                var newPatient = new Patient
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = newUser.Id,
+                    MedicalRecordNumber = $"MR{DateTime.UtcNow:yyyyMMddHHmmss}{new Random().Next(1000, 9999)}",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                await _patientRepository.SavePatientAsync(newPatient);
+
                 existingUser = newUser;
                 existingUser.Role = "Patient";
             }
@@ -248,6 +275,12 @@ namespace Medix.API.Business.Services.UserManagement
             {
                 var roleEntity = await _userRoleRepository.GetByIdAsync(existingUser.Id);
                 existingUser.Role = roleEntity?.RoleCode ?? "Patient";
+            }
+
+            // Kiểm tra tài khoản có bị khóa không (cho Google login)
+            if (existingUser.LockoutEnabled)
+            {
+                throw new UnauthorizedException("Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ");
             }
 
             var accessToken = _jwtService.GenerateAccessToken(existingUser, new List<string> { existingUser.Role });
@@ -265,21 +298,23 @@ namespace Medix.API.Business.Services.UserManagement
             _context.RefreshTokens.Add(refreshEntity);
             await _context.SaveChangesAsync();
 
-            return new AuthResponseDto
-            {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddHours(1),
-                User = new UserDto
+                return new AuthResponseDto
                 {
-                    Id = existingUser.Id,
-                    Email = existingUser.Email,
-                    FullName = existingUser.FullName,
-                    Role = existingUser.Role,
-                    EmailConfirmed = true,
-                    CreatedAt = existingUser.CreatedAt
-                }
-            };
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddHours(1),
+                    User = new UserDto
+                    {
+                        Id = existingUser.Id,
+                        Email = existingUser.Email,
+                        FullName = existingUser.FullName,
+                        Role = existingUser.Role,
+                        EmailConfirmed = true,
+                        CreatedAt = existingUser.CreatedAt,
+                        UserName = existingUser.UserName,
+                        IsTemporaryUsername = existingUser.UserName.StartsWith("temp_")
+                    }
+                };
         }
 
         // =====================

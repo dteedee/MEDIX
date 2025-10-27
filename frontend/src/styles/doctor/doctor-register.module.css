@@ -294,3 +294,9 @@ h1, h2, h3 {
     padding: 12px 40px;
   }
 }
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

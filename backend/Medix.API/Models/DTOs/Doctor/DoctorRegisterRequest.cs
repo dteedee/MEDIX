@@ -9,7 +9,8 @@ namespace Medix.API.Application.DTOs.Doctor
         [MaxLength(200, ErrorMessage = "Họ và tên không được vượt quá 200 ký tự")]
         public string FullName { get; set; } = null!;
         [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập")]
-        [MaxLength(15, ErrorMessage = "Tên đăng nhập không được vượt quá 15 ký tự")]
+        [MinLength(6, ErrorMessage = "Tên đăng nhập phải có ít nhất 6 ký tự")]
+        [MaxLength(20, ErrorMessage = "Tên đăng nhập không được vượt quá 20 ký tự")]
         [RegularExpression(@"^[a-zA-Z0-9]+$", ErrorMessage = "Tên đăng nhập chỉ được chứa chữ cái không dấu và số")]
         public string UserName { get; set; } = null!;
         [Dob]

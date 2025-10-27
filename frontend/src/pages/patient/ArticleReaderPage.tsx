@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArticleDTO } from '../../types/article.types'
+import '../../styles/ArticleReaderPage.css'
 
 export default function ArticleReaderPage() {
   const location = useLocation();
@@ -19,7 +20,7 @@ export default function ArticleReaderPage() {
   const [isSearching, setIsSearching] = useState(false);
   // State for category filter
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategories.filter(Boolean));
-  const pageSize = 4 // 1 featured + 4 grid items per page
+  const pageSize = 5 // 1 featured + 4 grid items per page
 
   const LikeIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" 
@@ -44,7 +45,9 @@ export default function ArticleReaderPage() {
         const allUrl = `/api/HealthArticle/published?page=1&pageSize=${totalArticles}`;
         const allRes = await fetch(allUrl);
         const allResponse = await allRes.json();
-        setAllArticles(allResponse.item2 || []);
+        // Filter out locked articles
+        const filteredArticles = (allResponse.item2 || []).filter((article: any) => !article.isLocked);
+        setAllArticles(filteredArticles);
       } else {
         setAllArticles([]);
       }
@@ -75,7 +78,9 @@ export default function ArticleReaderPage() {
         const url = `/api/HealthArticle/search?q=${encodeURIComponent(searchQuery)}`;
         const res = await fetch(url);
         const suggestedArticles = await res.json();
-        setSuggestions(suggestedArticles || []);
+        // Filter out locked articles
+        const filteredSuggestions = (suggestedArticles || []).filter((article: any) => !article.isLocked);
+        setSuggestions(filteredSuggestions);
       } catch (error) {
         console.error("Failed to fetch search suggestions:", error);
         setSuggestions([]);
@@ -166,7 +171,7 @@ export default function ArticleReaderPage() {
       {/* --- Cột giữa: Nội dung chính (60%) --- */}
       <div className="article-center-column">
         <div className="breadcrumb">
-          <Link to="/app/patient">Trang chủ</Link>
+          <Link to="/">Trang chủ</Link>
           <span className="separator">/</span>
           <span className="current-page">Kiến thức y khoa</span>
         </div>

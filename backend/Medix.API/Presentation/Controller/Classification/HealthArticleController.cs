@@ -6,6 +6,8 @@ using Medix.API.Models.DTOs.HealthArticle;
 using Microsoft.AspNetCore.Authorization;
 using Newtonsoft.Json;
 using Medix.API.Business.Services.Classification;
+using System.Security.Claims;
+using Medix.API.DataAccess.Interfaces.Classification;
 
 namespace Medix.API.Presentation.Controller.Classification
 {
@@ -16,16 +18,17 @@ namespace Medix.API.Presentation.Controller.Classification
         private readonly IHealthArticleService _healthArticleService;
         private readonly ILogger<HealthArticleController> _logger;
         private readonly CloudinaryService _cloudinaryService;
+        private readonly IRefArticleStatusRepository _statusRepository;
 
-        public HealthArticleController(IHealthArticleService healthArticleService, ILogger<HealthArticleController> logger, CloudinaryService cloudinaryService)
+        public HealthArticleController(IHealthArticleService healthArticleService, ILogger<HealthArticleController> logger, CloudinaryService cloudinaryService, IRefArticleStatusRepository statusRepository)
         {
             _healthArticleService = healthArticleService;
             _logger = logger;
             _cloudinaryService = cloudinaryService;
+            _statusRepository = statusRepository;
         }
 
         [HttpGet]
-        //[Authorize(Roles = "Manager")]
 
         public async Task<ActionResult> GetPaged([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
@@ -50,7 +53,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpGet("{id}")]
-        //[Authorize(Roles = "Manager")]
+        //[Authorize(Roles = "MANAGER")]
 
         public async Task<ActionResult> GetById(Guid id)
         {
@@ -61,7 +64,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpGet("slug/{slug}")]
-        //[Authorize(Roles = "Manager")]
+        //[Authorize(Roles = "MANAGER")]
 
         public async Task<ActionResult> GetBySlug(string slug)
         {
@@ -79,6 +82,15 @@ namespace Medix.API.Presentation.Controller.Classification
             return Ok(articles);
         }
 
+        [HttpGet("statuses")]
+        //[Authorize(Roles = "MANAGER")]
+        public async Task<IActionResult> GetStatuses()
+        {
+            var statuses = await _statusRepository.GetActiveStatusesAsync();
+            var result = statuses.Select(s => new { s.Code, s.DisplayName });
+            return Ok(result);
+        }
+
         [HttpGet("search")]
         public async Task<ActionResult> SearchByName([FromQuery] string? name)
         {
@@ -88,10 +100,22 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPost]
+        //[Authorize(Roles = "MANAGER")]
+
         public async Task<IActionResult> Create([FromForm] HealthArticleCreateDto model, IFormFile? thumbnailFile, IFormFile? coverFile)
         {
             try
             {
+                // Lấy ID của người dùng đang đăng nhập từ token
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var authorId))
+                {
+                    return Unauthorized(new { Message = "Không thể xác thực người dùng hoặc ID người dùng không hợp lệ." });
+                }
+
+                // Gán ID người dùng làm tác giả
+                model.AuthorId = authorId;
+
                 if (thumbnailFile != null)
                 {
                     var thumbUrl = await _cloudinaryService.UploadImageAsync(thumbnailFile);
@@ -162,7 +186,7 @@ namespace Medix.API.Presentation.Controller.Classification
 
 
         [HttpDelete("{id}")]
-        //[Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager")]
 
         public async Task<ActionResult> Delete(Guid id)
         {
@@ -170,17 +194,13 @@ namespace Medix.API.Presentation.Controller.Classification
             return Ok();
         }
         [HttpPost("{id}/like")]
-        //[Authorize] 
+        [Authorize] 
         public async Task<ActionResult> Like(Guid id)
         {
-            // Try to get user id from claims
-            Guid userId;
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out userId))
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
             {
-                Console.WriteLine("WARN: Using hardcoded UserId for testing Like functionality.");
-                userId = Guid.Parse("EC122B8D-5252-45BE-BCEF-78D478FF3474");
-                //return Unauthorized();
+                return Unauthorized(new { Message = "Không thể xác thực người dùng để thực hiện hành động này." });
             }
 
             var article = await _healthArticleService.LikeAsync(id, userId);
@@ -191,19 +211,13 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpDelete("{id}/like")]
-        //[Authorize]
-
+        [Authorize]
         public async Task<ActionResult> Unlike(Guid id)
         {
-            Guid userId;
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out userId))
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
             {
-
-
-                Console.WriteLine("WARN: Using hardcoded UserId for testing Unlike functionality.");
-                userId = Guid.Parse("EC122B8D-5252-45BE-BCEF-78D478FF3474");
-                //return Unauthorized();
+                return Unauthorized(new { Message = "Không thể xác thực người dùng để thực hiện hành động này." });
             }
 
             var article = await _healthArticleService.UnlikeAsync(id, userId);
@@ -212,5 +226,11 @@ namespace Medix.API.Presentation.Controller.Classification
 
             return Ok(article);
         }
+        [HttpGet("whoami")]
+        public IActionResult WhoAmI()
+        {
+            return Ok(User.Claims.Select(c => new { c.Type, c.Value }));
+        }
+
     }
 }

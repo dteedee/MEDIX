@@ -1,0 +1,313 @@
+/* --- Main Layout --- */
+.article-layout-container {
+    display: flex;
+    max-width: 1400px;
+    margin: 20px auto;
+    gap: 24px;
+    padding: 0 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.article-sidebar-left {
+    flex: 0 0 220px; /* Fixed width for left sidebar */
+    /* Styles for left sidebar content can be added here */
+}
+
+.article-center-column {
+    flex: 1;
+    min-width: 0; /* Prevents flex item from overflowing */
+}
+
+.article-sidebar-right {
+    flex: 0 0 280px; /* Fixed width for right sidebar */
+    position: sticky;
+    top: 20px; /* Khoảng cách từ đỉnh màn hình, bạn có thể điều chỉnh */
+    align-self: flex-start; /* Quan trọng để sticky hoạt động đúng trong flexbox */
+    height: calc(100vh - 40px); /* Chiều cao tối đa, trừ đi khoảng cách trên và dưới */
+    overflow-y: auto; /* Cho phép cuộn nếu nội dung dài hơn */
+}
+
+.article-content-wrapper {
+    display: flex;
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.article-main-content {
+    flex: 1;
+    min-width: 0;
+}
+
+/* --- Typography & Breadcrumb --- */
+.breadcrumb {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 16px;
+}
+
+.breadcrumb a {
+    color: #3b82f6;
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb .separator {
+    margin: 0 8px;
+}
+
+.breadcrumb .current-page {
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.reader-main-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+.reader-main-subtitle {
+    font-size: 1.1rem;
+    color: #4b5563;
+    margin-bottom: 32px;
+}
+
+/* --- Featured Article --- */
+.featured-article-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    margin-bottom: 32px;
+}
+
+.featured-article {
+    display: flex;
+    gap: 24px;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    overflow: hidden;
+    transition: box-shadow 0.3s ease;
+}
+
+.featured-article:hover {
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.featured-article img {
+    width: 45%;
+    height: 300px;
+    object-fit: cover;
+}
+
+.featured-content {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+.featured-content h2 {
+    font-size: 1.8rem;
+    margin: 0 0 12px 0;
+    line-height: 1.3;
+}
+
+.featured-content p {
+    font-size: 1rem;
+    color: #4b5563;
+    flex-grow: 1;
+}
+
+/* --- Article Grid --- */
+.article-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.article-card-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.article-card {
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.article-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+}
+
+.article-card-image-wrapper {
+    width: 100%;
+    padding-top: 56.25%; /* 16:9 aspect ratio */
+    position: relative;
+}
+
+.article-card-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.article-card-content {
+    padding: 16px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.article-card-category {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #3b82f6;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.article-card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    flex-grow: 1;
+}
+
+.article-card-stats {
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-top: auto; /* Pushes to the bottom */
+}
+
+/* --- Pagination --- */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 40px;
+}
+
+.pagination-button {
+    padding: 8px 16px;
+    border: 1px solid #d1d5db;
+    background-color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.pagination-button:hover:not(:disabled) {
+    background-color: #f3f4f6;
+}
+
+.pagination-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    font-size: 0.9rem;
+    color: #4b5563;
+}
+
+/* --- Right Sidebar: Search & Filter --- */
+.search-container {
+    position: relative;
+    margin-bottom: 24px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.search-spinner {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid #d1d5db;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: translateY(-50%) rotate(360deg); }
+}
+
+.suggestions-list {
+    list-style: none;
+    padding: 0;
+    margin: 4px 0 0 0;
+    background-color: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.suggestions-list li a {
+    display: block;
+    padding: 10px 16px;
+    text-decoration: none;
+    color: #1f2937;
+}
+
+.suggestions-list li a:hover {
+    background-color: #f3f4f6;
+}
+
+.category-filter-container {
+    background-color: #f9fafb;
+    padding: 16px;
+    border-radius: 8px;
+}
+
+.category-filter-label {
+    font-weight: 600;
+    color: #1f2937;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.category-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.category-checkbox-item {
+    display: flex;
+    align-items: center;
+}
+
+.category-checkbox-item input {
+    margin-right: 8px;
+}
+
+.category-checkbox-item label {
+    cursor: pointer;
+}

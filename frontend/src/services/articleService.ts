@@ -38,6 +38,24 @@ export const categoryCache = {
   }
 };
 
+// Helper function to sanitize article content on the frontend
+// This is a workaround for a backend issue where content might be a JSON string.
+function sanitizeArticleContent(content: any): string {
+  if (typeof content !== 'string') {
+    return '';
+  }
+  const trimmedContent = content.trim();
+  // Check if the content looks like a JSON object/array
+  if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) || (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
+    try {
+      JSON.parse(trimmedContent);
+      // If parsing succeeds, it's likely invalid JSON content. Return an error message.
+      return '<p style="color: red;">[Lỗi: Nội dung bài viết không hợp lệ và không thể hiển thị.]</p>';
+    } catch (e) { /* Not a valid JSON, so it might be legitimate content */ }
+  }
+  return content;
+}
+
 export const articleService = {
   getCachedCategories: async (): Promise<{ items: any[], total?: number }> => {
     return categoryCache.fetchAll();
@@ -61,7 +79,7 @@ export const articleService = {
       title: x.title,
       slug: x.slug,
       summary: x.summary,
-      content: x.content,
+      content: sanitizeArticleContent(x.content),
       thumbnailUrl: x.thumbnailUrl,
       coverImageUrl: x.coverImageUrl,
       metaTitle: x.metaTitle,
@@ -106,7 +124,7 @@ export const articleService = {
         title: x.title,
         slug: x.slug,
         summary: x.summary,
-        content: x.content,
+        content: sanitizeArticleContent(x.content),
         thumbnailUrl: x.thumbnailUrl,
         coverImageUrl: x.coverImageUrl,
         metaTitle: x.metaTitle,
@@ -138,7 +156,7 @@ export const articleService = {
       title: x.title,
       slug: x.slug,
       summary: x.summary,
-      content: x.content,
+      content: sanitizeArticleContent(x.content),
       thumbnailUrl: x.thumbnailUrl,
       coverImageUrl: x.coverImageUrl,
       metaTitle: x.metaTitle,
@@ -172,7 +190,7 @@ export const articleService = {
       title: x.title,
       slug: x.slug,
       summary: x.summary,
-      content: x.content,
+      content: sanitizeArticleContent(x.content),
       thumbnailUrl: x.thumbnailUrl,
       coverImageUrl: x.coverImageUrl,
       metaTitle: x.metaTitle,
@@ -196,7 +214,37 @@ export const articleService = {
   getBySlug: async (slug: string): Promise<ArticleDTO | null> => {
     try {
       const r = await apiClient.get(`${BASE}/slug/${encodeURIComponent(slug)}`)
-      return r.data
+      const x = r.data;
+      if (!x) return null;
+
+      // Normalize the response to match ArticleDTO, similar to other methods
+      const allCategories = (await categoryCache.fetchAll()).items;
+      const article: ArticleDTO = {
+        id: x.id,
+        title: x.title,
+        slug: x.slug,
+        summary: x.summary,
+        content: sanitizeArticleContent(x.content),
+        thumbnailUrl: x.thumbnailUrl,
+        coverImageUrl: x.coverImageUrl,
+        metaTitle: x.metaTitle,
+        metaDescription: x.metaDescription,
+        statusCode: x.statusCode,
+        authorName: x.authorName,
+        publishedAt: x.publishedAt,
+        viewCount: x.viewCount,
+        likeCount: x.likeCount,
+        isHomepageVisible: x.isHomepageVisible,
+        // isLikedByUser: x.isLikedByUser ?? false, // Add isLikedByUser, default to false
+        isLocked: x.isLocked ?? false, // Ensure isLocked always has a boolean value
+        displayOrder: x.displayOrder,
+        displayType: x.displayType,
+        createdAt: x.createdAt,
+        updatedAt: x.updatedAt,
+        categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
+        categoryIds: x.categoryIds || (x.categories ? x.categories.map((cat: any) => cat.id) : []),
+      };
+      return article;
     } catch (err: any) {
       if (err?.response?.status === 404) return null
       throw err

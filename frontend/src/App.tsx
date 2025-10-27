@@ -118,6 +118,7 @@ export function App() {
                   {/* ---------- Admin routes ---------- */}
                   <Route path="admin/*" element={<AdminLayout />}>
                     <Route index element={<AdminDashboard />} />
+                    <Route path="dashboard" element={<AdminDashboard />} />
                     <Route path="profile" element={<AdminProfile />} />
                     <Route path="users" element={<UserList />} />
                     <Route path="users/new" element={<UserEditPage />} />

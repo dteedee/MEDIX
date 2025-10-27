@@ -860,9 +860,51 @@ export const PatientRegister: React.FC = () => {
       {/* Main Content */}
       <div className="registration-container">
         <form onSubmit={handleSubmit} className="registration-form">
-          <div className="form-header">
-            <h1>Đăng Ký Tài Khoản Bệnh Nhân</h1>
-            <p>Vui lòng điền đầy đủ thông tin để tạo tài khoản</p>
+          <div className="form-header" style={{
+            border: 'none',
+            outline: 'none',
+            boxShadow: 'none',
+            background: 'none',
+            padding: '0',
+            margin: '0 0 40px 0',
+            borderWidth: '0',
+            borderStyle: 'none',
+            borderColor: 'transparent',
+            borderTop: 'none',
+            borderRight: 'none',
+            borderBottom: 'none',
+            borderLeft: 'none'
+          }}>
+            <h1 style={{
+              border: 'none',
+              outline: 'none',
+              boxShadow: 'none',
+              background: 'none',
+              padding: '0',
+              margin: '0 0 8px 0',
+              borderWidth: '0',
+              borderStyle: 'none',
+              borderColor: 'transparent',
+              borderTop: 'none',
+              borderRight: 'none',
+              borderBottom: 'none',
+              borderLeft: 'none'
+            }}>Đăng Ký Tài Khoản Bệnh Nhân</h1>
+            <p style={{
+              border: 'none',
+              outline: 'none',
+              boxShadow: 'none',
+              background: 'none',
+              padding: '0',
+              margin: '0',
+              borderWidth: '0',
+              borderStyle: 'none',
+              borderColor: 'transparent',
+              borderTop: 'none',
+              borderRight: 'none',
+              borderBottom: 'none',
+              borderLeft: 'none'
+            }}>Vui lòng điền đầy đủ thông tin để tạo tài khoản</p>
           </div>
 
           <div className="form-layout">

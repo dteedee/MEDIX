@@ -48,10 +48,47 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
+
+    // --- VALIDATION LOGIC ---
+
+    // 1. Validate Start time < End time
     if (formState.startTime >= formState.endTime) {
       Swal.fire('Lỗi!', 'Giờ bắt đầu phải trước giờ kết thúc.', 'error');
       return;
     }
+
+    // 2. Validate duration is exactly 4 hours
+    const start = new Date(`1970-01-01T${formState.startTime}:00`);
+    const end = new Date(`1970-01-01T${formState.endTime}:00`);
+    const durationInMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+
+    if (durationInMinutes !== 240) { // 4 hours * 60 minutes
+      Swal.fire('Lỗi!', 'Mỗi ca làm việc phải kéo dài chính xác 4 tiếng.', 'error');
+      return;
+    }
+
+    const schedulesForDay = schedules.filter(s => s.dayOfWeek === formState.dayOfWeek && s.id !== editingScheduleId);
+
+    // 3. Validate maximum 2 schedules per day (only for new schedules)
+    if (!editingScheduleId && schedulesForDay.length >= 2) {
+      Swal.fire('Lỗi!', `Mỗi ngày chỉ được đăng ký tối đa 2 ca làm việc. Ngày ${getDayLabel(formState.dayOfWeek)} đã đủ số ca.`, 'error');
+      return;
+    }
+
+    // 4. Validate for overlapping schedules
+    const isOverlap = schedulesForDay.some(existingSchedule =>
+      formState.startTime < existingSchedule.endTime && formState.endTime > existingSchedule.startTime
+    );
+
+    if (isOverlap) {
+      Swal.fire(
+        'Lỗi!',
+        `Lịch làm việc bị trùng lặp với một ca khác trong cùng ngày ${getDayLabel(formState.dayOfWeek)}.`,
+        'error'
+      );
+      return;
+    }
+    // --- END VALIDATION ---
 
     // Đảm bảo thời gian luôn có định dạng HH:mm:ss
     const payload: CreateSchedulePayload = {
@@ -72,9 +109,29 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
       onRefresh();
       setEditingScheduleId(null);
       setIsAdding(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving schedule:", err);
-      Swal.fire('Thất bại!', 'Lưu lịch làm việc thất bại.', 'error');
+
+      let errorMessage = 'Lưu lịch làm việc thất bại.'; // Fallback mặc định
+      if (err.response && err.response.data) {
+        if (typeof err.response.data === 'string') {
+          // Xử lý trường hợp backend trả về chuỗi thuần túy
+          errorMessage = err.response.data;
+        } else if (typeof err.response.data === 'object') {
+          // Xử lý trường hợp backend trả về đối tượng JSON (ví dụ: ProblemDetails)
+          errorMessage =
+            err.response.data.detail ||
+            err.response.data.message ||
+            JSON.stringify(err.response.data);
+        }
+      }
+
+      Swal.fire({
+        title: 'Thất bại!',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonText: 'Đã hiểu'
+      });
     }
   };
 
@@ -95,9 +152,29 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
         await scheduleService.deleteSchedule(scheduleId);
         Swal.fire('Đã xóa!', 'Lịch làm việc đã được xóa.', 'success');
         onRefresh();
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error deleting schedule:", err);
-        Swal.fire('Thất bại!', 'Xóa lịch làm việc thất bại.', 'error');
+
+        let errorMessage = 'Xóa lịch làm việc thất bại.'; // Fallback mặc định
+        if (err.response && err.response.data) {
+          if (typeof err.response.data === 'string') {
+            // Xử lý trường hợp backend trả về chuỗi thuần túy
+            errorMessage = err.response.data;
+          } else if (typeof err.response.data === 'object') {
+            // Xử lý trường hợp backend trả về đối tượng JSON
+            errorMessage =
+              err.response.data.detail ||
+              err.response.data.message ||
+              JSON.stringify(err.response.data);
+          }
+        }
+
+        Swal.fire({
+          title: 'Thất bại!',
+          text: errorMessage,
+          icon: 'error',
+          confirmButtonText: 'Đã hiểu'
+        });
       }
     }
   };

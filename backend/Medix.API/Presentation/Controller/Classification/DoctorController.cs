@@ -21,47 +21,22 @@ namespace Medix.API.Presentation.Controller.Classification
     public class DoctorController : ControllerBase
     {
         private readonly IDoctorService _doctorService;
-        private readonly ISpecializationService _specializationService;
         private readonly CloudinaryService _cloudinaryService;
         private readonly IUserService _userSerivce;
         private readonly IMapper _mapper;
         private readonly ILogger<DoctorController> _logger;
 
-        public DoctorController(IDoctorService doctorService, ISpecializationService specializationService,
+        public DoctorController(IDoctorService doctorService,
             CloudinaryService cloudinaryService, IUserService userService, IMapper mapper,
             ILogger<DoctorController> logger)
         {
             _doctorService = doctorService;
-            _specializationService = specializationService;
             _cloudinaryService = cloudinaryService;
             _userSerivce = userService;
             _mapper = mapper;
             _logger = logger;
         }
 
-        [HttpGet("register-metadata")]
-        public async Task<IActionResult> Get()
-        {
-            try
-            {
-                var specializations = await _specializationService.GetAllSpecializationsAsync();
-                var response = new DoctorRegisterMetadataDto
-                {
-                    Specializations = specializations.Select(s => new SpecializationDto
-                    {
-                        Id = s.Id,
-                        Name = s.Name
-                    }).ToList()
-                };
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while fetching registration metadata.");
-                return StatusCode(500, new { Message = "An error occurred while processing your request." });
-            }
-
-        }
         [HttpGet("education-type")]
         public async Task<IActionResult> GetEducationTypes()
         {
@@ -78,84 +53,6 @@ namespace Medix.API.Presentation.Controller.Classification
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while fetching education types.");
-                return StatusCode(500, new { Message = "An error occurred while processing your request." });
-            }
-        }
-
-        [HttpPost("register")]
-        public async Task<IActionResult> RegisterDoctor([FromForm] DoctorRegisterPresenter presenter)
-        {
-            try
-            {
-                var request = _mapper.Map<DoctorRegisterRequest>(presenter);
-                var validationResults = new List<ValidationResult>();
-                var context = new ValidationContext(request, null, null);
-
-                Validator.TryValidateObject(request, context, validationResults, true);
-                validationResults = await ValidateAsync(request, validationResults);
-                if (validationResults.Count != 0)
-                {
-                    var modelState = new ModelStateDictionary();
-                    foreach (var validationResult in validationResults)
-                    {
-                        foreach (var memberName in validationResult.MemberNames)
-                        {
-                            modelState.AddModelError(memberName, validationResult.ErrorMessage ?? "Invalid value");
-                        }
-                    }
-                    return ValidationProblem(modelState);
-                }
-
-                User user = new User
-                {
-                    Id = Guid.NewGuid(),
-                    UserName = request.UserName,
-                    NormalizedUserName = request.UserName.ToUpper(),
-                    Email = request.Email,
-                    NormalizedEmail = request.Email.ToUpper(),
-                    PasswordHash = "", // Password will be set later
-                    PhoneNumber = request.PhoneNumber,
-                    PhoneNumberConfirmed = false,
-                    EmailConfirmed = false,
-                    FullName = request.FullName,
-                    DateOfBirth = request.Dob == null ? null : DateOnly.Parse(request.Dob),
-                    GenderCode = request.GenderCode,
-                    IdentificationNumber = request.IdentificationNumber,
-                    AvatarUrl = "https://res.cloudinary.com/dvyswwdcz/image/upload/v1760970670/default_avatar_cnnmzg.jpg", // Default avatar
-                    Status = 2, // Assuming 2 means pending verification
-                };
-
-                var licenseImageUrl = await _cloudinaryService.UploadArchiveAsync(request.LicenseImage);
-
-                Doctor doctor = new Doctor
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user.Id,
-                    SpecializationId = Guid.Parse("247CAA7D-7FF2-4404-9A92-BCDF9C595290"), // Default specialization
-                    LicenseNumber = request.LicenseNumber,
-                    LicenseImageUrl = licenseImageUrl != null ? licenseImageUrl : "",
-                    Bio = request.Bio,
-                    Education = request.Education,
-                    YearsOfExperience = (int)request.YearsOfExperience,
-                    ConsultationFee = 0, // Default fee
-                };
-
-                UserRole userRole = new UserRole
-                {
-                    UserId = user.Id,
-                    RoleCode = "Doctor",
-                };
-
-                if (!await _doctorService.RegisterDoctorAsync(user, doctor, userRole))
-                {
-                    return StatusCode(500, new { Message = "Registration failed" });
-                }
-
-                return Ok(new { Message = "Doctor registered successfully" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while registering a doctor.");
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
         }
@@ -180,57 +77,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
         }
-
-        //private async Task<List<ValidationResult>> ValidateAsync(DoctorRegisterRequest request, List<ValidationResult> prev)
-        //{
-        //    if (request.Email != null && await _userSerivce.EmailExistsAsync(request.Email))
-        //    {
-        //        prev.Add(new ValidationResult("Email đã được sử dụng", new string[] { "Email" }));
-        //    }
-
-        //    if (request.PhoneNumber != null && await _userSerivce.PhoneNumberExistsAsync(request.PhoneNumber))
-        //    {
-        //        prev.Add(new ValidationResult("Số điện thoại đã được sử dụng", new string[] { "PhoneNumber" }));
-        //    }
-
-        //    if (request.LicenseNumber != null && await _doctorService.LicenseNumberExistsAsync(request.LicenseNumber))
-        //    {
-        //        prev.Add(new ValidationResult("Số giấy phép hành nghề đã được sử dụng", new string[] { "LicenseNumber" }));
-        //    }
-
-        //    if (request.UserName != null && await _userSerivce.UserNameExistsAsync(request.UserName))
-        //    {
-        //        prev.Add(new ValidationResult("Tên đăng nhập đã được sử dụng", new string[] { "UserName" }));
-        //    }
-
-        //    if (request.IdentificationNumber != null && await _userSerivce.IdentificationNumberExistsAsync(request.IdentificationNumber))
-        //    {
-        //        prev.Add(new ValidationResult("Số CCCD/CMND đã được sử dụng", new string[] { "IdentificationNumber" }));
-        //    }
-
-        //    return prev;
-        //}
-
-        //[HttpGet("profile/{username}")]
-        //public async Task<IActionResult> GetDoctorProfile(string username)
-        //{
-        //    try
-        //    {
-        //        var profileDto = await _doctorService.GetDoctorProfileByDoctorIDAsync(doctorID);
-
-        //        if (profileDto == null)
-        //        {
-        //            return NotFound(new { Message = "Doctor not found" });
-        //        }
-
-        //        return Ok(profileDto);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "An error occurred while fetching doctor profile for username: {Username}", doctorID);
-        //        return StatusCode(500, new { Message = "An error occurred while processing your request." });
-        //    }
-        //}
 
         [HttpGet("profile/details")]
         [Authorize(Roles = "Doctor")]
@@ -405,36 +251,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 _logger.LogError(ex, "An error occurred while updating doctor password.");
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
-        }
-
-        private async Task<List<ValidationResult>> ValidateAsync(DoctorRegisterRequest request, List<ValidationResult> prev)
-        {
-            if (request.Email != null && await _userSerivce.EmailExistsAsync(request.Email))
-            {
-                prev.Add(new ValidationResult("Email đã được sử dụng", new[] { "Email" }));
-            }
-
-            if (request.PhoneNumber != null && await _userSerivce.PhoneNumberExistsAsync(request.PhoneNumber))
-            {
-                prev.Add(new ValidationResult("Số điện thoại đã được sử dụng", new[] { "PhoneNumber" }));
-            }
-
-            if (request.LicenseNumber != null && await _doctorService.LicenseNumberExistsAsync(request.LicenseNumber))
-            {
-                prev.Add(new ValidationResult("Số giấy phép hành nghề đã được sử dụng", new[] { "LicenseNumber" }));
-            }
-
-            if (request.UserName != null && await _userSerivce.UserNameExistsAsync(request.UserName))
-            {
-                prev.Add(new ValidationResult("Tên đăng nhập đã được sử dụng", new[] { "UserName" }));
-            }
-
-            if (request.IdentificationNumber != null && await _userSerivce.IdentificationNumberExistsAsync(request.IdentificationNumber))
-            {
-                prev.Add(new ValidationResult("Số CCCD/CMND đã được sử dụng", new[] { "IdentificationNumber" }));
-            }
-
-            return prev;
         }
 
         private List<ValidationResult> ValidateNewPassword(List<ValidationResult> prevResult, PasswordUpdateRequest req, string oldPassword)

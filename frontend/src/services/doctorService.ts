@@ -2,16 +2,6 @@ import { apiClient } from "../lib/apiClient";
 import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, ServiceTierWithPaginatedDoctorsDto, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters } from "../types/doctor.types";
 
 class DoctorService {
-    async getMetadata(): Promise<DoctorRegisterMetadata> {
-        const response = await apiClient.get<DoctorRegisterMetadata>('/doctor/register-metadata');
-        return response.data;
-    }
-
-    async registerDoctor(payload: FormData): Promise<void> {
-        console.log('Payload:', payload);
-        await apiClient.postMultipart<any>('/doctor/register', payload);
-    }
-
     async getDoctorProfile(doctorID: string | undefined): Promise<DoctorProfileDto> {
         try {
             const response = await apiClient.get<DoctorProfileDto>('/doctor/profile/' + doctorID);

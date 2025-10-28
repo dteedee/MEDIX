@@ -5,6 +5,7 @@ namespace Medix.API.Models.DTOs.Doctor
 {
     public class DoctorRegisterPresenter
     {
+        public IFormFile? Avatar { get; set; }
         public string? FullName { get; set; }
         public string? UserName { get; set; }
         public string? Dob { get; set; }
@@ -15,6 +16,7 @@ namespace Medix.API.Models.DTOs.Doctor
         public string? SpecializationId { get; set; }
         public string? LicenseNumber { get; set; }
         public IFormFile? LicenseImage { get; set; }
+        public IFormFile? DegreeFiles { get; set; }
         public string? Bio { get; set; }
         public string? Education { get; set; }
         public int? YearsOfExperience { get; set; } = 0;

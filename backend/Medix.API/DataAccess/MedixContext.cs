@@ -36,6 +36,8 @@ public partial class MedixContext : DbContext
 
     public virtual DbSet<DoctorPerformanceMetric> DoctorPerformanceMetrics { get; set; }
 
+    public virtual DbSet<DoctorRegistrationForm> DoctorRegistrationForms { get; set; }
+
     public virtual DbSet<DoctorSalary> DoctorSalaries { get; set; }
 
     public virtual DbSet<DoctorSchedule> DoctorSchedules { get; set; }
@@ -387,6 +389,30 @@ public partial class MedixContext : DbContext
                 .HasForeignKey(d => d.DoctorId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_DoctorPerformanceMetrics_Doctor");
+        });
+
+        modelBuilder.Entity<DoctorRegistrationForm>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__DoctorRe__3214EC075D75F3AF");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.AvatarUrl).IsUnicode(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.DegreeFilesUrl).IsUnicode(false);
+            entity.Property(e => e.Education).HasMaxLength(1000);
+            entity.Property(e => e.EmailNormalized).HasMaxLength(256);
+            entity.Property(e => e.FullName).HasMaxLength(200);
+            entity.Property(e => e.GenderCode).HasMaxLength(10);
+            entity.Property(e => e.IdentificationNumber).HasMaxLength(50);
+            entity.Property(e => e.LicenseImageUrl).IsUnicode(false);
+            entity.Property(e => e.LicenseNumber).HasMaxLength(100);
+            entity.Property(e => e.PhoneNumber).HasMaxLength(20);
+            entity.Property(e => e.UserNameNormalized).HasMaxLength(256);
+
+            entity.HasOne(d => d.Specialization).WithMany(p => p.DoctorRegistrationForms)
+                .HasForeignKey(d => d.SpecializationId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__DoctorReg__Speci__30592A6F");
         });
 
         modelBuilder.Entity<DoctorSalary>(entity =>

@@ -2,10 +2,10 @@ import styles from '../../styles/doctor/doctor-register.module.css'
 
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
-import DoctorService from '../../services/doctorService';
 import { DoctorRegisterMetadata } from '../../types/doctor.types';
 import { useNavigate } from 'react-router-dom';
 import { PageLoader } from '../../components/ui';
+import DoctorRegistrationFormService from '../../services/doctorRegistrationFormService';
 
 function DoctorRegister() {
     const [metadata, setMetadata] = useState<DoctorRegisterMetadata>();
@@ -16,14 +16,18 @@ function DoctorRegister() {
 
     const [errors, setErrors] = useState<any>({});
     const [formData, setFormData] = useState<any>({});
-    const [touched, setTouched] = useState<{ licenseImage?: boolean }>({});
+    const [touched, setTouched] = useState<{
+        licenseImage?: boolean,
+        avatar?: boolean,
+        degreeFiles?: boolean
+    }>({});
 
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchMetadata = async () => {
             try {
-                const data = await DoctorService.getMetadata();
+                const data = await DoctorRegistrationFormService.getMetadata();
                 setMetadata(data);
             } catch (error) {
                 console.error('Failed to fetch metadata:', error);
@@ -58,7 +62,7 @@ function DoctorRegister() {
         setErrors({});
         setLoading(true);
         try {
-            await DoctorService.registerDoctor(formData);
+            await DoctorRegistrationFormService.registerDoctor(formData);
             setLoading(false);
             console.log('Registration successful');
             Swal.fire({
@@ -168,7 +172,7 @@ function DoctorRegister() {
 
             case 'dob':
                 if (!value) {
-                    newErrors.birthdate = []; // No error if left empty
+                    newErrors.Dob = ['Vui lòng nhập ngày sinh']; // No error if left empty
                 } else {
                     const birthYear = new Date(value).getFullYear();
                     const currentYear = new Date().getFullYear();
@@ -181,6 +185,14 @@ function DoctorRegister() {
                     } else {
                         newErrors.Dob = [];
                     }
+                }
+                break;
+
+            case 'genderCode':
+                if (!value) {
+                    newErrors.GenderCode = ['Vui lòng chọn giới tính'];
+                } else {
+                    newErrors.GenderCode = [];
                 }
                 break;
         }
@@ -196,38 +208,76 @@ function DoctorRegister() {
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
+        const name = e.target.name;
 
-        setFormData((prev: any) => ({ ...prev, licenseImage: file }));
+        setFormData((prev: any) => ({ ...prev, [name]: file }));
 
+        switch (name) {
+            case 'avatar':
+                validateFile('Avatar', file, 'image');
+                break;
+            case 'licenseImage':
+                validateFile('LicenseImage', file, 'image');
+                break;
+            case 'degreeFiles':
+                validateFile('DegreeFiles', file, 'archive');
+                break;
+        }
+    };
+
+    const validateFile = (name: string, file: File | null, type: 'image' | 'archive') => {
         if (!file) {
             setErrors((prev: any) => ({
                 ...prev,
-                LicenseImage: ['Vui lòng chọn một tệp ZIP hoặc RAR.'],
+                [name]: [`Vui lòng chọn một tệp.`],
             }));
             return;
         }
 
-        const validExtensions = ['.zip', '.rar'];
-        const fileExtension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
-        const maxSize = 3 * 1024 * 1024; // 3MB in bytes
+        const maxSizeInMB = 3; // 3MB in bytes
+        const maxSize = maxSizeInMB * 1024 * 1024;
 
-        if (!validExtensions.includes(fileExtension)) {
+        if (file.size > maxSize) {
             setErrors((prev: any) => ({
                 ...prev,
-                LicenseImage: ['Tệp phải có định dạng ZIP hoặc RAR.'],
-            }));
-        } else if (file.size > maxSize) {
-            setErrors((prev: any) => ({
-                ...prev,
-                LicenseImage: ['Kích thước tệp không được vượt quá 3MB.'],
-            }));
-        } else {
-            setErrors((prev: any) => ({
-                ...prev,
-                LicenseImage: [''],
-            }));
+                [name]: [`Kích thước tệp không được vượt quá ${maxSizeInMB}MB.`],
+            }))
+        };
+
+        const validArchiveExtensions = ['.zip', '.rar'];
+        const validImageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+        const fileExtension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+
+
+        switch (type) {
+            case 'archive':
+                if (!validArchiveExtensions.includes(fileExtension)) {
+                    setErrors((prev: any) => ({
+                        ...prev,
+                        [name]: ['Tệp phải có định dạng ZIP hoặc RAR.'],
+                    }));
+                } else {
+                    setErrors((prev: any) => ({
+                        ...prev,
+                        [name]: [''],
+                    }));
+                }
+                break;
+            case 'image':
+                if (!validImageExtensions.includes(fileExtension)) {
+                    setErrors((prev: any) => ({
+                        ...prev,
+                        [name]: ['Tệp phải là ảnh hợp lệ (jpg, png, gif, webp).'],
+                    }));
+                } else {
+                    setErrors((prev: any) => ({
+                        ...prev,
+                        [name]: [''],
+                    }));
+                }
+                break;
         }
-    };
+    }
 
     const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -277,6 +327,42 @@ function DoctorRegister() {
                             <div className={styles["form-section"]}>
                                 <h2 className={styles["section-title"]}>Phần 1: Thông tin cá nhân &amp; đăng nhập</h2>
                                 <div className={styles["form-group"]}>
+                                    <label htmlFor="avatar" className={styles["form-label"]}>
+                                        Ảnh thẻ <span className={styles["required"]}>*</span>
+                                    </label>
+
+                                    <div className="d-flex align-items-center gap-2">
+                                        <input
+                                            type="file"
+                                            id="avatar"
+                                            name="avatar"
+                                            accept=".jpg,.png,.gif,.webp,.jpeg"
+                                            onChange={handleFileChange}
+                                            className={`d-none`} />
+
+                                        <label
+                                            htmlFor="avatar"
+                                            className={`btn btn-outline-primary ${errors.Avatar?.[0]
+                                                ? 'is-invalid'
+                                                : touched.avatar && formData.avatar
+                                                    ? 'is-valid'
+                                                    : ''
+                                                }`}>
+                                            Chọn file
+                                        </label>
+
+                                        <span className="ms-2">
+                                            {formData.avatar?.name || 'Chưa có file nào được chọn'}
+                                        </span>
+                                    </div>
+
+                                    {errors.Avatar?.[0] && (
+                                        <div className="text-danger">
+                                            {errors.Avatar[0]}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className={styles["form-group"]}>
                                     <label className={styles["form-label"]}>Họ và tên <span className={styles["required"]}>*</span></label>
                                     <input
                                         type="text"
@@ -311,7 +397,7 @@ function DoctorRegister() {
                                     )}
                                 </div>
                                 <div className={styles["form-group"]}>
-                                    <label className={styles["form-label"]}>Ngày sinh</label>
+                                    <label className={styles["form-label"]}>Ngày sinh <span className={styles["required"]}>*</span></label>
                                     <input type="date"
                                         className={`${styles["form-input"]} form-control ${errors.Dob?.[0]
                                             ? 'is-invalid'
@@ -320,7 +406,7 @@ function DoctorRegister() {
                                                 : ''
                                             }`}
                                         onChange={handleChange}
-                                        placeholder="mm/dd/yyyy" 
+                                        placeholder="mm/dd/yyyy"
                                         name='dob'
                                         max="9999-12-31" />
                                     {errors.Dob?.[0] && (
@@ -328,21 +414,26 @@ function DoctorRegister() {
                                     )}
                                 </div>
                                 <div className={styles["form-group"]}>
-                                    <label className={styles["form-label"]}>Giới tính</label>
+                                    <label className={styles["form-label"]}>Giới tính <span className={styles["required"]}>*</span></label>
                                     <div className={styles["radio-group"]}>
-                                        <div className={styles["radio-option"]}>
-                                            <input type="radio" name="genderCode" id="male" defaultValue="Male" />
-                                            <label htmlFor="male">Nam</label>
-                                        </div>
-                                        <div className={styles["radio-option"]}>
-                                            <input type="radio" name="genderCode" id="female" defaultValue="Female" />
-                                            <label htmlFor="female">Nữ</label>
-                                        </div>
-                                        <div className={styles["radio-option"]}>
-                                            <input type="radio" name="genderCode" id="other" defaultValue="Other" />
-                                            <label htmlFor="other">Khác</label>
-                                        </div>
+                                        {["Male", "Female", "Other"].map((value) => (
+                                            <div key={value} className={styles["radio-option"]}>
+                                                <input
+                                                    type="radio"
+                                                    name="genderCode"
+                                                    id={value.toLowerCase()}
+                                                    value={value}
+                                                    onChange={handleChange}
+                                                />
+                                                <label htmlFor={value.toLowerCase()}>
+                                                    {value === "Male" ? "Nam" : value === "Female" ? "Nữ" : "Khác"}
+                                                </label>
+                                            </div>
+                                        ))}
                                     </div>
+                                    {errors.GenderCode?.[0] && (
+                                        <div className="text-danger">{errors.GenderCode[0]}</div>
+                                    )}
                                 </div>
                                 <div className={styles["form-group"]}>
                                     <label className={styles["form-label"]}>Số CCCD <span className={styles["required"]}>*</span></label>
@@ -438,7 +529,7 @@ function DoctorRegister() {
                                             type="file"
                                             id="licenseImage"
                                             name="licenseImage"
-                                            accept=".zip,.rar"
+                                            accept=".jpg,.png,.gif,.webp,.jpeg"
                                             onChange={handleFileChange}
                                             className={`d-none`} />
 
@@ -461,6 +552,42 @@ function DoctorRegister() {
                                     {errors.LicenseImage?.[0] && (
                                         <div className="text-danger">
                                             {errors.LicenseImage[0]}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className={styles["form-group"]}>
+                                    <label htmlFor="degreeFiles" className={styles["form-label"]}>
+                                        Bằng cấp <span className={styles["required"]}>*</span>
+                                    </label>
+
+                                    <div className="d-flex align-items-center gap-2">
+                                        <input
+                                            type="file"
+                                            id="degreeFiles"
+                                            name="degreeFiles"
+                                            accept=".zip,.rar"
+                                            onChange={handleFileChange}
+                                            className={`d-none`} />
+
+                                        <label
+                                            htmlFor="degreeFiles"
+                                            className={`btn btn-outline-primary ${errors.DegreeFiles?.[0]
+                                                ? 'is-invalid'
+                                                : touched.degreeFiles && formData.degreeFiles
+                                                    ? 'is-valid'
+                                                    : ''
+                                                }`}>
+                                            Chọn file
+                                        </label>
+
+                                        <span className="ms-2">
+                                            {formData.degreeFiles?.name || 'Chưa có file nào được chọn'}
+                                        </span>
+                                    </div>
+
+                                    {errors.DegreeFiles?.[0] && (
+                                        <div className="text-danger">
+                                            {errors.DegreeFiles[0]}
                                         </div>
                                     )}
                                 </div>

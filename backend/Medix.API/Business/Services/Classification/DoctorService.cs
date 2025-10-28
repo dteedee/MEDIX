@@ -37,42 +37,6 @@ namespace Medix.API.Business.Services.Classification
             _emailService = emailService;
         }
 
-
-        public async Task<bool> RegisterDoctorAsync(User user, Doctor doctor, UserRole role)
-        {
-            using var transaction = await _context.Database.BeginTransactionAsync();
-
-            try
-            {
-                var createdUser = await _userRepository.CreateAsync(user);
-                if (createdUser == null)
-                {
-                    await transaction.RollbackAsync();
-                    return false;
-                }
-                var createdDoctor = await _doctorRepository.CreateDoctorAsync(doctor);
-                if (createdDoctor == null)
-                {
-                    await transaction.RollbackAsync();
-                    return false;
-                }
-                var userRole = await _userRepository.CreateUserRoleAsync(role);
-                if (userRole == null)
-                {
-                    await transaction.RollbackAsync();
-                    return false;
-                }
-
-                await transaction.CommitAsync();
-                return true;
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
-        }
-
         public async Task<List<Doctor>> GetHomePageDoctorsAsync()
         {
             return await _doctorRepository.GetHomePageDoctorsAsync();

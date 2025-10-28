@@ -50,7 +50,7 @@ namespace Medix.API.Business.Services.Community
         /// <summary>
         /// Upload image từ IFormFile (dùng trong Controller)
         /// </summary>
-        public async Task<string?> UploadImageAsync(IFormFile? file)
+        public async Task<string> UploadImageAsync(IFormFile? file)
         {
             try
             {

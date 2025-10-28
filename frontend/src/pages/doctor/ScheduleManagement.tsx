@@ -24,12 +24,14 @@ const toYYYYMMDD = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+type ViewMode = 'month' | 'week';
+
 const ScheduleManagement: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const [schedules, setSchedules] = useState<DoctorSchedule[]>([]);
   const [scheduleOverrides, setScheduleOverrides] = useState<ScheduleOverride[]>([]);
   const [currentDayAppointments, setCurrentDayAppointments] = useState<Appointment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -37,6 +39,7 @@ const ScheduleManagement: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
 
+  const [viewMode, setViewMode] = useState<ViewMode>('month');
   // Map schedules by day of the week for quick lookup
   const schedulesByDayOfWeek = useMemo(() => {
     const map = new Map<number, DoctorSchedule[]>();
@@ -113,34 +116,73 @@ const ScheduleManagement: React.FC = () => {
     fetchSchedules();
   }, [isAuthenticated, user?.id]);
 
-  const getDaysInMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const { daysToRender, headerLabel } = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+
+    if (viewMode === 'month') {
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const firstDayOfMonth = new Date(year, month, 1).getDay();
+      const days = [];
+      const emptyCells = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+      for (let i = 0; i < emptyCells; i++) {
+        days.push(null);
+      }
+      for (let i = 1; i <= daysInMonth; i++) {
+        days.push(new Date(Date.UTC(year, month, i)));
+      }
+      return {
+        daysToRender: days,
+        headerLabel: `${monthNames[month]} ${year}`
+      };
+    } else { // week view
+      const dayOfWeek = currentMonth.getDay(); // 0=Sun, 1=Mon
+      const offset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const startOfWeek = new Date(currentMonth);
+      startOfWeek.setDate(startOfWeek.getDate() + offset);
+      
+      const days = [];
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(startOfWeek);
+        day.setDate(day.getDate() + i);
+        days.push(new Date(Date.UTC(day.getFullYear(), day.getMonth(), day.getDate())));
+      }
+
+      const endOfWeek = days[6];
+      const startMonthName = monthNames[days[0].getUTCMonth()];
+      const endMonthName = monthNames[endOfWeek.getUTCMonth()];
+      const startYear = days[0].getUTCFullYear();
+      const endYear = endOfWeek.getUTCFullYear();
+
+      let label = `${startMonthName} ${startYear}`;
+      if (startYear !== endYear) {
+        label = `${startMonthName} ${startYear} - ${endMonthName} ${endYear}`;
+      } else if (startMonthName !== endMonthName) {
+        label = `${startMonthName} - ${endMonthName} ${year}`;
+      }
+
+      return { daysToRender: days, headerLabel: label };
+    }
+  }, [currentMonth, viewMode]);
+
+  const handlePrev = () => {
+    const newDate = new Date(currentMonth);
+    if (viewMode === 'month') {
+      newDate.setMonth(newDate.getMonth() - 1);
+    } else {
+      newDate.setDate(newDate.getDate() - 7);
+    }
+    setCurrentMonth(newDate);
   };
 
-  const getFirstDayOfMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-  };
-
-  const daysInMonth = getDaysInMonth(currentMonth);
-  const firstDay = getFirstDayOfMonth(currentMonth);
-  const days = [];
-
-  // Add empty cells for days before month starts (Monday is 1, Sunday is 0)
-  for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
-    days.push(null);
-  }
-
-  // Add days of month
-  for (let i = 1; i <= daysInMonth; i++) {
-    days.push(i);
-  }
-
-  const handlePrevMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+  const handleNext = () => {
+    const newDate = new Date(currentMonth);
+    if (viewMode === 'month') {
+      newDate.setMonth(newDate.getMonth() + 1);
+    } else {
+      newDate.setDate(newDate.getDate() + 7);
+    }
+    setCurrentMonth(newDate);
   };
 
   const selectedDaySchedules = useMemo(() => {
@@ -162,134 +204,153 @@ const ScheduleManagement: React.FC = () => {
   }
 
   return (
-    <div className="schedule-calendar">
-      <div className="calendar-header">
-        <div className="month-selector">
-          <button onClick={handlePrevMonth} className="nav-button">
-            <ChevronLeft size={20} />
-          </button>
-          <h2>
-            {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-          </h2>
-          <button onClick={handleNextMonth} className="nav-button">
-            <ChevronRight size={20} />
-          </button>
-        </div>
-        <p className="warning-text">*Lịch làm việc được áp dụng hàng tuần theo các thứ đã đăng ký.</p>
-      </div>
-
-      <div className="calendar-container">
-        {error && <p className="warning-text">{error}</p>}
-        {isLoading && <p>Đang tải lịch làm việc...</p>}
-        
-        <div className="calendar-grid">
-          <div className="day-headers">
-            {dayNames.map((day) => (
-              <div key={day} className="day-header">{day}</div>
-            ))}
+    <div className="schedule-management-page">
+      <div className="schedule-main-content">
+        {/* Cột bên trái cho lịch và các nút quản lý */}
+        <div className="schedule-left-column">
+          <div className="calendar-header-wrapper">
+            <div className="calendar-header">
+              <div className="month-selector">
+                <button onClick={handlePrev} className="nav-button">
+                  <ChevronLeft size={20} />
+                </button>
+                <h2>
+                  {headerLabel}
+                </h2>
+                <button onClick={handleNext} className="nav-button">
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+              <div className="view-toggle">
+                <button className={`toggle-btn ${viewMode === 'month' ? 'active' : ''}`} onClick={() => setViewMode('month')}>
+                  Tháng
+                </button>
+                <button className={`toggle-btn ${viewMode === 'week' ? 'active' : ''}`} onClick={() => setViewMode('week')}>
+                  Tuần
+                </button>
+              </div>
+              <p className="warning-text">*Lịch làm việc được áp dụng hàng tuần theo các thứ đã đăng ký.</p>
+            </div>
           </div>
-          <div className="calendar-days">
-            {days.map((day, index) => {
-              if (!day) {
-                return <div key={index} className="calendar-day empty"></div>;
-              }
-              // Sử dụng Date.UTC để tạo ngày ở múi giờ UTC, đảm bảo toYYYYMMDD hoạt động chính xác
-              const date = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), day));
-              const dayOfWeek = date.getDay(); // Sunday is 0, Monday is 1
-              const timeSlots = schedulesByDayOfWeek.get(dayOfWeek) || [];
-              const fullDateString = toYYYYMMDD(date);
-              const hasOverrides = scheduleOverridesByDate.has(fullDateString);
-              
-              return (
-                <div
-                  key={index}
-                  className={`calendar-day ${day === selectedDate ? "selected" : ""} ${hasOverrides ? "has-override" : ""}`}
-                  onClick={() => setSelectedDate(day)}
-                >
-                  <div className="day-number">{day}</div>
-                  <div className="time-slots">
-                    {timeSlots.map((slot) => (
-                      <div key={slot.id} className="time-slot" style={{ color: slot.isAvailable ? '#10b981' : '#f87171' }}>
-                        {slot.startTime.substring(0, 5)}-{slot.endTime.substring(0, 5)}
-                      </div>
-                    ))}
-                  </div>
-                  {hasOverrides && <div className="override-badge"></div>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        <div className="management-buttons">
-          <button onClick={() => setIsModalOpen(true)} className="manage-button primary">
-            Quản lý lịch cố định
-          </button>
-          <button onClick={() => setIsOverrideModalOpen(true)} className="manage-button primary">
-            Quản lý lịch linh hoạt
-          </button>
-        </div>
-      </div>
 
-      <div className="schedule-details">
-        {selectedDate ? (
-          <>
-            <h3 className="details-header">{getFormattedSelectedDate()}</h3>
-            {selectedDaySchedules.length > 0 ? (
-              <div className="details-list">
-                {selectedDaySchedules.map(schedule => (
-                  <div key={schedule.id} className="detail-item">
-                    <p className="detail-time">{schedule.startTime.substring(0, 5)} - {schedule.endTime.substring(0, 5)}</p>
-                    <p className="detail-status">
-                      <span className="status-dot" style={{ backgroundColor: schedule.isAvailable ? '#10b981' : '#ef4444' }}></span>
-                      {schedule.isAvailable ? 'Sẵn sàng nhận lịch' : 'Không nhận lịch'}
-                    </p>
-                  </div>
+          <div className="calendar-container">
+            {error && <p className="warning-text">{error}</p>}
+            {isLoading && <p>Đang tải lịch làm việc...</p>}
+            
+            <div className="calendar-grid">
+              <div className="day-headers">
+                {dayNames.map((day) => (
+                  <div key={day} className="day-header">{day}</div>
                 ))}
               </div>
-            ) : <p className="details-placeholder">Không có ca làm việc nào cho ngày này.</p>}
+              <div className="calendar-days">
+                {daysToRender.map((date, index) => {
+                  if (!date) {
+                    return <div key={index} className="calendar-day empty"></div>;
+                  }
+                  const dayNumber = date.getUTCDate();
+                  const dayOfWeek = date.getDay(); // Sunday is 0, Monday is 1
+                  const timeSlots = schedulesByDayOfWeek.get(dayOfWeek) || [];
+                  const fullDateString = toYYYYMMDD(date);
+                  const hasOverrides = scheduleOverridesByDate.has(fullDateString);
+                  const isSelected = selectedDate === dayNumber && currentMonth.getUTCMonth() === date.getUTCMonth() && currentMonth.getUTCFullYear() === date.getUTCFullYear();
+                  const isToday = toYYYYMMDD(new Date()) === fullDateString;
+                  
+                  return (
+                    <div
+                      key={index}
+                      className={`calendar-day ${isSelected ? "selected" : ""} ${hasOverrides ? "has-override" : ""} ${isToday ? "today" : ""}`}
+                      onClick={() => { setSelectedDate(dayNumber); setCurrentMonth(new Date(date.getUTCFullYear(), date.getUTCMonth(), 1)); }}
+                    >
+                      <div className="day-number">{dayNumber}</div>
+                      <div className="time-slots">
+                        {timeSlots.map((slot) => (
+                          <div key={slot.id} className="time-slot" style={{ color: slot.isAvailable ? '#10b981' : '#f87171' }}>
+                            {slot.startTime.substring(0, 5)}-{slot.endTime.substring(0, 5)}
+                          </div>
+                        ))}
+                      </div>
+                      {hasOverrides && <div className="override-badge"></div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="management-buttons">
+              <button onClick={() => setIsModalOpen(true)} className="manage-button primary">
+                Quản lý lịch cố định
+              </button>
+              <button onClick={() => setIsOverrideModalOpen(true)} className="manage-button primary">
+                Quản lý lịch linh hoạt
+              </button>
+            </div>
+          </div>
+        </div>
 
-            {(() => {
-              const selectedDayFullDateString = toYYYYMMDD(new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate)));
-              const selectedDayOverrides = scheduleOverridesByDate.get(selectedDayFullDateString) || [];
-              if (selectedDayOverrides.length === 0) return null;
-
-              return (
-                <div className="override-list">
-                  <h4 className="appointment-list-header">Lịch linh hoạt</h4>
+        {/* Cột bên phải cho chi tiết lịch */}
+        <div className="schedule-right-column">
+          <div className="schedule-details">
+            {selectedDate ? (
+              <>
+                <h3 className="details-header">{getFormattedSelectedDate()}</h3>
+                {selectedDaySchedules.length > 0 ? (
                   <div className="details-list">
-                    {selectedDayOverrides.map(override => (
-                      <div key={override.id} className="detail-item override-item">
-                        <p className="detail-time">{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</p>
-                        <p className={`detail-status ${override.isAvailable ? 'status-available' : 'status-unavailable'}`}>
-                          <span className="status-dot" style={{ backgroundColor: override.isAvailable ? '#10b981' : '#ef4444' }}></span>
-                          {override.isAvailable ? 'Tăng ca' : 'Nghỉ'} - Lý do: {override.reason}
+                    {selectedDaySchedules.map(schedule => (
+                      <div key={schedule.id} className="detail-item">
+                        <p className="detail-time">{schedule.startTime.substring(0, 5)} - {schedule.endTime.substring(0, 5)}</p>
+                        <p className="detail-status">
+                          <span className="status-dot" style={{ backgroundColor: schedule.isAvailable ? '#10b981' : '#ef4444' }}></span>
+                          {schedule.isAvailable ? 'Sẵn sàng nhận lịch' : 'Không nhận lịch'}
                         </p>
                       </div>
                     ))}
                   </div>
-                </div>
-              );
-            })()}
+                ) : <p className="details-placeholder">Không có ca làm việc nào cho ngày này.</p>}
 
-            {selectedDayAppointments.length > 0 && (
-              <div className="appointment-list">
-                <h4 className="appointment-list-header">Các cuộc hẹn</h4>
-                <div className="details-list">
-                  {selectedDayAppointments.map(app => (
-                    <div key={app.id} className="appointment-item">
-                      <p className="appointment-time">{new Date(app.appointmentStartTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(app.appointmentEndTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</p>
-                      <p className="appointment-patient">BN: {app.patientName}</p>
-                      <p className="appointment-status">{app.statusDisplayName || app.statusCode}</p>
-                      <Link to={`/app/doctor/medical-records/${app.id}`} className="view-record-button">
-                        Xem chi tiết hồ sơ
-                      </Link>
+                {(() => {
+                  const selectedDayFullDateString = toYYYYMMDD(new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate)));
+                  const selectedDayOverrides = scheduleOverridesByDate.get(selectedDayFullDateString) || [];
+                  if (selectedDayOverrides.length === 0) return null;
+
+                  return (
+                    <div className="override-list">
+                      <h4 className="appointment-list-header">Lịch linh hoạt</h4>
+                      <div className="details-list">
+                        {selectedDayOverrides.map(override => (
+                          <div key={override.id} className="detail-item override-item">
+                            <p className="detail-time">{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</p>
+                            <p className={`detail-status ${override.isAvailable ? 'status-available' : 'status-unavailable'}`}>
+                              <span className="status-dot" style={{ backgroundColor: override.isAvailable ? '#10b981' : '#ef4444' }}></span>
+                              {override.isAvailable ? 'Tăng ca' : 'Nghỉ'} - Lý do: {override.reason}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        ) : <p className="details-placeholder">Chọn một ngày để xem chi tiết</p>}
+                  );
+                })()}
+
+                {selectedDayAppointments.length > 0 && (
+                  <div className="appointment-list">
+                    <h4 className="appointment-list-header">Các cuộc hẹn</h4>
+                    <div className="details-list">
+                      {selectedDayAppointments.map(app => (
+                        <div key={app.id} className="appointment-item">
+                          <p className="appointment-time">{new Date(app.appointmentStartTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(app.appointmentEndTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</p>
+                          <p className="appointment-patient">BN: {app.patientName}</p>
+                          <p className="appointment-status">{app.statusDisplayName || app.statusCode}</p>
+                          <Link to={`/app/doctor/medical-records/${app.id}`} className="view-record-button">
+                            Xem chi tiết hồ sơ
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : <p className="details-placeholder">Chọn một ngày để xem chi tiết</p>}
+          </div>
+        </div>
       </div>
 
       {isModalOpen && (

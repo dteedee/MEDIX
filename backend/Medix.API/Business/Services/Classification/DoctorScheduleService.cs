@@ -18,17 +18,17 @@ namespace Medix.API.Business.Services.Classification
         }
 
         // 🟢 Lấy tất cả
-        public async Task<IEnumerable<DoctorScheduleDto>> GetAllAsync()
+        public async Task<IEnumerable<DoctorScheduleWorkDto>> GetAllAsync()
         {
             var entities = await _repository.GetAllAsync();
-            return _mapper.Map<IEnumerable<DoctorScheduleDto>>(entities);
+            return _mapper.Map<IEnumerable<DoctorScheduleWorkDto>>(entities);
         }
 
         // 🟢 Lấy theo ID
-        public async Task<DoctorScheduleDto?> GetByIdAsync(Guid id)
+        public async Task<DoctorScheduleWorkDto?> GetByIdAsync(Guid id)
         {
             var entity = await _repository.GetByIdAsync(id);
-            return entity == null ? null : _mapper.Map<DoctorScheduleDto>(entity);
+            return entity == null ? null : _mapper.Map<DoctorScheduleWorkDto>(entity);
         }
 
         // 🟢 Validate logic lịch trùng
@@ -45,7 +45,7 @@ namespace Medix.API.Business.Services.Classification
             => startA < endB && endA > startB;
 
         // 🟢 Tạo mới
-        public async Task<DoctorScheduleDto> CreateAsync(CreateDoctorScheduleDto dto)
+        public async Task<DoctorScheduleWorkDto> CreateAsync(CreateDoctorScheduleDto dto)
         {
             ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
 
@@ -67,11 +67,11 @@ namespace Medix.API.Business.Services.Classification
             await _repository.AddAsync(entity);
 
             var reloaded = await _repository.GetByIdAsync(entity.Id);
-            return _mapper.Map<DoctorScheduleDto>(reloaded);
+            return _mapper.Map<DoctorScheduleWorkDto>(reloaded);
         }
 
         // 🟡 Cập nhật
-        public async Task<DoctorScheduleDto?> UpdateAsync(UpdateDoctorScheduleDto dto)
+        public async Task<DoctorScheduleWorkDto?> UpdateAsync(UpdateDoctorScheduleDto dto)
         {
             ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
 
@@ -95,7 +95,7 @@ namespace Medix.API.Business.Services.Classification
             existing.UpdatedAt = DateTime.UtcNow;
 
             await _repository.UpdateAsync(existing);
-            return _mapper.Map<DoctorScheduleDto>(existing);
+            return _mapper.Map<DoctorScheduleWorkDto>(existing);
         }
 
         // 🔴 Xóa theo ID
@@ -109,68 +109,14 @@ namespace Medix.API.Business.Services.Classification
         }
 
         // 🟢 Lấy tất cả lịch theo bác sĩ
-        public async Task<IEnumerable<DoctorScheduleDto>> GetByDoctorIdAsync(Guid doctorId)
+        public async Task<IEnumerable<DoctorScheduleWorkDto>> GetByDoctorIdAsync(Guid doctorId)
         {
             var schedules = await _repository.GetByDoctorAndDayAsync(doctorId, -1);
-            return _mapper.Map<IEnumerable<DoctorScheduleDto>>(schedules);
+            return _mapper.Map<IEnumerable<DoctorScheduleWorkDto>>(schedules);
         }
 
-        //// 🟡 Update toàn bộ lịch theo bác sĩ
-        //// 🟡 Update toàn bộ lịch theo bác sĩ (có transaction)
-        //public async Task<IEnumerable<DoctorScheduleDto>> UpdateByDoctorIdAsync(Guid doctorId, IEnumerable<UpdateDoctorScheduleDto> schedules)
-        //{
-        //    using var transaction = await _repository.BeginTransactionAsync();
-        //    try
-        //    {
-        //        // 1. Lấy tất cả lịch làm việc hiện có của bác sĩ
-        //        var existingSchedules = await _repository.GetByDoctorAndDayAsync(doctorId, -1);
-
-        //        // 2. Xác định các lịch cần xóa (có trong DB nhưng không có trong DTO gửi lên)
-        //        var scheduleIdsInDto = schedules.Select(s => s.Id).ToHashSet();
-        //        var toDelete = existingSchedules.Where(e => !scheduleIdsInDto.Contains(e.Id)).ToList();
-        //        foreach (var item in toDelete)
-        //        {
-        //            await _repository.DeleteAsync(item.Id);
-        //        }
-
-        //        // 3. Cập nhật hoặc tạo mới các lịch từ DTO
-        //        foreach (var dto in schedules)
-        //        {
-        //            // Nếu Id rỗng -> tạo mới
-        //            if (dto.Id == Guid.Empty)
-        //            {
-        //                var createDto = new CreateDoctorScheduleDto
-        //                {
-        //                    DoctorId = doctorId,
-        //                    DayOfWeek = dto.DayOfWeek,
-        //                    StartTime = dto.StartTime,
-        //                    EndTime = dto.EndTime,
-        //                    IsAvailable = dto.IsAvailable
-        //                };
-        //                await CreateAsync(createDto);
-        //            }
-        //            // Nếu có Id -> cập nhật
-        //            else
-        //            {
-        //                await UpdateSingleByDoctorIdAsync(doctorId, dto);
-        //            }
-        //        }
-
-        //        await transaction.CommitAsync();
-
-        //        // 4. Lấy lại danh sách cuối cùng và trả về
-        //        var updatedList = await _repository.GetByDoctorAndDayAsync(doctorId, -1);
-        //        return _mapper.Map<IEnumerable<DoctorScheduleDto>>(updatedList);
-        //    }
-        //    catch
-        //    {
-        //        await transaction.RollbackAsync();
-        //        throw;
-        //    }
-        //}
-
-        // 🟡 Update một lịch duy nhất theo bác sĩ
-        public async Task<DoctorScheduleDto?> UpdateSingleByDoctorIdAsync(Guid doctorId, UpdateDoctorScheduleDto dto)
+       
+        public async Task<DoctorScheduleWorkDto?> UpdateSingleByDoctorIdAsync(Guid doctorId, UpdateDoctorScheduleDto dto)
         {
             ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
 
@@ -199,13 +145,13 @@ namespace Medix.API.Business.Services.Classification
             existing.DoctorId = doctorId; // Đảm bảo DoctorId luôn là của bác sĩ đang đăng nhập
 
             await _repository.UpdateAsync(existing);
-            return _mapper.Map<DoctorScheduleDto>(existing);
+            return _mapper.Map<DoctorScheduleWorkDto>(existing);
         }
 
         // 🟢 Tạo nhiều lịch cho 1 bác sĩ
-        public async Task<IEnumerable<DoctorScheduleDto>> CreateByDoctorIdAsync(Guid doctorId, IEnumerable<CreateDoctorScheduleDto> schedules)
+        public async Task<IEnumerable<DoctorScheduleWorkDto>> CreateByDoctorIdAsync(Guid doctorId, IEnumerable<CreateDoctorScheduleDto> schedules)
         {
-            var created = new List<DoctorScheduleDto>();
+            var created = new List<DoctorScheduleWorkDto>();
 
             foreach (var dto in schedules)
             {
@@ -229,7 +175,7 @@ namespace Medix.API.Business.Services.Classification
 
                 var reloaded = await _repository.GetByIdAsync(entity.Id);
                 if (reloaded != null)
-                    created.Add(_mapper.Map<DoctorScheduleDto>(reloaded));
+                    created.Add(_mapper.Map<DoctorScheduleWorkDto>(reloaded));
             }
 
             return created;

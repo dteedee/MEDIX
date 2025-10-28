@@ -14,6 +14,7 @@ import Sidebar from './components/layout/Sidebar';
 import AdminLayout from './components/layout/AdminLayout';
 import PatientLayout from './components/layout/PatientLayout';
 import ManagerLayout from './components/layout/ManagerLayout';
+import DoctorLayout from './components/layout/DoctorLayout';
 import PublicLayout from './components/layout/PublicLayout';
 
 // Auth pages
@@ -31,6 +32,13 @@ import { Unauthorized } from './pages/error/Unauthorized';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import { ManageDashboard } from './pages/manager/ManageDashboard';
 import DoctorRegister from './pages/doctor/DoctorRegister';
+import DoctorDashboard from './pages/doctor/DoctorDashboard';
+import { DoctorProfile } from './pages/doctor/DoctorProfile';
+import DoctorAppointments from './pages/doctor/DoctorAppointments';
+import DoctorPatients from './pages/doctor/DoctorPatients';
+import DoctorWallet from './pages/doctor/DoctorWallet';
+import DoctorPackages from './pages/doctor/DoctorPackages';
+import DoctorFeedback from './pages/doctor/DoctorFeedback';
 import { AIChatBot } from './pages/ai/AIChatBot';
 import { PatientDashboard } from './pages/patient/patientdashboard';
 import { PatientProfile } from './pages/patient/patientProfile';
@@ -161,17 +169,24 @@ export function App() {
                     <Route path="finance" element={<PatientFinance />} />
                   </Route>
 
-                {/* ---------- Doctor routes (inside /app) ---------- */}
-                <Route path="doctor/*" element={
-                  // <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
-                    <Routes>
-                      {/* <Route index element={<Navigate to="schedules" replace />} /> */}
-                      <Route path="profile/edit" element={<DoctorProfileEdit />} />
-                      <Route path="schedules" element={<ScheduleManagement />} />
-                      <Route path="medical-records/:appointmentId" element={<MedicalRecordDetails />} /> {/* New route */}
-                    </Routes>
-                  // </ProtectedRoute>
-                } />
+                  {/* ---------- Doctor routes ---------- */}
+                  <Route path="doctor/*" element={
+                    <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
+                      <DoctorLayout />
+                    </ProtectedRoute>
+                  }>
+                    <Route index element={<Navigate to="dashboard" replace />} />
+                    <Route path="dashboard" element={<DoctorDashboard />} />
+                    <Route path="profile" element={<DoctorProfile />} />
+                    <Route path="profile/edit" element={<DoctorProfileEdit />} />
+                    <Route path="schedule" element={<ScheduleManagement />} />
+                    <Route path="appointments" element={<DoctorAppointments />} />
+                    <Route path="patients" element={<DoctorPatients />} />
+                    <Route path="wallet" element={<DoctorWallet />} />
+                    <Route path="packages" element={<DoctorPackages />} />
+                    <Route path="feedback" element={<DoctorFeedback />} />
+                    <Route path="medical-records/:appointmentId" element={<MedicalRecordDetails />} />
+                  </Route>
 
                 {/* ---------- Reader ---------- */}
                 <Route path="articles" element={<ArticleReaderPage />} />

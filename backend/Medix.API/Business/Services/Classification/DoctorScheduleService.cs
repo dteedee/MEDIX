@@ -48,6 +48,12 @@ namespace Medix.API.Business.Services.Classification
         public async Task<DoctorScheduleWorkDto> CreateAsync(CreateDoctorScheduleDto dto)
         {
             ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
+            
+            var duration = dto.EndTime - dto.StartTime;
+            if (duration.TotalHours != 4)
+            {
+                throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 4 tiếng.");
+            }
 
             var existingSchedules = await _repository.GetByDoctorAndDayAsync(dto.DoctorId, dto.DayOfWeek);
             var overlapping = existingSchedules.FirstOrDefault(s => IsOverlap(dto.StartTime, dto.EndTime, s.StartTime, s.EndTime));
@@ -57,6 +63,11 @@ namespace Medix.API.Business.Services.Classification
                 throw new InvalidOperationException(
                     $"Bác sĩ đã có lịch từ {overlapping.StartTime:HH\\:mm} đến {overlapping.EndTime:HH\\:mm} trong ngày {dto.DayOfWeek}."
                 );
+            }
+            
+            if (existingSchedules.Count() >= 2)
+            {
+                throw new InvalidOperationException("Mỗi ngày chỉ được đăng ký tối đa 2 ca làm việc.");
             }
 
             var entity = _mapper.Map<DoctorSchedule>(dto);
@@ -74,6 +85,12 @@ namespace Medix.API.Business.Services.Classification
         public async Task<DoctorScheduleWorkDto?> UpdateAsync(UpdateDoctorScheduleDto dto)
         {
             ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
+            
+            var duration = dto.EndTime - dto.StartTime;
+            if (duration.TotalHours != 4)
+            {
+                throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 4 tiếng.");
+            }
 
             var existing = await _repository.GetByIdAsync(dto.Id);
             if (existing == null)
@@ -120,6 +137,12 @@ namespace Medix.API.Business.Services.Classification
         {
             ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
 
+            var duration = dto.EndTime - dto.StartTime;
+            if (duration.TotalHours != 4)
+            {
+                throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 4 tiếng.");
+            }
+
             var existing = await _repository.GetByIdAsync(dto.Id);
             if (existing == null)
                 return null;
@@ -152,11 +175,19 @@ namespace Medix.API.Business.Services.Classification
         public async Task<IEnumerable<DoctorScheduleWorkDto>> CreateByDoctorIdAsync(Guid doctorId, IEnumerable<CreateDoctorScheduleDto> schedules)
         {
             var created = new List<DoctorScheduleWorkDto>();
+            // Lấy tất cả lịch hiện có của bác sĩ để kiểm tra tổng số ca và trùng lặp
+            var allExistingSchedules = (await _repository.GetByDoctorAndDayAsync(doctorId, -1)).ToList();
 
             foreach (var dto in schedules)
             {
                 dto.DoctorId = doctorId;
                 ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
+
+                var duration = dto.EndTime - dto.StartTime;
+                if (duration.TotalHours != 4)
+                {
+                    throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 4 tiếng.");
+                }
 
                 var existing = await _repository.GetByDoctorAndDayAsync(doctorId, dto.DayOfWeek);
                 var overlap = existing.FirstOrDefault(s => IsOverlap(dto.StartTime, dto.EndTime, s.StartTime, s.EndTime));
@@ -165,19 +196,26 @@ namespace Medix.API.Business.Services.Classification
                     throw new InvalidOperationException(
                         $"Bác sĩ đã có lịch từ {overlap.StartTime:HH\\:mm} đến {overlap.EndTime:HH\\:mm} trong ngày {dto.DayOfWeek}."
                     );
-
+                
+                // Kiểm tra số lượng ca làm việc trong ngày (bao gồm cả các ca mới được thêm trong cùng batch)
+                if (allExistingSchedules.Count(s => s.DayOfWeek == dto.DayOfWeek) + created.Count(s => s.DayOfWeek == dto.DayOfWeek) >= 2)
+                {
+                    throw new InvalidOperationException($"Mỗi ngày chỉ được đăng ký tối đa 2 ca làm việc. Ngày {dto.DayOfWeek} đã đủ số ca.");
+                }
+    
                 var entity = _mapper.Map<DoctorSchedule>(dto);
                 entity.Id = Guid.NewGuid();
                 entity.CreatedAt = DateTime.UtcNow;
                 entity.UpdatedAt = DateTime.UtcNow;
-
+    
                 await _repository.AddAsync(entity);
-
+    
                 var reloaded = await _repository.GetByIdAsync(entity.Id);
+                // Thêm vào danh sách created để kiểm tra số lượng ca trong cùng batch
                 if (reloaded != null)
                     created.Add(_mapper.Map<DoctorScheduleWorkDto>(reloaded));
             }
-
+    
             return created;
         }
 

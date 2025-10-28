@@ -9,11 +9,16 @@ namespace Medix.API.Business.Services.Classification
     public class DoctorScheduleService : IDoctorScheduleService
     {
         private readonly IDoctorScheduleRepository _repository;
+        private readonly IAppointmentRepository _appointmentRepository;
         private readonly IMapper _mapper;
 
-        public DoctorScheduleService(IDoctorScheduleRepository repository, IMapper mapper)
+        public DoctorScheduleService(
+            IDoctorScheduleRepository repository,
+            IAppointmentRepository appointmentRepository,
+            IMapper mapper)
         {
             _repository = repository;
+            _appointmentRepository = appointmentRepository;
             _mapper = mapper;
         }
 
@@ -96,6 +101,13 @@ namespace Medix.API.Business.Services.Classification
             if (existing == null)
                 throw new InvalidOperationException("Không tìm thấy lịch bác sĩ cần cập nhật.");
 
+            // KIỂM TRA BUSINESS RULE: Không cho cập nhật nếu đã có lịch hẹn trong tương lai
+            var hasFutureAppointments = await _appointmentRepository.HasFutureAppointmentsForDoctorOnDay(existing.DoctorId, existing.DayOfWeek);
+            if (hasFutureAppointments)
+            {
+                throw new InvalidOperationException($"Không thể thay đổi lịch làm việc cho ngày này vì đã có lịch hẹn được đặt trong tương lai. Vui lòng sử dụng chức năng 'Ghi đè lịch' (Override) nếu muốn thay đổi đột xuất.");
+            }
+
             var schedules = await _repository.GetByDoctorAndDayAsync(dto.DoctorId, dto.DayOfWeek);
             var hasOverlap = schedules
                 .Where(s => s.Id != dto.Id)
@@ -120,6 +132,14 @@ namespace Medix.API.Business.Services.Classification
         {
             var existing = await _repository.GetByIdAsync(id);
             if (existing == null) return false;
+
+            // KIỂM TRA BUSINESS RULE: Không cho xóa nếu đã có lịch hẹn trong tương lai
+            var hasFutureAppointments = await _appointmentRepository.HasFutureAppointmentsForDoctorOnDay(existing.DoctorId, existing.DayOfWeek);
+            if (hasFutureAppointments)
+            {
+                throw new InvalidOperationException($"Không thể xóa lịch làm việc cho ngày này vì đã có lịch hẹn được đặt trong tương lai. Vui lòng hủy các lịch hẹn trước.");
+            }
+
 
             await _repository.DeleteAsync(id);
             return true;
@@ -149,6 +169,13 @@ namespace Medix.API.Business.Services.Classification
             // Kiểm tra xem lịch này có đúng là của bác sĩ đang yêu cầu không
             if (existing.DoctorId != doctorId)
                 throw new UnauthorizedAccessException("Bạn không có quyền cập nhật lịch này.");
+
+            // KIỂM TRA BUSINESS RULE: Không cho cập nhật nếu đã có lịch hẹn trong tương lai
+            var hasFutureAppointments = await _appointmentRepository.HasFutureAppointmentsForDoctorOnDay(doctorId, existing.DayOfWeek);
+            if (hasFutureAppointments)
+            {
+                throw new InvalidOperationException($"Không thể thay đổi lịch làm việc cho ngày này vì đã có lịch hẹn được đặt trong tương lai. Vui lòng sử dụng chức năng 'Ghi đè lịch' (Override) nếu muốn thay đổi đột xuất.");
+            }
 
             // Kiểm tra trùng lặp với các lịch khác của cùng bác sĩ
             var schedules = await _repository.GetByDoctorAndDayAsync(doctorId, dto.DayOfWeek);
@@ -228,6 +255,13 @@ namespace Medix.API.Business.Services.Classification
                 var schedule = await _repository.GetByIdAsync(id);
                 if (schedule != null && schedule.DoctorId == doctorId)
                 {
+                    // KIỂM TRA BUSINESS RULE: Không cho xóa nếu đã có lịch hẹn trong tương lai
+                    var hasFutureAppointments = await _appointmentRepository.HasFutureAppointmentsForDoctorOnDay(doctorId, schedule.DayOfWeek);
+                    if (hasFutureAppointments)
+                    {
+                        throw new InvalidOperationException($"Không thể xóa lịch làm việc (ID: {id}) vì đã có lịch hẹn được đặt trong tương lai cho ngày này.");
+                    }
+
                     await _repository.DeleteAsync(id);
                     deleted++;
                 }

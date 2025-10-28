@@ -38,8 +38,8 @@ namespace Medix.API.Configurations
 
 
              CreateMap<HealthArticleUpdateDto, HealthArticle>()
-                .ForMember(dest => dest.Categories, opt => opt.Ignore()) // Bỏ qua Categories vì sẽ xử lý thủ công
-                .ForMember(dest => dest.PublishedAt, opt => opt.Ignore()); // Bỏ qua PublishedAt vì sẽ xử lý thủ công
+                .ForMember(dest => dest.Categories, opt => opt.Ignore()) 
+                .ForMember(dest => dest.PublishedAt, opt => opt.Ignore()); 
 
             CreateMap<SiteBanner, SiteBannerDto>();
             CreateMap<PasswordUpdatePresenter, PasswordUpdateRequest>();

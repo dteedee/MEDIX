@@ -46,6 +46,8 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
   const handleGoHome = () => {
     setShowUserMenu(false);
     navigate('/');
+    // Scroll to top when navigating to home
+    window.scrollTo(0, 0);
   };
 
   return (
@@ -66,7 +68,10 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
         <Link
           to="/app/manager"
           className={`${styles.navItem} ${currentPage === 'dashboard' ? styles.active : ''}`}
-          onClick={() => setShowUserMenu(false)}
+          onClick={() => {
+            setShowUserMenu(false);
+            window.scrollTo(0, 0);
+          }}
         >
           <i className="bi bi-speedometer2"></i>
           {sidebarOpen && <span>Dashboard</span>}

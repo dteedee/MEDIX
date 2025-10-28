@@ -12,13 +12,12 @@ namespace Medix.API.DataAccess.Repositories.Classification
             _context = context;
         }
 
-        public Task<Wallet> CreateWalletAsync(Wallet wallet)
+        public async Task<Wallet> CreateWalletAsync(Wallet wallet)
         {
-          _context.Wallets.AddAsync(wallet);
-            _context.SaveChangesAsync();
-            return Task.FromResult(wallet);
+            await _context.Wallets.AddAsync(wallet);
+            await _context.SaveChangesAsync();
+            return wallet;
         }
-
         public Task<bool> DecreaseWalletBalanceAsync(Guid userId, decimal amount)
         {
             var wallet = _context.Wallets.FirstOrDefault(w => w.UserId == userId);

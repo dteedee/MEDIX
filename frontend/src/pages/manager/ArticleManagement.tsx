@@ -4,6 +4,7 @@ import { articleService } from '../../services/articleService';
 import { ArticleDTO } from '../../types/article.types';
 import { useToast } from '../../contexts/ToastContext';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
+import { useAuth } from '../../contexts/AuthContext';
 import ArticleForm from './ArticleForm';
 import styles from '../../styles/admin/ArticleManagement.module.css';
 
@@ -42,6 +43,7 @@ const getInitialState = (): ArticleListFilters => {
 export default function ArticleManagement() {
   const [allArticles, setAllArticles] = useState<ArticleDTO[]>([]);
   const [total, setTotal] = useState<number | undefined>(undefined);
+  const [statuses, setStatuses] = useState<Array<{ code: string; displayName: string }>>([]);
   const [filters, setFilters] = useState<ArticleListFilters>(getInitialState);
   const [loading, setLoading] = useState(true);
   const [viewing, setViewing] = useState<ArticleDTO | null>(null);
@@ -63,6 +65,7 @@ export default function ArticleManagement() {
   });
 
   const { showToast } = useToast();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   // Helper function to calculate percentage change
@@ -100,7 +103,7 @@ export default function ArticleManagement() {
       : (newArticlesLastMonth > 0 ? 100 : 0);
 
     // Published articles: count articles that existed last week and are currently published
-    const publishedNow = allArticles.filter(a => a.statusCode === 'Published').length;
+    const publishedNow = allArticles.filter(a => a.statusCode?.toUpperCase() === 'PUBLISHED').length;
     
     // Count articles that existed a week ago (by createdAt)
     const existingLastWeek = allArticles.filter(a => {
@@ -109,13 +112,13 @@ export default function ArticleManagement() {
       return createdDate < oneWeekAgo;
     });
     
-    const publishedLastWeek = existingLastWeek.filter(a => a.statusCode === 'Published').length;
+    const publishedLastWeek = existingLastWeek.filter(a => a.statusCode?.toUpperCase() === 'PUBLISHED').length;
     const publishedChange = publishedLastWeek > 0 
       ? ((publishedNow - publishedLastWeek) / publishedLastWeek) * 100
       : (publishedNow > 0 ? 100 : 0);
 
     // Draft articles: similar logic
-    const draftNow = allArticles.filter(a => a.statusCode === 'Draft').length;
+    const draftNow = allArticles.filter(a => a.statusCode?.toUpperCase() === 'DRAFT').length;
     const draftLastWeek = existingLastWeek.filter(a => a.statusCode === 'Draft').length;
     const draftChange = draftLastWeek > 0
       ? ((draftNow - draftLastWeek) / draftLastWeek) * 100
@@ -152,12 +155,21 @@ export default function ArticleManagement() {
 
   useEffect(() => {
     load();
+    const fetchStatuses = async () => {
+      try {
+        const fetchedStatuses = await articleService.getStatuses();
+        setStatuses(fetchedStatuses);
+      } catch (error) {
+        console.error('Failed to fetch article statuses:', error);
+        showToast('Không thể tải danh sách trạng thái bài viết.', 'error');
+      }
+    };
+    fetchStatuses();
   }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [filters.page, filters.pageSize]);
-
   const handleFilterChange = (key: keyof ArticleListFilters, value: any) => {
     setFilters(prev => {
       const newState = { ...prev, [key]: value };
@@ -196,7 +208,7 @@ export default function ArticleManagement() {
 
     try {
       // Update status using articleService.update
-      const newStatusCode = isBeingLocked ? 'Draft' : 'Published';
+      const newStatusCode = isBeingLocked ? 'DRAFT' : 'PUBLISHED';
       const updatePayload = {
         title: currentArticle.title || '',
         slug: currentArticle.slug || '',
@@ -209,10 +221,9 @@ export default function ArticleManagement() {
         displayOrder: currentArticle.displayOrder || 0,
         metaTitle: currentArticle.metaTitle || '',
         metaDescription: currentArticle.metaDescription || '',
-        authorId: '1', // Default author ID
+        authorId: user?.id || '', // Use logged-in user ID
         statusCode: newStatusCode,
-        publishedAt: newStatusCode === 'Published' ? new Date().toISOString() : undefined,
-        categoryIds: currentArticle.categoryIds || []
+        categoryIds: currentArticle.categoryIds || [],
       };
 
       console.log('Updating article status:', {
@@ -316,8 +327,8 @@ export default function ArticleManagement() {
 
       // Use statusCode for status filtering
       const okStatus = filters.statusFilter === 'all' || 
-        (filters.statusFilter === 'published' ? a.statusCode === 'Published' : 
-         filters.statusFilter === 'draft' ? a.statusCode === 'Draft' : true);
+        (filters.statusFilter === 'published' ? a.statusCode?.toUpperCase() === 'PUBLISHED' : 
+         filters.statusFilter === 'draft' ? a.statusCode?.toUpperCase() === 'DRAFT' : true);
 
       let okDate = true;
       if (from || to) {
@@ -352,14 +363,12 @@ export default function ArticleManagement() {
       if (valA > valB) return filters.sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-
-    const startIndex = (filters.page - 1) * filters.pageSize;
-    const endIndex = startIndex + filters.pageSize;
     
-    return sorted.slice(startIndex, endIndex);
+    return sorted;
   }, [allArticles, filters]);
 
-  const totalPages = Math.ceil((processedItems.length * 10) / filters.pageSize);
+  const paginatedItems = useMemo(() => processedItems.slice((filters.page - 1) * filters.pageSize, filters.page * filters.pageSize), [processedItems, filters.page, filters.pageSize]);
+  const totalPages = Math.ceil(processedItems.length / filters.pageSize);
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'Chưa có';
@@ -367,37 +376,42 @@ export default function ArticleManagement() {
   };
 
   const getStatusBadge = (statusCode?: string, isLocked?: boolean) => {
-    // Use statusCode for primary status display
-    if (statusCode === 'Published') {
-      return (
-        <span className={`${styles.statusBadge} ${styles.statusActive}`}>
-          <i className="bi bi-check-circle-fill"></i>
-          Đã xuất bản
-        </span>
-      );
-    } else if (statusCode === 'Draft') {
-      return (
-        <span className={`${styles.statusBadge} ${styles.statusInactive}`}>
-          <i className="bi bi-file-text"></i>
-          Bản nháp
-        </span>
-      );
+    if (!statusCode) {
+      return <span className={`${styles.statusBadge} ${styles.statusInactive}`}>Không có</span>;
     }
-    
-    // Fallback to isLocked if statusCode is not available
-    if (isLocked !== undefined && isLocked) {
-    return (
-        <span className={`${styles.statusBadge} ${styles.statusLocked}`}>
-          <i className="bi bi-lock-fill"></i>
-          Đã khóa
-        </span>
-      );
+
+    const statusInfo = statuses.find(s => s.code.toUpperCase() === statusCode.toUpperCase());
+    const displayName = statusInfo ? statusInfo.displayName : statusCode; // Fallback to code if not found
+
+    let statusClass = styles.statusDefault; // Default color
+    let iconClass = 'bi bi-question-circle';
+
+    switch (statusCode.toUpperCase()) {
+      case 'PUBLISHED':
+        statusClass = styles.statusActive;
+        iconClass = 'bi bi-check-circle-fill';
+        break;
+      case 'DRAFT':
+        statusClass = styles.statusInactive;
+        iconClass = 'bi bi-file-text';
+        break;
+      case 'ARCHIVE':
+        statusClass = styles.statusArchived;
+        iconClass = 'bi bi-archive-fill';
+        break;
+      case 'ANHAI': // Example for custom status
+        statusClass = styles.statusCustom;
+        iconClass = 'bi bi-tag-fill';
+        break;
+      default:
+        // Keep default icon and color for any other status
+        break;
     }
-    
+
     return (
-      <span className={`${styles.statusBadge} ${styles.statusInactive}`}>
-        <i className="bi bi-question-circle"></i>
-        Không xác định
+      <span className={`${styles.statusBadge} ${statusClass}`}>
+        <i className={iconClass}></i>
+        {displayName}
       </span>
     );
   };
@@ -450,7 +464,7 @@ export default function ArticleManagement() {
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Đã xuất bản</div>
             <div className={styles.statValue}>
-              {allArticles.filter(a => a.statusCode === 'Published').length}
+              {allArticles.filter(a => a.statusCode?.toUpperCase() === 'PUBLISHED').length}
             </div>
             <div className={`${styles.statTrend} ${stats.publishedChange < 0 ? styles.negative : ''}`}>
               {stats.publishedChange >= 0 ? (
@@ -476,7 +490,7 @@ export default function ArticleManagement() {
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Bản nháp</div>
             <div className={styles.statValue}>
-              {allArticles.filter(a => a.statusCode === 'Draft').length}
+              {allArticles.filter(a => a.statusCode?.toUpperCase() === 'DRAFT').length}
             </div>
             <div className={`${styles.statTrend} ${stats.draftChange >= 0 ? styles.negative : ''}`}>
               {stats.draftChange < 0 ? (
@@ -591,7 +605,7 @@ export default function ArticleManagement() {
             <p>Đang tải dữ liệu...</p>
           </div>
         ) : processedItems.length > 0 ? (
-          <div className={styles.tableWrapper}>
+          <>
             <table className={styles.table}>
               <thead>
                 <tr>
@@ -631,7 +645,7 @@ export default function ArticleManagement() {
                 </tr>
               </thead>
               <tbody>
-                {processedItems.map((article, index) => (
+                {paginatedItems.map((article, index) => (
                   <tr key={article.id} className={styles.tableRow}>
                     <td className={styles.indexCell}>
                       {(filters.page - 1) * filters.pageSize + index + 1}
@@ -687,12 +701,12 @@ export default function ArticleManagement() {
                   <i className="bi bi-pencil"></i>
                 </button>
                 <button 
-                  onClick={() => handleStatusChange(article, article.statusCode === 'Draft')}
+                  onClick={() => handleStatusChange(article, article.statusCode?.toUpperCase() === 'PUBLISHED')}
                   disabled={Boolean(updatingIds[article.id])}
-                  title={article.statusCode === 'Published' ? 'Chuyển thành bản nháp' : 'Xuất bản'}
-                  className={`${styles.actionBtn} ${article.statusCode === 'Published' ? styles.actionLock : styles.actionUnlock}`}
+                  title={article.statusCode?.toUpperCase() === 'PUBLISHED' ? 'Chuyển thành bản nháp' : 'Xuất bản'}
+                  className={`${styles.actionBtn} ${article.statusCode?.toUpperCase() === 'PUBLISHED' ? styles.actionLock : styles.actionUnlock}`}
                 >
-                  <i className={`bi bi-${article.statusCode === 'Published' ? 'file-text' : 'check-circle'}`}></i>
+                  <i className={`bi bi-${article.statusCode?.toUpperCase() === 'PUBLISHED' ? 'file-text' : 'check-circle'}`}></i>
                 </button>
               </div>
                     </td>
@@ -700,7 +714,33 @@ export default function ArticleManagement() {
                 ))}
               </tbody>
             </table>
-          </div>
+            {/* Pagination */}
+            <div className={styles.pagination}>
+              <div className={styles.paginationInfo}>
+                <span>Hiển thị {(filters.page - 1) * filters.pageSize + 1} – {Math.min(filters.page * filters.pageSize, processedItems.length)} trong tổng số {processedItems.length} kết quả</span>
+              </div>
+              <div className={styles.paginationControls}>
+                <select
+                  value={filters.pageSize}
+                  onChange={e => handleFilterChange('pageSize', Number(e.target.value))}
+                  className={styles.pageSizeSelect}
+                >
+                  <option value={5}>5 / trang</option>
+                  <option value={10}>10 / trang</option>
+                  <option value={15}>15 / trang</option>
+                  <option value={20}>20 / trang</option>
+                </select>
+
+                <div className={styles.paginationButtons}>
+                  <button onClick={() => handleFilterChange('page', 1)} disabled={filters.page === 1} className={styles.pageBtn}><i className="bi bi-chevron-double-left"></i></button>
+                  <button onClick={() => handleFilterChange('page', filters.page - 1)} disabled={filters.page === 1} className={styles.pageBtn}><i className="bi bi-chevron-left"></i></button>
+                  <span className={styles.pageInfo}>{filters.page} / {totalPages || 1}</span>
+                  <button onClick={() => handleFilterChange('page', filters.page + 1)} disabled={filters.page >= totalPages} className={styles.pageBtn}><i className="bi bi-chevron-right"></i></button>
+                  <button onClick={() => handleFilterChange('page', totalPages)} disabled={filters.page >= totalPages} className={styles.pageBtn}><i className="bi bi-chevron-double-right"></i></button>
+                </div>
+              </div>
+            </div>
+          </>
         ) : (
           <div className={styles.emptyState}>
             <i className="bi bi-inbox"></i>
@@ -709,61 +749,6 @@ export default function ArticleManagement() {
             </div>
         )}
       </div>
-
-      {/* Pagination */}
-      <div className={styles.pagination}>
-        <div className={styles.paginationInfo}>
-          <span>Hiển thị {(filters.page - 1) * filters.pageSize + 1} – {Math.min(filters.page * filters.pageSize, processedItems.length)} trong tổng số {processedItems.length} kết quả</span>
-            </div>
-        <div className={styles.paginationControls}>
-                  <select
-            value={filters.pageSize} 
-            onChange={e => handleFilterChange('pageSize', Number(e.target.value))}
-            className={styles.pageSizeSelect}
-          >
-            <option value={5}>5 / trang</option>
-            <option value={10}>10 / trang</option>
-            <option value={15}>15 / trang</option>
-            <option value={20}>20 / trang</option>
-                  </select>
-
-          <div className={styles.paginationButtons}>
-            <button
-              onClick={() => handleFilterChange('page', 1)}
-              disabled={filters.page === 1}
-              className={styles.pageBtn}
-            >
-              <i className="bi bi-chevron-double-left"></i>
-            </button>
-            <button
-              onClick={() => handleFilterChange('page', filters.page - 1)}
-              disabled={filters.page === 1}
-              className={styles.pageBtn}
-            >
-              <i className="bi bi-chevron-left"></i>
-            </button>
-
-            <span className={styles.pageInfo}>
-              {filters.page} / {totalPages || 1}
-            </span>
-
-              <button 
-              onClick={() => handleFilterChange('page', filters.page + 1)}
-              disabled={filters.page >= totalPages}
-              className={styles.pageBtn}
-            >
-              <i className="bi bi-chevron-right"></i>
-              </button>
-              <button 
-              onClick={() => handleFilterChange('page', totalPages)}
-              disabled={filters.page >= totalPages}
-              className={styles.pageBtn}
-              >
-              <i className="bi bi-chevron-double-right"></i>
-              </button>
-            </div>
-          </div>
-        </div>
 
       {/* Image Popup */}
       {showImagePopup && (

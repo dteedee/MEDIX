@@ -163,37 +163,43 @@ export default function BannerFormNew({ banner, onSaved, onCancel }: Props) {
     }
     setSaving(true)
     try {
-      const toIso = (local?: string) => local ? new Date(local).toISOString() : undefined
+      const toIso = (local?: string) => (local ? new Date(local).toISOString() : undefined);
 
-      const payload: CreateBannerRequest | UpdateBannerRequest = {
-        bannerTitle: title,
-        bannerImageUrl: selectedFile ? undefined : (imagePreviewUrl || undefined),
-        bannerUrl: link || undefined,
-        displayOrder: order,
-        startDate: toIso(startDateLocal) || undefined,
-        endDate: toIso(endDateLocal) || undefined,
-        isActive,
-        bannerFile: selectedFile || undefined,
+      if (banner) {
+        // UPDATE mode
+        const payload: UpdateBannerRequest = {
+          bannerTitle: title,
+          // When editing without a new file, send the existing URL back.
+          // If a new file is selected, backend will generate a new URL from bannerFile.
+          bannerImageUrl: !selectedFile ? banner.bannerImageUrl : undefined,
+          bannerUrl: link || undefined,
+          displayOrder: order,
+          startDate: toIso(startDateLocal) || undefined,
+          endDate: toIso(endDateLocal) || undefined,
+          isActive,
+          bannerFile: selectedFile || undefined,
+        };
+        Object.keys(payload).forEach(key => (payload as any)[key] === undefined && delete (payload as any)[key]);
+        console.debug('Banner update payload:', payload);
+        await bannerService.update(banner.id, payload);
+      } else {
+        // CREATE mode
+        const payload: CreateBannerRequest = {
+          bannerTitle: title,
+          bannerUrl: link || undefined,
+          displayOrder: order,
+          startDate: toIso(startDateLocal) || undefined,
+          endDate: toIso(endDateLocal) || undefined,
+          isActive,
+          bannerFile: selectedFile || undefined,
+        };
+        Object.keys(payload).forEach(key => (payload as any)[key] === undefined && delete (payload as any)[key]);
+        console.debug('Banner create payload:', payload);
+        await bannerService.create(payload);
       }
-
-      console.debug('Banner submit payload:', payload)
-
-      try {
-        let res
-        if (banner) {
-          // In edit mode, payload can be UpdateBannerRequest
-          res = await bannerService.update(banner.id, payload as UpdateBannerRequest)
-        } else {
-          // In create mode, ensure the payload matches CreateBannerRequest
-          const createPayload: CreateBannerRequest = { ...payload, bannerTitle: title, isActive: isActive };
-          delete (createPayload as any).bannerImageUrl; // Remove property not in CreateBannerRequest
-          res = await bannerService.create(createPayload);
-        }
-        console.debug('Banner save response:', res)
-        onSaved?.()
-      } catch (err: any) {
-        handleBackendErrors(err);
-      }
+      onSaved?.();
+    } catch (err: any) {
+      handleBackendErrors(err);
     } finally {
       setSaving(false)
     }

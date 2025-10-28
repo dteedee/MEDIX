@@ -25,6 +25,7 @@ namespace Medix.API.Models.DTOs.HealthArticle
 
         public class CategoryInfo
         {
+            public Guid Id { get; set; }
             public string Name { get; set; } = null!;
             public string Slug { get; set; } = null!;
         }

@@ -28,7 +28,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
   const [dateOfBirth, setDateOfBirth] = useState<string>((user as any)?.dateOfBirth?.split('T')[0] ?? '')
   const [identificationNumber, setIdentificationNumber] = useState<string>(user?.identificationNumber ?? '')
   const [genderCode, setGenderCode] = useState<string>(user?.genderCode ?? '')
-  const [role, setRole] = useState(user?.role ?? 'MANAGER') // Default to MANAGER for new user
+  const [role, setRole] = useState(user?.role ?? 'Manager') 
   const [createdAt, setCreatedAt] = useState(user?.createdAt ?? '');
   const [updatedAt, setUpdatedAt] = useState(user?.updatedAt ?? '');
   const [emailConfirmed, setEmailConfirmed] = useState(user?.emailConfirmed ?? false);
@@ -81,14 +81,19 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     const fetchRoles = async () => {
       try {
         const roles = await userAdminService.getRoles();
-        setRolesList(roles);
+        // Nếu ở chế độ chỉnh sửa, lọc bỏ vai trò Admin khỏi danh sách
+        if (isEditMode) {
+          setRolesList(roles.filter(r => r.code.toUpperCase() !== 'ADMIN'));
+        } else {
+          setRolesList(roles);
+        }
       } catch (error) {
         console.error("Failed to fetch roles:", error);
         showToast('Không thể tải danh sách vai trò.', 'error');
       }
     };
     fetchRoles();
-  }, []);
+  }, [isEditMode, showToast]);
   
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<{ userName?: string, email?: string, password?: string }>({})
@@ -278,7 +283,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       } else { // When creating new user
         showToast('Đang tạo người dùng mới...', 'info')
         // Chỉ cần userName và email cho tạo mới
-        const payload: CreateUserRequest = { userName, email, role: 'MANAGER' } // Force role to MANAGER on create
+        const payload: CreateUserRequest = { userName, email, role: 'Manager' } // Force role to Manager on create
         await userAdminService.create(payload)
         showToast('Tạo người dùng mới thành công!', 'success')
         onSaved?.(payload)
@@ -286,19 +291,28 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     } catch (error: any) {
       // Xử lý lỗi từ server
       console.error('Lỗi khi lưu người dùng:', error);
+      const errorMessage = error?.response?.data?.message || error?.message;
       const serverErrors = error?.response?.data?.errors;
+
       if (serverErrors) {
         const newErrors: { userName?: string; email?: string; password?: string } = {};
         // Backend có thể trả về lỗi với key là 'UserName' hoặc 'userName'
         if (serverErrors.UserName || serverErrors.userName) newErrors.userName = (serverErrors.UserName || serverErrors.userName)[0];
         if (serverErrors.Password || serverErrors.password) newErrors.password = (serverErrors.Password || serverErrors.password)[0];
         if (serverErrors.Email || serverErrors.email) newErrors.email = (serverErrors.Email || serverErrors.email)[0]; // Handle email server error
-        setErrors(newErrors); // Update errors state with server errors
-        showToast('Vui lòng kiểm tra lại thông tin đã nhập.', 'error');
+        setErrors(newErrors);
+      } else if (errorMessage) {
+        // Xử lý các lỗi cụ thể không nằm trong 'errors' object, ví dụ: email đã tồn tại
+        const newErrors: { userName?: string; email?: string } = {};
+        if (errorMessage.toLowerCase().includes('email')) {
+          newErrors.email = errorMessage;
+        } else if (errorMessage.toLowerCase().includes('username')) {
+          newErrors.userName = errorMessage;
+        }
+        setErrors(newErrors);
       } else {
         // Xử lý các lỗi chung khác
-        const message = error?.response?.data?.message || error?.message || 'Tạo người dùng thất bại. Vui lòng thử lại.';
-        showToast(message, 'error');
+        showToast('Tạo người dùng thất bại. Vui lòng thử lại.', 'error');
       }
     } finally {
       setSaving(false)

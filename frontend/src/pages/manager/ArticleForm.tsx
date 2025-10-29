@@ -6,6 +6,8 @@ import { categoryService } from '../../services/categoryService'; // Import cate
 import { CategoryDTO } from '../../types/category.types'; // Import CategoryDTO
 import styles from '../../styles/admin/ArticleForm.module.css';
 import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
+import { CKEditor } from '@ckeditor/ckeditor5-react';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 
 interface Props {
   article?: ArticleDTO | null;
@@ -330,15 +332,25 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
             <i className="bi bi-file-earmark-richtext"></i>
             Nội dung <span className={styles.required}>*</span>
           </label>
-          <textarea
-            name="content"
-            value={formData.content}
-            onChange={handleChange}
-            disabled={mode === 'view'}
-            className={`${styles.textarea} ${styles.large} ${errors.content ? styles.inputError : ''}`}
-            placeholder="Nhập nội dung bài viết"
-            rows={12}
-          />
+          <div className={`${styles.ckeditorWrapper} ${errors.content ? styles.inputError : ''}`}>
+            <CKEditor
+              editor={ClassicEditor}
+              data={formData.content}
+              disabled={mode === 'view'}
+              onChange={(event, editor) => {
+                const data = editor.getData();
+                setFormData(prev => ({ ...prev, content: data }));
+                if (errors.content) {
+                  setErrors(prev => {
+                    const newErrors = { ...prev };
+                    delete newErrors.content;
+                    return newErrors;
+                  });
+                }
+              }}
+              config={{ placeholder: "Nhập nội dung bài viết..." }}
+            />
+          </div>
           {errors.content && <p className={styles.errorText}>{errors.content}</p>}
         </div>
 
@@ -562,43 +574,9 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
 
         {/* Meta Tags */}
         <div className={styles.gridTwoCols}>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>
-              <i className="bi bi-tag"></i>
-              Meta Title
-            </label>
-            <input
-              type="text"
-              name="metaTitle"
-              value={formData.metaTitle}
-              onChange={handleChange}
-              disabled={mode === 'view'}
-              className={`${styles.input} ${errors.metaTitle ? styles.inputError : ''}`}
-              placeholder="Nhập meta title"
-              maxLength={60}
-            />
-            {errors.metaTitle && <p className={styles.errorText}>{errors.metaTitle}</p>}
-            {mode !== 'view' && <p className={styles.helpText}>{formData.metaTitle.length}/60 ký tự</p>}
-          </div>
+          
 
-          <div className={styles.formGroup}>
-            <label className={styles.label}>
-              <i className="bi bi-card-text"></i>
-              Meta Description
-            </label>
-            <textarea
-              name="metaDescription"
-              value={formData.metaDescription}
-              onChange={handleChange}
-              disabled={mode === 'view'}
-              className={`${styles.textarea} ${errors.metaDescription ? styles.inputError : ''}`}
-              placeholder="Nhập meta description"
-              rows={2}
-              maxLength={160}
-            />
-            {errors.metaDescription && <p className={styles.errorText}>{errors.metaDescription}</p>}
-            {mode !== 'view' && <p className={styles.helpText}>{formData.metaDescription.length}/160 ký tự</p>}
-          </div>
+         
         </div>
 
         {/* View Mode Specific Fields */}

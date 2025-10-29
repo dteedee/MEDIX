@@ -137,9 +137,9 @@ export function App() {
 
                   {/* ---------- Manager routes ---------- */}
                   <Route path="manager/*" element={
-                    // <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
+                    <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
                       <ManagerLayout />
-                    // </ProtectedRoute>
+                     </ProtectedRoute>
                   }>
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard" element={<ManageDashboard />} />

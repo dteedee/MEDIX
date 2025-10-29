@@ -22,12 +22,20 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
     bannerUrl: banner?.bannerUrl || '',
     displayOrder: banner?.displayOrder || 0,
     isActive: banner?.isActive ?? true,
-    startDate: banner?.startDate ? banner.startDate.split('T')[0] : '',
-    endDate: banner?.endDate ? banner.endDate.split('T')[0] : '',
   });
 
   const [imagePreview, setImagePreview] = useState<string>(banner?.bannerImageUrl || '');
   const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // Helper to convert ISO string to a YYYY-MM-DD format for date input
+  const toInputDateString = (isoString?: string | null) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+  };
+
+  const [startDateLocal, setStartDateLocal] = useState<string>(toInputDateString(banner?.startDate));
+  const [endDateLocal, setEndDateLocal] = useState<string>(toInputDateString(banner?.endDate));
 
   useEffect(() => {
     if (banner) {
@@ -37,10 +45,10 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
         bannerUrl: banner.bannerUrl || '',
         displayOrder: banner.displayOrder || 0,
         isActive: banner.isActive ?? true,
-        startDate: banner.startDate ? banner.startDate.split('T')[0] : '',
-        endDate: banner.endDate ? banner.endDate.split('T')[0] : '',
       });
       setImagePreview(banner.bannerImageUrl || '');
+      setStartDateLocal(toInputDateString(banner.startDate));
+      setEndDateLocal(toInputDateString(banner.endDate));
     }
   }, [banner]);
 
@@ -65,11 +73,20 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
       newErrors.displayOrder = 'Thứ tự hiển thị phải lớn hơn hoặc bằng 0';
     }
 
-    if (formData.startDate && formData.endDate) {
-      const start = new Date(formData.startDate);
-      const end = new Date(formData.endDate);
+    if (startDateLocal && endDateLocal) {
+      const start = new Date(startDateLocal);
+      const end = new Date(endDateLocal);
       if (start > end) {
         newErrors.dateRange = 'Ngày bắt đầu phải trước ngày kết thúc';
+      }
+    }
+
+    if (endDateLocal) {
+      const end = new Date(endDateLocal);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Chuẩn hóa về đầu ngày để so sánh
+      if (end < today) {
+        newErrors.dateRange = 'Ngày kết thúc không được là một ngày trong quá khứ.';
       }
     }
 
@@ -108,14 +125,28 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
       finalBannerImageUrl = imagePreview;
     }
     
+    // Helper to convert YYYY-MM-DD string to full ISO string for the backend
+    const toISOString = (localDate?: string, isEndDate = false) => {
+      if (!localDate) return undefined;
+      const date = new Date(localDate);
+      if (isEndDate) {
+        // Set to the end of the day
+        date.setUTCHours(23, 59, 59, 999);
+      } else {
+        // Set to the start of the day
+        date.setUTCHours(0, 0, 0, 0);
+      }
+      return date.toISOString();
+    };
+
     const payload: CreateBannerRequest | UpdateBannerRequest = {
       bannerTitle: formData.bannerTitle,
       bannerImageUrl: finalBannerImageUrl || '',
       bannerUrl: formData.bannerUrl || undefined,
       displayOrder: formData.displayOrder || undefined,
       isActive: formData.isActive,
-      startDate: formData.startDate || undefined,
-      endDate: formData.endDate || undefined,
+      startDate: toISOString(startDateLocal, false),
+      endDate: toISOString(endDateLocal, true),
       bannerFile: imageFile || undefined,
     };
     
@@ -258,21 +289,7 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
         {/* Display in 2 columns */}
         <div className={styles.gridTwoCols}>
           {/* Banner URL */}
-          <div className={styles.formGroup}>
-            <label className={styles.label}>
-              <i className="bi bi-link-45deg"></i>
-              Đường dẫn URL (tùy chọn)
-            </label>
-            <input
-              type="text"
-              value={formData.bannerUrl}
-              onChange={e => setFormData(prev => ({ ...prev, bannerUrl: e.target.value }))}
-              className={`${styles.input} ${errors.bannerUrl ? styles.inputError : ''}`}
-              disabled={mode === 'view'}
-              placeholder="https://example.com"
-            />
-            {errors.bannerUrl && <span className={styles.errorText}>{errors.bannerUrl}</span>}
-          </div>
+         
 
           {/* Display Order */}
           <div className={styles.formGroup}>
@@ -294,6 +311,46 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
               <span className={styles.helpText}>Số càng nhỏ, banner hiển thị trước</span>
             )}
           </div>
+        </div>
+
+        {/* Date Range */}
+        <div className={styles.formGroup}>
+          <label className={styles.label}>
+            <i className="bi bi-calendar-range"></i>
+            Thời gian hiển thị (tùy chọn)
+          </label>
+          <div className={styles.gridTwoCols}>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                <i className="bi bi-calendar-event"></i>
+                Từ ngày
+              </label>
+              <input
+                type="date"
+                value={startDateLocal}
+                onChange={e => setStartDateLocal(e.target.value)}
+                className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
+                disabled={mode === 'view'}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                <i className="bi bi-calendar-check"></i>
+                Đến ngày
+              </label>
+              <input
+                type="date"
+                value={endDateLocal}
+                onChange={e => setEndDateLocal(e.target.value)}
+                className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
+                disabled={mode === 'view'}
+              />
+            </div>
+          </div>
+          {errors.dateRange && <p className={styles.errorText}>{errors.dateRange}</p>}
+          {mode !== 'view' && (
+            <span className={styles.helpText}>Banner sẽ tự động ẩn khi hết hạn</span>
+          )}
         </div>
 
         {/* Status */}
@@ -324,46 +381,6 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
                 : 'Banner sẽ không hiển thị cho đến khi được kích hoạt'}
             </p>
           </div>
-        </div>
-
-        {/* Date Range */}
-        <div className={styles.formGroup}>
-          <label className={styles.label}>
-            <i className="bi bi-calendar-range"></i>
-            Thời gian hiển thị (tùy chọn)
-          </label>
-          <div className={styles.gridTwoCols}>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>
-                <i className="bi bi-calendar-event"></i>
-                Từ ngày
-              </label>
-              <input
-                type="date"
-                value={formData.startDate}
-                onChange={e => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
-                disabled={mode === 'view'}
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>
-                <i className="bi bi-calendar-check"></i>
-                Đến ngày
-              </label>
-              <input
-                type="date"
-                value={formData.endDate}
-                onChange={e => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
-                disabled={mode === 'view'}
-              />
-            </div>
-          </div>
-          {errors.dateRange && <p className={styles.errorText}>{errors.dateRange}</p>}
-          {mode !== 'view' && (
-            <span className={styles.helpText}>Banner sẽ tự động ẩn khi hết hạn</span>
-          )}
         </div>
 
         {/* View mode - show additional info */}

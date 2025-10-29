@@ -302,7 +302,7 @@ namespace Medix.API.Business.Services.Classification
             {
                 throw new ValidationException(new Dictionary<string, string[]>
                 {
-                    { "Title", new[] { "Article title already exists" } }
+                    { "Title", new[] { "Article title đã tồn tại" } }
                 });
             }
 
@@ -393,7 +393,7 @@ namespace Medix.API.Business.Services.Classification
                 {
                     throw new ValidationException(new Dictionary<string, string[]>
                     {
-                        { "Slug", new[] { "Article slug already exists" } }
+                        { "Slug", new[] { "Article slug đã tồn tại" } }
                     });
                 }
             }

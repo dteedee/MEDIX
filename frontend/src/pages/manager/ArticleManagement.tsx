@@ -298,8 +298,8 @@ export default function ArticleManagement() {
       await load();
     } catch (error: any) {
       console.error('Error saving article:', error);
-      const message = error?.response?.data?.message || error?.message || 'Không thể lưu bài viết';
-      showToast(message, 'error');
+      // Ném lại lỗi để component ArticleForm có thể bắt và hiển thị lỗi inline
+      throw error;
     }
   };
 

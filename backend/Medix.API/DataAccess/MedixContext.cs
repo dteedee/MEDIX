@@ -327,6 +327,7 @@ public partial class MedixContext : DbContext
             entity.Property(e => e.AverageRating).HasColumnType("decimal(3, 2)");
             entity.Property(e => e.ConsultationFee).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.DegreeFilesUrl).HasDefaultValue("");
             entity.Property(e => e.Education).HasMaxLength(1000);
             entity.Property(e => e.IsAcceptingAppointments).HasDefaultValue(true);
             entity.Property(e => e.LicenseImageUrl).IsUnicode(false);

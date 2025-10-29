@@ -147,6 +147,7 @@ namespace Medix.API.Business.Services.Classification
                         ServiceTierId = Guid.Parse("580AACE7-39D4-4BAA-B13F-A98A5CA503B1"), //Basic tier
                         LicenseNumber = form.LicenseNumber,
                         LicenseImageUrl = form.LicenseImageUrl,
+                        DegreeFilesUrl = form.DegreeFilesUrl,
                         Bio = form.Bio,
                         Education = request.Education,
                         YearsOfExperience = form.YearsOfExperience,

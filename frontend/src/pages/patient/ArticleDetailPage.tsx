@@ -47,6 +47,14 @@ export default function ArticleDetailPage() {
           }
           setArticle(articleData)
           setLikeCount(articleData.likeCount ?? 0)
+
+          // [FE-ONLY] Kiểm tra trạng thái like từ localStorage
+          const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]') as string[];
+          if (articleData.id && likedArticles.includes(articleData.id)) {
+            setIsLiked(true);
+          } else {
+            setIsLiked(false);
+          }
         } else {
           setError('Article not found.')
         }
@@ -90,6 +98,20 @@ export default function ArticleDetailPage() {
       if (response.status === 200) {
         const updated = response.data
         setLikeCount(updated.likeCount ?? newLikeCount)
+
+        // [FE-ONLY] Cập nhật localStorage
+        const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]') as string[];
+        if (newIsLiked) {
+          if (!likedArticles.includes(article.id)) {
+            likedArticles.push(article.id);
+          }
+        } else {
+          const index = likedArticles.indexOf(article.id);
+          if (index > -1) {
+            likedArticles.splice(index, 1);
+          }
+        }
+        localStorage.setItem('likedArticles', JSON.stringify(likedArticles));
       } else {
         console.error("Failed to like the article:", response.status)
         setIsLiked(originalIsLiked)

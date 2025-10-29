@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { articleService } from '../../services/articleService'
 import { ArticleDTO } from '../../types/article.types'
@@ -13,6 +13,7 @@ export default function ArticleDetailPage() {
   const [isLiked, setIsLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
   const [isLiking, setIsLiking] = useState(false)
+  const effectRan = useRef(false)
   const navigate = useNavigate()
 
   const ViewIcon = () => (
@@ -37,8 +38,18 @@ export default function ArticleDetailPage() {
   // Lấy dữ liệu bài viết
   useEffect(() => {
     if (!slug) return
+
+    // Chỉ chạy logic fetch trong lần render thứ hai của StrictMode ở development
+    if (process.env.NODE_ENV === 'development' && !effectRan.current) {
+      effectRan.current = true
+      return
+    }
+
+    const abortController = new AbortController()
+    const signal = abortController.signal
+
     const fetchArticleData = async () => {
-      try {
+      try { // API call đã bao gồm việc tăng view count
         const articleData = await articleService.getBySlug(slug)
         if (articleData) {
           if (articleData.isLocked) {
@@ -59,12 +70,24 @@ export default function ArticleDetailPage() {
           setError('Article not found.')
         }
       } catch (err) {
-        setError('Failed to load article.')
+        if (!signal.aborted) {
+          setError('Failed to load article.')
+        }
       } finally {
-        setLoading(false)
+        if (!signal.aborted) {
+          setLoading(false)
+        }
       }
     }
     fetchArticleData()
+
+    return () => {
+      abortController.abort()
+      // Reset ref khi component unmount hoặc slug thay đổi
+      if (process.env.NODE_ENV === 'development') {
+        effectRan.current = false
+      }
+    }
   }, [slug])
 
   // ✅ Sửa lỗi 401 và dùng apiClient

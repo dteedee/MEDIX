@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArticleDTO } from '../../types/article.types'
-import '../../styles/ArticleReaderPage.css'
+import '../../styles/public/ArticleReaderPage.css'
 
 export default function ArticleReaderPage() {
   const location = useLocation();
@@ -274,3 +274,5 @@ export default function ArticleReaderPage() {
     </div>
   )
 }
+
+

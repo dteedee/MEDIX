@@ -66,7 +66,7 @@ import TrackingPage from './pages/admin/TrackingPage';
 import SettingsPage from './pages/admin/SettingsPage';
 
 // Reader pages
-import ArticleReaderPage from './pages/patient/ArticleReaderPage';
+import ArticleReaderPage from './pages/public/ArticleReaderPage';
 import ArticleDetailPage from './pages/patient/ArticleDetailPage';
 import DoctorBookingList from './pages/patient/DoctorBookingList';
 import ErrorPageWrapper from './pages/error/ErrorPageWrapper';

@@ -402,9 +402,9 @@ function HomePage() {
                                     </div>
                                     <div className={styles["knowledge-footer"]}>
                                         <span className={styles["knowledge-date"]}>
-                                            📅 {article.publishedAt ? new Date(article.publishedAt).toLocaleDateString('vi-VN') : ''}
+                                            {article.publishedAt ? new Date(article.publishedAt).toLocaleDateString('vi-VN') : ''}
                                         </span>
-                                        <span className={styles["read-more"]}>Đọc thêm &rarr;</span>
+                                        <span className={styles["read-more"]}>Đọc thêm</span>
                                     </div>
                                 </Link>
                             ))}

@@ -1021,55 +1021,129 @@ body {
   }
   
   .knowledge-card {
-    background: white;
+    background: #ffffff;
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.1);
-    border: 1px solid rgba(33, 150, 243, 0.1);
+    box-shadow: 0 6px 18px rgba(15, 76, 129, 0.10);
+    border: 1px solid rgba(33, 150, 243, 0.12);
     display: flex;
     flex-direction: column;
-    transition: all 0.3s ease;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    height: 100%;
   }
-  
+
   .knowledge-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(33, 150, 243, 0.2);
+    transform: translateY(-6px);
+    box-shadow: 0 14px 30px rgba(33, 150, 243, 0.22);
   }
-  
+
+  /* Image container fixed ratio */
+  .knowledge-image-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+  }
+
+  .knowledge-image-container::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0) 60%, rgba(0,0,0,0.03));
+    pointer-events: none;
+  }
+
   .knowledge-image {
     width: 100%;
-    height: 200px;
+    height: 100%;
     object-fit: cover;
+    transform: scale(1.0);
+    transition: transform 0.4s ease;
   }
-  
+
+  .knowledge-card:hover .knowledge-image {
+    transform: scale(1.05);
+  }
+
   .knowledge-content {
-    padding: 20px;
-    text-align: justify;
+    padding: 18px 18px 0 18px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 120px;
   }
-  
+
   .knowledge-content h5 {
     font-size: 18px;
-    color: #1565c0;
-    font-weight: 600;
-    margin-bottom: 12px;
+    color: #0f4c81;
+    font-weight: 700;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
-  
+
   .knowledge-content p {
     font-size: 14px;
-    color: #1976d2;
+    color: #4b85c1;
     line-height: 1.6;
-    opacity: 0.9;
-    text-align: justify;
+    opacity: 0.95;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* cắt bớt, người dùng bấm Đọc thêm để xem */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
-  
+
   .knowledge-footer {
-    padding: 10px 20px 20px;
-    text-align: right;
+    padding: 14px 18px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
   }
   
   .knowledge-date {
     font-size: 13px;
-    color: #777;
+    color: #607d8b;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .knowledge-date::before {
+    content: "\1F4C5"; /* calendar icon */
+    font-size: 14px;
+    line-height: 1;
+    display: inline-block;
+    opacity: 0.9;
+  }
+
+  .read-more {
+    color: #0f4c81;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .read-more::after {
+    content: '→';
+    font-weight: 700;
+    transform: translateX(0);
+    transition: transform 0.2s ease;
+  }
+
+  .knowledge-card:hover .read-more {
+    color: #1976d2;
+  }
+
+  .knowledge-card:hover .read-more::after {
+    transform: translateX(3px);
   }
 
   /* Knowledge Carousel Indicators */

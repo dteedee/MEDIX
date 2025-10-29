@@ -183,7 +183,7 @@ export default function ArticleReaderPage() {
           <div className="article-main-content">
             <div className="article-page-chunk">
               {featuredArticle && (
-                <Link to={`/app/articles/${featuredArticle.slug}`} className="featured-article-link">
+                <Link to={`/articles/${featuredArticle.slug}`} className="featured-article-link">
                   <div className="featured-article">
                     <img src={featuredArticle.coverImageUrl || featuredArticle.thumbnailUrl || '/images/placeholder.png'} alt={featuredArticle.title} />
                     <div className="featured-content">
@@ -200,7 +200,7 @@ export default function ArticleReaderPage() {
 
               <div className="article-grid">
                 {otherArticles.map(article => (
-                  <Link key={article.id} to={`/app/articles/${article.slug}`} className="article-card-link">
+                  <Link key={article.id} to={`/articles/${article.slug}`} className="article-card-link">
                     <div className="article-card">
                       <div className="article-card-image-wrapper">
                         <img src={article.thumbnailUrl || '/images/placeholder.png'} alt={article.title} className="article-card-image" />
@@ -245,7 +245,7 @@ export default function ArticleReaderPage() {
                 <ul className="suggestions-list">
                   {suggestions.map(article => (
                     <li key={article.id}>
-                      <Link to={`/app/articles/${article.slug}`}>{article.title}</Link>
+                      <Link to={`/articles/${article.slug}`}>{article.title}</Link>
                     </li>
                   ))}
                 </ul>

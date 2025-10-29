@@ -110,6 +110,8 @@ export function App() {
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/about" element={<AboutUs />} />
+                  {/* Public article detail */}
+                  <Route path="/articles/:slug" element={<ArticleDetailPage />} />
                 </Route>
 
                 {/* ---------- Change password route (Protected) ---------- */}
@@ -190,7 +192,8 @@ export function App() {
 
                 {/* ---------- Reader ---------- */}
                 <Route path="articles" element={<ArticleReaderPage />} />
-                <Route path="articles/:slug" element={<ProtectedRoute><ArticleDetailPage /></ProtectedRoute>} />
+                {/* Keep protected route for in-app context if needed */}
+                <Route path="articles/:slug" element={<ArticleDetailPage />} />
 
                   {/* ---------- AI Chat ---------- */}
                   <Route path="ai-chat" element={

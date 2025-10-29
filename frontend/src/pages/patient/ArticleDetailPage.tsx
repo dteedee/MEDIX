@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { articleService } from '../../services/articleService'
 import { ArticleDTO } from '../../types/article.types'
+import { apiClient } from '../../lib/apiClient'
 import '../../styles/ArticleDetailPage.css'
 
 export default function ArticleDetailPage() {
@@ -9,96 +10,105 @@ export default function ArticleDetailPage() {
   const [article, setArticle] = useState<ArticleDTO | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
-  const [isLiking, setIsLiking] = useState(false); // State to prevent multiple clicks
-  const navigate = useNavigate();
+  const [isLiked, setIsLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(0)
+  const [isLiking, setIsLiking] = useState(false)
+  const navigate = useNavigate()
 
   const ViewIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-  );
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+  )
 
   const LikeIcon = ({ filled }: { filled: boolean }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" 
-         fill={filled ? "red" : "none"} 
-         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+         viewBox="0 0 24 24"
+         fill={filled ? "red" : "none"}
+         stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round">
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
     </svg>
-  );
+  )
 
-  // This effect handles view counting once per session
+  // Lấy dữ liệu bài viết
   useEffect(() => {
     if (!slug) return
-
-    // The view count is now handled by the backend when GetBySlug is called.
-    // The client-side POST call is no longer needed.
-  }, [slug]);
-
-  // This effect fetches the article data
-  useEffect(() => {
-    if (!slug) return;
     const fetchArticleData = async () => {
       try {
-        const articleData = await articleService.getBySlug(slug);
+        const articleData = await articleService.getBySlug(slug)
         if (articleData) {
-          // Check if article is locked
           if (articleData.isLocked) {
             setError('Article not available.')
-            return;
+            return
           }
-          setArticle(articleData);
-          setLikeCount(articleData.likeCount ?? 0);
-          // setIsLiked(articleData.isLikedByUser || false); // Use the flag from the API
+          setArticle(articleData)
+          setLikeCount(articleData.likeCount ?? 0)
         } else {
           setError('Article not found.')
         }
-      } catch (err: any) {
+      } catch (err) {
         setError('Failed to load article.')
       } finally {
         setLoading(false)
       }
     }
-    fetchArticleData();
-  }, [slug]);
+    fetchArticleData()
+  }, [slug])
 
+  // ✅ Sửa lỗi 401 và dùng apiClient
   const handleLike = async () => {
-    if (!article || !article.id || !slug || isLiking) return;
+    if (!article || !article.id || isLiking) return
 
-    setIsLiking(true);
+    const token = apiClient.getToken()
+    if (!token) {
+      alert("Bạn cần đăng nhập để thích bài viết.")
+      navigate("/login")
+      return
+    }
 
-    // Optimistic UI Update
-    const originalIsLiked = isLiked;
-    const originalLikeCount = likeCount;
+    setIsLiking(true)
 
-    const newIsLiked = !originalIsLiked;
-    const newLikeCount = newIsLiked ? originalLikeCount + 1 : originalLikeCount - 1;
+    const originalIsLiked = isLiked
+    const originalLikeCount = likeCount
+    const newIsLiked = !originalIsLiked
+    const newLikeCount = newIsLiked ? originalLikeCount + 1 : originalLikeCount - 1
 
-    setIsLiked(newIsLiked);
-    setLikeCount(newLikeCount);
+    // Optimistic UI
+    setIsLiked(newIsLiked)
+    setLikeCount(newLikeCount)
 
     try {
-      const method = newIsLiked ? 'POST' : 'DELETE';
-      const response = await fetch(`/api/HealthArticle/${article.id}/like`, { method });
+      const method = newIsLiked ? 'post' : 'delete'
+      const url = `/HealthArticle/${article.id}/like`
 
-      if (response.ok) {
-        const updatedArticle: ArticleDTO = await response.json();
-        // Sync with server state to ensure consistency
-        setLikeCount(updatedArticle.likeCount ?? newLikeCount);
+      const response = await apiClient[method]<ArticleDTO>(url)
+
+      if (response.status === 200) {
+        const updated = response.data
+        setLikeCount(updated.likeCount ?? newLikeCount)
       } else {
-        console.error("Failed to like the article. Status:", response.status);
-        // Revert UI on failure
-        setIsLiked(originalIsLiked);
-        setLikeCount(originalLikeCount);
+        console.error("Failed to like the article:", response.status)
+        setIsLiked(originalIsLiked)
+        setLikeCount(originalLikeCount)
       }
-    } catch (err) {
-      console.error("Error liking the article:", err);
-      // Revert UI on error
-      setIsLiked(originalIsLiked);
-      setLikeCount(originalLikeCount);
+    } catch (err: any) {
+      console.error("Error liking the article:", err)
+      if (err.response?.status === 401) {
+        alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.")
+        apiClient.clearTokens()
+        navigate("/login")
+      } else {
+        setIsLiked(originalIsLiked)
+        setLikeCount(originalLikeCount)
+      }
     } finally {
-      setIsLiking(false); // Re-enable the button
+      setIsLiking(false)
     }
-  };
+  }
 
   if (loading) return <div className="article-reader-container">Đang tải bài viết...</div>
   if (error) return <div className="article-reader-container">{error}</div>
@@ -106,14 +116,13 @@ export default function ArticleDetailPage() {
 
   return (
     <div className="article-reader-container">
-       <button onClick={() => navigate('/app/articles')} className="back-button">
+      <button onClick={() => navigate('/app/articles')} className="back-button">
         &larr; Quay lại danh sách
       </button>
 
       <div className="breadcrumb">
         <Link to="/">Trang chủ</Link>
         <span className="separator">/</span>
-       
         <span className="current-page">{article.title}</span>
       </div>
 
@@ -125,7 +134,7 @@ export default function ArticleDetailPage() {
           </div>
           <div className="article-stats">
             <button onClick={handleLike} disabled={isLiking} className={`like-button ${isLiked ? 'liked' : ''}`}>
-              <LikeIcon filled={isLiked} /> 
+              <LikeIcon filled={isLiked} />
               <span className="like-count">{likeCount}</span>
             </button>
             <span className="stat-item"><ViewIcon /> {article.viewCount ?? 0}</span>

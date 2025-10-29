@@ -11,6 +11,7 @@ namespace Medix.API.Models.DTOs.Doctor
         public string? Dob { get; set; }
         public string? GenderCode { get; set; }
         public string? IdentificationNumber { get; set; }
+        public IFormFile? IdentityCardImage { get; set; }
         public string? Email { get; set; }
         public string? PhoneNumber { get; set; }
         public string? SpecializationId { get; set; }

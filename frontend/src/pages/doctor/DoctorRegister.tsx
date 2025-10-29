@@ -19,7 +19,8 @@ function DoctorRegister() {
     const [touched, setTouched] = useState<{
         licenseImage?: boolean,
         avatar?: boolean,
-        degreeFiles?: boolean
+        degreeFiles?: boolean,
+        identityCardImage?: boolean,
     }>({});
 
     const navigate = useNavigate();
@@ -222,6 +223,9 @@ function DoctorRegister() {
             case 'degreeFiles':
                 validateFile('DegreeFiles', file, 'archive');
                 break;
+            case 'identityCardImage':
+                validateFile('IdentityCardImage', file, 'image');
+                break;
         }
     };
 
@@ -234,7 +238,7 @@ function DoctorRegister() {
             return;
         }
 
-        const maxSizeInMB = 3; // 3MB in bytes
+        const maxSizeInMB = 1; // 3MB in bytes
         const maxSize = maxSizeInMB * 1024 * 1024;
 
         if (file.size > maxSize) {
@@ -458,6 +462,42 @@ function DoctorRegister() {
                                         value={formData.identificationNumber} />
                                     {errors.IdentificationNumber?.[0] && (
                                         <div className="text-danger">{errors.IdentificationNumber[0]}</div>
+                                    )}
+                                </div>
+                                <div className={styles["form-group"]}>
+                                    <label htmlFor="identityCardImage" className={styles["form-label"]}>
+                                        Ảnh chứng chỉ <span className={styles["required"]}>*</span>
+                                    </label>
+
+                                    <div className="d-flex align-items-center gap-2">
+                                        <input
+                                            type="file"
+                                            id="identityCardImage"
+                                            name="identityCardImage"
+                                            accept=".jpg,.png,.gif,.webp,.jpeg"
+                                            onChange={handleFileChange}
+                                            className={`d-none`} />
+
+                                        <label
+                                            htmlFor="identityCardImage"
+                                            className={`btn btn-outline-primary ${errors.IdentityCardImage?.[0]
+                                                ? 'is-invalid'
+                                                : touched.identityCardImage && formData.identityCardImage
+                                                    ? 'is-valid'
+                                                    : ''
+                                                }`}>
+                                            Chọn file
+                                        </label>
+
+                                        <span className="ms-2">
+                                            {formData.identityCardImage?.name || 'Chưa có file nào được chọn'}
+                                        </span>
+                                    </div>
+
+                                    {errors.IdentityCardImage?.[0] && (
+                                        <div className="text-danger">
+                                            {errors.IdentityCardImage[0]}
+                                        </div>
                                     )}
                                 </div>
                                 <div className={styles["form-group"]}>

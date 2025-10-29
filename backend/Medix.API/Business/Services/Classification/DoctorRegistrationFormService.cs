@@ -56,6 +56,7 @@ namespace Medix.API.Business.Services.Classification
             var avatarUrl = await _cloudinaryService.UploadImageAsync(request.Avatar);
             var licenseImageUrl = await _cloudinaryService.UploadImageAsync(request.LicenseImage);
             var degreeFilesUrl = await _cloudinaryService.UploadArchiveAsync(request.DegreeFiles);
+            var identityCardUrl = await _cloudinaryService.UploadImageAsync(request.IdentityCardImage);
 
             var form = new DoctorRegistrationForm
             {
@@ -65,6 +66,7 @@ namespace Medix.API.Business.Services.Classification
                 DateOfBirth = DateOnly.Parse(request.Dob),
                 GenderCode = request.GenderCode,
                 IdentificationNumber = request.IdentificationNumber,
+                IdentityCardImageUrl = identityCardUrl,
                 EmailNormalized = request.Email.ToUpper(),
                 PhoneNumber = request.PhoneNumber,
                 SpecializationId = Guid.Parse(request.SpecializationId),

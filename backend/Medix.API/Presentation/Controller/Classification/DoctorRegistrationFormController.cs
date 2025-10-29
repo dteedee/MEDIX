@@ -190,6 +190,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     Dob = registerForm.DateOfBirth.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
                     Gender = registerForm.GenderCode,
                     registerForm.IdentificationNumber,
+                    registerForm.IdentityCardImageUrl,
                     Email = registerForm.EmailNormalized.ToLower(),
                     registerForm.PhoneNumber,
                     Specialization = registerForm.Specialization.Name,

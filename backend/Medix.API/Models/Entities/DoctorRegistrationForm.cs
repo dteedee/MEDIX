@@ -19,6 +19,8 @@ public partial class DoctorRegistrationForm
 
     public string IdentificationNumber { get; set; } = null!;
 
+    public string IdentityCardImageUrl { get; set; } = null!;
+
     public string EmailNormalized { get; set; } = null!;
 
     public string PhoneNumber { get; set; } = null!;

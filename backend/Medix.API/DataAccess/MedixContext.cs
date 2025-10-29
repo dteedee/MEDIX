@@ -393,28 +393,25 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<DoctorRegistrationForm>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__DoctorRe__3214EC07218644EC");
+            entity.HasKey(e => e.Id).HasName("PK__DoctorRe__3214EC078AFF2B65");
 
-            entity.HasIndex(e => e.UserNameNormalized, "UQ__DoctorRe__2CB5855F967EDB49").IsUnique();
+            entity.HasIndex(e => e.UserNameNormalized, "UQ__DoctorRe__2CB5855F7E011DA4").IsUnique();
 
-            entity.HasIndex(e => e.PhoneNumber, "UQ__DoctorRe__85FB4E38B45FE1DA").IsUnique();
+            entity.HasIndex(e => e.PhoneNumber, "UQ__DoctorRe__85FB4E3875223BA8").IsUnique();
 
-            entity.HasIndex(e => e.IdentificationNumber, "UQ__DoctorRe__9CD14694ED97B186").IsUnique();
+            entity.HasIndex(e => e.IdentificationNumber, "UQ__DoctorRe__9CD14694DB6FF6E0").IsUnique();
 
-            entity.HasIndex(e => e.EmailNormalized, "UQ__DoctorRe__B5DB813722E06034").IsUnique();
+            entity.HasIndex(e => e.EmailNormalized, "UQ__DoctorRe__B5DB8137650358A8").IsUnique();
 
-            entity.HasIndex(e => e.LicenseNumber, "UQ__DoctorRe__E8890166783EE73D").IsUnique();
+            entity.HasIndex(e => e.LicenseNumber, "UQ__DoctorRe__E889016606590140").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.AvatarUrl).IsUnicode(false);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.DegreeFilesUrl).IsUnicode(false);
             entity.Property(e => e.Education).HasMaxLength(1000);
             entity.Property(e => e.EmailNormalized).HasMaxLength(256);
             entity.Property(e => e.FullName).HasMaxLength(200);
             entity.Property(e => e.GenderCode).HasMaxLength(10);
             entity.Property(e => e.IdentificationNumber).HasMaxLength(50);
-            entity.Property(e => e.LicenseImageUrl).IsUnicode(false);
             entity.Property(e => e.LicenseNumber).HasMaxLength(100);
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.UserNameNormalized).HasMaxLength(256);
@@ -422,7 +419,7 @@ public partial class MedixContext : DbContext
             entity.HasOne(d => d.Specialization).WithMany(p => p.DoctorRegistrationForms)
                 .HasForeignKey(d => d.SpecializationId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__DoctorReg__Speci__3BCADD1B");
+                .HasConstraintName("FK__DoctorReg__Speci__595B4002");
         });
 
         modelBuilder.Entity<DoctorSalary>(entity =>

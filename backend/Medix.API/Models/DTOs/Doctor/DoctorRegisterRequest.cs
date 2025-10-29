@@ -6,7 +6,7 @@ namespace Medix.API.Application.DTOs.Doctor
     public class DoctorRegisterRequest
     {
         [Required(ErrorMessage = "Vui lòng chọn một tệp hình ảnh.")]
-        [RequiredImage(MaxSizeInMB = 3)]
+        [RequiredImage(MaxSizeInMB = 1)]
         public IFormFile? Avatar { get; set; }
 
         [Required(ErrorMessage = "Vui lòng nhập họ và tên")]
@@ -30,6 +30,10 @@ namespace Medix.API.Application.DTOs.Doctor
         [RegularExpression(@"^\d{12}$", ErrorMessage = "Số CCCD phải gồm đúng 12 chữ số")]
         public string IdentificationNumber { get; set; } = null!;
 
+        [Required(ErrorMessage = "Vui lòng chọn một tệp hình ảnh.")]
+        [RequiredImage(MaxSizeInMB = 1)]
+        public IFormFile? IdentityCardImage { get; set; }
+
         [Required(ErrorMessage = "Vui lòng nhập email")]
         [EmailAddress(ErrorMessage = "Email không hợp lệ")]
         public string Email { get; set; } = null!;
@@ -47,7 +51,7 @@ namespace Medix.API.Application.DTOs.Doctor
         public string LicenseNumber { get; set; } = null!;
 
         [Required(ErrorMessage = "Vui lòng chọn một tệp hình ảnh.")]
-        [RequiredImage(MaxSizeInMB = 3)]
+        [RequiredImage(MaxSizeInMB = 1)]
         public IFormFile? LicenseImage { get; set; }
 
         [Required(ErrorMessage = "Vui lòng chọn một tệp ZIP hoặc RAR.")]

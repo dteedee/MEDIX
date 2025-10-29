@@ -22,6 +22,7 @@ export const PendingDoctorList: React.FC = () => {
     const [doctorProfileDetails, setDoctorProfileDetails] = useState<DoctorRegisterFormDetails>();
     const [showProfileDetails, setShowProfileDetails] = useState(false);
     const [showImageModal, setShowImageModal] = useState(false);
+    const [modalImageUrl, setModalImageUrl] = useState<string>('');
 
     const [degrees, setDegrees] = useState<DoctorDegree[]>();
 
@@ -53,16 +54,15 @@ export const PendingDoctorList: React.FC = () => {
     }
 
     const fetchProfile = async (id: string) => {
+        setDoctorProfileDetails(undefined);
         try {
             if (!id) {
-                setErrorCode(400);
                 return;
             }
             const data = await DoctorRegistrationFormService.getDetails(id);
             setDoctorProfileDetails(data);
         } catch (error: any) {
-            const status = error?.response?.status ?? 500;
-            setErrorCode(status);
+            console.error('Error fetching doctor profile details:', error);
         }
     }
 
@@ -88,9 +88,9 @@ export const PendingDoctorList: React.FC = () => {
         }
     };
 
-    const handleViewDetails = (id: string) => {
+    const handleViewDetails = async (id: string) => {
         setShowProfileDetails(true);
-        fetchProfile(id);
+        await fetchProfile(id);
     }
 
     const handleCloseDetails = () => {
@@ -122,6 +122,11 @@ export const PendingDoctorList: React.FC = () => {
         await fetchList(query);
         setPageLoading(false);
     };
+
+    const handleShowImageModal = (url: string) => {
+        setShowImageModal(true);
+        setModalImageUrl(url);
+    }
 
     // useEffect(() => {
     //     const query: DoctorQuery = {
@@ -457,69 +462,84 @@ export const PendingDoctorList: React.FC = () => {
             {TabContent}
 
             {/* Doctor Details Modal */}
-            {showProfileDetails && doctorProfileDetails && (
+            {showProfileDetails && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modal}>
-                        <div className={styles.modalHeader}>
-                            <h3>Chi tiết Bác sĩ</h3>
-                            <button onClick={handleCloseDetails} className={styles.closeButton}>&times;</button>
-                        </div>
-                        <div className={styles.modalBody}>
-                            <div className={styles.doctorDetails}>
-                                <div className={styles.doctorAvatar}>
-                                    <img
-                                        src={doctorProfileDetails.avatarUrl}
-                                        alt={doctorProfileDetails.fullName}
-                                    />
+                        {doctorProfileDetails ? (
+                            <>
+                                <div className={styles.modalHeader}>
+                                    <h3>Chi tiết Bác sĩ</h3>
+                                    <button onClick={handleCloseDetails} className={styles.closeButton}>&times;</button>
                                 </div>
-                                <div className={styles.doctorInfo}>
-                                    <h4>{doctorProfileDetails.fullName}</h4>
-                                    <p><strong>Tên đăng nhập:</strong> {doctorProfileDetails.userName}</p>
-                                    <p><strong>Ngày sinh:</strong> {doctorProfileDetails.dob}</p>
-                                    <p><strong>Giới tính:</strong> {getGenderLabel(doctorProfileDetails.gender)}</p>
-                                    <p><strong>Số CMND/CCCD:</strong> {doctorProfileDetails.identificationNumber}</p>
-                                    <p><strong>Email:</strong> {doctorProfileDetails.email}</p>
-                                    <p><strong>Số điện thoại:</strong> {doctorProfileDetails.phoneNumber}</p>
-                                    <p><strong>Chuyên khoa:</strong> {doctorProfileDetails.specialization}</p>
-                                    <p>
-                                        <strong>Ảnh chứng chỉ hành nghề:</strong>
-                                        <button className="btn btn-outline-primary btn-sm ml-2" onClick={() => setShowImageModal(true)}>Xem ảnh</button>
-                                    </p>
-                                    <p><strong>Số giấy phép hành nghề:</strong> {doctorProfileDetails.licenseNumber}</p>
-                                    <p>
-                                        <strong>Tệp bằng cấp:</strong>
-                                        <a href={doctorProfileDetails.degreeFilesUrl} download className="btn btn-outline-primary btn-sm ml-2">Tải về</a>
-                                    </p>
-                                    {doctorProfileDetails.bio && <p><strong>Tiểu sử:</strong> {doctorProfileDetails.bio}</p>}
-                                    {doctorProfileDetails.education && <p><strong>Học vị:</strong> {doctorProfileDetails.education}</p>}
-                                    <p><strong>Kinh nghiệm:</strong> {doctorProfileDetails.yearsOfExperience} năm</p>
+                                <div className={styles.modalBody}>
+                                    <div className={styles.doctorDetails}>
+                                        <div className={styles.doctorAvatar}>
+                                            <img
+                                                src={doctorProfileDetails.avatarUrl}
+                                                alt={doctorProfileDetails.fullName} />
+                                        </div>
+                                        <div className={styles.doctorInfo}>
+                                            <h4>{doctorProfileDetails.fullName}</h4>
+                                            <p><strong>Tên đăng nhập:</strong> {doctorProfileDetails.userName}</p>
+                                            <p><strong>Ngày sinh:</strong> {doctorProfileDetails.dob}</p>
+                                            <p><strong>Giới tính:</strong> {getGenderLabel(doctorProfileDetails.gender)}</p>
+                                            <p><strong>Số CMND/CCCD:</strong> {doctorProfileDetails.identificationNumber}</p>
+                                            <p>
+                                                <strong>Ảnh CCCD:</strong>
+                                                <button className="btn btn-outline-primary btn-sm ml-2" onClick={() => handleShowImageModal(doctorProfileDetails.identityCardImageUrl)}>Xem ảnh</button>
+                                            </p>
+                                            <p><strong>Email:</strong> {doctorProfileDetails.email}</p>
+                                            <p><strong>Số điện thoại:</strong> {doctorProfileDetails.phoneNumber}</p>
+                                            <p><strong>Chuyên khoa:</strong> {doctorProfileDetails.specialization}</p>
+                                            <p>
+                                                <strong>Ảnh chứng chỉ hành nghề:</strong>
+                                                <button className="btn btn-outline-primary btn-sm ml-2" onClick={() => handleShowImageModal(doctorProfileDetails.licenseImageUrl)}>Xem ảnh</button>
+                                            </p>
+                                            <p><strong>Số giấy phép hành nghề:</strong> {doctorProfileDetails.licenseNumber}</p>
+                                            <p>
+                                                <strong>Tệp bằng cấp:</strong>
+                                                <a href={doctorProfileDetails.degreeFilesUrl} download className="btn btn-outline-primary btn-sm ml-2">Tải về</a>
+                                            </p>
+                                            {doctorProfileDetails.bio && <p><strong>Tiểu sử:</strong> {doctorProfileDetails.bio}</p>}
+                                            {doctorProfileDetails.education && <p><strong>Học vị:</strong> {doctorProfileDetails.education}</p>}
+                                            <p><strong>Kinh nghiệm:</strong> {doctorProfileDetails.yearsOfExperience} năm</p>
+                                        </div>
+                                    </div>
+                                    <hr />
+                                    <div style={{ marginTop: '20px' }}>
+                                        {reviewTabContents[reviewTabIndex]}
+                                    </div>
                                 </div>
-                            </div>
-                            <hr />
-                            <div style={{ marginTop: '20px' }}>
-                                {reviewTabContents[reviewTabIndex]}
-                            </div>
-                        </div>
-                        <div className={styles.modalActions}>
-                            <button className={styles.cancelButton} onClick={handleCloseDetails}>
-                                Đóng
-                            </button>
-                            <button className={`btn ${(reviewTabIndex === 1) ? 'btn-primary' : 'btn-outline-primary'
-                                }`} onClick={() => setReviewTabIndex(1)}>
-                                Chấp nhận hồ sơ
-                            </button>
-                            <button className={`btn ${(reviewTabIndex === 2) ? 'btn-primary' : 'btn-outline-primary'
-                                }`} onClick={() => setReviewTabIndex(2)}>
-                                Từ chối hồ sơ
-                            </button>
-                        </div>
+                                <div className={styles.modalActions}>
+                                    <button className={styles.cancelButton} onClick={handleCloseDetails}>
+                                        Đóng
+                                    </button>
+                                    <button className={`btn ${(reviewTabIndex === 1) ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setReviewTabIndex(1)}>
+                                        Chấp nhận hồ sơ
+                                    </button>
+                                    <button className={`btn ${(reviewTabIndex === 2) ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setReviewTabIndex(2)}>
+                                        Từ chối hồ sơ
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className={styles.modalBody} style={{ textAlign: 'center' }}>
+                                    <span className="text-danger">Đã có lỗi xảy ra, vui lòng thử lại sau</span>
+                                </div><div className={styles.modalActions}>
+                                    <button className={styles.cancelButton} onClick={handleCloseDetails}>
+                                        Đóng
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
 
             {showImageModal && (
                 <ModalImageViewer
-                    src={doctorProfileDetails?.licenseImageUrl || ''}
+                    src={modalImageUrl || ''}
                     alt={doctorProfileDetails?.fullName}
                     onClose={() => setShowImageModal(false)}
                 />

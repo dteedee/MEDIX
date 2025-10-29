@@ -160,6 +160,7 @@ export interface DoctorRegisterFormDetails {
   education: string;
   yearsOfExperience: number;
   createdAt: string;
+  identityCardImageUrl: string;
 }
 
 export interface DoctorRegisterForm {

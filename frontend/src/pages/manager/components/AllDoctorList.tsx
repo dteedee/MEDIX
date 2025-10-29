@@ -89,16 +89,15 @@ export const AllDoctorList: React.FC = () => {
     };
 
     const fetchDetails = async (id: string) => {
+        setDoctorDetails(null);
         try {
             if (!id) {
-                setErrorCode(400);
                 return;
             }
             const data = await DoctorService.getById(id);
             setDoctorDetails(data);
         } catch (error: any) {
-            const status = error?.response?.status ?? 500;
-            setErrorCode(status);
+            console.error('Error fetching doctor details:', error);
         }
     }
 
@@ -301,39 +300,46 @@ export const AllDoctorList: React.FC = () => {
                 )}
             </div>
 
-            {showDetails && doctorDetails && (
+            {showDetails && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modal}>
-                        <div className={styles.modalHeader}>
-                            <h3>Chi tiết Bác sĩ</h3>
-                            <button onClick={handleCloseDetails} className={styles.closeButton}>&times;</button>
-                        </div>
-                        <div className={styles.modalBody}>
-                            <div className={styles.doctorDetails}>
-                                <div className={styles.doctorAvatar}>
-                                    <img
-                                        src={doctorDetails.avatarUrl}
-                                        alt={doctorDetails.fullName}
-                                    />
+                        {doctorDetails ? (
+                            <>
+                                <div className={styles.modalHeader}>
+                                    <h3>Chi tiết Bác sĩ</h3>
+                                    <button onClick={handleCloseDetails} className={styles.closeButton}>&times;</button>
                                 </div>
-                                <div className={styles.doctorInfo}>
-                                    <h4>{doctorDetails.fullName}</h4>
-                                    <p><strong>Email:</strong> {doctorDetails.email}</p>
-                                    <p><strong>Số điện thoại:</strong> {doctorDetails.phoneNumber}</p>
-                                    <p><strong>Chuyên khoa:</strong> {doctorDetails.specialization}</p>
-                                    <p><strong>Học vị:</strong> {doctorDetails.education}</p>
-                                    <p><strong>Kinh nghiệm:</strong> {doctorDetails.yearsOfExperience} năm</p>
-                                    <p><strong>Đánh giá:</strong> {getRatingStars(doctorDetails.rating)} {doctorDetails.rating} ({doctorDetails.reviewCount} đánh giá)</p>
-                                    <p><strong>Trạng thái:</strong> {getStatusBadge(doctorDetails.statusCode)}</p>
-                                    <p><strong>Ngày tạo:</strong> {doctorDetails.createdAt}</p>
+                                <div className={styles.modalBody}>
+                                    <div className={styles.doctorDetails}>
+                                        <div className={styles.doctorAvatar}>
+                                            <img
+                                                src={doctorDetails.avatarUrl}
+                                                alt={doctorDetails.fullName} />
+                                        </div>
+                                        <div className={styles.doctorInfo}>
+                                            <h4>{doctorDetails.fullName}</h4>
+                                            <p><strong>Email:</strong> {doctorDetails.email}</p>
+                                            <p><strong>Số điện thoại:</strong> {doctorDetails.phoneNumber}</p>
+                                            <p><strong>Chuyên khoa:</strong> {doctorDetails.specialization}</p>
+                                            <p><strong>Học vị:</strong> {doctorDetails.education}</p>
+                                            <p><strong>Kinh nghiệm:</strong> {doctorDetails.yearsOfExperience} năm</p>
+                                            <p><strong>Đánh giá:</strong> {getRatingStars(doctorDetails.rating)} {doctorDetails.rating} ({doctorDetails.reviewCount} đánh giá)</p>
+                                            <p><strong>Trạng thái:</strong> {getStatusBadge(doctorDetails.statusCode)}</p>
+                                            <p><strong>Ngày tạo:</strong> {doctorDetails.createdAt}</p>
+                                        </div>
+                                    </div>
                                 </div>
+                                <div className={styles.modalActions}>
+                                    <button className={styles.cancelButton} onClick={handleCloseDetails}>
+                                        Đóng
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <div className={styles.modalBody} style={{ textAlign: 'center' }}>
+                                <span className="text-danger">Đã có lỗi xảy ra, vui lòng thử lại sau</span>
                             </div>
-                        </div>
-                        <div className={styles.modalActions}>
-                            <button className={styles.cancelButton} onClick={handleCloseDetails}>
-                                Đóng
-                            </button>
-                        </div>
+                        )}
                     </div>
                 </div>
             )}

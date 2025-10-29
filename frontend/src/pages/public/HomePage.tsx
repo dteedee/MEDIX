@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from '../../styles/public/home.module.css'
 import { HomeMetadata } from '../../types/home.types';
@@ -29,7 +29,7 @@ function HomePage() {
 
         const fetchArticles = async () => {
             try {
-                const articles = await articleService.getHomepageArticles(3); // Lấy 6 bài viết
+                const articles = await articleService.getHomepageArticles(9); // Lấy 9 bài viết để có thể carousel
                 setFeaturedArticles(articles);
             } catch (error) {
                 console.error('Failed to fetch homepage articles:', error);
@@ -68,6 +68,41 @@ function HomePage() {
       window.addEventListener('scroll', handleScroll);
       return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    // Knowledge carousel: cửa sổ trượt tròn, hiển thị columns bài, dịch 1 bài/lần
+    const knowledgeTrackRef = useRef<HTMLDivElement>(null);
+    const [knowledgeIndex, setKnowledgeIndex] = useState(0);
+    const [columns, setColumns] = useState(3);
+
+    useEffect(() => {
+        const updateColumns = () => {
+            const w = window.innerWidth;
+            if (w <= 600) setColumns(1);
+            else if (w <= 900) setColumns(2);
+            else setColumns(3);
+        };
+        updateColumns();
+        window.addEventListener('resize', updateColumns);
+        return () => window.removeEventListener('resize', updateColumns);
+    }, []);
+
+    useEffect(() => {
+        if (!featuredArticles.length) return;
+        const interval = setInterval(() => {
+            setKnowledgeIndex((prev) => (prev + 1) % featuredArticles.length);
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [featuredArticles.length]);
+
+    const getVisibleArticles = () => {
+        const result: ArticleDTO[] = [];
+        const total = featuredArticles.length;
+        if (!total) return result;
+        for (let i = 0; i < Math.min(columns, total); i++) {
+            result.push(featuredArticles[(knowledgeIndex + i) % total]);
+        }
+        return result;
+    };
     
     return (
         <div>
@@ -350,24 +385,43 @@ function HomePage() {
             {/* Knowledge Section */}
             <section className={styles["knowledge"]}>
                 <h2>{t('knowledge.title')}</h2>
-                <div className={styles["knowledge-grid"]}>
-                    {featuredArticles.map((article) => (
-                        <Link to={`/app/articles/${article.slug}`} key={article.id} className={styles["knowledge-card"]}>
-                            <div className={styles["knowledge-image-container"]}>
-                                <img className={styles["knowledge-image"]} src={article.thumbnailUrl || '/placeholder-image.jpg'} alt={article.title} />
-                            </div>
-                            <div className={styles["knowledge-content"]}>
-                                <h5>{article.title}</h5>
-                                <p>{article.summary}</p>
-                            </div>
-                            <div className={styles["knowledge-footer"]}>
-                                <span className={styles["knowledge-date"]}>
-                                    📅 {article.publishedAt ? new Date(article.publishedAt).toLocaleDateString('vi-VN') : ''}
-                                </span>
-                                <span className={styles["read-more"]}>Đọc thêm &rarr;</span>
-                            </div>
-                        </Link>
-                    ))}
+                <div className={styles["knowledge-carousel-container"]}>
+                    <div className={styles["knowledge-scroll-wrapper"]}>
+                        <div 
+                            className={styles["knowledge-track"]}
+                            ref={knowledgeTrackRef}
+                        >
+                            {getVisibleArticles().map((article) => (
+                                <Link to={`/app/articles/${article.slug}`} key={article.id} className={styles["knowledge-card"]}>
+                                    <div className={styles["knowledge-image-container"]}>
+                                        <img className={styles["knowledge-image"]} src={article.thumbnailUrl || '/placeholder-image.jpg'} alt={article.title} />
+                                    </div>
+                                    <div className={styles["knowledge-content"]}>
+                                        <h5>{article.title}</h5>
+                                        <p>{article.summary}</p>
+                                    </div>
+                                    <div className={styles["knowledge-footer"]}>
+                                        <span className={styles["knowledge-date"]}>
+                                            📅 {article.publishedAt ? new Date(article.publishedAt).toLocaleDateString('vi-VN') : ''}
+                                        </span>
+                                        <span className={styles["read-more"]}>Đọc thêm &rarr;</span>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                    {featuredArticles.length > 0 && (
+                        <div className={styles["knowledge-indicators"]}>
+                            {Array.from({ length: featuredArticles.length }).map((_, index) => (
+                                <button
+                                    key={index}
+                                    className={`${styles["knowledge-indicator"]} ${knowledgeIndex === index ? styles["active"] : ""}`}
+                                    onClick={() => setKnowledgeIndex(index)}
+                                    aria-label={`Article ${index + 1}`}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </section >
 

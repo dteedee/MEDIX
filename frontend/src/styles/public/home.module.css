@@ -987,10 +987,37 @@ body {
     border-radius: 3px;
   }
   
+  .knowledge-carousel-container {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .knowledge-scroll-wrapper {
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .knowledge-track {
+    display: flex;
+    column-gap: 30px; /* dùng column-gap để có thể đọc bằng JS */
+    transition: transform 0.6s ease-in-out;
+    will-change: transform;
+  }
+
+  .knowledge-grid-wrapper {
+    overflow: hidden;
+    width: 100%;
+  }
+
   .knowledge-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 30px;
+    display: flex;
+    transition: transform 0.6s ease-in-out;
+    will-change: transform;
+  }
+
+  /* Kích thước card trong track (3 cột desktop) */
+  .knowledge-track .knowledge-card {
+    flex: 0 0 calc((100% - 60px) / 3); /* 2 khoảng gap = 60px */
   }
   
   .knowledge-card {
@@ -1044,6 +1071,39 @@ body {
     font-size: 13px;
     color: #777;
   }
+
+  /* Knowledge Carousel Indicators */
+  .knowledge-indicators {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 40px;
+  }
+
+  .knowledge-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(33, 150, 243, 0.3);
+    border: 2px solid rgba(33, 150, 243, 0.5);
+    cursor: pointer;
+    transition: all 0.4s ease;
+    padding: 0;
+    margin: 0;
+  }
+
+  .knowledge-indicator:hover {
+    background: rgba(33, 150, 243, 0.5);
+    transform: scale(1.2);
+  }
+
+  .knowledge-indicator.active {
+    background: linear-gradient(135deg, #2196f3, #1976d2);
+    width: 30px;
+    border-radius: 6px;
+    border: 2px solid rgba(33, 150, 243, 0.8);
+    box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+  }
   
   /* --- Responsive --- */
   @media (max-width: 900px) {
@@ -1051,15 +1111,17 @@ body {
       flex-wrap: wrap;
       justify-content: center;
     }
-  
-    .knowledge-grid {
-      grid-template-columns: 1fr 1fr;
+
+    /* 2 cột tablet */
+    .knowledge-track .knowledge-card {
+      flex: 0 0 calc((100% - 30px) / 2); /* 1 khoảng gap */
     }
   }
   
   @media (max-width: 600px) {
-    .knowledge-grid {
-      grid-template-columns: 1fr;
+    /* 1 cột mobile */
+    .knowledge-track .knowledge-card {
+      flex: 0 0 100%;
     }
   }
   
@@ -1149,8 +1211,11 @@ body {
         grid-template-columns: 1fr;
     }
 
-    .doctors-grid,
-    .knowledge-grid {
+    .doctors-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .knowledge-slide {
         grid-template-columns: 1fr;
     }
 

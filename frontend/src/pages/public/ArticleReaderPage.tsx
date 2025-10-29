@@ -163,31 +163,6 @@ export default function ArticleReaderPage() {
       <div className="arp-container">
         {/* Sidebar */}
         <aside className="arp-sidebar">
-          <div className="sidebar-card search-card">
-            <div className="sidebar-title">
-              <i className="bi bi-search"></i>
-              Tìm kiếm bài viết
-            </div>
-            <div className="search-box">
-              <input
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Nhập từ khóa tìm kiếm..."
-              />
-              {search && (
-                <button className="clear-btn" onClick={() => setSearch('')} aria-label="Xoá tìm kiếm">
-                  <i className="bi bi-x-circle-fill"></i>
-                </button>
-              )}
-            </div>
-            {debounced && (
-              <div className="search-result-info">
-                <i className="bi bi-check-circle-fill"></i>
-                Tìm thấy {total} kết quả
-              </div>
-            )}
-          </div>
-
           <div className="sidebar-card category-card">
             <div className="sidebar-title">
               <i className="bi bi-folder2-open"></i>
@@ -247,15 +222,28 @@ export default function ArticleReaderPage() {
 
         {/* Main content */}
         <main className="arp-main">
-          {/* Header with breadcrumb and stats */}
+          {/* Header with search + stats */}
           <div className="page-header">
-            <div className="breadcrumb">
-              <a onClick={() => navigate('/')}>
-                <i className="bi bi-house-fill"></i>
-                Trang chủ
-              </a>
-              <i className="bi bi-chevron-right"></i>
-              <span>Bài viết sức khỏe</span>
+            <div className="header-search" style={{ flex: 1, minWidth: '300px' }}>
+              <div className="search-box">
+                <i className="bi bi-search search-icon"></i>
+                <input
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  placeholder="Tìm bài viết sức khoẻ..."
+                />
+                {search && (
+                  <button className="clear-btn" onClick={() => setSearch('')} aria-label="Xoá tìm kiếm">
+                    <i className="bi bi-x-circle-fill"></i>
+                  </button>
+                )}
+              </div>
+              {debounced && (
+                <div className="search-result-info">
+                  <i className="bi bi-check-circle-fill"></i>
+                  Tìm thấy {total} kết quả
+                </div>
+              )}
             </div>
             <div className="stats-bar">
               <div className="stat-item">

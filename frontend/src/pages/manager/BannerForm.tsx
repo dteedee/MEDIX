@@ -330,6 +330,7 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
                 value={startDateLocal}
                 onChange={e => setStartDateLocal(e.target.value)}
                 className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
+                max="9999-12-31"
                 disabled={mode === 'view'}
               />
             </div>
@@ -343,6 +344,7 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
                 value={endDateLocal}
                 onChange={e => setEndDateLocal(e.target.value)}
                 className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
+                max="9999-12-31"
                 disabled={mode === 'view'}
               />
             </div>

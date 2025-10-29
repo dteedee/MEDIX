@@ -72,5 +72,24 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 TotalPages = (int)Math.Ceiling((double)await listQueryable.CountAsync() / query.PageSize),
             };
         }
+
+        public async Task<DoctorRegistrationForm?> GetByIdAsync(Guid id)
+        {
+            return await _context.DoctorRegistrationForms
+                .Include(d => d.Specialization)
+                .FirstOrDefaultAsync(d => d.Id == id);
+        }
+
+        public async Task<bool> DeleteAsync(Guid id)
+        {
+            var form = await _context.DoctorRegistrationForms.FindAsync(id);
+            if (form == null)
+            {
+                return false;
+            }
+            _context.DoctorRegistrationForms.Remove(form);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

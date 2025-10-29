@@ -1,10 +1,10 @@
 import { apiClient } from "../lib/apiClient";
-import { DoctorProfileQuery, DoctorRegisterProfileDetails, DoctorRegisterProfileList } from "../types/doctor.types";
+import { DoctorQuery, DoctorRegisterFormDetails, DoctorRegisterFormList } from "../types/doctor.types";
 
 class DoctorProfileService {
-    async getAll(query: DoctorProfileQuery): Promise<DoctorRegisterProfileList> {
+    async getAll(query: DoctorQuery): Promise<DoctorRegisterFormList> {
         const token = apiClient.getToken();
-        const response = await apiClient.get<DoctorRegisterProfileList>('/doctorProfile', {
+        const response = await apiClient.get<DoctorRegisterFormList>('/doctorRegistrationForm', {
             params: {
                 page: query.page,
                 searchTerm: query.searchTerm,
@@ -17,12 +17,12 @@ class DoctorProfileService {
         return response.data;
     }
 
-    async getDetails(id: string): Promise<DoctorRegisterProfileDetails>{
-        const response = await apiClient.get<DoctorRegisterProfileDetails>(`/doctorProfile/${id}`);
+    async getDetails(id: string): Promise<DoctorRegisterFormDetails> {
+        const response = await apiClient.get<DoctorRegisterFormDetails>(`/doctorProfile/${id}`);
         return response.data;
     }
 
-    async reviewProfile(payload: any, id: string) : Promise<void>{
+    async reviewProfile(payload: any, id: string): Promise<void> {
         await apiClient.put<any>(`doctorProfile/review/${id}`, payload);
     }
 }

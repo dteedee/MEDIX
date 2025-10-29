@@ -12,5 +12,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task<bool> LicenseNumberExistAsync(string licenseNumber);
         Task AddAsync(DoctorRegistrationForm form);
         Task<PagedList<DoctorRegistrationForm>> GetAllAsync(DoctorQuery query);
+        Task<DoctorRegistrationForm?> GetByIdAsync(Guid id);
+        Task<bool> DeleteAsync(Guid id);
     }
 }

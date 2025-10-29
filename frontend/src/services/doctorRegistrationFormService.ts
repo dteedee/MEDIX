@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { DoctorRegisterMetadata } from "../types/doctor.types";
+import { DoctorQuery, DoctorRegisterFormDetails, DoctorRegisterFormList, DoctorRegisterMetadata } from "../types/doctor.types";
 
 class DoctorRegistrationFormService {
     async getMetadata(): Promise<DoctorRegisterMetadata> {
@@ -10,6 +10,30 @@ class DoctorRegistrationFormService {
     async registerDoctor(payload: FormData): Promise<void> {
         console.log('Payload:', payload);
         await apiClient.postMultipart<any>('/doctorRegistrationForm/register', payload);
+    }
+
+    async getAll(query: DoctorQuery): Promise<DoctorRegisterFormList> {
+        const token = apiClient.getToken();
+        const response = await apiClient.get<DoctorRegisterFormList>('/doctorRegistrationForm', {
+            params: {
+                page: query.page,
+                searchTerm: query.searchTerm,
+                pageSize: query.pageSize,
+            },
+            headers: {
+                Authorization: token ? `Bearer ${token}` : '',
+            },
+        });
+        return response.data;
+    }
+
+    async getDetails(id: string): Promise<DoctorRegisterFormDetails> {
+        const response = await apiClient.get<DoctorRegisterFormDetails>(`/doctorRegistrationForm/${id}`);
+        return response.data;
+    }
+
+    async reviewProfile(payload: any, id: string): Promise<void> {
+        await apiClient.post<any>(`doctorRegistrationForm/review/${id}`, payload);
     }
 }
 

@@ -4,6 +4,8 @@ using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.Doctor;
+using Medix.API.Models.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.ComponentModel.DataAnnotations;
@@ -142,6 +144,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpGet]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> Get([FromQuery] DoctorQuery query)
         {
             try
@@ -156,11 +159,89 @@ namespace Medix.API.Presentation.Controller.Classification
                     CreatedAt = d.CreatedAt.ToString("dd/MM/yyyy"),
                 }).ToList();
 
-                return Ok(doctors);
+                return Ok(new { totalPages = list.TotalPages, doctors });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while fetching registration forms.");
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        [HttpGet("{id}")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            try
+            {
+                var registerForm = await _doctorRegistrationFormService.GetByIdAsync(id);
+
+                if (registerForm == null)
+                {
+                    return NotFound(new { Message = "Doctor registration form not found." });
+                }
+
+                var doctor = new
+                {
+                    registerForm.Id,
+                    registerForm.AvatarUrl,
+                    registerForm.FullName,
+                    UserName = registerForm.UserNameNormalized.ToLower(),
+                    Dob = registerForm.DateOfBirth.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
+                    Gender = registerForm.GenderCode,
+                    registerForm.IdentificationNumber,
+                    Email = registerForm.EmailNormalized.ToLower(),
+                    registerForm.PhoneNumber,
+                    Specialization = registerForm.Specialization.Name,
+                    registerForm.LicenseImageUrl,
+                    registerForm.LicenseNumber,
+                    registerForm.DegreeFilesUrl,
+                    registerForm.Bio,
+                    registerForm.Education,
+                    registerForm.YearsOfExperience,
+                    CreatedAt = registerForm.CreatedAt.ToString("dd/MM/yyyy"),
+                };
+
+                return Ok(doctor);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching the registration form.");
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        [HttpPost("review/{id}")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> ReviewRegisterForm(
+            [FromBody] DoctorReviewRequest request,
+            [FromRoute] Guid id)
+        {
+            try
+            {
+                var registerForm = await _doctorRegistrationFormService.GetByIdAsync(id);
+                if (registerForm == null)
+                {
+                    return NotFound(new { Message = "Doctor registration form not found." });
+                }
+
+                if (request.IsApproved && string.IsNullOrWhiteSpace(request.Education))
+                {
+                    return BadRequest(new { acceptError = "Chọn trình độ học vấn khi phê duyệt hồ sơ bác sĩ" });
+                }
+
+                if (!request.IsApproved && string.IsNullOrWhiteSpace(request.RejectReason))
+                {
+                    return BadRequest(new { rejectError = "Vui lòng nhập lí do từ chối" });
+                }
+
+                await _doctorRegistrationFormService.ReviewDoctorAsync(request, registerForm);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while reviewing the registration form.");
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
         }

@@ -13,10 +13,10 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<DoctorProfileDto?> GetDoctorProfileByDoctorIDAsync(string doctorID);
         Task<Doctor?> GetDoctorByUserIdAsync(Guid userId);
         Task<bool> UpdateDoctorProfileAsync(Doctor existingDoctor, DoctorProfileUpdateRequest req);
-        Task<PagedList<Doctor>> GetPendingDoctorsAsync(DoctorQuery query);
-        Task ReviewDoctorProfile(DoctorProfileReviewRequest request, Guid doctorId);
+        //Task<PagedList<Doctor>> GetPendingDoctorsAsync(DoctorQuery query);
+        //Task ReviewDoctorProfile(DoctorReviewRequest request, Guid doctorId);
         Task<Doctor?> GetDoctorByIdAsync(Guid id);
         Task<IEnumerable<ServiceTierWithPaginatedDoctorsDto>> GetGroupedDoctorsAsync(DoctorQueryParameters queryParams);
-        Task<PagedList<Doctor>> GetReviewedDoctorsAsync(DoctorQuery query);
+        Task<PagedList<DoctorDto>> GetDoctorsAsync(DoctorQuery query);
     }
 }

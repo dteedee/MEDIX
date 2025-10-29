@@ -520,8 +520,22 @@ function DoctorRegister() {
                                     )}
                                 </div>
                                 <div className={styles["form-group"]}>
+                                    <label className={styles["form-label"]}>Số chứng chỉ <span className={styles["required"]}>*</span></label>
+                                    <input type="text" name='licenseNumber'
+                                        className={`${styles["form-input"]} form-control ${errors.LicenseNumber?.[0]
+                                            ? 'is-invalid'
+                                            : formData.licenseNumber?.trim()
+                                                ? 'is-valid'
+                                                : ''
+                                            }`}
+                                        onChange={handleChange} />
+                                    {errors.LicenseNumber?.[0] && (
+                                        <div className="text-danger">{errors.LicenseNumber[0]}</div>
+                                    )}
+                                </div>
+                                <div className={styles["form-group"]}>
                                     <label htmlFor="licenseImage" className={styles["form-label"]}>
-                                        Chứng chỉ làm việc <span className={styles["required"]}>*</span>
+                                        Ảnh chứng chỉ <span className={styles["required"]}>*</span>
                                     </label>
 
                                     <div className="d-flex align-items-center gap-2">
@@ -589,20 +603,6 @@ function DoctorRegister() {
                                         <div className="text-danger">
                                             {errors.DegreeFiles[0]}
                                         </div>
-                                    )}
-                                </div>
-                                <div className={styles["form-group"]}>
-                                    <label className={styles["form-label"]}>Số chứng chỉ <span className={styles["required"]}>*</span></label>
-                                    <input type="text" name='licenseNumber'
-                                        className={`${styles["form-input"]} form-control ${errors.LicenseNumber?.[0]
-                                            ? 'is-invalid'
-                                            : formData.licenseNumber?.trim()
-                                                ? 'is-valid'
-                                                : ''
-                                            }`}
-                                        onChange={handleChange} />
-                                    {errors.LicenseNumber?.[0] && (
-                                        <div className="text-danger">{errors.LicenseNumber[0]}</div>
                                     )}
                                 </div>
                                 <div className={styles["form-group"]}>

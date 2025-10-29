@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, ServiceTierWithPaginatedDoctorsDto, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters } from "../types/doctor.types";
+import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, ServiceTierWithPaginatedDoctorsDto, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters, DoctorQuery, DoctorList, DoctorDto } from "../types/doctor.types";
 
 class DoctorService {
     async getDoctorProfile(doctorID: string | undefined): Promise<DoctorProfileDto> {
@@ -59,6 +59,31 @@ class DoctorService {
             console.error('Get education types error: ', error);
             throw this.handleApiError(error);
         }
+    }
+
+    async getAll(query: DoctorQuery): Promise<DoctorList> {
+        const token = apiClient.getToken();
+        const response = await apiClient.get<DoctorList>('/doctor', {
+            params: {
+                page: query.page,
+                searchTerm: query.searchTerm,
+                pageSize: query.pageSize,
+            },
+            headers: {
+                Authorization: token ? `Bearer ${token}` : '',
+            },
+        });
+        return response.data;
+    }
+
+    async getById(id: string): Promise<DoctorDto> {
+        const token = apiClient.getToken();
+        const response = await apiClient.get<DoctorDto>(`/doctor/${id}`, {
+            headers: {
+                Authorization: token ? `Bearer ${token}` : '',
+            },
+        });
+        return response.data;
     }
 
     private handleApiError(error: any): Error {

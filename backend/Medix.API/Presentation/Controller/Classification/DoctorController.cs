@@ -1,5 +1,6 @@
-﻿﻿using AutoMapper;
+﻿using AutoMapper;
 using Medix.API.Application.DTOs.Doctor;
+using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.Community;
@@ -253,6 +254,60 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
+        [HttpGet]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> GetDoctors([FromQuery] DoctorQuery query)
+        {
+            try
+            {
+                var doctors = await _doctorService.GetDoctorsAsync(query);
+                return Ok(doctors);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching doctors.");
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        [HttpGet("{id}")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> GetDoctorById(Guid id)
+        {
+            try
+            {
+                var doctor = await _doctorService.GetDoctorByIdAsync(id);
+                if (doctor == null)
+                {
+                    return NotFound(new { Message = "Doctor not found" });
+                }
+                var doctorDto = new
+                {
+                    doctor.Id,
+                    doctor.User.AvatarUrl,
+                    doctor.User.FullName,
+                    Email = doctor.User.Email.ToLower(),
+                    doctor.User.PhoneNumber,
+                    Specialization = doctor.Specialization.Name,
+                    doctor.Education,
+                    Rating = doctor.Appointments
+                        .Select(a => a.Review.Rating)
+                        .DefaultIfEmpty(0)
+                        .Average(),
+                    ReviewCount = doctor.Appointments
+                        .Count(a => a.Review != null),
+                    StatusCode = doctor.User.Status,
+                    CreatedAt = doctor.CreatedAt.ToString("dd/MM/yyyy"),
+                };
+                return Ok(doctorDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching doctor by ID.");
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
         private List<ValidationResult> ValidateNewPassword(List<ValidationResult> prevResult, PasswordUpdateRequest req, string oldPassword)
         {
             if (req.NewPassword == oldPassword)
@@ -273,10 +328,10 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         private async Task<List<ValidationResult>> ValidateUpdateRequest(List<ValidationResult> prevResult, DoctorProfileUpdateRequest request
-            ,Doctor doctor)
+            , Doctor doctor)
         {
-            if (request.PhoneNumber != null 
-                && request.PhoneNumber != doctor.User.PhoneNumber 
+            if (request.PhoneNumber != null
+                && request.PhoneNumber != doctor.User.PhoneNumber
                 && await _userSerivce.PhoneNumberExistsAsync(request.PhoneNumber))
             {
                 prevResult.Add(new ValidationResult("Số điện thoại đã được sử dụng", new[] { "PhoneNumber" }));

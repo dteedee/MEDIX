@@ -393,7 +393,17 @@ public partial class MedixContext : DbContext
 
         modelBuilder.Entity<DoctorRegistrationForm>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__DoctorRe__3214EC075D75F3AF");
+            entity.HasKey(e => e.Id).HasName("PK__DoctorRe__3214EC07218644EC");
+
+            entity.HasIndex(e => e.UserNameNormalized, "UQ__DoctorRe__2CB5855F967EDB49").IsUnique();
+
+            entity.HasIndex(e => e.PhoneNumber, "UQ__DoctorRe__85FB4E38B45FE1DA").IsUnique();
+
+            entity.HasIndex(e => e.IdentificationNumber, "UQ__DoctorRe__9CD14694ED97B186").IsUnique();
+
+            entity.HasIndex(e => e.EmailNormalized, "UQ__DoctorRe__B5DB813722E06034").IsUnique();
+
+            entity.HasIndex(e => e.LicenseNumber, "UQ__DoctorRe__E8890166783EE73D").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.AvatarUrl).IsUnicode(false);
@@ -412,7 +422,7 @@ public partial class MedixContext : DbContext
             entity.HasOne(d => d.Specialization).WithMany(p => p.DoctorRegistrationForms)
                 .HasForeignKey(d => d.SpecializationId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__DoctorReg__Speci__30592A6F");
+                .HasConstraintName("FK__DoctorReg__Speci__3BCADD1B");
         });
 
         modelBuilder.Entity<DoctorSalary>(entity =>

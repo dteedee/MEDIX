@@ -1,5 +1,6 @@
 ﻿using Medix.API.Application.DTOs.Doctor;
 using Medix.API.Business.Helper;
+using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
 
 namespace Medix.API.Business.Interfaces.Classification
@@ -13,5 +14,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<bool> IsLicenseNumberExistAsync(string licenseNumber);
         Task RegisterDoctorAsync(DoctorRegisterRequest request);
         Task<PagedList<DoctorRegistrationForm>> GetAllRegistrationFormsAsync(DoctorQuery query);
+        Task<DoctorRegistrationForm?> GetByIdAsync(Guid id);
+        Task ReviewDoctorAsync(DoctorReviewRequest request, DoctorRegistrationForm form);
     }
 }

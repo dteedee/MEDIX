@@ -103,12 +103,52 @@
 
 /* Main */
 .adp-main { min-height: 70vh; }
-.adp-hero { background: linear-gradient(135deg, #0066cc 0%, #0080e6 50%, #00c4cc 100%); color: white; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-lg); }
-.adp-hero-media { position: relative; height: 300px; background: #0b2545; }
-.adp-hero-media img { width: 100%; height: 100%; object-fit: cover; }
-.adp-hero-content { padding: 24px; background: linear-gradient(135deg, rgba(0,20,40,0.65), rgba(0,20,40,0.45)); }
-.adp-title { margin: 0 0 8px; font-size: 28px; font-weight: 800; color: white; }
-.adp-meta { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; color: rgba(255,255,255,0.9); font-size: 13px; }
+/* ===== HERO SECTION - new look ===== */
+.adp-hero {
+  position: relative;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  height: clamp(260px, 42vw, 560px); /* responsive height */
+  background: linear-gradient(135deg, #0066cc 0%, #00c4cc 100%);
+}
+
+.adp-hero-media {
+  position: absolute;
+  inset: 0;
+}
+
+.adp-hero-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* hiển thị tràn đẹp mắt */
+  display: block;
+}
+
+.adp-hero-content {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 22px 24px;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 60%, rgba(0,0,0,.75) 100%);
+}
+
+.adp-title {
+  margin: 0 0 8px;
+  font-size: clamp(20px, 2.2vw, 30px);
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0,0,0,.35);
+}
+
+.adp-meta { 
+  display: flex; 
+  gap: 14px; 
+  align-items: center; 
+  flex-wrap: wrap; 
+  color: rgba(255,255,255,0.92);
+  font-size: 13px;
+}
 .adp-meta i { color: #fbbf24; }
 
 .adp-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 16px 0; }
@@ -139,7 +179,10 @@
 }
 @media (max-width: 768px) {
   .adp-container { padding: 18px 12px 48px; gap: 20px; }
+  .adp-hero { height: clamp(220px, 48vw, 420px); }
+  .adp-hero-content { padding: 18px; }
   .adp-hero-media { height: 220px; }
+  .adp-hero-media img { max-height: 360px; }
 }
 
 /* Breadcrumb */

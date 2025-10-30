@@ -37,6 +37,11 @@ function getCategoryIcon(name?: string) {
   return 'bi-bookmark-heart';
 }
 
+// Add scroll-to-top utility
+function scrollToTop() {
+  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+}
+
 export default function ArticleDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -126,9 +131,12 @@ export default function ArticleDetailPage() {
           (a.categoryIds || []).forEach(cid => { counts[cid] = (counts[cid] || 0) + 1; });
         }
         setCategoryCounts(counts);
-        // Recent chỉ lấy từ valid, khác slug
+        // Recent chỉ lấy từ valid, khác slug và cùng category với bài hiện tại
         setRecent(
-          valid.filter(a => a.slug !== article?.slug)
+          valid.filter(a =>
+            a.slug !== article?.slug &&
+            a.categoryIds?.some((catId: string) => article?.categoryIds?.includes(catId))
+          )
             .sort((a, b) => {
               const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
               const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
@@ -205,37 +213,37 @@ export default function ArticleDetailPage() {
       <nav className={homeStyles["navbar"]}>
         <ul className={homeStyles["nav-menu"]}>
           <li>
-            <a onClick={() => navigate('/')} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/' ? homeStyles["active"] : ''}`}>
+            <a onClick={() => { scrollToTop(); navigate('/'); }} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/' ? homeStyles["active"] : ''}`}>
               Trang chủ
             </a>
           </li>
           <li><span>|</span></li>
           <li>
-            <a onClick={() => navigate('/ai-chat')} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}>
+            <a onClick={() => { scrollToTop(); navigate('/ai-chat'); }} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}>
               AI chẩn đoán
             </a>
           </li>
           <li><span>|</span></li>
           <li>
-            <a onClick={() => navigate('/specialties')} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/specialties' ? homeStyles["active"] : ''}`}>
+            <a onClick={() => { scrollToTop(); navigate('/specialties'); }} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/specialties' ? homeStyles["active"] : ''}`}>
               Chuyên khoa
             </a>
           </li>
           <li><span>|</span></li>
           <li>
-            <a onClick={() => navigate('/doctors')} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/doctors' ? homeStyles["active"] : ''}`}>
+            <a onClick={() => { scrollToTop(); navigate('/doctors'); }} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/doctors' ? homeStyles["active"] : ''}`}>
               Bác sĩ
             </a>
           </li>
           <li><span>|</span></li>
           <li>
-            <a onClick={() => navigate('/articles')} className={`${homeStyles["nav-link"]} ${window.location.pathname.startsWith('/articles') ? homeStyles["active"] : ''}`}>
+            <a onClick={() => { scrollToTop(); navigate('/articles'); }} className={`${homeStyles["nav-link"]} ${window.location.pathname.startsWith('/articles') ? homeStyles["active"] : ''}`}>
               Bài viết sức khỏe
             </a>
           </li>
           <li><span>|</span></li>
           <li>
-            <a onClick={() => navigate('/about')} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/about' ? homeStyles["active"] : ''}`}>
+            <a onClick={() => { scrollToTop(); navigate('/about'); }} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/about' ? homeStyles["active"] : ''}`}>
               Về chúng tôi
             </a>
           </li>
@@ -244,9 +252,9 @@ export default function ArticleDetailPage() {
 
       {/* Breadcrumb */}
       <div className="adp-breadcrumb" aria-label="breadcrumb">
-        <button className="crumb" onClick={() => navigate('/')}>Trang chủ</button>
+        <button className="crumb" onClick={() => { scrollToTop(); navigate('/'); }}>Trang chủ</button>
         <span className="sep">/</span>
-        <button className="crumb" onClick={() => navigate('/articles')}>Bài viết sức khỏe</button>
+        <button className="crumb" onClick={() => { scrollToTop(); navigate('/articles'); }}>Bài viết sức khỏe</button>
         <span className="sep">/</span>
         <span className="crumb current" title={article?.title || ''}>{article?.title || ''}</span>
       </div>
@@ -260,7 +268,7 @@ export default function ArticleDetailPage() {
               <li>
                 <button
                   className={`adp-category-item${!article?.categoryIds?.length ? ' active' : ''}`}
-                  onClick={() => navigate('/articles')}
+                  onClick={() => { scrollToTop(); navigate('/articles'); }}
                 >
                   <span className="category-icon"><i className="bi bi-grid-3x3-gap-fill" /></span>
                   <span>Tất cả</span>
@@ -271,7 +279,7 @@ export default function ArticleDetailPage() {
                 <li key={c.id}>
                   <button
                     className={`adp-category-item${article?.categoryIds?.includes(c.id) ? ' active' : ''}`}
-                    onClick={() => navigate(`/articles?cat=${c.id}`)}
+                    onClick={() => { scrollToTop(); navigate(`/articles?cat=${c.id}`); }}
                   >
                     <span className="category-icon"><i className={`bi ${getCategoryIcon(c.name)}`} /></span>
                     <span>{c.name}</span>
@@ -285,13 +293,18 @@ export default function ArticleDetailPage() {
             <div className="title"><i className="bi bi-stars" /> Bài viết mới</div>
             <div className="adp-recent-list">
               {recent.map(r => (
-                <Link to={`/articles/${r.slug}`} key={r.id} className="adp-recent-item">
+                <button
+                  key={r.id}
+                  className="adp-recent-item"
+                  onClick={() => { scrollToTop(); navigate(`/articles/${r.slug}`); }}
+                  style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', textAlign: 'left', cursor: 'pointer' }}
+                >
                   <img className="adp-recent-thumb" src={r.thumbnailUrl || r.coverImageUrl || '/images/medix-logo.png'} alt={r.title} />
                   <div>
                     <div className="adp-recent-title">{r.title}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatViDate(r.publishedAt)}</div>
                   </div>
-                </Link>
+                </button>
               ))}
             </div>
           </div>

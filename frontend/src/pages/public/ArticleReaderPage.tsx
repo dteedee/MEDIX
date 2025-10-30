@@ -29,6 +29,10 @@ function getReadingTime(content?: string | null): string {
   return `${minutes} phút đọc`;
 }
 
+function scrollToTop() {
+  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+}
+
 export default function ArticleReaderPage() {
   const navigate = useNavigate();
 
@@ -185,7 +189,7 @@ export default function ArticleReaderPage() {
         <ul className={homeStyles["nav-menu"]}>
           <li>
             <a
-              onClick={() => navigate('/')}
+              onClick={() => { scrollToTop(); navigate('/'); }}
               className={`${homeStyles["nav-link"]} ${window.location.pathname === '/' ? homeStyles["active"] : ''}`}
             >
               Trang chủ
@@ -194,7 +198,7 @@ export default function ArticleReaderPage() {
           <li><span>|</span></li>
           <li>
             <a
-              onClick={() => navigate('/ai-chat')}
+              onClick={() => { scrollToTop(); navigate('/ai-chat'); }}
               className={`${homeStyles["nav-link"]} ${window.location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}
             >
               AI chẩn đoán
@@ -203,7 +207,7 @@ export default function ArticleReaderPage() {
           <li><span>|</span></li>
           <li>
             <a
-              onClick={() => navigate('/specialties')}
+              onClick={() => { scrollToTop(); navigate('/specialties'); }}
               className={`${homeStyles["nav-link"]} ${window.location.pathname === '/specialties' ? homeStyles["active"] : ''}`}
             >
               Chuyên khoa
@@ -212,7 +216,7 @@ export default function ArticleReaderPage() {
           <li><span>|</span></li>
           <li>
             <a
-              onClick={() => navigate('/doctors')}
+              onClick={() => { scrollToTop(); navigate('/doctors'); }}
               className={`${homeStyles["nav-link"]} ${window.location.pathname === '/doctors' ? homeStyles["active"] : ''}`}
             >
               Bác sĩ
@@ -221,7 +225,7 @@ export default function ArticleReaderPage() {
           <li><span>|</span></li>
           <li>
             <a
-              onClick={() => navigate('/articles')}
+              onClick={() => { scrollToTop(); navigate('/articles'); }}
               className={`${homeStyles["nav-link"]} ${window.location.pathname === '/articles' ? homeStyles["active"] : ''}`}
             >
               Bài viết sức khỏe
@@ -230,7 +234,7 @@ export default function ArticleReaderPage() {
           <li><span>|</span></li>
           <li>
             <a
-              onClick={() => navigate('/about')}
+              onClick={() => { scrollToTop(); navigate('/about'); }}
               className={`${homeStyles["nav-link"]} ${window.location.pathname === '/about' ? homeStyles["active"] : ''}`}
             >
               Về chúng tôi
@@ -389,11 +393,11 @@ export default function ArticleReaderPage() {
               </div>
             )}
             {!loading && rest.map((a, idx) => (
-              <Link 
-                key={a.id} 
-                to={`/articles/${a.slug}`} 
+              <button
+                key={a.id}
                 className="article-card"
                 style={{ animationDelay: `${idx * 0.04}s` }}
+                onClick={() => { scrollToTop(); navigate(`/articles/${a.slug}`); }}
               >
                 <div className="card-thumb">
                   <img src={a.thumbnailUrl || a.coverImageUrl || '/images/medix-logo.png'} alt={a.title} />
@@ -422,7 +426,7 @@ export default function ArticleReaderPage() {
                     <i className="bi bi-arrow-right-short"></i>
                   </span>
                 </div>
-              </Link>
+              </button>
             ))}
           </section>
 

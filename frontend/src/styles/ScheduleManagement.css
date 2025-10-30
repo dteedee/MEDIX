@@ -1,23 +1,33 @@
-.schedule-calendar {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  max-width: 1200px;
-  margin: auto;
-  display: flex;
-  gap: 24px;
+.schedule-management-page {
   padding: 24px;
-  align-items: flex-start;
+  background-color: #f9fafb;
+  height: 100%;
+}
+
+.schedule-calendar-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .calendar-header {
   margin-bottom: 24px;
 }
 
+.calendar-header-wrapper {
+  padding: 16px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  margin-bottom: 24px;
+}
+
 .month-selector {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   margin-bottom: 8px;
 }
 
@@ -25,7 +35,7 @@
   font-size: 18px;
   font-weight: 600;
   color: #1f2937;
-  margin: 0;
+  margin: 0 16px;
   min-width: 150px;
   text-align: center;
 }
@@ -50,6 +60,33 @@
   font-size: 12px;
   color: #ef4444;
   margin: 0;
+}
+
+.view-toggle {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+  background-color: #f3f4f6;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background-color: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #4b5563;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn.active {
+  background-color: #fff;
+  color: #3b82f6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .calendar-grid {
@@ -87,6 +124,7 @@
   display: flex;
   flex-direction: column;
   background: white;
+  position: relative; /* Cần thiết để định vị các thành phần con */
   min-height: 100px;
   overflow: hidden;
 }
@@ -109,17 +147,38 @@
 }
 
 .calendar-day.has-override {
-  background-color: #7df4a1; /* Màu xanh lá cây rất nhạt */
-  border-color: #a7f3d0;
-  position: relative; /* Đảm bảo badge vẫn hiển thị đúng */
+  background-color: #ecfeff; /* Màu nền xanh ngọc rất nhạt */
+  border-color: #00BCD4; /* Màu viền xanh ngọc */
+}
+
+.calendar-day.has-override:hover:not(.selected) {
+  background-color: #cffafe; /* Màu nền xanh ngọc nhạt hơn khi di chuột */
+  border-color: #0891b2;
+}
+
+.calendar-day.today .day-number {
+  background-color: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .day-number {
+  position: relative;
   font-weight: 600;
   font-size: 14px;
   color: #1f2937;
+  display: block; /* Chuyển sang block để số ngày và huy hiệu tự sắp xếp */
+  width: 100%;
   margin-bottom: 4px;
+  padding: 0 4px; /* Thêm padding để không bị sát viền */
 }
+
+
 
 .time-slots {
   display: flex;
@@ -132,22 +191,6 @@
 .time-slot { 
   font-weight: 500;
   line-height: 1.2;
-}
-
-.save-button {
-  width: 100%;
-  padding: 12px 24px;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.calendar-day {
-  position: relative; /* Cần thiết để định vị tuyệt đối cho override-badge */
 }
 
 .management-buttons {
@@ -186,21 +229,6 @@
 }
 
 .calendar-container {
-  flex: 0 1 60%; /* Chiếm 60% chiều rộng */
-  min-width: 0; /* Fix for flexbox overflow */
-}
-
-.left-pane {
-  flex: 0 1 20%; /* Chiếm 20% chiều rộng */
-  padding: 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background-color: #f9fafb;
-}
-
-.schedule-details {
-  flex: 0 1 20%; /* Chiếm 20% chiều rộng */
-  flex-shrink: 0;
   padding: 16px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -272,22 +300,19 @@
   border-top: 1px solid #e5e7eb;
 }
 
-.override-badge {
-  position: absolute;
-  bottom: 5px; /* Điều chỉnh vị trí theo ý muốn */
-  right: 5px;  /* Điều chỉnh vị trí theo ý muốn */
-  width: 8px;
-  height: 8px;
-  background-color: #f59e0b; /* Màu vàng cam nổi bật */
-  border-radius: 50%;
-  border: 1px solid #fff; /* Viền trắng để tăng độ tương phản */
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.2); /* Bóng nhẹ */
-}
-
 .appointment-list {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid #e5e7eb;
+}
+
+.appointment-list-nested {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #d1d5db;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .appointment-list-header {
@@ -343,4 +368,132 @@
 
 .view-record-button:hover {
   background-color: #4338ca;
+}
+
+/* --- Styles cho các chấm màu --- */
+.schedule-dots-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  min-height: 10px;
+  flex-wrap: wrap;
+}
+
+.schedule-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.schedule-dot-fixed {
+  background-color: #2196F3; /* Màu xanh dương cho lịch cố định */
+}
+
+.schedule-dot-override {
+  background-color: #00BCD4; /* Màu xanh ngọc cho lịch linh hoạt */
+}
+
+/* Thêm style cho chấm lịch đã có cuộc hẹn */
+.schedule-dot.has-appointment {
+  border: 2px solid #ff5722; /* Viền màu cam nổi bật */
+  box-shadow: 0 0 5px rgba(255, 87, 34, 0.7); /* Thêm hiệu ứng glow */
+}
+
+/* Ẩn badge cũ nếu còn */
+.override-badge {
+  display: none;
+}
+
+/* --- Styles cho Modal Chi Tiết Ngày --- */
+.details-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.details-modal-content {
+  background-color: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.details-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.details-modal-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.details-modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: color 0.2s;
+}
+
+.details-modal-close-btn:hover {
+  color: #374151;
+}
+
+.details-modal-body {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}/* Bao quanh số ngày, để làm gốc định vị cho badge */
+.day-number-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Badge hiển thị số lượng cuộc hẹn */
+.appointment-badge {
+  position: absolute;
+  top: 0;
+  right: 4px;
+  background-color: #ff5722; /* Màu cam-đỏ nóng, nổi bật */
+  color: #fff;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  box-shadow: 0 0 3px rgba(0,0,0,0.2);
+  z-index: 5;
 }

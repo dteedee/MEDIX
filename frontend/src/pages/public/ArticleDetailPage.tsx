@@ -1,99 +1,199 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { articleService } from '../../services/articleService';
-import { ArticleDTO } from '../../types/article.types';
-import styles from '../../styles/public/ArticleDetailPage.module.css';
+import React, { useEffect, useRef, useState } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { articleService } from '../../services/articleService'
+import { ArticleDTO } from '../../types/article.types'
+import { apiClient } from '../../lib/apiClient'
+import '../../styles/ArticleDetailPage.css'
 
 export default function ArticleDetailPage() {
-  const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
-  const [article, setArticle] = useState<ArticleDTO | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { slug } = useParams<{ slug: string }>()
+  const [article, setArticle] = useState<ArticleDTO | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isLiked, setIsLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(0)
+  const [isLiking, setIsLiking] = useState(false)
+  const effectRan = useRef(false)
+  const navigate = useNavigate()
 
+  const ViewIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+  )
+
+  const LikeIcon = ({ filled }: { filled: boolean }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+         viewBox="0 0 24 24"
+         fill={filled ? "red" : "none"}
+         stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+    </svg>
+  )
+
+  // Lấy dữ liệu bài viết
   useEffect(() => {
-    if (!slug) {
-      setError('Không tìm thấy slug bài viết.');
-      setLoading(false);
-      return;
+    if (!slug) return
+
+    // Chỉ chạy logic fetch trong lần render thứ hai của StrictMode ở development
+    if (process.env.NODE_ENV === 'development' && !effectRan.current) {
+      effectRan.current = true
+      return
     }
 
-    const fetchArticle = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await articleService.getBySlug(slug);
-        if (data) {
-          // Check if the article is published. The backend should already handle this,
-          // but this is an extra layer of protection on the client.
-          if (data.statusCode !== 'PUBLISHED') {
-            setError('Bài viết này không được công khai hoặc không tồn tại.');
-            return;
+    const abortController = new AbortController()
+    const signal = abortController.signal
+
+    const fetchArticleData = async () => {
+      try { // API call đã bao gồm việc tăng view count
+        const articleData = await articleService.getBySlug(slug)
+        if (articleData) {
+          if (articleData.isLocked) {
+            setError('Article not available.')
+            return
           }
-          setArticle(data);
+          setArticle(articleData)
+          setLikeCount(articleData.likeCount ?? 0)
+
+          // [FE-ONLY] Kiểm tra trạng thái like từ localStorage
+          const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]') as string[];
+          if (articleData.id && likedArticles.includes(articleData.id)) {
+            setIsLiked(true);
+          } else {
+            setIsLiked(false);
+          }
         } else {
-          setError('Không tìm thấy bài viết.');
+          setError('Article not found.')
         }
       } catch (err) {
-        console.error('Failed to fetch article:', err);
-        setError('Đã xảy ra lỗi khi tải bài viết.');
+        if (!signal.aborted) {
+          setError('Failed to load article.')
+        }
       } finally {
-        setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false)
+        }
       }
-    };
+    }
+    fetchArticleData()
 
-    fetchArticle();
-  }, [slug]);
+    return () => {
+      abortController.abort()
+      // Reset ref khi component unmount hoặc slug thay đổi
+      if (process.env.NODE_ENV === 'development') {
+        effectRan.current = false
+      }
+    }
+  }, [slug])
 
-  const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('vi-VN') : 'N/A';
+  // ✅ Sửa lỗi 401 và dùng apiClient
+  const handleLike = async () => {
+    if (!article || !article.id || isLiking) return
 
-  if (loading) {
-    return (
-      <div className={styles.page}>
-        <div className={`${styles.container} ${styles.stateContainer}`}>
-          <div className={styles.loadingSpinner}></div>
-          <p>Đang tải bài viết...</p>
-        </div>
-      </div>
-    );
+    const token = apiClient.getToken()
+    if (!token) {
+      alert("Bạn cần đăng nhập để thích bài viết.")
+      navigate("/login")
+      return
+    }
+
+    setIsLiking(true)
+
+    const originalIsLiked = isLiked
+    const originalLikeCount = likeCount
+    const newIsLiked = !originalIsLiked
+    const newLikeCount = newIsLiked ? originalLikeCount + 1 : originalLikeCount - 1
+
+    // Optimistic UI
+    setIsLiked(newIsLiked)
+    setLikeCount(newLikeCount)
+
+    try {
+      const method = newIsLiked ? 'post' : 'delete'
+      const url = `/HealthArticle/${article.id}/like`
+
+      const response = await apiClient[method]<ArticleDTO>(url)
+
+      if (response.status === 200) {
+        const updated = response.data
+        setLikeCount(updated.likeCount ?? newLikeCount)
+
+        // [FE-ONLY] Cập nhật localStorage
+        const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]') as string[];
+        if (newIsLiked) {
+          if (!likedArticles.includes(article.id)) {
+            likedArticles.push(article.id);
+          }
+        } else {
+          const index = likedArticles.indexOf(article.id);
+          if (index > -1) {
+            likedArticles.splice(index, 1);
+          }
+        }
+        localStorage.setItem('likedArticles', JSON.stringify(likedArticles));
+      } else {
+        console.error("Failed to like the article:", response.status)
+        setIsLiked(originalIsLiked)
+        setLikeCount(originalLikeCount)
+      }
+    } catch (err: any) {
+      console.error("Error liking the article:", err)
+      if (err.response?.status === 401) {
+        alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.")
+        apiClient.clearTokens()
+        navigate("/login")
+      } else {
+        setIsLiked(originalIsLiked)
+        setLikeCount(originalLikeCount)
+      }
+    } finally {
+      setIsLiking(false)
+    }
   }
-  
-  if (error) {
-    return (
-      <div className={styles.page}>
-        <div className={`${styles.container} ${styles.stateContainer}`}>
-          <div className={styles.errorIcon}>&#x26A0;</div>
-          <h2>Lỗi</h2>
-          <p>{error}</p>
-          <button onClick={() => navigate(-1)} className={styles.backButton} style={{ marginTop: '20px' }}>
-            &larr; Quay lại
-          </button>
-        </div>
-      </div>
-    );
-  }
-  
-  if (!article) {
-    return <div className={styles.container}><h2>Không tìm thấy bài viết</h2></div>;
-  }
+
+  if (loading) return <div className="article-reader-container">Đang tải bài viết...</div>
+  if (error) return <div className="article-reader-container">{error}</div>
+  if (!article) return null
 
   return (
-    <div className={styles.page}>
-      <div className={styles.container}>
-        <button onClick={() => navigate(-1)} className={styles.backButton}>
-          &larr; Quay lại
-        </button>
-        <header className={styles.header}>
-          <h1 className={styles.title}>{article.title}</h1>
-          <p className={styles.metaInfo}>
-            <span>Tác giả: {article.authorName || 'N/A'}</span>
-            <span>|</span>
-            <span>Ngày đăng: {fmtDate(article.publishedAt ?? article.createdAt)}</span>
-          </p>
-        </header>
-        {article.coverImageUrl && <img src={article.coverImageUrl} alt={article.title} className={styles.coverImage} />}
-        <div className={styles.content} dangerouslySetInnerHTML={{ __html: article.content || '' }}></div>
+    <div className="article-reader-container">
+      <button onClick={() => navigate('/app/articles')} className="back-button">
+        &larr; Quay lại danh sách
+      </button>
+
+      <div className="breadcrumb">
+        <Link to="/">Trang chủ</Link>
+        <span className="separator">/</span>
+        <span className="current-page">{article.title}</span>
       </div>
+
+      <article className="article-detail">
+        <h1>{article.title}</h1>
+        <div className="article-meta-container">
+          <div className="article-meta">
+            Đăng ngày {new Date(article.publishedAt ?? article.createdAt!).toLocaleDateString()} bởi {article.authorName ?? 'MEDIX'}
+          </div>
+          <div className="article-stats">
+            <button onClick={handleLike} disabled={isLiking} className={`like-button ${isLiked ? 'liked' : ''}`}>
+              <LikeIcon filled={isLiked} />
+              <span className="like-count">{likeCount}</span>
+            </button>
+            <span className="stat-item"><ViewIcon /> {article.viewCount ?? 0}</span>
+          </div>
+        </div>
+        {(article.coverImageUrl || article.thumbnailUrl) && (
+          <img
+            src={article.coverImageUrl || article.thumbnailUrl}
+            alt={article.title}
+            className="article-cover-image"
+          />
+        )}
+        <div className="article-content" dangerouslySetInnerHTML={{ __html: article.content ?? '' }} />
+      </article>
     </div>
-  );
+  )
 }

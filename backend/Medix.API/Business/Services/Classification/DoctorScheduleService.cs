@@ -1,4 +1,4 @@
-﻿﻿using AutoMapper;
+﻿﻿﻿﻿using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.Doctor;
@@ -55,9 +55,9 @@ namespace Medix.API.Business.Services.Classification
             ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
             
             var duration = dto.EndTime - dto.StartTime;
-            if (duration.TotalHours != 4)
+            if (duration.TotalMinutes != 50)
             {
-                throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 4 tiếng.");
+                throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 50 phút.");
             }
 
             var existingSchedules = await _repository.GetByDoctorAndDayAsync(dto.DoctorId, dto.DayOfWeek);
@@ -70,10 +70,7 @@ namespace Medix.API.Business.Services.Classification
                 );
             }
             
-            if (existingSchedules.Count() >= 2)
-            {
-                throw new InvalidOperationException("Mỗi ngày chỉ được đăng ký tối đa 2 ca làm việc.");
-            }
+          
 
             var entity = _mapper.Map<DoctorSchedule>(dto);
             entity.Id = Guid.NewGuid();
@@ -92,9 +89,9 @@ namespace Medix.API.Business.Services.Classification
             ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
             
             var duration = dto.EndTime - dto.StartTime;
-            if (duration.TotalHours != 4)
+            if (duration.TotalMinutes != 50)
             {
-                throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 4 tiếng.");
+                throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 50 phút.");
             }
 
             var existing = await _repository.GetByIdAsync(dto.Id);
@@ -158,9 +155,9 @@ namespace Medix.API.Business.Services.Classification
             ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
 
             var duration = dto.EndTime - dto.StartTime;
-            if (duration.TotalHours != 4)
+            if (duration.TotalMinutes != 50)
             {
-                throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 4 tiếng.");
+                throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 50 phút.");
             }
 
             var existing = await _repository.GetByIdAsync(dto.Id);
@@ -202,6 +199,7 @@ namespace Medix.API.Business.Services.Classification
         public async Task<IEnumerable<DoctorScheduleWorkDto>> CreateByDoctorIdAsync(Guid doctorId, IEnumerable<CreateDoctorScheduleDto> schedules)
         {
             var created = new List<DoctorScheduleWorkDto>();
+            var createdEntitiesForValidation = new List<DoctorSchedule>(); // Danh sách mới để lưu các entity đã tạo
             // Lấy tất cả lịch hiện có của bác sĩ để kiểm tra tổng số ca và trùng lặp
             var allExistingSchedules = (await _repository.GetByDoctorAndDayAsync(doctorId, -1)).ToList();
 
@@ -211,9 +209,9 @@ namespace Medix.API.Business.Services.Classification
                 ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
 
                 var duration = dto.EndTime - dto.StartTime;
-                if (duration.TotalHours != 4)
+                if (duration.TotalMinutes != 50)
                 {
-                    throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 4 tiếng.");
+                    throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 50 phút.");
                 }
 
                 var existing = await _repository.GetByDoctorAndDayAsync(doctorId, dto.DayOfWeek);
@@ -224,12 +222,6 @@ namespace Medix.API.Business.Services.Classification
                         $"Bác sĩ đã có lịch từ {overlap.StartTime:HH\\:mm} đến {overlap.EndTime:HH\\:mm} trong ngày {dto.DayOfWeek}."
                     );
                 
-                // Kiểm tra số lượng ca làm việc trong ngày (bao gồm cả các ca mới được thêm trong cùng batch)
-                if (allExistingSchedules.Count(s => s.DayOfWeek == dto.DayOfWeek) + created.Count(s => s.DayOfWeek == dto.DayOfWeek) >= 2)
-                {
-                    throw new InvalidOperationException($"Mỗi ngày chỉ được đăng ký tối đa 2 ca làm việc. Ngày {dto.DayOfWeek} đã đủ số ca.");
-                }
-    
                 var entity = _mapper.Map<DoctorSchedule>(dto);
                 entity.Id = Guid.NewGuid();
                 entity.CreatedAt = DateTime.UtcNow;
@@ -239,10 +231,25 @@ namespace Medix.API.Business.Services.Classification
     
                 var reloaded = await _repository.GetByIdAsync(entity.Id);
                 // Thêm vào danh sách created để kiểm tra số lượng ca trong cùng batch
-                if (reloaded != null)
+                if (reloaded != null) {
                     created.Add(_mapper.Map<DoctorScheduleWorkDto>(reloaded));
+                    createdEntitiesForValidation.Add(reloaded); // Thêm entity vào danh sách validation
+                }
             }
-    
+
+            // Sau khi thêm, kiểm tra lại toàn bộ lịch
+            var finalSchedules = allExistingSchedules.Concat(createdEntitiesForValidation).ToList();
+            var schedulesByDay = finalSchedules
+                .GroupBy(s => s.DayOfWeek)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // foreach (var dayGroup in schedulesByDay)
+            // {
+            //     if (dayGroup.Value.Count > 0 && dayGroup.Value.Count < 5)
+            //     {
+            //         throw new InvalidOperationException($"Mỗi ngày làm việc phải có ít nhất 5 ca. Ngày {dayGroup.Key} hiện chỉ có {dayGroup.Value.Count} ca.");
+            //     }
+            // }
             return created;
         }
 

@@ -1,6 +1,7 @@
-﻿using Medix.API.Models.DTOs.ApointmentDTO;
+﻿﻿using Medix.API.Models.DTOs.ApointmentDTO;
 
 namespace Medix.API.Business.Interfaces.Classification
+
 {
     public interface IAppointmentService
     {
@@ -13,6 +14,6 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<IEnumerable<AppointmentDto>> GetByPatientAsync(Guid patientId);
         Task<IEnumerable<AppointmentDto>> GetByDateAsync(DateTime date);
         Task<IEnumerable<AppointmentDto>> GetByDoctorUserAndDateAsync(Guid userId, DateTime date);
-
+        Task<IEnumerable<AppointmentDto>> GetByDoctorUserAndDateRangeAsync(Guid userId, DateTime startDate, DateTime endDate);
     }
 }

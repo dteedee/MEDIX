@@ -1,4 +1,4 @@
-﻿using Medix.API.Business.Interfaces.Classification;
+﻿﻿using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs.ApointmentDTO;
 using Medix.API.Models.DTOs.ApointmentDTO;
 using Microsoft.AspNetCore.Mvc;
@@ -109,5 +109,29 @@ namespace Medix.API.Presentation.Controllers
             }
         }
 
+        [HttpGet("my-appointments-by-range")]
+        //[Authorize(Roles = "Doctor")]
+        public async Task<IActionResult> GetMyAppointmentsByRange([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
+        {
+            try
+            {
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                             ?? User.FindFirst("sub")?.Value;
+
+                if (userId == null)
+                    return Unauthorized(new { Message = "User ID not found in token" });
+
+                var result = await _service.GetByDoctorUserAndDateRangeAsync(Guid.Parse(userId), startDate, endDate);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while fetching appointments.", Details = ex.Message });
+            }
+        }
     }
 }

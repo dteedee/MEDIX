@@ -164,10 +164,22 @@ export default function ArticleReaderPage() {
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
 
+  const activeCategory = selectedCategoryId !== 'all'
+    ? categories.find(c => c.id === selectedCategoryId)
+    : null;
+
   const featured: ArticleDTO | undefined = useMemo(() => {
     if (debounced) return undefined;
+    if (selectedCategoryId !== 'all') {
+      // Chỉ featured bài đầu tiên thật sự thuộc danh mục đang chọn
+      return filteredArticles.find(a => (a.categoryIds || []).includes(String(selectedCategoryId)));
+    }
     return filteredArticles[0];
-  }, [debounced, filteredArticles]);
+  }, [debounced, filteredArticles, selectedCategoryId]);
+
+  const featuredTag =
+    activeCategory?.name ||
+    (featured?.categories?.[0]?.name || "Sức khoẻ");
 
   const rest = useMemo(() => {
     if (featured && page === 1 && pagedArticles.length) {
@@ -253,17 +265,17 @@ export default function ArticleReaderPage() {
             </div>
             <ul className="category-list">
               <li>
-                <button className={`category-item ${selectedCategoryId === 'all' ? 'active' : ''}`} onClick={() => handleSelectCategory('all')}>
+                <button className={`category-item ${selectedCategoryId === 'all' ? 'active' : ''}`} onClick={() => { scrollToTop(); handleSelectCategory('all'); }}>
                   <span className="category-icon"><i className="bi bi-grid-3x3-gap-fill"></i></span>
                   <span>Tất cả</span>
-                  <span className="category-badge">{filteredArticles.length}</span>
+                  <span className="category-badge">{validArticles.length}</span>
                 </button>
               </li>
               {categories.map(c => (
                 <li key={c.id}>
                   <button
                     className={`category-item ${selectedCategoryId === c.id ? 'active' : ''}`}
-                    onClick={() => handleSelectCategory(c.id)}
+                    onClick={() => { scrollToTop(); handleSelectCategory(c.id); }}
                   >
                     <span className="category-icon"><i className={`bi ${getCategoryIcon(c.name)}`}></i></span>
                     <span>{c.name}</span>
@@ -349,7 +361,7 @@ export default function ArticleReaderPage() {
                 <div className="featured-tags">
                   <span className="tag">
                     <i className="bi bi-bookmark-fill"></i>
-                    Sức khỏe
+                    {featuredTag}
                   </span>
                 </div>
                 <h2 className="featured-title">{featured.title}</h2>

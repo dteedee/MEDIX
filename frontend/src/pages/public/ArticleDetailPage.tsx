@@ -42,6 +42,11 @@ function scrollToTop() {
   window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
 }
 
+// Helper sum cho badge 'Tất cả' (cố định bằng validArticles.length)
+function sumAllCategories(counts: { [catId: string]: number }) {
+  return Object.values(counts).reduce((a, b) => a + b, 0);
+}
+
 export default function ArticleDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -272,7 +277,7 @@ export default function ArticleDetailPage() {
                 >
                   <span className="category-icon"><i className="bi bi-grid-3x3-gap-fill" /></span>
                   <span>Tất cả</span>
-                  <span className="category-badge">{totalValid}</span>
+                  <span className="category-badge">{validArticles.length}</span>
                 </button>
               </li>
               {categories.map(c => (

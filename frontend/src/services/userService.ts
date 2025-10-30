@@ -48,7 +48,7 @@ export const userService = {
         data: error.response?.data,
         message: error.message
       });
-      
+
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -72,7 +72,7 @@ export const userService = {
         emergencyContactName: data.emergencyContactName || null,
         emergencyContactPhone: data.emergencyContactPhone || null
       };
-      
+
       // Add patient-specific fields if they exist
       if (data.emergencyContactName !== undefined) {
         updateDto.emergencyContactName = data.emergencyContactName;
@@ -86,7 +86,7 @@ export const userService = {
       if (data.allergies !== undefined) {
         updateDto.allergies = data.allergies;
       }
-      
+
       const response = await apiClient.put<UserBasicInfo>('/user/updateUserInfor', updateDto);
       console.log('UpdateUserInfo - Request payload:', updateDto);
       console.log('UpdateUserInfo - API response:', response.data);
@@ -150,6 +150,10 @@ export const userService = {
       }
     }
   },
+
+  async updatePassword(payload: FormData): Promise<any> {
+    await apiClient.put('user/update-password', payload);
+  }
 };
 
 // --- Phần dành cho quản lý người dùng (Admin) ---

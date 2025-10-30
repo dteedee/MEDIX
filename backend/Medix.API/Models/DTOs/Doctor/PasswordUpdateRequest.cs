@@ -10,6 +10,6 @@ namespace Medix.API.Models.DTOs.Doctor
         [PasswordComplexity]
         public string? NewPassword { get; set; }
 
-        public string? ConfirmNewPassword { get; set; }
+        public string? ConfirmPassword { get; set; }
     }
 }

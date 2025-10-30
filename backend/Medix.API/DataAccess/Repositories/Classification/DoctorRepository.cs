@@ -51,6 +51,8 @@ namespace Medix.API.DataAccess.Repositories.Classification
         {
             return await _context.Doctors
                 .Include(d => d.User)
+                .Include(d => d.Specialization)
+                .Include(d => d.ServiceTier)
                 .FirstOrDefaultAsync(d => d.User.Id == userId);
         }
 
@@ -122,48 +124,50 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .FirstOrDefaultAsync(d => d.Id == doctorID);
         }
 
-        public async Task<PagedList<Doctor>> GetPendingDoctorsAsync(DoctorQuery query)
-        {
-            var doctorQueryable = _context.Doctors
-                .Where(d => d.User.Status == 2)
-                .AsQueryable();
+        //public async Task<PagedList<Doctor>> GetPendingDoctorsAsync(DoctorQuery query)
+        //{
+        //    var doctorQueryable = _context.Doctors
+        //        .Where(d => d.User.Status == 2)
+        //        .AsQueryable();
 
-            if (!string.IsNullOrEmpty(query.SearchTerm))
-            {
-                doctorQueryable = doctorQueryable
-                    .Where(d => d.User.FullName.ToLower().Contains(query.SearchTerm.ToLower()) ||
-                        d.Specialization.Name.ToLower().Contains(query.SearchTerm.ToLower()) ||
-                        d.User.NormalizedEmail.Contains(query.SearchTerm.ToUpper()));
-            }
+        //    if (!string.IsNullOrEmpty(query.SearchTerm))
+        //    {
+        //        doctorQueryable = doctorQueryable
+        //            .Where(d => d.User.FullName.ToLower().Contains(query.SearchTerm.ToLower()) ||
+        //                d.Specialization.Name.ToLower().Contains(query.SearchTerm.ToLower()) ||
+        //                d.User.NormalizedEmail.Contains(query.SearchTerm.ToUpper()));
+        //    }
 
-            if (query.PageSize == 0)
-            {
-                query.PageSize = 10;
-            }
+        //    if (query.PageSize == 0)
+        //    {
+        //        query.PageSize = 10;
+        //    }
 
-            var doctors = await doctorQueryable
-                .Include(d => d.User)
-                .Include(d => d.Specialization)
-                .Skip((query.Page - 1) * query.PageSize)
-                .Take(query.PageSize)
-                .ToListAsync();
+        //    var doctors = await doctorQueryable
+        //        .Include(d => d.User)
+        //        .Include(d => d.Specialization)
+        //        .Skip((query.Page - 1) * query.PageSize)
+        //        .Take(query.PageSize)
+        //        .ToListAsync();
 
-            return new PagedList<Doctor>
-            {
-                Items = doctors,
-                TotalPages = (int)Math.Ceiling((double)await doctorQueryable.CountAsync() / query.PageSize),
-            };
-        }
+        //    return new PagedList<Doctor>
+        //    {
+        //        Items = doctors,
+        //        TotalPages = (int)Math.Ceiling((double)await doctorQueryable.CountAsync() / query.PageSize),
+        //    };
+        //}
 
         public async Task<Doctor?> GetDoctorByIdAsync(Guid doctorId)
         {
             return await _context.Doctors
                 .Include(d => d.User)
                 .Include(d => d.Specialization)
+                .Include(d => d.Appointments)
+                    .ThenInclude(a => a.Review)
                 .FirstOrDefaultAsync(d => d.Id == doctorId);
         }
 
-        public async Task<PagedList<Doctor>> GetReviewedDoctorsAsync(DoctorQuery query)
+        public async Task<PagedList<Doctor>> GetDoctorsAsync(DoctorQuery query)
         {
             var doctorQueryable = _context.Doctors
                 .Where(d => d.User.Status == 0 || d.User.Status == 1)

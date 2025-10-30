@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import styles from '../../styles/auth/ChangePasswordModal.module.css';
+import { userService } from '../../services/userService';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -8,10 +9,10 @@ interface ChangePasswordModalProps {
   onSuccess?: () => void;
 }
 
-export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  onSuccess 
+export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess
 }) => {
   const { showToast } = useToast();
   const [passwordData, setPasswordData] = useState({
@@ -48,7 +49,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   // Password handlers
   const handlePasswordChange = (field: string, value: string) => {
     setPasswordData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear error when user starts typing
     if (passwordErrors[field]) {
       setPasswordErrors(prev => ({ ...prev, [field]: '' }));
@@ -57,22 +58,22 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   const handlePasswordBlur = (field: string, value: string) => {
     let error = '';
-    
+
     // Only validate confirm password on blur, new password validation is shown in requirements
     if (field === 'confirmPassword') {
       error = validatePasswordMatch(passwordData.newPassword, value) || '';
     }
-    
+
     setPasswordErrors(prev => ({ ...prev, [field]: error }));
   };
 
   const handleChangePassword = async () => {
     const errors: Record<string, string> = {};
-    
+
     if (!passwordData.currentPassword) {
-      errors.currentPassword = 'Mật khẩu hiện tại không được để trống';
+      errors.CurrentPassword = 'Mật khẩu hiện tại không được để trống';
     }
-    
+
     // Check if new password meets requirements (but don't show error message)
     const newPasswordError = validatePassword(passwordData.newPassword);
     if (newPasswordError) {
@@ -80,32 +81,49 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       setError('Mật khẩu mới chưa đáp ứng yêu cầu. Vui lòng kiểm tra danh sách yêu cầu bên dưới.');
       return;
     }
-    
+
     const confirmPasswordError = validatePasswordMatch(passwordData.newPassword, passwordData.confirmPassword);
     if (confirmPasswordError) {
-      errors.confirmPassword = confirmPasswordError;
+      errors.ConfirmPassword = confirmPasswordError;
     }
-    
+
     setPasswordErrors(errors);
-    
+
     if (Object.keys(errors).length > 0) {
       return;
     }
-    
+
     setChangingPassword(true);
     showToast('Đang đổi mật khẩu...', 'info');
-    
+    setError(null);
+
     try {
-      // TODO: Implement actual password change API call
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Mock API call
-      
+      const formData = new FormData();
+      formData.append('currentPassword', passwordData.currentPassword);
+      formData.append('newPassword', passwordData.confirmPassword);
+      formData.append('confirmPassword', passwordData.confirmPassword);
+      await userService.updatePassword(formData);
+
       showToast('Đổi mật khẩu thành công!', 'success');
       setTimeout(() => {
         handleClose();
         if (onSuccess) onSuccess();
       }, 1500);
-    } catch (e: any) {
-      showToast(e?.message || 'Không thể đổi mật khẩu', 'error');
+    } catch (error: any) {
+      if (error.response?.status === 400 && Array.isArray(error.response.data)) {
+        const errors: Record<string, string> = {};
+        error.response.data.forEach((item: any) => {
+          const field = item.memberNames?.[0];
+          const message = item.errorMessage;
+          if (field && message) {
+            errors[field] = message;
+          }
+        });
+        setPasswordErrors(errors);
+      } else {
+        console.error('Password update error: ', error);
+        showToast('Không thể đổi mật khẩu', 'error');
+      }
     } finally {
       setChangingPassword(false);
     }
@@ -137,8 +155,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             <i className="bi bi-key"></i>
             Đổi mật khẩu
           </h3>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={handleClose}
             className={styles.modalCloseBtn}
           >
@@ -153,7 +171,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               {error}
             </div>
           )}
-          
+
           {success && (
             <div className={styles.successMessage}>
               <i className="bi bi-check-circle"></i>
@@ -162,26 +180,26 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
           )}
 
           <div className={styles.passwordFieldGroup}>
-            <label className={`${styles.passwordFieldLabel} ${passwordErrors.currentPassword ? styles.fieldLabelError : ''}`}>
+            <label className={`${styles.passwordFieldLabel} ${passwordErrors.CurrentPassword ? styles.fieldLabelError : ''}`}>
               <i className="bi bi-lock"></i>
               Mật khẩu hiện tại
-              {passwordErrors.currentPassword && <span className={styles.errorIcon}>⚠️</span>}
+              {passwordErrors.CurrentPassword && <span className={styles.errorIcon}>⚠️</span>}
             </label>
             <div className={styles.passwordInputContainer}>
               <input
                 type={showPasswords.currentPassword ? "text" : "password"}
                 value={passwordData.currentPassword}
                 onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
-                className={`${styles.passwordFieldInput} ${passwordErrors.currentPassword ? styles.fieldInputError : ''}`}
+                className={`${styles.passwordFieldInput} ${passwordErrors.CurrentPassword ? styles.fieldInputError : ''}`}
                 placeholder="Nhập mật khẩu hiện tại"
               />
-              <i 
+              <i
                 className={`bi ${showPasswords.currentPassword ? 'bi-eye' : 'bi-eye-slash'}`}
                 onClick={() => togglePasswordVisibility('currentPassword')}
               ></i>
             </div>
-            {passwordErrors.currentPassword && (
-              <div className={styles.fieldError}>{passwordErrors.currentPassword}</div>
+            {passwordErrors.CurrentPassword && (
+              <div className={styles.fieldError}>{passwordErrors.CurrentPassword}</div>
             )}
           </div>
 
@@ -198,7 +216,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 className={styles.passwordFieldInput}
                 placeholder="Nhập mật khẩu mới"
               />
-              <i 
+              <i
                 className={`bi ${showPasswords.newPassword ? 'bi-eye' : 'bi-eye-slash'}`}
                 onClick={() => togglePasswordVisibility('newPassword')}
               ></i>
@@ -206,10 +224,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
           </div>
 
           <div className={styles.passwordFieldGroup}>
-            <label className={`${styles.passwordFieldLabel} ${passwordErrors.confirmPassword ? styles.fieldLabelError : ''}`}>
+            <label className={`${styles.passwordFieldLabel} ${passwordErrors.ConfirmPassword ? styles.fieldLabelError : ''}`}>
               <i className="bi bi-check-circle"></i>
               Xác nhận mật khẩu mới
-              {passwordErrors.confirmPassword && <span className={styles.errorIcon}>⚠️</span>}
+              {passwordErrors.ConfirmPassword && <span className={styles.errorIcon}>⚠️</span>}
             </label>
             <div className={styles.passwordInputContainer}>
               <input
@@ -217,16 +235,16 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 value={passwordData.confirmPassword}
                 onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
                 onBlur={(e) => handlePasswordBlur('confirmPassword', e.target.value)}
-                className={`${styles.passwordFieldInput} ${passwordErrors.confirmPassword ? styles.fieldInputError : ''}`}
+                className={`${styles.passwordFieldInput} ${passwordErrors.ConfirmPassword ? styles.fieldInputError : ''}`}
                 placeholder="Nhập lại mật khẩu mới"
               />
-              <i 
+              <i
                 className={`bi ${showPasswords.confirmPassword ? 'bi-eye' : 'bi-eye-slash'}`}
                 onClick={() => togglePasswordVisibility('confirmPassword')}
               ></i>
             </div>
-            {passwordErrors.confirmPassword && (
-              <div className={styles.fieldError}>{passwordErrors.confirmPassword}</div>
+            {passwordErrors.ConfirmPassword && (
+              <div className={styles.fieldError}>{passwordErrors.ConfirmPassword}</div>
             )}
           </div>
 
@@ -258,8 +276,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         </div>
 
         <div className={styles.modalFooter}>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={handleClose}
             className={styles.modalCancelBtn}
             disabled={changingPassword}
@@ -267,8 +285,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             <i className="bi bi-x-circle"></i>
             Hủy
           </button>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={handleChangePassword}
             className={styles.modalConfirmBtn}
             disabled={changingPassword}

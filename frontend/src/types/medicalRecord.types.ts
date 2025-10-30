@@ -25,3 +25,30 @@ export interface MedicalRecord {
   updatedAt: string;
   prescriptions: Prescription[];
 }
+
+export interface MedicalRecordDto{
+  id: string;
+  date: string;
+  doctor: string;
+  chiefComplaint: string;
+  diagnosis: string;
+  treatmentPlan: string;
+  attatchments: string[];
+}
+
+export interface MedicalRecordQuery{
+  skip: number;
+  take: number;
+  dateFrom: string | null;
+  dateTo: string | null;
+}
+
+export interface MedicalRecordDetail{
+  id: string;
+  date: string;
+  doctor: string;
+  chiefComplaint: string;
+  diagnosis: string;
+  treatmentPlan: string;
+  prescription: string;
+}

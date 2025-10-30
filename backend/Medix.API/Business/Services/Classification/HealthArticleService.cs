@@ -153,9 +153,6 @@ namespace Medix.API.Business.Services.Classification
             if (article == null)
                 return null;
 
-            // Increment view count
-            await _healthArticleRepository.IncrementViewCountAsync(article.Id);
-
             return new HealthArticlePublicDto
             {
                 Id = article.Id,
@@ -168,7 +165,7 @@ namespace Medix.API.Business.Services.Classification
                 MetaTitle = article.MetaTitle,
                 MetaDescription = article.MetaDescription,
                 StatusCode = article.StatusCode,
-                ViewCount = article.ViewCount + 1, // Show incremented count
+                ViewCount = article.ViewCount, // Return the actual current count
                 LikeCount = article.LikeCount,
                 PublishedAt = article.PublishedAt,
                 IsHomepageVisible = article.IsHomepageVisible,
@@ -186,6 +183,12 @@ namespace Medix.API.Business.Services.Classification
                     })
                     .ToList()
             };
+        }
+
+        // New method specifically for incrementing view count
+        public async Task IncrementViewCountOnlyAsync(Guid articleId)
+        {
+            await _healthArticleRepository.IncrementViewCountAsync(articleId);
         }
 
         public async Task<(int total, IEnumerable<HealthArticlePublicDto> data)> GetByCategoryAsync(Guid categoryId, int page = 1, int pageSize = 10)

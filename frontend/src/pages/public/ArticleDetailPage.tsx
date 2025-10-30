@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import '../../styles/public/ArticleDetailPage.css';
 import homeStyles from '../../styles/public/home.module.css';
@@ -63,6 +63,10 @@ export default function ArticleDetailPage() {
   const [likeBusy, setLikeBusy] = useState(false);
   const [liked, setLiked] = useState(false);
 
+  // Ref to track if the view has been incremented for the current slug
+  // This prevents double-incrementing in React's StrictMode.
+  const viewIncrementedRef = useRef<{ [key: string]: boolean }>({});
+
   // load categories + article + recent
   useEffect(() => {
     (async () => {
@@ -71,8 +75,13 @@ export default function ArticleDetailPage() {
         setLoading(false);
         return;
       }
-      setLoading(true);
-      setError(null);
+
+      // Only show full loading state if this is the first time processing this slug
+      if (!viewIncrementedRef.current[slug]) {
+        setLoading(true);
+        setError(null);
+      }
+
       try {
         const [catRes, articleRes] = await Promise.all([
           categoryService.list(1, 9999),
@@ -96,9 +105,20 @@ export default function ArticleDetailPage() {
           const key = `medix-liked-${articleRes.id}`;
           setLiked(localStorage.getItem(key) === '1');
         } catch {}
-        // lấy bài viết mới (client-side lọc khác slug)
-        const { items } = await articleService.list(1, 20);
-        const filtered = (items || [])
+
+        // Increment view count only once per slug visit
+        if (articleRes.id && !viewIncrementedRef.current[slug]) {
+          viewIncrementedRef.current[slug] = true; // Mark as incremented immediately
+          articleService.incrementView(articleRes.id)
+            .then(() => {
+              // Optimistically update the UI to show +1 view instantly
+              setArticle(prev => prev ? { ...prev, viewCount: (prev.viewCount || 0) + 1 } : null);
+            })
+            .catch((err) => console.error("Failed to increment view count:", err));
+        }
+
+        const { items: recentItems } = await articleService.list(1, 20);
+        const filtered = (recentItems || [])
           .filter(a => a.slug !== articleRes.slug)
           .sort((a, b) => {
             const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
@@ -107,10 +127,6 @@ export default function ArticleDetailPage() {
           })
           .slice(0, 6);
         setRecent(filtered);
-        // tăng view (best-effort)
-        if (articleRes.id) {
-          articleService.incrementView(articleRes.id).catch(() => {});
-        }
       } catch (e) {
         console.error(e);
         setError('Đã xảy ra lỗi khi tải dữ liệu.');
@@ -118,6 +134,7 @@ export default function ArticleDetailPage() {
         setLoading(false);
       }
     })();
+    // `viewIncrementedRef` is a ref, so it doesn't need to be in the dependency array.
   }, [slug]);
 
   useEffect(() => {

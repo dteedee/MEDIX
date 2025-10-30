@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.AspNetCore.Mvc;
+﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Services.Community;
 using Microsoft.Extensions.Logging;
@@ -241,5 +241,16 @@ namespace Medix.API.Presentation.Controller.Classification
             return Ok(User.Claims.Select(c => new { c.Type, c.Value }));
         }
 
+        [HttpPost("{id}/view")]
+        [AllowAnonymous] // Allow anyone to trigger a view count
+        public async Task<IActionResult> IncrementView(Guid id)
+        {
+            // This endpoint now exists and will handle the view increment request
+            // It has a single responsibility: increment the view count.
+            await _healthArticleService.IncrementViewCountOnlyAsync(id);
+            
+            // Return 200 OK to confirm the action was received.
+            return Ok();
+        }
     }
 }

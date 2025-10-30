@@ -141,3 +141,28 @@
   .adp-container { padding: 18px 12px 48px; gap: 20px; }
   .adp-hero-media { height: 220px; }
 }
+
+/* Breadcrumb */
+.adp-breadcrumb {
+  width: min(1440px, 96vw);
+  margin: 8px auto 0;
+  padding: 8px 16px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.adp-breadcrumb .crumb {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 0;
+  font-weight: 600;
+}
+.adp-breadcrumb .crumb:hover { text-decoration: underline; }
+.adp-breadcrumb .crumb.current {
+  color: var(--text-secondary);
+  cursor: default;
+  font-weight: 600;
+  text-decoration: none;
+}
+.adp-breadcrumb .sep { margin: 0 6px; color: var(--text-muted); }

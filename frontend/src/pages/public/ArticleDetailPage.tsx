@@ -242,6 +242,15 @@ export default function ArticleDetailPage() {
         </ul>
       </nav>
 
+      {/* Breadcrumb */}
+      <div className="adp-breadcrumb" aria-label="breadcrumb">
+        <button className="crumb" onClick={() => navigate('/')}>Trang chủ</button>
+        <span className="sep">/</span>
+        <button className="crumb" onClick={() => navigate('/articles')}>Bài viết sức khỏe</button>
+        <span className="sep">/</span>
+        <span className="crumb current" title={article?.title || ''}>{article?.title || ''}</span>
+      </div>
+
       <div className="adp-container">
         {/* Sidebar */}
         <aside className="adp-sidebar">

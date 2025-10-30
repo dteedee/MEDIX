@@ -91,17 +91,10 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<bool> UpdateDoctorProfileAsync(Doctor existingDoctor, DoctorProfileUpdateRequest req)
         {
-            existingDoctor.User.FullName = req.FullName;
-            existingDoctor.User.DateOfBirth = (req.Dob == null || string.IsNullOrWhiteSpace(req.Dob)) ? null : DateOnly.Parse(req.Dob);
-            if (existingDoctor.User.PhoneNumber != req.PhoneNumber)
-            {
-                existingDoctor.User.PhoneNumber = req.PhoneNumber;
-                existingDoctor.User.PhoneNumberConfirmed = false;
-            }
-
-            existingDoctor.Bio = req.Bio;
-            existingDoctor.Education = req.Education;
-            existingDoctor.YearsOfExperience = (int)(req.YearsOfExperience == null ? 0 : req.YearsOfExperience);
+            existingDoctor.User.UserName = req.UserName;
+            existingDoctor.User.NormalizedUserName = req.UserName.ToUpper();
+            existingDoctor.User.PhoneNumber = req.PhoneNumber;
+            existingDoctor.User.Address = req.Address;
 
             var updatedDoctor = await _doctorRepository.UpdateDoctorAsync(existingDoctor);
             return updatedDoctor != null;

@@ -101,17 +101,23 @@ namespace Medix.API.Presentation.Controller.Classification
 
                 return Ok(new
                 {
-                    doctor.User.UserName,
-                    doctor.User.Email,
                     doctor.User.AvatarUrl,
-                    doctor.User.PhoneNumber,
+                    UserName = doctor.User.UserName.ToLower(),
                     doctor.User.FullName,
-                    doctor.User.DateOfBirth,
+                    Email = doctor.User.Email.ToLower(),
+                    doctor.User.PhoneNumber,
                     doctor.User.Address,
-                    doctor.Education,
-                    doctor.Bio,
+                    Dob = doctor.User.DateOfBirth?.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
+                    doctor.User.IdentificationNumber,
+                    doctor.User.GenderCode,
+                    Specialization = doctor.Specialization.Name,
+                    doctor.LicenseNumber,
+                    Education = DoctorDegree.GetDescription(doctor.Education),
+                    ServiceTier = doctor.ServiceTier?.Name,
                     doctor.YearsOfExperience,
-                    doctor.ConsultationFee,
+                    doctor.Bio,
+                    doctor.LicenseImageUrl,
+                    doctor.DegreeFilesUrl,
                 });
             }
             catch (Exception ex)
@@ -315,7 +321,7 @@ namespace Medix.API.Presentation.Controller.Classification
                 prevResult.Add(new ValidationResult("Mật khẩu mới không được trùng với mật khẩu hiện tại", new string[] { "NewPassword" }));
             }
 
-            if (req.NewPassword != req.ConfirmNewPassword)
+            if (req.NewPassword != req.ConfirmPassword)
             {
                 prevResult.Add(new ValidationResult("Mật khẩu không khớp", new string[] { "ConfirmNewPassword" }));
             }
@@ -337,13 +343,20 @@ namespace Medix.API.Presentation.Controller.Classification
                 prevResult.Add(new ValidationResult("Số điện thoại đã được sử dụng", new[] { "PhoneNumber" }));
             }
 
+            if (request.UserName != null
+                && request.UserName != doctor.User.UserName
+                && await _userSerivce.UserNameExistsAsync(request.UserName))
+            {
+                prevResult.Add(new ValidationResult("Tên đăng nhập đã được sử dụng", new[] { "UserName" }));
+            }
+
             return prevResult;
         }
     }
 
     public class UpdateAvatarRequest
     {
-        [ImageFile]
+        [RequiredImage(MaxSizeInMB = 1)]
         public IFormFile? Avatar { get; set; }
     }
 }

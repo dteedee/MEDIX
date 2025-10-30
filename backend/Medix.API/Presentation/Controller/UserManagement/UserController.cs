@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Claims; 
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.Community;
@@ -15,6 +15,10 @@ using Medix.API.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Medix.API.Business.Interfaces.Community;
 using Microsoft.Extensions.Logging;
+using Medix.API.Business.Services.UserManagement;
+using Medix.API.Models.DTOs.Doctor;
+using System.ComponentModel.DataAnnotations;
+using AutoMapper;
 
 namespace Medix.API.Presentation.Controller.UserManagement
 {
@@ -27,15 +31,17 @@ namespace Medix.API.Presentation.Controller.UserManagement
         private readonly IEmailService _emailService;
         private readonly ILogger<UserController> _logger;
         private readonly IPatientService _patientService;
+        private readonly IMapper _mapper;
 
-        public UserController(ILogger<UserController> logger, IUserService userService, MedixContext context, IEmailService emailService, IPatientService patientService)
+        public UserController(ILogger<UserController> logger, IUserService userService, MedixContext context, IEmailService emailService, IPatientService patientService
+            ,IMapper mapper)
         {
             _logger = logger;
             _userService = userService;
             _context = context;
             _emailService = emailService;
             _patientService = patientService;
-
+            _mapper = mapper;
         }
 
         // ========================= USER SELF MANAGEMENT =========================
@@ -343,6 +349,69 @@ namespace Medix.API.Presentation.Controller.UserManagement
             }
 
             return new string(password);
+        }
+
+        [HttpPut("update-password")]
+        [Authorize]
+        public async Task<IActionResult> UpdateDoctorPassword([FromBody] PasswordUpdatePresenter pre)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+                if (userId == null)
+                {
+                    return Unauthorized(new { Message = "User ID not found in token" });
+                }
+                var user = await _userService.GetUserAsync(Guid.Parse(userId.Value));
+                if (user == null)
+                {
+                    return NotFound(new { Message = "Doctor not found" });
+                }
+
+                var req = _mapper.Map<PasswordUpdateRequest>(pre);
+                var validationResults = new List<ValidationResult>();
+                var context = new ValidationContext(req, null, null);
+
+                Validator.TryValidateObject(req, context, validationResults, true);
+                ValidateNewPassword(validationResults, req, user.PasswordHash);
+                if (validationResults.Any())
+                {
+                    return BadRequest(validationResults);
+                }
+
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+                var updatedUser = await _userService.UpdateUserAsync(user);
+                if (updatedUser == null)
+                {
+                    return StatusCode(500, new { Message = "An error occurred while updating the password" });
+                }
+
+                return Ok(new { Message = "Password updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while updating doctor password.");
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        private List<ValidationResult> ValidateNewPassword(List<ValidationResult> prevResult, PasswordUpdateRequest req, string oldPassword)
+        {
+            if (req.NewPassword == oldPassword)
+            {
+                prevResult.Add(new ValidationResult("Mật khẩu mới không được trùng với mật khẩu hiện tại", new string[] { "NewPassword" }));
+            }
+
+            if (req.NewPassword != req.ConfirmPassword)
+            {
+                prevResult.Add(new ValidationResult("Mật khẩu không khớp", new string[] { "ConfirmNewPassword" }));
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, oldPassword))
+            {
+                prevResult.Add(new ValidationResult("Mật khẩu cũ không đúng", new string[] { "CurrentPassword" }));
+            }
+            return prevResult;
         }
     }
 }

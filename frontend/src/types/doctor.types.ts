@@ -39,11 +39,11 @@ export interface SpecializationDto {
   name: string;
 }
 
-export interface DoctorRegisterMetadata{
+export interface DoctorRegisterMetadata {
   specializations: SpecializationDto[];
 }
 
-export interface ReviewDto{
+export interface ReviewDto {
   rating: number;
   comment: string;
   date: string;
@@ -57,12 +57,12 @@ export interface DoctorScheduleDto {
   endTime: string;
   isAvailable: boolean;
 }
-export interface DoctorTypeDegreeDto{
- code: string;
- description: string;
+export interface DoctorTypeDegreeDto {
+  code: string;
+  description: string;
 }
 
-export interface DoctorProfileDto{
+export interface DoctorProfileDto {
   doctorID?: string;
   avatarUrl?: string;
   fullName: string;
@@ -77,18 +77,24 @@ export interface DoctorProfileDto{
   schedules: DoctorScheduleDto[];
 }
 
-export interface DoctorProfileDetails{
-  userName: string;
-  email: string;
+export interface DoctorProfileDetails {
   avatarUrl: string;
-  phoneNumber: string;
+  userName: string;
   fullName: string;
-  dateOfBirth: string;
+  email: string;
+  phoneNumber: string;
   address: string;
+  dob: string;
+  identificationNumber: string;
+  genderCode: string;
+  specialization: string;
+  licenseNumber: string;
   education: string;
+  serviceTier: string;
+  yearsOfExperience: string;
   bio: string;
-  yearsOfExperience: number;
-  consultationFee: string;
+  licenseImageUrl: string;
+  degreeFilesUrl: string;
 }
 
 // Types for Service Tier API with Pagination
@@ -171,7 +177,7 @@ export interface DoctorRegisterForm {
   createdAt: string;
 }
 
-export interface DoctorDto{
+export interface DoctorDto {
   id: string;
   avatarUrl: string;
   fullName: string;
@@ -186,7 +192,7 @@ export interface DoctorDto{
   createdAt: string;
 }
 
-export interface DoctorList{
+export interface DoctorList {
   totalPages: number;
   items: DoctorDto[];
 }

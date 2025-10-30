@@ -13,16 +13,7 @@ class DoctorService {
     }
 
     async getDoctorProfileDetails(): Promise<DoctorProfileDetails> {
-        const accessToken = localStorage.getItem('accessToken');
-
-        if (!accessToken) {
-            throw new Error('No access token found - please login');
-        }
-        const response = await apiClient.get<DoctorProfileDetails>('doctor/profile/details', {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        });
+        const response = await apiClient.get<DoctorProfileDetails>('doctor/profile/details');
         return response.data;
     }
 
@@ -35,9 +26,9 @@ class DoctorService {
         return response.data;
     }
 
-    async updatePassword(payload: FormData): Promise<any> {
-        await apiClient.put('doctor/profile/update-password', payload);
-    }
+    // async updatePassword(payload: FormData): Promise<any> {
+    //     await apiClient.put('doctor/profile/update-password', payload);
+    // }
 
     async getDoctorsGroupedByTier(queryParams: DoctorQueryParameters): Promise<ServiceTierWithPaginatedDoctorsDto[]> {
         try {

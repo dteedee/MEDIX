@@ -103,9 +103,12 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({ isOpen, onClose, form
 
 const ScheduleManagement: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
-  const [schedules, setSchedules] = useState<DoctorSchedule[]>([]);
-  const [scheduleOverrides, setScheduleOverrides] = useState<ScheduleOverride[]>([]);
-  const [allAppointmentsInView, setAllAppointmentsInView] = useState<Appointment[]>([]); // New state for all appointments in the current view
+  const [viewData, setViewData] = useState<{
+    schedules: DoctorSchedule[];
+    overrides: ScheduleOverride[];
+    appointments: Appointment[];
+  }>({ schedules: [], overrides: [], appointments: [] });
+
   const [currentDayAppointments, setCurrentDayAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,74 +120,87 @@ const ScheduleManagement: React.FC = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false); // State cho modal chi tiết
 
   const [viewMode, setViewMode] = useState<ViewMode>('month');
-  // Map schedules by day of the week for quick lookup
-  const schedulesByDayOfWeek = useMemo(() => {
-    const map = new Map<number, DoctorSchedule[]>();
-    schedules.forEach(schedule => {
+
+  // Gộp tất cả các logic xử lý dữ liệu vào một useMemo duy nhất
+  // để đảm bảo tính nhất quán và tránh race condition khi render.
+  const { schedulesByDayOfWeek, scheduleOverridesByDate, appointmentsByDate } = useMemo(() => {
+    const schedulesMap = new Map<number, DoctorSchedule[]>();
+    viewData.schedules.forEach(schedule => {
       const day = schedule.dayOfWeek;
-      if (!map.has(day)) {
-        map.set(day, []);
-      }
-      map.get(day)?.push(schedule);
+      if (!schedulesMap.has(day)) schedulesMap.set(day, []);
+      schedulesMap.get(day)?.push(schedule);
     });
-    return map;
-  }, [schedules]);
 
-  const fetchSchedules = async () => {
+    const overridesMap = new Map<string, ScheduleOverride[]>();
+    viewData.overrides.forEach(override => {
+      const dateKey = override.overrideDate;
+      if (!overridesMap.has(dateKey)) overridesMap.set(dateKey, []);
+      overridesMap.get(dateKey)?.push(override);
+    });
+
+    const appointmentsMap = new Map<string, Appointment[]>();
+    viewData.appointments.forEach(appointment => {
+      const dateKey = appointment.appointmentStartTime.substring(0, 10);
+      if (!appointmentsMap.has(dateKey)) appointmentsMap.set(dateKey, []);
+      appointmentsMap.get(dateKey)?.push(appointment);
+    });
+
+    return { schedulesByDayOfWeek: schedulesMap, scheduleOverridesByDate: overridesMap, appointmentsByDate: appointmentsMap };
+  }, [viewData]);
+
+  const refreshAllData = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    if (!isAuthenticated || !user?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+
+    let startDate: Date;
+    let endDate: Date;
+
+    if (viewMode === 'month') {
+      startDate = new Date(Date.UTC(year, month, 1));
+      endDate = new Date(Date.UTC(year, month + 1, 0)); // Last day of the month
+    } else { // week view
+      const dayOfWeek = currentMonth.getUTCDay(); // 0=Sun, 1=Mon
+      const offset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Adjust to start on Monday
+      const startOfWeek = new Date(currentMonth);
+      startOfWeek.setUTCDate(startOfWeek.getUTCDate() + offset);
+      
+      startDate = new Date(Date.UTC(startOfWeek.getUTCFullYear(), startOfWeek.getUTCMonth(), startOfWeek.getUTCDate()));
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setUTCDate(endOfWeek.getUTCDate() + 6);
+      endDate = new Date(Date.UTC(endOfWeek.getUTCFullYear(), endOfWeek.getUTCMonth(), endOfWeek.getUTCDate()));
+    }
+    
     try {
-      setIsLoading(true);
-      if (!isAuthenticated || !user?.id) {
-        setError('Bạn cần đăng nhập để xem và quản lý lịch làm việc.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Fetch both fixed schedules and schedule overrides concurrently
+      // Sử dụng Promise.all để lấy tất cả dữ liệu cần thiết cùng lúc
+      // Tách ra để đảm bảo schedules và overrides được fetch trước, tránh race condition khi render
       const [fixedSchedules, overrides] = await Promise.all([
         scheduleService.getMySchedules(),
-        scheduleService.getMyScheduleOverrides(),
+        scheduleService.getMyScheduleOverrides()
       ]);
 
-      setSchedules(fixedSchedules);
-      setScheduleOverrides(overrides);
-      setError(null);
+      // Sau khi có lịch, mới fetch các cuộc hẹn
+      const appointments = await appointmentService.getMyAppointmentsByDateRange(toYYYYMMDD(startDate), toYYYYMMDD(endDate));
+
+      setViewData({
+        schedules: fixedSchedules,
+        overrides: overrides,
+        appointments: appointments
+      });
     } catch (err) {
-      setError('Không thể tải danh sách lịch làm việc. Vui lòng thử lại.');
-      console.error('Error fetching schedules:', err);
+      console.error('Error fetching data for view:', err);
+      setError('Không thể tải dữ liệu lịch. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Map schedule overrides by date for quick lookup
-  const scheduleOverridesByDate = useMemo(() => {
-    const map = new Map<string, ScheduleOverride[]>();
-    scheduleOverrides.forEach(override => {
-      const dateKey = override.overrideDate; // API returns YYYY-MM-DD
-      if (!map.has(dateKey)) {
-        map.set(dateKey, []);
-      }
-      map.get(dateKey)?.push(override);
-    });
-    return map;
-  }, [scheduleOverrides]);
-
-  // Map all appointments in view by date for quick lookup
-  const appointmentsByDate = useMemo(() => {
-    const map = new Map<string, Appointment[]>();
-    allAppointmentsInView.forEach(appointment => {
-      // Assuming appointmentStartTime is an ISO string, convert to Date and then to YYYY-MM-DD
-      // Lấy chuỗi YYYY-MM-DD trực tiếp từ chuỗi ISO để đảm bảo tính chính xác
-      // Ví dụ: "2023-12-15T02:00:00Z" -> "2023-12-15"
-      const dateKey = appointment.appointmentStartTime.substring(0, 10);
-      if (!map.has(dateKey)) {
-        map.set(dateKey, []);
-      }
-      (map.get(dateKey) as Appointment[]).push(appointment);
-    });
-    return map;
-  }, [allAppointmentsInView]);
-
 
   // Effect để lấy cuộc hẹn khi ngày được chọn thay đổi
   useEffect(() => {
@@ -208,48 +224,8 @@ const ScheduleManagement: React.FC = () => {
 
   // Effect to fetch all appointments for the current month/week view
   useEffect(() => {
-    const fetchAppointmentsForView = async () => {
-      setAllAppointmentsInView([]); // Xóa dữ liệu cũ trước khi fetch dữ liệu mới
-      if (!isAuthenticated || !user?.id) {
-        setAllAppointmentsInView([]);
-        return;
-      }
-
-      const year = currentMonth.getFullYear();
-      const month = currentMonth.getMonth();
-
-      let startDate: Date;
-      let endDate: Date;
-
-      if (viewMode === 'month') {
-        startDate = new Date(Date.UTC(year, month, 1));
-        endDate = new Date(Date.UTC(year, month + 1, 0)); // Last day of the month
-      } else { // week view
-        const dayOfWeek = currentMonth.getUTCDay(); // 0=Sun, 1=Mon
-        const offset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Adjust to start on Monday
-        const startOfWeek = new Date(currentMonth);
-        startOfWeek.setUTCDate(startOfWeek.getUTCDate() + offset);
-        
-        startDate = new Date(Date.UTC(startOfWeek.getUTCFullYear(), startOfWeek.getUTCMonth(), startOfWeek.getUTCDate()));
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setUTCDate(endOfWeek.getUTCDate() + 6);
-        endDate = new Date(Date.UTC(endOfWeek.getUTCFullYear(), endOfWeek.getUTCMonth(), endOfWeek.getUTCDate()));
-      }
-      
-      try {
-        const appointments = await appointmentService.getMyAppointmentsByDateRange(toYYYYMMDD(startDate), toYYYYMMDD(endDate));
-        setAllAppointmentsInView(appointments);
-      } catch (err) {
-        console.error('Error fetching appointments for view:', err);
-        setAllAppointmentsInView([]);
-      }
-    };
-    fetchAppointmentsForView();
-  }, [currentMonth, viewMode, isAuthenticated, user?.id]); // Dependencies for fetching appointments for the entire view
-
-  useEffect(() => {
-    fetchSchedules();
-  }, [isAuthenticated, user?.id]);
+    refreshAllData();
+  }, [currentMonth, viewMode, isAuthenticated, user?.id]);
 
   const { daysToRender, headerLabel } = useMemo(() => {
     const year = currentMonth.getFullYear();
@@ -386,7 +362,9 @@ const ScheduleManagement: React.FC = () => {
                 }
                 const dayNumber = date.getUTCDate();
                 const dayOfWeek = date.getUTCDay(); // Sunday is 0, Monday is 1
-                const timeSlots = schedulesByDayOfWeek.get(dayOfWeek) || [];
+                const timeSlots = (schedulesByDayOfWeek.get(dayOfWeek) || []).sort((a, b) =>
+                  a.startTime.localeCompare(b.startTime)
+                );
                 const hasFixedSchedule = timeSlots.length > 0; // Check if there's any fixed schedule
                 const fullDateString = toYYYYMMDD(date);
                 const hasFlexibleOverride = scheduleOverridesByDate.has(fullDateString);
@@ -458,11 +436,11 @@ const ScheduleManagement: React.FC = () => {
 
       {/* Render các modal */}
       {isModalOpen && (
-        <FixedScheduleManager schedules={schedules} onClose={() => setIsModalOpen(false)} onRefresh={fetchSchedules} />
+        <FixedScheduleManager schedules={viewData.schedules} onClose={() => setIsModalOpen(false)} onRefresh={refreshAllData} />
       )}
 
       {isOverrideModalOpen && (
-        <FlexibleScheduleManager overrides={scheduleOverrides} onClose={() => setIsOverrideModalOpen(false)} onRefresh={fetchSchedules} />
+        <FlexibleScheduleManager overrides={viewData.overrides} onClose={() => setIsOverrideModalOpen(false)} onRefresh={refreshAllData} />
       )}
 
       <DayDetailsModal
@@ -470,7 +448,7 @@ const ScheduleManagement: React.FC = () => {
         onClose={() => setIsDetailsModalOpen(false)}
         formattedDate={getFormattedSelectedDate()}
         schedules={selectedDaySchedules}
-        overrides={selectedDayOverrides}
+        overrides={selectedDayOverrides} // Giữ nguyên vì selectedDayOverrides đã được tính toán đúng
         appointments={selectedDayAppointments}
       />
     </div>

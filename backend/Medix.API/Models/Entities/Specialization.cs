@@ -23,5 +23,7 @@ public partial class Specialization
 
     public virtual ICollection<AISymptomAnalysis> AISymptomAnalyses { get; set; } = new List<AISymptomAnalysis>();
 
+    public virtual ICollection<DoctorRegistrationForm> DoctorRegistrationForms { get; set; } = new List<DoctorRegistrationForm>();
+
     public virtual ICollection<Doctor> Doctors { get; set; } = new List<Doctor>();
 }

@@ -37,6 +37,8 @@ public partial class Doctor
 
     public DateTime UpdatedAt { get; set; }
 
+    public string DegreeFilesUrl { get; set; } = null!;
+
     public virtual ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
 
     public virtual ICollection<DoctorAdCampaign> DoctorAdCampaigns { get; set; } = new List<DoctorAdCampaign>();

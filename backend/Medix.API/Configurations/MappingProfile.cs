@@ -130,6 +130,7 @@ namespace Medix.API.Configurations
             CreateMap<DoctorScheduleOverride, DoctorScheduleOverrideDto>().ReverseMap();
             CreateMap<CreateDoctorScheduleOverrideDto, DoctorScheduleOverride>();
             CreateMap<UpdateDoctorScheduleOverrideDto, DoctorScheduleOverride>();
+            CreateMap<DoctorProfileUpdatePresenter, DoctorProfileUpdateRequest>();
         }
     }
 }

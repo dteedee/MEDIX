@@ -1,91 +1,124 @@
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useEffect, useState } from 'react';
+import styles from '../../styles/doctor/DoctorProfile.module.css';
+import { LoadingSpinner } from '../../components/ui';
+import { DoctorProfileDetails } from '../../types/doctor.types';
+import DoctorService from '../../services/doctorService';
 import { useToast } from '../../contexts/ToastContext';
-import { userService, UserBasicInfo, UpdateUserInfo } from '../../services/userService';
-import doctorService from '../../services/doctorService';
-import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import axios from 'axios';
 import { ChangePasswordModal } from '../auth/ChangePasswordModal';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
-import styles from '../../styles/doctor/DoctorProfile.module.css';
 
-interface ExtendedUserInfo extends UserBasicInfo {
-  cccd?: string;
-  identificationNumber?: string;
-  gender?: 'male' | 'female' | 'other';
-  role?: string;
-  specialization?: string;
-  licenseNumber?: string;
-  licenseUrl?: string;
-  certificates?: string;
-  certificationUrl?: string;
-  yearsOfExperience?: number;
-  education?: string;
-  bio?: string;
-  serviceTier?: string;
-}
-
-interface ExtendedUpdateUserInfo extends UpdateUserInfo {
-  username?: string;
-  fullName?: string;
+interface DoctorUpdateRequest {
+  userName?: string;
   phoneNumber?: string;
   address?: string;
-  cccd?: string;
-  imageURL?: string;
-  consultationFee?: string;
-  yearsOfExperience?: string | number;
-  bio?: string;
-  specialization?: string;
-  licenseNumber?: string;
 }
 
-const formatDate = (iso: string | null | undefined) => {
-  if (!iso) return '';
-  try {
-    const [y, m, d] = iso.split('-');
-    return `${d}/${m}/${y}`;
-  } catch {
-    return iso;
-  }
-};
-
-const formatCurrency = (amount: string | number) => {
-  if (!amount) return '';
-  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND'
-  }).format(numAmount);
-};
-
 export const DoctorProfile: React.FC = () => {
-  const { user, updateUser } = useAuth();
   const { showToast } = useToast();
-  const [data, setData] = useState<ExtendedUserInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState<ExtendedUpdateUserInfo>({});
+
+  const [pageLoading, setPageLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
-  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [uploadingCert, setUploadingCert] = useState(false);
   const [uploadingDegree, setUploadingDegree] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
 
-  // Validation functions
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [data, setData] = useState<DoctorProfileDetails | null>(null);
+  const [editData, setEditData] = useState<DoctorUpdateRequest>();
+
+  const [fieldErrors, setFieldErrors] = useState<any>({});
+
+  const previewImage = "https://res.cloudinary.com/dvyswwdcz/image/upload/v1760970670/default_avatar_cnnmzg.jpg";
+
+  useEffect(() => {
+    setError(null);
+    (async () => {
+      try {
+        let response = await DoctorService.getDoctorProfileDetails();
+        setData(response);
+        setEditData({
+          userName: response.userName || '',
+          address: response.address || '',
+          phoneNumber: response.phoneNumber || '',
+        });
+      } catch (error: any) {
+        console.log('Failed to fetch user profile: ', error);
+        setError('Đã có lỗi xảy ra. Vui lòng thử lại sau.');
+      }
+      setPageLoading(false);
+    })();
+    return () => { }
+  }, []);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    setUploading(true);
+    setError(null);
+    try {
+      const response = await DoctorService.updateAvatar(formData);
+      console.log(response);
+      const newUrl = response.avatarUrl;
+
+      setData((prev) => ({
+        ...prev!,
+        avatarUrl: newUrl,
+      }));
+
+      showToast('Cập nhật ảnh đại diện thành công!', 'success');
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const errorData = error.response?.data;
+
+        if (status === 400 && errorData?.errors?.Avatar?.[0]) {
+          setError(errorData.errors.Avatar[0]);
+        } else if (status === 500) {
+          setError('Đã xảy ra lỗi máy chủ. Vui lòng thử lại sau.');
+        } else {
+          setError('Không thể tải ảnh lên. Vui lòng kiểm tra kết nối hoặc thử lại.');
+        }
+      } else {
+        setError('Lỗi không xác định. Vui lòng thử lại.');
+      }
+    }
+    setUploading(false);
+  };
+
+  const handleCancel = () => {
+    if (data) {
+      setEditData({
+        userName: data.userName || '',
+        address: data.address || '',
+        phoneNumber: data.phoneNumber || '',
+      });
+    }
+    setIsEditing(false);
+    setError(null);
+    setSuccess(null);
+    setFieldErrors({});
+  };
+
+  const getFieldDisplayName = (field: string): string => {
+    const fieldNames: Record<string, string> = {
+      userName: 'Tên tài khoản',
+      phoneNumber: 'Số điện thoại',
+    };
+    return fieldNames[field] || field;
+  };
+
   const validateUsername = (username: string): string | null => {
     if (!username) return 'Tên tài khoản không được để trống';
     if (username.length < 6) return 'Tên tài khoản phải có ít nhất 6 ký tự';
-    return null;
-  };
-
-  const validateEmail = (email: string): string | null => {
-    if (!email) return 'Email không được để trống';
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return 'Email không hợp lệ';
     return null;
   };
 
@@ -95,81 +128,48 @@ export const DoctorProfile: React.FC = () => {
     return null;
   };
 
-  const validateCCCD = (cccd: string): string | null => {
-    if (!cccd) return 'CCCD không được để trống';
-    if (!/^\d{12}$/.test(cccd)) return 'CCCD phải có đúng 12 chữ số';
-    return null;
-  };
-
-  const validateYearsOfExperience = (years: string): string | null => {
-    if (!years) return 'Số năm kinh nghiệm không được để trống';
-    const numYears = parseInt(years);
-    if (isNaN(numYears) || numYears < 0) return 'Số năm kinh nghiệm phải là số dương';
-    return null;
-  };
-
-  const validateSpecialization = (specialization: string): string | null => {
-    if (!specialization) return 'Chuyên khoa không được để trống';
-    if (specialization.trim().length < 2) return 'Chuyên khoa phải có ít nhất 2 ký tự';
-    return null;
-  };
-
-  const validateLicenseNumber = (license: string): string | null => {
-    if (!license) return 'Số chứng chỉ không được để trống';
-    if (license.trim().length < 3) return 'Số chứng chỉ phải có ít nhất 3 ký tự';
-    return null;
-  };
-
-
   const validateField = (fieldName: string, value: string): string | null => {
     switch (fieldName) {
-      case 'username':
+      case 'userName':
         return validateUsername(value);
-      case 'fullName':
-        if (!value || value.trim() === '') return 'Họ và tên không được để trống';
-        if (value.trim().length < 2) return 'Họ và tên phải có ít nhất 2 ký tự';
-        return null;
-      case 'email':
-        return validateEmail(value);
       case 'phoneNumber':
         return validatePhoneNumber(value);
-      case 'cccd':
-        return validateCCCD(value);
-      case 'yearsOfExperience':
-        return validateYearsOfExperience(value);
-      case 'specialization':
-        return validateSpecialization(value);
-      case 'licenseNumber':
-        return validateLicenseNumber(value);
       default:
         return null;
     }
   };
 
   const validateAllFields = (): boolean => {
-    const errors: Record<string, string> = {};
+    const errors: Record<string, string[]> = {};
     let isValid = true;
 
     // Validate required fields
-    const requiredFields = ['username', 'fullName', 'email', 'phoneNumber', 'cccd', 'yearsOfExperience'];
-    
+    const requiredFields = ['userName', 'phoneNumber'];
+
     for (const field of requiredFields) {
-      const value = editData[field as keyof typeof editData];
+      const value = editData?.[field as keyof typeof editData];
       if (!value || value.toString().trim() === '') {
-        errors[field] = `${getFieldDisplayName(field)} không được để trống`;
+        errors[field] = [`${getFieldDisplayName(field)} không được để trống`];
         isValid = false;
       } else {
         const error = validateField(field, value.toString());
         if (error) {
-          errors[field] = error;
+          switch (field) {
+            case 'userName':
+              errors.UserName = [error];
+              break;
+            case 'phoneNumber':
+              errors.PhoneNumber = [error];
+              break;
+          }
           isValid = false;
         }
       }
     }
 
     // Validate optional fields if they have values
-    if (editData.address && editData.address.trim() === '') {
-      errors.address = 'Địa chỉ không được để trống nếu đã nhập';
+    if (editData?.address && editData.address.trim() === '') {
+      errors.address = ['Địa chỉ không được để trống nếu đã nhập'];
       isValid = false;
     }
 
@@ -177,111 +177,18 @@ export const DoctorProfile: React.FC = () => {
     return isValid;
   };
 
-  const getFieldDisplayName = (field: string): string => {
-    const fieldNames: Record<string, string> = {
-      username: 'Tên tài khoản',
-      fullName: 'Họ và tên',
-      email: 'Email',
-      phoneNumber: 'Số điện thoại',
-      cccd: 'CCCD',
-      address: 'Địa chỉ',
-      yearsOfExperience: 'Số năm kinh nghiệm',
-      bio: 'Tiểu sử'
-    };
-    return fieldNames[field] || field;
-  };
-
-  const validateSingleField = (fieldName: string, value: string) => {
-    const error = validateField(fieldName, value);
-    setFieldErrors(prev => ({
-      ...prev,
-      [fieldName]: error || ''
-    }));
-    return !error;
-  };
-
-  const handleFieldBlur = (fieldName: string, value: string) => {
-    if (value.trim()) {
-      validateSingleField(fieldName, value);
-    } else {
-      setFieldErrors(prev => ({
-        ...prev,
-        [fieldName]: ''
-      }));
-    }
-  };
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        // Get basic user info
-        const userRes = await userService.getUserInfo();
-        
-        // Get doctor-specific data
-        let doctorData: any = {};
-        try {
-          const doctorResponse = await doctorService.getDoctorProfileDetails();
-          doctorData = doctorResponse;
-          console.log('Doctor data received:', doctorData);
-        } catch (error) {
-          console.log('Doctor info not available, using basic data');
-        }
-        
-        if (mounted) {
-          const extendedData: ExtendedUserInfo = {
-            ...userRes,
-            cccd: userRes.identificationNumber || doctorData.identificationNumber,
-            identificationNumber: userRes.identificationNumber || doctorData.identificationNumber,
-            gender: (userRes as any).gender || doctorData.gender || 'male',
-            role: 'Doctor',
-            specialization: doctorData.specialization,
-            licenseNumber: doctorData.licenseNumber,
-            licenseUrl: doctorData.licenseUrl,
-            certificationUrl: doctorData.certificationUrl,
-            yearsOfExperience: doctorData.yearsOfExperience,
-            education: doctorData.education,
-            bio: doctorData.bio,
-            serviceTier: doctorData.serviceTier
-          };
-          
-          setData(extendedData);
-          setEditData({
-            username: userRes.username || '',
-            fullName: userRes.fullName,
-            email: userRes.email,
-            phoneNumber: userRes.phoneNumber || '',
-            address: userRes.address || '',
-            dob: userRes.dob || '',
-            cccd: userRes.identificationNumber || '',
-            consultationFee: doctorData.consultationFee || '',
-            yearsOfExperience: doctorData.yearsOfExperience?.toString() || '',
-            bio: doctorData.bio || '',
-            specialization: doctorData.specialization || '',
-            licenseNumber: doctorData.licenseNumber || ''
-          });
-        }
-      } catch (e: any) {
-        if (mounted) setError(e?.message || 'Không thể tải thông tin người dùng');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
   const handleSaveClick = () => {
     // Check required fields first
-    const requiredFields = ['username', 'fullName', 'email', 'phoneNumber', 'cccd', 'yearsOfExperience'];
+    const requiredFields = ['userName', 'phoneNumber'];
     const missingFields: string[] = [];
-    
+
     for (const field of requiredFields) {
-      const value = editData[field as keyof typeof editData];
+      const value = editData?.[field as keyof typeof editData];
       if (!value || value.toString().trim() === '') {
         missingFields.push(getFieldDisplayName(field));
       }
     }
-    
+
     if (missingFields.length > 0) {
       showToast(`Vui lòng điền đầy đủ thông tin: ${missingFields.join(', ')}`, 'error');
       return;
@@ -293,277 +200,63 @@ export const DoctorProfile: React.FC = () => {
       return;
     }
 
-    // Validate age
-    if (editData.dob) {
-      const date = new Date(editData.dob);
-      const now = new Date();
-      let age = now.getFullYear() - date.getFullYear();
-      const monthDiff = now.getMonth() - date.getMonth();
-      
-      if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
-        age--;
-      }
-      
-      if (age < 18) {
-        showToast('Bạn phải đủ 18 tuổi', 'error');
-        return;
-      }
-    }
-
     // Show confirmation dialog
     setShowSaveConfirmation(true);
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
     setShowSaveConfirmation(false);
+    if (editData?.userName && editData.phoneNumber) {
+      const formData = new FormData();
+      formData.append('userName', editData?.userName);
+      formData.append('phoneNumber', editData.phoneNumber);
+      formData.append('address', editData.address ?? '');
 
-    showToast('Đang cập nhật thông tin...', 'info');
-
-    try {
-      // Update basic user info
-      const apiData = {
-        ...editData,
-        identificationNumber: editData.cccd,
-      };
-      
-      if (!apiData.username || apiData.username.trim() === '') {
-        apiData.username = data?.username || '';
-      }
-      
-      delete apiData.cccd;
-      
-      const updatedUser = await userService.updateUserInfo(apiData);
-      
-      // Update doctor-specific info
+      setSaving(true);
       try {
-        const doctorUpdateData = new FormData();
-        doctorUpdateData.append('specialization', editData.specialization || '');
-        doctorUpdateData.append('licenseNumber', editData.licenseNumber || '');
-        doctorUpdateData.append('yearsOfExperience', editData.yearsOfExperience?.toString() || '0');
-        doctorUpdateData.append('bio', editData.bio || '');
-        
-        await doctorService.updateDoctorProfile(doctorUpdateData);
-      } catch (doctorError) {
-        console.warn('Could not update doctor-specific data:', doctorError);
+        await DoctorService.updateDoctorProfile(formData);
+
+        setData((prev) => ({
+          ...prev!,
+          address: editData.address ?? '',
+          userName: editData.userName ?? '',
+          phoneNumber: editData.phoneNumber ?? ''
+        }));
+        setIsEditing(false);
+
+        showToast('Cập nhật thông tin thành công!', 'success');
+      } catch (error: any) {
+        const status = error.response?.status;
+        const errorData = error.response?.data;
+
+        if (axios.isAxiosError(error)) {
+          switch (status) {
+            case 400:
+              if (errorData?.errors) {
+                console.log('profileUpdate: ', errorData.errors);
+                setFieldErrors(errorData.errors);
+              } else {
+                showToast('Yêu cầu không hợp lệ. Vui lòng kiểm tra lại thông tin.', 'error');
+              }
+              break;
+            default:
+              console.error('Profile update error: ', error);
+              showToast('Lỗi máy chủ. Vui lòng thử lại sau', 'error');
+              break;
+          }
+        } else {
+          console.error('Profile update error: ', error);
+          showToast('Không thể cập nhật thông tin', 'error');
+        }
+      } finally {
+        setSaving(false);
       }
-      
-      const finalUsername = updatedUser.username && updatedUser.username !== updatedUser.email 
-        ? updatedUser.username 
-        : editData.username || data?.username || '';
-      
-      const preservedImageURL = updatedUser.imageURL || data?.imageURL;
-      
-      const updatedData: ExtendedUserInfo = {
-        ...updatedUser,
-        username: finalUsername,
-        imageURL: preservedImageURL,
-        cccd: updatedUser.identificationNumber || editData.cccd || data?.cccd,
-        identificationNumber: updatedUser.identificationNumber || editData.cccd || data?.identificationNumber,
-        gender: (updatedUser as any).gender || data?.gender,
-        role: 'Doctor',
-        specialization: editData.specialization || data?.specialization,
-        licenseNumber: editData.licenseNumber || data?.licenseNumber,
-        licenseUrl: data?.licenseUrl,
-        certificationUrl: data?.certificationUrl,
-        yearsOfExperience: editData.yearsOfExperience ? parseInt(editData.yearsOfExperience.toString()) : data?.yearsOfExperience,
-        education: data?.education,
-        bio: editData.bio || data?.bio,
-        serviceTier: data?.serviceTier
-      };
-      
-      setData(updatedData);
-      setIsEditing(false);
-      showToast('Cập nhật thông tin thành công!', 'success');
-      
-      // Update user context with new data
-      updateUser({
-        fullName: updatedData.fullName || undefined,
-        email: updatedData.email || undefined,
-        phoneNumber: updatedData.phoneNumber || undefined,
-        avatarUrl: preservedImageURL || undefined
-      });
-      
-    } catch (e: any) {
-      showToast(e?.message || 'Không thể cập nhật thông tin', 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    if (data) {
-      setEditData({
-        username: data.username || '',
-        fullName: data.fullName,
-        email: data.email,
-        phoneNumber: data.phoneNumber || '',
-        address: data.address || '',
-        dob: data.dob || '',
-        cccd: data.cccd || '',
-        yearsOfExperience: data.yearsOfExperience?.toString() || '',
-        bio: data.bio || '',
-        specialization: data.specialization || '',
-        licenseNumber: data.licenseNumber || ''
-      });
-    }
-    setIsEditing(false);
-    setError(null);
-    setSuccess(null);
-    setFieldErrors({});
-  };
-
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    const allowedExtensions = ['.jpg', '.jpeg', '.png'];
-    
-    const fileName = file.name.toLowerCase();
-    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
-    const hasValidMimeType = allowedTypes.includes(file.type);
-
-    if (!hasValidMimeType || !hasValidExtension) {
-      setError(`File ảnh không hợp lệ: ${file.name}\nChỉ chấp nhận: JPG, JPEG, PNG`);
+    } else {
       return;
     }
+  }
 
-    const maxSize = 3 * 1024 * 1024;
-    if (file.size > maxSize) {
-      setError(`File ảnh quá lớn: ${(file.size / 1024 / 1024).toFixed(2)}MB. Tối đa 3MB`);
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(file);
-    setPreviewImage(previewUrl);
-
-    setUploading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const result = await userService.uploadProfileImage(file);
-      
-      if (data && result.imageUrl) {
-        const updatedData = { ...data, imageURL: result.imageUrl };
-        setData(updatedData);
-        
-        updateUser({ avatarUrl: result.imageUrl });
-      }
-      
-      showToast('Cập nhật ảnh đại diện thành công!', 'success');
-      
-      URL.revokeObjectURL(previewUrl);
-      setPreviewImage(null);
-    } catch (e: any) {
-      const errorMessage = e?.message || 'Không thể tải ảnh lên';
-      setError(`${errorMessage}. Ảnh preview sẽ được hiển thị tạm thời.`);
-      
-      setTimeout(() => {
-        URL.revokeObjectURL(previewUrl);
-        setPreviewImage(null);
-        setError(null);
-      }, 10000);
-    } finally {
-      setUploading(false);
-      event.target.value = '';
-    }
-  };
-
-  const handleLicenseImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    const allowedExtensions = ['.jpg', '.jpeg', '.png'];
-    
-    const fileName = file.name.toLowerCase();
-    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
-    const hasValidMimeType = allowedTypes.includes(file.type);
-
-    if (!hasValidMimeType || !hasValidExtension) {
-      showToast(`Ảnh chứng chỉ không hợp lệ. Chỉ chấp nhận: JPG, JPEG, PNG`, 'error');
-      return;
-    }
-
-    const maxSize = 3 * 1024 * 1024;
-    if (file.size > maxSize) {
-      showToast(`Ảnh chứng chỉ quá lớn: ${(file.size / 1024 / 1024).toFixed(2)}MB. Tối đa 3MB`, 'error');
-      return;
-    }
-
-    setUploadingCert(true);
-    setError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append('licenseFile', file);
-      
-      // Note: This endpoint would need to be implemented
-      // await doctorService.updateLicenseImage(formData);
-      
-      showToast('Cập nhật chứng chỉ thành công!', 'success');
-      
-      // Refresh data
-      const updatedData = { ...data, licenseUrl: URL.createObjectURL(file) };
-      setData(updatedData as ExtendedUserInfo);
-    } catch (e: any) {
-      showToast(e?.message || 'Không thể tải ảnh chứng chỉ lên', 'error');
-    } finally {
-      setUploadingCert(false);
-      event.target.value = '';
-    }
-  };
-
-  const handleDegreeFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const allowedTypes = ['application/zip', 'application/x-rar-compressed', 'application/x-rar'];
-    const allowedExtensions = ['.rar', '.zip'];
-    
-    const fileName = file.name.toLowerCase();
-    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
-    const hasValidMimeType = allowedTypes.includes(file.type);
-
-    if (!hasValidMimeType || !hasValidExtension) {
-      showToast(`File bằng cấp không hợp lệ. Chỉ chấp nhận: RAR, ZIP`, 'error');
-      return;
-    }
-
-    const maxSize = 3 * 1024 * 1024;
-    if (file.size > maxSize) {
-      showToast(`File bằng cấp quá lớn: ${(file.size / 1024 / 1024).toFixed(2)}MB. Tối đa 3MB`, 'error');
-      return;
-    }
-
-    setUploadingDegree(true);
-    setError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append('degreeFile', file);
-      
-      // Note: This endpoint would need to be implemented
-      // await doctorService.updateDegreeFile(formData);
-      
-      showToast('Cập nhật bằng cấp thành công!', 'success');
-      
-      // Refresh data
-      const updatedData = { ...data, certificationUrl: URL.createObjectURL(file) };
-      setData(updatedData as ExtendedUserInfo);
-    } catch (e: any) {
-      showToast(e?.message || 'Không thể tải file bằng cấp lên', 'error');
-    } finally {
-      setUploadingDegree(false);
-      event.target.value = '';
-    }
-  };
-
-  if (loading) {
+  if (pageLoading) {
     return (
       <div className={styles.container}>
         <div className={styles.loadingContainer}>
@@ -602,17 +295,17 @@ export const DoctorProfile: React.FC = () => {
             {success}
           </div>
         )}
-        
+
         {data && (
           <>
             {/* Profile Info Section */}
             <div className={styles.profileInfoSection}>
               <div className={styles.avatarSection}>
                 <div className={styles.avatarContainer}>
-                  {(previewImage || data.imageURL) ? (
-                    <img 
-                      src={previewImage || data.imageURL || ''} 
-                      alt="Profile" 
+                  {(data.avatarUrl || previewImage) ? (
+                    <img
+                      src={data.avatarUrl || previewImage || ''}
+                      alt="Profile"
                       className={styles.avatarImage}
                     />
                   ) : (
@@ -630,7 +323,7 @@ export const DoctorProfile: React.FC = () => {
                   <span className={styles.userRole}>Bác sĩ</span>
                 </div>
               </div>
-              
+
               <div className={styles.uploadSection}>
                 <input
                   type="file"
@@ -639,8 +332,8 @@ export const DoctorProfile: React.FC = () => {
                   style={{ display: 'none' }}
                   onChange={handleImageUpload}
                 />
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => document.getElementById('profileImageInput')?.click()}
                   disabled={uploading}
                   className={styles.uploadBtn}
@@ -667,38 +360,38 @@ export const DoctorProfile: React.FC = () => {
                 <h3>1. Thông tin cá nhân</h3>
                 <p>Thông tin cơ bản về bác sĩ</p>
               </div>
-              
+
               <div className={styles.formGrid}>
                 <div className={styles.fieldGroup}>
-                  <label className={`${styles.fieldLabel} ${fieldErrors.username ? styles.fieldLabelError : ''}`}>
+                  <label className={`${styles.fieldLabel} ${fieldErrors?.UserName?.[0] ? styles.fieldLabelError : ''}`}>
                     <i className="bi bi-person"></i>
                     Tên tài khoản
-                    {fieldErrors.username && <span className={styles.errorIcon}>⚠️</span>}
+                    {fieldErrors?.UserName?.[0] && <span className={styles.errorIcon}>⚠️</span>}
                   </label>
                   {isEditing ? (
                     <div className={styles.inputContainer}>
-                      <input 
-                        value={editData.username || ''} 
+                      <input
+                        value={editData?.userName || ''}
                         onChange={(e) => {
-                          setEditData({...editData, username: e.target.value});
-                          if (fieldErrors.username) {
-                            setFieldErrors({...fieldErrors, username: ''});
+                          setEditData({ ...editData, userName: e.target.value });
+                          if (fieldErrors?.UserName?.[0]) {
+                            setFieldErrors({ ...fieldErrors, UserName: [''] });
                           }
                         }}
-                        onBlur={(e) => handleFieldBlur('username', e.target.value)}
-                        className={`${styles.fieldInput} ${fieldErrors.username ? styles.fieldInputError : ''}`}
+                        //onBlur={(e) => handleFieldBlur('username', e.target.value)}
+                        className={`${styles.fieldInput} ${fieldErrors?.UserName?.[0] ? styles.fieldInputError : ''}`}
                         placeholder="Nhập tên tài khoản"
                       />
                       <i className="bi bi-pencil"></i>
                     </div>
                   ) : (
                     <div className={styles.inputContainer}>
-                      <input disabled value={data.username || ''} className={styles.fieldInputDisabled} />
+                      <input disabled value={data.userName || ''} className={styles.fieldInputDisabled} />
                       <i className="bi bi-lock"></i>
                     </div>
                   )}
-                  {fieldErrors.username && (
-                    <div className={styles.fieldError}>{fieldErrors.username}</div>
+                  {fieldErrors?.UserName?.[0] && (
+                    <div className={styles.fieldError}>{fieldErrors?.UserName[0]}</div>
                   )}
                 </div>
 
@@ -707,22 +400,10 @@ export const DoctorProfile: React.FC = () => {
                     <i className="bi bi-person-badge"></i>
                     Họ và Tên
                   </label>
-                  {isEditing ? (
-                    <div className={styles.inputContainer}>
-                      <input 
-                        value={editData.fullName || ''} 
-                        onChange={(e) => setEditData({...editData, fullName: e.target.value})}
-                        className={styles.fieldInput}
-                        placeholder="Nhập họ và tên"
-                      />
-                      <i className="bi bi-pencil"></i>
-                    </div>
-                  ) : (
-                    <div className={styles.inputContainer}>
-                      <input disabled value={data.fullName} className={styles.fieldInputDisabled} />
-                      <i className="bi bi-lock"></i>
-                    </div>
-                  )}
+                  <div className={styles.inputContainer}>
+                    <input disabled value={data.fullName} className={styles.fieldInputDisabled} />
+                    <i className="bi bi-lock"></i>
+                  </div>
                 </div>
 
                 <div className={styles.fieldGroup}>
@@ -737,25 +418,25 @@ export const DoctorProfile: React.FC = () => {
                 </div>
 
                 <div className={styles.fieldGroup}>
-                  <label className={`${styles.fieldLabel} ${fieldErrors.phoneNumber ? styles.fieldLabelError : ''}`}>
+                  <label className={`${styles.fieldLabel} ${fieldErrors?.PhoneNumber?.[0] ? styles.fieldLabelError : ''}`}>
                     <i className="bi bi-telephone"></i>
                     Số điện thoại
-                    {fieldErrors.phoneNumber && <span className={styles.errorIcon}>⚠️</span>}
+                    {fieldErrors?.PhoneNumber?.[0] && <span className={styles.errorIcon}>⚠️</span>}
                   </label>
                   {isEditing ? (
                     <div className={styles.inputContainer}>
-                      <input 
+                      <input
                         maxLength={10}
-                        value={editData.phoneNumber || ''} 
+                        value={editData?.phoneNumber || ''}
                         onChange={(e) => {
                           const numericValue = e.target.value.replace(/[^0-9]/g, '');
-                          setEditData({...editData, phoneNumber: numericValue});
-                          if (fieldErrors.phoneNumber) {
-                            setFieldErrors({...fieldErrors, phoneNumber: ''});
+                          setEditData({ ...editData, phoneNumber: numericValue });
+                          if (fieldErrors?.PhoneNumber?.[0]) {
+                            setFieldErrors({ ...fieldErrors, PhoneNumber: [''] });
                           }
                         }}
-                        onBlur={(e) => handleFieldBlur('phoneNumber', e.target.value)}
-                        className={`${styles.fieldInput} ${fieldErrors.phoneNumber ? styles.fieldInputError : ''}`}
+                        //onBlur={(e) => handleFieldBlur('phoneNumber', e.target.value)}
+                        className={`${styles.fieldInput} ${fieldErrors?.PhoneNumber?.[0] ? styles.fieldInputError : ''}`}
                         placeholder="Nhập số điện thoại"
                         type="tel"
                       />
@@ -767,8 +448,8 @@ export const DoctorProfile: React.FC = () => {
                       <i className="bi bi-lock"></i>
                     </div>
                   )}
-                  {fieldErrors.phoneNumber && (
-                    <div className={styles.fieldError}>{fieldErrors.phoneNumber}</div>
+                  {fieldErrors?.PhoneNumber?.[0] && (
+                    <div className={styles.fieldError}>{fieldErrors?.PhoneNumber[0]}</div>
                   )}
                 </div>
 
@@ -779,9 +460,9 @@ export const DoctorProfile: React.FC = () => {
                   </label>
                   {isEditing ? (
                     <div className={styles.inputContainer}>
-                      <input 
-                        value={editData.address || ''} 
-                        onChange={(e) => setEditData({...editData, address: e.target.value})}
+                      <input
+                        value={editData?.address || ''}
+                        onChange={(e) => setEditData({ ...editData, address: e.target.value })}
                         className={styles.fieldInput}
                         placeholder="Nhập địa chỉ"
                       />
@@ -800,78 +481,21 @@ export const DoctorProfile: React.FC = () => {
                     <i className="bi bi-calendar3"></i>
                     Ngày sinh
                   </label>
-                  {isEditing ? (
-                    <div className={styles.inputContainer}>
-                      <input 
-                        type="date"
-                        value={editData.dob || ''} 
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setEditData({...editData, dob: value});
-                          setError(null);
-                          
-                          if (value) {
-                            const date = new Date(value);
-                            const now = new Date();
-                            let age = now.getFullYear() - date.getFullYear();
-                            const monthDiff = now.getMonth() - date.getMonth();
-                            
-                            if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
-                              age--;
-                            }
-                            
-                            if (age < 18) {
-                              setError('Bạn phải đủ 18 tuổi');
-                            }
-                          }
-                        }}
-                        max="9999-12-31"
-                        className={styles.fieldInput}
-                      />
-                      <i className="bi bi-pencil"></i>
-                    </div>
-                  ) : (
-                    <div className={styles.inputContainer}>
-                      <input disabled value={formatDate(data.dob)} className={styles.fieldInputDisabled} />
-                      <i className="bi bi-lock"></i>
-                    </div>
-                  )}
+                  <div className={styles.inputContainer}>
+                    <input disabled value={data.dob} className={styles.fieldInputDisabled} />
+                    <i className="bi bi-lock"></i>
+                  </div>
                 </div>
 
                 <div className={styles.fieldGroup}>
-                  <label className={`${styles.fieldLabel} ${fieldErrors.cccd ? styles.fieldLabelError : ''}`}>
+                  <label className={`${styles.fieldLabel} ${fieldErrors?.cccd ? styles.fieldLabelError : ''}`}>
                     <i className="bi bi-card-text"></i>
                     CCCD
-                    {fieldErrors.cccd && <span className={styles.errorIcon}>⚠️</span>}
                   </label>
-                  {isEditing ? (
-                    <div className={styles.inputContainer}>
-                      <input 
-                        maxLength={12}
-                        value={editData.cccd || ''} 
-                        onChange={(e) => {
-                          const numericValue = e.target.value.replace(/[^0-9]/g, '');
-                          setEditData({...editData, cccd: numericValue});
-                          if (fieldErrors.cccd) {
-                            setFieldErrors({...fieldErrors, cccd: ''});
-                          }
-                        }}
-                        onBlur={(e) => handleFieldBlur('cccd', e.target.value)}
-                        className={`${styles.fieldInput} ${fieldErrors.cccd ? styles.fieldInputError : ''}`}
-                        placeholder="Nhập số CCCD"
-                        type="text"
-                      />
-                      <i className="bi bi-pencil"></i>
-                    </div>
-                  ) : (
-                    <div className={styles.inputContainer}>
-                      <input disabled value={data.cccd || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
-                      <i className="bi bi-lock"></i>
-                    </div>
-                  )}
-                  {fieldErrors.cccd && (
-                    <div className={styles.fieldError}>{fieldErrors.cccd}</div>
-                  )}
+                  <div className={styles.inputContainer}>
+                    <input disabled value={data.identificationNumber || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
+                    <i className="bi bi-lock"></i>
+                  </div>
                 </div>
 
                 <div className={styles.fieldGroup}>
@@ -880,7 +504,7 @@ export const DoctorProfile: React.FC = () => {
                     Giới tính
                   </label>
                   <div className={styles.inputContainer}>
-                    <input disabled value={data.gender === 'male' ? 'Nam' : data.gender === 'female' ? 'Nữ' : 'Khác'} className={styles.fieldInputDisabled} />
+                    <input disabled value={data.genderCode === 'male' ? 'Nam' : data.genderCode === 'female' ? 'Nữ' : 'Khác'} className={styles.fieldInputDisabled} />
                     <i className="bi bi-lock"></i>
                   </div>
                 </div>
@@ -894,69 +518,27 @@ export const DoctorProfile: React.FC = () => {
 
               <div className={styles.formGrid}>
                 <div className={styles.fieldGroup}>
-                  <label className={`${styles.fieldLabel} ${fieldErrors.specialization ? styles.fieldLabelError : ''}`}>
+                  <label className={`${styles.fieldLabel} ${fieldErrors?.specialization ? styles.fieldLabelError : ''}`}>
                     <i className="bi bi-hospital"></i>
                     Chuyên khoa
-                    {fieldErrors.specialization && <span className={styles.errorIcon}>⚠️</span>}
+                    {fieldErrors?.specialization && <span className={styles.errorIcon}>⚠️</span>}
                   </label>
-                  {isEditing ? (
-                    <div className={styles.inputContainer}>
-                      <input 
-                        value={editData.specialization || ''} 
-                        onChange={(e) => {
-                          setEditData({...editData, specialization: e.target.value});
-                          if (fieldErrors.specialization) {
-                            setFieldErrors({...fieldErrors, specialization: ''});
-                          }
-                        }}
-                        onBlur={(e) => handleFieldBlur('specialization', e.target.value)}
-                        className={`${styles.fieldInput} ${fieldErrors.specialization ? styles.fieldInputError : ''}`}
-                        placeholder="Nhập chuyên khoa"
-                      />
-                      <i className="bi bi-pencil"></i>
-                    </div>
-                  ) : (
-                    <div className={styles.inputContainer}>
-                      <input disabled value={data.specialization || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
-                      <i className="bi bi-lock"></i>
-                    </div>
-                  )}
-                  {fieldErrors.specialization && (
-                    <div className={styles.fieldError}>{fieldErrors.specialization}</div>
-                  )}
+                  <div className={styles.inputContainer}>
+                    <input disabled value={data.specialization || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
+                    <i className="bi bi-lock"></i>
+                  </div>
                 </div>
 
                 <div className={styles.fieldGroup}>
-                  <label className={`${styles.fieldLabel} ${fieldErrors.licenseNumber ? styles.fieldLabelError : ''}`}>
+                  <label className={`${styles.fieldLabel} ${fieldErrors?.licenseNumber ? styles.fieldLabelError : ''}`}>
                     <i className="bi bi-award"></i>
                     Số chứng chỉ
-                    {fieldErrors.licenseNumber && <span className={styles.errorIcon}>⚠️</span>}
+                    {fieldErrors?.licenseNumber && <span className={styles.errorIcon}>⚠️</span>}
                   </label>
-                  {isEditing ? (
-                    <div className={styles.inputContainer}>
-                      <input 
-                        value={editData.licenseNumber || ''} 
-                        onChange={(e) => {
-                          setEditData({...editData, licenseNumber: e.target.value});
-                          if (fieldErrors.licenseNumber) {
-                            setFieldErrors({...fieldErrors, licenseNumber: ''});
-                          }
-                        }}
-                        onBlur={(e) => handleFieldBlur('licenseNumber', e.target.value)}
-                        className={`${styles.fieldInput} ${fieldErrors.licenseNumber ? styles.fieldInputError : ''}`}
-                        placeholder="Nhập số chứng chỉ"
-                      />
-                      <i className="bi bi-pencil"></i>
-                    </div>
-                  ) : (
-                    <div className={styles.inputContainer}>
-                      <input disabled value={data.licenseNumber || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
-                      <i className="bi bi-lock"></i>
-                    </div>
-                  )}
-                  {fieldErrors.licenseNumber && (
-                    <div className={styles.fieldError}>{fieldErrors.licenseNumber}</div>
-                  )}
+                  <div className={styles.inputContainer}>
+                    <input disabled value={data.licenseNumber || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
+                    <i className="bi bi-lock"></i>
+                  </div>
                 </div>
 
                 <div className={styles.fieldGroup}>
@@ -982,38 +564,15 @@ export const DoctorProfile: React.FC = () => {
                 </div>
 
                 <div className={styles.fieldGroup}>
-                  <label className={`${styles.fieldLabel} ${fieldErrors.yearsOfExperience ? styles.fieldLabelError : ''}`}>
+                  <label className={`${styles.fieldLabel} ${fieldErrors?.yearsOfExperience ? styles.fieldLabelError : ''}`}>
                     <i className="bi bi-clock-history"></i>
                     Số năm kinh nghiệm
-                    {fieldErrors.yearsOfExperience && <span className={styles.errorIcon}>⚠️</span>}
+                    {fieldErrors?.yearsOfExperience && <span className={styles.errorIcon}>⚠️</span>}
                   </label>
-                  {isEditing ? (
-                    <div className={styles.inputContainer}>
-                      <input 
-                        value={editData.yearsOfExperience || ''} 
-                        onChange={(e) => {
-                          const numericValue = e.target.value.replace(/[^0-9]/g, '');
-                          setEditData({...editData, yearsOfExperience: numericValue.toString()});
-                          if (fieldErrors.yearsOfExperience) {
-                            setFieldErrors({...fieldErrors, yearsOfExperience: ''});
-                          }
-                        }}
-                        onBlur={(e) => handleFieldBlur('yearsOfExperience', e.target.value)}
-                        className={`${styles.fieldInput} ${fieldErrors.yearsOfExperience ? styles.fieldInputError : ''}`}
-                        placeholder="Nhập số năm kinh nghiệm"
-                        type="text"
-                      />
-                      <i className="bi bi-pencil"></i>
-                    </div>
-                  ) : (
-                    <div className={styles.inputContainer}>
-                      <input disabled value={`${data.yearsOfExperience || 0} năm`} className={styles.fieldInputDisabled} />
-                      <i className="bi bi-lock"></i>
-                    </div>
-                  )}
-                  {fieldErrors.yearsOfExperience && (
-                    <div className={styles.fieldError}>{fieldErrors.yearsOfExperience}</div>
-                  )}
+                  <div className={styles.inputContainer}>
+                    <input disabled value={`${data.yearsOfExperience || 0} năm`} className={styles.fieldInputDisabled} />
+                    <i className="bi bi-lock"></i>
+                  </div>
                 </div>
 
                 <div className={styles.fieldGroup}>
@@ -1021,23 +580,10 @@ export const DoctorProfile: React.FC = () => {
                     <i className="bi bi-file-text"></i>
                     Tiểu sử
                   </label>
-                  {isEditing ? (
-                    <div className={styles.inputContainer}>
-                      <textarea 
-                        value={editData.bio || ''} 
-                        onChange={(e) => setEditData({...editData, bio: e.target.value})}
-                        className={styles.fieldTextarea}
-                        placeholder="Nhập tiểu sử"
-                        rows={3}
-                      />
-                      <i className="bi bi-pencil"></i>
-                    </div>
-                  ) : (
-                    <div className={styles.inputContainer}>
-                      <textarea disabled value={data.bio || 'Chưa cập nhật'} className={styles.fieldTextareaDisabled} rows={3} />
-                      <i className="bi bi-lock"></i>
-                    </div>
-                  )}
+                  <div className={styles.inputContainer}>
+                    <textarea disabled value={data.bio || 'Chưa cập nhật'} className={styles.fieldTextareaDisabled} rows={3} />
+                    <i className="bi bi-lock"></i>
+                  </div>
                 </div>
               </div>
 
@@ -1054,58 +600,9 @@ export const DoctorProfile: React.FC = () => {
                     Chứng chỉ làm việc (Ảnh)
                   </label>
                   <div className={styles.fileUploadContainer}>
-                    {data.licenseUrl ? (
-                      <div className={styles.filePreview}>
-                        <img src={data.licenseUrl} alt="License" className={styles.filePreviewImage} />
-                        <div className={styles.fileOverlay}>
-                          <button 
-                            type="button"
-                            onClick={() => document.getElementById('licenseImageInput')?.click()}
-                            className={styles.fileUpdateBtn}
-                            disabled={uploadingCert}
-                          >
-                            {uploadingCert ? (
-                              <>
-                                <div className={styles.spinner}></div>
-                                Đang tải...
-                              </>
-                            ) : (
-                              <>
-                                <i className="bi bi-arrow-clockwise"></i>
-                                Cập nhật
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button 
-                        type="button"
-                        onClick={() => document.getElementById('licenseImageInput')?.click()}
-                        className={styles.fileUploadBtn}
-                        disabled={uploadingCert}
-                      >
-                        {uploadingCert ? (
-                          <>
-                            <div className={styles.spinner}></div>
-                            Đang tải...
-                          </>
-                        ) : (
-                          <>
-                            <i className="bi bi-cloud-upload"></i>
-                            Tải ảnh chứng chỉ lên
-                          </>
-                        )}
-                      </button>
-                    )}
-                    <input
-                      type="file"
-                      id="licenseImageInput"
-                      accept="image/jpeg,image/jpg,image/png,.jpg,.jpeg,.png"
-                      style={{ display: 'none' }}
-                      onChange={handleLicenseImageUpload}
-                    />
-                    <p className={styles.fileHint}>Định dạng: JPG, PNG. Tối đa 3MB</p>
+                    <div className={styles.filePreview}>
+                      <img src={data.licenseImageUrl} alt="License" className={styles.filePreviewImage} />
+                    </div>
                   </div>
                 </div>
 
@@ -1115,58 +612,22 @@ export const DoctorProfile: React.FC = () => {
                     Bằng cấp (File RAR/ZIP)
                   </label>
                   <div className={styles.fileUploadContainer}>
-                    {data.certificationUrl ? (
-                      <div className={styles.filePreview}>
-                        <div className={styles.fileIconContainer}>
-                          <i className="bi bi-file-earmark-zip" style={{ fontSize: '48px', color: '#667eea' }}></i>
-                        </div>
-                        <button 
-                          type="button"
-                          onClick={() => document.getElementById('degreeFileInput')?.click()}
-                          className={styles.fileUpdateBtn}
-                          disabled={uploadingDegree}
-                        >
-                          {uploadingDegree ? (
-                            <>
-                              <div className={styles.spinner}></div>
-                              Đang tải...
-                            </>
-                          ) : (
-                            <>
-                              <i className="bi bi-arrow-clockwise"></i>
-                              Cập nhật
-                            </>
-                          )}
-                        </button>
+                    <div className={styles.filePreview}>
+                      <div className={styles.fileIconContainer}>
+                        <i className="bi bi-file-earmark-zip" style={{ fontSize: '48px', color: '#667eea' }}></i>
                       </div>
-                    ) : (
-                      <button 
-                        type="button"
-                        onClick={() => document.getElementById('degreeFileInput')?.click()}
-                        className={styles.fileUploadBtn}
-                        disabled={uploadingDegree}
+                      <a
+                        // type="button"
+                        // onClick={() => document.getElementById('degreeFileInput')?.click()}
+                        className={styles.fileUpdateBtn}
+                        href={data.degreeFilesUrl}
+                        download
+                        //disabled={uploadingDegree}
                       >
-                        {uploadingDegree ? (
-                          <>
-                            <div className={styles.spinner}></div>
-                            Đang tải...
-                          </>
-                        ) : (
-                          <>
-                            <i className="bi bi-cloud-upload"></i>
-                            Tải file bằng cấp lên
-                          </>
-                        )}
-                      </button>
-                    )}
-                    <input
-                      type="file"
-                      id="degreeFileInput"
-                      accept=".rar,.zip,application/zip,application/x-rar-compressed,application/x-rar"
-                      style={{ display: 'none' }}
-                      onChange={handleDegreeFileUpload}
-                    />
-                    <p className={styles.fileHint}>Định dạng: RAR, ZIP. Tối đa 3MB</p>
+                        Tải về
+                      </a>
+                    </div>
+
                   </div>
                 </div>
               </div>
@@ -1176,8 +637,8 @@ export const DoctorProfile: React.FC = () => {
             <div className={styles.actionSection}>
               {isEditing ? (
                 <div className={styles.editActions}>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={handleCancel}
                     className={styles.cancelBtn}
                     disabled={saving}
@@ -1185,7 +646,7 @@ export const DoctorProfile: React.FC = () => {
                     <i className="bi bi-x-circle"></i>
                     Hủy
                   </button>
-                  <button 
+                  <button
                     type="button"
                     onClick={handleSaveClick}
                     className={styles.saveBtn}
@@ -1206,16 +667,16 @@ export const DoctorProfile: React.FC = () => {
                 </div>
               ) : (
                 <div className={styles.viewActions}>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setShowChangePasswordModal(true)}
                     className={styles.changePasswordBtn}
                   >
                     <i className="bi bi-key"></i>
                     Đổi mật khẩu
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setIsEditing(true)}
                     className={styles.editBtn}
                   >

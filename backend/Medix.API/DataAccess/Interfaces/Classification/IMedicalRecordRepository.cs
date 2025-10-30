@@ -9,5 +9,6 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task AddAsync(MedicalRecord record);
         Task UpdateAsync(MedicalRecord record);
         IQueryable<MedicalRecord> Query();
+
     }
 }

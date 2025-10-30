@@ -5,14 +5,18 @@ export interface Prescription {
   frequency: string;
   duration: string;
   instructions: string;
-  medicalRecordId?: string; // Thêm để liên kết khi tạo mới
+  medicalRecordId?: string;
+
+  genericName?: string | null;
+  dosageForms?: string | null;
+  commonUses?: string | null;
+  sideEffects?: string | null;
 }
 
 export interface MedicalRecord {
   id: string;
   appointmentId: string;
   patientName: string;
-  doctorName: string;
   appointmentDate: string;
   chiefComplaint: string;
   physicalExamination: string;
@@ -20,8 +24,19 @@ export interface MedicalRecord {
   assessmentNotes: string;
   treatmentPlan: string;
   followUpInstructions: string;
-  doctorNotes?: string;
-  createdAt: string;
-  updatedAt: string;
+  doctorNotes: string;
   prescriptions: Prescription[];
+  // Thêm các trường bị thiếu
+  medicalRecordNumber?: string;
+  bloodTypeCode?: string;
+  height?: number;
+  weight?: number;
+  medicalHistory?: string;
+  allergies?: string;
+  // Thêm các trường từ User
+  genderCode?: string;
+  dateOfBirth?: string;
+  address?: string;
+  identificationNumber?: string;
+  
 }

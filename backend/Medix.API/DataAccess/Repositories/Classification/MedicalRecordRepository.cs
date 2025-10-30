@@ -34,11 +34,18 @@ namespace Medix.API.DataAccess.Repositories.Classification
         public async Task<MedicalRecord?> GetByAppointmentIdAsync(Guid appointmentId)
         {
             return await _context.MedicalRecords
-                .Include(r => r.Prescriptions)
-                .Include(r => r.Appointment)
-                .ThenInclude(a => a.Patient)
-                .FirstOrDefaultAsync(r => r.AppointmentId == appointmentId);
+        .Include(r => r.Prescriptions)
+            .ThenInclude(p => p.Medication)
+        .Include(r => r.Appointment)
+            .ThenInclude(a => a.Patient)
+                .ThenInclude(p => p.User)
+        .Include(r => r.Appointment)
+            .ThenInclude(a => a.Doctor)
+                .ThenInclude(d => d.User)
+        .FirstOrDefaultAsync(r => r.AppointmentId == appointmentId);
+
         }
+
 
         public async Task AddAsync(MedicalRecord record)
         {

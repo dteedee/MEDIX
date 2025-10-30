@@ -7,6 +7,7 @@ using Medix.API.Models.DTOs.ContentCategory;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.DTOs.HealthArticle;
 using Medix.API.Models.DTOs.MedicalRecordDTO;
+using Medix.API.Models.DTOs.MedicationDTO;
 using Medix.API.Models.DTOs.ReviewDTO;
 using Medix.API.Models.DTOs.SiteBanner;
 using Medix.API.Models.Entities;
@@ -81,10 +82,31 @@ namespace Medix.API.Configurations
                .ForMember(dest => dest.Prescriptions, opt => opt.MapFrom(src => src.Prescriptions));
 
             CreateMap<MedicalRecord, MedicalRecordDto>()
-     .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => src.Appointment.Patient.User.FullName))
-     .ForMember(dest => dest.DoctorName, opt => opt.MapFrom(src => src.Appointment.Doctor.User.FullName))
-     .ForMember(dest => dest.AppointmentDate, opt => opt.MapFrom(src => src.Appointment.AppointmentStartTime))
-     .ForMember(dest => dest.Prescriptions, opt => opt.MapFrom(src => src.Prescriptions));
+      .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => src.Appointment.Patient.User.FullName))
+      .ForMember(dest => dest.DoctorName, opt => opt.MapFrom(src => src.Appointment.Doctor.User.FullName))
+      .ForMember(dest => dest.AppointmentDate, opt => opt.MapFrom(src => src.Appointment.AppointmentStartTime))
+
+      // --- Thông tin bệnh nhân ---
+      .ForMember(dest => dest.MedicalRecordNumber, opt => opt.MapFrom(src => src.Appointment.Patient.MedicalRecordNumber))
+      .ForMember(dest => dest.BloodTypeCode, opt => opt.MapFrom(src => src.Appointment.Patient.BloodTypeCode))
+      .ForMember(dest => dest.Height, opt => opt.MapFrom(src => src.Appointment.Patient.Height))
+      .ForMember(dest => dest.Weight, opt => opt.MapFrom(src => src.Appointment.Patient.Weight))
+      .ForMember(dest => dest.MedicalHistory, opt => opt.MapFrom(src => src.Appointment.Patient.MedicalHistory))
+      .ForMember(dest => dest.Allergies, opt => opt.MapFrom(src => src.Appointment.Patient.Allergies))
+
+       .ForMember(dest => dest.DoctorName,
+        opt => opt.MapFrom(src => src.Appointment.Doctor.User.FullName))
+
+      // ✅ Thông tin từ bảng User
+      .ForMember(dest => dest.GenderCode, opt => opt.MapFrom(src => src.Appointment.Patient.User.GenderCode))
+      .ForMember(dest => dest.DateOfBirth, opt => opt.MapFrom(src => src.Appointment.Patient.User.DateOfBirth))
+      .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Appointment.Patient.User.Address))
+      .ForMember(dest => dest.IdentificationNumber, opt => opt.MapFrom(src => src.Appointment.Patient.User.IdentificationNumber))
+      .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.Appointment.Patient.User.PhoneNumber))
+
+      // --- Đơn thuốc ---
+      .ForMember(dest => dest.Prescriptions, opt => opt.MapFrom(src => src.Prescriptions));
+
 
             CreateMap<CreateOrUpdateMedicalRecordDto, MedicalRecord>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
@@ -93,7 +115,12 @@ namespace Medix.API.Configurations
 
 
             // --- ✅ Prescription ---
-            CreateMap<Prescription, PrescriptionDto>();
+            CreateMap<Prescription, PrescriptionDto>()
+     .ForMember(dest => dest.GenericName, opt => opt.MapFrom(src => src.Medication.GenericName))
+     .ForMember(dest => dest.DosageForms, opt => opt.MapFrom(src => src.Medication.DosageForms))
+     .ForMember(dest => dest.CommonUses, opt => opt.MapFrom(src => src.Medication.CommonUses))
+     .ForMember(dest => dest.SideEffects, opt => opt.MapFrom(src => src.Medication.SideEffects));
+
             CreateMap<CreatePrescriptionDto, Prescription>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.MedicalRecordId, opt => opt.Ignore())
@@ -130,6 +157,9 @@ namespace Medix.API.Configurations
             CreateMap<DoctorScheduleOverride, DoctorScheduleOverrideDto>().ReverseMap();
             CreateMap<CreateDoctorScheduleOverrideDto, DoctorScheduleOverride>();
             CreateMap<UpdateDoctorScheduleOverrideDto, DoctorScheduleOverride>();
+
+            CreateMap<MedicationDatabase, MedicationDto>().ReverseMap();
+
         }
     }
 }

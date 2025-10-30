@@ -83,9 +83,16 @@ export default function ArticleReaderPage() {
           keyword: debounced || undefined,
         });
 
-        const filtered = selectedCategoryId === 'all'
+        let filtered = selectedCategoryId === 'all'
           ? items
           : items.filter(a => (a.categoryIds || []).includes(String(selectedCategoryId)));
+
+        // Sort by date: newest first
+        filtered = filtered.sort((a, b) => {
+          const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+          const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+          return tb - ta;
+        });
 
         setArticles(filtered);
         setTotal(filtered.length);
@@ -351,6 +358,8 @@ export default function ArticleReaderPage() {
                 <div className="card-body">
                   <h3 className="card-title">{a.title}</h3>
                   {a.summary && <p className="card-summary">{a.summary}</p>}
+                </div>
+                <div className="card-footer">
                   <div className="card-meta">
                     <span className="meta-date">
                       <i className="bi bi-calendar-event"></i>
@@ -361,8 +370,6 @@ export default function ArticleReaderPage() {
                       {getReadingTime(a.content)}
                     </span>
                   </div>
-                </div>
-                <div className="card-footer">
                   <span className="cta-link">
                     Đọc thêm
                     <i className="bi bi-arrow-right-short"></i>

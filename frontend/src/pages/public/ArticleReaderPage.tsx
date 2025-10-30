@@ -48,6 +48,18 @@ export default function ArticleReaderPage() {
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  // Map category name -> icon class (align with homepage step icons vibe)
+  const getCategoryIcon = (name?: string) => {
+    const lower = (name || '').toLowerCase();
+    if (lower.includes('cấp cứu') || lower.includes('khẩn')) return 'bi-activity';
+    if (lower.includes('tim') || lower.includes('mạch') || lower.includes('huyết')) return 'bi-heart-pulse';
+    if (lower.includes('nhi') || lower.includes('trẻ')) return 'bi-emoji-smile';
+    if (lower.includes('dinh dưỡng') || lower.includes('ăn')) return 'bi-basket';
+    if (lower.includes('tiêm') || lower.includes('vaccine')) return 'bi-shield-plus';
+    if (lower.includes('sức khỏe') || lower.includes('health')) return 'bi-heart-fill';
+    return 'bi-bookmark-heart';
+  };
+
   // Debounce search for better UX
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 300);
@@ -98,11 +110,21 @@ export default function ArticleReaderPage() {
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
 
-  const featured: ArticleDTO | undefined = pagedArticles[0] ?? articles[0];
+  const featured: ArticleDTO | undefined = useMemo(() => {
+    // Chỉ hiển thị bài nổi bật khi không tìm kiếm từ khoá
+    if (debounced) return undefined;
+    return articles[0];
+  }, [debounced, articles]);
+
   const rest = useMemo(() => {
-    const list = pagedArticles[0] ? pagedArticles.slice(1) : pagedArticles;
-    return list;
-  }, [pagedArticles]);
+    // Nếu có featured và đang ở trang 1 thì bỏ phần tử đầu trong trang hiện tại
+    if (featured && page === 1 && pagedArticles.length) {
+      // Nếu phần tử đầu trùng với featured thì cắt bỏ
+      const [first, ...others] = pagedArticles;
+      return first.id === featured.id ? others : pagedArticles;
+    }
+    return pagedArticles;
+  }, [pagedArticles, featured, page]);
 
   const handleSelectCategory = (id: string | 'all') => {
     setSelectedCategoryId(id);
@@ -184,7 +206,7 @@ export default function ArticleReaderPage() {
                   className={`category-item ${selectedCategoryId === 'all' ? 'active' : ''}`}
                   onClick={() => handleSelectCategory('all')}
                 >
-                  <span className="category-icon">📚</span>
+                  <span className="category-icon"><i className="bi bi-grid-3x3-gap-fill"></i></span>
                   <span>Tất cả</span>
                   <span className="category-badge">{articles.length}</span>
                 </button>
@@ -195,7 +217,7 @@ export default function ArticleReaderPage() {
                     className={`category-item ${selectedCategoryId === c.id ? 'active' : ''}`}
                     onClick={() => handleSelectCategory(c.id)}
                   >
-                    <span className="category-icon">🏥</span>
+                    <span className="category-icon"><i className={`bi ${getCategoryIcon(c.name)}`}></i></span>
                     <span>{c.name}</span>
                   </button>
                 </li>
@@ -248,12 +270,6 @@ export default function ArticleReaderPage() {
                   </button>
                 )}
               </div>
-              {debounced && (
-                <div className="search-result-info">
-                  <i className="bi bi-check-circle-fill"></i>
-                  Tìm thấy {total} kết quả
-                </div>
-              )}
             </div>
             <div className="stats-bar">
               <div className="stat-item">
@@ -311,6 +327,7 @@ export default function ArticleReaderPage() {
           )}
 
           {/* Grid/List cards */}
+          <h3 style={{ margin: '16px 0 8px', fontWeight: 800 }}>Bài viết mới nhất</h3>
           <section className={`card-container ${viewMode}`}>
             {loading && (
               <div className="loading-state">

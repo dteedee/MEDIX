@@ -26,6 +26,17 @@ function getReadingTime(content?: string | null): string {
   return `${minutes} phút đọc`;
 }
 
+function getCategoryIcon(name?: string) {
+  const lower = (name || '').toLowerCase();
+  if (lower.includes('cấp cứu') || lower.includes('khẩn')) return 'bi-activity';
+  if (lower.includes('tim') || lower.includes('mạch') || lower.includes('huyết')) return 'bi-heart-pulse';
+  if (lower.includes('nhi') || lower.includes('trẻ')) return 'bi-emoji-smile';
+  if (lower.includes('dinh dưỡng') || lower.includes('ăn')) return 'bi-basket';
+  if (lower.includes('tiêm') || lower.includes('vaccine')) return 'bi-shield-plus';
+  if (lower.includes('sức khỏe') || lower.includes('health')) return 'bi-heart-fill';
+  return 'bi-bookmark-heart';
+}
+
 export default function ArticleDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -35,6 +46,9 @@ export default function ArticleDetailPage() {
   const [article, setArticle] = useState<ArticleDTO | null>(null);
   const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [recent, setRecent] = useState<ArticleDTO[]>([]);
+  const [categoryCounts, setCategoryCounts] = useState<{ [catId: string]: number }>({});
+  const [totalValid, setTotalValid] = useState(0);
+  const [validArticles, setValidArticles] = useState<ArticleDTO[]>([]);
 
   const [likeBusy, setLikeBusy] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -95,6 +109,38 @@ export default function ArticleDetailPage() {
       }
     })();
   }, [slug]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { items } = await articleService.list(1, 9999);
+        // Chỉ lấy bài published, có category hợp lệ
+        const valid = items.filter(
+          a => String(a.statusCode).toLowerCase() === 'published' && Array.isArray(a.categoryIds) && a.categoryIds.length > 0
+        );
+        setValidArticles(valid);
+        setTotalValid(valid.length);
+        // Tính count từng cat
+        const counts: { [catId: string]: number } = {};
+        for(const a of valid) {
+          (a.categoryIds || []).forEach(cid => { counts[cid] = (counts[cid] || 0) + 1; });
+        }
+        setCategoryCounts(counts);
+        // Recent chỉ lấy từ valid, khác slug
+        setRecent(
+          valid.filter(a => a.slug !== article?.slug)
+            .sort((a, b) => {
+              const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+              const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+              return tb - ta;
+            })
+            .slice(0, 6)
+        );
+      } catch {
+        setValidArticles([]); setCategoryCounts({}); setTotalValid(0);
+      }
+    })();
+  }, [categories, article]);
 
   const handleLike = async () => {
     if (!article || likeBusy) return;
@@ -202,9 +248,26 @@ export default function ArticleDetailPage() {
           <div className="adp-card">
             <div className="title"><i className="bi bi-folder2-open" /> Danh mục</div>
             <ul className="adp-category-list">
+              <li>
+                <button
+                  className={`adp-category-item${!article?.categoryIds?.length ? ' active' : ''}`}
+                  onClick={() => navigate('/articles')}
+                >
+                  <span className="category-icon"><i className="bi bi-grid-3x3-gap-fill" /></span>
+                  <span>Tất cả</span>
+                  <span className="category-badge">{totalValid}</span>
+                </button>
+              </li>
               {categories.map(c => (
                 <li key={c.id}>
-                  <button className="adp-category-item" onClick={() => navigate('/articles')}>{c.name}</button>
+                  <button
+                    className={`adp-category-item${article?.categoryIds?.includes(c.id) ? ' active' : ''}`}
+                    onClick={() => navigate(`/articles?cat=${c.id}`)}
+                  >
+                    <span className="category-icon"><i className={`bi ${getCategoryIcon(c.name)}`} /></span>
+                    <span>{c.name}</span>
+                    <span className="category-badge">{categoryCounts[c.id] || 0}</span>
+                  </button>
                 </li>
               ))}
             </ul>

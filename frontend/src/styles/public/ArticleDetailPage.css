@@ -36,9 +36,65 @@
 .adp-sidebar { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 88px; height: fit-content; }
 .adp-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 18px; }
 .adp-card .title { font-weight: 800; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-.adp-category-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.adp-category-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-card); cursor: pointer; transition: var(--transition); font-size: 14px; }
-.adp-category-item:hover { border-color: var(--primary); background: rgba(0, 102, 204, 0.04); transform: translateX(3px); }
+.adp-category-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.adp-category-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+  padding: 12px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  position: relative;
+  box-sizing: border-box;
+  min-height: 56px; /* đồng đều chiều cao các thẻ */
+}
+.adp-category-item .category-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,102,204,0.15);
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+.adp-category-item:hover .category-icon { transform: scale(1.1); }
+
+/* Badge đồng bộ với reader */
+.adp-category-badge, .category-badge {
+  margin-left: auto;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 10px;
+  min-width: 24px;
+  text-align: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.adp-category-item:hover,
+.adp-category-item.active {
+  border-color: var(--primary);
+  background: rgba(0, 102, 204, 0.04);
+}
 .adp-recent-list { display: flex; flex-direction: column; gap: 10px; }
 .adp-recent-item { display: grid; grid-template-columns: 64px 1fr; gap: 10px; text-decoration: none; color: inherit; padding: 8px; border-radius: 10px; transition: var(--transition); }
 .adp-recent-item:hover { background: rgba(0,0,0,0.03); }

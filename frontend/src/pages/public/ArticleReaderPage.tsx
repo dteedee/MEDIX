@@ -44,6 +44,10 @@ export default function ArticleReaderPage() {
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  const [categoryCounts, setCategoryCounts] = useState<{ [catId: string]: number }>({});
+  const [totalValid, setTotalValid] = useState(0);
+  const [validArticles, setValidArticles] = useState<ArticleDTO[]>([]);
+
   // Map category name -> icon class
   const getCategoryIcon = (name?: string) => {
     const lower = (name || '').toLowerCase();
@@ -73,6 +77,33 @@ export default function ArticleReaderPage() {
       }
     })();
   }, []);
+
+  // Fetch, filter bài hợp lệ và đếm badge sidebar
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const { items } = await articleService.list(1, 9999);
+        // Lọc đúng bài hợp lệ
+        const valid = items.filter(
+          a => String(a.statusCode).toLowerCase() === 'published' && Array.isArray(a.categoryIds) && a.categoryIds.length > 0
+        );
+        setValidArticles(valid);
+        setTotalValid(valid.length);
+        // Đếm cho từng cat
+        const catCounts: { [catId: string]: number } = {};
+        for(const a of valid) {
+          (a.categoryIds || []).forEach(cid => {
+            catCounts[cid] = (catCounts[cid] || 0) + 1;
+          })
+        }
+        setCategoryCounts(catCounts);
+      } catch {
+        setValidArticles([]); setTotalValid(0); setCategoryCounts({});
+      }
+      setLoading(false);
+    })();
+  }, [/* có thể thêm categories khi cần */]);
 
   // Fetch articles
   useEffect(() => {
@@ -106,17 +137,33 @@ export default function ArticleReaderPage() {
     })();
   }, [page, pageSize, debounced, selectedCategoryId]);
 
+  const filteredArticles = useMemo(() => {
+    let arr = validArticles;
+    if (debounced) {
+      const key = debounced.toLowerCase();
+      arr = arr.filter(a =>
+        a.title?.toLowerCase().includes(key)
+        || a.summary?.toLowerCase().includes(key)
+        || a.content?.toLowerCase().includes(key)
+      );
+    }
+    if (selectedCategoryId !== 'all') {
+      arr = arr.filter(a => (a.categoryIds || []).includes(String(selectedCategoryId)));
+    }
+    return arr;
+  }, [validArticles, debounced, selectedCategoryId]);
+
   const pagedArticles = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return articles.slice(start, start + pageSize);
-  }, [articles, page, pageSize]);
+    return filteredArticles.slice(start, start + pageSize);
+  }, [filteredArticles, page, pageSize]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
 
   const featured: ArticleDTO | undefined = useMemo(() => {
     if (debounced) return undefined;
-    return articles[0];
-  }, [debounced, articles]);
+    return filteredArticles[0];
+  }, [debounced, filteredArticles]);
 
   const rest = useMemo(() => {
     if (featured && page === 1 && pagedArticles.length) {
@@ -202,13 +249,10 @@ export default function ArticleReaderPage() {
             </div>
             <ul className="category-list">
               <li>
-                <button
-                  className={`category-item ${selectedCategoryId === 'all' ? 'active' : ''}`}
-                  onClick={() => handleSelectCategory('all')}
-                >
+                <button className={`category-item ${selectedCategoryId === 'all' ? 'active' : ''}`} onClick={() => handleSelectCategory('all')}>
                   <span className="category-icon"><i className="bi bi-grid-3x3-gap-fill"></i></span>
                   <span>Tất cả</span>
-                  <span className="category-badge">{articles.length}</span>
+                  <span className="category-badge">{filteredArticles.length}</span>
                 </button>
               </li>
               {categories.map(c => (
@@ -219,6 +263,7 @@ export default function ArticleReaderPage() {
                   >
                     <span className="category-icon"><i className={`bi ${getCategoryIcon(c.name)}`}></i></span>
                     <span>{c.name}</span>
+                    <span className="category-badge">{categoryCounts[c.id] || 0}</span>
                   </button>
                 </li>
               ))}
@@ -274,7 +319,7 @@ export default function ArticleReaderPage() {
             <div className="stats-bar">
               <div className="stat-item">
                 <i className="bi bi-file-earmark-text-fill"></i>
-                <span>{total} bài viết</span>
+                <span>{totalValid} bài viết</span>
               </div>
               {selectedCategoryId !== 'all' && (
                 <div className="stat-item active-filter">

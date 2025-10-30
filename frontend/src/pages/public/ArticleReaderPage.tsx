@@ -17,9 +17,19 @@ function formatViDate(input?: string | null): string {
 
 // Utility: Get reading time estimate
 function getReadingTime(content?: string | null): string {
-  if (!content) return '5 phút đọc';
-  const words = content.split(/\s+/).length;
-  const minutes = Math.ceil(words / 200);
+  if (!content) return '1 phút đọc';
+  // Chuẩn ngành thường dùng ~200 từ/phút (đọc trung bình người lớn)
+  const WORDS_PER_MINUTE = 200;
+
+  // Loại bỏ thẻ HTML và entity để đếm từ chính xác
+  const plainText = content
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;|&amp;|&lt;|&gt;|&quot;|&#39;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const words = plainText ? plainText.split(' ').length : 0;
+  const minutes = Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
   return `${minutes} phút đọc`;
 }
 

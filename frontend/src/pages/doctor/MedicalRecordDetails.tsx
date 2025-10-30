@@ -19,6 +19,7 @@ const MedicalRecordDetails: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchMedicalRecord = async () => {
@@ -53,6 +54,43 @@ const MedicalRecordDetails: React.FC = () => {
     setMedicalRecord(prev => prev ? { ...prev, [field]: value } : null);
   };
 
+  const fieldDisplayNames: { [key in keyof MedicalRecord]?: string } = {
+    chiefComplaint: 'Lý do khám',
+    physicalExamination: 'Khám lâm sàng',
+    diagnosis: 'Chẩn đoán chính',
+    treatmentPlan: 'Kế hoạch điều trị',
+  };
+
+  const validateField = (fieldName: keyof MedicalRecord, value: any): string => {
+    const requiredFields: (keyof MedicalRecord)[] = [
+      'chiefComplaint',
+      'physicalExamination',
+      'diagnosis',
+      'treatmentPlan',
+    ];
+
+    if (requiredFields.includes(fieldName)) {
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        return `${fieldDisplayNames[fieldName] || fieldName} không được để trống.`;
+      }
+    }
+    return '';
+  };
+
+  const handleFieldChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const { name, value } = e.target as { name: keyof MedicalRecord, value: string };
+    handleUpdateField(name, value);
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleFieldBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+    const { name, value } = e.target as { name: keyof MedicalRecord, value: string };
+    const error = validateField(name, value);
+    setFieldErrors(prev => ({ ...prev, [name]: error }));
+  };
+
   const handleAddMedicine = () => {
     const newMedicine: Prescription = {
       id: `new-${Date.now()}`, // ID tạm thời cho client
@@ -77,6 +115,27 @@ const MedicalRecordDetails: React.FC = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!medicalRecord) return;
+
+    // --- VALIDATION ---
+    const requiredFields: (keyof MedicalRecord)[] = [
+      'chiefComplaint',
+      'physicalExamination',
+      'diagnosis',
+      'treatmentPlan',
+    ];
+
+    const missingFields = requiredFields.filter(field => {
+      const value = medicalRecord[field];
+      return !value || (typeof value === 'string' && value.trim() === '');
+    });
+
+    if (missingFields.length > 0) {
+      // Cập nhật trạng thái lỗi để hiển thị trên UI
+      missingFields.forEach(field => setFieldErrors(prev => ({ ...prev, [field]: `${fieldDisplayNames[field]} không được để trống.` })));
+      const missingFieldNames = missingFields.map(field => fieldDisplayNames[field] || field).join(', ');
+      Swal.fire('Thiếu thông tin', `Vui lòng điền đầy đủ các trường bắt buộc: ${missingFieldNames}.`, 'warning');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -181,11 +240,25 @@ const MedicalRecordDetails: React.FC = () => {
         <div className="section-grid">
           <div className="form-column">
             <label className="form-label">Lý do khám</label>
-            <textarea className="form-textarea" value={medicalRecord.chiefComplaint} onChange={(e) => handleUpdateField('chiefComplaint', e.target.value)} rows={3} />
+            <textarea
+              name="chiefComplaint"
+              className={`form-textarea ${fieldErrors.chiefComplaint ? 'input-error' : ''}`}
+              value={medicalRecord.chiefComplaint}
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              rows={3} />
+            {fieldErrors.chiefComplaint && <p className="error-message">{fieldErrors.chiefComplaint}</p>}
           </div>
           <div className="form-column full-width">
             <label className="form-label">Quá trình bệnh lý và diễn biến (Khám lâm sàng)</label>
-            <textarea className="form-textarea" value={medicalRecord.physicalExamination} onChange={(e) => handleUpdateField('physicalExamination', e.target.value)} rows={5} />
+            <textarea
+              name="physicalExamination"
+              className={`form-textarea ${fieldErrors.physicalExamination ? 'input-error' : ''}`}
+              value={medicalRecord.physicalExamination}
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              rows={5} />
+            {fieldErrors.physicalExamination && <p className="error-message">{fieldErrors.physicalExamination}</p>}
           </div>
         </div>
       </section>
@@ -209,23 +282,47 @@ const MedicalRecordDetails: React.FC = () => {
         <div className="section-grid">
           <div className="form-column">
             <label className="form-label">Chẩn đoán chính</label>
-            <textarea className="form-textarea" value={medicalRecord.diagnosis} onChange={(e) => handleUpdateField('diagnosis', e.target.value)} rows={3} />
+            <textarea
+              name="diagnosis"
+              className={`form-textarea ${fieldErrors.diagnosis ? 'input-error' : ''}`}
+              value={medicalRecord.diagnosis}
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              rows={3} />
+            {fieldErrors.diagnosis && <p className="error-message">{fieldErrors.diagnosis}</p>}
           </div>
           <div className="form-column">
             <label className="form-label">Ghi chú đánh giá</label>
-            <textarea className="form-textarea" value={medicalRecord.assessmentNotes} onChange={(e) => handleUpdateField('assessmentNotes', e.target.value)} rows={3} />
+            <textarea
+              name="assessmentNotes"
+              className="form-textarea"
+              value={medicalRecord.assessmentNotes}
+              onChange={handleFieldChange}
+              rows={3} />
           </div>
           <div className="form-column full-width">
             <label className="form-label">Kế hoạch điều trị</label>
-            <textarea className="form-textarea" value={medicalRecord.treatmentPlan} onChange={(e) => handleUpdateField('treatmentPlan', e.target.value)} rows={4} />
+            <textarea
+              name="treatmentPlan"
+              className={`form-textarea ${fieldErrors.treatmentPlan ? 'input-error' : ''}`}
+              value={medicalRecord.treatmentPlan}
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              rows={4} />
+            {fieldErrors.treatmentPlan && <p className="error-message">{fieldErrors.treatmentPlan}</p>}
           </div>
           <div className="form-column">
             <label className="form-label">Ghi chú của bác sĩ</label>
-            <textarea className="form-textarea" value={medicalRecord.doctorNotes} onChange={(e) => handleUpdateField('doctorNotes', e.target.value)} rows={4} />
+            <textarea
+              name="doctorNotes"
+              className="form-textarea"
+              value={medicalRecord.doctorNotes}
+              onChange={handleFieldChange}
+              rows={4} />
           </div>
           <div className="form-column">
             <label className="form-label">Hướng dẫn tái khám</label>
-            <textarea className="form-textarea" value={medicalRecord.followUpInstructions} onChange={(e) => handleUpdateField('followUpInstructions', e.target.value)} rows={4} />
+            <textarea name="followUpInstructions" className="form-textarea" value={medicalRecord.followUpInstructions} onChange={handleFieldChange} rows={4} />
           </div>
         </div>
       </section>

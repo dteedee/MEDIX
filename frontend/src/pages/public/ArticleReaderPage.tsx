@@ -83,9 +83,11 @@ export default function ArticleReaderPage() {
           keyword: debounced || undefined,
         });
 
+        // LỌC CHỈ BÀI VIẾT ĐƯỢC PUBLIC
+        let published = items.filter(a => String(a.statusCode).toLowerCase() === 'published');
         let filtered = selectedCategoryId === 'all'
-          ? items
-          : items.filter(a => (a.categoryIds || []).includes(String(selectedCategoryId)));
+          ? published
+          : published.filter(a => (a.categoryIds || []).includes(String(selectedCategoryId)));
 
         // Sort by date: newest first
         filtered = filtered.sort((a, b) => {

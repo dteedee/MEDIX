@@ -65,7 +65,7 @@ import UserEditPage from './pages/admin/UserEditPage';
 import TrackingPage from './pages/admin/TrackingPage';
 import SettingsPage from './pages/admin/SettingsPage';
 
-import ArticleDetailPage from './pages/patient/ArticleDetailPage';
+import ArticleDetailPage from './pages/public/ArticleDetailPage';
 import ArticleReaderPage from './pages/public/ArticleReaderPage';
 import DoctorBookingList from './pages/patient/DoctorBookingList';
 import ErrorPageWrapper from './pages/error/ErrorPageWrapper';

@@ -1,98 +1,267 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import '../../styles/public/ArticleDetailPage.css';
+import homeStyles from '../../styles/public/home.module.css';
 import { articleService } from '../../services/articleService';
-import { ArticleDTO } from '../../types/article.types';
-import styles from '../../styles/public/ArticleDetailPage.module.css';
+import { categoryService } from '../../services/categoryService';
+import type { ArticleDTO } from '../../types/article.types';
+import type { CategoryDTO } from '../../types/category.types';
+
+function formatViDate(input?: string | null): string {
+  if (!input) return '';
+  const d = new Date(input);
+  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function getReadingTime(content?: string | null): string {
+  if (!content) return '1 phút đọc';
+  const WORDS_PER_MINUTE = 200;
+  const plainText = content
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;|&amp;|&lt;|&gt;|&quot;|&#39;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const words = plainText ? plainText.split(' ').length : 0;
+  const minutes = Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
+  return `${minutes} phút đọc`;
+}
 
 export default function ArticleDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const [article, setArticle] = useState<ArticleDTO | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [article, setArticle] = useState<ArticleDTO | null>(null);
+  const [categories, setCategories] = useState<CategoryDTO[]>([]);
+  const [recent, setRecent] = useState<ArticleDTO[]>([]);
 
+  const [likeBusy, setLikeBusy] = useState(false);
+  const [liked, setLiked] = useState(false);
+
+  // load categories + article + recent
   useEffect(() => {
-    if (!slug) {
-      setError('Không tìm thấy slug bài viết.');
-      setLoading(false);
-      return;
-    }
-
-    const fetchArticle = async () => {
+    (async () => {
+      if (!slug) {
+        setError('Không tìm thấy slug bài viết');
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       setError(null);
       try {
-        const data = await articleService.getBySlug(slug);
-        if (data) {
-          // Check if the article is published. The backend should already handle this,
-          // but this is an extra layer of protection on the client.
-          if (data.statusCode !== 'PUBLISHED') {
-            setError('Bài viết này không được công khai hoặc không tồn tại.');
-            return;
-          }
-          setArticle(data);
-        } else {
-          setError('Không tìm thấy bài viết.');
+        const [catRes, articleRes] = await Promise.all([
+          categoryService.list(1, 9999),
+          articleService.getBySlug(slug)
+        ]);
+        setCategories(catRes.items || []);
+        if (!articleRes) {
+          setError('Không tìm thấy bài viết');
+          setArticle(null);
+          return;
         }
-      } catch (err) {
-        console.error('Failed to fetch article:', err);
-        setError('Đã xảy ra lỗi khi tải bài viết.');
+        // chỉ cho phép xem bài đã publish
+        if (!articleRes.statusCode || String(articleRes.statusCode).toLowerCase() !== 'published') {
+          setError('Bài viết này không được công khai hoặc không tồn tại.');
+          setArticle(null);
+          return;
+        }
+        setArticle(articleRes);
+        // init liked từ localStorage
+        try {
+          const key = `medix-liked-${articleRes.id}`;
+          setLiked(localStorage.getItem(key) === '1');
+        } catch {}
+        // lấy bài viết mới (client-side lọc khác slug)
+        const { items } = await articleService.list(1, 20);
+        const filtered = (items || [])
+          .filter(a => a.slug !== articleRes.slug)
+          .sort((a, b) => {
+            const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+            const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+            return tb - ta;
+          })
+          .slice(0, 6);
+        setRecent(filtered);
+        // tăng view (best-effort)
+        if (articleRes.id) {
+          articleService.incrementView(articleRes.id).catch(() => {});
+        }
+      } catch (e) {
+        console.error(e);
+        setError('Đã xảy ra lỗi khi tải dữ liệu.');
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchArticle();
+    })();
   }, [slug]);
 
-  const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('vi-VN') : 'N/A';
+  const handleLike = async () => {
+    if (!article || likeBusy) return;
+    setLikeBusy(true);
+    const prevLiked = liked;
+    const prevCount = article.likeCount || 0;
+    // tối ưu UI
+    setLiked(!prevLiked);
+    setArticle({ ...article, likeCount: prevLiked ? Math.max(0, prevCount - 1) : prevCount + 1 });
+    try {
+      await articleService.toggleLike(article.id);
+      try { localStorage.setItem(`medix-liked-${article.id}`, !prevLiked ? '1' : '0'); } catch {}
+    } catch (e) {
+      // revert nếu lỗi
+      setLiked(prevLiked);
+      setArticle({ ...article, likeCount: prevCount });
+    } finally {
+      setLikeBusy(false);
+    }
+  };
+
+  const readingTime = useMemo(() => getReadingTime(article?.content), [article?.content]);
 
   if (loading) {
     return (
-      <div className={styles.page}>
-        <div className={`${styles.container} ${styles.stateContainer}`}>
-          <div className={styles.loadingSpinner}></div>
-          <p>Đang tải bài viết...</p>
+      <div className="adp-page">
+        <div className="adp-container">
+          <main className="adp-main">
+            <div className="adp-loading">
+              <div className="adp-spinner" />
+              <p>Đang tải bài viết...</p>
+            </div>
+          </main>
         </div>
       </div>
     );
-  }
-  
-  if (error) {
-    return (
-      <div className={styles.page}>
-        <div className={`${styles.container} ${styles.stateContainer}`}>
-          <div className={styles.errorIcon}>&#x26A0;</div>
-          <h2>Lỗi</h2>
-          <p>{error}</p>
-          <button onClick={() => navigate(-1)} className={styles.backButton} style={{ marginTop: '20px' }}>
-            &larr; Quay lại
-          </button>
-        </div>
-      </div>
-    );
-  }
-  
-  if (!article) {
-    return <div className={styles.container}><h2>Không tìm thấy bài viết</h2></div>;
   }
 
+  if (error) {
+    return (
+      <div className="adp-page">
+        <div className="adp-container">
+          <main className="adp-main">
+            <div className="adp-error">
+              <i className="bi bi-exclamation-triangle-fill" />
+              <h3>{error}</h3>
+              <button className="adp-like" onClick={() => navigate(-1)}>
+                <i className="bi bi-arrow-left" /> Quay lại
+              </button>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (!article) return null;
+
   return (
-    <div className={styles.page}>
-      <div className={styles.container}>
-        <button onClick={() => navigate(-1)} className={styles.backButton}>
-          &larr; Quay lại
-        </button>
-        <header className={styles.header}>
-          <h1 className={styles.title}>{article.title}</h1>
-          <p className={styles.metaInfo}>
-            <span>Tác giả: {article.authorName || 'N/A'}</span>
-            <span>|</span>
-            <span>Ngày đăng: {fmtDate(article.publishedAt ?? article.createdAt)}</span>
-          </p>
-        </header>
-        {article.coverImageUrl && <img src={article.coverImageUrl} alt={article.title} className={styles.coverImage} />}
-        <div className={styles.content} dangerouslySetInnerHTML={{ __html: article.content || '' }}></div>
+    <div className="adp-page">
+      {/* Navigation giống trang danh sách */}
+      <nav className={homeStyles["navbar"]}>
+        <ul className={homeStyles["nav-menu"]}>
+          <li>
+            <a onClick={() => navigate('/')} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/' ? homeStyles["active"] : ''}`}>
+              Trang chủ
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a onClick={() => navigate('/ai-chat')} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}>
+              AI chẩn đoán
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a onClick={() => navigate('/specialties')} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/specialties' ? homeStyles["active"] : ''}`}>
+              Chuyên khoa
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a onClick={() => navigate('/doctors')} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/doctors' ? homeStyles["active"] : ''}`}>
+              Bác sĩ
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a onClick={() => navigate('/articles')} className={`${homeStyles["nav-link"]} ${window.location.pathname.startsWith('/articles') ? homeStyles["active"] : ''}`}>
+              Bài viết sức khỏe
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a onClick={() => navigate('/about')} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/about' ? homeStyles["active"] : ''}`}>
+              Về chúng tôi
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div className="adp-container">
+        {/* Sidebar */}
+        <aside className="adp-sidebar">
+          <div className="adp-card">
+            <div className="title"><i className="bi bi-folder2-open" /> Danh mục</div>
+            <ul className="adp-category-list">
+              {categories.map(c => (
+                <li key={c.id}>
+                  <button className="adp-category-item" onClick={() => navigate('/articles')}>{c.name}</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="adp-card">
+            <div className="title"><i className="bi bi-stars" /> Bài viết mới</div>
+            <div className="adp-recent-list">
+              {recent.map(r => (
+                <Link to={`/articles/${r.slug}`} key={r.id} className="adp-recent-item">
+                  <img className="adp-recent-thumb" src={r.thumbnailUrl || r.coverImageUrl || '/images/medix-logo.png'} alt={r.title} />
+                  <div>
+                    <div className="adp-recent-title">{r.title}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatViDate(r.publishedAt)}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        {/* Main */}
+        <main className="adp-main">
+          {/* Hero */}
+          <section className="adp-hero">
+            <div className="adp-hero-media">
+              <img src={article.coverImageUrl || article.thumbnailUrl || '/images/medix-logo.png'} alt={article.title} />
+            </div>
+            <div className="adp-hero-content">
+              <h1 className="adp-title">{article.title}</h1>
+              <div className="adp-meta">
+                <span><i className="bi bi-person-circle" /> {article.authorName || 'Tác giả ẩn danh'}</span>
+                <span><i className="bi bi-calendar3" /> {formatViDate(article.publishedAt || article.createdAt)}</span>
+                <span><i className="bi bi-clock" /> {readingTime}</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Toolbar: like + stats */}
+          <div className="adp-toolbar">
+            <div className="adp-stats">
+              <span><i className="bi bi-eye" /> {article.viewCount ?? 0} lượt xem</span>
+              <span><i className="bi bi-chat-left-text" /> {Math.max(0, Math.floor((article.likeCount || 0) / 3))} bình luận</span>
+            </div>
+            <button className={`adp-like ${liked ? 'liked' : ''}`} onClick={handleLike} disabled={likeBusy} aria-label="Thích bài viết">
+              <i className={`bi ${liked ? 'bi-heart-fill' : 'bi-heart'}`} />
+              <span>{article.likeCount ?? 0}</span>
+            </button>
+          </div>
+
+          {/* Content */}
+          <article className="adp-content">
+            {article.summary && (
+              <p style={{ fontStyle: 'italic', color: 'var(--text-secondary)', marginTop: 0 }}>{article.summary}</p>
+            )}
+            <div className="article-html" dangerouslySetInnerHTML={{ __html: article.content || '' }} />
+          </article>
+        </main>
       </div>
     </div>
   );

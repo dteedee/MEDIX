@@ -114,8 +114,10 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return await _context.SiteBanners
                 .Where(b => b.IsActive && b.StartDate <= today && today <= b.EndDate)
                 .OrderBy(b => b.DisplayOrder)
+                .ThenByDescending(b => b.CreatedAt) 
                 .ToListAsync();
         }
+
         public async Task<(IEnumerable<SiteBanner> Banners, int TotalCount)> SearchByNameAsync(string name, int page, int pageSize)
         {
             var query = _context.SiteBanners

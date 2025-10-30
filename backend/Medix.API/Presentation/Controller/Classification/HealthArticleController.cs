@@ -133,17 +133,19 @@ namespace Medix.API.Presentation.Controller.Classification
                 var article = await _healthArticleService.CreateAsync(model);
                 return CreatedAtAction(nameof(GetById), new { id = article.Id }, article);
             }
+            catch (Medix.API.Exceptions.ValidationException)
+            {
+                // Ném lại lỗi để ExceptionHandlingMiddleware xử lý
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while creating article");
                 if (ex.InnerException != null)
                     _logger.LogError("Inner exception: {0}", ex.InnerException.Message);
 
-                return StatusCode(500, new
-                {
-                    message = ex.Message,
-                    inner = ex.InnerException?.Message
-                });
+                // Chỉ trả về lỗi 500 cho các lỗi không mong muốn
+                return StatusCode(500, new { message = "An unexpected error occurred while creating the article." });
             }
 
         }
@@ -169,17 +171,24 @@ namespace Medix.API.Presentation.Controller.Classification
                 var updated = await _healthArticleService.UpdateAsync(id, model);
                 return Ok(updated);
             }
+            catch (Medix.API.Exceptions.ValidationException)
+            {
+                // Ném lại lỗi để ExceptionHandlingMiddleware xử lý
+                throw;
+            }
+            catch (Medix.API.Exceptions.NotFoundException)
+            {
+                // Ném lại lỗi để ExceptionHandlingMiddleware xử lý
+                throw;
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while creating article");
+                _logger.LogError(ex, "Error while updating article with ID {ArticleId}", id);
                 if (ex.InnerException != null)
                     _logger.LogError("Inner exception: {0}", ex.InnerException.Message);
 
-                return StatusCode(500, new
-                {
-                    message = ex.Message,
-                    inner = ex.InnerException?.Message
-                });
+                // Chỉ trả về lỗi 500 cho các lỗi không mong muốn
+                return StatusCode(500, new { message = "An unexpected error occurred while updating the article." });
             }
 
         }

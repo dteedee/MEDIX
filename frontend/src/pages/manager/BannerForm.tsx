@@ -44,6 +44,20 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
     }
   }, [banner]);
 
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    if (name === 'bannerTitle' && !value.trim()) {
+      setErrors(prev => ({ ...prev, bannerTitle: 'Tiêu đề không được để trống' }));
+    }
+    if (name === 'bannerUrl' && value.trim() && !isValidUrl(value)) { // Validate URL on blur
+      setErrors(prev => ({ ...prev, bannerUrl: 'Đường dẫn không hợp lệ' }));
+    } else if (name === 'bannerUrl') { // Clear URL error if it becomes valid or empty
+      const newErrors = { ...errors };
+      delete newErrors.bannerUrl;
+      setErrors(newErrors);
+    }
+  };
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -164,9 +178,30 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
     }
   };
 
+  const isValidImageFile = (file: File): boolean => {
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
+    return allowedExtensions.includes(fileExtension) && allowedMimeTypes.includes(file.type);
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!isValidImageFile(file)) {
+        setErrors(prev => ({ ...prev, bannerImageUrl: 'Chỉ chấp nhận các tệp ảnh (.jpg, .png, .gif, .webp).' }));
+        e.target.value = ''; // Reset input
+        return;
+      }
+
+      // Clear error if file is valid
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.bannerImageUrl;
+        return newErrors;
+      });
+
       setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -174,6 +209,10 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
         setImagePreview(result);
       };
       reader.readAsDataURL(file);
+    } else {
+      // Clear file and preview if user cancels file selection
+      setImageFile(null);
+      setImagePreview(banner?.bannerImageUrl || '');
     }
   };
 
@@ -181,6 +220,8 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
     if (!dateString) return 'Chưa có';
     return new Date(dateString).toLocaleDateString('vi-VN');
   };
+
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
@@ -194,7 +235,16 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
           <input
             type="text"
             value={formData.bannerTitle}
-            onChange={e => setFormData(prev => ({ ...prev, bannerTitle: e.target.value }))}
+            name="bannerTitle"
+            onChange={e => {
+              setFormData(prev => ({ ...prev, bannerTitle: e.target.value }));
+              if (errors.bannerTitle) {
+                const newErrors = { ...errors };
+                delete newErrors.bannerTitle;
+                setErrors(newErrors);
+              }
+            }}
+            onBlur={handleBlur}
             className={`${styles.input} ${errors.bannerTitle ? styles.inputError : ''}`}
             disabled={mode === 'view'}
             placeholder="Nhập tiêu đề banner"
@@ -258,21 +308,7 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
         {/* Display in 2 columns */}
         <div className={styles.gridTwoCols}>
           {/* Banner URL */}
-          <div className={styles.formGroup}>
-            <label className={styles.label}>
-              <i className="bi bi-link-45deg"></i>
-              Đường dẫn URL (tùy chọn)
-            </label>
-            <input
-              type="text"
-              value={formData.bannerUrl}
-              onChange={e => setFormData(prev => ({ ...prev, bannerUrl: e.target.value }))}
-              className={`${styles.input} ${errors.bannerUrl ? styles.inputError : ''}`}
-              disabled={mode === 'view'}
-              placeholder="https://example.com"
-            />
-            {errors.bannerUrl && <span className={styles.errorText}>{errors.bannerUrl}</span>}
-          </div>
+          
 
           {/* Display Order */}
           <div className={styles.formGroup}>
@@ -283,7 +319,14 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
             <input
               type="number"
               value={formData.displayOrder}
-              onChange={e => setFormData(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
+              onChange={e => {
+                setFormData(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }));
+                if (errors.displayOrder) {
+                  const newErrors = { ...errors };
+                  delete newErrors.displayOrder;
+                  setErrors(newErrors);
+                }
+              }}
               className={`${styles.input} ${errors.displayOrder ? styles.inputError : ''}`}
               disabled={mode === 'view'}
               placeholder="0"
@@ -296,7 +339,64 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
           </div>
         </div>
 
-        {/* Status */}
+        
+        {/* Date Range */}
+        <div className={styles.formGroup}>
+          <label className={styles.label}>
+            <i className="bi bi-calendar-range"></i>
+            Thời gian hiển thị (tùy chọn)
+          </label>
+          <div className={styles.gridTwoCols}>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                <i className="bi bi-calendar-event"></i>
+                Từ ngày
+              </label>
+              <input
+                type="date"
+                value={formData.startDate}
+                onChange={e => {
+                  setFormData(prev => ({ ...prev, startDate: e.target.value }));
+                  if (errors.dateRange) {
+                    const newErrors = { ...errors };
+                    delete newErrors.dateRange;
+                    setErrors(newErrors);
+                  }
+                }}
+                max="9999-12-31"
+                className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
+                disabled={mode === 'view'}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                <i className="bi bi-calendar-check"></i>
+                Đến ngày
+              </label>
+              <input
+                type="date"
+                value={formData.endDate}
+                onChange={e => {
+                  setFormData(prev => ({ ...prev, endDate: e.target.value }));
+                  if (errors.dateRange) {
+                    const newErrors = { ...errors };
+                    delete newErrors.dateRange;
+                    setErrors(newErrors);
+                  }
+                }}
+                min={today}
+                max="9999-12-31"
+                className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
+                disabled={mode === 'view'}
+              />
+            </div>
+          </div>
+          {errors.dateRange && <p className={styles.errorText}>{errors.dateRange}</p>}
+          {mode !== 'view' && (
+            <span className={styles.helpText}>Banner sẽ tự động ẩn khi hết hạn</span>
+          )}
+        </div>
+{/* Status */}
         <div className={styles.formGroup}>
           <label className={styles.label}>
             <i className="bi bi-power"></i>
@@ -324,46 +424,6 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
                 : 'Banner sẽ không hiển thị cho đến khi được kích hoạt'}
             </p>
           </div>
-        </div>
-
-        {/* Date Range */}
-        <div className={styles.formGroup}>
-          <label className={styles.label}>
-            <i className="bi bi-calendar-range"></i>
-            Thời gian hiển thị (tùy chọn)
-          </label>
-          <div className={styles.gridTwoCols}>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>
-                <i className="bi bi-calendar-event"></i>
-                Từ ngày
-              </label>
-              <input
-                type="date"
-                value={formData.startDate}
-                onChange={e => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
-                disabled={mode === 'view'}
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>
-                <i className="bi bi-calendar-check"></i>
-                Đến ngày
-              </label>
-              <input
-                type="date"
-                value={formData.endDate}
-                onChange={e => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
-                disabled={mode === 'view'}
-              />
-            </div>
-          </div>
-          {errors.dateRange && <p className={styles.errorText}>{errors.dateRange}</p>}
-          {mode !== 'view' && (
-            <span className={styles.helpText}>Banner sẽ tự động ẩn khi hết hạn</span>
-          )}
         </div>
 
         {/* View mode - show additional info */}

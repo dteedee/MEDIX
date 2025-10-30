@@ -295,7 +295,9 @@ export default function UserList() {
       return date;
     })() : undefined;
 
-    const filtered = allUsers.filter(u => {
+    // Lọc bỏ các tài khoản Admin khỏi danh sách hiển thị
+    const nonAdminUsers = allUsers.filter(u => u.role?.toUpperCase() !== 'ADMIN');
+    const filtered = nonAdminUsers.filter(u => {
       const searchTerm = filters.search.toLowerCase();
       const okSearch = !searchTerm ||
         (u.fullName && u.fullName.toLowerCase().includes(searchTerm)) ||

@@ -18,16 +18,12 @@ function formatViDate(input?: string | null): string {
 // Utility: Get reading time estimate
 function getReadingTime(content?: string | null): string {
   if (!content) return '1 phút đọc';
-  // Chuẩn ngành thường dùng ~200 từ/phút (đọc trung bình người lớn)
   const WORDS_PER_MINUTE = 200;
-
-  // Loại bỏ thẻ HTML và entity để đếm từ chính xác
   const plainText = content
     .replace(/<[^>]*>/g, ' ')
     .replace(/&nbsp;|&amp;|&lt;|&gt;|&quot;|&#39;/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-
   const words = plainText ? plainText.split(' ').length : 0;
   const minutes = Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
   return `${minutes} phút đọc`;
@@ -42,13 +38,13 @@ export default function ArticleReaderPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | 'all'>('all');
 
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(9);
+  const [pageSize] = useState(12);
   const [total, setTotal] = useState(0);
   const [articles, setArticles] = useState<ArticleDTO[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Map category name -> icon class (align with homepage step icons vibe)
+  // Map category name -> icon class
   const getCategoryIcon = (name?: string) => {
     const lower = (name || '').toLowerCase();
     if (lower.includes('cấp cứu') || lower.includes('khẩn')) return 'bi-activity';
@@ -60,13 +56,13 @@ export default function ArticleReaderPage() {
     return 'bi-bookmark-heart';
   };
 
-  // Debounce search for better UX
+  // Debounce search
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 300);
     return () => clearTimeout(t);
   }, [search]);
 
-  // Load categories once
+  // Load categories
   useEffect(() => {
     (async () => {
       try {
@@ -78,7 +74,7 @@ export default function ArticleReaderPage() {
     })();
   }, []);
 
-  // Fetch articles when filters change
+  // Fetch articles
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -87,7 +83,6 @@ export default function ArticleReaderPage() {
           keyword: debounced || undefined,
         });
 
-        // Client-side category filter
         const filtered = selectedCategoryId === 'all'
           ? items
           : items.filter(a => (a.categoryIds || []).includes(String(selectedCategoryId)));
@@ -102,7 +97,6 @@ export default function ArticleReaderPage() {
     })();
   }, [page, pageSize, debounced, selectedCategoryId]);
 
-  // Compute current page data
   const pagedArticles = useMemo(() => {
     const start = (page - 1) * pageSize;
     return articles.slice(start, start + pageSize);
@@ -111,15 +105,12 @@ export default function ArticleReaderPage() {
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
 
   const featured: ArticleDTO | undefined = useMemo(() => {
-    // Chỉ hiển thị bài nổi bật khi không tìm kiếm từ khoá
     if (debounced) return undefined;
     return articles[0];
   }, [debounced, articles]);
 
   const rest = useMemo(() => {
-    // Nếu có featured và đang ở trang 1 thì bỏ phần tử đầu trong trang hiện tại
     if (featured && page === 1 && pagedArticles.length) {
-      // Nếu phần tử đầu trùng với featured thì cắt bỏ
       const [first, ...others] = pagedArticles;
       return first.id === featured.id ? others : pagedArticles;
     }
@@ -133,7 +124,7 @@ export default function ArticleReaderPage() {
 
   return (
     <div className="article-reader-page">
-      {/* Top navigation */}
+      {/* Navigation */}
       <nav className={homeStyles["navbar"]}>
         <ul className={homeStyles["nav-menu"]}>
           <li>
@@ -254,15 +245,15 @@ export default function ArticleReaderPage() {
 
         {/* Main content */}
         <main className="arp-main">
-          {/* Header with search + stats */}
+          {/* Header with search */}
           <div className="page-header">
-            <div className="header-search" style={{ flex: 1, minWidth: '300px' }}>
+            <div className="header-search">
               <div className="search-box">
                 <i className="bi bi-search search-icon"></i>
                 <input
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Tìm bài viết sức khoẻ..."
+                  placeholder="Tìm bài viết sức khỏe..."
                 />
                 {search && (
                   <button className="clear-btn" onClick={() => setSearch('')} aria-label="Xoá tìm kiếm">
@@ -287,10 +278,7 @@ export default function ArticleReaderPage() {
 
           {/* Featured */}
           {featured && (
-            <Link 
-              to={`/articles/${featured.slug}`} 
-              className="featured-card"
-            >
+            <Link to={`/articles/${featured.slug}`} className="featured-card">
               <div className="featured-badge">
                 <i className="bi bi-star-fill"></i>
                 Nổi bật
@@ -326,8 +314,12 @@ export default function ArticleReaderPage() {
             </Link>
           )}
 
-          {/* Grid/List cards */}
-          <h3 style={{ margin: '16px 0 8px', fontWeight: 800 }}>Bài viết mới nhất</h3>
+          {/* Articles section */}
+          <div className="section-header">
+            <h3 className="section-title">Bài viết mới nhất</h3>
+            <div className="section-count">{rest.length} bài viết</div>
+          </div>
+
           <section className={`card-container ${viewMode}`}>
             {loading && (
               <div className="loading-state">
@@ -347,7 +339,7 @@ export default function ArticleReaderPage() {
                 key={a.id} 
                 to={`/articles/${a.slug}`} 
                 className="article-card"
-                style={{ animationDelay: `${idx * 0.05}s` }}
+                style={{ animationDelay: `${idx * 0.04}s` }}
               >
                 <div className="card-thumb">
                   <img src={a.thumbnailUrl || a.coverImageUrl || '/images/medix-logo.png'} alt={a.title} />

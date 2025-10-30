@@ -1,5 +1,6 @@
 export interface Prescription {
   id: string;
+  medicationId?: string; // ID của thuốc từ database
   medicationName: string;
   dosage: string;
   frequency: string;

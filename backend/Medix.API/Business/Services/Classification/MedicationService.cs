@@ -27,5 +27,12 @@ namespace Medix.API.Business.Services.Classification
             var med = await _repository.GetByIdAsync(id);
             return med == null ? null : _mapper.Map<MedicationDto>(med);
         }
+
+        public async Task<IEnumerable<MedicationSearchDto>> SearchAsync(string query)
+        {
+            var meds = await _repository.SearchAsync(query);
+            // AutoMapper sẽ chuyển đổi từ List<MedicationDatabase> sang List<MedicationSearchDto>
+            return _mapper.Map<IEnumerable<MedicationSearchDto>>(meds);
+        }
     }
 }

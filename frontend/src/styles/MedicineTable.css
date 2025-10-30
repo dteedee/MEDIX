@@ -7,6 +7,7 @@
 .medicine-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed; /* Giúp các cột tuân thủ độ rộng đã định */
   background: white;
 }
 
@@ -22,6 +23,20 @@
   font-weight: 600;
   color: #374151;
   white-space: nowrap;
+}
+
+/* --- Phân chia lại độ rộng các cột để tối ưu không gian --- */
+.medicine-table th:nth-child(1) { width: 30%; } /* Tên thuốc */
+.medicine-table th:nth-child(2) { width: 12%; } /* Hàm lượng */
+.medicine-table th:nth-child(3) { width: 15%; } /* Tần suất */
+.medicine-table th:nth-child(4) { width: 10%; } /* Thời gian */
+.medicine-table th:nth-child(5) { width: 23%; } /* Hướng dẫn */
+.medicine-table th:nth-child(6),
+.medicine-table th:nth-child(7) { width: 5%; text-align: center; } /* Chi tiết & Xóa */
+
+.medicine-table td:nth-child(6),
+.medicine-table td:nth-child(7) {
+  text-align: center;
 }
 
 .medicine-table td {

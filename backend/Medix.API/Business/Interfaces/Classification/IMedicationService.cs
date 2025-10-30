@@ -6,5 +6,6 @@ namespace Medix.API.Business.Interfaces.Classification
     {
         Task<IEnumerable<MedicationDto>> GetAllAsync();
         Task<MedicationDto?> GetByIdAsync(Guid id);
+        Task<IEnumerable<MedicationSearchDto>> SearchAsync(string query);
     }
 }

@@ -6,5 +6,6 @@ namespace Medix.API.DataAccess.Interfaces.Classification
     {
         Task<IEnumerable<MedicationDatabase>> GetAllAsync();
         Task<MedicationDatabase?> GetByIdAsync(Guid id);
+        Task<IEnumerable<MedicationDatabase>> SearchAsync(string query, int limit = 10);
     }
 }

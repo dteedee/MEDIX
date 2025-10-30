@@ -31,5 +31,18 @@ namespace Medix.API.Presentation.Controller.Classification
 
             return Ok(med);
         }
+
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<MedicationSearchDto>>> Search([FromQuery] string query)
+        {
+            // Chỉ tìm kiếm khi query có ít nhất 2 ký tự để tối ưu
+            if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+            {
+                return Ok(Enumerable.Empty<MedicationSearchDto>());
+            }
+
+            var results = await _service.SearchAsync(query);
+            return Ok(results);
+        }
     }
 }

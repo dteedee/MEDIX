@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState } from 'react';
+import MedicineSearchableInput from './MedicineSearchableInput';
+import { MedicationSearchResult } from '../../services/medicationService';
 import "../../styles/MedicineTable.css"
 import { Prescription } from "../../types/medicalRecord.types";
 
@@ -16,6 +18,13 @@ interface MedicationDetailsModalProps {
   onUpdate: (id: string, field: keyof Prescription, value: any) => void;
 }
 
+const handleSelectMedicine = (id: string, onUpdate: MedicineTableProps['onUpdate']) => (medicine: MedicationSearchResult) => {
+  // Khi người dùng chọn một thuốc từ danh sách gợi ý
+  onUpdate(id, 'medicationId', medicine.id);
+  onUpdate(id, 'medicationName', medicine.name);
+  onUpdate(id, 'dosage', medicine.dosage || ''); // Tự động điền hàm lượng
+};
+
 export default function MedicineTable({ medicines, onDelete, onUpdate }: MedicineTableProps) {
   const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
 
@@ -27,7 +36,7 @@ export default function MedicineTable({ medicines, onDelete, onUpdate }: Medicin
             <th>Tên thuốc</th>
             <th>Hàm lượng</th>
             <th>Tần suất</th>
-            <th>Thời gian (ngày)</th>
+            <th>Thời gian</th>
             <th>Hướng dẫn</th>
             <th>Chi tiết</th>
             <th></th>
@@ -37,12 +46,10 @@ export default function MedicineTable({ medicines, onDelete, onUpdate }: Medicin
           {medicines.map((medicine) => (
             <tr key={medicine.id}>
               <td>
-                <input
-                  type="text"
+                {/* Thay thế input text bằng component tìm kiếm */}
+                <MedicineSearchableInput
                   value={medicine.medicationName}
-                  onChange={(e) => onUpdate(medicine.id, "medicationName", e.target.value)}
-                  className="table-input"
-                  placeholder="Tên thuốc"
+                  onSelect={handleSelectMedicine(medicine.id, onUpdate)}
                 />
               </td>
               <td>
@@ -51,7 +58,7 @@ export default function MedicineTable({ medicines, onDelete, onUpdate }: Medicin
                   value={medicine.dosage}
                   onChange={(e) => onUpdate(medicine.id, "dosage", e.target.value)}
                   className="table-input"
-                  placeholder="500mg"
+                  placeholder=""
                 />
               </td>
               <td>

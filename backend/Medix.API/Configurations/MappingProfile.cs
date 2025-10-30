@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+﻿﻿using AutoMapper;
 using Medix.API.Application.DTOs.Doctor;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.ApointmentDTO;
@@ -159,6 +159,11 @@ namespace Medix.API.Configurations
             CreateMap<UpdateDoctorScheduleOverrideDto, DoctorScheduleOverride>();
 
             CreateMap<MedicationDatabase, MedicationDto>().ReverseMap();
+
+            // ✅ THÊM MAPPING CHO TÌM KIẾM THUỐC
+            CreateMap<MedicationDatabase, MedicationSearchDto>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.MedicationName))
+                .ForMember(dest => dest.Dosage, opt => opt.MapFrom(src => src.DosageForms));
 
         }
     }

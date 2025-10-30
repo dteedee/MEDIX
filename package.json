@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "react-select": "^5.10.2"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.17.20"
+  }
+}

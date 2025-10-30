@@ -13,15 +13,11 @@ class DoctorRegistrationFormService {
     }
 
     async getAll(query: DoctorQuery): Promise<DoctorRegisterFormList> {
-        const token = apiClient.getToken();
         const response = await apiClient.get<DoctorRegisterFormList>('/doctorRegistrationForm', {
             params: {
                 page: query.page,
                 searchTerm: query.searchTerm,
                 pageSize: query.pageSize,
-            },
-            headers: {
-                Authorization: token ? `Bearer ${token}` : '',
             },
         });
         return response.data;

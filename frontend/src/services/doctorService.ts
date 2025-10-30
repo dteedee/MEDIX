@@ -53,27 +53,18 @@ class DoctorService {
     }
 
     async getAll(query: DoctorQuery): Promise<DoctorList> {
-        const token = apiClient.getToken();
         const response = await apiClient.get<DoctorList>('/doctor', {
             params: {
                 page: query.page,
                 searchTerm: query.searchTerm,
                 pageSize: query.pageSize,
             },
-            headers: {
-                Authorization: token ? `Bearer ${token}` : '',
-            },
         });
         return response.data;
     }
 
     async getById(id: string): Promise<DoctorDto> {
-        const token = apiClient.getToken();
-        const response = await apiClient.get<DoctorDto>(`/doctor/${id}`, {
-            headers: {
-                Authorization: token ? `Bearer ${token}` : '',
-            },
-        });
+        const response = await apiClient.get<DoctorDto>(`/doctor/${id}`);
         return response.data;
     }
 

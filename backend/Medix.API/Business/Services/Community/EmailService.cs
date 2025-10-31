@@ -135,6 +135,9 @@ namespace Medix.API.Business.Services.Community
 
         public async Task<bool> SendNewUserPasswordAsync(string email, string username, string password)
         {
+            var frontendBaseUrl = _configuration["PasswordReset:FrontendBaseUrl"] ?? "http://localhost:5173";
+            var loginLink = $"{frontendBaseUrl.TrimEnd('/')}/login";
+
             var subject = "Chào mừng đến với Medix - Thông tin tài khoản của bạn";
             var body = $@"
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
@@ -151,6 +154,8 @@ namespace Medix.API.Business.Services.Community
                         <li>Đây là mật khẩu tạm thời. Bạn nên đổi mật khẩu ngay sau khi đăng nhập lần đầu tiên để đảm bảo an toàn.</li>
                         <li>Không chia sẻ thông tin tài khoản này với bất kỳ ai.</li>
                     </ul>
+                    <p>Bạn có thể đăng nhập vào tài khoản của mình tại đây:</p>
+                    <p style='text-align: center; margin: 20px 0;'><a href='{loginLink}' style='background-color: #3498db; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Đăng nhập ngay</a></p>
                     <p>Cảm ơn bạn đã tham gia cộng đồng Medix!</p>
                 </div>
             ";

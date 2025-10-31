@@ -60,6 +60,22 @@ export const articleService = {
   getCachedCategories: async (): Promise<{ items: any[], total?: number }> => {
     return categoryCache.fetchAll();
   },
+  incrementView: async (id: string): Promise<void> => {
+    try {
+      await apiClient.post(`${BASE}/${id}/view`)
+    } catch (err) {
+      console.warn('incrementView failed (ignored):', err)
+    }
+  },
+  toggleLike: async (id: string): Promise<{ likeCount?: number; liked?: boolean } | void> => {
+    try {
+      const r = await apiClient.post(`${BASE}/${id}/like`)
+      return r?.data
+    } catch (err) {
+      console.warn('toggleLike failed:', err)
+      throw err
+    }
+  },
   getAll: async (): Promise<ArticleDTO[]> => {
     // Request a large page size to fetch all articles for client-side processing
     // This matches the frontend's current architecture of filtering/sorting on the client.

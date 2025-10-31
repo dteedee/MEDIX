@@ -38,5 +38,6 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task AddLikeAsync(Guid articleId, Guid userId);
 
         Task RemoveLikeAsync(Guid articleId, Guid userId);
+
     }
 }

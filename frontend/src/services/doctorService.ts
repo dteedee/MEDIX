@@ -1,17 +1,7 @@
 import { apiClient } from "../lib/apiClient";
-import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, ServiceTierWithPaginatedDoctorsDto, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters } from "../types/doctor.types";
+import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, ServiceTierWithPaginatedDoctorsDto, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters, DoctorQuery, DoctorList, DoctorDto } from "../types/doctor.types";
 
 class DoctorService {
-    async getMetadata(): Promise<DoctorRegisterMetadata> {
-        const response = await apiClient.get<DoctorRegisterMetadata>('/doctor/register-metadata');
-        return response.data;
-    }
-
-    async registerDoctor(payload: FormData): Promise<void> {
-        console.log('Payload:', payload);
-        await apiClient.postMultipart<any>('/doctor/register', payload);
-    }
-
     async getDoctorProfile(doctorID: string | undefined): Promise<DoctorProfileDto> {
         try {
             const response = await apiClient.get<DoctorProfileDto>('/doctor/profile/' + doctorID);
@@ -23,16 +13,7 @@ class DoctorService {
     }
 
     async getDoctorProfileDetails(): Promise<DoctorProfileDetails> {
-        const accessToken = localStorage.getItem('accessToken');
-
-        if (!accessToken) {
-            throw new Error('No access token found - please login');
-        }
-        const response = await apiClient.get<DoctorProfileDetails>('doctor/profile/details', {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        });
+        const response = await apiClient.get<DoctorProfileDetails>('doctor/profile/details');
         return response.data;
     }
 
@@ -45,9 +26,9 @@ class DoctorService {
         return response.data;
     }
 
-    async updatePassword(payload: FormData): Promise<any> {
-        await apiClient.put('doctor/profile/update-password', payload);
-    }
+    // async updatePassword(payload: FormData): Promise<any> {
+    //     await apiClient.put('doctor/profile/update-password', payload);
+    // }
 
     async getDoctorsGroupedByTier(queryParams: DoctorQueryParameters): Promise<ServiceTierWithPaginatedDoctorsDto[]> {
         try {
@@ -69,6 +50,22 @@ class DoctorService {
             console.error('Get education types error: ', error);
             throw this.handleApiError(error);
         }
+    }
+
+    async getAll(query: DoctorQuery): Promise<DoctorList> {
+        const response = await apiClient.get<DoctorList>('/doctor', {
+            params: {
+                page: query.page,
+                searchTerm: query.searchTerm,
+                pageSize: query.pageSize,
+            },
+        });
+        return response.data;
+    }
+
+    async getById(id: string): Promise<DoctorDto> {
+        const response = await apiClient.get<DoctorDto>(`/doctor/${id}`);
+        return response.data;
     }
 
     private handleApiError(error: any): Error {

@@ -165,6 +165,7 @@ namespace Medix.API.Configurations
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.MedicationName))
                 .ForMember(dest => dest.Dosage, opt => opt.MapFrom(src => src.DosageForms));
 
+            CreateMap<DoctorProfileUpdatePresenter, DoctorProfileUpdateRequest>();
         }
     }
 }

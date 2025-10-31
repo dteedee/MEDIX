@@ -27,6 +27,6 @@ namespace Medix.API.Business.Interfaces.UserManagement
         Task<UserBasicInfoDto> UpdateUserBasicInfo(UpdateUserDto updateDto);
         Task<string?> UpdateAvatarURL(string linkImage, Guid id);
         Task<UserDto> AdminResetPasswordAsync(Guid userId, string newPassword);
-
+        Task<User?> GetUserAsync(Guid userId);
     }
 }

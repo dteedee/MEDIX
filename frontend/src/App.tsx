@@ -65,9 +65,8 @@ import UserEditPage from './pages/admin/UserEditPage';
 import TrackingPage from './pages/admin/TrackingPage';
 import SettingsPage from './pages/admin/SettingsPage';
 
-// Reader pages
-import ArticleReaderPage from './pages/patient/ArticleReaderPage';
-import ArticleDetailPage from './pages/patient/ArticleDetailPage';
+import ArticleDetailPage from './pages/public/ArticleDetailPage';
+import ArticleReaderPage from './pages/public/ArticleReaderPage';
 import DoctorBookingList from './pages/patient/DoctorBookingList';
 import ErrorPageWrapper from './pages/error/ErrorPageWrapper';
 
@@ -110,6 +109,10 @@ export function App() {
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/about" element={<AboutUs />} />
+                  {/* Public article list */}
+                  <Route path="/articles" element={<ArticleReaderPage />} />
+                  {/* Public article detail */}
+                  <Route path="/articles/:slug" element={<ArticleDetailPage />} />
                 </Route>
 
                 {/* ---------- Change password route (Protected) ---------- */}
@@ -189,8 +192,9 @@ export function App() {
                   </Route>
 
                 {/* ---------- Reader ---------- */}
-                <Route path="articles" element={<ArticleReaderPage />} />
-                <Route path="articles/:slug" element={<ProtectedRoute><ArticleDetailPage /></ProtectedRoute>} />
+                {/* Redirect /app/articles -> public list for consistency */}
+                <Route path="articles" element={<Navigate to="/articles" replace />} />
+                <Route path="articles/:slug" element={<ArticleDetailPage />} />
 
                   {/* ---------- AI Chat ---------- */}
                   <Route path="ai-chat" element={

@@ -362,5 +362,10 @@ public async Task<UserDto> CreateUserAsync(CreateUserDTO createUserDto, string p
             return _mapper.Map<UserDto>(user);
         }
 
+        public async Task<User?> GetUserAsync(Guid userId)
+        {
+            return await _userRepository.GetByIdAsync(userId);
+        }
+
     }
 }

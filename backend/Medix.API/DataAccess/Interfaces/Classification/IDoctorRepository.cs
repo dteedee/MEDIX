@@ -16,8 +16,8 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task<List<Doctor>> GetDoctorsByServiceTierNameAsync(string name);
         Task<(List<Doctor> Doctors, int TotalCount)> GetPaginatedDoctorsByTierIdAsync(
                Guid tierId, DoctorQueryParameters queryParams);
-        Task<PagedList<Doctor>> GetPendingDoctorsAsync(DoctorQuery query);
+        //Task<PagedList<Doctor>> GetPendingDoctorsAsync(DoctorQuery query);
         Task<Doctor?> GetDoctorByIdAsync(Guid doctorId);
-        Task<PagedList<Doctor>> GetReviewedDoctorsAsync(DoctorQuery query);
+        Task<PagedList<Doctor>> GetDoctorsAsync(DoctorQuery query);
     }
 }

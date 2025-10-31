@@ -23,20 +23,22 @@ namespace Medix.API.Presentation.Middleware
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception");
-                await HandleExceptionAsync(context, ex);
+                // Không log ở đây nữa, chuyển logic log vào HandleExceptionAsync
+                await HandleExceptionAsync(context, ex, _logger);
             }
         }
 
-        private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
+        private static async Task HandleExceptionAsync(HttpContext context, Exception exception, ILogger<ExceptionHandlingMiddleware> logger)
         {
             context.Response.ContentType = "application/json";
 
             switch (exception)
             {
                 case ValidationException vex:
+                    // Log lỗi validation với chi tiết các trường
+                    logger.LogWarning("Validation error occurred: {ValidationErrors}", JsonSerializer.Serialize(vex.Errors));
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    var payload = JsonSerializer.Serialize(new { errors = vex.Errors });
+                    var payload = JsonSerializer.Serialize(new { message = "Một hoặc nhiều lỗi xác thực đã xảy ra.", errors = vex.Errors });
                     await context.Response.WriteAsync(payload);
                     return;
                 case NotFoundException nfe:
@@ -58,8 +60,10 @@ namespace Medix.API.Presentation.Middleware
                     await context.Response.WriteAsync(ioe.Message);
                     return;
                 default:
+                    // Log lỗi không xác định (lỗi 500)
+                    logger.LogError(exception, "An unhandled exception has occurred.");
                     context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                    await context.Response.WriteAsync(JsonSerializer.Serialize(new { message = "An unexpected error occurred." }));
+                    await context.Response.WriteAsync(JsonSerializer.Serialize(new { message = "Đã có lỗi không mong muốn xảy ra." }));
                     return;
             }
         }

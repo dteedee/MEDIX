@@ -1,174 +1,374 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { articleService } from '../../services/articleService'
-import { ArticleDTO } from '../../types/article.types'
-import { apiClient } from '../../lib/apiClient'
-import '../../styles/ArticleDetailPage.css'
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import '../../styles/public/ArticleDetailPage.css';
+import homeStyles from '../../styles/public/home.module.css';
+import { articleService } from '../../services/articleService';
+import { categoryService } from '../../services/categoryService';
+import type { ArticleDTO } from '../../types/article.types';
+import type { CategoryDTO } from '../../types/category.types';
+
+function formatViDate(input?: string | null): string {
+  if (!input) return '';
+  const d = new Date(input);
+  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function getReadingTime(content?: string | null): string {
+  if (!content) return '1 phút đọc';
+  const WORDS_PER_MINUTE = 200;
+  const plainText = content
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;|&amp;|&lt;|&gt;|&quot;|&#39;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const words = plainText ? plainText.split(' ').length : 0;
+  const minutes = Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
+  return `${minutes} phút đọc`;
+}
+
+function getCategoryIcon(name?: string) {
+  const lower = (name || '').toLowerCase();
+  if (lower.includes('cấp cứu') || lower.includes('khẩn')) return 'bi-activity';
+  if (lower.includes('tim') || lower.includes('mạch') || lower.includes('huyết')) return 'bi-heart-pulse';
+  if (lower.includes('nhi') || lower.includes('trẻ')) return 'bi-emoji-smile';
+  if (lower.includes('dinh dưỡng') || lower.includes('ăn')) return 'bi-basket';
+  if (lower.includes('tiêm') || lower.includes('vaccine')) return 'bi-shield-plus';
+  if (lower.includes('sức khỏe') || lower.includes('health')) return 'bi-heart-fill';
+  return 'bi-bookmark-heart';
+}
+
+// Add scroll-to-top utility
+function scrollToTop() {
+  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+}
+
+// Helper sum cho badge 'Tất cả' (cố định bằng validArticles.length)
+function sumAllCategories(counts: { [catId: string]: number }) {
+  return Object.values(counts).reduce((a, b) => a + b, 0);
+}
 
 export default function ArticleDetailPage() {
-  const { slug } = useParams<{ slug: string }>()
-  const [article, setArticle] = useState<ArticleDTO | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isLiked, setIsLiked] = useState(false)
-  const [likeCount, setLikeCount] = useState(0)
-  const [isLiking, setIsLiking] = useState(false)
-  const effectRan = useRef(false)
-  const navigate = useNavigate()
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
 
-  const ViewIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-         viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-      <circle cx="12" cy="12" r="3"></circle>
-    </svg>
-  )
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [article, setArticle] = useState<ArticleDTO | null>(null);
+  const [categories, setCategories] = useState<CategoryDTO[]>([]);
+  const [recent, setRecent] = useState<ArticleDTO[]>([]);
+  const [categoryCounts, setCategoryCounts] = useState<{ [catId: string]: number }>({});
+  const [totalValid, setTotalValid] = useState(0);
+  const [validArticles, setValidArticles] = useState<ArticleDTO[]>([]);
 
-  const LikeIcon = ({ filled }: { filled: boolean }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-         viewBox="0 0 24 24"
-         fill={filled ? "red" : "none"}
-         stroke="currentColor" strokeWidth="2"
-         strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-    </svg>
-  )
+  const [likeBusy, setLikeBusy] = useState(false);
+  const [liked, setLiked] = useState(false);
 
-  // Lấy dữ liệu bài viết
+  // Ref to track if the view has been incremented for the current slug
+  // This prevents double-incrementing in React's StrictMode.
+  const viewIncrementedRef = useRef<{ [key: string]: boolean }>({});
+
+  // load categories + article + recent
   useEffect(() => {
-    if (!slug) return
+    (async () => {
+      if (!slug) {
+        setError('Không tìm thấy slug bài viết');
+        setLoading(false);
+        return;
+      }
 
-    // Chỉ chạy logic fetch trong lần render thứ hai của StrictMode ở development
-    if (process.env.NODE_ENV === 'development' && !effectRan.current) {
-      effectRan.current = true
-      return
-    }
+      // Only show full loading state if this is the first time processing this slug
+      if (!viewIncrementedRef.current[slug]) {
+        setLoading(true);
+        setError(null);
+      }
 
-    const abortController = new AbortController()
-    const signal = abortController.signal
-
-    const fetchArticleData = async () => {
-      try { // API call đã bao gồm việc tăng view count
-        const articleData = await articleService.getBySlug(slug)
-        if (articleData) {
-          if (articleData.isLocked) {
-            setError('Article not available.')
-            return
-          }
-          setArticle(articleData)
-          setLikeCount(articleData.likeCount ?? 0)
-
-          // [FE-ONLY] Kiểm tra trạng thái like từ localStorage
-          const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]') as string[];
-          if (articleData.id && likedArticles.includes(articleData.id)) {
-            setIsLiked(true);
-          } else {
-            setIsLiked(false);
-          }
-        } else {
-          setError('Article not found.')
+      try {
+        const [catRes, articleRes] = await Promise.all([
+          categoryService.list(1, 9999),
+          articleService.getBySlug(slug)
+        ]);
+        setCategories(catRes.items || []);
+        if (!articleRes) {
+          setError('Không tìm thấy bài viết');
+          setArticle(null);
+          return;
         }
-      } catch (err) {
-        if (!signal.aborted) {
-          setError('Failed to load article.')
+        // chỉ cho phép xem bài đã publish
+        if (!articleRes.statusCode || String(articleRes.statusCode).toLowerCase() !== 'published') {
+          setError('Bài viết này không được công khai hoặc không tồn tại.');
+          setArticle(null);
+          return;
         }
+        setArticle(articleRes);
+        // init liked từ localStorage
+        try {
+          const key = `medix-liked-${articleRes.id}`;
+          setLiked(localStorage.getItem(key) === '1');
+        } catch {}
+
+        // Increment view count only once per slug visit
+        if (articleRes.id && !viewIncrementedRef.current[slug]) {
+          viewIncrementedRef.current[slug] = true; // Mark as incremented immediately
+          articleService.incrementView(articleRes.id)
+            .then(() => {
+              // Optimistically update the UI to show +1 view instantly
+              setArticle(prev => prev ? { ...prev, viewCount: (prev.viewCount || 0) + 1 } : null);
+            })
+            .catch((err) => console.error("Failed to increment view count:", err));
+        }
+
+        const { items: recentItems } = await articleService.list(1, 20);
+        const filtered = (recentItems || [])
+          .filter(a => a.slug !== articleRes.slug)
+          .sort((a, b) => {
+            const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+            const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+            return tb - ta;
+          })
+          .slice(0, 6);
+        setRecent(filtered);
+      } catch (e) {
+        console.error(e);
+        setError('Đã xảy ra lỗi khi tải dữ liệu.');
       } finally {
-        if (!signal.aborted) {
-          setLoading(false)
+        setLoading(false);
+      }
+    })();
+    // `viewIncrementedRef` is a ref, so it doesn't need to be in the dependency array.
+  }, [slug]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { items } = await articleService.list(1, 9999);
+        // Chỉ lấy bài published, có category hợp lệ
+        const valid = items.filter(
+          a => String(a.statusCode).toLowerCase() === 'published' && Array.isArray(a.categoryIds) && a.categoryIds.length > 0
+        );
+        setValidArticles(valid);
+        setTotalValid(valid.length);
+        // Tính count từng cat
+        const counts: { [catId: string]: number } = {};
+        for(const a of valid) {
+          (a.categoryIds || []).forEach(cid => { counts[cid] = (counts[cid] || 0) + 1; });
         }
+        setCategoryCounts(counts);
+        // Recent chỉ lấy từ valid, khác slug và cùng category với bài hiện tại
+        setRecent(
+          valid.filter(a =>
+            a.slug !== article?.slug &&
+            a.categoryIds?.some((catId: string) => article?.categoryIds?.includes(catId))
+          )
+            .sort((a, b) => {
+              const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+              const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+              return tb - ta;
+            })
+            .slice(0, 6)
+        );
+      } catch {
+        setValidArticles([]); setCategoryCounts({}); setTotalValid(0);
       }
-    }
-    fetchArticleData()
+    })();
+  }, [categories, article]);
 
-    return () => {
-      abortController.abort()
-      // Reset ref khi component unmount hoặc slug thay đổi
-      if (process.env.NODE_ENV === 'development') {
-        effectRan.current = false
-      }
-    }
-  }, [slug])
-
-  // ✅ Sửa lỗi 401 và dùng apiClient
   const handleLike = async () => {
-    if (!article || !article.id || isLiking) return
-
-    const token = apiClient.getToken()
-    if (!token) {
-      alert("Bạn cần đăng nhập để thích bài viết.")
-      navigate("/login")
-      return
-    }
-
-    setIsLiking(true)
-
-    const originalIsLiked = isLiked
-    const originalLikeCount = likeCount
-    const newIsLiked = !originalIsLiked
-    const newLikeCount = newIsLiked ? originalLikeCount + 1 : originalLikeCount - 1
-
-    // Optimistic UI
-    setIsLiked(newIsLiked)
-    setLikeCount(newLikeCount)
-
+    if (!article || likeBusy) return;
+    setLikeBusy(true);
+    const prevLiked = liked;
+    const prevCount = article.likeCount || 0;
+    // tối ưu UI
+    setLiked(!prevLiked);
+    setArticle({ ...article, likeCount: prevLiked ? Math.max(0, prevCount - 1) : prevCount + 1 });
     try {
-      const method = newIsLiked ? 'post' : 'delete'
-      const url = `/HealthArticle/${article.id}/like`
-
-      const response = await apiClient[method]<ArticleDTO>(url)
-
-      if (response.status === 200) {
-        const updated = response.data
-        setLikeCount(updated.likeCount ?? newLikeCount)
-
-        // [FE-ONLY] Cập nhật localStorage
-        const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]') as string[];
-        if (newIsLiked) {
-          if (!likedArticles.includes(article.id)) {
-            likedArticles.push(article.id);
-          }
-        } else {
-          const index = likedArticles.indexOf(article.id);
-          if (index > -1) {
-            likedArticles.splice(index, 1);
-          }
-        }
-        localStorage.setItem('likedArticles', JSON.stringify(likedArticles));
-      } else {
-        console.error("Failed to like the article:", response.status)
-        setIsLiked(originalIsLiked)
-        setLikeCount(originalLikeCount)
-      }
-    } catch (err: any) {
-      console.error("Error liking the article:", err)
-      if (err.response?.status === 401) {
-        alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.")
-        apiClient.clearTokens()
-        navigate("/login")
-      } else {
-        setIsLiked(originalIsLiked)
-        setLikeCount(originalLikeCount)
-      }
+      await articleService.toggleLike(article.id);
+      try { localStorage.setItem(`medix-liked-${article.id}`, !prevLiked ? '1' : '0'); } catch {}
+    } catch (e) {
+      // revert nếu lỗi
+      setLiked(prevLiked);
+      setArticle({ ...article, likeCount: prevCount });
     } finally {
-      setIsLiking(false)
+      setLikeBusy(false);
     }
+  };
+
+  const readingTime = useMemo(() => getReadingTime(article?.content), [article?.content]);
+
+  if (loading) {
+    return (
+      <div className="adp-page">
+        <div className="adp-container">
+          <main className="adp-main">
+            <div className="adp-loading">
+              <div className="adp-spinner" />
+              <p>Đang tải bài viết...</p>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
   }
 
-  if (loading) return <div className="article-reader-container">Đang tải bài viết...</div>
-  if (error) return <div className="article-reader-container">{error}</div>
-  if (!article) return null
+  if (error) {
+    return (
+      <div className="adp-page">
+        <div className="adp-container">
+          <main className="adp-main">
+            <div className="adp-error">
+              <i className="bi bi-exclamation-triangle-fill" />
+              <h3>{error}</h3>
+              <button className="adp-like" onClick={() => navigate(-1)}>
+                <i className="bi bi-arrow-left" /> Quay lại
+              </button>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (!article) return null;
 
   return (
-    <div className="article-reader-container">
-      <button onClick={() => navigate('/app/articles')} className="back-button">
-        &larr; Quay lại danh sách
-      </button>
+    <div className="adp-page">
+      {/* Navigation giống trang danh sách */}
+      <nav className={homeStyles["navbar"]}>
+        <ul className={homeStyles["nav-menu"]}>
+          <li>
+            <a onClick={() => { scrollToTop(); navigate('/'); }} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/' ? homeStyles["active"] : ''}`}>
+              Trang chủ
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a onClick={() => { scrollToTop(); navigate('/ai-chat'); }} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}>
+              AI chẩn đoán
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a onClick={() => { scrollToTop(); navigate('/specialties'); }} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/specialties' ? homeStyles["active"] : ''}`}>
+              Chuyên khoa
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a onClick={() => { scrollToTop(); navigate('/doctors'); }} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/doctors' ? homeStyles["active"] : ''}`}>
+              Bác sĩ
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a onClick={() => { scrollToTop(); navigate('/articles'); }} className={`${homeStyles["nav-link"]} ${window.location.pathname.startsWith('/articles') ? homeStyles["active"] : ''}`}>
+              Bài viết sức khỏe
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a onClick={() => { scrollToTop(); navigate('/about'); }} className={`${homeStyles["nav-link"]} ${window.location.pathname === '/about' ? homeStyles["active"] : ''}`}>
+              Về chúng tôi
+            </a>
+          </li>
+        </ul>
+      </nav>
 
-      <div className="breadcrumb">
-        <Link to="/">Trang chủ</Link>
-        <span className="separator">/</span>
-        <span className="current-page">{article.title}</span>
+      {/* Breadcrumb */}
+      <div className="adp-breadcrumb" aria-label="breadcrumb">
+        <button className="crumb" onClick={() => { scrollToTop(); navigate('/'); }}>Trang chủ</button>
+        <span className="sep">/</span>
+        <button className="crumb" onClick={() => { scrollToTop(); navigate('/articles'); }}>Bài viết sức khỏe</button>
+        <span className="sep">/</span>
+        <span className="crumb current" title={article?.title || ''}>{article?.title || ''}</span>
+      </div>
+
+      <div className="adp-container">
+        {/* Sidebar */}
+        <aside className="adp-sidebar">
+          <div className="adp-card">
+            <div className="title"><i className="bi bi-folder2-open" /> Danh mục</div>
+            <ul className="adp-category-list">
+              <li>
+                <button
+                  className={`adp-category-item${!article?.categoryIds?.length ? ' active' : ''}`}
+                  onClick={() => { scrollToTop(); navigate('/articles'); }}
+                >
+                  <span className="category-icon"><i className="bi bi-grid-3x3-gap-fill" /></span>
+                  <span>Tất cả</span>
+                  <span className="category-badge">{validArticles.length}</span>
+                </button>
+              </li>
+              {categories.map(c => (
+                <li key={c.id}>
+                  <button
+                    className={`adp-category-item${article?.categoryIds?.includes(c.id) ? ' active' : ''}`}
+                    onClick={() => { scrollToTop(); navigate(`/articles?cat=${c.id}`); }}
+                  >
+                    <span className="category-icon"><i className={`bi ${getCategoryIcon(c.name)}`} /></span>
+                    <span>{c.name}</span>
+                    <span className="category-badge">{categoryCounts[c.id] || 0}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="adp-card">
+            <div className="title"><i className="bi bi-stars" /> Bài viết mới</div>
+            <div className="adp-recent-list">
+              {recent.map(r => (
+                <button
+                  key={r.id}
+                  className="adp-recent-item"
+                  onClick={() => { scrollToTop(); navigate(`/articles/${r.slug}`); }}
+                  style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <img className="adp-recent-thumb" src={r.thumbnailUrl || r.coverImageUrl || '/images/medix-logo.png'} alt={r.title} />
+                  <div>
+                    <div className="adp-recent-title">{r.title}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatViDate(r.publishedAt)}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        {/* Main */}
+        <main className="adp-main">
+          {/* Hero */}
+          <section className="adp-hero">
+            <div className="adp-hero-media">
+              <img src={article.coverImageUrl || article.thumbnailUrl || '/images/medix-logo.png'} alt={article.title} />
+            </div>
+            <div className="adp-hero-content">
+              <h1 className="adp-title">{article.title}</h1>
+              <div className="adp-meta">
+                <span><i className="bi bi-person-circle" /> {article.authorName || 'Tác giả ẩn danh'}</span>
+                <span><i className="bi bi-calendar3" /> {formatViDate(article.publishedAt || article.createdAt)}</span>
+                <span><i className="bi bi-clock" /> {readingTime}</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Toolbar: like + stats */}
+          <div className="adp-toolbar">
+            <div className="adp-stats">
+              <span><i className="bi bi-eye" /> {article.viewCount ?? 0} lượt xem</span>
+              <span><i className="bi bi-chat-left-text" /> {Math.max(0, Math.floor((article.likeCount || 0) / 3))} bình luận</span>
+            </div>
+            <button className={`adp-like ${liked ? 'liked' : ''}`} onClick={handleLike} disabled={likeBusy} aria-label="Thích bài viết">
+              <i className={`bi ${liked ? 'bi-heart-fill' : 'bi-heart'}`} />
+              <span>{article.likeCount ?? 0}</span>
+            </button>
+          </div>
+
+          {/* Content */}
+          <article className="adp-content">
+            {article.summary && (
+              <p style={{ fontStyle: 'italic', color: 'var(--text-secondary)', marginTop: 0 }}>{article.summary}</p>
+            )}
+            <div className="article-html" dangerouslySetInnerHTML={{ __html: article.content || '' }} />
+          </article>
+        </main>
       </div>
 
       <article className="article-detail">

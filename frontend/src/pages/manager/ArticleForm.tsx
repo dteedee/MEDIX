@@ -92,7 +92,18 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
   // Ensure authorId is always set if user is available
   useEffect(() => { if (user?.id && formData.authorId !== user.id) setFormData(prev => ({ ...prev, authorId: user.id })); }, [user?.id, formData.authorId]);
 
-  const validate = (): boolean => {
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    if (!value.trim()) {
+      let errorMessage = 'Trường này không được để trống';
+      if (name === 'title') errorMessage = 'Tiêu đề bài viết không được để trống';
+      if (name === 'slug') errorMessage = 'Slug không được để trống';
+      if (name === 'summary') errorMessage = 'Tóm tắt không được để trống';
+      setErrors(prev => ({ ...prev, [name]: errorMessage }));
+    }
+  };
+
+  const validate = (returnErrors = false): boolean | Record<string, string> => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.title.trim()) {
@@ -129,8 +140,31 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
       newErrors.metaDescription = 'Meta description không được vượt quá 160 ký tự';
     }
 
+    if (formData.categoryIds.length === 0) {
+      newErrors.categoryIds = 'Phải chọn ít nhất một danh mục';
+    }
+
+    if (mode === 'create' && !thumbnailFile) {
+      newErrors.thumbnailUrl = 'Ảnh thumbnail không được để trống';
+    }
+
+    const hasErrors = Object.keys(newErrors).length > 0;
+
+    if (returnErrors) {
+      return newErrors;
+    }
+
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    if (hasErrors) {
+      const fieldOrder = ['title', 'slug', 'summary', 'content', 'thumbnailUrl', 'categoryIds', 'displayOrder', 'statusCode', 'metaTitle', 'metaDescription', 'coverImageUrl'];
+      const firstErrorField = fieldOrder.find(field => newErrors[field]);
+      if (firstErrorField) {
+        document.getElementById(`form-group-${firstErrorField}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    return !hasErrors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -173,7 +207,23 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
     console.log('Form submission - Payload:', payload);
 
     if (onSaveRequest) {
-      onSaveRequest(payload);
+      try {
+        await onSaveRequest(payload);
+      } catch (error: any) {
+        console.error('Caught error in ArticleForm from onSaveRequest:', error);
+        const backendErrors = error?.response?.data?.errors;
+        if (backendErrors) {
+          const newErrors: Record<string, string> = {};
+          for (const key in backendErrors) {
+            const frontendKey = key.charAt(0).toLowerCase() + key.slice(1);
+            newErrors[frontendKey] = backendErrors[key][0];
+          }
+          setErrors(prev => ({ ...prev, ...newErrors }));
+        } else {
+          const message = error?.response?.data?.message || error?.message || 'Không thể lưu bài viết';
+          showToast(message, 'error');
+        }
+      }
     } else {
       // Direct save (no confirmation)
       await saveArticle(payload);
@@ -205,6 +255,18 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
       });
       const message = error?.response?.data?.message || error?.message || 'Không thể lưu bài viết';
       showToast(message, 'error');
+
+      // Xử lý lỗi validation từ backend để hiển thị inline
+      const backendErrors = error?.response?.data?.errors;
+      if (backendErrors) {
+        const newErrors: Record<string, string> = {};
+        for (const key in backendErrors) {
+          // Backend có thể trả về key là 'Title' hoặc 'Slug', chúng ta cần map sang 'title', 'slug'
+          const frontendKey = key.charAt(0).toLowerCase() + key.slice(1);
+          newErrors[frontendKey] = backendErrors[key][0];
+        }
+        setErrors(prev => ({ ...prev, ...newErrors }));
+      }
     } finally {
       setLoading(false);
     }
@@ -216,6 +278,12 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
+    // Clear error on change
+    if (errors[name] && value.trim()) {
+      const newErrors = { ...errors };
+      delete newErrors[name];
+      setErrors(newErrors);
+    }
   };
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,6 +292,14 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
       const newCategoryIds = checked
         ? [...prev.categoryIds, value]
         : prev.categoryIds.filter(id => id !== value);
+
+      // Clear category error when at least one is selected
+      if (newCategoryIds.length > 0 && errors.categoryIds) {
+        const newErrors = { ...errors };
+        delete newErrors.categoryIds;
+        setErrors(newErrors);
+      }
+
       return { ...prev, categoryIds: newCategoryIds };
     });
   };
@@ -233,9 +309,32 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
     return formData.categoryIds.includes(categoryId);
   };
 
+  const isValidImageFile = (file: File): boolean => {
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
+    return allowedExtensions.includes(fileExtension) && allowedMimeTypes.includes(file.type);
+  };
+
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!isValidImageFile(file)) {
+        setErrors(prev => ({ ...prev, thumbnailUrl: 'Chỉ chấp nhận các tệp ảnh (.jpg, .png, .gif, .webp).' }));
+        e.target.value = ''; // Reset input để người dùng có thể chọn lại
+        return;
+      }
+
+      // Xóa lỗi nếu tệp hợp lệ
+      if (errors.thumbnailUrl) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.thumbnailUrl;
+          return newErrors;
+        });
+      }
+
       setThumbnailFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -249,6 +348,12 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!isValidImageFile(file)) {
+        setErrors(prev => ({ ...prev, coverImageUrl: 'Chỉ chấp nhận các tệp ảnh (.jpg, .png, .gif, .webp).' }));
+        e.target.value = ''; // Reset input
+        return;
+      }
+
       setCoverFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -268,7 +373,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
     <form onSubmit={handleSubmit} className={styles.form}>
       <div className={styles.formContent}>
         {/* Article Title */}
-        <div className={styles.formGroup}>
+        <div id="form-group-title" className={styles.formGroup}>
           <label className={styles.label}>
             <i className="bi bi-pencil"></i>
             Tiêu đề bài viết <span className={styles.required}>*</span>
@@ -278,6 +383,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
             name="title"
             value={formData.title}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={mode === 'view'}
             className={`${styles.input} ${errors.title ? styles.inputError : ''}`}
             placeholder="Nhập tiêu đề bài viết"
@@ -288,7 +394,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
         </div>
 
         {/* Slug */}
-        <div className={styles.formGroup}>
+        <div id="form-group-slug" className={styles.formGroup}>
           <label className={styles.label}>
             <i className="bi bi-link-45deg"></i>
             Slug <span className={styles.required}>*</span>
@@ -298,6 +404,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
             name="slug"
             value={formData.slug}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={mode === 'view'}
             className={`${styles.input} ${errors.slug ? styles.inputError : ''}`}
             placeholder="bai-viet-example"
@@ -307,7 +414,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
         </div>
 
         {/* Summary */}
-        <div className={styles.formGroup}>
+        <div id="form-group-summary" className={styles.formGroup}>
           <label className={styles.label}>
             <i className="bi bi-file-text"></i>
             Tóm tắt <span className={styles.required}>*</span>
@@ -316,6 +423,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
             name="summary"
             value={formData.summary}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={mode === 'view'}
             className={`${styles.textarea} ${errors.summary ? styles.inputError : ''}`}
             placeholder="Nhập tóm tắt bài viết"
@@ -327,27 +435,31 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
         </div>
 
         {/* Content */}
-        <div className={styles.formGroup}>
+        <div id="form-group-content" className={styles.formGroup}>
           <label className={styles.label}>
             <i className="bi bi-file-earmark-richtext"></i>
             Nội dung <span className={styles.required}>*</span>
           </label>
-          <div className={`${styles.ckeditorWrapper} ${errors.content ? styles.inputError : ''}`}>
+          <div className={`${styles.editorWrapper} ${errors.content ? styles.inputError : ''}`}>
             <CKEditor
               editor={ClassicEditor}
               data={formData.content}
-              disabled={mode === 'view'}
               onChange={(event, editor) => {
                 const data = editor.getData();
                 setFormData(prev => ({ ...prev, content: data }));
-                if (errors.content) {
-                  setErrors(prev => {
-                    const newErrors = { ...prev };
-                    delete newErrors.content;
-                    return newErrors;
-                  });
+                if (errors.content && data.trim()) {
+                  const newErrors = { ...errors };
+                  delete newErrors.content;
+                  setErrors(newErrors);
                 }
               }}
+              onBlur={(event, editor) => {
+                const data = editor.getData();
+                if (!data.trim()) {
+                  setErrors(prev => ({ ...prev, content: 'Nội dung không được để trống' }));
+                }
+              }}
+            disabled={mode === 'view'}
               config={{ placeholder: "Nhập nội dung bài viết..." }}
             />
           </div>
@@ -357,7 +469,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
         {/* Images */}
         <div className={styles.gridTwoCols}>
           {/* Thumbnail */}
-          <div className={styles.formGroup}>
+          <div id="form-group-thumbnailUrl" className={styles.formGroup}>
             <label className={styles.label}>
               <i className="bi bi-image"></i>
               Ảnh thumbnail {mode === 'create' && !thumbnailPreview ? <span className={styles.required}>*</span> : ''}
@@ -406,7 +518,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
           </div>
 
           {/* Cover Image */}
-          <div className={styles.formGroup}>
+          <div id="form-group-coverImageUrl" className={styles.formGroup}>
             <label className={styles.label}>
               <i className="bi bi-image"></i>
               Ảnh bìa
@@ -451,12 +563,13 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
                 )}
               </>
             )}
+            {errors.coverImageUrl && <p className={styles.errorText}>{errors.coverImageUrl}</p>}
           </div>
         </div>
 
         {/* Display Settings */}
         <div className={styles.gridTwoCols}>
-          <div className={styles.formGroup}>
+          <div id="form-group-displayType" className={styles.formGroup}>
             <label className={styles.label}>
               <i className="bi bi-collection"></i>
               Loại hiển thị
@@ -474,7 +587,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
             <p className={styles.helpText}>Chọn loại hiển thị cho bài viết</p>
           </div>
 
-          <div className={styles.formGroup}>
+          <div id="form-group-displayOrder" className={styles.formGroup}>
             <label className={styles.label}>
               <i className="bi bi-sort-numeric-down"></i>
               Thứ tự hiển thị
@@ -495,7 +608,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
         </div>
 
         {/* Homepage Visibility Toggle */}
-        <div className={styles.formGroup}>
+        <div id="form-group-isHomepageVisible" className={styles.formGroup}>
           <label className={styles.label}>
             <i className="bi bi-house-door"></i>
             Hiển thị trên trang chủ
@@ -525,7 +638,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
         </div>
 
         {/* Status */}
-        <div className={styles.formGroup}>
+        <div id="form-group-statusCode" className={styles.formGroup}>
           <label className={styles.label}>
             <i className="bi bi-info-circle"></i>
             Trạng thái xuất bản
@@ -548,7 +661,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
 
         {/* Categories */}
         {categories.length > 0 && (
-          <div className={styles.formGroup}>
+          <div id="form-group-categoryIds" className={styles.formGroup}>
             <label className={styles.label}>
               <i className="bi bi-tags"></i>
               Danh mục
@@ -568,17 +681,12 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
                   {category.name}
                 </label>
               ))}
+              {errors.categoryIds && <p className={styles.errorText}>{errors.categoryIds}</p>}
             </div>
           </div>
         )}
 
-        {/* Meta Tags */}
-        <div className={styles.gridTwoCols}>
-          
-
-         
-        </div>
-
+        
         {/* View Mode Specific Fields */}
         {mode === 'view' && article && (
           <div className={styles.infoSection}>
@@ -620,8 +728,8 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
           <button type="submit" className={styles.saveButton} disabled={loading}>
             {loading ? (
               <>
-                <i className="bi bi-hourglass-split"></i>
-                Đang lưu...
+                  <span className={styles.spinner}></span>
+                  Đang xử lý...
               </>
             ) : (
               <>

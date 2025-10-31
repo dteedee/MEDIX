@@ -26,5 +26,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<HealthArticlePublicDto?> LikeAsync(Guid id, Guid userId);
 
         Task<HealthArticlePublicDto?> UnlikeAsync(Guid id, Guid userId);
+
+        Task IncrementViewCountOnlyAsync(Guid articleId);
     }
 }

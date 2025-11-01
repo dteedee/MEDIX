@@ -150,7 +150,7 @@ export default function EMRTimeline() {
 
         const opt = {
             margin: 0.5,
-            filename: 'page.pdf',
+            filename: `${basicInfo?.fullName}_EMR.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2 },
             jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }

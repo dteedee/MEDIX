@@ -9,7 +9,7 @@ import { scheduleService } from "../../services/scheduleService";
 import { appointmentService } from "../../services/appointmentService";
 import { DoctorSchedule, ScheduleOverride } from "../../types/schedule";
 import { Appointment } from "../../types/appointment.types";
-import "../../styles/ScheduleManagement.css";
+import "../../styles/doctor/ScheduleManagement.css";
 import FixedScheduleManager from "./FixedScheduleManager";
 import FlexibleScheduleManager from "./FlexibleScheduleManager";
 

@@ -9,7 +9,7 @@ import { PageLoader } from '../../components/ui';
 import Swal from 'sweetalert2';
 import MedicineTable from './MedicineTable';
 import { useAuth } from '../../contexts/AuthContext';
-import "../../styles/PatientVisitForm.css";
+import "../../styles/doctor/PatientVisitForm.css";
 
 const MedicalRecordDetails: React.FC = () => {
   const { appointmentId } = useParams<{ appointmentId: string }>();
@@ -139,27 +139,9 @@ const MedicalRecordDetails: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Tách đơn thuốc mới (có id tạm) và đơn thuốc cũ
-      const newPrescriptions = medicalRecord.prescriptions.filter(p => p.id.startsWith('new-'));
-      const existingPrescriptions = medicalRecord.prescriptions.filter(p => !p.id.startsWith('new-'));
-
-      // Bước 1: Tạo các đơn thuốc mới
-      const createdPrescriptionPromises = newPrescriptions.map(p => {
-        const { id, ...payload } = p; // Loại bỏ id tạm thời
-        return prescriptionService.createPrescription({
-          ...payload,
-          medicalRecordId: medicalRecord.id // Đảm bảo medicalRecordId được gửi đi
-        });
-      });
-      const createdPrescriptions = await Promise.all(createdPrescriptionPromises);
-
-      // Bước 2: Cập nhật lại hồ sơ bệnh án với danh sách đơn thuốc đầy đủ (cũ + mới đã có id thật)
-      const updatedRecordPayload: MedicalRecord = {
-        ...medicalRecord,
-        prescriptions: [...existingPrescriptions, ...createdPrescriptions],
-      };
-
-      await medicalRecordService.updateMedicalRecord(medicalRecord.id, updatedRecordPayload);
+      // Đơn giản hóa: Gửi toàn bộ đối tượng medicalRecord lên API.
+      // Backend sẽ chịu trách nhiệm xử lý việc xóa và tạo lại đơn thuốc.
+      await medicalRecordService.updateMedicalRecord(medicalRecord.id, medicalRecord);
 
       Swal.fire({
         title: 'Thành công!',

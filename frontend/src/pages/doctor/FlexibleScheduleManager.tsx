@@ -4,7 +4,7 @@ import Swal from 'sweetalert2';
 import { ScheduleOverride, CreateScheduleOverridePayload } from '../../types/schedule';
 import { scheduleService } from '../../services/scheduleService';
 import { X, Plus, Edit, Trash2 } from 'lucide-react';
-import '../../styles/FlexibleScheduleManager.css';
+import '../../styles/doctor/FlexibleScheduleManager.css';
 
 interface Props {
   overrides: ScheduleOverride[];

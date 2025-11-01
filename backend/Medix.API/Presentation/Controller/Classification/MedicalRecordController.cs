@@ -18,8 +18,8 @@ namespace Medix.API.Presentation.Controllers.Classification
         private ILogger<MedicalRecordController> _logger;
 
         public MedicalRecordController(
-            IMedicalRecordService service, 
-            IPatientService patientService, 
+            IMedicalRecordService service,
+            IPatientService patientService,
             IMedicalRecordService medicalRecordService,
             ILogger<MedicalRecordController> logger)
         {
@@ -91,8 +91,13 @@ namespace Medix.API.Presentation.Controllers.Classification
                     mr.ChiefComplaint,
                     mr.Diagnosis,
                     mr.TreatmentPlan,
-                    Attachments = mr.MedicalRecordAttachments
-                        .Select(mra => mra.FileUrl).ToList(),
+                    Attatchments = mr.MedicalRecordAttachments
+                        .Select(a => new
+                        {
+                            a.Id,
+                            a.FileName,
+                            a.FileUrl,
+                        }).ToList(),
                 }).ToList();
 
                 return Ok(list);
@@ -102,7 +107,7 @@ namespace Medix.API.Presentation.Controllers.Classification
                 _logger.LogError(ex, "Failed to get medical records of patient");
                 return StatusCode(500);
             }
-            
+
         }
 
         [HttpGet("{id}")]
@@ -132,7 +137,19 @@ namespace Medix.API.Presentation.Controllers.Classification
                     record.Diagnosis,
                     record.TreatmentPlan,
                     Prescription = record.Prescriptions
-                        .Select(p => p.Medication?.MedicationName).ToList(),
+                        .Select(p => new
+                        {
+                            p.Id,
+                            p.Medication?.MedicationName,
+                            p.Instructions,
+                        }).ToList(),
+                    Attatchments = record.MedicalRecordAttachments
+                        .Select(a => new
+                        {
+                            a.Id,
+                            a.FileName,
+                            a.FileUrl,
+                        }).ToList(),
                 });
             }
             catch (Exception ex)

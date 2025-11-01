@@ -99,12 +99,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 
             }
 
-            if (query.Skip < 0) query.Skip = 0;
-            if (query.Take < 1) query.Take = 5;
-
             return await queryable
-                .Skip(query.Skip)
-                .Take(query.Take)
                 .Include(mr => mr.Appointment)
                     .ThenInclude(a => a.Doctor)
                         .ThenInclude(d => d.User)

@@ -29,8 +29,6 @@ const updateMedicalRecord = async (recordId: string, payload: MedicalRecord): Pr
 const getMedicalRecordsOfPatient = async (query: MedicalRecordQuery): Promise<MedicalRecordDto[]> => {
   const response = await apiClient.get<MedicalRecordDto[]>(`${API_ENDPOINT}/patient`, {
     params: {
-      skip: query.skip,
-      take: query.take,
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
     }

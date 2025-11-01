@@ -36,14 +36,22 @@ interface DayDetailsModalProps {
   appointments: Appointment[];
 }
 
+// Định nghĩa một kiểu chung cho các ca làm việc để TypeScript hiểu được
+type WorkSlot = (DoctorSchedule & { type: 'fixed' }) | (ScheduleOverride & { type: 'override' });
+
 const DayDetailsModal: React.FC<DayDetailsModalProps> = ({ isOpen, onClose, formattedDate, schedules, overrides, appointments }) => {
   // Gộp lịch cố định và linh hoạt vào một danh sách và sắp xếp theo thời gian bắt đầu
   const allWorkSlots = useMemo(() => {
-    const combinedSlots = [
-      ...schedules.map(s => ({ ...s, type: 'fixed' as const })),
-      ...overrides.map(o => ({ ...o, type: 'override' as const }))
-    ];
-    return combinedSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    // Nếu có lịch linh hoạt (ghi đè) cho ngày này, chỉ hiển thị lịch linh hoạt.
+    if (overrides.length > 0) {
+      return overrides
+        .map(o => ({ ...o, type: 'override' as const }))
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    }
+    // Nếu không, hiển thị lịch cố định.
+    return schedules
+      .map(s => ({ ...s, type: 'fixed' as const }))
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [schedules, overrides]);
 
   if (!isOpen) return null;
@@ -67,7 +75,10 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({ isOpen, onClose, form
                 });
 
                 return (
-                  <div key={slot.id} className="detail-item">
+                  // Điều kiện: Chỉ hiển thị nếu không phải là lịch nghỉ (override và isAvailable=false)
+                  // Các lịch cố định và lịch tăng ca (override và isAvailable=true) sẽ luôn được hiển thị.
+                  !(slot.type === 'override' && !slot.isAvailable) && (
+                  <div key={slot.id} className={`detail-item ${slot.type === 'override' ? 'override-item' : ''}`}>
                     <p className="detail-time">{slot.startTime.substring(0, 5)} - {slot.endTime.substring(0, 5)}</p>
                     <p className={`detail-status ${slot.isAvailable ? 'status-available' : 'status-unavailable'}`}>
                       <span className="status-dot" style={{ backgroundColor: slot.isAvailable ? '#10b981' : '#ef4444' }}></span>
@@ -89,6 +100,7 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({ isOpen, onClose, form
                       </div>
                     )}
                   </div>
+                  )
                 );
               })}
             </div>
@@ -109,7 +121,6 @@ const ScheduleManagement: React.FC = () => {
     appointments: Appointment[];
   }>({ schedules: [], overrides: [], appointments: [] });
 
-  const [currentDayAppointments, setCurrentDayAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -202,26 +213,6 @@ const ScheduleManagement: React.FC = () => {
     }
   };
 
-  // Effect để lấy cuộc hẹn khi ngày được chọn thay đổi
-  useEffect(() => {
-    const fetchAppointmentsForSelectedDay = async () => {
-      if (!isAuthenticated || !user?.id || !selectedDate) {
-        setCurrentDayAppointments([]);
-        return;
-      }
-      const selectedFullDate = new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth(), selectedDate));
-      const selectedDateString = toYYYYMMDD(selectedFullDate); // Sử dụng hàm tiện ích an toàn
-      try {
-        const appointments = await appointmentService.getMyDayAppointments(selectedDateString);
-        setCurrentDayAppointments(appointments.sort((a, b) => a.appointmentStartTime.localeCompare(b.appointmentStartTime)));
-      } catch (err) {
-        console.error('Error fetching appointments for selected day:', err);
-        setCurrentDayAppointments([]); // Xóa các cuộc hẹn nếu có lỗi
-      }
-    };
-    fetchAppointmentsForSelectedDay();
-  }, [selectedDate, currentMonth, isAuthenticated, user?.id]);
-
   // Effect to fetch all appointments for the current month/week view
   useEffect(() => {
     refreshAllData();
@@ -312,8 +303,10 @@ const ScheduleManagement: React.FC = () => {
   }, [selectedDate, currentMonth, scheduleOverridesByDate]);
 
   const selectedDayAppointments = useMemo(() => {
-    return currentDayAppointments; // Đã được fetch và sắp xếp trong useEffect
-  }, [currentDayAppointments]);
+    if (!selectedDate) return [];
+    const selectedDayFullDateString = toYYYYMMDD(new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth(), selectedDate)));
+    return (appointmentsByDate.get(selectedDayFullDateString) || []).sort((a, b) => a.appointmentStartTime.localeCompare(b.appointmentStartTime));
+  }, [selectedDate, currentMonth, appointmentsByDate]);
 
   const getFormattedSelectedDate = () => {
     if (!selectedDate) return "";
@@ -390,21 +383,22 @@ const ScheduleManagement: React.FC = () => {
 
                     <div className="schedule-dots-container">
                       {/* Hiển thị một chấm cho mỗi ca làm việc cố định */}
-                      {timeSlots.map((slot) => {
-                        const hasAppointmentInSlot = appointmentsForDay?.some(app => {
-                          const appStartTime = new Date(app.appointmentStartTime).toTimeString().substring(0, 8);
-                          return appStartTime >= slot.startTime && appStartTime < slot.endTime;
-                        });
-                        return (
-                          <div 
-                            key={slot.id} 
-                            className={`schedule-dot schedule-dot-fixed ${hasAppointmentInSlot ? 'has-appointment' : ''}`} 
-                            title={`Lịch cố định: ${slot.startTime.substring(0, 5)}-${slot.endTime.substring(0, 5)} (${slot.isAvailable ? 'Sẵn sàng' : 'Không sẵn sàng'})${hasAppointmentInSlot ? ' - Đã có hẹn' : ''}`}>
-                          </div>
-                        );
-                      })}
+                      {!hasFlexibleOverride && timeSlots.map((slot) => {
+                          const hasAppointmentInSlot = appointmentsForDay?.some(app => {
+                            const appStartTime = new Date(app.appointmentStartTime).toTimeString().substring(0, 8);
+                            return appStartTime >= slot.startTime && appStartTime < slot.endTime;
+                          });
+                          return (
+                            <div
+                              key={slot.id}
+                              className={`schedule-dot schedule-dot-fixed ${hasAppointmentInSlot ? 'has-appointment' : ''}`}
+                              title={`Lịch cố định: ${slot.startTime.substring(0, 5)}-${slot.endTime.substring(0, 5)} (${slot.isAvailable ? 'Sẵn sàng' : 'Không sẵn sàng'})${hasAppointmentInSlot ? ' - Đã có hẹn' : ''}`}>
+                            </div>
+                          );
+                        })}
                       {/* Hiển thị một chấm cho mỗi lịch linh hoạt */}
-                      {scheduleOverridesByDate.get(fullDateString)?.map((override) => {
+                      {/* Luôn hiển thị lịch linh hoạt nếu có */}
+                      {hasFlexibleOverride && scheduleOverridesByDate.get(fullDateString)?.map((override) => {
                         const hasAppointmentInSlot = appointmentsForDay?.some(app => {
                           const appStartTime = new Date(app.appointmentStartTime).toTimeString().substring(0, 8);
                           return appStartTime >= override.startTime && appStartTime < override.endTime;

@@ -14,6 +14,17 @@ interface Props {
 
 type FormInputs = CreateScheduleOverridePayload;
 
+const timeSlots = [
+  { label: 'Ca 1 (07:00 - 07:50)', startTime: '07:00', endTime: '07:50' },
+  { label: 'Ca 2 (08:00 - 08:50)', startTime: '08:00', endTime: '08:50' },
+  { label: 'Ca 3 (09:00 - 09:50)', startTime: '09:00', endTime: '09:50' },
+  { label: 'Ca 4 (10:00 - 10:50)', startTime: '10:00', endTime: '10:50' },
+  { label: 'Ca 5 (13:00 - 13:50)', startTime: '13:00', endTime: '13:50' },
+  { label: 'Ca 6 (14:00 - 14:50)', startTime: '14:00', endTime: '14:50' },
+  { label: 'Ca 7 (15:00 - 15:50)', startTime: '15:00', endTime: '15:50' },
+  { label: 'Ca 8 (16:00 - 16:50)', startTime: '16:00', endTime: '16:50' },
+];
+
 const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefresh }) => {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingOverride, setEditingOverride] = useState<ScheduleOverride | null>(null);
@@ -92,6 +103,15 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
     }
   };
 
+  const handleTimeSlotChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedSlot = timeSlots.find(slot => slot.startTime === e.target.value);
+    if (selectedSlot) {
+      setValue('startTime', selectedSlot.startTime);
+      setValue('endTime', selectedSlot.endTime);
+    }
+  };
+
+
   return (
     <div className="modal-overlay">
       <div className="modal-content">
@@ -146,21 +166,15 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
                 {/* Giữ trường isAvailable ẩn để form hoạt động đúng, mặc định là true (Tăng ca) */}
                 <input type="hidden" {...register('isAvailable')} value="true" />
               </div>
-              <div className="form-group">
-                <label>Giờ bắt đầu</label>
-                <input type="time" {...register('startTime', { required: 'Giờ bắt đầu là bắt buộc' })} />
+              <div className="form-group form-group-span-2">
+                <label>Ca làm việc</label>
+                <select
+                  {...register('startTime', { required: 'Vui lòng chọn ca làm việc' })}
+                  onChange={handleTimeSlotChange}
+                >
+                  {timeSlots.map(slot => <option key={slot.startTime} value={slot.startTime}>{slot.label}</option>)}
+                </select>
                 {errors.startTime && <p className="error-text">{errors.startTime.message}</p>}
-              </div>
-              <div className="form-group">
-                <label>Giờ kết thúc</label>
-                <input
-                  type="time"
-                  {...register('endTime', {
-                    required: 'Giờ kết thúc là bắt buộc',
-                    validate: value => getValues('startTime') < value || 'Giờ kết thúc phải sau giờ bắt đầu'
-                  })}
-                />
-                {errors.endTime && <p className="error-text">{errors.endTime.message}</p>}
               </div>
             </div>
             <div className="form-actions">

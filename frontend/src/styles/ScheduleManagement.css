@@ -146,15 +146,48 @@
   border: none;
 }
 
+/* Bỏ màu nền cho cả ô, chỉ giữ lại hiệu ứng khi di chuột */
 .calendar-day.has-override {
-  background-color: #ecfeff; /* Màu nền xanh ngọc rất nhạt */
-  border-color: #00BCD4; /* Màu viền xanh ngọc */
+  /* background-color: #ecfeff; */ /* Xóa màu nền */
 }
 
 .calendar-day.has-override:hover:not(.selected) {
   background-color: #cffafe; /* Màu nền xanh ngọc nhạt hơn khi di chuột */
-  border-color: #0891b2;
 }
+
+/* Style cho ngày có cuộc hẹn */
+.calendar-day.has-appointment-day {
+  /* background-color: #fff7ed; */ /* Xóa màu nền */
+}
+
+.calendar-day.has-appointment-day:hover:not(.selected) {
+  background-color: #ffedd5; /* Màu nền cam nhạt hơn khi di chuột */
+}
+
+/* Thêm viền tròn cho số ngày có lịch linh hoạt */
+.calendar-day.has-override .day-number {
+  border: 2px solid #00BCD4; /* Viền màu xanh ngọc */
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0; /* Bỏ padding để số nằm giữa */
+}
+
+/* Thêm viền tròn cho số ngày có cuộc hẹn (sẽ ghi đè viền trên nếu có cả hai) */
+.calendar-day.has-appointment-day .day-number {
+  border: 2px solid #fb923c; /* Viền màu cam */
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
 
 .calendar-day.today .day-number {
   background-color: #3b82f6;
@@ -168,7 +201,6 @@
 }
 
 .day-number {
-  position: relative;
   font-weight: 600;
   font-size: 14px;
   color: #1f2937;
@@ -406,10 +438,14 @@
   background-color: #f44336; /* Màu đỏ */
 }
 
-/* Thêm style cho chấm lịch đã có cuộc hẹn */
-.schedule-dot.has-appointment {
-  border: 2px solid #ff5722; /* Viền màu cam nổi bật */
-  box-shadow: 0 0 5px rgba(255, 87, 34, 0.7); /* Thêm hiệu ứng glow */
+/* Style cho ca làm việc có cuộc hẹn (thêm viền đỏ quanh chấm tròn) */
+.indicator.has-appointment {
+  border: 2px solid #f44336; /* Viền màu đỏ */
+  /* 
+    Dùng box-sizing để viền không làm tăng kích thước của chấm tròn,
+    giúp các chấm có kích thước đồng đều.
+  */
+  box-sizing: border-box; 
 }
 
 /* Ẩn badge cũ nếu còn */

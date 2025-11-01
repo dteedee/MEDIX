@@ -323,30 +323,46 @@ const ScheduleManagement: React.FC = () => {
                 // Lấy lịch cố định và lịch linh hoạt cho ngày hiện tại
                 const fixedSchedules = schedulesByDay.get(dayOfWeek) || [];
                 const dayOverrides = overridesByDate.get(dateKey) || [];
+                const dayAppointments = appointmentsByDate.get(dateKey) || [];
+
 
                 // Tính toán các ca làm việc thực tế trong ngày
                 const workSlots = [
                   // Lấy các ca cố định không bị lịch nghỉ ghi đè
-                  ...fixedSchedules.filter(fs => 
-                    !dayOverrides.some(o => !o.isAvailable && o.startTime < fs.endTime && o.endTime > fs.startTime)
+                  ...fixedSchedules.filter(fs =>
+                    !dayOverrides.some(
+                      o => !o.isAvailable && o.startTime < fs.endTime && o.endTime > fs.startTime
+                    )
                   ),
                   // Lấy các ca tăng ca (lịch linh hoạt có isAvailable = true)
                   ...dayOverrides.filter(o => o.isAvailable)
                 ];
 
+                const isToday = getLocalDateKey(date) === getLocalDateKey(new Date());
+
+                const dayClasses = [
+                  "calendar-day",
+                  selectedDate && getLocalDateKey(selectedDate) === dateKey ? "selected" : "",
+                  dayOverrides.length > 0 ? "has-override" : "",
+                  dayAppointments.length > 0 ? "has-appointment-day" : "",
+                  isToday ? "today" : ""
+                ].join(" ");
+
                 return (
                   <div
                     key={dateKey}
-                    className={`calendar-day ${
-                      selectedDate && getLocalDateKey(selectedDate) === dateKey ? "selected" : ""
-                    }`}
+                    className={dayClasses}
                     onClick={() => openDayDetails(date)}
                   >
                     <div className="day-number">{date.getDate()}</div>
                     <div className="day-indicators">
                       {/* Render một chấm tròn cho mỗi ca làm việc */}
                       {workSlots.map((slot, index) => (
-                        <span key={index} className="indicator" title={`${slot.startTime.slice(0,5)}-${slot.endTime.slice(0,5)}`}></span>
+                        <span
+                          key={index}
+                          className="indicator"
+                          title={`${slot.startTime.slice(0, 5)}-${slot.endTime.slice(0, 5)}`}
+                        ></span>
                       ))}
                     </div>
                   </div>

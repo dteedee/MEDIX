@@ -6,8 +6,8 @@ class ApiClient {
   private refreshTokenPromise: Promise<string> | null = null;
 
   constructor() {
-    // Use environment variable for API base URL, fallback to proxy for development
-    const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api';
+    // Use environment variable for API base URL, fallback to localhost for development
+    const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5123/api';
     
     this.client = axios.create({
       baseURL: API_BASE_URL,
@@ -104,6 +104,10 @@ class ApiClient {
     return response.data;
   }
 
+  public getToken (): string | null {
+    return this.getAccessToken();
+  }
+  
   // Token management
   private getAccessToken(): string | null {
     const token = localStorage.getItem('accessToken');

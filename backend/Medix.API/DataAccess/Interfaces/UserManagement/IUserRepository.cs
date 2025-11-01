@@ -18,6 +18,8 @@ namespace Medix.API.DataAccess.Interfaces.UserManagement
         Task<bool> ExistsByPhoneNumberAsync(string phoneNumber);
         Task<bool> ExistsByUserNameAsync(string userName);
         Task<bool> ExistsByIdentificationNumberAsync(string identificationNumber);
+        Task<bool> ExistsByEmailAsync(string email); 
+
         Task<(int total, IEnumerable<User> data)> GetPagedAsync(int page, int pageSize);
         Task<(int total, IEnumerable<User> data)> SearchAsync(string keyword, int page, int pageSize);
         Task<IEnumerable<User>> SearchByNameAsync(string keyword);

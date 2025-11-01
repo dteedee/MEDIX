@@ -36,6 +36,8 @@ public partial class MedixContext : DbContext
 
     public virtual DbSet<DoctorPerformanceMetric> DoctorPerformanceMetrics { get; set; }
 
+    public virtual DbSet<DoctorRegistrationForm> DoctorRegistrationForms { get; set; }
+
     public virtual DbSet<DoctorSalary> DoctorSalaries { get; set; }
 
     public virtual DbSet<DoctorSchedule> DoctorSchedules { get; set; }
@@ -47,6 +49,7 @@ public partial class MedixContext : DbContext
     public virtual DbSet<DoctorSubscription> DoctorSubscriptions { get; set; }
 
     public virtual DbSet<HealthArticle> HealthArticles { get; set; }
+    public virtual DbSet<HealthArticleLike> HealthArticleLikes { get; set; }
 
     public virtual DbSet<MedicalRecord> MedicalRecords { get; set; }
 
@@ -324,6 +327,7 @@ public partial class MedixContext : DbContext
             entity.Property(e => e.AverageRating).HasColumnType("decimal(3, 2)");
             entity.Property(e => e.ConsultationFee).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.DegreeFilesUrl).HasDefaultValue("");
             entity.Property(e => e.Education).HasMaxLength(1000);
             entity.Property(e => e.IsAcceptingAppointments).HasDefaultValue(true);
             entity.Property(e => e.LicenseImageUrl).IsUnicode(false);
@@ -386,6 +390,37 @@ public partial class MedixContext : DbContext
                 .HasForeignKey(d => d.DoctorId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_DoctorPerformanceMetrics_Doctor");
+        });
+
+        modelBuilder.Entity<DoctorRegistrationForm>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__DoctorRe__3214EC078AFF2B65");
+
+            entity.HasIndex(e => e.UserNameNormalized, "UQ__DoctorRe__2CB5855F7E011DA4").IsUnique();
+
+            entity.HasIndex(e => e.PhoneNumber, "UQ__DoctorRe__85FB4E3875223BA8").IsUnique();
+
+            entity.HasIndex(e => e.IdentificationNumber, "UQ__DoctorRe__9CD14694DB6FF6E0").IsUnique();
+
+            entity.HasIndex(e => e.EmailNormalized, "UQ__DoctorRe__B5DB8137650358A8").IsUnique();
+
+            entity.HasIndex(e => e.LicenseNumber, "UQ__DoctorRe__E889016606590140").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Education).HasMaxLength(1000);
+            entity.Property(e => e.EmailNormalized).HasMaxLength(256);
+            entity.Property(e => e.FullName).HasMaxLength(200);
+            entity.Property(e => e.GenderCode).HasMaxLength(10);
+            entity.Property(e => e.IdentificationNumber).HasMaxLength(50);
+            entity.Property(e => e.LicenseNumber).HasMaxLength(100);
+            entity.Property(e => e.PhoneNumber).HasMaxLength(20);
+            entity.Property(e => e.UserNameNormalized).HasMaxLength(256);
+
+            entity.HasOne(d => d.Specialization).WithMany(p => p.DoctorRegistrationForms)
+                .HasForeignKey(d => d.SpecializationId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__DoctorReg__Speci__595B4002");
         });
 
         modelBuilder.Entity<DoctorSalary>(entity =>
@@ -1033,6 +1068,7 @@ public partial class MedixContext : DbContext
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.OrderCode).HasColumnType("bigint");
             entity.Property(e => e.BalanceAfter).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.BalanceBefore).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");

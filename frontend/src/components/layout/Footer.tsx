@@ -1,74 +1,69 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import './medix-footer.css'; // Gộp lại dùng file CSS thống nhất
+import { useLanguage } from '../../contexts/LanguageContext';
+import styles from '../../styles/footer.module.css';
 
-const Footer = () => {
+const Footer: React.FC = () => {
+  const { t } = useLanguage();
+
   return (
-    <footer className="medix-footer">
-      <div className="medix-footer__inner">
-        {/* --- Cột 1: Giới thiệu --- */}
-        <div className="medix-footer__section">
+    <footer>
+      <div className={styles["footer-content"]}>
+        {/* Section 1: MEDIX info */}
+        <div className={styles["footer-section"]}>
           <h3>MEDIX</h3>
           <p style={{ fontSize: '13px', lineHeight: '1.8' }}>
-            Hệ thống y tế hàng đầu Việt Nam với tiêu chuẩn quốc tế
+            {t('footer.about')}
           </p>
-          <div className="medix-footer__social-icons">
-            <a
-              href="https://facebook.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="medix-footer__social-icon"
-            >
-              f
-            </a>
-            <a
-              href="https://linkedin.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="medix-footer__social-icon"
-            >
-              in
-            </a>
+          <div className={styles["social-icons"]}>
+            <div className={styles["social-icon"]}>f</div>
+            <div className={styles["social-icon"]}>in</div>
           </div>
         </div>
 
-        {/* --- Cột 2: Về chúng tôi --- */}
-        <div className="medix-footer__section">
-          <h3>Về chúng tôi</h3>
+        {/* Section 2: About Us */}
+        <div className={styles["footer-section"]}>
+          <h3>{t('footer.links.title')}</h3>
           <ul>
-            <li><Link to="/">Trang chủ</Link></li>
-            <li><Link to="/about-us">Về chúng tôi</Link></li>
-            <li><Link to="/doctors">Bác sĩ</Link></li>
-            <li><Link to="/health-articles">Bài viết sức khỏe</Link></li>
+            <li><a href="/">{t('footer.links.home')}</a></li>
+            <li><a href="/about">{t('footer.links.about')}</a></li>
+            <li><a href="#">{t('footer.links.doctors')}</a></li>
+            <li><a href="#">{t('footer.links.healthArticles')}</a></li>
           </ul>
         </div>
 
-        {/* --- Cột 3: Dịch vụ --- */}
-        <div className="medix-footer__section">
-          <h3>Dịch vụ</h3>
+        {/* Section 3: Services */}
+        <div className={styles["footer-section"]}>
+          <h3>{t('footer.services.title')}</h3>
           <ul>
-            <li><Link to="/health-packages">Gói khám sức khỏe</Link></li>
-            <li><Link to="/ai-diagnosis">AI chẩn đoán</Link></li>
-            <li><Link to="/appointments">Đặt lịch hẹn</Link></li>
+            <li><a href="#">{t('footer.services.packages')}</a></li>
+            <li><a href="#">{t('footer.services.aiDiagnosis')}</a></li>
+            <li><a href="#">{t('footer.services.booking')}</a></li>
           </ul>
         </div>
 
-        {/* --- Cột 4: Liên hệ --- */}
-        <div className="medix-footer__section">
-          <h3>Liên hệ</h3>
+        {/* Section 4: Contact */}
+        <div className={styles["footer-section"]}>
+          <h3>{t('footer.contact.title')}</h3>
           <ul>
             <li>
-              <a href="mailto:Chamsockhachhangmedix@gmail.com">
-                Email: Chamsockhachhangmedix@gmail.com
-              </a>
+              <a>Email: medix.sp@gmail.com</a>
+            </li>
+            <li>
+              <a>Hotline: 0969.995.633</a>
+            </li>
+            <li>
+              <a>Website: www.medix.com</a>
+            </li>
+            <li>
+              <a>Địa chỉ: FPT University</a>
             </li>
           </ul>
         </div>
       </div>
 
-      {/* --- Dòng bản quyền --- */}
-      <div className="medix-footer__bottom">
-        <p>© 2025 MEDIX. All rights reserved.</p>
+      {/* Bottom line */}
+      <div className={styles["footer-bottom"]}>
+        <p>© 2025 MEDIX. {t('footer.rights')}</p>
       </div>
     </footer>
   );

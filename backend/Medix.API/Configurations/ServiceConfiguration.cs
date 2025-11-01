@@ -38,6 +38,19 @@ namespace Medix.API.Configurations
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IArticleRepository, ArticleRepitory>();
             services.AddScoped<IReviewRepository, ReviewRepository>();
+            services.AddScoped<IServiceTierRepository, ServiceTierRepository>();
+            services.AddScoped<INotificationRepository, NotificationRepostiory>();
+            services.AddScoped<IDoctorScheduleRepository, DoctorScheduleRepository>();
+            services.AddScoped<IWalletRepository, WalletRepository>();
+            services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
+            services.AddScoped<IAppointmentRepository, AppointmentRepository>();
+            services.AddScoped<IMedicalRecordRepository, MedicalRecordRepository>();
+            services.AddScoped<IPrescriptionRepository, PrescriptionRepository>();
+            services.AddScoped<IDoctorScheduleOverrideRepository, DoctorScheduleOverrideRepository>();
+            services.AddScoped<IRefArticleStatusRepository, RefArticleStatusRepository>();
+            services.AddScoped<IDoctorRegistrationFormRepository, DoctorRegistrationFormRepository>();
+
+
         }
 
         private static void RegisterServices(IServiceCollection services)
@@ -57,6 +70,20 @@ namespace Medix.API.Configurations
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<CloudinaryService>();
             services.AddScoped<IArticleService, ArticleService>();
+            services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IVnpay, Vnpay>();
+            services.AddScoped<IWalletService, WalletService>();
+            services.AddScoped<IWalletTransactionService, WalletTransactionService>();
+
+
+            services.AddScoped<IDoctorScheduleService, DoctorScheduleService>();
+            services.AddScoped<IAppointmentService, AppointmentService>();
+            services.AddScoped<IMedicalRecordService, MedicalRecordService>();
+            services.AddScoped<IPrescriptionService, PrescriptionService>();
+            services.AddScoped<IReviewService, ReviewService>();
+            services.AddScoped<IDoctorScheduleOverrideService, DoctorScheduleOverrideService>();
+            services.AddScoped<IDoctorRegistrationFormService, DoctorRegistrationFormService>();
+
         }
     }
 }

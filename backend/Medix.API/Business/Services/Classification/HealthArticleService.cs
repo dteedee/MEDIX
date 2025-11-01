@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Exceptions;
@@ -6,6 +6,7 @@ using Medix.API.Models.DTOs.HealthArticle;
 using Medix.API.Models.Entities;
 using Medix.API.Business.Helper;
 using Microsoft.AspNetCore.Http.HttpResults;
+using System.Security.Claims;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -14,6 +15,8 @@ namespace Medix.API.Business.Services.Classification
         private readonly IHealthArticleRepository _healthArticleRepository;
         private readonly IContentCategoryRepository _contentCategoryRepository;
         private readonly IMapper _mapper;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
 
         public HealthArticleService(IHealthArticleRepository healthArticleRepository, IContentCategoryRepository contentCategoryRepository, IMapper mapper)
         {
@@ -21,7 +24,14 @@ namespace Medix.API.Business.Services.Classification
             _contentCategoryRepository = contentCategoryRepository;
             _mapper = mapper;
         }
+        private Guid GetCurrentUserId()
+        {
+            var userId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                throw new UnauthorizedAccessException("User ID not found in token.");
 
+            return Guid.Parse(userId);
+        }
         public async Task<(int total, IEnumerable<HealthArticlePublicDto> data)> GetPagedAsync(int page = 1, int pageSize = 10)
         {
             var (articles, total) = await _healthArticleRepository.GetPagedAsync(page, pageSize);
@@ -32,24 +42,34 @@ namespace Medix.API.Business.Services.Classification
                 Title = a.Title,
                 Slug = a.Slug,
                 Summary = a.Summary,
+                Content = a.Content, 
+                MetaTitle = a.MetaTitle, 
+                MetaDescription = a.MetaDescription, 
+                PublishedAt = a.PublishedAt, 
+                IsHomepageVisible = a.IsHomepageVisible,
+                DisplayOrder = a.DisplayOrder,
+                
                 CoverImageUrl = a.CoverImageUrl,
                 ThumbnailUrl = a.ThumbnailUrl,
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
                 LikeCount = a.LikeCount,
+                DisplayType = a.DisplayType,
 
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
-                DisplayType = a.DisplayType,
+
                 Categories = a.Categories
-                    .Select(c => new HealthArticlePublicDto.CategoryInfo
-                    {
-                        Name = c.Name,
-                        Slug = c.Slug
-                    })
-                    .ToList()
+         .Select(c => new HealthArticlePublicDto.CategoryInfo
+         {
+             Id = c.Id,
+             Name = c.Name,
+             Slug = c.Slug
+         })
+         .ToList()
             });
+
 
             return (total, data);
         }
@@ -69,7 +89,7 @@ namespace Medix.API.Business.Services.Classification
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
                 LikeCount = a.LikeCount,
-
+                PublishedAt = a.PublishedAt,
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
@@ -77,6 +97,7 @@ namespace Medix.API.Business.Services.Classification
                 Categories = a.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })
@@ -89,7 +110,7 @@ namespace Medix.API.Business.Services.Classification
         public async Task<HealthArticlePublicDto?> GetByIdAsync(Guid id)
         {
             var article = await _healthArticleRepository.GetByIdWithDetailsAsync(id);
-            
+
             if (article == null)
                 return null;
 
@@ -107,7 +128,7 @@ namespace Medix.API.Business.Services.Classification
                 StatusCode = article.StatusCode,
                 ViewCount = article.ViewCount,
                 LikeCount = article.LikeCount,
-
+                PublishedAt = article.PublishedAt,
                 IsHomepageVisible = article.IsHomepageVisible,
                 DisplayOrder = article.DisplayOrder,
                 DisplayType = article.DisplayType,
@@ -117,6 +138,7 @@ namespace Medix.API.Business.Services.Classification
                 Categories = article.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })
@@ -127,12 +149,9 @@ namespace Medix.API.Business.Services.Classification
         public async Task<HealthArticlePublicDto?> GetBySlugAsync(string slug)
         {
             var article = await _healthArticleRepository.GetBySlugAsync(slug);
-            
+
             if (article == null)
                 return null;
-
-            // Increment view count
-            await _healthArticleRepository.IncrementViewCountAsync(article.Id);
 
             return new HealthArticlePublicDto
             {
@@ -146,9 +165,9 @@ namespace Medix.API.Business.Services.Classification
                 MetaTitle = article.MetaTitle,
                 MetaDescription = article.MetaDescription,
                 StatusCode = article.StatusCode,
-                ViewCount = article.ViewCount + 1, // Show incremented count
+                ViewCount = article.ViewCount, // Return the actual current count
                 LikeCount = article.LikeCount,
-
+                PublishedAt = article.PublishedAt,
                 IsHomepageVisible = article.IsHomepageVisible,
                 DisplayOrder = article.DisplayOrder,
                 DisplayType = article.DisplayType,
@@ -158,11 +177,18 @@ namespace Medix.API.Business.Services.Classification
                 Categories = article.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })
                     .ToList()
             };
+        }
+
+        // New method specifically for incrementing view count
+        public async Task IncrementViewCountOnlyAsync(Guid articleId)
+        {
+            await _healthArticleRepository.IncrementViewCountAsync(articleId);
         }
 
         public async Task<(int total, IEnumerable<HealthArticlePublicDto> data)> GetByCategoryAsync(Guid categoryId, int page = 1, int pageSize = 10)
@@ -180,7 +206,7 @@ namespace Medix.API.Business.Services.Classification
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
                 LikeCount = a.LikeCount,
-
+                PublishedAt = a.PublishedAt,
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
@@ -188,6 +214,7 @@ namespace Medix.API.Business.Services.Classification
                 Categories = a.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })
@@ -212,13 +239,17 @@ namespace Medix.API.Business.Services.Classification
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
                 LikeCount = a.LikeCount,
-
+                IsHomepageVisible = a.IsHomepageVisible,
+                DisplayOrder = a.DisplayOrder,
+                DisplayType = a.DisplayType,
+                PublishedAt = a.PublishedAt,
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
                 Categories = a.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })
@@ -241,7 +272,7 @@ namespace Medix.API.Business.Services.Classification
                 StatusCode = a.StatusCode,
                 ViewCount = a.ViewCount,
                 LikeCount = a.LikeCount,
-
+                PublishedAt = a.PublishedAt,
                 AuthorName = a.Author?.FullName ?? string.Empty,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
@@ -249,6 +280,7 @@ namespace Medix.API.Business.Services.Classification
                 Categories = a.Categories
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
+                        Id = c.Id,
                         Name = c.Name,
                         Slug = c.Slug
                     })
@@ -273,7 +305,7 @@ namespace Medix.API.Business.Services.Classification
             {
                 throw new ValidationException(new Dictionary<string, string[]>
                 {
-                    { "Title", new[] { "Article title already exists" } }
+                    { "Title", new[] { "Article title đã tồn tại" } }
                 });
             }
 
@@ -291,7 +323,7 @@ namespace Medix.API.Business.Services.Classification
                 StatusCode = createDto.StatusCode ?? "Draft",
                 ViewCount = 0,
                 LikeCount = 0,
-
+                PublishedAt = createDto.PublishedAt,
                 IsHomepageVisible = createDto.IsHomepageVisible,
                 DisplayOrder = createDto.DisplayOrder,
                 DisplayType = createDto.DisplayType ?? "Standard",
@@ -299,6 +331,12 @@ namespace Medix.API.Business.Services.Classification
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
+
+            // Nếu bài viết được tạo với trạng thái Published, gán luôn ngày xuất bản
+            if (article.StatusCode == "Published" && article.PublishedAt == null)
+            {
+                article.PublishedAt = DateTime.UtcNow;
+            }
 
             // Attach categories if provided
             if (createDto.CategoryIds != null && createDto.CategoryIds.Any())
@@ -358,12 +396,12 @@ namespace Medix.API.Business.Services.Classification
                 {
                     throw new ValidationException(new Dictionary<string, string[]>
                     {
-                        { "Slug", new[] { "Article slug already exists" } }
+                        { "Slug", new[] { "Article slug đã tồn tại" } }
                     });
                 }
             }
 
-          
+
 
             var authorExists = await _healthArticleRepository.UserExistsAsync(updateDto.AuthorId);
             if (!authorExists)
@@ -374,19 +412,22 @@ namespace Medix.API.Business.Services.Classification
                 });
             }
 
-            article.Title = updateDto.Title;
-            article.Slug = updateDto.Slug;
-            article.Summary = updateDto.Summary;
-            article.Content = updateDto.Content;
-            article.CoverImageUrl = updateDto.CoverImageUrl;
-            article.ThumbnailUrl = updateDto.ThumbnailUrl;
-            article.MetaTitle = updateDto.MetaTitle;
-            article.MetaDescription = updateDto.MetaDescription;
-            article.StatusCode = updateDto.StatusCode;
-            article.IsHomepageVisible = updateDto.IsHomepageVisible;
-            article.DisplayOrder = updateDto.DisplayOrder;
-            article.DisplayType = updateDto.DisplayType;
-            article.AuthorId = updateDto.AuthorId;
+            // Ghi lại trạng thái cũ trước khi map
+            var oldStatusCode = article.StatusCode;
+
+            // Logic cập nhật PublishedAt an toàn
+            // Chỉ gán PublishedAt khi chuyển trạng thái sang "Published" lần đầu tiên.
+            if (updateDto.StatusCode == "Published" && oldStatusCode != "Published")
+            {
+                if (article.PublishedAt == null)
+                {
+                    article.PublishedAt = DateTime.UtcNow;
+                }
+            }
+
+            // Map các giá trị từ DTO vào entity
+            _mapper.Map(updateDto, article);
+
             article.UpdatedAt = DateTime.UtcNow;
 
             // Update categories if provided
@@ -425,6 +466,102 @@ namespace Medix.API.Business.Services.Classification
             }
 
             return true;
+        }
+        public async Task<HealthArticlePublicDto?> LikeAsync(Guid id, Guid userId)
+        {
+            var article = await _healthArticleRepository.GetByIdWithDetailsAsync(id);
+            if (article == null)
+                return null;
+
+            // If user already liked, return current state (idempotent)
+            var already = await _healthArticleRepository.HasUserLikedAsync(id, userId);
+            if (!already)
+            {
+                await _healthArticleRepository.AddLikeAsync(id, userId);
+            }
+
+            var updated = await _healthArticleRepository.GetByIdWithDetailsAsync(id);
+            if (updated == null)
+                return null;
+
+            return new HealthArticlePublicDto
+            {
+                Id = updated.Id,
+                Title = updated.Title,
+                Slug = updated.Slug,
+                Summary = updated.Summary,
+                Content = updated.Content,
+                CoverImageUrl = updated.CoverImageUrl,
+                ThumbnailUrl = updated.ThumbnailUrl,
+                MetaTitle = updated.MetaTitle,
+                MetaDescription = updated.MetaDescription,
+                StatusCode = updated.StatusCode,
+                ViewCount = updated.ViewCount,
+                LikeCount = updated.LikeCount,
+
+                IsHomepageVisible = updated.IsHomepageVisible,
+                DisplayOrder = updated.DisplayOrder,
+                DisplayType = updated.DisplayType,
+                AuthorName = updated.Author?.FullName ?? string.Empty,
+                CreatedAt = updated.CreatedAt,
+                UpdatedAt = updated.UpdatedAt,
+                Categories = updated.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Id = c.Id,
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
+            };
+        }
+
+        public async Task<HealthArticlePublicDto?> UnlikeAsync(Guid id, Guid userId)
+        {
+            var article = await _healthArticleRepository.GetByIdWithDetailsAsync(id);
+            if (article == null)
+                return null;
+
+            var already = await _healthArticleRepository.HasUserLikedAsync(id, userId);
+            if (already)
+            {
+                await _healthArticleRepository.RemoveLikeAsync(id, userId);
+            }
+
+            var updated = await _healthArticleRepository.GetByIdWithDetailsAsync(id);
+            if (updated == null)
+                return null;
+
+            return new HealthArticlePublicDto
+            {
+                Id = updated.Id,
+                Title = updated.Title,
+                Slug = updated.Slug,
+                Summary = updated.Summary,
+                Content = updated.Content,
+                CoverImageUrl = updated.CoverImageUrl,
+                ThumbnailUrl = updated.ThumbnailUrl,
+                MetaTitle = updated.MetaTitle,
+                MetaDescription = updated.MetaDescription,
+                StatusCode = updated.StatusCode,
+                ViewCount = updated.ViewCount,
+                LikeCount = updated.LikeCount,
+
+                IsHomepageVisible = updated.IsHomepageVisible,
+                DisplayOrder = updated.DisplayOrder,
+                DisplayType = updated.DisplayType,
+                AuthorName = updated.Author?.FullName ?? string.Empty,
+                CreatedAt = updated.CreatedAt,
+                UpdatedAt = updated.UpdatedAt,
+                Categories = updated.Categories
+                    .Select(c => new HealthArticlePublicDto.CategoryInfo
+                    {
+                        Id = c.Id,
+                        Name = c.Name,
+                        Slug = c.Slug
+                    })
+                    .ToList()
+            };
         }
     }
 }

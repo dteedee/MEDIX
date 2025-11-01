@@ -20,7 +20,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
 
         Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null);
 
-    Task<bool> TitleExistsAsync(string title, Guid? excludeId = null);
+        Task<bool> TitleExistsAsync(string title, Guid? excludeId = null);
 
         Task<HealthArticle> CreateAsync(HealthArticle article);
 
@@ -31,5 +31,13 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task IncrementViewCountAsync(Guid id);
 
         Task<bool> UserExistsAsync(Guid userId);
+        Task IncrementLikeCountAsync(Guid id);
+
+        Task<bool> HasUserLikedAsync(Guid articleId, Guid userId);
+
+        Task AddLikeAsync(Guid articleId, Guid userId);
+
+        Task RemoveLikeAsync(Guid articleId, Guid userId);
+
     }
 }

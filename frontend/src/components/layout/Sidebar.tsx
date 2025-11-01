@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types/common.types';
-import './Sidebar.css';
+import '../../styles/Sidebar.css';
 
 type SidebarItem = {
   to: string;

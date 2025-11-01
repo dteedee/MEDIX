@@ -1,16 +1,7 @@
-import axios from 'axios'
 import { CmsPageDTO, CreateCmsPageRequest, UpdateCmsPageRequest } from '../types/cmspage.types'
+import { apiClient } from '../lib/apiClient'
 
-const BASE = '/api/Cmspage'
-
-function authHeader() {
-  try {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
-    return token ? { Authorization: `Bearer ${token}` } : undefined
-  } catch {
-    return undefined
-  }
-}
+const BASE = '/Cmspage'
 
 // Helper function to process and re-throw API validation errors
 function handleApiError(error: any, context: string) {
@@ -44,7 +35,7 @@ export const cmspageService = {
       // Assuming it supports them for now.
     }
 
-    const r = await axios.get(url, { params, headers: authHeader() });
+    const r = await apiClient.get(url, { params });
     const data = r.data;
 
     // Handle multiple response shapes from backend (direct array, or paged object)
@@ -57,12 +48,12 @@ export const cmspageService = {
     return { items, total };
   },
   get: async (id: string): Promise<CmsPageDTO> => {
-    const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })
+    const r = await apiClient.get(`${BASE}/${id}`)
     return r.data
   },
   create: async (payload: CreateCmsPageRequest): Promise<CmsPageDTO> => {
     try {
-      const r = await axios.post(BASE, payload, { headers: authHeader() })
+      const r = await apiClient.post(BASE, payload)
       return r.data
     } catch (error: any) {
       if (error.response?.data?.errors) {
@@ -76,7 +67,7 @@ export const cmspageService = {
   },
   update: async (id: string, payload: UpdateCmsPageRequest): Promise<CmsPageDTO> => {
     try {
-      const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() })
+      const r = await apiClient.put(`${BASE}/${id}`, payload)
       return r.data
     } catch (error: any) {
       if (error.response?.data?.errors) {
@@ -89,6 +80,6 @@ export const cmspageService = {
     }
   },
   remove: async (id: string): Promise<void> => {
-    await axios.delete(`${BASE}/${id}`, { headers: authHeader() })
+    await apiClient.delete(`${BASE}/${id}`)
   }
 }

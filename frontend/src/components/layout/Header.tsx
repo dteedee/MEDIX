@@ -1,111 +1,267 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { authService } from '../../services/authService';
-import './Header.css';
+import styles from '../../styles/header.module.css'
+import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { NotificationMetadata } from '../../types/notification.types';
+import NotificationService from '../../services/notificationService';
+import { formatDistanceToNow } from 'date-fns';
+import { vi, enUS } from 'date-fns/locale';
 
 export const Header: React.FC = () => {
-  const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<any | null>(() => {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null;
-    return raw ? JSON.parse(raw) : null;
-  });
+    const [notificationMetadata, setNotificationMetadata] = useState<NotificationMetadata>();
+    const [showUserDropdown, setShowUserDropdown] = useState(false);
+    const { user, logout } = useAuth();
+    const { language, setLanguage, t } = useLanguage();
+    const navigate = useNavigate();
+    const userDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Lắng nghe sự kiện thay đổi đăng nhập/đăng xuất
-  useEffect(() => {
-    const handleAuthChanged = () => {
-      const raw = localStorage.getItem('currentUser');
-      setCurrentUser(raw ? JSON.parse(raw) : null);
+    useEffect(() => {
+        // Only fetch if user is logged in
+        if (!user) {
+            return;
+        }
+        
+        const fetchMetadata = async () => {
+            try {
+                const data = await NotificationService.getMetadata();
+                setNotificationMetadata(data);
+            } catch (error) {
+                console.error('❌ Header - Failed to fetch metadata:', error);
+            }
+        }
+        fetchMetadata();
+    }, [user?.id]); // Use user.id instead of entire user object to prevent unnecessary re-renders
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+                setShowUserDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const getNotificationIconClass = (type: string): string => {
+        switch (type) {
+            case 'Appointment':
+                return 'bi-calendar-event';
+            case 'Payment':
+                return 'bi-credit-card';
+            case 'System':
+                return 'bi-gear';
+            case 'Reminder':
+                return 'bi-alarm';
+            case 'Marketing':
+                return 'bi-megaphone';
+            default:
+                return 'bi-info-circle'; // fallback icon
+        }
     };
 
-    window.addEventListener('authChanged', handleAuthChanged);
-    window.addEventListener('storage', handleAuthChanged);
-
-    return () => {
-      window.removeEventListener('authChanged', handleAuthChanged);
-      window.removeEventListener('storage', handleAuthChanged);
+    const handleUserDropdownToggle = () => {
+        setShowUserDropdown(!showUserDropdown);
     };
-  }, []);
 
-  // Đăng xuất
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-    } finally {
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('expiresAt');
-      localStorage.removeItem('rememberEmail');
+    const handleLogout = async () => {
+        setShowUserDropdown(false);
+        await logout();
+        navigate('/login');
+    };
 
-      window.dispatchEvent(new Event('authChanged'));
-      setCurrentUser(null);
-      navigate('/');
-    }
-  };
+    const handleProfileClick = () => {
+        setShowUserDropdown(false);
+        if (user?.role === "Admin") {
+            navigate('/app/admin/profile');
+        } else if (user?.role === "Manager") {
+            navigate('/app/manager/profile');
+        } else if (user?.role === "Doctor") {
+            navigate('/app/doctor/profile/edit');
+        } else {
+            navigate('/app/patient/profile');
+        }
+    };
 
-  const handleLogoClick = () => navigate('/');
+    const handleDashboardClick = () => {
+        setShowUserDropdown(false);
+        if (user?.role === "Admin") {
+            navigate('/app/admin/dashboard');
+        } else if (user?.role === "Manager") {
+            navigate('/app/manager/dashboard');
+        } else if (user?.role === "Doctor") {
+            navigate('/app/doctor/dashboard');
+        } else {
+            navigate('/app/patient');
+        }
+    };
 
-  return (
-    <header className="medix-header">
-      <div className="medix-header-inner">
-        {/* Logo */}
-        <div className="medix-logo" onClick={handleLogoClick}>
-          <div className="medix-logo-title">MEDIX</div>
-          <div className="medix-logo-sub">HỆ THỐNG Y TẾ THÔNG MINH ỨNG DỤNG AI</div>
-        </div>
+    return (
+        <header>
+            <div className={styles["top-bar"]}>
+                <div className={styles["logo"]}>
+                    <a href='/' className={styles["logo"]}>
+                        MEDIX
+                        <small style={{ textTransform: 'uppercase' }}>Hệ thống y tế thông minh ứng dụng AI</small>
+                    </a>
+                </div>
+                <div className={styles["search-bar"]}>
+                    <input type="text" placeholder={t('header.search.placeholder')} />
+                    <button>🔍</button>
+                </div>
+                <div className={styles["header-links"]}>
+                    {user ? (
+                        <>
+                            {/* Language Selector */}
+                            <div className={styles['language-selector']}>
+                                <button
+                                    className={styles['language-button']}
+                                    onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
+                                    title={language === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'}
+                                >
+                                    <img
+                                        src={language === 'vi'
+                                            ? '/images/vn-flag.jpg'
+                                            : '/images/us-flag.jpg'}
+                                        alt={language === 'vi' ? 'Vietnamese' : 'English'}
+                                        className={styles['flag-icon']}
+                                    />
+                                </button>
+                            </div>
 
-        {/* Thanh tìm kiếm */}
-        <div className="medix-search">
-          <div className="search-pill">
-            <input
-              className="search-input"
-              placeholder="Chuyên khoa, Triệu chứng, Tên bác sĩ"
-            />
-            <button className="search-icon" aria-label="search">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
+                            {/* Notifications */}
+                            <div className="dropdown" style={{ position: 'relative', display: 'inline-block' }}>
+                                <i
+                                    className="bi bi-bell-fill fs-4"
+                                    style={{ cursor: 'pointer' }}
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                </i>
 
-        {/* Khu vực tài khoản / hành động */}
-        <div className="medix-actions">
-          {currentUser ? (
-            <div className="user-menu">
-              <div className="user-greeting">
-                <span className="greeting-text">Xin chào,</span>
-                <span className="user-name">{currentUser.fullName || currentUser.email}</span>
-                <span className="user-role">({currentUser.role || 'USER'})</span>
-              </div>
-              <button className="logout-btn" onClick={handleLogout}>
-                Đăng xuất
-              </button>
+                                {!notificationMetadata?.isAllRead && (
+                                    <span
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            right: 0,
+                                            width: '10px',
+                                            height: '10px',
+                                            backgroundColor: 'red',
+                                            borderRadius: '50%',
+                                        }}
+                                    ></span>
+                                )}
+
+                                <ul className="dropdown-menu dropdown-menu-start" style={{
+                                    maxHeight: '500px',
+                                    overflowY: 'auto', width: '400px'
+                                }}>
+                                    <li><h6 className="dropdown-header">{t('header.notifications')}</h6></li>
+                                    {notificationMetadata?.notifications.map((notification) => (
+                                        <li>
+                                            <a className="dropdown-item" href="#" style={{ whiteSpace: 'normal' }}>
+                                                <div>
+                                                    <strong><i className={`bi ${getNotificationIconClass(notification.type)} me-2`}></i>
+                                                        {notification.title}</strong>
+                                                    <div style={{ fontSize: '0.9rem', lineHeight: '1.4', marginTop: '2px' }}>
+                                                        {notification.message}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '4px' }}>
+                                                        {formatDistanceToNow(new Date(notification.createdAt), {
+                                                            addSuffix: true,
+                                                            locale: language === 'vi' ? vi : enUS,
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            {/* User Avatar Dropdown */}
+                            <div className={styles["user-dropdown"]} ref={userDropdownRef}>
+                                <div 
+                                    className={styles["user-avatar-container"]}
+                                    onClick={handleUserDropdownToggle}
+                                >
+                                    <img
+                                        src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || user.email || 'User')}&background=667eea&color=fff`}
+                                        alt="User avatar"
+                                        className={styles["user-avatar"]}
+                                    />
+                                    <div className={styles["user-info"]}>
+                                        <div className={styles["user-name"]}>{user.fullName || 'Người dùng'}</div>
+                                        <div className={styles["user-role"]}>
+                                            {user.role === "Doctor" ? "Bác sĩ" : 
+                                             user.role === "Admin" ? "Quản trị viên" :
+                                             user.role === "Manager" ? "Quản lý" :
+                                             user.role === "Patient" ? "Bệnh nhân" : "Người dùng"}
+                                        </div>
+                                    </div>
+                                    <i className={`bi bi-chevron-${showUserDropdown ? 'up' : 'down'} ${styles["dropdown-icon"]}`}></i>
+                                </div>
+                                
+                                {showUserDropdown && (
+                                    <div className={styles["user-dropdown-menu"]}>
+                                        <button className={styles["dropdown-item"]} onClick={handleDashboardClick}>
+                                            <i className="bi bi-speedometer2"></i>
+                                            <span>Dashboard</span>
+                                        </button>
+                                        <button className={styles["dropdown-item"]} onClick={handleProfileClick}>
+                                            <i className="bi bi-person"></i>
+                                            <span>Xem tài khoản</span>
+                                        </button>
+                                        <div className={styles["dropdown-divider"]}></div>
+                                        <button className={styles["dropdown-item"]} onClick={handleLogout}>
+                                            <i className="bi bi-box-arrow-right"></i>
+                                            <span>Đăng xuất</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className={styles["auth-buttons"]}>
+                                <a href="/login" className={styles["btn-login"]}>
+                                    {t('header.login')}
+                                </a>
+                                <div className="dropdown">
+                                    <a href="#" className={styles["btn-register"]} data-bs-toggle="dropdown" aria-expanded="false">
+                                        {t('header.register')}
+                                    </a>
+                                    <ul className={`dropdown-menu ${styles["register-dropdown"]}`}>
+                                        <li><a className="dropdown-item" href="/patient-register">{t('header.register.patient')}</a></li>
+                                        <li><a className="dropdown-item" href="/doctor/register">{t('header.register.doctor')}</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            {/* Language Selector */}
+                            <div className={styles['language-selector']}>
+                                <button
+                                    className={styles['language-button']}
+                                    onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
+                                    title={language === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'}
+                                >
+                                    <img
+                                        src={language === 'vi'
+                                            ? '/images/vn-flag.jpg'
+                                            : '/images/us-flag.jpg'}
+                                        alt={language === 'vi' ? 'Vietnamese' : 'English'}
+                                        className={styles['flag-icon']}
+                                    />
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
-          ) : (
-            <>
-              <Link to="/login" className="login-btn">
-                Đăng nhập
-              </Link>
-              <Link to="/patient-register" className="register-btn">
-                Đăng ký
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
-  );
+        </header >
+    );
 };

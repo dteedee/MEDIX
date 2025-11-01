@@ -1,3 +1,4 @@
+using CloudinaryDotNet.Actions;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -69,12 +70,27 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
 
         public async Task<IEnumerable<User>> GetAllAsync()
         {
-            return await _context.Users.ToListAsync();
+            return await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.RoleCodeNavigation)
+                .ToListAsync();
         }
+
+        public async Task<User?> GetByIdAsync(Guid id)
+        {
+            return await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.RoleCodeNavigation)
+                .FirstOrDefaultAsync(u => u.Id == id);
+        }
+
+
 
         public async Task<(int total, IEnumerable<User> data)> GetPagedAsync(int page, int pageSize)
         {
             var query = _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.RoleCodeNavigation)
                 .OrderByDescending(u => u.CreatedAt);
 
             var total = await query.CountAsync();
@@ -85,6 +101,7 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
 
             return (total, users);
         }
+
 
         public async Task<(int total, IEnumerable<User> data)> SearchAsync(string keyword, int page, int pageSize)
         {
@@ -127,6 +144,18 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
         {
             return await _context.Users
                 .AnyAsync(u => u.PhoneNumber == phoneNumber);
+        }
+
+        //public async Task<Role?> GetRoleByDisplayNameAsync(string displayName)
+        //{
+        //    return await _context.Roles.FirstOrDefaultAsync(r => r.DisplayName == displayName);
+        //}
+
+        public async Task RemoveAllRolesForUserAsync(Guid userId)
+        {
+            var roles = _context.UserRoles.Where(ur => ur.UserId == userId);
+            _context.UserRoles.RemoveRange(roles);
+            await _context.SaveChangesAsync();
         }
 
         public async Task<bool> ExistsByUserNameAsync(string userName) => await _context.Users

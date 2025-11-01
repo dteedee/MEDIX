@@ -1,16 +1,5 @@
-import axios from 'axios';
-
-// Base URL for API - có thể config trong .env file
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5123';
-
-// Create axios instance with default config
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+import { apiClient } from '../lib/apiClient';
+import { UserDTO, CreateUserRequest, UpdateUserRequest } from '../types/user.types';
 
 export interface UserBasicInfo {
   id: string;
@@ -21,7 +10,13 @@ export interface UserBasicInfo {
   address: string | null;
   dob: string | null; // ISO date string 'YYYY-MM-DD'
   imageURL?: string | null; // Match backend DTO field name
+  identificationNumber?: string | null; // Số CMND/CCCD
   createdAt: string;
+  medicalRecordNumber?: string | null; // Somente leitura
+  emergencyContactName?: string | null; // Editável
+  emergencyContactPhone?: string | null; // Editável
+  allergies?: string | null; // Match backend DTO field name
+  medicalHistory?: string | null; // Match backend DTO field name
 }
 
 export interface UpdateUserInfo {
@@ -31,28 +26,29 @@ export interface UpdateUserInfo {
   phoneNumber?: string;
   address?: string;
   dob?: string; // Will be converted to DateOnly on backend
+  identificationNumber?: string; // Số CMND/CCCD
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  medicalHistory?: string;
+  allergies?: string;
 }
 
 export const userService = {
   async getUserInfo(): Promise<UserBasicInfo> {
     try {
-      // Get access token from localStorage
-      const accessToken = localStorage.getItem('accessToken');
-      
-      if (!accessToken) {
-        throw new Error('No access token found - please login');
-      }
-
-      // Use shared api client with explicit Authorization header
-      const response = await apiClient.get<UserBasicInfo>('/api/user/getUserInfor', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
+      console.log('🔄 userService - Calling API: /user/getUserInfor');
+      const response = await apiClient.get<UserBasicInfo>('/user/getUserInfor');
+      console.log('✅ userService - API response received:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching user info:', error);
-      
+      console.error('❌ userService - Error fetching user info:', error);
+      console.error('❌ userService - Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -65,32 +61,38 @@ export const userService = {
 
   async updateUserInfo(data: UpdateUserInfo): Promise<UserBasicInfo> {
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      if (!accessToken) throw new Error('No access token found - please login');
-
-      const updateDto = {
+      const updateDto: any = {
         id: null,
         username: data.username || '',
         fullName: data.fullName || '',
         email: data.email || '',
         phoneNumber: data.phoneNumber || null,
         address: data.address || null,
-        dob: data.dob || null
+        dob: data.dob || null,
+        emergencyContactName: data.emergencyContactName || null,
+        emergencyContactPhone: data.emergencyContactPhone || null
       };
 
-      const response = await apiClient.put<UserBasicInfo>('/api/user/updateUserInfor', updateDto, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
-      
+      // Add patient-specific fields if they exist
+      if (data.emergencyContactName !== undefined) {
+        updateDto.emergencyContactName = data.emergencyContactName;
+      }
+      if (data.emergencyContactPhone !== undefined) {
+        updateDto.emergencyContactPhone = data.emergencyContactPhone;
+      }
+      if (data.medicalHistory !== undefined) {
+        updateDto.medicalHistory = data.medicalHistory;
+      }
+      if (data.allergies !== undefined) {
+        updateDto.allergies = data.allergies;
+      }
+
+      const response = await apiClient.put<UserBasicInfo>('/user/updateUserInfor', updateDto);
       console.log('UpdateUserInfo - Request payload:', updateDto);
       console.log('UpdateUserInfo - API response:', response.data);
-      
       return response.data;
     } catch (error: any) {
       console.error('Error updating user info:', error);
-      
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -105,50 +107,17 @@ export const userService = {
 
   async uploadProfileImage(imageFile: File): Promise<{ imageUrl: string }> {
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      if (!accessToken) throw new Error('No access token found - please login');
-
       const formData = new FormData();
       formData.append('file', imageFile);
-
-      console.log('Upload attempt with fetch:');
+      console.log('Upload profile image:');
       console.log('- File name:', imageFile.name);
       console.log('- File type:', imageFile.type);
       console.log('- File size:', imageFile.size);
-
-      const response = await fetch(`${API_BASE_URL}/api/user/uploadAvatar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Fetch error:', response.status, errorText);
-        throw new Error(`Upload failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Upload successful:', result);
-      
-      return result;
+      const response = await apiClient.postMultipart<{ imageUrl: string }>('/user/uploadAvatar', formData);
+      console.log('Upload successful:', response.data);
+      return response.data;
     } catch (error: any) {
       console.error('Error uploading profile image:', error);
-      console.error('Error response:', error.response);
-      console.error('Full error details:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        headers: error.response?.headers,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers
-        }
-      });
-      
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -181,52 +150,55 @@ export const userService = {
       }
     }
   },
+
+  async updatePassword(payload: FormData): Promise<any> {
+    await apiClient.put('user/update-password', payload);
+  }
 };
 
 // --- Phần dành cho quản lý người dùng (Admin) ---
-import { UserDTO, CreateUserRequest, UpdateUserRequest } from '../types/user.types';
-
-const BASE = '/api/User'; // Base path for user-related actions
-
-function authHeader() {
-  try {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-    return token ? { Authorization: `Bearer ${token}` } : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
+const BASE = '/User'; // Base path (apiClient đã có /api)
 export const userAdminService = {
   list: async (page = 1, pageSize = 10, search?: string): Promise<{ items: UserDTO[]; total?: number }> => {
     let response;
     const params: any = { page, pageSize };
-
     if (search && search.trim()) {
       params.keyword = search;
-      response = await axios.get(`${BASE}/search`, { params, headers: authHeader() });
+      response = await apiClient.get(`${BASE}/search`, { params });
     } else {
-      response = await axios.get(BASE, { params, headers: authHeader() });
+      response = await apiClient.get(BASE, { params });
     }
-
     const data = response.data;
     const items: UserDTO[] = data?.item2 ?? [];
     const total: number | undefined = data?.item1;
     return { items, total };
   },
   get: async (id: string): Promise<UserDTO> => {
-    const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() });
+    const r = await apiClient.get(`${BASE}/${id}`);
     return r.data;
   },
   create: async (payload: CreateUserRequest): Promise<UserDTO> => {
-    const r = await axios.post(BASE, payload, { headers: authHeader() });
+    const r = await apiClient.post(BASE, payload);
     return r.data;
   },
   update: async (id: string, payload: UpdateUserRequest): Promise<UserDTO> => {
-    const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() });
+    const r = await apiClient.put(`${BASE}/${id}`, payload);
     return r.data;
   },
   remove: async (id: string): Promise<void> => {
-    await axios.delete(`${BASE}/${id}`, { headers: authHeader() });
+    await apiClient.delete(`${BASE}/${id}`);
+  },
+  getRoles: async (): Promise<{ code: string; displayName: string }[]> => {
+    const r = await apiClient.get(`${BASE}/roles`);
+    return r.data;
+  },
+  /**
+   * Sends a request for an admin to reset a user's password.
+   * A new temporary password will be generated and emailed to the user.
+   * @param id The ID of the user.
+   */
+  adminResetPassword: async (id: string): Promise<void> => {
+    // This calls the POST /api/User/{id}/admin-reset-password endpoint you created.
+    await apiClient.post(`${BASE}/${id}/admin-reset-password`);
   },
 };

@@ -66,7 +66,7 @@ namespace Medix.API.Business.Services.Community
                     string.IsNullOrEmpty(emailSettings["Username"]) || 
                     string.IsNullOrEmpty(emailSettings["Password"]))
                 {
-                    Console.WriteLine("Email settings not configured properly");
+                    _logger.LogError("Email settings (SMTPServer, Username, Password) are not configured properly in appsettings.json.");
                     return false;
                 }
 
@@ -77,19 +77,19 @@ namespace Medix.API.Business.Services.Community
                 message.Body = new TextPart("html") { Text = body };
 
                 using var client = new SmtpClient();
+                _logger.LogInformation("Connecting to SMTP server {Server}:{Port}...", emailSettings["SMTPServer"], emailSettings["Port"]);
                 await client.ConnectAsync(emailSettings["SMTPServer"],
                     int.Parse(emailSettings["Port"]), SecureSocketOptions.StartTls);
                 await client.AuthenticateAsync(emailSettings["Username"], emailSettings["Password"]);
                 await client.SendAsync(message);
                 await client.DisconnectAsync(true);
 
-                Console.WriteLine($"Email sent successfully to {to}");
+                _logger.LogInformation("Email sent successfully to {Recipient}", to);
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error sending email to {to}: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                _logger.LogError(ex, "Failed to send email to {Recipient}. Error: {ErrorMessage}", to, ex.Message);
                 return false;
             }
         }
@@ -132,6 +132,34 @@ namespace Medix.API.Business.Services.Community
 
             return await SendEmailAsync(email, subject, body);
         }
+
+        public async Task<bool> SendNewUserPasswordAsync(string email, string username, string password)
+        {
+            var frontendBaseUrl = _configuration["PasswordReset:FrontendBaseUrl"] ?? "http://localhost:5173";
+            var loginLink = $"{frontendBaseUrl.TrimEnd('/')}/login";
+
+            var subject = "Chào mừng đến với Medix - Thông tin tài khoản của bạn";
+            var body = $@"
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+                    <h2 style='color: #2c3e50;'>Chào mừng bạn đến với Medix!</h2>
+                    <p>Tài khoản của bạn đã được tạo thành công.</p>
+                    <p>Dưới đây là thông tin đăng nhập của bạn:</p>
+                    <div style='background-color: #f8f9fa; padding: 20px; border-left: 4px solid #3498db; margin: 20px 0;'>
+                        <p><strong>Tên đăng nhập:</strong> {username}</p>
+                        <p><strong>Email:</strong> {email}</p>
+                        <p><strong>Mật khẩu tạm thời:</strong> <strong style='font-size: 18px; color: #e74c3c;'>{password}</strong></p>
+                    </div>
+                    <p><strong>Lưu ý quan trọng:</strong></p>
+                    <ul>
+                        <li>Đây là mật khẩu tạm thời. Bạn nên đổi mật khẩu ngay sau khi đăng nhập lần đầu tiên để đảm bảo an toàn.</li>
+                        <li>Không chia sẻ thông tin tài khoản này với bất kỳ ai.</li>
+                    </ul>
+                    <p>Bạn có thể đăng nhập vào tài khoản của mình tại đây:</p>
+                    <p style='text-align: center; margin: 20px 0;'><a href='{loginLink}' style='background-color: #3498db; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Đăng nhập ngay</a></p>
+                    <p>Cảm ơn bạn đã tham gia cộng đồng Medix!</p>
+                </div>
+            ";
+            return await SendEmailAsync(email, subject, body);
+        }
     }
 }
-

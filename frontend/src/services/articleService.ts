@@ -1,32 +1,120 @@
-import axios from 'axios'
-import { ArticleDTO, CreateArticleRequest, UpdateArticleRequest } from '../types/article.types'
+import { ArticleDTO } from '../types/article.types'
 import { categoryService } from './categoryService'
+import { apiClient } from '../lib/apiClient'
 
-const BASE = '/api/HealthArticle'
-
-function authHeader() {
-  try {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
-    return token ? { Authorization: `Bearer ${token}` } : undefined
-  } catch {
-    return undefined
-  }
+// Define a new type for the form payload that can include File objects
+// This is used internally by the service to construct FormData
+export interface ArticleFormPayload {
+  title: string;
+  slug: string;
+  summary: string;
+  content: string;
+  displayType: string;
+  thumbnailUrl?: string; // Existing URL if no new file is uploaded
+  coverImageUrl?: string; // Existing URL if no new file is uploaded
+  isHomepageVisible: boolean;
+  displayOrder: number;
+  metaTitle: string;
+  metaDescription: string;
+  authorId: string;
+  statusCode: string;
+  publishedAt?: string;
+  categoryIds: string[];
+  thumbnailFile?: File; // New file to upload
+  coverFile?: File; // New file to upload
 }
 
+const BASE = '/HealthArticle'
+
 // Helper to fetch all categories once and cache them for mapping
-const categoryCache = {
+export const categoryCache = {
   promise: null as Promise<{ items: any[], total?: number }> | null,
   fetchAll: function() {
     if (!this.promise) {
-      // Fetch a large number to get all categories, assuming less than 1000
-      this.promise = categoryService.list(1, 1000);
+      // Fetch a large number to get all categories, assuming less than 9999
+      this.promise = categoryService.list(1, 9999);
     }
     return this.promise;
   }
 };
 
+// Helper function to sanitize article content on the frontend
+// This is a workaround for a backend issue where content might be a JSON string.
+function sanitizeArticleContent(content: any): string {
+  if (typeof content !== 'string') {
+    return '';
+  }
+  const trimmedContent = content.trim();
+  // Check if the content looks like a JSON object/array
+  if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) || (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
+    try {
+      JSON.parse(trimmedContent);
+      // If parsing succeeds, it's likely invalid JSON content. Return an error message.
+      return '<p style="color: red;">[Lỗi: Nội dung bài viết không hợp lệ và không thể hiển thị.]</p>';
+    } catch (e) { /* Not a valid JSON, so it might be legitimate content */ }
+  }
+  return content;
+}
 
 export const articleService = {
+  getCachedCategories: async (): Promise<{ items: any[], total?: number }> => {
+    return categoryCache.fetchAll();
+  },
+  incrementView: async (id: string): Promise<void> => {
+    try {
+      await apiClient.post(`${BASE}/${id}/view`)
+    } catch (err) {
+      console.warn('incrementView failed (ignored):', err)
+    }
+  },
+  toggleLike: async (id: string): Promise<{ likeCount?: number; liked?: boolean } | void> => {
+    try {
+      const r = await apiClient.post(`${BASE}/${id}/like`)
+      return r?.data
+    } catch (err) {
+      console.warn('toggleLike failed:', err)
+      throw err
+    }
+  },
+  getAll: async (): Promise<ArticleDTO[]> => {
+    // Request a large page size to fetch all articles for client-side processing
+    // This matches the frontend's current architecture of filtering/sorting on the client.
+    const r = await apiClient.get(BASE, { params: { page: 1, pageSize: 9999 } });
+    const data = r.data;
+    
+    // Fetch all categories to map names from IDs
+    const allCategories = (await categoryCache.fetchAll()).items;
+    
+    // Handle multiple response shapes from backend
+    const rawItems = Array.isArray(data)
+      ? data
+      : data?.data ?? data?.item2 ?? [];
+    
+    return (rawItems || []).map((x: any) => ({
+      id: x.id,
+      title: x.title,
+      slug: x.slug,
+      summary: x.summary,
+      content: sanitizeArticleContent(x.content),
+      thumbnailUrl: x.thumbnailUrl,
+      coverImageUrl: x.coverImageUrl,
+      metaTitle: x.metaTitle,
+      metaDescription: x.metaDescription,
+      statusCode: x.statusCode,
+      authorName: x.authorName,
+      publishedAt: x.publishedAt,
+      viewCount: x.viewCount,
+      likeCount: x.likeCount,
+      isHomepageVisible: x.isHomepageVisible,
+      isLocked: x.isLocked ?? false,
+      displayOrder: x.displayOrder,
+      displayType: x.displayType,
+      createdAt: x.createdAt,
+      updatedAt: x.updatedAt,
+      categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
+      categoryIds: x.categoryIds || (x.categories ? x.categories.map((cat: any) => cat.id) : []),
+    }));
+  },
   list: async (page = 1, pageSize = 10, params?: { keyword?: string; status?: string; slug?: string }): Promise<{ items: ArticleDTO[]; total?: number }> => {
     const query: any = { page, pageSize };
     let url = BASE;
@@ -39,7 +127,7 @@ export const articleService = {
     if (params?.status) query.status = params.status;
     if (params?.slug) query.slug = params.slug;
 
-    const r = await axios.get(url, { params: query, headers: authHeader() });
+    const r = await apiClient.get(url, { params: query });
     const data = r.data
 
     // Fetch all categories to map names from IDs
@@ -52,7 +140,7 @@ export const articleService = {
         title: x.title,
         slug: x.slug,
         summary: x.summary,
-        content: x.content,
+        content: sanitizeArticleContent(x.content),
         thumbnailUrl: x.thumbnailUrl,
         coverImageUrl: x.coverImageUrl,
         metaTitle: x.metaTitle,
@@ -63,13 +151,14 @@ export const articleService = {
         viewCount: x.viewCount,
         likeCount: x.likeCount,
         isHomepageVisible: x.isHomepageVisible,
+        isLocked: x.isLocked ?? false,
         displayOrder: x.displayOrder,
         displayType: x.displayType,
         createdAt: x.createdAt,
         updatedAt: x.updatedAt,
         // If categories are not fully populated, map them from the cache
         categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
-        categoryIds: x.categoryIds
+        categoryIds: x.categoryIds || (x.categories ? x.categories.map((cat: any) => cat.id) : []),
       }))
       return { items, total: items.length }
     }
@@ -83,7 +172,7 @@ export const articleService = {
       title: x.title,
       slug: x.slug,
       summary: x.summary,
-      content: x.content,
+      content: sanitizeArticleContent(x.content),
       thumbnailUrl: x.thumbnailUrl,
       coverImageUrl: x.coverImageUrl,
       metaTitle: x.metaTitle,
@@ -95,18 +184,19 @@ export const articleService = {
       likeCount: x.likeCount,
 
       isHomepageVisible: x.isHomepageVisible,
+      isLocked: x.isLocked ?? false,
       displayOrder: x.displayOrder,
       displayType: x.displayType,
       createdAt: x.createdAt,
       updatedAt: x.updatedAt,
       // If categories are not fully populated, map them from the cache
       categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
-      categoryIds: x.categoryIds
+      categoryIds: x.categoryIds || (x.categories ? x.categories.map((cat: any) => cat.id) : []),
     })) ?? []
     return { items, total }
   },
   get: async (id: string): Promise<ArticleDTO> => {
-    const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })
+    const r = await apiClient.get(`${BASE}/${id}`)
     const x = r.data;
     
     // Also enrich with categories on single-get
@@ -116,7 +206,7 @@ export const articleService = {
       title: x.title,
       slug: x.slug,
       summary: x.summary,
-      content: x.content,
+      content: sanitizeArticleContent(x.content),
       thumbnailUrl: x.thumbnailUrl,
       coverImageUrl: x.coverImageUrl,
       metaTitle: x.metaTitle,
@@ -126,28 +216,107 @@ export const articleService = {
       viewCount: x.viewCount,
       likeCount: x.likeCount,
       isHomepageVisible: x.isHomepageVisible,
+      isLocked: x.isLocked ?? false,
       displayOrder: x.displayOrder,
       displayType: x.displayType,
       publishedAt: x.publishedAt,
       createdAt: x.createdAt,
       updatedAt: x.updatedAt,
       categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
-      categoryIds: x.categoryIds,
+      categoryIds: x.categoryIds || (x.categories ? x.categories.map((cat: any) => cat.id) : []),
     };
     return article;
   },
   getBySlug: async (slug: string): Promise<ArticleDTO | null> => {
     try {
-      const r = await axios.get(`${BASE}/slug/${encodeURIComponent(slug)}`, { headers: authHeader() })
-      return r.data
+      const r = await apiClient.get(`${BASE}/slug/${encodeURIComponent(slug)}`)
+      const x = r.data;
+      if (!x) return null;
+
+      // Normalize the response to match ArticleDTO, similar to other methods
+      const allCategories = (await categoryCache.fetchAll()).items;
+      const article: ArticleDTO = {
+        id: x.id,
+        title: x.title,
+        slug: x.slug,
+        summary: x.summary,
+        content: sanitizeArticleContent(x.content),
+        thumbnailUrl: x.thumbnailUrl,
+        coverImageUrl: x.coverImageUrl,
+        metaTitle: x.metaTitle,
+        metaDescription: x.metaDescription,
+        statusCode: x.statusCode,
+        authorName: x.authorName,
+        publishedAt: x.publishedAt,
+        viewCount: x.viewCount,
+        likeCount: x.likeCount,
+        isHomepageVisible: x.isHomepageVisible,
+        // isLikedByUser: x.isLikedByUser ?? false, // Add isLikedByUser, default to false
+        isLocked: x.isLocked ?? false, // Ensure isLocked always has a boolean value
+        displayOrder: x.displayOrder,
+        displayType: x.displayType,
+        createdAt: x.createdAt,
+        updatedAt: x.updatedAt,
+        categories: x.categories?.length ? x.categories : (x.categoryIds || []).map((id: string) => allCategories.find(c => c.id === id)).filter(Boolean),
+        categoryIds: x.categoryIds || (x.categories ? x.categories.map((cat: any) => cat.id) : []),
+      };
+      return article;
     } catch (err: any) {
       if (err?.response?.status === 404) return null
       throw err
     }
   },
- create: async (payload: CreateArticleRequest): Promise<ArticleDTO> => {
+  getHomepageArticles: async (limit = 5): Promise<ArticleDTO[]> => {
     try {
-      const r = await axios.post(BASE, { ...payload }, { headers: authHeader() });
+      const response = await apiClient.get<ArticleDTO[]>(`${BASE}/homepage`, {
+        params: { limit }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch homepage articles:', error);
+      throw error;
+    }
+  },
+ create: async (payload: ArticleFormPayload): Promise<ArticleDTO> => {
+    const formData = new FormData();
+
+    // Append text fields to FormData under 'model' prefix as expected by [FromForm]
+    formData.append('model.Title', payload.title);
+    formData.append('model.Slug', payload.slug);
+    formData.append('model.Summary', payload.summary);
+    formData.append('model.Content', payload.content);
+    formData.append('model.DisplayType', payload.displayType);
+    formData.append('model.IsHomepageVisible', payload.isHomepageVisible.toString());
+    formData.append('model.DisplayOrder', payload.displayOrder.toString());
+    formData.append('model.MetaTitle', payload.metaTitle);
+    formData.append('model.MetaDescription', payload.metaDescription);
+    formData.append('model.AuthorId', payload.authorId);
+    formData.append('model.StatusCode', payload.statusCode);
+    if (payload.publishedAt) {
+        formData.append('model.PublishedAt', payload.publishedAt);
+    }
+    payload.categoryIds.forEach(id => formData.append('model.CategoryIds', id));
+
+    // Append existing image URLs if no new file is provided
+    // This is crucial if the backend expects the URL to be part of the DTO
+    if (payload.thumbnailUrl && !payload.thumbnailFile) {
+        formData.append('model.ThumbnailUrl', payload.thumbnailUrl);
+    }
+    if (payload.coverImageUrl && !payload.coverFile) {
+        formData.append('model.CoverImageUrl', payload.coverImageUrl);
+    }
+
+    // Append file objects if present
+    if (payload.thumbnailFile) {
+        formData.append('thumbnailFile', payload.thumbnailFile);
+    }
+    if (payload.coverFile) {
+        formData.append('coverFile', payload.coverFile);
+    }
+
+    try {
+      // apiClient automatically adds auth header and sets Content-Type for FormData
+      const r = await apiClient.postMultipart(BASE, formData);
       return r.data;
     } catch (error: any) {
       if (error.response && error.response.data && error.response.data.errors) {
@@ -165,9 +334,48 @@ export const articleService = {
     }
   },
 
-  update: async (id: string, payload: UpdateArticleRequest): Promise<ArticleDTO> => {
+  update: async (id: string, payload: ArticleFormPayload): Promise<ArticleDTO> => {
+    const formData = new FormData();
+
+    // Append text fields to FormData under 'model' prefix as expected by [FromForm]
+    formData.append('model.Title', payload.title);
+    formData.append('model.Slug', payload.slug);
+    formData.append('model.Summary', payload.summary);
+    formData.append('model.Content', payload.content);
+    formData.append('model.DisplayType', payload.displayType);
+    formData.append('model.IsHomepageVisible', payload.isHomepageVisible.toString());
+    formData.append('model.DisplayOrder', payload.displayOrder.toString());
+    formData.append('model.MetaTitle', payload.metaTitle);
+    formData.append('model.MetaDescription', payload.metaDescription);
+    formData.append('model.AuthorId', payload.authorId);
+    formData.append('model.StatusCode', payload.statusCode);
+    if (payload.publishedAt !== undefined) {
+        formData.append('model.PublishedAt', payload.publishedAt);
+    }
+    payload.categoryIds.forEach(catId => formData.append('model.CategoryIds', catId));
+
+    // Append existing image URLs if no new file is provided
+    if (payload.thumbnailUrl && !payload.thumbnailFile) {
+        formData.append('model.ThumbnailUrl', payload.thumbnailUrl);
+    } else if (!payload.thumbnailFile) { // If no new file and no existing URL, explicitly send empty string
+        formData.append('model.ThumbnailUrl', '');
+    }
+    if (payload.coverImageUrl && !payload.coverFile) {
+        formData.append('model.CoverImageUrl', payload.coverImageUrl);
+    } else if (!payload.coverFile) { // If no new file and no existing URL, explicitly send empty string
+        formData.append('model.CoverImageUrl', '');
+    }
+
+    // Append file objects if present
+    if (payload.thumbnailFile) {
+        formData.append('thumbnailFile', payload.thumbnailFile);
+    }
+    if (payload.coverFile) {
+        formData.append('coverFile', payload.coverFile);
+    }
+
     try {
-      const r = await axios.put(`${BASE}/${id}`, { ...payload }, { headers: authHeader() })
+      const r = await apiClient.putMultipart(`${BASE}/${id}`, formData)
       return r.data
     } catch (error: any) {
       if (error.response && error.response.data && error.response.data.errors) {
@@ -177,8 +385,14 @@ export const articleService = {
       throw error;
     }
   },
+  lock: async (id: string): Promise<void> => {
+    await apiClient.put(`${BASE}/${id}/lock`)
+  },
+  unlock: async (id: string): Promise<void> => {
+    await apiClient.put(`${BASE}/${id}/unlock`)
+  },
   remove: async (id: string): Promise<void> => {
-    await axios.delete(`${BASE}/${id}`, { headers: authHeader() })
+    await apiClient.delete(`${BASE}/${id}`)
   },
   checkUniqueness: async (field: 'title' | 'slug' | 'displayOrder', value: string, excludeId?: string): Promise<void> => {
     const params = new URLSearchParams()
@@ -192,20 +406,23 @@ export const articleService = {
     // and a 4xx status code (e.g., 409 Conflict) if it's not.
     // The `axios` call will automatically throw an error for 4xx/5xx responses,
     // which is caught in the ArticleForm component.
-    await axios.get(`${BASE}/check-uniqueness`, { params, headers: authHeader() })
-  }
-  ,
+    await apiClient.get(`${BASE}/check-uniqueness`, { params });
+  },
+  getStatuses: async (): Promise<{ code: string; displayName: string }[]> => {
+    const r = await apiClient.get(`${BASE}/statuses`);
+    return r.data;
+  },
   /**
    * Upload an image file.
    * @param file File to upload
    * @param endpoint optional upload endpoint (defaults to /api/File/Upload)
    * Returns the uploaded file URL as string. The function attempts to normalize common response shapes.
    */
-  uploadImage: async (file: File, endpoint = '/api/File/Upload'): Promise<string> => {
+  uploadImage: async (file: File, endpoint = '/File/Upload'): Promise<string> => {
     const form = new FormData()
     form.append('file', file)
     try {
-      const r = await axios.post(endpoint, form, { headers: { ...(authHeader() ?? {}), 'Content-Type': 'multipart/form-data' } })
+      const r = await apiClient.postMultipart(endpoint, form)
       const data = r.data
 
   // Try common fields for returned URL/path. Backend commonly returns { url: '...' }.

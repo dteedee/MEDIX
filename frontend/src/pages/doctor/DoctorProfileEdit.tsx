@@ -1,13 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import styles from '../../styles/doctor-edit-profile.module.css'
+import styles from '../../styles/doctor/doctor-edit-profile.module.css'
 import DoctorService from '../../services/doctorService';
 import { DoctorProfileDetails } from '../../types/doctor.types';
-import {Header} from '../../components/layout/Header';
-import Footer from '../../components/layout/Footer';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { PageLoader } from '../../components/ui';
+import { Header } from '../../components/layout/Header';
+import Footer from '../../components/layout/Footer';
 
-function DoctorProfileEdit() {
+export default function DoctorProfileEdit() {
+
+    const navigate = useNavigate();
+
+    const [pageLoading, setPageLoading] = useState(true);
+    const [errorCode, setErrorCode] = useState<number | null>(null);
 
     const [profileDetails, setProfileDetails] = useState<DoctorProfileDetails>();
     const [errors, setErrors] = useState<any>({});
@@ -23,6 +30,10 @@ function DoctorProfileEdit() {
 
     const [passwordFieldErrors, setPasswordFieldErrors] = useState<Record<string, string>>({});
 
+    const [uploadImageLoading, setUploadImageLoading] = useState(false);
+    const [updateLoading, setUpdateLoading] = useState(false);
+    const [updatePasswordLoading, setUpdatePasswordLoading] = useState(false);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleUploadClick = () => {
@@ -36,8 +47,10 @@ function DoctorProfileEdit() {
         const formData = new FormData();
         formData.append('avatar', file);
 
+        setUploadImageLoading(true);
         try {
             const response = await DoctorService.updateAvatar(formData);
+            setUploadImageLoading(false);
             console.log(response);
             const newUrl = response.avatarUrl;
 
@@ -49,6 +62,7 @@ function DoctorProfileEdit() {
             setUploadStatus('success');
             setUploadMessage('Ảnh đã được cập nhật thành công!');
         } catch (error: unknown) {
+            setUploadImageLoading(false);
             if (axios.isAxiosError(error)) {
                 const status = error.response?.status;
                 const errorData = error.response?.data;
@@ -76,8 +90,11 @@ function DoctorProfileEdit() {
                 const data = await DoctorService.getDoctorProfileDetails();
                 setProfileDetails(data);
                 console.log(data);
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Failed to fetch profile details:', error);
+                setErrorCode(error?.response?.status ?? 500);
+            } finally {
+                setPageLoading(false);
             }
         }
         fetchProfile();
@@ -94,9 +111,10 @@ function DoctorProfileEdit() {
         }
 
         setErrors({});
+        setUpdateLoading(true);
         try {
             await DoctorService.updateDoctorProfile(formData);
-
+            setUpdateLoading(false);
             Swal.fire({
                 title: 'Cập nhật thông tin thành công!',
                 icon: 'success',
@@ -105,57 +123,88 @@ function DoctorProfileEdit() {
                 window.location.href = '/';
             });
         } catch (error: unknown) {
+            setUpdateLoading(false);
+
             if (axios.isAxiosError(error)) {
+                const status = error.response?.status;
                 const errorData = error.response?.data;
-                if (errorData?.errors) {
-                    setErrors(errorData.errors);
-                } else {
-                    console.error('Unexpected error format:', errorData);
+
+                switch (status) {
+                    case 400:
+                        // Bad Request – likely validation errors
+                        if (errorData?.errors) {
+                            setErrors(errorData.errors);
+                        } else {
+                            setErrors({ general: 'Yêu cầu không hợp lệ. Vui lòng kiểm tra lại thông tin.' });
+                        }
+                        break;
+
+                    case 401:
+                        // Unauthorized – user needs to log in
+                        setErrors({ general: 'Bạn chưa đăng nhập hoặc phiên đã hết hạn.' });
+                        // Optionally redirect to login:
+                        // navigate('/login');
+                        break;
+
+                    case 500:
+                        // Internal Server Error
+                        setErrors({ general: 'Lỗi máy chủ. Vui lòng thử lại sau.' });
+                        break;
+
+                    default:
+                        // Other unexpected errors
+                        setErrors({ general: 'Đã xảy ra lỗi. Vui lòng thử lại.' });
+                        console.error('Unhandled error status:', status, errorData);
                 }
             } else {
                 console.error('Non-Axios error:', error);
+                setErrors({ general: 'Lỗi không xác định. Vui lòng thử lại.' });
             }
         }
+
     }
 
-    const handlePasswordUpdateSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
+    // const handlePasswordUpdateSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    //     e.preventDefault();
 
-        const form = e.currentTarget;
-        const formData = new FormData(form);
+    //     const form = e.currentTarget;
+    //     const formData = new FormData(form);
 
-        for (const [key, value] of formData.entries()) {
-            console.log(`${key}:`, value);
-        }
+    //     for (const [key, value] of formData.entries()) {
+    //         console.log(`${key}:`, value);
+    //     }
 
-        setPasswordFieldErrors({});
-        try {
-            await DoctorService.updatePassword(formData);
-            Swal.fire({
-                title: 'Cập nhật thông tin thành công!',
-                icon: 'success',
-                confirmButtonText: 'OK',
-            }).then(() => {
-                window.location.href = '/doctor/profile/edit';
-            });
-            console.log("Update pasword successfully");
-        } catch (error: any) {
-            if (error.response?.status === 400 && Array.isArray(error.response.data)) {
-                const errors: Record<string, string> = {};
-                error.response.data.forEach((item: any) => {
-                    const field = item.memberNames?.[0];
-                    const message = item.errorMessage;
-                    if (field && message) {
-                        errors[field] = message;
-                    }
-                });
-                setPasswordFieldErrors(errors);
-            } else {
-                // handle 500 or other errors
-                setPasswordFieldErrors({ general: 'Đã xảy ra lỗi máy chủ. Vui lòng thử lại sau.' });
-            }
-        }
-    }
+    //     setUpdatePasswordLoading(true);
+    //     setPasswordFieldErrors({});
+    //     try {
+    //         await DoctorService.updatePassword(formData);
+    //         setUpdatePasswordLoading(false);
+    //         Swal.fire({
+    //             title: 'Cập nhật thông tin thành công!',
+    //             icon: 'success',
+    //             confirmButtonText: 'OK',
+    //         }).then(() => {
+    //             window.location.href = '/doctor/profile/edit';
+    //         });
+    //         console.log("Update pasword successfully");
+    //     } catch (error: any) {
+    //         setUpdatePasswordLoading(false);
+    //         if (error.response?.status === 400 && Array.isArray(error.response.data)) {
+    //             const errors: Record<string, string> = {};
+    //             error.response.data.forEach((item: any) => {
+    //                 const field = item.memberNames?.[0];
+    //                 const message = item.errorMessage;
+    //                 if (field && message) {
+    //                     errors[field] = message;
+    //                 }
+    //             });
+    //             setPasswordFieldErrors(errors);
+    //         } else {
+    //             // handle 500 or other errors
+    //             setPasswordFieldErrors({ general: 'Đã xảy ra lỗi máy chủ. Vui lòng thử lại sau.' });
+    //         }
+    //     }
+    // }
 
     const validateField = (name: string, value: string) => {
         const newErrors: Record<string, string[]> = {};
@@ -218,6 +267,26 @@ function DoctorProfileEdit() {
         validateField(name, value);
     };
 
+    const validateNumber = (input: string) => {
+        // Remove any non-digit characters
+        return input.replace(/[^0-9]/g, '');
+    };
+
+    const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value;
+        const { name, value } = e.target;
+        const sanitized = validateNumber(raw);
+        setFormData((prev: any) => ({ ...prev, [name]: sanitized }));
+        validateField(name, sanitized);
+    };
+
+    if (pageLoading) return <PageLoader />;
+
+    if (errorCode) {
+        navigate(`/error/${errorCode}`);
+        return null;
+    }
+
     return (
         <>
             <Header />
@@ -230,7 +299,16 @@ function DoctorProfileEdit() {
                             <div className={styles["profile-avatar"]}>
                                 <img className={styles["avatar-placeholder"]} src={profileDetails?.avatarUrl} />
                             </div>
-                            <button className="btn btn-primary" onClick={handleUploadClick}>Tải ảnh lên</button>
+                            <button className="btn btn-primary" disabled={uploadImageLoading} onClick={handleUploadClick}>
+                                {uploadImageLoading ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        Đang xử lý...
+                                    </>
+                                ) : (
+                                    'Tải ảnh lên'
+                                )}
+                            </button>
                             {uploadMessage && (
                                 <div
                                     style={{
@@ -305,7 +383,7 @@ function DoctorProfileEdit() {
                                                 : ''
                                             }`}
                                         onChange={handleChange}
-                                        defaultValue={profileDetails?.dateOfBirth} name='dob' />
+                                        defaultValue={profileDetails?.dob} name='dob' />
                                     {errors.Dob?.[0] && (
                                         <div className={styles["form-error"]}>{errors.Dob[0]}</div>
                                     )}
@@ -321,16 +399,17 @@ function DoctorProfileEdit() {
                                                 target.value = target.value.slice(0, 10);
                                             }
                                         }}
-                                        type="number"
+                                        type="text"
                                         className={`${styles["form-input"]} form-control ${errors.PhoneNumber?.[0]
                                             ? 'is-invalid'
                                             : formData.phoneNumber?.trim()
                                                 ? 'is-valid'
                                                 : ''
                                             }`}
-                                        onChange={handleChange}
+                                        onChange={handleNumberChange}
                                         defaultValue={profileDetails?.phoneNumber}
-                                        name='phoneNumber' />
+                                        name='phoneNumber'
+                                        value={formData.phoneNumber} />
                                     {errors.PhoneNumber?.[0] && (
                                         <div className={styles["form-error"]}>{errors.PhoneNumber[0]}</div>
                                     )}
@@ -377,8 +456,9 @@ function DoctorProfileEdit() {
                                                 ? 'is-valid'
                                                 : ''
                                             }`}
-                                        onChange={handleChange}
+                                        onChange={handleNumberChange}
                                         defaultValue={profileDetails?.yearsOfExperience}
+                                        value={formData.yearsOfExperience}
                                         name="yearsOfExperience"
                                     />
                                     {errors.YearsOfExperience?.[0] && (
@@ -387,33 +467,31 @@ function DoctorProfileEdit() {
                                 </div>
                             </div>
 
-                            <div className={styles["form-row"]}>
-                                <label className={styles["form-label"]}>Giá khám</label>
-                                <div className={styles["form-input-group"]}>
-                                    <input
-                                        type="text"
-                                        className={styles["form-input"]}
-                                        defaultValue={profileDetails?.consultationFee}
-                                        name="consultationFee"
-                                    />
-                                    {errors.ConsultationFee?.[0] && (
-                                        <div className={styles["form-error"]}>{errors.ConsultationFee[0]}</div>
-                                    )}
-                                </div>
-                            </div>
-
+                            {errors.general && (
+                                <div className={styles["form-error"]}
+                                    style={{ textAlign: 'center' }}>{errors.general}</div>
+                            )}
                             {/* Action Buttons */}
                             <div className={styles["action-buttons"]}>
                                 <button type="button" className="btn btn-primary" data-bs-toggle="modal"
                                     data-bs-target="#changePasswordModal">Đổi mật khẩu</button>
-                                <button type="submit" className="btn btn-primary">Lưu thay đổi</button>
+                                <button type="submit" disabled={updateLoading} className="btn btn-primary">
+                                    {updateLoading ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                            Đang xử lý...
+                                        </>
+                                    ) : (
+                                        'Lưu thay đổi'
+                                    )}
+                                </button>
                             </div>
                         </form>
                     </div>
                 </main>
             </div>
-            <Footer />
             {/* Modal */}
+            <Footer />
             <div
                 className="modal fade"
                 id="changePasswordModal"
@@ -433,7 +511,7 @@ function DoctorProfileEdit() {
                                 aria-label="Close"
                             />
                         </div>
-                        <form onSubmit={handlePasswordUpdateSubmit}>
+                        <form>
                             <div className="modal-body">
                                 {/* Current Password */}
                                 <div className="mb-3">
@@ -504,8 +582,15 @@ function DoctorProfileEdit() {
                                 <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">
                                     Đóng
                                 </button>
-                                <button type="submit" className="btn btn-primary">
-                                    Cập nhật mật khẩu
+                                <button type="submit" className="btn btn-primary" disabled={updatePasswordLoading}>
+                                    {updatePasswordLoading ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                            Đang xử lý...
+                                        </>
+                                    ) : (
+                                        'Cập nhật mật khẩu'
+                                    )}
                                 </button>
                             </div>
                         </form>
@@ -515,5 +600,3 @@ function DoctorProfileEdit() {
         </>
     )
 }
-
-export default DoctorProfileEdit;

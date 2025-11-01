@@ -1002,6 +1002,30 @@ namespace Medix.API.Migrations
                     b.ToTable("HealthArticles");
                 });
 
+            modelBuilder.Entity("Medix.API.Models.Entities.HealthArticleLike", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ArticleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArticleId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("HealthArticleLikes");
+                });
+
             modelBuilder.Entity("Medix.API.Models.Entities.MedicalRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1949,6 +1973,9 @@ namespace Medix.API.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<long?>("OrderCode")
+                        .HasColumnType("bigint");
+
                     b.Property<Guid?>("RelatedAppointmentId")
                         .HasColumnType("uniqueidentifier");
 
@@ -2570,6 +2597,25 @@ namespace Medix.API.Migrations
                     b.Navigation("Author");
 
                     b.Navigation("StatusCodeNavigation");
+                });
+
+            modelBuilder.Entity("Medix.API.Models.Entities.HealthArticleLike", b =>
+                {
+                    b.HasOne("Medix.API.Models.Entities.HealthArticle", "Article")
+                        .WithMany()
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Medix.API.Models.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Article");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Medix.API.Models.Entities.MedicalRecord", b =>

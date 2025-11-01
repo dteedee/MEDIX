@@ -17,11 +17,12 @@ export interface UserDTO {
   createdAt?: string;
   updatedAt?: string;
   accessFailedCount?: number;
+  isProfileCompleted?: boolean;
 }
 
 export interface CreateUserRequest {
   userName: string;
-  password: string;
+  email: string;
   role?: string;
 }
 
@@ -37,4 +38,6 @@ export interface UpdateUserRequest {
   identificationNumber?: string;
   lockoutEnabled?: boolean;
   lockoutEnd?: string | null;
+  isProfileCompleted?: boolean;
+  accessFailedCount?: number;
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import UserForm from '../../components/admin/UserForm'
-import { userService } from '../../services/userService'
+import UserForm from './UserForm'
+import { userAdminService } from '../../services/userService'
 import { UserDTO } from '../../types/user.types'
 import { useToast } from '../../contexts/ToastContext'
 
@@ -14,7 +14,7 @@ export default function UserEditPage() {
 
   useEffect(() => {
     if (id) {
-      userService.get(id)
+      userAdminService.get(id)
         .then(setUser)
         .finally(() => setLoading(false))
     } else {
@@ -24,9 +24,9 @@ export default function UserEditPage() {
 
   const handleSave = () => {
     showToast(id ? 'Cập nhật người dùng thành công!' : 'Tạo người dùng thành công!')
-    navigate('/admin/users')
+    navigate('/app/admin/users')
   }
-  const handleCancel = () => navigate('/admin/users')
+  const handleCancel = () => navigate('/app/admin/users')
 
   if (loading) return <div>Loading...</div>
 

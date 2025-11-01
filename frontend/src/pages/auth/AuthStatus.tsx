@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
+import { apiClient } from '../../lib/apiClient';
 import { Button } from '../../components/ui/Button';
 
 const AuthStatus: React.FC = () => {
@@ -24,17 +25,16 @@ const AuthStatus: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await authService.logout();
+      await authService.logout(); // This already calls apiClient.clearTokens()
     } catch {
       // ignore logout errors, still clear local data
+      apiClient.clearTokens();
     } finally {
+      // Clear user data
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('userData');
       localStorage.removeItem('rememberEmail');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('expiresAt');
-      // apiClient.clearTokens() được gọi trong authService.logout() nếu có
-      // notify others
+      // Notify other components
       window.dispatchEvent(new Event('authChanged'));
       navigate('/');
     }
@@ -61,6 +61,7 @@ const AuthStatus: React.FC = () => {
 };
 
 export default AuthStatus;
+
 
 
 

@@ -2,26 +2,27 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { bannerService } from '../../services/bannerService'
 import { BannerDTO } from '../../types/banner.types'
-import BannerDetails from '../../components/admin/BannerDetails'
+import BannerDetails from './BannerDetails'
 import { useToast } from '../../contexts/ToastContext'
+import styles from '../../styles/manager/BannerList.module.css'
 
 // SVG Icons for actions
 const ViewIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <circle cx="12" cy="12" r="3" />
   </svg>
 );
 
 const EditIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
   </svg>
 );
 
 const DeleteIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#ef4444' }}>
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="3 6 5 6 21 6" />
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
   </svg>
@@ -36,22 +37,41 @@ const SortIcon = ({ direction }: { direction?: 'asc' | 'desc' }) => (
   </svg>
 );
 export default function BannerList() {
+  const SESSION_STORAGE_KEY = 'bannerListState';
+
+  const getInitialState = () => {
+    try {
+      const savedState = sessionStorage.getItem(SESSION_STORAGE_KEY);
+      if (savedState) {
+        return JSON.parse(savedState);
+      }
+    } catch (error) {
+      console.error("Failed to parse saved state for banners:", error);
+    }
+    return {
+      page: 1,
+      pageSize: 5,
+      search: '',
+      status: 'all',
+      sortBy: 'createdAt',
+      sortDir: 'desc',
+    };
+  };
+
   const [items, setItems] = useState<BannerDTO[]>([])
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(5)
   const [viewing, setViewing] = useState<BannerDTO | null>(null)
 
-  // filter/search UI
-  const [search, setSearch] = useState('')
-  const [appliedSearch, setAppliedSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [page, setPage] = useState(getInitialState().page);
+  const [pageSize, setPageSize] = useState(getInitialState().pageSize);
+  const [search, setSearch] = useState(getInitialState().search);
+  const [appliedSearch, setAppliedSearch] = useState(getInitialState().search);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(getInitialState().status);
+  const [sortBy, setSortBy] = useState(getInitialState().sortBy);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(getInitialState().sortDir);
+
   const [suggestions, setSuggestions] = useState<BannerDTO[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const searchContainerRef = React.useRef<HTMLDivElement>(null)
-
-  // sorting
-  const [sortBy, setSortBy] = useState('createdAt')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
   const { showToast } = useToast()
 
@@ -66,11 +86,6 @@ export default function BannerList() {
     load()
   }, [])
 
-  // Scroll to top on page or page size change
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [page, pageSize]);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
@@ -83,10 +98,23 @@ export default function BannerList() {
     };
   }, []);
 
+  // Save state to sessionStorage when it changes
+  useEffect(() => {
+    const stateToSave = {
+      page,
+      pageSize,
+      search: appliedSearch,
+      status: statusFilter,
+      sortBy,
+      sortDir: sortDirection,
+    };
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [page, pageSize, appliedSearch, statusFilter, sortBy, sortDirection]);
+
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setAppliedSearch(value); // Áp dụng tìm kiếm ngay khi người dùng nhập
-    setPage(1); // Reset về trang đầu tiên khi có tìm kiếm mới
+    if (page !== 1) setPage(1); // Reset về trang đầu tiên khi có tìm kiếm mới
 
     if (value.trim()) {
       const filteredSuggestions = items.filter(item =>
@@ -150,8 +178,8 @@ export default function BannerList() {
     return filtered;
   }, [items, statusFilter, appliedSearch, sortBy, sortDirection]);
 
-  const onCreate = () => navigate('/manager/banners/new')
-  const onEdit = (b: BannerDTO) => navigate(`/manager/banners/edit/${b.id}`)
+  const onCreate = () => navigate('/app/manager/banners/new')
+  const onEdit = (b: BannerDTO) => navigate(`/app/manager/banners/edit/${b.id}`)
   const handleStatusChange = async (bannerToUpdate: BannerDTO, newStatus: boolean) => {
     if (bannerToUpdate.isActive === newStatus) return;
 
@@ -181,9 +209,7 @@ export default function BannerList() {
   const pill = (active?: boolean) => {
     const isOn = Boolean(active)
     const text = isOn ? 'Đang hoạt động' : 'Ngừng'
-    const bg = isOn ? '#e7f9ec' : '#fee2e2'
-    const color = isOn ? '#16a34a' : '#dc2626'
-    return <span style={{ background: bg, color, padding: '6px 10px', borderRadius: 16, fontSize: 12, fontWeight: 500 }}>{text}</span>
+    return <span className={`${styles.statusPill} ${isOn ? styles.statusActive : styles.statusInactive}`}>{text}</span>
   }
 
   const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString() : '-'
@@ -193,77 +219,47 @@ export default function BannerList() {
   const totalPages = Math.ceil(totalItems / pageSize);
   const paginatedItems = processedItems.slice((page - 1) * pageSize, page * pageSize);
   return (
-    <div style={{ padding: 24, backgroundColor: '#f9fafb', minHeight: '100vh' }}>
+    <div className={styles.pageContainer}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontSize: '1.875rem', fontWeight: 'bold', color: '#111827' }}>Quản lý Banner</h1>
-        <button
-          onClick={onCreate}
-          style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
-        >
+      <div className={styles.header}>
+        <h1 className={styles.title}>Quản lý Banner</h1>
+        <button onClick={onCreate} className={styles.createButton}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           Tạo mới
         </button>
       </div>
 
       {/* Filter Section */}
-      <div style={{ marginBottom: 24, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 20 }}>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'end', flexWrap: 'wrap' }}>
-          <div ref={searchContainerRef} style={{ flex: '2 1 200px', position: 'relative' }}>
-            <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Tìm kiếm</label>
+      <div className={styles.filterContainer}>
+        <div className={styles.filterGrid}>
+          <div ref={searchContainerRef} className={styles.filterGroup}>
+            <label className={styles.filterLabel}>Tìm kiếm</label>
             <input
               placeholder="Tìm theo tiêu đề"
               value={search}
               onChange={e => handleSearchChange(e.target.value)}
-              style={{ width: '80%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
+              className={styles.filterInput}
             />
             {showSuggestions && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  right: 0,
-                  background: "#fff",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "0 0 8px 8px",
-                  zIndex: 10,
-                  boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                  marginTop: "-1px",
-                }}
-              >
+              <div className={styles.suggestionsContainer}>
                 {suggestions.map((suggestion) => (
-                  <div
-                    key={suggestion.id}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    style={{
-                      padding: "10px 12px",
-                      cursor: "pointer",
-                      fontSize: 14,
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#f9fafb")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.backgroundColor = "transparent")
-                    }
-                  >
+                  <div key={suggestion.id} onClick={() => handleSuggestionClick(suggestion)} className={styles.suggestionItem}>
                     {suggestion.bannerTitle}
                   </div>
                 ))}
               </div>
             )}
           </div>
-          <div style={{ flex: '1 1 150px' }}>
-            <label style={{ fontSize: 14, color: '#4b5563', marginBottom: 6, display: 'block' }}>Trạng thái</label>
-            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value as any); setPage(1); }} style={{ padding: 10, width: '100%', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}>
+          <div className={`${styles.filterGroup} ${styles.status}`}>
+            <label className={styles.filterLabel}>Trạng thái</label>
+            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value as any); setPage(1); }} className={styles.filterSelect}>
               <option value="all">Tất cả</option>
               <option value="active">Đang hoạt động</option>
               <option value="inactive">Ngừng</option>
             </select>
           </div>
           <div>
-            <button onClick={() => { setSearch(''); setAppliedSearch(''); setStatusFilter('all'); setPage(1); }} style={{ padding: '10px 20px', background: '#fff', color: '#2563eb', borderRadius: 8, border: '1px solid #d1d5db', fontWeight: 500, cursor: 'pointer' }}>
+            <button onClick={() => { setSearch(''); setAppliedSearch(''); setStatusFilter('all'); if (page !== 1) setPage(1); }} className={styles.filterButton}>
               Xóa
             </button>
           </div>
@@ -271,90 +267,82 @@ export default function BannerList() {
       </div>
 
       {/* Table */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflowX: 'auto' }}>
+      <div className={styles.tableContainer}>
         {paginatedItems.length > 0 ? (
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
-            <thead style={{ backgroundColor: '#f9fafb' }}>
+          <table className={styles.table}>
+            <thead className={styles.tableHead}>
               <tr>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '50px' }}>STT</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '120px' }}>Ảnh</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tiêu đề</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Link</th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thứ tự</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trạng thái</th>
-                <th onClick={() => handleSort('createdAt')} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer' }}>Ngày tạo <SortIcon direction={sortBy === 'createdAt' ? sortDirection : undefined} /></th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thao tác</th>
+                <th className={styles.th} style={{ width: '50px' }}>STT</th>
+                <th className={styles.th} style={{ width: '120px' }}>Ảnh</th>
+                <th className={styles.th}>Tiêu đề</th>
+                <th className={styles.th}>Link</th>
+                <th className={`${styles.th} ${styles.center}`}>Thứ tự</th>
+                <th className={styles.th}>Trạng thái</th>
+                <th onClick={() => handleSort('createdAt')} className={`${styles.th} ${styles.sortable}`}>Ngày tạo <SortIcon direction={sortBy === 'createdAt' ? sortDirection : undefined} /></th>
+                <th className={styles.th} style={{ textAlign: 'right' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
                 {paginatedItems.map((b, index) => (
-                  <tr key={b.id} style={{ borderTop: '1px solid #e5e7eb' }}>
-                    <td style={{ padding: '12px 16px', color: '#4b5563', fontSize: 14, textAlign: 'center' }}>
+                  <tr key={b.id}>
+                    <td className={`${styles.td} ${styles.center}`}>
                       {(page - 1) * pageSize + index + 1}
                     </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ width: 100, height: 56, background: '#f0f2f5', borderRadius: 6, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {b.bannerImageUrl ? <img src={b.bannerImageUrl} alt={b.bannerTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 12, color: '#6b7280' }}>No Image</span>}
+                    <td className={styles.td}>
+                      <div className={styles.thumbnailContainer}>
+                        {b.bannerImageUrl ? <img src={b.bannerImageUrl} alt={b.bannerTitle} className={styles.thumbnail} /> : <span className={styles.noImage}>No Image</span>}
                       </div>
                     </td>
-                    <td style={{ padding: '16px', color: '#111827', fontWeight: 500, fontSize: 14 }}>{b.bannerTitle}</td>
-                    <td style={{ padding: '16px', color: '#4b5563', fontSize: 14, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <a href={b.bannerUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>{b.bannerUrl}</a>
+                    <td className={`${styles.td} ${styles.title}`}>{b.bannerTitle}</td>
+                    <td className={`${styles.td} ${styles.link}`}>
+                      <a href={b.bannerUrl} target="_blank" rel="noopener noreferrer">{b.bannerUrl}</a>
                     </td>
-                    <td style={{ padding: '16px', color: '#4b5563', fontSize: 14, textAlign: 'center' }}>{b.displayOrder ?? '-'}</td>
-                    <td style={{ padding: '16px' }}>
+                    <td className={`${styles.td} ${styles.center}`}>{b.displayOrder ?? '-'}</td>
+                    <td className={styles.td}>
                       <select
                         value={b.isActive ? 'active' : 'inactive'}
                         onChange={(e) => handleStatusChange(b, e.target.value === 'active')}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: 6,
-                          border: '1px solid',
-                          borderColor: b.isActive ? '#6ee7b7' : '#fca5a5',
-                          fontSize: 13,
-                          background: b.isActive ? '#d1fae5' : '#fee2e2',
-                          color: b.isActive ? '#065f46' : '#991b1b',
-                          fontWeight: 500,
-                        }}>
+                        className={`${styles.statusSelect} ${b.isActive ? styles.statusSelectActive : styles.statusSelectInactive}`}
+                      >
                         <option value="active">Đang hoạt động</option>
                         <option value="inactive">Ngừng</option>
                       </select>
                     </td>
-                    <td style={{ padding: '16px', color: '#4b5563', fontSize: 14 }}>{fmtDate(b.createdAt)}</td>
-                    <td style={{ padding: '16px', display: 'flex', gap: 16, justifyContent: 'flex-end', alignItems: 'center' }}>
-                      <button onClick={() => setViewing(b)} title="Xem" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><ViewIcon /></button>
-                      <button onClick={() => onEdit(b)} title="Sửa" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}><EditIcon /></button>
+                    <td className={styles.td}>{fmtDate(b.createdAt)}</td>
+                    <td className={`${styles.td} ${styles.actions}`}>
+                      <button onClick={() => setViewing(b)} title="Xem" className={styles.actionButton}><ViewIcon /></button>
+                      <button onClick={() => onEdit(b)} title="Sửa" className={styles.actionButton}><EditIcon /></button>
                     </td>
                   </tr>
                 ))}
             </tbody>
           </table>
         ) : (
-          <div style={{ padding: '48px 16px', textAlign: 'center', color: '#6b7280', fontSize: 14 }}>
+          <div className={styles.noResults}>
             Không tìm thấy kết quả
           </div>
         )}
       </div>
 
       {/* Pagination */}
-      <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#4b5563', fontSize: 14 }}>
+      <div className={styles.paginationContainer}>
         <div>
           Hiển thị {paginatedItems.length} trên tổng số {totalItems} kết quả
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label htmlFor="pageSize" style={{ fontSize: 14 }}>Số mục:</label>
-            <select id="pageSize" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}>
+        <div className={styles.paginationControls}>
+          <div className={styles.paginationPageSize}>
+            <label htmlFor="pageSize">Số mục:</label>
+            <select id="pageSize" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }} className={styles.filterSelect} style={{ padding: '6px 10px', width: 'auto' }}>
               <option value={5}>5</option>
               <option value={10}>10</option>
               <option value={15}>15</option>
             </select>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page <= 1 ? 0.6 : 1 }}>
+          <div className={styles.paginationControls}>
+            <button onClick={() => setPage((p: number) => Math.max(1, p - 1))} disabled={page <= 1} className={styles.paginationButton}>
               Trang trước
             </button>
-            <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', opacity: page >= totalPages ? 0.6 : 1 }}>
+            <button onClick={() => setPage((p: number) => p + 1)} disabled={page >= totalPages} className={styles.paginationButton}>
               Trang sau
             </button>
           </div>

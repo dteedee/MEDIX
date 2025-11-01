@@ -9,7 +9,7 @@ public partial class WalletTransaction
     public Guid Id { get; set; }
 
     public Guid WalletId { get; set; }
-
+    public long? OrderCode { get; set; }
     public string TransactionTypeCode { get; set; } = null!;
 
     public decimal Amount { get; set; }

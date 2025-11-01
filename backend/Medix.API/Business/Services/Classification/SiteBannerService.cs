@@ -134,7 +134,11 @@ namespace Medix.API.Business.Services.Classification
             await _validator.ValidateSiteBannerUpdateAsync(id, updateDto);
 
             banner.BannerTitle = updateDto.BannerTitle;
-            banner.BannerImageUrl = updateDto.BannerImageUrl;
+            // Only update the image URL if a new one is provided.
+            if (!string.IsNullOrEmpty(updateDto.BannerImageUrl))
+            {
+                banner.BannerImageUrl = updateDto.BannerImageUrl;
+            }
             banner.BannerUrl = updateDto.BannerUrl;
             banner.IsActive = updateDto.IsActive;
             banner.DisplayOrder = updateDto.DisplayOrder;

@@ -4,6 +4,7 @@ using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
+using Medix.API.Models.DTOs.Wallet;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,14 +19,16 @@ namespace Medix.API.Presentation.Controller.UserManagement
         private readonly IUserService _userService;
         private readonly IPatientService _patientService;
         private readonly IAuthService _authService;
+        private readonly IWalletService _walletService;
 
-        public RegisterController(MedixContext context, IEmailService emailService, IUserService userService, IPatientService patientService, IAuthService authService)
+        public RegisterController(MedixContext context, IEmailService emailService, IUserService userService, IPatientService patientService, IAuthService authService, IWalletService walletService)
         {
             _context = context;
             _emailService = emailService;
             _userService = userService;
             _patientService = patientService;
             _authService = authService;
+            _walletService = walletService;
         }
 
         [HttpGet("getBloodTypes")]
@@ -79,7 +82,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
 
         [HttpPost("verifyEmailCode")]
-        public async Task<IActionResult> VerifyEmailCode([FromBody] EmailCodeVerifyRequest request)
+        public async Task<IActionResult> VerifyEmailCode([FromBody] xEmailCodeVerifyRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Code))
                 return BadRequest(new { message = "Email và mã xác thực là bắt buộc" });
@@ -106,7 +109,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
         }
 
         // Request DTO
-        public class EmailCodeVerifyRequest
+        public class xEmailCodeVerifyRequest
         {
             public string Email { get; set; }
             public string Code { get; set; }
@@ -174,6 +177,17 @@ namespace Medix.API.Presentation.Controller.UserManagement
             }
             var userDTO = await _userService.RegisterUserAsync(registration.RegisterRequest);
             var patientDTO = await _patientService.RegisterPatientAsync(registration.PatientDTO, userDTO.Id);
+
+            var walletDto = new WalletDTo
+            {
+                UserId = userDTO.Id,
+                Balance = 0,
+                Currency = "VND",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            var createdWallet = await _walletService.CreateWalletAsync(walletDto);
             var loginRequest = new LoginRequestDto
             {
                 Identifier = registration.RegisterRequest.Email,

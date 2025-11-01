@@ -1,16 +1,7 @@
-import axios from 'axios'
 import { CategoryDTO, CreateCategoryRequest, UpdateCategoryRequest } from '../types/category.types'
+import { apiClient } from '../lib/apiClient'
 
-const BASE = '/api/ContentCategory'
-
-function authHeader() {
-  try {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
-    return token ? { Authorization: `Bearer ${token}` } : undefined
-  } catch {
-    return undefined
-  }
-}
+const BASE = '/ContentCategory'
 
 export const categoryService = {
   list: async (page = 1, pageSize = 10, keyword?: string): Promise<{ items: CategoryDTO[]; total?: number }> => {
@@ -22,7 +13,7 @@ export const categoryService = {
       params.keyword = keyword;
     }
 
-    const r = await axios.get(url, { params, headers: authHeader() });
+    const r = await apiClient.get(url, { params });
     const data = r.data;
 
     // Handle multiple response shapes from backend (direct array, or paged object)
@@ -44,12 +35,12 @@ export const categoryService = {
     return { items, total }
   },
   get: async (id: string): Promise<CategoryDTO> => {
-    const r = await axios.get(`${BASE}/${id}`, { headers: authHeader() })
+    const r = await apiClient.get(`${BASE}/${id}`)
     return r.data
   },
   create: async (payload: CreateCategoryRequest): Promise<CategoryDTO> => {
     try {
-      const r = await axios.post(BASE, payload, { headers: authHeader() })
+      const r = await apiClient.post(BASE, payload)
       return r.data
     } catch (error: any) {
       if (error.response?.data?.errors) {
@@ -64,7 +55,7 @@ export const categoryService = {
   },
   update: async (id: string, payload: UpdateCategoryRequest): Promise<CategoryDTO> => {
     try {
-      const r = await axios.put(`${BASE}/${id}`, payload, { headers: authHeader() });
+      const r = await apiClient.put(`${BASE}/${id}`, payload);
       return r.data;
     } catch (error: any) {
       if (error.response?.data?.errors) {
@@ -76,7 +67,7 @@ export const categoryService = {
     }
   },
   remove: async (id: string): Promise<void> => {
-    await axios.delete(`${BASE}/${id}`, { headers: authHeader() })
+    await apiClient.delete(`${BASE}/${id}`)
   },
   checkUniqueness: async (field: 'slug' | 'name', value: string, excludeId?: string): Promise<void> => {
     const params = new URLSearchParams()
@@ -90,6 +81,6 @@ export const categoryService = {
     // and a 4xx status code (e.g., 409 Conflict) if it's not.
     // The `axios` call will automatically throw an error for 4xx/5xx responses,
     // which is caught in the CategoryForm component.
-    await axios.get(`${BASE}/check-uniqueness`, { params, headers: authHeader() })
+    await apiClient.get(`${BASE}/check-uniqueness`, { params })
   }
 }

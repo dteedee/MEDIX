@@ -11,10 +11,14 @@
   "dependencies": {
     "@ckeditor/ckeditor5-build-classic": "^41.4.2",
     "@ckeditor/ckeditor5-react": "^11.0.0",
+    "@fortawesome/fontawesome-free": "^7.1.0",
     "@types/node": "^24.7.2",
     "axios": "^1.7.7",
+    "date-fns": "^3.6.0",
+    "lucide-react": "^0.546.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-hook-form": "^7.65.0",
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^6.22.3",
     "sweetalert2": "^11.10.0"

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Storage - MEDIX</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        p {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffc107;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #28a745;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #17a2b8;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 16px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button.secondary {
+            background: #6c757d;
+        }
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            border-radius: 5px;
+        }
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .info-box ul {
+            margin-left: 20px;
+            color: #666;
+        }
+        .info-box li {
+            margin: 5px 0;
+        }
+        code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+        }
+        .emoji {
+            font-size: 50px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="emoji">🔧</div>
+        <h1>MEDIX Storage Cleaner</h1>
+        
+        <div id="status" class="status warning">
+            ⚠️ Phát hiện refresh loop - Cần xóa dữ liệu cũ
+        </div>
+
+        <p>
+            Trang web đang bị refresh liên tục vì có dữ liệu không hợp lệ trong trình duyệt.
+            Click nút bên dưới để xóa toàn bộ và quay về trang login.
+        </p>
+
+        <div class="info-box">
+            <h3>📦 Những gì sẽ bị xóa:</h3>
+            <ul>
+                <li><code>accessToken</code> - Token đăng nhập</li>
+                <li><code>refreshToken</code> - Token làm mới</li>
+                <li><code>userData</code> - Thông tin user</li>
+                <li><code>currentUser</code> - User hiện tại</li>
+                <li><code>tokenExpiration</code> - Thời gian hết hạn</li>
+                <li><code>rememberEmail</code> - Email đã lưu</li>
+                <li><code>rememberPassword</code> - Mật khẩu đã lưu</li>
+            </ul>
+        </div>
+
+        <button onclick="clearAndReload()">
+            🗑️ Xóa dữ liệu & Về trang Login
+        </button>
+        
+        <button class="secondary" onclick="viewStorage()">
+            👁️ Xem dữ liệu hiện tại
+        </button>
+
+        <div id="storageInfo" style="display:none; margin-top: 20px;">
+            <div class="info-box">
+                <h3>💾 Dữ liệu trong localStorage:</h3>
+                <pre id="storageContent" style="text-align: left; overflow-x: auto; font-size: 12px;"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function clearAndReload() {
+            const status = document.getElementById('status');
+            
+            // Lấy danh sách keys trước khi xóa
+            const keysToRemove = [
+                'accessToken',
+                'refreshToken',
+                'userData',
+                'currentUser',
+                'tokenExpiration',
+                'rememberEmail',
+                'rememberPassword'
+            ];
+
+            // Xóa từng key
+            keysToRemove.forEach(key => {
+                localStorage.removeItem(key);
+                console.log('Đã xóa:', key);
+            });
+
+            // Hiển thị thông báo thành công
+            status.className = 'status success';
+            status.innerHTML = '✅ Đã xóa thành công! Đang chuyển về trang login...';
+
+            // Chờ 1.5s rồi chuyển trang
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 1500);
+        }
+
+        function viewStorage() {
+            const storageInfo = document.getElementById('storageInfo');
+            const storageContent = document.getElementById('storageContent');
+            
+            if (storageInfo.style.display === 'none') {
+                // Hiển thị nội dung
+                const data = {};
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    let value = localStorage.getItem(key);
+                    
+                    // Try to parse JSON
+                    try {
+                        value = JSON.parse(value);
+                    } catch (e) {
+                        // Keep as string if not JSON
+                    }
+                    
+                    data[key] = value;
+                }
+                
+                storageContent.textContent = JSON.stringify(data, null, 2);
+                storageInfo.style.display = 'block';
+            } else {
+                storageInfo.style.display = 'none';
+            }
+        }
+
+        // Auto-detect nếu có dữ liệu
+        window.onload = function() {
+            const hasUserData = localStorage.getItem('userData');
+            const hasToken = localStorage.getItem('accessToken');
+            
+            if (!hasUserData && !hasToken) {
+                const status = document.getElementById('status');
+                status.className = 'status info';
+                status.innerHTML = 'ℹ️ Không phát hiện dữ liệu cũ - localStorage đã sạch';
+            }
+        };
+    </script>
+</body>
+</html>
+

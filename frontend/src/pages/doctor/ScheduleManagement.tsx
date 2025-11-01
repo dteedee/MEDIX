@@ -48,12 +48,20 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   appointments
 }) => {
   const allSlots = useMemo(() => {
+    // Lấy tất cả lịch linh hoạt
     const overrideSlots = overrides.map(o => ({ ...o, type: "override" as const }));
-    const fixedSlots = schedules.map(s => ({ ...s, type: "fixed" as const }));
 
-    return [...fixedSlots, ...overrideSlots].sort((a, b) =>
-      a.startTime.localeCompare(b.startTime)
-    );
+    // Lọc ra những ca cố định không bị "ghi đè" bởi một lịch "Nghỉ"
+    const visibleFixedSlots = schedules.filter(fixedSlot => {
+      // Một ca cố định sẽ bị ẩn nếu nó trùng giờ với một lịch nghỉ (isAvailable: false)
+      const isOverriddenByOff = overrideSlots.some(overrideSlot => 
+        !overrideSlot.isAvailable && overrideSlot.startTime < fixedSlot.endTime && overrideSlot.endTime > fixedSlot.startTime
+      );
+      return !isOverriddenByOff;
+    }).map(s => ({ ...s, type: "fixed" as const }));
+
+    // Gộp các ca cố định hợp lệ và tất cả các ca linh hoạt, sau đó sắp xếp
+    return [...visibleFixedSlots, ...overrideSlots].sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [schedules, overrides]);
 
   if (!isOpen) return null;

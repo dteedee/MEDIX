@@ -1,32 +1,35 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import React, { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import Swal from 'sweetalert2';
-import { scheduleService } from '../../services/scheduleService';
-import { appointmentService } from '../../services/appointmentService';
-import { DoctorSchedule, CreateSchedulePayload, ScheduleOverride } from '../../types/schedule';
-import { Appointment } from '../../types/appointment.types';
+import Swal from "sweetalert2";
+import { scheduleService } from "../../services/scheduleService";
+import { appointmentService } from "../../services/appointmentService";
+import { DoctorSchedule, ScheduleOverride } from "../../types/schedule";
+import { Appointment } from "../../types/appointment.types";
 import "../../styles/ScheduleManagement.css";
-import FixedScheduleManager from './FixedScheduleManager'; // Giữ nguyên vì file mới được tạo cùng thư mục
-import FlexibleScheduleManager from './FlexibleScheduleManager';
+import FixedScheduleManager from "./FixedScheduleManager";
+import FlexibleScheduleManager from "./FlexibleScheduleManager";
 
-const monthNames = [ "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12" ];
+const monthNames = [
+  "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
+  "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"
+];
 const dayNames = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
-
-const toYYYYMMDD = (date: Date) => {
-  // Chuyển đổi sang chuỗi ISO (luôn ở múi giờ UTC) và cắt lấy phần YYYY-MM-DD.
-  // Đây là cách đáng tin cậy nhất để có được ngày tháng mà không bị ảnh hưởng bởi múi giờ.
-  return date.toISOString().substring(0, 10);
+// --- Helper: chuẩn hóa ngày local thành dạng YYYY-MM-DD ---
+const getLocalDateKey = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 };
 
+type ViewMode = "month" | "week";
 
-type ViewMode = 'month' | 'week';
-
-// --- Component Modal Chi Tiết Ngày ---
+// --- Modal Chi tiết ngày ---
 interface DayDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -36,76 +39,113 @@ interface DayDetailsModalProps {
   appointments: Appointment[];
 }
 
-// Định nghĩa một kiểu chung cho các ca làm việc để TypeScript hiểu được
-type WorkSlot = (DoctorSchedule & { type: 'fixed' }) | (ScheduleOverride & { type: 'override' });
+const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
+  isOpen,
+  onClose,
+  formattedDate,
+  schedules,
+  overrides,
+  appointments
+}) => {
+  const allSlots = useMemo(() => {
+    const overrideSlots = overrides.map(o => ({ ...o, type: "override" as const }));
+    const fixedSlots = schedules.map(s => ({ ...s, type: "fixed" as const }));
 
-const DayDetailsModal: React.FC<DayDetailsModalProps> = ({ isOpen, onClose, formattedDate, schedules, overrides, appointments }) => {
-  // Gộp lịch cố định và linh hoạt vào một danh sách và sắp xếp theo thời gian bắt đầu
-  const allWorkSlots = useMemo(() => {
-    // Nếu có lịch linh hoạt (ghi đè) cho ngày này, chỉ hiển thị lịch linh hoạt.
-    if (overrides.length > 0) {
-      return overrides
-        .map(o => ({ ...o, type: 'override' as const }))
-        .sort((a, b) => a.startTime.localeCompare(b.startTime));
-    }
-    // Nếu không, hiển thị lịch cố định.
-    return schedules
-      .map(s => ({ ...s, type: 'fixed' as const }))
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    return [...fixedSlots, ...overrideSlots].sort((a, b) =>
+      a.startTime.localeCompare(b.startTime)
+    );
   }, [schedules, overrides]);
 
   if (!isOpen) return null;
 
   return (
     <div className="details-modal-overlay" onClick={onClose}>
-      <div className="details-modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="details-modal-content" onClick={e => e.stopPropagation()}>
         <div className="details-modal-header">
           <h3>{formattedDate}</h3>
-          <button onClick={onClose} className="details-modal-close-btn">&times;</button>
+          <button onClick={onClose} className="details-modal-close-btn">
+            &times;
+          </button>
         </div>
-        <div className="details-modal-body">
-          {allWorkSlots.length > 0 ? (
-            <div className="details-list">
-              <h4 className="appointment-list-header">Ca làm việc trong ngày</h4>
-              {allWorkSlots.map(slot => {
-                // Tìm các cuộc hẹn thuộc về ca làm việc này
-                const appointmentsInSlot = appointments.filter(app => {
-                  const appStartTime = new Date(app.appointmentStartTime).toTimeString().substring(0, 8);
-                  return appStartTime >= slot.startTime && appStartTime < slot.endTime;
-                });
 
-                return (
-                  // Điều kiện: Chỉ hiển thị nếu không phải là lịch nghỉ (override và isAvailable=false)
-                  // Các lịch cố định và lịch tăng ca (override và isAvailable=true) sẽ luôn được hiển thị.
-                  !(slot.type === 'override' && !slot.isAvailable) && (
-                  <div key={slot.id} className={`detail-item ${slot.type === 'override' ? 'override-item' : ''}`}>
-                    <p className="detail-time">{slot.startTime.substring(0, 5)} - {slot.endTime.substring(0, 5)}</p>
-                    <p className={`detail-status ${slot.isAvailable ? 'status-available' : 'status-unavailable'}`}>
-                      <span className="status-dot" style={{ backgroundColor: slot.isAvailable ? '#10b981' : '#ef4444' }}></span>
-                      {slot.type === 'fixed' ? (slot.isAvailable ? 'Sẵn sàng' : 'Không sẵn sàng') : (slot.isAvailable ? `Tăng ca - ${slot.reason}`: `Nghỉ - ${slot.reason}`)}
-                    </p>
-                    {/* Hiển thị danh sách cuộc hẹn bên trong ca làm việc */}
-                    {appointmentsInSlot.length > 0 && (
-                      <div className="appointment-list-nested">
-                        {appointmentsInSlot.map(app => (
-                          <div key={app.id} className="appointment-item">
-                            <p className="appointment-time">{new Date(app.appointmentStartTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(app.appointmentEndTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</p>
-                            <p className="appointment-patient">BN: {app.patientName}</p>
-                            <p className="appointment-status">{app.statusDisplayName || app.statusCode}</p>
-                            <Link to={`/app/doctor/medical-records/${app.id}`} className="view-record-button">
-                              Xem chi tiết hồ sơ
-                            </Link>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  )
-                );
-              })}
-            </div>
+        <div className="details-modal-body">
+          {allSlots.length > 0 ? (
+            allSlots.map(slot => {
+              const apps = appointments.filter(app => {
+                const start = new Date(app.appointmentStartTime).toTimeString().slice(0, 8);
+                return start >= slot.startTime && start < slot.endTime;
+              });
+
+              return (
+                <div
+                  key={slot.id}
+                  className={`detail-item ${
+                    slot.type === "override"
+                      ? slot.isAvailable
+                        ? "override-available"
+                        : "override-item"
+                      : ""
+                  }`}
+                >
+                  <p className="detail-time">
+                    {slot.startTime.slice(0, 5)} - {slot.endTime.slice(0, 5)}
+                  </p>
+                  <p
+                    className={`detail-status ${
+                      slot.isAvailable ? "status-available" : "status-unavailable"
+                    }`}
+                  >
+                    <span
+                      className="status-dot"
+                      style={{
+                        backgroundColor: slot.isAvailable ? "#10b981" : "#ef4444"
+                      }}
+                    ></span>
+                    {slot.type === "fixed"
+                      ? slot.isAvailable
+                        ? "Sẵn sàng"
+                        : "Không sẵn sàng"
+                      : slot.isAvailable
+                      ? `Tăng ca - ${slot.reason}`
+                      : `Nghỉ - ${slot.reason}`}
+                  </p>
+
+                  {apps.length > 0 && (
+                    <div className="appointment-list-nested">
+                      {apps.map(app => (
+                        <div key={app.id} className="appointment-item">
+                          <p className="appointment-time">
+                            {new Date(app.appointmentStartTime).toLocaleTimeString("vi-VN", {
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}{" "}
+                            -{" "}
+                            {new Date(app.appointmentEndTime).toLocaleTimeString("vi-VN", {
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}
+                          </p>
+                          <p className="appointment-patient">BN: {app.patientName}</p>
+                          <p className="appointment-status">
+                            {app.statusDisplayName || app.statusCode}
+                          </p>
+                          <Link
+                            to={`/app/doctor/medical-records/${app.id}`}
+                            className="view-record-button"
+                          >
+                            Xem hồ sơ
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           ) : (
-            <p className="details-placeholder">Không có lịch làm việc hoặc cuộc hẹn nào trong ngày này.</p>
+            <p className="details-placeholder">
+              Không có lịch làm việc hoặc cuộc hẹn nào trong ngày này.
+            </p>
           )}
         </div>
       </div>
@@ -113,310 +153,208 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({ isOpen, onClose, form
   );
 };
 
+// --- Component chính ---
 const ScheduleManagement: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
-  const [viewData, setViewData] = useState<{
-    schedules: DoctorSchedule[];
-    overrides: ScheduleOverride[];
-    appointments: Appointment[];
-  }>({ schedules: [], overrides: [], appointments: [] });
+
+  const [viewData, setViewData] = useState({
+    schedules: [] as DoctorSchedule[],
+    overrides: [] as ScheduleOverride[],
+    appointments: [] as Appointment[]
+  });
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<number | null>(new Date().getDate());
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false); // State cho modal chi tiết
 
-  const [viewMode, setViewMode] = useState<ViewMode>('month');
-
-  // Gộp tất cả các logic xử lý dữ liệu vào một useMemo duy nhất
-  // để đảm bảo tính nhất quán và tránh race condition khi render.
-  const { schedulesByDayOfWeek, scheduleOverridesByDate, appointmentsByDate } = useMemo(() => {
-    const schedulesMap = new Map<number, DoctorSchedule[]>();
-    viewData.schedules.forEach(schedule => {
-      const day = schedule.dayOfWeek;
-      if (!schedulesMap.has(day)) schedulesMap.set(day, []);
-      schedulesMap.get(day)?.push(schedule);
-    });
-
-    const overridesMap = new Map<string, ScheduleOverride[]>();
-    viewData.overrides.forEach(override => {
-      const dateKey = override.overrideDate;
-      if (!overridesMap.has(dateKey)) overridesMap.set(dateKey, []);
-      overridesMap.get(dateKey)?.push(override);
-    });
-
-    const appointmentsMap = new Map<string, Appointment[]>();
-    viewData.appointments.forEach(appointment => {
-      const dateKey = appointment.appointmentStartTime.substring(0, 10);
-      if (!appointmentsMap.has(dateKey)) appointmentsMap.set(dateKey, []);
-      appointmentsMap.get(dateKey)?.push(appointment);
-    });
-
-    return { schedulesByDayOfWeek: schedulesMap, scheduleOverridesByDate: overridesMap, appointmentsByDate: appointmentsMap };
-  }, [viewData]);
-
+  // --- Fetch dữ liệu ---
   const refreshAllData = async () => {
+    if (!isAuthenticated || !user?.id) return;
     setIsLoading(true);
     setError(null);
-    
-    if (!isAuthenticated || !user?.id) {
-      setIsLoading(false);
-      return;
-    }
 
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-
-    let startDate: Date;
-    let endDate: Date;
-
-    if (viewMode === 'month') {
-      startDate = new Date(Date.UTC(year, month, 1));
-      endDate = new Date(Date.UTC(year, month + 1, 0)); // Last day of the month
-    } else { // week view
-      const dayOfWeek = currentMonth.getUTCDay(); // 0=Sun, 1=Mon
-      const offset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Adjust to start on Monday
-      const startOfWeek = new Date(currentMonth);
-      startOfWeek.setUTCDate(startOfWeek.getUTCDate() + offset);
-      
-      startDate = new Date(Date.UTC(startOfWeek.getUTCFullYear(), startOfWeek.getUTCMonth(), startOfWeek.getUTCDate()));
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setUTCDate(endOfWeek.getUTCDate() + 6);
-      endDate = new Date(Date.UTC(endOfWeek.getUTCFullYear(), endOfWeek.getUTCMonth(), endOfWeek.getUTCDate()));
-    }
-    
     try {
-      // Sử dụng Promise.all để lấy tất cả dữ liệu cần thiết cùng lúc
-      // Tách ra để đảm bảo schedules và overrides được fetch trước, tránh race condition khi render
-      const [fixedSchedules, overrides] = await Promise.all([
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const [fixed, overrides] = await Promise.all([
         scheduleService.getMySchedules(),
         scheduleService.getMyScheduleOverrides()
       ]);
 
-      // Sau khi có lịch, mới fetch các cuộc hẹn
-      const appointments = await appointmentService.getMyAppointmentsByDateRange(toYYYYMMDD(startDate), toYYYYMMDD(endDate));
+      const start = new Date(year, month, 1);
+      const end = new Date(year, month + 1, 0);
+      const appointments = await appointmentService.getMyAppointmentsByDateRange(
+        getLocalDateKey(start),
+        getLocalDateKey(end)
+      );
 
-      setViewData({
-        schedules: fixedSchedules,
-        overrides: overrides,
-        appointments: appointments
-      });
+      setViewData({ schedules: fixed, overrides, appointments });
     } catch (err) {
-      console.error('Error fetching data for view:', err);
-      setError('Không thể tải dữ liệu lịch. Vui lòng thử lại.');
+      console.error(err);
+      setError("Không thể tải dữ liệu lịch.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Effect to fetch all appointments for the current month/week view
   useEffect(() => {
     refreshAllData();
-  }, [currentMonth, viewMode, isAuthenticated, user?.id]);
+  }, [currentDate, viewMode, isAuthenticated, user?.id]);
 
-  const { daysToRender, headerLabel } = useMemo(() => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
+  // --- Map dữ liệu ---
+  const { schedulesByDay, overridesByDate, appointmentsByDate } = useMemo(() => {
+    const sMap = new Map<number, DoctorSchedule[]>();
+    viewData.schedules.forEach(s => {
+      if (!sMap.has(s.dayOfWeek)) sMap.set(s.dayOfWeek, []);
+      sMap.get(s.dayOfWeek)!.push(s);
+    });
 
-    if (viewMode === 'month') {
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const firstDayOfMonth = new Date(Date.UTC(year, month, 1)).getUTCDay();
-      const days = [];
-      const emptyCells = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
-      for (let i = 0; i < emptyCells; i++) {
-        days.push(null);
-      }
-      for (let i = 1; i <= daysInMonth; i++) {
-        days.push(new Date(Date.UTC(year, month, i)));
-      }
-      return {
-        daysToRender: days,
-        headerLabel: `${monthNames[month]} ${year}`
-      };
-    } else { // week view
-      const offset = currentMonth.getUTCDay() === 0 ? -6 : 1 - currentMonth.getUTCDay();
-      // Sử dụng UTC để đảm bảo tính nhất quán với phần còn lại của logic
-      const startOfWeek = new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth(), currentMonth.getUTCDate()));
-      startOfWeek.setUTCDate(startOfWeek.getUTCDate() + offset);
-      
-      const days = [];
-      for (let i = 0; i < 7; i++) {
-        const day = new Date(startOfWeek);
-        day.setUTCDate(startOfWeek.getUTCDate() + i);
-        days.push(day);
-      }
+    const oMap = new Map<string, ScheduleOverride[]>();
+    viewData.overrides.forEach(o => {
+      const key = o.overrideDate;
+      if (!oMap.has(key)) oMap.set(key, []);
+      oMap.get(key)!.push(o);
+    });
 
-      const endOfWeek = days[6];
-      const startMonthName = monthNames[days[0].getUTCMonth()];
-      const endMonthName = monthNames[endOfWeek.getUTCMonth()];
-      const startYear = days[0].getUTCFullYear();
-      const endYear = endOfWeek.getUTCFullYear();
+    const aMap = new Map<string, Appointment[]>();
+    viewData.appointments.forEach(a => {
+      const key = a.appointmentStartTime.substring(0, 10);
+      if (!aMap.has(key)) aMap.set(key, []);
+      aMap.get(key)!.push(a);
+    });
 
-      let label = `${startMonthName} ${startYear}`;
-      if (startYear !== endYear) {
-        label = `${startMonthName} ${startYear} - ${endMonthName} ${endYear}`;
-      } else if (startMonthName !== endMonthName) {
-        label = `${startMonthName} - ${endMonthName} ${year}`;
-      }
+    return { schedulesByDay: sMap, overridesByDate: oMap, appointmentsByDate: aMap };
+  }, [viewData]);
 
-      return { daysToRender: days, headerLabel: label };
-    }
-  }, [currentMonth, viewMode]);
+  // --- Sinh danh sách ngày ---
+  const { days, headerLabel } = useMemo(() => {
+    const y = currentDate.getFullYear();
+    const m = currentDate.getMonth();
+    if (viewMode === "month") {
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      const firstDay = new Date(y, m, 1).getDay() || 7;
+      const daysArray: (Date | null)[] = [];
 
-  const handlePrev = () => {
-    const newDate = new Date(currentMonth);
-    if (viewMode === 'month') {
-      newDate.setMonth(newDate.getMonth() - 1);
+      for (let i = 1; i < firstDay; i++) daysArray.push(null);
+      for (let d = 1; d <= daysInMonth; d++) daysArray.push(new Date(y, m, d));
+
+      return { days: daysArray, headerLabel: `${monthNames[m]} ${y}` };
     } else {
-      newDate.setDate(newDate.getDate() - 7);
+      const dayOfWeek = currentDate.getDay() || 7;
+      const monday = new Date(currentDate);
+      monday.setDate(currentDate.getDate() - (dayOfWeek - 1));
+      const weekDays = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        return d;
+      });
+      const label = `${monthNames[monday.getMonth()]} ${monday.getFullYear()}`;
+      return { days: weekDays, headerLabel: label };
     }
-    setCurrentMonth(newDate);
+  }, [currentDate, viewMode]);
+
+  const openDayDetails = (date: Date) => {
+    setSelectedDate(date);
+    setIsDetailsModalOpen(true);
   };
-
-  const handleNext = () => {
-    const newDate = new Date(currentMonth);
-    if (viewMode === 'month') {
-      newDate.setMonth(newDate.getMonth() + 1);
-    } else {
-      newDate.setDate(newDate.getDate() + 7);
-    }
-    setCurrentMonth(newDate);
-  };
-
-  const selectedDaySchedules = useMemo(() => {
-    if (!selectedDate) return [];
-    const date = new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth(), selectedDate));
-    const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 1 = Monday...
-    const schedules = schedulesByDayOfWeek.get(dayOfWeek) || [];
-    return schedules.sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [selectedDate, currentMonth, schedulesByDayOfWeek]);
-
-  const selectedDayOverrides = useMemo(() => {
-    if (!selectedDate) return [];
-    const selectedDayFullDateString = toYYYYMMDD(new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth(), selectedDate)));
-    const overrides = scheduleOverridesByDate.get(selectedDayFullDateString) || [];
-    return overrides.sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [selectedDate, currentMonth, scheduleOverridesByDate]);
-
-  const selectedDayAppointments = useMemo(() => {
-    if (!selectedDate) return [];
-    const selectedDayFullDateString = toYYYYMMDD(new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth(), selectedDate)));
-    return (appointmentsByDate.get(selectedDayFullDateString) || []).sort((a, b) => a.appointmentStartTime.localeCompare(b.appointmentStartTime));
-  }, [selectedDate, currentMonth, appointmentsByDate]);
 
   const getFormattedSelectedDate = () => {
     if (!selectedDate) return "";
-    const date = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate));
-    const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    return date.toLocaleDateString('vi-VN', options);
-  }
+    return selectedDate.toLocaleDateString("vi-VN", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    });
+  };
 
   return (
     <div className="schedule-management-page">
-      {/* Phần lịch chính */}
       <div className="schedule-calendar-section">
-        <div className="calendar-header-wrapper">
-          <div className="calendar-header">
-            <div className="month-selector">
-              <button onClick={handlePrev} className="nav-button">
-                <ChevronLeft size={20} />
-              </button>
-              <h2>{headerLabel}</h2>
-              <button onClick={handleNext} className="nav-button">
-                <ChevronRight size={20} />
-              </button>
-            </div>
-            <div className="view-toggle">
-              <button className={`toggle-btn ${viewMode === 'month' ? 'active' : ''}`} onClick={() => setViewMode('month')}>Tháng</button>
-              <button className={`toggle-btn ${viewMode === 'week' ? 'active' : ''}`} onClick={() => setViewMode('week')}>Tuần</button>
-            </div>
-            <p className="warning-text">*Lịch làm việc được áp dụng hàng tuần theo các thứ đã đăng ký.</p>
+        <div className="calendar-header">
+          <button onClick={() => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - (viewMode === "month" ? 1 : 0), d.getDate() - (viewMode === "week" ? 7 : 0)))}>
+            <ChevronLeft size={20} />
+          </button>
+          <h2>{headerLabel}</h2>
+          <button onClick={() => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + (viewMode === "month" ? 1 : 0), d.getDate() + (viewMode === "week" ? 7 : 0)))}>
+            <ChevronRight size={20} />
+          </button>
+
+          <div className="view-toggle">
+            <button
+              className={`toggle-btn ${viewMode === "month" ? "active" : ""}`}
+              onClick={() => setViewMode("month")}
+            >
+              Tháng
+            </button>
+            <button
+              className={`toggle-btn ${viewMode === "week" ? "active" : ""}`}
+              onClick={() => setViewMode("week")}
+            >
+              Tuần
+            </button>
           </div>
         </div>
 
         <div className="calendar-container">
           {error && <p className="warning-text">{error}</p>}
-          {isLoading && <p>Đang tải lịch làm việc...</p>}
-          
+          {isLoading && <p>Đang tải...</p>}
+
           <div className="calendar-grid">
             <div className="day-headers">
-              {dayNames.map((day) => (
-                <div key={day} className="day-header">{day}</div>
+              {dayNames.map(d => (
+                <div key={d} className="day-header">{d}</div>
               ))}
             </div>
             <div className="calendar-days">
-              {daysToRender.map((date, index) => {
+              {days.map((date, i) => {
                 if (!date) {
-                  return <div key={index} className="calendar-day empty"></div>;
+                  return <div key={i} className="calendar-day empty" />;
                 }
-                const dayNumber = date.getUTCDate();
-                const dayOfWeek = date.getUTCDay(); // Sunday is 0, Monday is 1
-                const timeSlots = (schedulesByDayOfWeek.get(dayOfWeek) || []).sort((a, b) =>
-                  a.startTime.localeCompare(b.startTime)
-                );
-                const hasFixedSchedule = timeSlots.length > 0; // Check if there's any fixed schedule
-                const fullDateString = toYYYYMMDD(date);
-                const hasFlexibleOverride = scheduleOverridesByDate.has(fullDateString);
-                const appointmentsForDay = appointmentsByDate.get(fullDateString);
-                const hasAppointments = appointmentsByDate.has(fullDateString);
 
-                const isSelected = selectedDate === dayNumber && currentMonth.getUTCMonth() === date.getUTCMonth() && currentMonth.getUTCFullYear() === date.getUTCFullYear();
-                const isToday = toYYYYMMDD(new Date()) === fullDateString;
-                
+                const dateKey = getLocalDateKey(date);
+                const dayOfWeek = date.getDay(); // 0=CN, 1=T2,...
+
+                // Lấy lịch cố định và lịch linh hoạt cho ngày hiện tại
+                const fixedSchedules = schedulesByDay.get(dayOfWeek) || [];
+                const dayOverrides = overridesByDate.get(dateKey) || [];
+
+                // Tính toán các ca làm việc thực tế trong ngày
+                const workSlots = [
+                  // Lấy các ca cố định không bị lịch nghỉ ghi đè
+                  ...fixedSchedules.filter(fs => 
+                    !dayOverrides.some(o => !o.isAvailable && o.startTime < fs.endTime && o.endTime > fs.startTime)
+                  ),
+                  // Lấy các ca tăng ca (lịch linh hoạt có isAvailable = true)
+                  ...dayOverrides.filter(o => o.isAvailable)
+                ];
+
                 return (
                   <div
-                    key={index}
-                    className={`calendar-day ${isSelected ? "selected" : ""} ${hasFlexibleOverride ? "has-override" : ""} ${isToday ? "today" : ""} ${hasAppointments ? "has-appointments" : ""}`}
-                    onClick={() => {
-                      setSelectedDate(dayNumber);
-                      setCurrentMonth(new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-                      setIsDetailsModalOpen(true); // Mở modal khi click
-                    }}
+                    key={dateKey}
+                    className={`calendar-day ${
+                      selectedDate && getLocalDateKey(selectedDate) === dateKey ? "selected" : ""
+                    }`}
+                    onClick={() => openDayDetails(date)}
                   >
-                    <div className="day-number">
-                      <span>{dayNumber}</span>
-                    </div>
-
-                    <div className="schedule-dots-container">
-                      {/* Hiển thị một chấm cho mỗi ca làm việc cố định */}
-                      {!hasFlexibleOverride && timeSlots.map((slot) => {
-                          const hasAppointmentInSlot = appointmentsForDay?.some(app => {
-                            const appStartTime = new Date(app.appointmentStartTime).toTimeString().substring(0, 8);
-                            return appStartTime >= slot.startTime && appStartTime < slot.endTime;
-                          });
-                          return (
-                            <div
-                              key={slot.id}
-                              className={`schedule-dot schedule-dot-fixed ${hasAppointmentInSlot ? 'has-appointment' : ''}`}
-                              title={`Lịch cố định: ${slot.startTime.substring(0, 5)}-${slot.endTime.substring(0, 5)} (${slot.isAvailable ? 'Sẵn sàng' : 'Không sẵn sàng'})${hasAppointmentInSlot ? ' - Đã có hẹn' : ''}`}>
-                            </div>
-                          );
-                        })}
-                      {/* Hiển thị một chấm cho mỗi lịch linh hoạt */}
-                      {/* Luôn hiển thị lịch linh hoạt nếu có */}
-                      {hasFlexibleOverride && scheduleOverridesByDate.get(fullDateString)?.map((override) => {
-                        const hasAppointmentInSlot = appointmentsForDay?.some(app => {
-                          const appStartTime = new Date(app.appointmentStartTime).toTimeString().substring(0, 8);
-                          return appStartTime >= override.startTime && appStartTime < override.endTime;
-                        });
-                        return (
-                          <div 
-                            key={override.id} 
-                            className={`schedule-dot schedule-dot-override ${hasAppointmentInSlot ? 'has-appointment' : ''}`} 
-                            title={`Lịch linh hoạt: ${override.startTime.substring(0, 5)}-${override.endTime.substring(0, 5)} (${override.isAvailable ? 'Tăng ca' : 'Nghỉ'})${hasAppointmentInSlot ? ' - Đã có hẹn' : ''}`}>
-                          </div>
-                        );
-                      })}
+                    <div className="day-number">{date.getDate()}</div>
+                    <div className="day-indicators">
+                      {/* Render một chấm tròn cho mỗi ca làm việc */}
+                      {workSlots.map((slot, index) => (
+                        <span key={index} className="indicator" title={`${slot.startTime.slice(0,5)}-${slot.endTime.slice(0,5)}`}></span>
+                      ))}
                     </div>
                   </div>
                 );
               })}
             </div>
           </div>
+
           <div className="management-buttons">
             <button onClick={() => setIsModalOpen(true)} className="manage-button primary">
               Quản lý lịch cố định
@@ -428,22 +366,28 @@ const ScheduleManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Render các modal */}
       {isModalOpen && (
-        <FixedScheduleManager schedules={viewData.schedules} onClose={() => setIsModalOpen(false)} onRefresh={refreshAllData} />
+        <FixedScheduleManager
+          schedules={viewData.schedules}
+          onClose={() => setIsModalOpen(false)}
+          onRefresh={refreshAllData}
+        />
       )}
-
       {isOverrideModalOpen && (
-        <FlexibleScheduleManager overrides={viewData.overrides} onClose={() => setIsOverrideModalOpen(false)} onRefresh={refreshAllData} />
+        <FlexibleScheduleManager
+          overrides={viewData.overrides}
+          onClose={() => setIsOverrideModalOpen(false)}
+          onRefresh={refreshAllData}
+        />
       )}
 
       <DayDetailsModal
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
         formattedDate={getFormattedSelectedDate()}
-        schedules={selectedDaySchedules}
-        overrides={selectedDayOverrides} // Giữ nguyên vì selectedDayOverrides đã được tính toán đúng
-        appointments={selectedDayAppointments}
+        schedules={selectedDate ? schedulesByDay.get((selectedDate.getDay() || 7)) || [] : []}
+        overrides={selectedDate ? overridesByDate.get(getLocalDateKey(selectedDate)) || [] : []}
+        appointments={selectedDate ? appointmentsByDate.get(getLocalDateKey(selectedDate)) || [] : []}
       />
     </div>
   );

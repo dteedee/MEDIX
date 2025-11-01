@@ -79,12 +79,17 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
 
   const processFormSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
+      // Tự động xác định isAvailable dựa trên lý do được chọn
+      const isWork = data.reason.toLowerCase().includes('tăng ca');
+      const isOff = data.reason.toLowerCase().includes('nghỉ');
+
       const payload: CreateScheduleOverridePayload = {
         ...data, // isAvailable, overrideDate, reason
         // Đảm bảo thời gian luôn có định dạng HH:mm:ss
         startTime: data.startTime.length === 5 ? `${data.startTime}:00` : data.startTime,
         endTime: data.endTime.length === 5 ? `${data.endTime}:00` : data.endTime,
-        isAvailable: data.isAvailable === true || (data.isAvailable as any) === 'true', // Đảm bảo isAvailable là boolean
+        // Nếu lý do là "Nghỉ...", isAvailable là false, ngược lại là true
+        isAvailable: !isOff,
       };
 
       if (editingOverride) {
@@ -160,11 +165,14 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
                 {errors.overrideDate && <p className="error-text">{errors.overrideDate.message}</p>}
               </div>
               <div className="form-group">
-                <label>Loại</label>
-                <input type="text" {...register('reason', { required: 'Loại/Lý do là bắt buộc' })} placeholder="VD: Tăng ca, Nghỉ ốm..." />
+                <label>Lý do</label>
+                <select {...register('reason', { required: 'Vui lòng chọn lý do' })}>
+                  <option value="Tăng ca">Tăng ca</option>
+                  <option value="Nghỉ phép">Nghỉ phép</option>
+                  <option value="Nghỉ ốm">Nghỉ ốm</option>
+                  <option value="Nghỉ việc riêng">Nghỉ việc riêng</option>
+                </select>
                 {errors.reason && <p className="error-text">{errors.reason.message}</p>}
-                {/* Giữ trường isAvailable ẩn để form hoạt động đúng, mặc định là true (Tăng ca) */}
-                <input type="hidden" {...register('isAvailable')} value="true" />
               </div>
               <div className="form-group form-group-span-2">
                 <label>Ca làm việc</label>

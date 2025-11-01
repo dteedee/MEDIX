@@ -371,29 +371,39 @@
 }
 
 /* --- Styles cho các chấm màu --- */
-.schedule-dots-container {
+/* Container cho các chấm tròn chỉ báo */
+.day-indicators {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 4px;
-  margin-top: 8px;
+  margin-top: 6px; /* Điều chỉnh khoảng cách với số ngày */
   min-height: 10px;
   flex-wrap: wrap;
 }
 
-.schedule-dot {
+/* Style chung cho mỗi chấm tròn */
+.indicator {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  background-color: #2196F3; /* Màu xanh dương cho tất cả các ca làm việc */
 }
 
-.schedule-dot-fixed {
+/* Màu cho lịch cố định */
+.indicator.fixed {
   background-color: #2196F3; /* Màu xanh dương cho lịch cố định */
 }
 
-.schedule-dot-override {
-  background-color: #00BCD4; /* Màu xanh ngọc cho lịch linh hoạt */
+/* Màu cho lịch tăng ca */
+.indicator.override-work {
+  background-color: #4caf50; /* Màu xanh lá */
+}
+
+/* Màu cho lịch nghỉ */
+.indicator.override-off {
+  background-color: #f44336; /* Màu đỏ */
 }
 
 /* Thêm style cho chấm lịch đã có cuộc hẹn */

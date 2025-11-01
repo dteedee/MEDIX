@@ -33,14 +33,24 @@ export interface MedicalRecordDto{
   chiefComplaint: string;
   diagnosis: string;
   treatmentPlan: string;
-  attatchments: string[];
+  attatchments: AttatchmentDto[];
 }
 
 export interface MedicalRecordQuery{
-  skip: number;
-  take: number;
   dateFrom: string | null;
   dateTo: string | null;
+}
+
+export interface PrescriptionDto{
+  id: string;
+  medicationName: string;
+  instructions: string;
+}
+
+export interface AttatchmentDto{
+  id: string;
+  fileName: string;
+  fileUrl: string;
 }
 
 export interface MedicalRecordDetail{
@@ -50,5 +60,6 @@ export interface MedicalRecordDetail{
   chiefComplaint: string;
   diagnosis: string;
   treatmentPlan: string;
-  prescription: string;
+  prescription: PrescriptionDto[];
+  attatchments: AttatchmentDto[];
 }

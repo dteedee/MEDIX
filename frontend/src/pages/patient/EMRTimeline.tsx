@@ -1,43 +1,20 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import styles from '../../styles/patient/emrTimeline.module.css'
 import { LoadingSpinner } from '../../components/ui';
 import PatientService from '../../services/patientService';
 import { BasicEMRInfo } from '../../types/patient.types';
 import { MedicalRecordDetail, MedicalRecordDto, MedicalRecordQuery } from '../../types/medicalRecord.types';
 import { medicalRecordService } from '../../services/medicalRecordService';
+import html2pdf from 'html2pdf.js';
 
 export default function EMRTimeline() {
     const [pageLoading, setPageLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
     const [basicInfoError, setBasicInfoError] = useState<string | null>(null);
     const [listError, setListError] = useState<string | null>(null);
-    const [hasMore, setHasMore] = useState(true);
-    const [count, setCount] = useState(0);
-    const take = 3;
 
     const [showDetails, setshowDetails] = useState(false);
     const [recordDetails, setRecordDetails] = useState<MedicalRecordDetail | null>(null);
     const [detailsError, setDetailsError] = useState<string | null>(null);
-
-    const observer = useRef<IntersectionObserver>();
-    const lastItemRef = useCallback((node: HTMLDivElement) => {
-        if (loadingMore) return;
-        if (observer.current) observer.current.disconnect();
-
-        observer.current = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting && hasMore) {
-                const query: MedicalRecordQuery = {
-                    skip: count,
-                    take: take,
-                    dateFrom: null,
-                    dateTo: null
-                };
-                loadMore(query);
-            }
-        });
-
-        if (node) observer.current.observe(node);
-    }, [loadingMore, hasMore, count]);
 
     const [basicInfo, setBasicInfo] = useState<BasicEMRInfo | null>(null);
     const [list, setList] = useState<MedicalRecordDto[]>([]);
@@ -45,19 +22,17 @@ export default function EMRTimeline() {
     const [dateTo, setDateTo] = useState<string>('');
     const [dateRangeError, setDateRangeError] = useState<string | null>(null);
 
+    const contentRef = useRef<HTMLDivElement>(null);
+
     const handleClearDateRange = () => {
         setDateFrom('');
         setDateTo('');
         setDateRangeError(null);
-        setCount(0);
-        setHasMore(true);
         const query: MedicalRecordQuery = {
-            skip: 0,
-            take: take,
             dateFrom: null,
             dateTo: null
         };
-        fetchMedicalRecordList(false, query);
+        fetchMedicalRecordList(query);
     };
 
     const handleSubmitDateRange = () => {
@@ -67,15 +42,11 @@ export default function EMRTimeline() {
             setDateRangeError('Ngày bắt đầu không thể sau ngày kết thúc');
             return;
         }
-        setCount(0);  // Reset pagination
-        setHasMore(true);
         const query: MedicalRecordQuery = {
-            skip: 0,
-            take: take,
             dateFrom: dateFrom || null,
             dateTo: dateTo || null
         };
-        fetchMedicalRecordList(false, query);
+        fetchMedicalRecordList(query);
     };
 
     const getGenderLabel = (gender?: string) => {
@@ -104,23 +75,12 @@ export default function EMRTimeline() {
         }
     }
 
-    const fetchMedicalRecordList = async (isLoadingMore: boolean = false, query: MedicalRecordQuery) => {
+    const fetchMedicalRecordList = async (query: MedicalRecordQuery) => {
         try {
             const data = await medicalRecordService.getMedicalRecordsOfPatient(query);
-
-            // For initial load, just set the data
-            if (!isLoadingMore) {
-                setList(data);
-                setCount(query.take);
-            }
-            // For loading more (infinite scroll), append the data
-            else {
-                setList(prev => [...prev, ...data]);
-                setCount(count + query.take)
-            }
+            setList(data);
 
             // Update pagination state
-            setHasMore(data.length > 0);
         } catch (error: any) {
             if (error.response?.status === 404) {
                 setListError('Đã có lỗi xảy ra. Vui lòng thử lại sau.');
@@ -130,20 +90,8 @@ export default function EMRTimeline() {
         }
     }
 
-    const loadMore = async (query: MedicalRecordQuery) => {
-        if (!hasMore || loadingMore) return;
-        setLoadingMore(true);
-        try {
-            await fetchMedicalRecordList(true, query);
-        } finally {
-            setLoadingMore(false);
-        }
-    }
-
     useEffect(() => {
         const query: MedicalRecordQuery = {
-            skip: 0,
-            take: take,
             dateFrom: null,
             dateTo: null
         }
@@ -154,7 +102,7 @@ export default function EMRTimeline() {
         (async () => {
             if (isMounted) {
                 await fetchBasicInfo();
-                await fetchMedicalRecordList(false, query);
+                await fetchMedicalRecordList(query);
                 if (isMounted) {
                     setPageLoading(false);
                 }
@@ -194,6 +142,26 @@ export default function EMRTimeline() {
         setRecordDetails(null);
     }
 
+    const handleDownload = () => {
+        if (!contentRef.current) return;
+
+        const excludedElements = contentRef.current.querySelectorAll('.pdf-exclude');
+        excludedElements.forEach(el => (el as HTMLElement).style.display = 'none');
+
+        const opt = {
+            margin: 0.5,
+            filename: `${basicInfo?.fullName}_EMR.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(contentRef.current).save().then(() => {
+            excludedElements.forEach(el => (el as HTMLElement).style.display = '');
+        });
+    };
+
+
     if (pageLoading) {
         return (
             <div className={styles.container}>
@@ -206,66 +174,76 @@ export default function EMRTimeline() {
 
     return (
         <>
-            <div className={styles["container"]}>
-                <h1 className="page-title">Hồ sơ Y tế</h1>
+            <div ref={contentRef} className={styles["container"]}>
+                <h1 className="page-title mb-3">Hồ sơ Y tế</h1>
                 {basicInfoError ? (
                     <div className={styles.errorMessage}>
                         <i className="bi bi-exclamation-triangle"></i>
                         {basicInfoError}
                     </div>
                 ) : (
-                    <div className={styles["profile-section"]}>
-                        <img className={styles["profile-image"]} src={basicInfo?.avatarUrl} />
-                        <div className={styles["profile-info"]}>
-                            <div className={styles["info-column"]}>
-                                <h3>Thông tin cá nhân</h3>
-                                <div className={styles["info-item"]}>
-                                    <span className={styles["info-label"]}>Họ và tên:</span> <span className={styles["info-value"]}>{basicInfo?.fullName}</span>
+                    <>
+                        <div className={styles["profile-section"]}>
+                            <img className={styles["profile-image"]} src={basicInfo?.avatarUrl} />
+                            <div className={styles["profile-info"]}>
+                                <div className={styles["info-column"]}>
+                                    <h3>Thông tin cá nhân</h3>
+                                    <div className={styles["info-item"]}>
+                                        <span className={styles["info-label"]}>Họ và tên:</span> <span className={styles["info-value"]}>{basicInfo?.fullName}</span>
+                                    </div>
+                                    <div className={styles["info-item"]}>
+                                        <span className={styles["info-label"]}>Số CCCD/CMND:</span> <span className={styles["info-value"]}>{basicInfo?.identificationNumber}</span>
+                                    </div>
+                                    <div className={styles["info-item"]}>
+                                        <span className={styles["info-label"]}>Địa chỉ liên lạc:</span> <span className={styles["info-value"]}>{basicInfo?.address}</span>
+                                    </div>
+                                    <div className={styles["info-item"]}>
+                                        <span className={styles["info-label"]}>Email:</span> <span className={styles["info-value"]}>{basicInfo?.email}</span>
+                                    </div>
+                                    <div className={styles["info-item"]}>
+                                        <span className={styles["info-label"]}>Số điện thoại:</span> <span className={styles["info-value"]}>{basicInfo?.phoneNumber}</span>
+                                    </div>
+                                    <h3 style={{ marginTop: '30px' }}>Người liên hệ khẩn cấp</h3>
+                                    <div className={styles["info-item"]}>
+                                        <span className={styles["info-label"]}>Họ tên người liên hệ:</span> <span className={styles["info-value"]}>{basicInfo?.emergencyContactName}</span>
+                                    </div>
+                                    <div className={styles["info-item"]}>
+                                        <span className={styles["info-label"]}>Số điện thoại liên hệ:</span> <span className={styles["info-value"]}>{basicInfo?.emergencyContactPhone}</span>
+                                    </div>
                                 </div>
-                                <div className={styles["info-item"]}>
-                                    <span className={styles["info-label"]}>Số CCCD/CMND:</span> <span className={styles["info-value"]}>{basicInfo?.identificationNumber}</span>
-                                </div>
-                                <div className={styles["info-item"]}>
-                                    <span className={styles["info-label"]}>Địa chỉ liên lạc:</span> <span className={styles["info-value"]}>{basicInfo?.address}</span>
-                                </div>
-                                <div className={styles["info-item"]}>
-                                    <span className={styles["info-label"]}>Email:</span> <span className={styles["info-value"]}>{basicInfo?.email}</span>
-                                </div>
-                                <div className={styles["info-item"]}>
-                                    <span className={styles["info-label"]}>Số điện thoại:</span> <span className={styles["info-value"]}>{basicInfo?.phoneNumber}</span>
-                                </div>
-                                <h3 style={{ marginTop: '30px' }}>Người liên hệ khẩn cấp</h3>
-                                <div className={styles["info-item"]}>
-                                    <span className={styles["info-label"]}>Họ tên người liên hệ:</span> <span className={styles["info-value"]}>{basicInfo?.emergencyContactName}</span>
-                                </div>
-                                <div className={styles["info-item"]}>
-                                    <span className={styles["info-label"]}>Số điện thoại liên hệ:</span> <span className={styles["info-value"]}>{basicInfo?.emergencyContactPhone}</span>
-                                </div>
-                            </div>
-                            <div className={styles["info-column"]}>
-                                <h3>Thông tin Y tế &amp; EMR</h3>
-                                <div className={styles["info-item"]}>
-                                    <span className={styles["info-label"]}>Ngày sinh:</span> <span className={styles["info-value"]}>{basicInfo?.dob}</span>
-                                </div>
-                                <div className={styles["info-item"]}>
-                                    <span className={styles["info-label"]}>Giới tính:</span> <span className={styles["info-value"]}>{getGenderLabel(basicInfo?.genderCode)}</span>
-                                </div>
-                                <div className={styles["info-item"]}>
-                                    <span className={styles["info-label"]}>Nhóm máu:</span> <span className={styles["info-value"]}>Nhóm máu {basicInfo?.bloodTypeCode}</span>
-                                </div>
-                                <h3 style={{ marginTop: '30px' }}>Phần 4: Tiền sử bệnh lý</h3>
-                                <div className={styles["info-item"]}>
-                                    <span className={styles["info-label"]}>Dị ứng:</span> <span className={styles["info-value"]}>{basicInfo?.allergies}</span>
+                                <div className={styles["info-column"]}>
+                                    <h3>Thông tin Y tế &amp; EMR</h3>
+                                    <div className={styles["info-item"]}>
+                                        <span className={styles["info-label"]}>Ngày sinh:</span> <span className={styles["info-value"]}>{basicInfo?.dob}</span>
+                                    </div>
+                                    <div className={styles["info-item"]}>
+                                        <span className={styles["info-label"]}>Giới tính:</span> <span className={styles["info-value"]}>{getGenderLabel(basicInfo?.genderCode)}</span>
+                                    </div>
+                                    <div className={styles["info-item"]}>
+                                        <span className={styles["info-label"]}>Nhóm máu:</span> <span className={styles["info-value"]}>Nhóm máu {basicInfo?.bloodTypeCode}</span>
+                                    </div>
+                                    <h3 style={{ marginTop: '30px' }}>Phần 4: Tiền sử bệnh lý</h3>
+                                    <div className={styles["info-item"]}>
+                                        <span className={styles["info-label"]}>Dị ứng:</span> <span className={styles["info-value"]}>{basicInfo?.allergies}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                        {!basicInfoError && !listError && (
+                            <div className={`${styles["breadcrumb"]} pdf-exclude`}>
+                                <button className={styles["pdf-btn"]} onClick={handleDownload}>
+                                    📄 Xuất PDF
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )
+                }
 
                 {/* Medical History */}
                 <div className={styles["history-section"]}>
                     <h2 className={styles["section-title"]}>Lịch sử khám</h2>
-                    <div className={styles["filter-section"]}>
+                    <div className={`${styles["filter-section"]} pdf-exclude`}>
                         <div className={styles["date-filter"]}>
                             <div className={styles["date-input-group"]}>
                                 <label htmlFor="dateFrom">Từ ngày:</label>
@@ -320,9 +298,8 @@ export default function EMRTimeline() {
                         </div>
                     ) : (
                         <div className={styles["timeline"]}>
-                            {list.map((item, index) => (
+                            {list.map((item) => (
                                 <div
-                                    ref={index === list.length - 1 ? lastItemRef : undefined}
                                     key={item.id}
                                     className={styles["timeline-item"]}>
                                     <div className={styles["timeline-dot"]} />
@@ -344,26 +321,23 @@ export default function EMRTimeline() {
                                             <span className={styles["record-label"]}>Kế hoạch điều trị:</span>
                                             <span className={styles["record-value"]}>{item.treatmentPlan}</span>
                                         </div>
-                                        <div className={styles["record-row"]}>
+                                        <div className={`${styles["record-row"]} pdf-exclude`}>
                                             <span className={styles["record-label"]}>Kết quả cận lâm sàng:</span>
                                             <div className={styles["attachment-links"]}>
-                                                <a href="#" className={styles["attachment-link"]}>📄 Lorem ipsum.pdf</a>
-                                                <a href="#" className={styles["attachment-link"]}>📷 Lorem ipsum.img</a>
+                                                {item.attatchments.map((attatchment) => (
+                                                    <a key={attatchment.id} href={attatchment.fileUrl} className={styles["attachment-link"]}
+                                                        rel="noopener noreferrer" target="_blank">📄 {attatchment.fileName}</a>
+                                                ))}
                                             </div>
                                         </div>
                                     </div>
-                                    <button className={styles["view-emr-link"]} onClick={() => handleShowDetails(item.id)}>Xem EMR chi tiết</button>
+                                    <button className={`${styles["view-emr-link"]} pdf-exclude`} onClick={() => handleShowDetails(item.id)}>Xem EMR chi tiết</button>
                                 </div>
                             ))}
-                            {loadingMore && (
-                                <div className={styles.loadingContainer}>
-                                    <LoadingSpinner />
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>
-            </div>
+            </div >
 
             {showDetails && (
                 <>
@@ -402,10 +376,22 @@ export default function EMRTimeline() {
                                             <span className={styles["record-value"]}>{recordDetails?.treatmentPlan}</span>
                                         </div>
                                         <div className={styles["record-row"]}>
+                                            <span className={styles["record-label"]}>Đơn thuốc:</span>
+                                            <span className={styles["record-value"]}>
+                                                {recordDetails?.prescription.map((medication) => (
+                                                    <div key={medication.id}>
+                                                        {medication.medicationName} - {medication.instructions}
+                                                    </div>
+                                                ))}
+                                            </span>
+                                        </div>
+                                        <div className={styles["record-row"]}>
                                             <span className={styles["record-label"]}>Kết quả cận lâm sàng:</span>
                                             <div className={styles["attachment-links"]}>
-                                                <a href="#" className={styles["attachment-link"]}>📄 Lorem ipsum.pdf</a>
-                                                <a href="#" className={styles["attachment-link"]}>📷 Lorem ipsum.img</a>
+                                                {recordDetails?.attatchments.map((attatchment) => (
+                                                    <a key={attatchment.id} href={attatchment.fileUrl} className={styles["attachment-link"]}
+                                                        rel="noopener noreferrer" target="_blank">📄 {attatchment.fileName}</a>
+                                                ))}
                                             </div>
                                         </div>
                                     </div>
@@ -414,7 +400,8 @@ export default function EMRTimeline() {
                         </div>
                     </div>
                 </>
-            )}
+            )
+            }
         </>
     )
 }

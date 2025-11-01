@@ -19,14 +19,14 @@ namespace Medix.API.Business.Services.Classification
         private readonly IEmailService _emailService;
         private readonly IUserRepository _userRepository;
         private readonly IDoctorRepository _doctorRepository;
+        private readonly IWalletRepository _walletRepository;
 
         public DoctorRegistrationFormService(
-            IDoctorRegistrationFormRepository doctorRegistrationFormRepository,
-            CloudinaryService cloudinaryService,
-            MedixContext context,
-            IEmailService emailService,
-            IUserRepository userRepository,
-            IDoctorRepository doctorRepository)
+            IDoctorRegistrationFormRepository doctorRegistrationFormRepository, 
+            CloudinaryService cloudinaryService, MedixContext context, 
+            IEmailService emailService, IUserRepository userRepository, 
+            IDoctorRepository doctorRepository, 
+            IWalletRepository walletRepository)
         {
             _doctorRegistrationFormRepository = doctorRegistrationFormRepository;
             _cloudinaryService = cloudinaryService;
@@ -34,6 +34,7 @@ namespace Medix.API.Business.Services.Classification
             _emailService = emailService;
             _userRepository = userRepository;
             _doctorRepository = doctorRepository;
+            _walletRepository = walletRepository;
         }
 
         public async Task<bool> IsUserNameExistAsync(string userName) =>
@@ -158,6 +159,12 @@ namespace Medix.API.Business.Services.Classification
                         IsAcceptingAppointments = false
                     };
                     await _doctorRepository.CreateDoctorAsync(doctor);
+
+                    var wallet = new Wallet
+                    {
+                        UserId = userId,
+                    };
+                    await _walletRepository.CreateWalletAsync(wallet);
 
                     if (!await _doctorRegistrationFormRepository.DeleteAsync(form.Id))
                     {

@@ -123,6 +123,8 @@ namespace Medix.API.Business.Services.UserManagement
             return new List<PatientDTO>();
         }
 
+        public async Task<Patient?> GetPatientByUserIdAsync(Guid userId) => await _patientRepository.GetPatientByUserIdAsync(userId);
+
         private string GenerateMedicalRecordNumber()
         {
             var random = new Random();

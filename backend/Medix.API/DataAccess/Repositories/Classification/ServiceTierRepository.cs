@@ -22,5 +22,11 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .OrderBy(t => t.Name) // Luôn OrderBy khi lấy danh sách
                 .ToListAsync();
         }
+
+        public async Task<DoctorServiceTier?> GetServiceTierByNameAsync(string name)
+        {
+            return await _context.DoctorServiceTiers
+                .FirstOrDefaultAsync(t => t.Name == name);
+        }
     }
 }

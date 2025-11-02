@@ -8,6 +8,9 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<ReviewDoctorDto> CreateAsync(CreateReviewDto dto);
         Task<ReviewDoctorDto> UpdateAsync(UpdateReviewDto dto);
         Task DeleteAsync(Guid appointmentId);
+        Task<List<ReviewDoctorDto>> GetByDoctorIdAsync(Guid doctorId);
+        Task<List<ReviewDoctorDto>> GetByDoctorUserIdAsync(Guid userId);
+
 
     }
 }

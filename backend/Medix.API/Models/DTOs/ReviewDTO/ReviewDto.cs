@@ -1,4 +1,4 @@
-﻿namespace Medix.API.Models.DTOs.ReviewDTO
+﻿﻿namespace Medix.API.Models.DTOs.ReviewDTO
 {
     public class ReviewDoctorDto
     {
@@ -14,5 +14,7 @@
         public string? AdminResponse { get; set; }
         public string Status { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
+        public DateTime AppointmentStartTime { get; set; }
+        public DateTime AppointmentEndTime { get; set; }
     }
 }

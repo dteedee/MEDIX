@@ -1,4 +1,4 @@
-import styles from '../../styles/header.module.css'
+import styles from '../../styles/public/header.module.css'
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';

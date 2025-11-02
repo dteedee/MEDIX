@@ -82,16 +82,7 @@ export default function MedicineTable({ medicines, onDelete, onUpdate }: Medicin
                   placeholder="Sau ăn"
                 />
               </td>
-              <td>
-                <button
-                  type="button"
-                  className="btn-details"
-                  onClick={() => setSelectedPrescription(medicine)}
-                  title="Xem chi tiết thuốc"
-                >
-                  Xem
-                </button>
-              </td>
+              
               <td>
                 <button className="btn-delete" onClick={() => onDelete(medicine.id)} title="Xóa">
                   ✕

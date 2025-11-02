@@ -93,6 +93,9 @@ const DoctorBookingList: React.FC = () => {
   // Refs to prevent double loading
   const mountedRef = useRef(true);
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isLoadingRef = useRef(false);
+  const loadRequestIdRef = useRef<string | null>(null);
+  const initialLoadDoneRef = useRef(false);
 
   // Load metadata and education types only once on mount
   useEffect(() => {
@@ -120,6 +123,13 @@ const DoctorBookingList: React.FC = () => {
     loadInitialData();
     return () => {
       mountedRef.current = false;
+      isLoadingRef.current = false;
+      loadRequestIdRef.current = null;
+      initialLoadDoneRef.current = false;
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
     };
   }, []);
 
@@ -153,16 +163,22 @@ const DoctorBookingList: React.FC = () => {
     return data.find(t => t.name === tierName);
   }, []);
 
-  // Load all tiers data - optimized
+  // Initial load only once on mount
   useEffect(() => {
-    // Clear any pending timeout
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
+    // Only load if hasn't loaded yet
+    if (initialLoadDoneRef.current || isLoadingRef.current) {
+      return;
     }
+    
+    initialLoadDoneRef.current = true;
+    const currentRequestId = `${Date.now()}-${Math.random()}`;
+    loadRequestIdRef.current = currentRequestId;
+    isLoadingRef.current = true;
 
-    // Debounce the actual loading to prevent rapid-fire requests
-    loadingTimeoutRef.current = setTimeout(async () => {
-      if (!mountedRef.current) return;
+    const loadData = async () => {
+      if (!mountedRef.current || loadRequestIdRef.current !== currentRequestId) {
+        return;
+      }
       
       try {
         setLoading(true);
@@ -175,7 +191,7 @@ const DoctorBookingList: React.FC = () => {
           loadTierData('VIP', vipPagination, selectedEducationCode, selectedSpecializationCode, priceRange)
         ]);
 
-        if (mountedRef.current) {
+        if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
           const allTiersData = [basicData, professionalData, premiumData, vipData].filter(
             (tier): tier is ServiceTierWithPaginatedDoctorsDto => tier !== undefined
           );
@@ -188,7 +204,6 @@ const DoctorBookingList: React.FC = () => {
           );
           
           if (doctorsNeedingAvatar.length > 0) {
-            // Fetch avatars in parallel (limit to avoid too many requests)
             Promise.all(
               doctorsNeedingAvatar.slice(0, 20).map(async (doctor) => {
                 try {
@@ -202,7 +217,7 @@ const DoctorBookingList: React.FC = () => {
                 return null;
               })
             ).then(results => {
-              if (mountedRef.current) {
+              if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
                 const newAvatars: Record<string, string> = {};
                 results.forEach(result => {
                   if (result && result.avatarUrl) {
@@ -215,19 +230,127 @@ const DoctorBookingList: React.FC = () => {
           }
           
           setLoading(false);
+          isLoadingRef.current = false;
+          loadRequestIdRef.current = null;
         }
       } catch (err: any) {
-        if (mountedRef.current) {
+        if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
           console.error('Error loading tiers data:', err);
           setError(err.message || 'Lỗi khi tải dữ liệu bác sĩ');
           setLoading(false);
+          isLoadingRef.current = false;
+          loadRequestIdRef.current = null;
         }
       }
-    }, 150); // Small delay to batch rapid changes
+    };
+
+    // Small delay to batch and let StrictMode settle
+    const timeoutId = setTimeout(loadData, 50);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      if (loadRequestIdRef.current === currentRequestId) {
+        isLoadingRef.current = false;
+        loadRequestIdRef.current = null;
+      }
+    };
+  }, []); // Only run once on mount
+
+  // Reload when filters/pagination change (after initial load)
+  useEffect(() => {
+    // Skip if initial load hasn't completed yet
+    if (!initialLoadDoneRef.current || isLoadingRef.current) {
+      return;
+    }
+    
+    // Clear any pending timeout
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+
+    const currentRequestId = `${Date.now()}-${Math.random()}`;
+    loadRequestIdRef.current = currentRequestId;
+    isLoadingRef.current = true;
+
+    // Debounce reload to prevent rapid-fire requests
+    loadingTimeoutRef.current = setTimeout(async () => {
+      if (loadRequestIdRef.current !== currentRequestId || !mountedRef.current) {
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const [basicData, professionalData, premiumData, vipData] = await Promise.all([
+          loadTierData('Basic', basicPagination, selectedEducationCode, selectedSpecializationCode, priceRange),
+          loadTierData('Professional', professionalPagination, selectedEducationCode, selectedSpecializationCode, priceRange),
+          loadTierData('Premium', premiumPagination, selectedEducationCode, selectedSpecializationCode, priceRange),
+          loadTierData('VIP', vipPagination, selectedEducationCode, selectedSpecializationCode, priceRange)
+        ]);
+
+        if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
+          const allTiersData = [basicData, professionalData, premiumData, vipData].filter(
+            (tier): tier is ServiceTierWithPaginatedDoctorsDto => tier !== undefined
+          );
+          setTiersData(allTiersData);
+          
+          // Load avatars for doctors that don't have avatarUrl in the response
+          const allDoctors = allTiersData.flatMap(tier => tier.doctors?.items || []);
+          const doctorsNeedingAvatar = allDoctors.filter(doctor => 
+            !(doctor as any).avatarUrl && doctor.doctorId
+          );
+          
+          if (doctorsNeedingAvatar.length > 0) {
+            Promise.all(
+              doctorsNeedingAvatar.slice(0, 20).map(async (doctor) => {
+                try {
+                  const profile = await doctorService.getDoctorProfile(doctor.doctorId);
+                  if (profile.avatarUrl) {
+                    return { doctorId: doctor.doctorId, avatarUrl: profile.avatarUrl };
+                  }
+                } catch (error) {
+                  console.log(`Could not fetch avatar for doctor ${doctor.doctorId}:`, error);
+                }
+                return null;
+              })
+            ).then(results => {
+              if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
+                const newAvatars: Record<string, string> = {};
+                results.forEach(result => {
+                  if (result && result.avatarUrl) {
+                    newAvatars[result.doctorId] = result.avatarUrl;
+                  }
+                });
+                setDoctorAvatars(prev => ({ ...prev, ...newAvatars }));
+              }
+            });
+          }
+          
+          setLoading(false);
+          isLoadingRef.current = false;
+          loadRequestIdRef.current = null;
+        }
+      } catch (err: any) {
+        if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
+          console.error('Error loading tiers data:', err);
+          setError(err.message || 'Lỗi khi tải dữ liệu bác sĩ');
+          setLoading(false);
+          isLoadingRef.current = false;
+          loadRequestIdRef.current = null;
+        }
+      }
+    }, 200); // Debounce for filter changes
 
     return () => {
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+      if (loadRequestIdRef.current === currentRequestId) {
+        isLoadingRef.current = false;
+        loadRequestIdRef.current = null;
       }
     };
   }, [basicPagination, professionalPagination, premiumPagination, vipPagination, selectedEducationCode, selectedSpecializationCode, priceRange, loadTierData]);
@@ -260,7 +383,7 @@ const DoctorBookingList: React.FC = () => {
     };
   };
 
-  const currentDoctors = useMemo(() => getDoctorsByTier(activeTier), [tiersData, activeTier, debouncedSearch]);
+  const currentDoctors = useMemo(() => getDoctorsByTier(activeTier), [tiersData, activeTier, debouncedSearch, doctorAvatars]);
   const currentPagination = useMemo(() => {
     switch (activeTier) {
       case 'Basic': return basicPagination;
@@ -365,7 +488,7 @@ const DoctorBookingList: React.FC = () => {
         className={`${styles.doctorCard} ${getTierClass(doctor.tier)}`}
         onClick={() => handleDoctorCardClick(doctor.id)}
       >
-        {/* Avatar and Tier Badge */}
+        {/* Avatar */}
         <div className={styles.cardTopSection}>
           <div className={styles.doctorAvatar}>
             {doctor.imageUrl ? (
@@ -375,10 +498,6 @@ const DoctorBookingList: React.FC = () => {
                 <i className="bi bi-person-fill"></i>
               </div>
             )}
-          </div>
-          <div className={styles.tierBadge}>
-            <i className="bi bi-award-fill"></i>
-            {doctor.tier}
           </div>
         </div>
 
@@ -443,9 +562,9 @@ const DoctorBookingList: React.FC = () => {
 
         {/* Price */}
         <div className={styles.priceSection}>
-          <span className={styles.priceLabel}>Từ</span>
+          <span className={styles.priceLabel}>Giá</span>
           <span className={styles.priceValue}>{formatPrice(doctor.price)}</span>
-          <span className={styles.priceUnit}>/phút</span>
+          <span className={styles.priceUnit}>/lần hẹn</span>
         </div>
 
         {/* Booking Button */}
@@ -679,7 +798,7 @@ const DoctorBookingList: React.FC = () => {
             <div className={styles.filterGroup}>
               <label className={styles.filterLabel}>
                 <i className="bi bi-currency-dollar"></i>
-                Mức giá (VNĐ/phút)
+                Mức giá (VNĐ/lần hẹn)
               </label>
               <div className={styles.priceRangeDisplay}>
                 <span>{new Intl.NumberFormat('vi-VN').format(tempPriceRange[0])}</span>

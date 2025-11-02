@@ -190,11 +190,13 @@ const Login: React.FC = () => {
         {/* Left side */}
         <div className={styles["brand-section"]}>
           <div className={styles["brand-content"]}>
-            <div className={styles["brand-logo"]}>
+            <Link to="/" className={styles["brand-logo"]}>
               <img src="/images/medix-logo.png" alt="MEDIX" />
-            </div>
+            </Link>
 
-            <h1 className={styles["brand-heading"]}>MEDIX</h1>
+            <Link to="/" className={styles["brand-heading-link"]}>
+              <h1 className={styles["brand-heading"]}>MEDIX</h1>
+            </Link>
             <p className={styles["brand-tagline"]}>Hệ thống Y tế Thông minh Tích hợp AI</p>
 
             <div className={styles["brand-stats"]}>

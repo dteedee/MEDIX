@@ -136,7 +136,31 @@
       overflow: hidden;      
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
       animation: pulse 2s ease-in-out infinite;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.3s ease;
     }
+  
+  .brand-logo:hover {
+    transform: scale(1.05);
+  }
+
+  .brand-heading-link {
+    display: inline-block;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    width: 100%;
+    text-align: center;
+  }
+
+  .brand-heading-link:hover {
+    transform: scale(1.05);
+  }
+
+  .brand-heading-link:hover .brand-heading {
+    opacity: 0.9;
+  }
   @keyframes pulse {
     0%, 100% {
       transform: scale(1);

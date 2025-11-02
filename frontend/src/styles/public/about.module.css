@@ -1,34 +1,25 @@
 /* About Us Styles */
 .about-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
   font-family: 'Be Vietnam Pro', sans-serif;
   background-color: #f8f9fa;
   min-height: 100vh;
 }
 
 .about-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.aboutContentInner {
   background: white;
   border-radius: 12px;
   padding: 40px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   margin-bottom: 40px;
-}
-
-.breadcrumb {
-  margin-bottom: 30px;
-  font-size: 14px;
-  color: #6c757d;
-}
-
-.breadcrumb a {
-  color: #1976d2;
-  text-decoration: none;
-}
-
-.breadcrumb a:hover {
-  text-decoration: underline;
 }
 
 .about-header {
@@ -310,8 +301,8 @@
   .about-container {
     padding: 10px;
   }
-  
-  .about-content {
+
+  .aboutContentInner {
     padding: 20px;
   }
   

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from '../../styles/manager/DoctorDetails.module.css';
 import DoctorDegreeService from '../../services/doctorDegreeService';
+import DoctorService from '../../services/doctorService';
 import { DoctorDegree } from '../../types/education.types';
 
 interface Props {
@@ -14,6 +15,8 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
   const [showImageModal, setShowImageModal] = useState(false);
   const [modalImageUrl, setModalImageUrl] = useState('');
   const [degrees, setDegrees] = useState<DoctorDegree[]>([]);
+  const [statistics, setStatistics] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   useEffect(() => {
     const loadDegrees = async () => {
@@ -26,6 +29,67 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
     };
     loadDegrees();
   }, []);
+
+  useEffect(() => {
+    const loadStatistics = async () => {
+      if (!doctor?.id || isPending) return;
+      
+      setLoadingStats(true);
+      try {
+        // Thử lấy thống kê từ API theo doctor ID
+        try {
+          const stats = await DoctorService.getStatistics(doctor.id);
+          setStatistics({
+            totalAppointments: stats.totalAppointments || stats.totalBookings || 0,
+            successfulAppointments: stats.successfulAppointments || stats.completedAppointments || 0,
+            totalCases: stats.totalCases || stats.totalAppointments || 0,
+            successfulCases: stats.successfulCases || stats.completedCases || stats.completedAppointments || 0,
+            salary: stats.salary || stats.monthlySalary || 0,
+            revenue: stats.revenue || stats.totalRevenue || stats.monthlyEarnings || 0,
+          });
+        } catch (apiError: any) {
+          // Nếu API không tồn tại hoặc lỗi, thử lấy từ doctor object
+          console.log("Statistics API không khả dụng, sử dụng dữ liệu từ doctor object");
+          
+          // Kiểm tra xem doctor object có chứa thống kê không
+          if (doctor.totalAppointments !== undefined || doctor.appointmentCount !== undefined) {
+            setStatistics({
+              totalAppointments: doctor.totalAppointments || doctor.appointmentCount || 0,
+              successfulAppointments: doctor.successfulAppointments || doctor.completedAppointments || 0,
+              totalCases: doctor.totalCases || doctor.totalAppointments || 0,
+              successfulCases: doctor.successfulCases || doctor.completedCases || doctor.completedAppointments || 0,
+              salary: doctor.salary || doctor.monthlySalary || 0,
+              revenue: doctor.revenue || doctor.totalRevenue || doctor.monthlyEarnings || 0,
+            });
+          } else {
+            // Nếu không có dữ liệu, hiển thị 0
+            setStatistics({
+              totalAppointments: 0,
+              successfulAppointments: 0,
+              totalCases: 0,
+              successfulCases: 0,
+              salary: 0,
+              revenue: 0,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải thống kê:", error);
+        setStatistics({
+          totalAppointments: 0,
+          successfulAppointments: 0,
+          totalCases: 0,
+          successfulCases: 0,
+          salary: 0,
+          revenue: 0,
+        });
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    loadStatistics();
+  }, [doctor?.id, isPending]);
 
   if (!doctor) return null;
 
@@ -298,6 +362,81 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
                     )}
                   </div>
                 </div>
+
+                {/* Business Statistics */}
+                {!isPending && (
+                  <div className={styles.section}>
+                    <div className={styles.sectionHeader}>
+                      <i className="bi bi-graph-up-arrow"></i>
+                      <h3>Thống kê Kinh doanh</h3>
+                    </div>
+                    <div className={styles.sectionContent}>
+                      {loadingStats ? (
+                        <div style={{ textAlign: 'center', padding: '20px' }}>
+                          <div className={styles.loadingSpinner}></div>
+                          <p>Đang tải thống kê...</p>
+                        </div>
+                      ) : (
+                        <div className={styles.infoGrid}>
+                          <div className={styles.infoItem}>
+                            <label>
+                              <i className="bi bi-calendar-check"></i>
+                              Tổng số người đặt khám
+                            </label>
+                            <span className={styles.statValue}>
+                              {statistics?.totalAppointments || doctor.totalAppointments || doctor.appointmentCount || 0} lượt
+                            </span>
+                          </div>
+                          <div className={styles.infoItem}>
+                            <label>
+                              <i className="bi bi-check-circle"></i>
+                              Đặt khám thành công
+                            </label>
+                            <span className={styles.statValue}>
+                              {statistics?.successfulAppointments || doctor.successfulAppointments || doctor.completedAppointments || 0} lượt
+                            </span>
+                          </div>
+                          <div className={styles.infoItem}>
+                            <label>
+                              <i className="bi bi-file-medical"></i>
+                              Tổng số ca khám
+                            </label>
+                            <span className={styles.statValue}>
+                              {statistics?.totalCases || doctor.totalCases || doctor.totalAppointments || 0} ca
+                            </span>
+                          </div>
+                          <div className={styles.infoItem}>
+                            <label>
+                              <i className="bi bi-check2-circle"></i>
+                              Ca khám thành công
+                            </label>
+                            <span className={styles.statValue}>
+                              {statistics?.successfulCases || doctor.successfulCases || doctor.completedAppointments || 0} ca
+                            </span>
+                          </div>
+                          <div className={styles.infoItem}>
+                            <label>
+                              <i className="bi bi-wallet2"></i>
+                              Lương / Thù lao
+                            </label>
+                            <span className={styles.priceText}>
+                              {Number(statistics?.salary || doctor.salary || doctor.monthlySalary || 0).toLocaleString('vi-VN')} VNĐ
+                            </span>
+                          </div>
+                          <div className={styles.infoItem}>
+                            <label>
+                              <i className="bi bi-cash-coin"></i>
+                              Tổng doanh thu
+                            </label>
+                            <span className={styles.revenueText}>
+                              {Number(statistics?.revenue || doctor.revenue || doctor.totalRevenue || doctor.monthlyEarnings || 0).toLocaleString('vi-VN')} VNĐ
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Performance & Reviews */}
                 {!isPending && (

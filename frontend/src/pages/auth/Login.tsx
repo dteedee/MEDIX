@@ -190,8 +190,19 @@ const Login: React.FC = () => {
         {/* Left side */}
         <div className={styles["brand-section"]}>
           <div className={styles["brand-content"]}>
-            <Link to="/" className={styles["brand-logo"]}>
-              <img src="/images/medix-logo.png" alt="MEDIX" />
+            <Link to="/" className={styles["brand-logo"]} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img 
+                src="/images/medix-logo.png" 
+                alt="MEDIX" 
+                style={{ 
+                  display: 'block',
+                  width: '85%',
+                  height: '85%',
+                  objectFit: 'contain',
+                  visibility: 'visible',
+                  opacity: 1
+                }}
+              />
             </Link>
 
             <Link to="/" className={styles["brand-heading-link"]}>
@@ -201,17 +212,17 @@ const Login: React.FC = () => {
 
             <div className={styles["brand-stats"]}>
               <div className={styles["stat-item"]}>
-                <div className={styles["stat-number"]}>500+</div>
+                <div className={styles["stat-number"]} data-count="500">500+</div>
                 <div className={styles["stat-label"]}>Bác sĩ</div>
               </div>
               <div className={styles["stat-divider"]}></div>
               <div className={styles["stat-item"]}>
-                <div className={styles["stat-number"]}>95%</div>
+                <div className={styles["stat-number"]} data-count="95">95%</div>
                 <div className={styles["stat-label"]}>Độ chính xác AI</div>
               </div>
               <div className={styles["stat-divider"]}></div>
               <div className={styles["stat-item"]}>
-                <div className={styles["stat-number"]}>10k+</div>
+                <div className={styles["stat-number"]} data-count="10">10k+</div>
                 <div className={styles["stat-label"]}>Người dùng</div>
               </div>
             </div>

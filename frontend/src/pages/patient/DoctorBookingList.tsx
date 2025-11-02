@@ -647,13 +647,16 @@ const DoctorBookingList: React.FC = () => {
                 <span>-</span>
                 <span>{new Intl.NumberFormat('vi-VN').format(tempPriceRange[1])}</span>
               </div>
-              <div 
-                className={styles.priceSliderContainer}
-                style={{
-                  '--min-percent': (tempPriceRange[0] / 3000000) * 100,
-                  '--max-percent': (tempPriceRange[1] / 3000000) * 100,
-                } as React.CSSProperties}
-              >
+              <div className={styles.priceSliderContainer}>
+                {/* Track nền */}
+                <div
+                  className={styles.priceTrack}
+                  style={{
+                    '--min': `${(tempPriceRange[0] / 3000000) * 100}%`,
+                    '--max': `${(tempPriceRange[1] / 3000000) * 100}%`,
+                  } as React.CSSProperties}
+                ></div>
+                {/* Slider Min */}
                 <input
                   type="range"
                   min="0"
@@ -662,12 +665,12 @@ const DoctorBookingList: React.FC = () => {
                   value={tempPriceRange[0]}
                   onChange={(e) => {
                     const newMin = Number(e.target.value);
-                    if (newMin <= tempPriceRange[1]) {
-                      setTempPriceRange([newMin, tempPriceRange[1]]);
-                    }
+                    const minValue = Math.max(0, Math.min(newMin, tempPriceRange[1] - 100000));
+                    setTempPriceRange([minValue, tempPriceRange[1]]);
                   }}
-                  className={`${styles.priceSlider} ${styles.priceSliderMin}`}
+                  className={`${styles.rangeThumb} ${styles.thumbMin}`}
                 />
+                {/* Slider Max */}
                 <input
                   type="range"
                   min="0"
@@ -676,11 +679,10 @@ const DoctorBookingList: React.FC = () => {
                   value={tempPriceRange[1]}
                   onChange={(e) => {
                     const newMax = Number(e.target.value);
-                    if (newMax >= tempPriceRange[0]) {
-                      setTempPriceRange([tempPriceRange[0], newMax]);
-                    }
+                    const maxValue = Math.min(3000000, Math.max(newMax, tempPriceRange[0] + 100000));
+                    setTempPriceRange([tempPriceRange[0], maxValue]);
                   }}
-                  className={`${styles.priceSlider} ${styles.priceSliderMax}`}
+                  className={`${styles.rangeThumb} ${styles.thumbMax}`}
                 />
               </div>
             </div>

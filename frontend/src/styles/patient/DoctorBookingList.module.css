@@ -216,15 +216,13 @@
 
 .priceSliderContainer {
   position: relative;
-  padding: 20px 0;
-  height: 50px;
+  height: 40px;
   display: flex;
   align-items: center;
 }
 
-/* Single unified track */
-.priceSliderContainer::before {
-  content: '';
+/* Thanh nền */
+.priceTrack {
   position: absolute;
   top: 50%;
   left: 0;
@@ -233,47 +231,37 @@
   background: #e2e8f0;
   border-radius: 4px;
   transform: translateY(-50%);
-  z-index: 1;
 }
 
-/* Active range between thumbs */
-.priceSliderContainer::after {
-  content: '';
+.priceTrack::after {
+  content: "";
   position: absolute;
-  top: 50%;
-  left: calc((var(--min-percent, 0) * 1%));
-  right: calc(100% - (var(--max-percent, 100) * 1%));
+  top: 0;
+  left: var(--min);
+  right: calc(100% - var(--max));
   height: 8px;
-  background: linear-gradient(to right, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(90deg, #667eea, #764ba2);
   border-radius: 4px;
-  transform: translateY(-50%);
-  z-index: 2;
-  transition: left 0.15s ease, right 0.15s ease;
   box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
 }
 
-/* Both sliders on same track */
-.priceSlider {
+/* Slider chung */
+.rangeThumb {
   position: absolute;
   width: 100%;
-  height: 50px;
-  background: transparent;
-  outline: none;
+  height: 40px;
   -webkit-appearance: none;
   appearance: none;
-  pointer-events: auto;
-  z-index: 5;
+  background: transparent;
+  pointer-events: none; /* chỉ kích hoạt thumb */
   margin: 0;
   top: 50%;
-  left: 0;
   transform: translateY(-50%);
-  cursor: pointer;
-  padding: 0;
-  border: none;
+  z-index: 3;
 }
 
-/* Base thumb styles */
-.priceSlider::-webkit-slider-thumb {
+/* Thumb */
+.rangeThumb::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 20px;
@@ -281,153 +269,86 @@
   border-radius: 50%;
   background: white;
   border: 3px solid #667eea;
-  cursor: grab;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.8);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: all;
-  position: relative;
-  z-index: 10;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  transition: all 0.25s;
   margin-top: -6px;
+  position: relative;
+  z-index: 5;
 }
 
-.priceSlider::-webkit-slider-thumb:hover {
+.rangeThumb::-webkit-slider-thumb:hover {
   transform: scale(1.2);
-  box-shadow: 0 3px 12px rgba(102, 126, 234, 0.4), 0 0 0 4px rgba(102, 126, 234, 0.12);
+  box-shadow: 0 3px 12px rgba(102, 126, 234, 0.4);
 }
 
-.priceSlider::-webkit-slider-thumb:active {
-  transform: scale(1.3);
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.5), 0 0 0 5px rgba(102, 126, 234, 0.15);
-  cursor: grabbing;
+/* Min thumb - đảm bảo hiển thị ở vị trí 0 */
+.thumbMin {
+  z-index: 3;
 }
 
-.priceSlider::-moz-range-thumb {
+.thumbMin::-webkit-slider-thumb {
+  z-index: 5;
+}
+
+/* Max thumb - z-index cao hơn */
+.thumbMax {
+  z-index: 4;
+}
+
+.thumbMax::-webkit-slider-thumb {
+  z-index: 6;
+}
+
+.rangeThumb::-webkit-slider-runnable-track {
+  height: 8px;
+  background: transparent;
+  border: none;
+}
+
+.rangeThumb::-moz-range-thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;
   background: white;
   border: 3px solid #667eea;
-  cursor: grab;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.8);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: all;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  transition: all 0.25s;
 }
 
-.priceSlider::-moz-range-thumb:hover {
+.rangeThumb::-moz-range-thumb:hover {
   transform: scale(1.2);
-  box-shadow: 0 3px 12px rgba(102, 126, 234, 0.4), 0 0 0 4px rgba(102, 126, 234, 0.12);
+  box-shadow: 0 3px 12px rgba(102, 126, 234, 0.4);
 }
 
-.priceSlider::-moz-range-thumb:active {
-  transform: scale(1.3);
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.5), 0 0 0 5px rgba(102, 126, 234, 0.15);
-  cursor: grabbing;
-}
-
-.priceSlider::-webkit-slider-runnable-track {
+.rangeThumb::-moz-range-track {
   height: 8px;
   background: transparent;
   border: none;
-  cursor: pointer;
 }
 
-.priceSlider::-moz-range-track {
-  height: 8px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-/* Min slider - left thumb (blue) */
-.priceSliderMin {
-  z-index: 6;
-}
-
-.priceSliderMin::-webkit-slider-thumb {
-  z-index: 6;
-  border-color: #667eea;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.9), 0 0 0 5px rgba(102, 126, 234, 0.1);
-}
-
-.priceSliderMin::-webkit-slider-thumb:hover {
-  border-color: #5568d3;
-  box-shadow: 0 3px 12px rgba(102, 126, 234, 0.4), 0 0 0 4px rgba(102, 126, 234, 0.12);
-}
-
-.priceSliderMin::-webkit-slider-thumb:active {
-  border-color: #5568d3;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.5), 0 0 0 5px rgba(102, 126, 234, 0.15);
-}
-
-.priceSliderMin::-moz-range-thumb {
-  border-color: #667eea;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.9), 0 0 0 5px rgba(102, 126, 234, 0.1);
-}
-
-.priceSliderMin::-moz-range-thumb:hover {
-  border-color: #5568d3;
-  box-shadow: 0 3px 12px rgba(102, 126, 234, 0.4), 0 0 0 4px rgba(102, 126, 234, 0.12);
-}
-
-.priceSliderMin::-moz-range-thumb:active {
-  border-color: #5568d3;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.5), 0 0 0 5px rgba(102, 126, 234, 0.15);
-}
-
-/* Max slider - right thumb (pink) */
-.priceSliderMax {
-  z-index: 7;
-}
-
-.priceSliderMax::-webkit-slider-thumb {
-  z-index: 7;
+/* Max thumb màu khác để phân biệt */
+.thumbMax::-webkit-slider-thumb {
   border-color: #ec4899;
-  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.9), 0 0 0 5px rgba(236, 72, 153, 0.1);
+  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.3);
 }
 
-.priceSliderMax::-webkit-slider-thumb:hover {
-  border-color: #db2777;
-  box-shadow: 0 3px 12px rgba(236, 72, 153, 0.4), 0 0 0 4px rgba(236, 72, 153, 0.12);
+.thumbMax::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 3px 12px rgba(236, 72, 153, 0.4);
 }
 
-.priceSliderMax::-webkit-slider-thumb:active {
-  border-color: #db2777;
-  box-shadow: 0 4px 16px rgba(236, 72, 153, 0.5), 0 0 0 5px rgba(236, 72, 153, 0.15);
-}
-
-.priceSliderMax::-moz-range-thumb {
+.thumbMax::-moz-range-thumb {
   border-color: #ec4899;
-  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.9), 0 0 0 5px rgba(236, 72, 153, 0.1);
+  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.3);
 }
 
-.priceSliderMax::-moz-range-thumb:hover {
-  border-color: #db2777;
-  box-shadow: 0 3px 12px rgba(236, 72, 153, 0.4), 0 0 0 4px rgba(236, 72, 153, 0.12);
-}
-
-.priceSliderMax::-moz-range-thumb:active {
-  border-color: #db2777;
-  box-shadow: 0 4px 16px rgba(236, 72, 153, 0.5), 0 0 0 5px rgba(236, 72, 153, 0.15);
-}
-
-/* Ensure both sliders are interactive */
-.priceSliderMin,
-.priceSliderMax {
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-/* Prevent track clicks from interfering */
-.priceSliderMin::-webkit-slider-runnable-track,
-.priceSliderMax::-webkit-slider-runnable-track {
-  cursor: pointer;
-  pointer-events: auto;
-}
-
-.priceSliderMin::-moz-range-track,
-.priceSliderMax::-moz-range-track {
-  cursor: pointer;
-  pointer-events: auto;
+.thumbMax::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 3px 12px rgba(236, 72, 153, 0.4);
 }
 
 .resetButton {

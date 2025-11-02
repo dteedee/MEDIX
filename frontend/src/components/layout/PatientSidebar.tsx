@@ -32,7 +32,7 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
   const handleLogout = async () => {
     // Close menu first
     setShowUserMenu(false);
-    
+
     try {
       // Call logout from AuthContext - it will handle redirect
       await logout();
@@ -74,8 +74,8 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
       </div>
 
       <nav className={styles.sidebarNav}>
-        <Link 
-          to="/app/patient" 
+        <Link
+          to="/app/patient"
           className={`${styles.navItem} ${currentPage === 'dashboard' ? styles.active : ''}`}
           onClick={() => {
             setShowUserMenu(false);
@@ -85,39 +85,47 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
           <i className="bi bi-speedometer2"></i>
           {sidebarOpen && <span>Dashboard</span>}
         </Link>
-        <Link 
-          to="/app/patient/appointments" 
+        <Link
+          to="/app/patient/appointments"
           className={`${styles.navItem} ${currentPage === 'appointments' ? styles.active : ''}`}
           onClick={() => setShowUserMenu(false)}
         >
           <i className="bi bi-calendar-check"></i>
           {sidebarOpen && <span>Lịch hẹn</span>}
         </Link>
-        <Link 
-          to="/app/patient/results" 
+        <Link
+          to="/app/patient/results"
           className={`${styles.navItem} ${currentPage === 'results' ? styles.active : ''}`}
           onClick={() => setShowUserMenu(false)}
         >
           <i className="bi bi-clipboard-data"></i>
           {sidebarOpen && <span>Xem kết quả</span>}
         </Link>
-        <Link 
-          to="/app/patient/finance" 
+        <Link
+          to="/app/patient/finance"
           className={`${styles.navItem} ${currentPage === 'finance' ? styles.active : ''}`}
           onClick={() => setShowUserMenu(false)}
         >
           <i className="bi bi-credit-card"></i>
           {sidebarOpen && <span>Tài chính</span>}
         </Link>
+        <Link
+          to="/app/patient/emr-timeline"
+          className={`${styles.navItem} ${currentPage === 'emr-timeline' ? styles.active : ''}`}
+          onClick={() => setShowUserMenu(false)}
+        >
+          <i className="bi bi-file-medical-fill"></i>
+          {sidebarOpen && <span>Chi tiết hồ sơ khám bệnh & EMR</span>}
+        </Link>
       </nav>
 
       <div className={styles.userSection} ref={userMenuRef}>
-        <div 
+        <div
           className={styles.userInfo}
           onClick={() => setShowUserMenu(!showUserMenu)}
         >
           <div className={styles.userAvatar}>
-            <img 
+            <img
               src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || user?.email || 'Patient')}&background=667eea&color=fff`}
               alt={user?.fullName || 'Patient'}
             />
@@ -160,7 +168,7 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
         )}
       </div>
 
-      <button 
+      <button
         className={styles.sidebarToggle}
         onClick={() => setSidebarOpen(!sidebarOpen)}
         title={sidebarOpen ? 'Thu gọn sidebar' : 'Mở rộng sidebar'}

@@ -1,4 +1,4 @@
-import styles from '../../styles/pagination.module.css'; // adjust path as needed
+import styles from '../../styles/public/pagination.module.css'; // adjust path as needed
 
 interface PaginationProps {
   currentPage: number;

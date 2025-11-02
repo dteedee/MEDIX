@@ -25,7 +25,12 @@ interface Doctor {
   responseTime?: string;
 }
 
-const convertApiDoctorToDoctor = (apiDoctor: DoctorInTier, tierName: string, avatarUrlMap?: Record<string, string>): Doctor => {
+const convertApiDoctorToDoctor = (
+  apiDoctor: DoctorInTier, 
+  tierName: string, 
+  avatarUrlMap?: Record<string, string>,
+  statisticsMap?: Record<string, { totalCases: number; successRate: number; responseTime: string }>
+): Doctor => {
   const rating = typeof apiDoctor.rating === 'number' ? apiDoctor.rating : parseFloat(String(apiDoctor.rating)) || 0;
   const experience = typeof apiDoctor.experience === 'number' ? apiDoctor.experience : parseInt(String(apiDoctor.experience)) || 0;
   
@@ -33,12 +38,28 @@ const convertApiDoctorToDoctor = (apiDoctor: DoctorInTier, tierName: string, ava
   // Or get from avatarUrlMap if fetched separately
   const imageUrl = (apiDoctor as any).avatarUrl || avatarUrlMap?.[apiDoctor.doctorId] || undefined;
   
-  // Calculate mock stats based on experience and rating (for demo)
-  // These should ideally come from API in production
-  const totalCases = Math.max(0, experience * 50 + Math.floor(Math.random() * 200));
-  const successRate = Math.max(85, Math.min(99, 85 + (rating * 2.5) + Math.floor(Math.random() * 5)));
-  const responseTimeMinutes = Math.max(5, Math.min(60, 30 - (rating * 5) + Math.floor(Math.random() * 10)));
-  const responseTime = responseTimeMinutes < 60 ? `${responseTimeMinutes} phút` : '1 giờ';
+  // Get statistics from API response or from separately fetched statistics map
+  const stats = statisticsMap?.[apiDoctor.doctorId] || 
+    (apiDoctor.totalCases !== undefined ? {
+      totalCases: apiDoctor.totalCases,
+      successRate: apiDoctor.successRate || (apiDoctor.successfulCases && apiDoctor.totalCases > 0 
+        ? Math.round((apiDoctor.successfulCases / apiDoctor.totalCases) * 100) 
+        : 0),
+      responseTime: apiDoctor.averageResponseTime 
+        ? (apiDoctor.averageResponseTime < 60 ? `${Math.round(apiDoctor.averageResponseTime)} phút` : '1 giờ')
+        : 'N/A'
+    } : undefined);
+  
+  const totalCases = stats?.totalCases ?? 0;
+  const successRate = stats?.successRate ?? 0;
+  const responseTime = stats?.responseTime ?? 'N/A';
+  const reviewCount = apiDoctor.reviewCount || (typeof (apiDoctor as any).numberOfReviews === 'number' ? (apiDoctor as any).numberOfReviews : 0);
+  
+  // Validate tierName to prevent crash from invalid UUIDs or null values
+  const safeTier =
+    tierName === 'Basic' || tierName === 'Professional' || tierName === 'Premium' || tierName === 'VIP'
+      ? tierName
+      : 'Basic';
   
   return {
     id: apiDoctor.doctorId,
@@ -47,9 +68,9 @@ const convertApiDoctorToDoctor = (apiDoctor: DoctorInTier, tierName: string, ava
     specialty: apiDoctor.specialization,
     experience: `${experience}`,
     rating: Math.max(0, Math.min(5, rating)),
-    reviewCount: Math.floor(totalCases * 0.3), // Estimate review count as 30% of cases
+    reviewCount,
     price: apiDoctor.price,
-    tier: tierName as 'Basic' | 'Professional' | 'Premium' | 'VIP',
+    tier: safeTier as 'Basic' | 'Professional' | 'Premium' | 'VIP',
     bio: apiDoctor.bio || 'Bác sĩ chuyên nghiệp với nhiều năm kinh nghiệm trong lĩnh vực y tế.',
     imageUrl,
     totalCases,
@@ -71,6 +92,11 @@ const DoctorBookingList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [doctorAvatars, setDoctorAvatars] = useState<Record<string, string>>({});
+  const [doctorStatistics, setDoctorStatistics] = useState<Record<string, {
+    totalCases: number;
+    successRate: number;
+    responseTime: string;
+  }>>({});
   
   const [specializations, setSpecializations] = useState<{id: string, name: string}[]>([]);
   const [metadataLoading, setMetadataLoading] = useState(true);
@@ -133,6 +159,12 @@ const DoctorBookingList: React.FC = () => {
     };
   }, []);
 
+  // Helper function to normalize Vietnamese text for search
+  const normalizeSearchText = useCallback((str: string | null | undefined) => {
+    if (!str || typeof str !== 'string') return '';
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  }, []);
+
   // Debounce search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -140,6 +172,65 @@ const DoctorBookingList: React.FC = () => {
     }, 300);
     return () => clearTimeout(timeoutId);
   }, [searchTerm]);
+
+  // Helper function to check if doctor matches search
+  const doctorMatchesSearch = useCallback((doctor: DoctorInTier, searchTerms: string[], tierName?: string): boolean => {
+    if (!doctor || searchTerms.length === 0) return false;
+    
+    const convertedDoctor = convertApiDoctorToDoctor(doctor, tierName || 'Basic', doctorAvatars, doctorStatistics);
+    const nameNormalized = normalizeSearchText(convertedDoctor?.fullName);
+    const specialtyNormalized = normalizeSearchText(convertedDoctor?.specialty);
+    const degreeNormalized = normalizeSearchText(convertedDoctor?.degree);
+    const bioNormalized = normalizeSearchText(convertedDoctor?.bio);
+    
+    return searchTerms.every(term => 
+      nameNormalized.includes(term) ||
+      specialtyNormalized.includes(term) ||
+      degreeNormalized.includes(term) ||
+      bioNormalized.includes(term)
+    );
+  }, [normalizeSearchText, doctorAvatars, doctorStatistics]);
+
+  // Auto-switch to tier with search results
+  useEffect(() => {
+    // Không làm gì nếu chưa có data hoặc chưa nhập gì
+    if (!debouncedSearch || !debouncedSearch.trim() || tiersData.length === 0) return;
+
+    const searchNormalized = normalizeSearchText(debouncedSearch);
+    if (!searchNormalized) return;
+    
+    const searchTerms = searchNormalized.split(/\s+/).filter(term => term.length > 0);
+    if (searchTerms.length === 0) return;
+
+    const tiersWithResults: TierType[] = [];
+
+    // Tìm các tier có kết quả
+    for (const tier of tiersData) {
+      if (!tier?.name || !tier?.doctors?.items?.length) continue;
+
+      const hasMatch = tier.doctors.items.some((doctor) =>
+        doctorMatchesSearch(doctor, searchTerms, tier.name)
+      );
+
+      if (hasMatch) tiersWithResults.push(tier.name as TierType);
+    }
+
+    // 1️⃣ Nếu KHÔNG tìm thấy ở tier nào → GIỮ nguyên tier hiện tại
+    if (tiersWithResults.length === 0) {
+      return;
+    }
+
+    // 2️⃣ Nếu tier hiện tại CÓ kết quả → KHÔNG chuyển tier
+    if (tiersWithResults.includes(activeTier)) {
+      return;
+    }
+
+    // 3️⃣ Nếu tier hiện tại KHÔNG có kết quả → CHUYỂN sang tier đầu tiên có kết quả
+    const firstTierWithResults = tiersWithResults[0];
+    if (firstTierWithResults && firstTierWithResults !== activeTier) {
+      setActiveTier(firstTierWithResults);
+    }
+  }, [debouncedSearch, tiersData, activeTier, normalizeSearchText, doctorMatchesSearch]);
 
   // Debounce price range
   useEffect(() => {
@@ -197,12 +288,16 @@ const DoctorBookingList: React.FC = () => {
           );
           setTiersData(allTiersData);
           
-          // Load avatars for doctors that don't have avatarUrl in the response
+          // Load avatars and statistics for doctors that don't have them in the response
           const allDoctors = allTiersData.flatMap(tier => tier.doctors?.items || []);
           const doctorsNeedingAvatar = allDoctors.filter(doctor => 
             !(doctor as any).avatarUrl && doctor.doctorId
           );
+          const doctorsNeedingStats = allDoctors.filter(doctor => 
+            doctor.doctorId && (doctor.totalCases === undefined || doctor.successRate === undefined || doctor.averageResponseTime === undefined)
+          );
           
+          // Fetch avatars in parallel
           if (doctorsNeedingAvatar.length > 0) {
             Promise.all(
               doctorsNeedingAvatar.slice(0, 20).map(async (doctor) => {
@@ -225,6 +320,49 @@ const DoctorBookingList: React.FC = () => {
                   }
                 });
                 setDoctorAvatars(prev => ({ ...prev, ...newAvatars }));
+              }
+            });
+          }
+
+          // Fetch statistics in parallel
+          if (doctorsNeedingStats.length > 0) {
+            Promise.all(
+              doctorsNeedingStats.slice(0, 20).map(async (doctor) => {
+                try {
+                  const stats = await doctorService.getStatistics(doctor.doctorId);
+                  // Map API response to our format
+                  const totalCases = stats.totalCases || stats.totalAppointments || 0;
+                  const successfulCases = stats.successfulCases || stats.completedCases || stats.completedAppointments || 0;
+                  const successRate = totalCases > 0 ? Math.round((successfulCases / totalCases) * 100) : 0;
+                  const responseTimeMinutes = stats.averageResponseTime || stats.responseTime || 0;
+                  const responseTime = responseTimeMinutes > 0 
+                    ? (responseTimeMinutes < 60 ? `${Math.round(responseTimeMinutes)} phút` : '1 giờ')
+                    : 'N/A';
+                  
+                  return {
+                    doctorId: doctor.doctorId,
+                    totalCases,
+                    successRate,
+                    responseTime
+                  };
+                } catch (error) {
+                  console.log(`Could not fetch statistics for doctor ${doctor.doctorId}:`, error);
+                  return null;
+                }
+              })
+            ).then(results => {
+              if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
+                const newStats: Record<string, { totalCases: number; successRate: number; responseTime: string }> = {};
+                results.forEach(result => {
+                  if (result) {
+                    newStats[result.doctorId] = {
+                      totalCases: result.totalCases,
+                      successRate: result.successRate,
+                      responseTime: result.responseTime
+                    };
+                  }
+                });
+                setDoctorStatistics(prev => ({ ...prev, ...newStats }));
               }
             });
           }
@@ -296,12 +434,16 @@ const DoctorBookingList: React.FC = () => {
           );
           setTiersData(allTiersData);
           
-          // Load avatars for doctors that don't have avatarUrl in the response
+          // Load avatars and statistics for doctors that don't have them in the response
           const allDoctors = allTiersData.flatMap(tier => tier.doctors?.items || []);
           const doctorsNeedingAvatar = allDoctors.filter(doctor => 
             !(doctor as any).avatarUrl && doctor.doctorId
           );
+          const doctorsNeedingStats = allDoctors.filter(doctor => 
+            doctor.doctorId && (doctor.totalCases === undefined || doctor.successRate === undefined || doctor.averageResponseTime === undefined)
+          );
           
+          // Fetch avatars in parallel
           if (doctorsNeedingAvatar.length > 0) {
             Promise.all(
               doctorsNeedingAvatar.slice(0, 20).map(async (doctor) => {
@@ -324,6 +466,49 @@ const DoctorBookingList: React.FC = () => {
                   }
                 });
                 setDoctorAvatars(prev => ({ ...prev, ...newAvatars }));
+              }
+            });
+          }
+
+          // Fetch statistics in parallel
+          if (doctorsNeedingStats.length > 0) {
+            Promise.all(
+              doctorsNeedingStats.slice(0, 20).map(async (doctor) => {
+                try {
+                  const stats = await doctorService.getStatistics(doctor.doctorId);
+                  // Map API response to our format
+                  const totalCases = stats.totalCases || stats.totalAppointments || 0;
+                  const successfulCases = stats.successfulCases || stats.completedCases || stats.completedAppointments || 0;
+                  const successRate = totalCases > 0 ? Math.round((successfulCases / totalCases) * 100) : 0;
+                  const responseTimeMinutes = stats.averageResponseTime || stats.responseTime || 0;
+                  const responseTime = responseTimeMinutes > 0 
+                    ? (responseTimeMinutes < 60 ? `${Math.round(responseTimeMinutes)} phút` : '1 giờ')
+                    : 'N/A';
+                  
+                  return {
+                    doctorId: doctor.doctorId,
+                    totalCases,
+                    successRate,
+                    responseTime
+                  };
+                } catch (error) {
+                  console.log(`Could not fetch statistics for doctor ${doctor.doctorId}:`, error);
+                  return null;
+                }
+              })
+            ).then(results => {
+              if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
+                const newStats: Record<string, { totalCases: number; successRate: number; responseTime: string }> = {};
+                results.forEach(result => {
+                  if (result) {
+                    newStats[result.doctorId] = {
+                      totalCases: result.totalCases,
+                      successRate: result.successRate,
+                      responseTime: result.responseTime
+                    };
+                  }
+                });
+                setDoctorStatistics(prev => ({ ...prev, ...newStats }));
               }
             });
           }
@@ -355,24 +540,77 @@ const DoctorBookingList: React.FC = () => {
     };
   }, [basicPagination, professionalPagination, premiumPagination, vipPagination, selectedEducationCode, selectedSpecializationCode, priceRange, loadTierData]);
 
-  const getDoctorsByTier = (tierName: string): Doctor[] => {
+  // Search doctors across all tiers
+  const searchDoctorsAcrossAllTiers = (searchTerm: string): { tier: TierType; doctors: Doctor[] }[] => {
+    if (!searchTerm.trim()) return [];
+    
+    const searchNormalized = normalizeSearchText(searchTerm);
+    const searchTerms = searchNormalized.split(/\s+/).filter(term => term.length > 0);
+    
+    const results: { tier: TierType; doctors: Doctor[] }[] = [];
+    
+    tiersData.forEach(tier => {
+      if (!tier.doctors || !tier.doctors.items) return;
+      
+      const doctors = tier.doctors.items
+        .map(doctor => convertApiDoctorToDoctor(doctor, tier.name, doctorAvatars, doctorStatistics))
+        .filter(doctor => {
+          const nameNormalized = normalizeSearchText(doctor.fullName);
+          const specialtyNormalized = normalizeSearchText(doctor.specialty);
+          const degreeNormalized = normalizeSearchText(doctor.degree);
+          const bioNormalized = normalizeSearchText(doctor.bio || '');
+          
+          // Check if all search terms appear in any field
+          return searchTerms.every(term => 
+            nameNormalized.includes(term) ||
+            specialtyNormalized.includes(term) ||
+            degreeNormalized.includes(term) ||
+            bioNormalized.includes(term)
+          );
+        });
+      
+      if (doctors.length > 0) {
+        results.push({ tier: tier.name as TierType, doctors });
+      }
+    });
+    
+    return results;
+  };
+
+  const getDoctorsByTier = useCallback((tierName: string): Doctor[] => {
     const tier = tiersData.find(t => t.name === tierName);
     if (!tier || !tier.doctors || !tier.doctors.items) return [];
     
-    let doctors = tier.doctors.items.map(doctor => convertApiDoctorToDoctor(doctor, tierName, doctorAvatars));
+    let doctors = tier.doctors.items.map(doctor => convertApiDoctorToDoctor(doctor, tierName, doctorAvatars, doctorStatistics));
     
-    if (debouncedSearch.trim()) {
-      const searchLower = debouncedSearch.toLowerCase().trim();
-      doctors = doctors.filter(doctor => 
-        doctor.fullName.toLowerCase().includes(searchLower) ||
-        doctor.specialty.toLowerCase().includes(searchLower) ||
-        doctor.degree.toLowerCase().includes(searchLower) ||
-        doctor.bio.toLowerCase().includes(searchLower)
-      );
+    if (debouncedSearch && debouncedSearch.trim()) {
+      const searchNormalized = normalizeSearchText(debouncedSearch);
+      if (!searchNormalized) return doctors;
+      
+      const searchTerms = searchNormalized.split(/\s+/).filter(term => term.length > 0);
+      
+      if (searchTerms.length > 0) {
+        doctors = doctors.filter(doctor => {
+          if (!doctor) return false;
+          
+          const nameNormalized = normalizeSearchText(doctor.fullName);
+          const specialtyNormalized = normalizeSearchText(doctor.specialty);
+          const degreeNormalized = normalizeSearchText(doctor.degree);
+          const bioNormalized = normalizeSearchText(doctor.bio);
+          
+          // Check if all search terms appear in any field
+          return searchTerms.every(term => 
+            nameNormalized.includes(term) ||
+            specialtyNormalized.includes(term) ||
+            degreeNormalized.includes(term) ||
+            bioNormalized.includes(term)
+          );
+        });
+      }
     }
     
     return doctors;
-  };
+  }, [tiersData, debouncedSearch, doctorAvatars, doctorStatistics, normalizeSearchText]);
 
   const getTierPaginationInfo = (tierName: string) => {
     const tier = tiersData.find(t => t.name === tierName);
@@ -383,7 +621,7 @@ const DoctorBookingList: React.FC = () => {
     };
   };
 
-  const currentDoctors = useMemo(() => getDoctorsByTier(activeTier), [tiersData, activeTier, debouncedSearch, doctorAvatars]);
+  const currentDoctors = useMemo(() => getDoctorsByTier(activeTier), [getDoctorsByTier, activeTier]);
   const currentPagination = useMemo(() => {
     switch (activeTier) {
       case 'Basic': return basicPagination;

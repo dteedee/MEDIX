@@ -108,6 +108,11 @@ export interface DoctorInTier {
   price: number;
   bio: string;
   rating: number;
+  totalCases?: number;
+  successfulCases?: number;
+  successRate?: number;
+  averageResponseTime?: number; // in minutes
+  reviewCount?: number;
 }
 
 export interface PaginationParams {

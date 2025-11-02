@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import DoctorService from '../../services/doctorService';
 import DoctorRegistrationFormService from '../../services/doctorRegistrationFormService';
@@ -19,6 +19,10 @@ interface DoctorFilters {
   dateTo: string;
   sortBy: string;
   sortDirection: 'asc' | 'desc';
+  minRating?: number;
+  maxRating?: number;
+  minExperience?: number;
+  maxExperience?: number;
 }
 
 const getInitialState = (): DoctorFilters => {
@@ -55,6 +59,7 @@ export default function DoctorManagement() {
   const [reviewing, setReviewing] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
   
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -93,15 +98,19 @@ export default function DoctorManagement() {
     }
   };
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
-    await Promise.all([loadAllDoctors(), loadPendingDoctors(), loadDegrees()]);
-    setLoading(false);
-  };
+    try {
+      await Promise.all([loadAllDoctors(), loadPendingDoctors(), loadDegrees()]);
+      setLastRefreshTime(new Date());
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     load();
-  }, [location.pathname]);
+  }, [location.pathname, load]);
 
   useEffect(() => {
     localStorage.setItem('doctorListState', JSON.stringify(filters));
@@ -132,8 +141,12 @@ export default function DoctorManagement() {
     setViewing(doctor);
     try {
       if (activeTab === 'all') {
-        const fullDoctor = await DoctorService.getById(doctor.id);
+        const fullDoctor: any = await DoctorService.getById(doctor.id);
         setViewing(fullDoctor);
+        // Update doctor in list with serviceTier if available
+        setAllDoctors(prev => prev.map(d => 
+          d.id === doctor.id ? { ...d, serviceTier: fullDoctor.serviceTier || d.serviceTier } : d
+        ));
       } else {
         const fullDoctor = await DoctorRegistrationFormService.getDetails(doctor.id);
         setViewing(fullDoctor);
@@ -200,7 +213,23 @@ export default function DoctorManagement() {
         okDate = !!created && (!from || created >= from) && (!to || created <= to);
       }
 
-      return okSearch && okSpec && okStatus && okDate;
+      // Rating filter
+      let okRating = true;
+      if (filters.minRating !== undefined || filters.maxRating !== undefined) {
+        const rating = d.rating || 0;
+        okRating = (!filters.minRating || rating >= filters.minRating) &&
+                   (!filters.maxRating || rating <= filters.maxRating);
+      }
+
+      // Experience filter
+      let okExperience = true;
+      if (filters.minExperience !== undefined || filters.maxExperience !== undefined) {
+        const exp = d.yearsOfExperience || 0;
+        okExperience = (!filters.minExperience || exp >= filters.minExperience) &&
+                       (!filters.maxExperience || exp <= filters.maxExperience);
+      }
+
+      return okSearch && okSpec && okStatus && okDate && okRating && okExperience;
     });
 
     const sorted = [...filtered].sort((a, b) => {
@@ -218,6 +247,9 @@ export default function DoctorManagement() {
       } else if (filters.sortBy === 'specialization') {
         valA = (a.specialization || '').toLowerCase();
         valB = (b.specialization || '').toLowerCase();
+      } else if (filters.sortBy === 'education') {
+        valA = (a.education || '').toLowerCase();
+        valB = (b.education || '').toLowerCase();
       } else if (filters.sortBy === 'rating') {
         valA = a.rating || 0;
         valB = b.rating || 0;
@@ -234,21 +266,92 @@ export default function DoctorManagement() {
     return sorted.slice(startIndex, endIndex);
   }, [allDoctors, pendingDoctors, filters, activeTab]);
 
-  const handleResetFilters = () => {
+  const handleResetFilters = useCallback(() => {
     setFilters({
       ...filters,
       specializationFilter: 'all',
       statusFilter: 'all',
       dateFrom: '',
       dateTo: '',
+      minRating: undefined,
+      maxRating: undefined,
+      minExperience: undefined,
+      maxExperience: undefined,
     });
-  };
+  }, [filters]);
 
-  // Calculate stats
-  const totalDoctors = allDoctors.length;
-  const activeDoctors = allDoctors.filter(d => d.statusCode === 1).length;
-  const pendingCount = pendingDoctors.length;
-  const topSpecialty = useMemo(() => {
+  // Export to CSV
+  const handleExportCSV = useCallback(() => {
+    const currentList = activeTab === 'all' ? allDoctors : pendingDoctors;
+    const headers = activeTab === 'all' 
+      ? ['STT', 'Tên', 'Email', 'Chuyên khoa', 'Kinh nghiệm', 'Đánh giá', 'Số đánh giá', 'Trạng thái', 'Ngày tạo']
+      : ['STT', 'Tên', 'Email', 'Chuyên khoa', 'Ngày đăng ký'];
+    
+    const rows = currentList.map((d, index) => {
+      if (activeTab === 'all') {
+        return [
+          index + 1,
+          d.fullName || '',
+          d.email || '',
+          d.specialization || '',
+          `${d.yearsOfExperience || 0} năm`,
+          (d.rating || 0).toFixed(1),
+          d.reviewCount || 0,
+          d.statusCode === 1 ? 'Hoạt động' : 'Ngừng hoạt động',
+          new Date(d.createdAt).toLocaleDateString('vi-VN')
+        ];
+      } else {
+        return [
+          index + 1,
+          d.fullName || '',
+          d.email || '',
+          d.specialization || '',
+          new Date(d.createdAt).toLocaleDateString('vi-VN')
+        ];
+      }
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `danh-sach-bac-si-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast('Đã xuất file CSV thành công', 'success');
+  }, [activeTab, allDoctors, pendingDoctors, showToast]);
+
+  // Calculate stats with real data
+  const stats = useMemo(() => {
+    const totalDoctors = allDoctors.length;
+    const activeDoctors = allDoctors.filter(d => d.statusCode === 1).length;
+    const inactiveDoctors = totalDoctors - activeDoctors;
+    const pendingCount = pendingDoctors.length;
+    
+    // Calculate average rating
+    const doctorsWithRating = allDoctors.filter(d => d.rating && d.rating > 0);
+    const avgRating = doctorsWithRating.length > 0
+      ? doctorsWithRating.reduce((sum, d) => sum + (d.rating || 0), 0) / doctorsWithRating.length
+      : 0;
+    
+    // Calculate total reviews
+    const totalReviews = allDoctors.reduce((sum, d) => sum + (d.reviewCount || 0), 0);
+    
+    // Calculate average experience
+    const doctorsWithExp = allDoctors.filter(d => d.yearsOfExperience && d.yearsOfExperience > 0);
+    const avgExperience = doctorsWithExp.length > 0
+      ? doctorsWithExp.reduce((sum, d) => sum + (d.yearsOfExperience || 0), 0) / doctorsWithExp.length
+      : 0;
+    
+    // Top specialty
     const specCounts: Record<string, number> = allDoctors.reduce((acc, d) => {
       if (d.specialization) {
         acc[d.specialization] = (acc[d.specialization] || 0) + 1;
@@ -258,15 +361,42 @@ export default function DoctorManagement() {
     
     const entries = Object.entries(specCounts) as [string, number][];
     const sorted = entries.sort((a, b) => b[1] - a[1]);
-    const top = sorted[0];
-    return top ? { name: top[0], count: top[1] } : { name: 'N/A', count: 0 };
-  }, [allDoctors]);
+    const topSpecialty = sorted[0] ? { name: sorted[0][0], count: sorted[0][1] } : { name: 'N/A', count: 0 };
+    
+    // Calculate percentage changes (simplified - in real app, compare with previous period)
+    const activePercentage = totalDoctors > 0 ? ((activeDoctors / totalDoctors) * 100).toFixed(1) : '0';
+    
+    return {
+      totalDoctors,
+      activeDoctors,
+      inactiveDoctors,
+      pendingCount,
+      avgRating: avgRating.toFixed(1),
+      totalReviews,
+      avgExperience: avgExperience.toFixed(1),
+      topSpecialty,
+      activePercentage
+    };
+  }, [allDoctors, pendingDoctors]);
 
   const currentList = activeTab === 'all' ? allDoctors : pendingDoctors;
   const totalPages = Math.ceil(currentList.length / filters.pageSize);
 
   const getRatingStars = (rating: number) => {
     return '★'.repeat(Math.floor(rating)) + '☆'.repeat(5 - Math.floor(rating));
+  };
+
+  const getEducationLabel = (educationCode?: string): string => {
+    if (!educationCode) return 'Chưa có';
+    
+    // Try to find matching degree description
+    const degree = degrees.find((d: any) => d.code === educationCode);
+    if (degree) {
+      return degree.description;
+    }
+    
+    // If not found, return the code as is (might be already a description)
+    return educationCode;
   };
 
   return (
@@ -276,6 +406,13 @@ export default function DoctorManagement() {
         <div className={styles.headerLeft}>
           <h1 className={styles.title}>Quản lý Bác sĩ</h1>
           <p className={styles.subtitle}>Quản lý và theo dõi tất cả bác sĩ trong hệ thống</p>
+        </div>
+        <div className={styles.headerActions}>
+          {lastRefreshTime && (
+            <p className={styles.lastUpdate} style={{ fontSize: '0.85rem', color: '#666' }}>
+              Cập nhật lần cuối: {lastRefreshTime.toLocaleTimeString('vi-VN')}
+            </p>
+          )}
         </div>
       </div>
 
@@ -287,7 +424,7 @@ export default function DoctorManagement() {
         >
           <i className="bi bi-people-fill"></i>
           Tất cả bác sĩ
-          <span className={styles.tabBadge}>{totalDoctors}</span>
+          <span className={styles.tabBadge}>{stats.totalDoctors}</span>
         </button>
         <button 
           className={`${styles.tab} ${activeTab === 'pending' ? styles.tabActive : ''}`}
@@ -295,7 +432,7 @@ export default function DoctorManagement() {
         >
           <i className="bi bi-clock-history"></i>
           Chờ phê duyệt
-          {pendingCount > 0 && <span className={styles.tabBadgeAlert}>{pendingCount}</span>}
+          {stats.pendingCount > 0 && <span className={styles.tabBadgeAlert}>{stats.pendingCount}</span>}
         </button>
       </div>
 
@@ -307,10 +444,10 @@ export default function DoctorManagement() {
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Tổng bác sĩ</div>
-            <div className={styles.statValue}>{totalDoctors}</div>
+            <div className={styles.statValue}>{stats.totalDoctors}</div>
             <div className={styles.statTrend}>
               <i className="bi bi-graph-up"></i>
-              <span>+5.2% so với tháng trước</span>
+              <span>{stats.activePercentage}% đang hoạt động</span>
             </div>
           </div>
           <div className={styles.statBg}>
@@ -324,10 +461,10 @@ export default function DoctorManagement() {
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Đang hoạt động</div>
-            <div className={styles.statValue}>{activeDoctors}</div>
+            <div className={styles.statValue}>{stats.activeDoctors}</div>
             <div className={styles.statTrend}>
-              <i className="bi bi-graph-up"></i>
-              <span>+3.1% tuần này</span>
+              <i className="bi bi-star-fill"></i>
+              <span>Đánh giá TB: {stats.avgRating}/5.0</span>
             </div>
           </div>
           <div className={styles.statBg}>
@@ -341,10 +478,10 @@ export default function DoctorManagement() {
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Chờ phê duyệt</div>
-            <div className={styles.statValue}>{pendingCount}</div>
+            <div className={styles.statValue}>{stats.pendingCount}</div>
             <div className={styles.statTrend}>
               <i className="bi bi-exclamation-circle"></i>
-              <span>Cần xử lý</span>
+              <span>{stats.pendingCount > 0 ? 'Cần xử lý ngay' : 'Không có'}</span>
             </div>
           </div>
           <div className={styles.statBg}>
@@ -358,10 +495,10 @@ export default function DoctorManagement() {
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Chuyên khoa hàng đầu</div>
-            <div className={styles.statValue} style={{ fontSize: '1.2rem' }}>{topSpecialty.name}</div>
+            <div className={styles.statValue} style={{ fontSize: '1.2rem' }}>{stats.topSpecialty.name}</div>
             <div className={styles.statTrend}>
-              <i className="bi bi-people"></i>
-              <span>{topSpecialty.count} bác sĩ</span>
+              <i className="bi bi-briefcase"></i>
+              <span>{stats.topSpecialty.count} bác sĩ • {stats.avgExperience} năm TB</span>
             </div>
           </div>
           <div className={styles.statBg}>
@@ -397,9 +534,20 @@ export default function DoctorManagement() {
         >
           <i className="bi bi-funnel"></i>
           Bộ lọc
-          {(filters.specializationFilter !== 'all' || filters.statusFilter !== 'all' || filters.dateFrom || filters.dateTo) && (
+          {(filters.specializationFilter !== 'all' || filters.statusFilter !== 'all' || filters.dateFrom || filters.dateTo || 
+            filters.minRating !== undefined || filters.maxRating !== undefined || 
+            filters.minExperience !== undefined || filters.maxExperience !== undefined) && (
             <span className={styles.filterBadge}></span>
           )}
+        </button>
+        <button 
+          onClick={handleExportCSV}
+          className={styles.btnExport}
+          disabled={processedItems.length === 0}
+          title="Xuất danh sách ra file CSV"
+        >
+          <i className="bi bi-download"></i>
+          Xuất CSV
         </button>
       </div>
 
@@ -421,17 +569,75 @@ export default function DoctorManagement() {
             </div>
 
             {activeTab === 'all' && (
-              <div className={styles.filterItem}>
-                <label>
-                  <i className="bi bi-toggle-on"></i>
-                  Trạng thái
-                </label>
-                <select value={filters.statusFilter} onChange={e => handleFilterChange('statusFilter', e.target.value)}>
-                  <option value="all">Tất cả trạng thái</option>
-                  <option value="active">Đang hoạt động</option>
-                  <option value="inactive">Ngừng hoạt động</option>
-                </select>
-              </div>
+              <>
+                <div className={styles.filterItem}>
+                  <label>
+                    <i className="bi bi-toggle-on"></i>
+                    Trạng thái
+                  </label>
+                  <select value={filters.statusFilter} onChange={e => handleFilterChange('statusFilter', e.target.value)}>
+                    <option value="all">Tất cả trạng thái</option>
+                    <option value="active">Đang hoạt động</option>
+                    <option value="inactive">Ngừng hoạt động</option>
+                  </select>
+                </div>
+                <div className={styles.filterItem}>
+                  <label>
+                    <i className="bi bi-star"></i>
+                    Đánh giá từ
+                  </label>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    max="5" 
+                    step="0.1"
+                    placeholder="0.0"
+                    value={filters.minRating || ''} 
+                    onChange={e => handleFilterChange('minRating', e.target.value ? Number(e.target.value) : undefined)} 
+                  />
+                </div>
+                <div className={styles.filterItem}>
+                  <label>
+                    <i className="bi bi-star-fill"></i>
+                    Đánh giá đến
+                  </label>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    max="5" 
+                    step="0.1"
+                    placeholder="5.0"
+                    value={filters.maxRating || ''} 
+                    onChange={e => handleFilterChange('maxRating', e.target.value ? Number(e.target.value) : undefined)} 
+                  />
+                </div>
+                <div className={styles.filterItem}>
+                  <label>
+                    <i className="bi bi-calendar3"></i>
+                    Kinh nghiệm từ (năm)
+                  </label>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    placeholder="0"
+                    value={filters.minExperience || ''} 
+                    onChange={e => handleFilterChange('minExperience', e.target.value ? Number(e.target.value) : undefined)} 
+                  />
+                </div>
+                <div className={styles.filterItem}>
+                  <label>
+                    <i className="bi bi-calendar3-range"></i>
+                    Kinh nghiệm đến (năm)
+                  </label>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    placeholder="100"
+                    value={filters.maxExperience || ''} 
+                    onChange={e => handleFilterChange('maxExperience', e.target.value ? Number(e.target.value) : undefined)} 
+                  />
+                </div>
+              </>
             )}
 
             <div className={styles.filterItem}>
@@ -506,22 +712,30 @@ export default function DoctorManagement() {
                   </th>
                   {activeTab === 'all' && (
                     <>
-                      <th>Kinh nghiệm</th>
+                      <th onClick={() => handleSort('education')} className={styles.sortable}>
+                        Học vị
+                        {filters.sortBy === 'education' && (
+                          <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                        )}
+                      </th>
                       <th onClick={() => handleSort('rating')} className={styles.sortable}>
                         Đánh giá
                         {filters.sortBy === 'rating' && (
                           <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
                         )}
                       </th>
+                      <th>Gói dịch vụ</th>
                       <th>Trạng thái</th>
                     </>
                   )}
-                  <th onClick={() => handleSort('createdAt')} className={styles.sortable}>
-                    Ngày {activeTab === 'pending' ? 'đăng ký' : 'tạo'}
-                    {filters.sortBy === 'createdAt' && (
-                      <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
-                    )}
-                  </th>
+                  {activeTab === 'pending' && (
+                    <th onClick={() => handleSort('createdAt')} className={styles.sortable}>
+                      Ngày đăng ký
+                      {filters.sortBy === 'createdAt' && (
+                        <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
+                      )}
+                    </th>
+                  )}
                   <th style={{ textAlign: 'right', width: activeTab === 'pending' ? '120px' : '150px' }}>
                     Thao tác
                   </th>
@@ -549,13 +763,22 @@ export default function DoctorManagement() {
                     </td>
                     {activeTab === 'all' && (
                       <>
-                        <td>{doctor.yearsOfExperience} năm</td>
+                        <td>
+                          <span className={styles.educationBadge}>
+                            {getEducationLabel(doctor.education)}
+                          </span>
+                        </td>
                         <td>
                           <div className={styles.ratingCell}>
                             <span className={styles.ratingStars}>{getRatingStars(doctor.rating || 0)}</span>
                             <span className={styles.ratingValue}>{(doctor.rating || 0).toFixed(1)}</span>
                             <span className={styles.reviewCount}>({doctor.reviewCount || 0})</span>
                           </div>
+                        </td>
+                        <td>
+                          <span className={styles.serviceTierBadge}>
+                            {doctor.serviceTier || 'Chưa có'}
+                          </span>
                         </td>
                         <td>
                           <span className={`${styles.statusBadge} ${doctor.statusCode === 1 ? styles.statusActive : styles.statusInactive}`}>
@@ -565,7 +788,9 @@ export default function DoctorManagement() {
                         </td>
                       </>
                     )}
-                    <td>{new Date(doctor.createdAt).toLocaleDateString('vi-VN')}</td>
+                    {activeTab === 'pending' && (
+                      <td>{new Date(doctor.createdAt).toLocaleDateString('vi-VN')}</td>
+                    )}
                     <td>
                       <div className={styles.actions}>
                         <button 

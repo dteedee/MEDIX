@@ -25,9 +25,13 @@ interface Doctor {
   responseTime?: string;
 }
 
-const convertApiDoctorToDoctor = (apiDoctor: DoctorInTier, tierName: string): Doctor => {
+const convertApiDoctorToDoctor = (apiDoctor: DoctorInTier, tierName: string, avatarUrlMap?: Record<string, string>): Doctor => {
   const rating = typeof apiDoctor.rating === 'number' ? apiDoctor.rating : parseFloat(String(apiDoctor.rating)) || 0;
   const experience = typeof apiDoctor.experience === 'number' ? apiDoctor.experience : parseInt(String(apiDoctor.experience)) || 0;
+  
+  // Check if avatarUrl is in API response (even if not in TypeScript interface)
+  // Or get from avatarUrlMap if fetched separately
+  const imageUrl = (apiDoctor as any).avatarUrl || avatarUrlMap?.[apiDoctor.doctorId] || undefined;
   
   // Calculate mock stats based on experience and rating (for demo)
   // These should ideally come from API in production
@@ -47,7 +51,7 @@ const convertApiDoctorToDoctor = (apiDoctor: DoctorInTier, tierName: string): Do
     price: apiDoctor.price,
     tier: tierName as 'Basic' | 'Professional' | 'Premium' | 'VIP',
     bio: apiDoctor.bio || 'Bác sĩ chuyên nghiệp với nhiều năm kinh nghiệm trong lĩnh vực y tế.',
-    imageUrl: undefined,
+    imageUrl,
     totalCases,
     successRate,
     responseTime
@@ -66,6 +70,7 @@ const DoctorBookingList: React.FC = () => {
   const [tiersData, setTiersData] = useState<ServiceTierWithPaginatedDoctorsDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [doctorAvatars, setDoctorAvatars] = useState<Record<string, string>>({});
   
   const [specializations, setSpecializations] = useState<{id: string, name: string}[]>([]);
   const [metadataLoading, setMetadataLoading] = useState(true);
@@ -175,6 +180,40 @@ const DoctorBookingList: React.FC = () => {
             (tier): tier is ServiceTierWithPaginatedDoctorsDto => tier !== undefined
           );
           setTiersData(allTiersData);
+          
+          // Load avatars for doctors that don't have avatarUrl in the response
+          const allDoctors = allTiersData.flatMap(tier => tier.doctors?.items || []);
+          const doctorsNeedingAvatar = allDoctors.filter(doctor => 
+            !(doctor as any).avatarUrl && doctor.doctorId
+          );
+          
+          if (doctorsNeedingAvatar.length > 0) {
+            // Fetch avatars in parallel (limit to avoid too many requests)
+            Promise.all(
+              doctorsNeedingAvatar.slice(0, 20).map(async (doctor) => {
+                try {
+                  const profile = await doctorService.getDoctorProfile(doctor.doctorId);
+                  if (profile.avatarUrl) {
+                    return { doctorId: doctor.doctorId, avatarUrl: profile.avatarUrl };
+                  }
+                } catch (error) {
+                  console.log(`Could not fetch avatar for doctor ${doctor.doctorId}:`, error);
+                }
+                return null;
+              })
+            ).then(results => {
+              if (mountedRef.current) {
+                const newAvatars: Record<string, string> = {};
+                results.forEach(result => {
+                  if (result && result.avatarUrl) {
+                    newAvatars[result.doctorId] = result.avatarUrl;
+                  }
+                });
+                setDoctorAvatars(prev => ({ ...prev, ...newAvatars }));
+              }
+            });
+          }
+          
           setLoading(false);
         }
       } catch (err: any) {
@@ -197,7 +236,7 @@ const DoctorBookingList: React.FC = () => {
     const tier = tiersData.find(t => t.name === tierName);
     if (!tier || !tier.doctors || !tier.doctors.items) return [];
     
-    let doctors = tier.doctors.items.map(doctor => convertApiDoctorToDoctor(doctor, tierName));
+    let doctors = tier.doctors.items.map(doctor => convertApiDoctorToDoctor(doctor, tierName, doctorAvatars));
     
     if (debouncedSearch.trim()) {
       const searchLower = debouncedSearch.toLowerCase().trim();

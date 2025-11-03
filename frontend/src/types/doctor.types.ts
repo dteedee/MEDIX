@@ -66,7 +66,10 @@ export interface DoctorProfileDto {
   doctorID?: string;
   avatarUrl?: string;
   fullName: string;
-  price: number;
+  consultationFee?: number; // phí khám từ backend
+  price?: number; // giữ tương thích nếu có nơi dùng price
+  yearsOfExperience?: number | string; // kinh nghiệm từ backend
+  experience?: number | string; // một số API trả experience
   averageRating: number;
   numberOfReviews: number;
   specialization: string;

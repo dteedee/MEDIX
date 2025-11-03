@@ -95,6 +95,22 @@ const DoctorBookingList: React.FC = () => {
     'Giáo sư'
   ], []);
 
+  const degreeColorSchemes = useMemo(() => ({
+    'Cử nhân y khoa': { accent: '#3b82f6', light: 'rgba(59,130,246,0.12)' },
+    'Thạc sĩ y khoa': { accent: '#10b981', light: 'rgba(16,185,129,0.12)' },
+    'Tiến sĩ y khoa': { accent: '#f59e0b', light: 'rgba(245,158,11,0.12)' },
+    'Phó giáo sư': { accent: '#8b5cf6', light: 'rgba(139,92,246,0.12)' },
+    'Giáo sư': { accent: '#ef4444', light: 'rgba(239,68,68,0.12)' }
+  } as Record<DegreeTab, { accent: string; light: string }>), []);
+
+  const degreeIcons = useMemo(() => ({
+    'Cử nhân y khoa': 'bi-mortarboard',
+    'Thạc sĩ y khoa': 'bi-mortarboard-fill',
+    'Tiến sĩ y khoa': 'bi-journal-bookmark-fill',
+    'Phó giáo sư': 'bi-award',
+    'Giáo sư': 'bi-award-fill'
+  } as Record<DegreeTab, string>), []);
+
   const [activeDegree, setActiveDegree] = useState<DegreeTab>('Cử nhân y khoa');
   const [tiersData, setTiersData] = useState<ServiceTierWithPaginatedDoctorsDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -183,10 +199,10 @@ const DoctorBookingList: React.FC = () => {
   }, [searchTerm]);
 
   // Helper function to check if doctor matches search
-  const doctorMatchesSearch = useCallback((doctor: DoctorInTier, searchTerms: string[], tierName?: string): boolean => {
+  const doctorMatchesSearch = useCallback((doctor: DoctorInTier, searchTerms: string[]): boolean => {
     if (!doctor || searchTerms.length === 0) return false;
     
-    const convertedDoctor = convertApiDoctorToDoctor(doctor, tierName || 'Basic', doctorAvatars, doctorStatistics);
+    const convertedDoctor = convertApiDoctorToDoctor(doctor, 'Basic', doctorAvatars, doctorStatistics);
     const nameNormalized = normalizeSearchText(convertedDoctor?.fullName);
     const specialtyNormalized = normalizeSearchText(convertedDoctor?.specialty);
     const degreeNormalized = normalizeSearchText(convertedDoctor?.degree);
@@ -214,7 +230,7 @@ const DoctorBookingList: React.FC = () => {
     const allDoctors = tiersData.flatMap(t => t.doctors?.items || []);
     const resultsByDegree: Partial<Record<DegreeTab, boolean>> = {};
     degreeTabs.forEach(tab => {
-      const has = allDoctors.some(d => doctorMatchesSearch(d, searchTerms, t.name));
+      const has = allDoctors.some(d => doctorMatchesSearch(d, searchTerms));
       if (has) resultsByDegree[tab] = true;
     });
     const first = degreeTabs.find(tab => resultsByDegree[tab]);
@@ -264,11 +280,12 @@ const DoctorBookingList: React.FC = () => {
         setLoading(true);
         setError(null);
         
+        const commonPage = { pageNumber: 1, pageSize: 9 };
         const [basicData, professionalData, premiumData, vipData] = await Promise.all([
-          loadTierData('Basic', basicPagination, selectedEducationCode, selectedSpecializationCode, priceRange),
-          loadTierData('Professional', professionalPagination, selectedEducationCode, selectedSpecializationCode, priceRange),
-          loadTierData('Premium', premiumPagination, selectedEducationCode, selectedSpecializationCode, priceRange),
-          loadTierData('VIP', vipPagination, selectedEducationCode, selectedSpecializationCode, priceRange)
+          loadTierData('Basic', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange),
+          loadTierData('Professional', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange),
+          loadTierData('Premium', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange),
+          loadTierData('VIP', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange)
         ]);
 
         if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
@@ -410,11 +427,12 @@ const DoctorBookingList: React.FC = () => {
         setLoading(true);
         setError(null);
         
+        const commonPage = { pageNumber: 1, pageSize: 9 };
         const [basicData, professionalData, premiumData, vipData] = await Promise.all([
-          loadTierData('Basic', basicPagination, selectedEducationCode, selectedSpecializationCode, priceRange),
-          loadTierData('Professional', professionalPagination, selectedEducationCode, selectedSpecializationCode, priceRange),
-          loadTierData('Premium', premiumPagination, selectedEducationCode, selectedSpecializationCode, priceRange),
-          loadTierData('VIP', vipPagination, selectedEducationCode, selectedSpecializationCode, priceRange)
+          loadTierData('Basic', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange),
+          loadTierData('Professional', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange),
+          loadTierData('Premium', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange),
+          loadTierData('VIP', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange)
         ]);
 
         if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
@@ -527,7 +545,7 @@ const DoctorBookingList: React.FC = () => {
         loadRequestIdRef.current = null;
       }
     };
-  }, [basicPagination, professionalPagination, premiumPagination, vipPagination, selectedEducationCode, selectedSpecializationCode, priceRange, loadTierData]);
+  }, [selectedEducationCode, selectedSpecializationCode, priceRange, loadTierData]);
 
   // Search doctors across all degrees
   const searchDoctorsAcrossAllDegrees = (searchTerm: string): { degree: DegreeTab; doctors: Doctor[] }[] => {
@@ -564,10 +582,11 @@ const DoctorBookingList: React.FC = () => {
   };
 
   const getDoctorsByDegree = useCallback((degree: DegreeTab): Doctor[] => {
-    const all = tiersData.flatMap(t => t.doctors?.items || []);
+    const allConverted = tiersData.flatMap(t => (t.doctors?.items || []).map(d => 
+      convertApiDoctorToDoctor(d, t.name, doctorAvatars, doctorStatistics)
+    ));
     
-    let doctors = all.map(doctor => convertApiDoctorToDoctor(doctor, t.name || 'Basic', doctorAvatars, doctorStatistics))
-      .filter(d => d.degree === degree);
+    let doctors = allConverted.filter(d => d.degree === degree);
     
     if (debouncedSearch && debouncedSearch.trim()) {
       const searchNormalized = normalizeSearchText(debouncedSearch);
@@ -972,7 +991,7 @@ const DoctorBookingList: React.FC = () => {
         )}
 
         <div className={styles.mainLayout}>
-          <aside className={styles.filterSidebar}>
+          <aside className={styles.filterSidebar} style={{ width: 260, minWidth: 240 }}>
             <div className={styles.sidebarHeader}>
               <i className="bi bi-funnel-fill"></i>
               <h3>Bộ lọc tìm kiếm</h3>
@@ -1099,16 +1118,48 @@ const DoctorBookingList: React.FC = () => {
             </div>
 
       <div className={styles.tierTabs}>
-        {degreeTabs.map(tab => (
-          <button
-            key={tab}
-            className={`${styles.tierTab} ${activeDegree === tab ? styles.active : ''}`}
-            onClick={() => setActiveDegree(tab)}
-          >
-            <i className="bi bi-mortarboard-fill"></i>
-            {tab}
-          </button>
-        ))}
+        {degreeTabs.map(tab => {
+          const count = getDoctorsByDegree(tab).length;
+          const scheme = degreeColorSchemes[tab];
+          const isActive = activeDegree === tab;
+          return (
+            <button
+              key={tab}
+              className={`${styles.tierTab} ${isActive ? styles.active : ''}`}
+              onClick={() => setActiveDegree(tab)}
+              aria-pressed={isActive}
+              title={`${tab} • ${count} bác sĩ`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                border: `1px solid ${isActive ? scheme.accent : '#e5e7eb'}`,
+                background: isActive ? scheme.light : 'white',
+                boxShadow: isActive ? `0 4px 14px ${scheme.light}` : 'none',
+                transform: isActive ? 'translateY(-1px)' : 'none',
+                transition: 'all 160ms ease-in-out',
+                whiteSpace: 'nowrap',
+                padding: '10px 14px'
+              }}
+            >
+              <i className={`bi ${degreeIcons[tab]}`} style={{ color: scheme.accent, fontSize: 18 }}></i>
+              <span style={{ color: isActive ? scheme.accent : '#111827', fontWeight: isActive ? 600 : 500 }}>{tab}</span>
+              <span
+                style={{
+                  marginLeft: 4,
+                  fontSize: 12,
+                  lineHeight: 1,
+                  background: scheme.light,
+                  color: scheme.accent,
+                  borderRadius: 9999,
+                  padding: '4px 8px',
+                }}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
             {currentDoctors.length > 0 ? (

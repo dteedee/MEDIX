@@ -66,7 +66,10 @@ export interface DoctorProfileDto {
   doctorID?: string;
   avatarUrl?: string;
   fullName: string;
-  consulationFee: number;
+  consultationFee?: number; // phí khám từ backend
+  price?: number; // giữ tương thích nếu có nơi dùng price
+  yearsOfExperience?: number | string; // kinh nghiệm từ backend
+  experience?: number | string; // một số API trả experience
   averageRating: number;
   numberOfReviews: number;
   specialization: string;
@@ -108,6 +111,11 @@ export interface DoctorInTier {
   price: number;
   bio: string;
   rating: number;
+  totalCases?: number;
+  successfulCases?: number;
+  successRate?: number;
+  averageResponseTime?: number; // in minutes
+  reviewCount?: number;
 }
 
 export interface PaginationParams {

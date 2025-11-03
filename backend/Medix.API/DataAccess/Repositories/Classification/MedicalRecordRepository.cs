@@ -1,4 +1,6 @@
-﻿using Medix.API.DataAccess.Interfaces.Classification;
+﻿using CloudinaryDotNet.Actions;
+using Medix.API.Business.Helper;
+using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -63,6 +65,60 @@ namespace Medix.API.DataAccess.Repositories.Classification
             await _context.Prescriptions.AddRangeAsync(record.Prescriptions);
 
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query)
+        {
+            var queryable = _context.MedicalRecords
+                .Where(mr => mr.Appointment.Patient.UserId == userId)
+                .OrderByDescending(mr => mr.Appointment.AppointmentEndTime)
+                .AsQueryable();
+            if (queryable.Count() == 0)
+            {
+                return new List<MedicalRecord>();
+            }
+
+            if (query.DateFrom == null && query.DateTo == null) { }
+            else if (query.DateTo == null)
+            {
+                queryable = queryable.Where(mr => mr.Appointment.AppointmentEndTime >= query.DateFrom);
+            }
+            else
+            {
+                query.DateTo = query.DateTo.Value.AddDays(1);
+                if (query.DateFrom == null)
+                {
+                    queryable = queryable.Where(mr => mr.Appointment.AppointmentEndTime <= query.DateTo);
+                }
+                else
+                {
+                    queryable = queryable.Where(mr =>
+                        mr.Appointment.AppointmentEndTime <= query.DateTo
+                        && mr.Appointment.AppointmentEndTime >= query.DateFrom);
+                }
+                
+            }
+
+            return await queryable
+                .Include(mr => mr.Appointment)
+                    .ThenInclude(a => a.Doctor)
+                        .ThenInclude(d => d.User)
+                .Include(mr => mr.MedicalRecordAttachments)
+                .ToListAsync();
+        }
+
+        public async Task<MedicalRecord?> GetRecordDetailsByIdAsync(Guid id)
+        {
+            return await _context.MedicalRecords
+                .Include(mr => mr.Appointment)
+                    .ThenInclude(mr => mr.Patient)
+                .Include(mr => mr.Appointment)
+                    .ThenInclude(a => a.Doctor)
+                        .ThenInclude(d => d.User)
+                .Include(mr => mr.MedicalRecordAttachments)
+                .Include(mr => mr.Prescriptions)
+                    .ThenInclude(p => p.Medication)
+                .FirstOrDefaultAsync(mr => mr.Id == id);
         }
     }
 }

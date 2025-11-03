@@ -11,5 +11,6 @@ namespace Medix.API.Business.Interfaces.UserManagement
         Task<PatientDTO> UpdateAsync(Guid id, PatientDTO patientDTO);
         Task<bool> DeleteAsync(Guid id);
         Task<IEnumerable<PatientDTO>> GetAllAsync();
+        Task<Patient?> GetPatientByUserIdAsync(Guid userId);
     }
 }

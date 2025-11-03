@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import styles from '../../styles/footer.module.css';
+import styles from '../../styles/public/footer.module.css';
 
 const Footer: React.FC = () => {
   const { t } = useLanguage();

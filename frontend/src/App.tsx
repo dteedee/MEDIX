@@ -74,8 +74,6 @@ import ErrorPageWrapper from './pages/error/ErrorPageWrapper';
 import PrivacyPolicy from './pages/public/PrivacyPolicy';
 import TermsOfService from './pages/public/TermsOfService';
 import AboutUs from './pages/public/AboutUs';
-import DoctorProfileList from './pages/manager/DoctorProfileList';
-import DoctorProfileDetails from './pages/manager/DoctorProfileDetails';
 
 export function App() {
   return (
@@ -154,8 +152,6 @@ export function App() {
                     <Route path="services" element={<ServicePackageManagement />} />
                     <Route path="commissions" element={<CommissionManagement />} />
                     <Route path="feedback" element={<FeedbackManagement />} />
-                    <Route path='doctor-profiles' element={<DoctorProfileList />} />
-                    <Route path='doctor-profiles/details/:id' element={<DoctorProfileDetails />} />
                   </Route>
 
                   {/* ---------- Patient routes ---------- */}

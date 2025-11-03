@@ -19,14 +19,16 @@ namespace Medix.API.Business.Services.Classification
         private readonly IEmailService _emailService;
         private readonly IUserRepository _userRepository;
         private readonly IDoctorRepository _doctorRepository;
+        private readonly IWalletRepository _walletRepository;
+        private readonly IServiceTierRepository _serviceTierRepository;
 
         public DoctorRegistrationFormService(
-            IDoctorRegistrationFormRepository doctorRegistrationFormRepository,
-            CloudinaryService cloudinaryService,
-            MedixContext context,
-            IEmailService emailService,
-            IUserRepository userRepository,
-            IDoctorRepository doctorRepository)
+            IDoctorRegistrationFormRepository doctorRegistrationFormRepository, 
+            CloudinaryService cloudinaryService, MedixContext context, 
+            IEmailService emailService, IUserRepository userRepository, 
+            IDoctorRepository doctorRepository, 
+            IWalletRepository walletRepository,
+            IServiceTierRepository serviceTierRepository)
         {
             _doctorRegistrationFormRepository = doctorRegistrationFormRepository;
             _cloudinaryService = cloudinaryService;
@@ -34,6 +36,8 @@ namespace Medix.API.Business.Services.Classification
             _emailService = emailService;
             _userRepository = userRepository;
             _doctorRepository = doctorRepository;
+            _walletRepository = walletRepository;
+            _serviceTierRepository = serviceTierRepository;
         }
 
         public async Task<bool> IsUserNameExistAsync(string userName) =>
@@ -139,12 +143,18 @@ namespace Medix.API.Business.Services.Classification
                     };
                     await _userRepository.CreateUserRoleAsync(userRole);
 
+                    var basicServiceTier = await _serviceTierRepository.GetServiceTierByNameAsync("Basic"); //Basic tier
+                    if (basicServiceTier == null)
+                    {
+                        throw new Exception("Basic service tier not found in database");
+                    }
+
                     var doctor = new Doctor
                     {
                         Id = Guid.NewGuid(),
                         UserId = userId,
                         SpecializationId = form.SpecializationId,
-                        ServiceTierId = Guid.Parse("580AACE7-39D4-4BAA-B13F-A98A5CA503B1"), //Basic tier
+                        ServiceTierId = basicServiceTier.Id, //Basic tier
                         LicenseNumber = form.LicenseNumber,
                         LicenseImageUrl = form.LicenseImageUrl,
                         DegreeFilesUrl = form.DegreeFilesUrl,
@@ -158,6 +168,12 @@ namespace Medix.API.Business.Services.Classification
                         IsAcceptingAppointments = false
                     };
                     await _doctorRepository.CreateDoctorAsync(doctor);
+
+                    var wallet = new Wallet
+                    {
+                        UserId = userId,
+                    };
+                    await _walletRepository.CreateWalletAsync(wallet);
 
                     if (!await _doctorRegistrationFormRepository.DeleteAsync(form.Id))
                     {

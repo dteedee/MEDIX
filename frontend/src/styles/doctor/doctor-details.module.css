@@ -1,630 +1,1366 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-    background: #f8f9fa;
-    color: #1a1a1a;
-}
-
-/* Breadcrumb */
-.breadcrumb {
-    max-width: 1400px;
+/* Page Wrapper */
+.pageWrapper {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 50%, #fafbfc 100%);
+    background-size: 200% 200%;
+    animation: gradientShift 20s ease infinite;
+  }
+  
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  
+  /* Breadcrumb */
+  .breadcrumb {
+    max-width: 1600px;
     margin: 0 auto;
-    padding: 20px 40px;
-    font-size: 13px;
-    color: #666;
-}
-
-.breadcrumb a {
-    color: #0066b3;
-    text-decoration: none;
-}
-
-/* Main Content */
-.container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 40px 60px;
-}
-
-.page-title {
-    font-size: 28px;
-    font-weight: 600;
-    margin-bottom: 30px;
-    color: #000;
-}
-
-.doctor-profile {
-    background: white;
-    border-radius: 12px;
-    padding: 35px;
-    display: flex;
-    gap: 35px;
-    margin-bottom: 30px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.doctor-image {
-    width: 180px;
-    height: 180px;
-    background: #e5e7eb;
-    border-radius: 8px;
-    flex-shrink: 0;
-}
-
-.doctor-info h3 {
-    font-size: 14px;
-    color: #666;
-    font-weight: 500;
-    margin-bottom: 5px;
-}
-
-.doctor-name {
-    font-size: 32px;
-    font-weight: 700;
-    color: #000;
-    margin-bottom: 15px;
-}
-
-.rating-section {
+    padding: 20px 24px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.stars {
-    color: #fbbf24;
-    font-size: 20px;
-    letter-spacing: 2px;
-}
-
-.rating-number {
-    font-size: 18px;
-    font-weight: 600;
-    color: #000;
-}
-
-.rating-count {
-    font-size: 13px;
-    color: #666;
-}
-
-.info-row {
-    margin-bottom: 12px;
+    gap: 12px;
     font-size: 14px;
-}
-
-.info-label {
-    font-weight: 600;
-    color: #000;
-    margin-right: 5px;
-}
-
-.info-value {
-    color: #4a4a4a;
-}
-
-/* Tabs */
-.tabs {
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.tab-buttons {
-    display: flex;
-    border-bottom: 2px solid #e5e7eb;
-}
-
-.tab-btn {
-    flex: 1;
-    padding: 18px;
-    background: transparent;
+    animation: fadeIn 0.6s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .breadcrumbLink {
+    background: none;
     border: none;
-    font-size: 15px;
-    font-weight: 500;
+    color: #667eea;
     cursor: pointer;
-    color: #666;
-    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    padding: 6px 10px;
+    border-radius: 8px;
+  }
+  
+  .breadcrumbLink:hover {
+    background: rgba(102, 126, 234, 0.1);
+    color: #5568d3;
+  }
+  
+  .breadcrumbLink i {
+    font-size: 16px;
+  }
+  
+  .breadcrumb > i {
+    color: #cbd5e1;
+    font-size: 12px;
+  }
+  
+  .breadcrumbCurrent {
+    color: #475569;
+    font-weight: 600;
+  }
+  
+  /* Container */
+  .container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+  }
+  
+  /* Hero Section */
+  .heroSection {
+    margin-bottom: 32px;
+    animation: slideUp 0.8s ease-out;
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .doctorProfileCard {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 32px;
+    padding: 40px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(226, 232, 240, 0.5);
+    display: flex;
+    gap: 40px;
     position: relative;
-}
-
-.tab-btn.active {
-    color: #000;
-    background: #f8f9fa;
-}
-
-.tab-btn.active::after {
+    overflow: hidden;
+  }
+  
+  .doctorProfileCard::before {
     content: '';
     position: absolute;
-    bottom: -2px;
+    top: 0;
     left: 0;
     right: 0;
-    height: 2px;
-    background: #0066b3;
-}
-
-.tab-content {
-    padding: 35px;
-}
-
-/* Overview Section */
-.overview-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-}
-
-.overview-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #000;
-}
-
-.overall-rating {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* Rating Breakdown */
-.rating-breakdown-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #0066b3;
-    margin-bottom: 20px;
-}
-
-.rating-bar-item {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 12px;
-}
-
-.rating-label {
-    font-size: 14px;
-    color: #4a4a4a;
-    width: 35px;
-}
-
-.rating-bar-container {
-    flex: 1;
-    height: 8px;
-    background: #e5e7eb;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.rating-bar-fill {
+    height: 6px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  .profileLeft {
+    flex-shrink: 0;
+  }
+  
+  .avatarWrapper {
+    position: relative;
+    width: 200px;
+    height: 200px;
+  }
+  
+  .doctorAvatar {
+    width: 100%;
     height: 100%;
-    background: #0066b3;
-    border-radius: 4px;
-}
-
-.rating-count-text {
-    font-size: 13px;
-    color: #666;
-    width: 90px;
-    text-align: right;
-}
-
-/* Reviews */
-.reviews-section {
-    margin-top: 35px;
-}
-
-.reviews-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #0066b3;
-    margin-bottom: 20px;
-}
-
-.review-item {
-    padding: 20px 0;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.review-item:last-child {
-    border-bottom: none;
-}
-
-.review-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.review-stars {
-    color: #fbbf24;
-    font-size: 16px;
-    letter-spacing: 1px;
-}
-
-.review-date {
-    font-size: 13px;
-    color: #666;
-}
-
-.review-text {
-    font-size: 14px;
-    color: #4a4a4a;
-    line-height: 1.6;
-}
-
-/* Booking Tab Styles */
-.booking-container {
-    padding: 20px 0;
-}
-
-.booking-title {
-    font-size: 24px;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin-bottom: 30px;
-    text-align: center;
-}
-
-.booking-layout {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
-    margin-bottom: 30px;
-}
-
-/* Calendar Styles */
-.calendar-section {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.calendar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.calendar-nav {
-    background: #f3f4f6;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 12px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-    color: #374151;
-    transition: background-color 0.2s;
-}
-
-.calendar-nav:hover {
-    background: #e5e7eb;
-}
-
-.calendar-month {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin: 0;
-}
-
-.calendar-grid {
-    display: flex;
-    flex-direction: column;
-}
-
-.calendar-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-    margin-bottom: 8px;
-}
-
-.weekday {
-    text-align: center;
-    font-size: 12px;
-    font-weight: 500;
-    color: #6b7280;
-    padding: 8px 4px;
-}
-
-.calendar-dates {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-}
-
-.calendar-date {
-    aspect-ratio: 1;
-    border: none;
-    border-radius: 8px;
-    background: #f9fafb;
-    color: #374151;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
+    border-radius: 24px;
+    object-fit: cover;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+    border: 4px solid white;
+  }
+  
+  .avatarPlaceholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 24px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.calendar-date:hover:not(:disabled) {
-    background: #e5e7eb;
-}
-
-.calendar-date.selected {
-    background: #3b82f6;
-    color: white;
-}
-
-.calendar-date.unavailable {
-    background: #f3f4f6;
-    color: #9ca3af;
-    cursor: not-allowed;
-}
-
-.calendar-date.other-month {
-    background: transparent;
-    color: #d1d5db;
-}
-
-/* Time Slots Styles */
-.timeslots-section {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.timeslots-header {
-    margin-bottom: 20px;
-}
-
-.legend {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 4px solid white;
+  }
+  
+  .avatarPlaceholder i {
+    font-size: 80px;
+    color: #cbd5e1;
+  }
+  
+  .verifiedBadge {
+    position: absolute;
+    bottom: -8px;
+    right: -8px;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-radius: 50%;
     display: flex;
-    gap: 20px;
-    margin-bottom: 10px;
-}
-
-.legend-item {
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+    border: 4px solid white;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+  
+  .verifiedBadge i {
+    font-size: 28px;
+    color: white;
+  }
+  
+  .profileRight {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  
+  .doctorHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .titleSection {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .doctorLabel {
+    font-size: 14px;
+    font-weight: 600;
+    color: #667eea;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .doctorName {
+    font-size: 36px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+  }
+  
+  .ratingSection {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .ratingStars {
+    display: flex;
+    gap: 4px;
+  }
+  
+  .starFilled {
+    color: #fbbf24;
+    font-size: 20px;
+  }
+  
+  .starHalf {
+    color: #fbbf24;
+    font-size: 20px;
+  }
+  
+  .starEmpty {
+    color: #e2e8f0;
+    font-size: 20px;
+  }
+  
+  .ratingInfo {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 12px;
-    color: #6b7280;
-}
-
-.legend-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-}
-
-.legend-dot.available {
-    background: #3b82f6;
-}
-
-.legend-dot.unavailable {
-    background: #9ca3af;
-}
-
-.slots-info {
-    font-size: 12px;
-    color: #6b7280;
-    margin: 0;
-}
-
-.timeslots-grid {
+    font-size: 15px;
+  }
+  
+  .ratingNumber {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 18px;
+  }
+  
+  .ratingDivider {
+    color: #cbd5e1;
+  }
+  
+  .reviewCount {
+    color: #64748b;
+    font-weight: 500;
+  }
+  
+  .infoGrid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-}
-
-.timeslot {
-    padding: 12px 16px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    background: #3b82f6;
-    color: white;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: center;
-}
-
-.timeslot:hover {
-    background: #2563eb;
-    transform: translateY(-1px);
-}
-
-.timeslot.selected {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
-    box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.2);
-}
-
-.no-date-selected {
-    text-align: center;
-    padding: 40px 20px;
-    color: #6b7280;
-}
-
-.selected-info {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    border: 1px solid #e5e7eb;
-}
-
-.selected-info h4 {
-    margin: 0 0 10px 0;
-    color: #1a1a1a;
-    font-size: 16px;
-}
-
-.selected-info p {
-    margin: 5px 0;
-    color: #374151;
-    font-size: 14px;
-}
-
-.booking-form {
-    max-width: 600px;
-    margin: 0 auto;
-    background: white;
-    padding: 30px;
+    gap: 16px;
+  }
+  
+  .infoCard {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(241, 245, 249, 0.6) 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(226, 232, 240, 0.5);
+    transition: all 0.3s ease;
+  }
+  
+  .infoCard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    border-color: rgba(102, 126, 234, 0.3);
+  }
+  
+  .infoIcon {
+    width: 48px;
+    height: 48px;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-label {
-    display: block;
-    font-size: 14px;
-    font-weight: 500;
-    color: #374151;
-    margin-bottom: 8px;
-}
-
-.form-input,
-.form-select,
-.form-textarea {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+  
+  .infoIcon i {
+    font-size: 22px;
+    color: white;
+  }
+  
+  .infoContent {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .infoLabel {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .infoValue {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .infoPriceValue {
+    font-size: 18px;
+    font-weight: 700;
+    color: #10b981;
+  }
+  
+  .bookNowButton {
     width: 100%;
-    padding: 12px 16px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .bookNowButton::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s ease;
+  }
+  
+  .bookNowButton:hover::before {
+    left: 100%;
+  }
+  
+  .bookNowButton:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(102, 126, 234, 0.4);
+  }
+  
+  .bookNowButton:active {
+    transform: translateY(-1px);
+  }
+  
+  .bookNowButton i {
+    font-size: 20px;
+  }
+  
+  /* Tabs Section */
+  .tabsSection {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(226, 232, 240, 0.5);
+    animation: fadeInUp 0.8s ease-out 0.2s both;
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .tabButtons {
+    display: flex;
+    padding: 8px;
+    background: #f8fafc;
+    gap: 8px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+  }
+  
+  .tabButton {
+    flex: 1;
+    padding: 16px 24px;
+    background: transparent;
+    border: 2px solid transparent;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+  
+  .tabButton i {
+    font-size: 18px;
+  }
+  
+  .tabButton:hover:not(.active) {
+    background: #f1f5f9;
+    color: #475569;
+  }
+  
+  .tabButton.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  }
+  
+  .tabContent {
+    padding: 32px;
+  }
+  
+  /* Bio Tab */
+  .bioTab {
+    animation: fadeIn 0.6s ease-out;
+  }
+  
+  .bioCard {
+    padding: 32px;
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.5) 0%, rgba(241, 245, 249, 0.3) 100%);
+    border-radius: 20px;
+    border: 1px solid rgba(226, 232, 240, 0.5);
+  }
+  
+  .sectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 20px 0;
+  }
+  
+  .sectionTitle i {
+    font-size: 24px;
+    color: #667eea;
+  }
+  
+  .bioText {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #475569;
+    margin: 0;
+  }
+  
+  /* Booking Tab */
+  .bookingTab {
+    animation: fadeIn 0.6s ease-out;
+  }
+  
+  .bookingLayout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  
+  .calendarSection,
+  .timeslotsSection {
     background: white;
-}
-
-.form-input:focus,
-.form-select:focus,
-.form-textarea:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.form-textarea {
-    resize: vertical;
-    min-height: 100px;
-}
-
-.booking-info {
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(226, 232, 240, 0.5);
+  }
+  
+  .sectionHeader {
+    margin-bottom: 20px;
+  }
+  
+  .sectionHeader h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+  }
+  
+  .sectionHeader h3 i {
+    font-size: 20px;
+    color: #667eea;
+  }
+  
+  .calendarContainer {
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 20px;
+  }
+  
+  .calendarHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin: 25px 0;
-    padding: 20px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-}
-
-.price-info,
-.duration-info {
+    margin-bottom: 20px;
+  }
+  
+  .calendarNav {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    background: white;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.3s ease;
+  }
+  
+  .calendarNav:hover {
+    border-color: #667eea;
+    color: #667eea;
+    background: #f8fafc;
+    transform: scale(1.05);
+  }
+  
+  .calendarMonth {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+  }
+  
+  .calendarGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .calendarWeekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  
+  .weekday {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    padding: 8px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .calendarDates {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  
+  .calendarDate {
+    aspect-ratio: 1;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    background: white;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  
+  .calendarDate:hover:not(:disabled):not(.unavailable) {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    transform: scale(1.05);
+  }
+  
+  .calendarDate.selected {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    transform: scale(1.05);
+  }
+  
+  .calendarDate.unavailable {
+    background: #f8fafc;
+    color: #cbd5e1;
+    cursor: not-allowed;
+  }
+  
+  .calendarDate.otherMonth {
+    background: transparent;
+    color: #cbd5e1;
+  }
+  
+  .timeslotsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .selectedDateInfo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+  }
+  
+  .selectedDateInfo i {
+    font-size: 18px;
+    color: #667eea;
+  }
+  
+  .timeslotsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .timeslot {
+    padding: 14px 18px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    background: white;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+  }
+  
+  .timeslot i {
+    font-size: 16px;
+  }
+  
+  .timeslot:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-2px);
+  }
+  
+  .timeslot.selected {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    transform: translateY(-2px);
+  }
+  
+  .noDateSelected,
+  .noSlotsMessage {
+    text-align: center;
+    padding: 60px 20px;
+    color: #94a3b8;
+  }
+  
+  .noDateSelected i,
+  .noSlotsMessage i {
+    font-size: 48px;
+    color: #cbd5e1;
+    margin-bottom: 12px;
+  }
+  
+  .noDateSelected p,
+  .noSlotsMessage p {
+    font-size: 15px;
+    margin: 0;
+  }
+  
+  .bookingConfirmation {
+    margin-top: 24px;
+    animation: slideUp 0.6s ease-out;
+  }
+  
+  .bookingSummary {
+    background: white;
+    border-radius: 20px;
+    padding: 32px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    border: 2px solid rgba(102, 126, 234, 0.2);
+  }
+  
+  .bookingSummary h3 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 24px 0;
+  }
+  
+  .bookingSummary h3 i {
+    font-size: 24px;
+    color: #667eea;
+  }
+  
+  .summaryGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  
+  .summaryItem {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(241, 245, 249, 0.6) 100%);
+    border-radius: 14px;
+    border: 1px solid rgba(226, 232, 240, 0.5);
+  }
+  
+  .summaryLabel {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .summaryValue {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  
+  .summaryPrice {
+    font-size: 18px;
+    font-weight: 700;
+    color: #10b981;
+  }
+  
+  .confirmButton,
+  .paymentButton {
+    width: 100%;
+    padding: 16px 24px;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+  }
+  
+  .confirmButton {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+  }
+  
+  .confirmButton:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(102, 126, 234, 0.4);
+  }
+  
+  .paymentButton {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+  }
+  
+  .paymentButton:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(16, 185, 129, 0.4);
+  }
+  
+  .paymentButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  .buttonSpinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  /* Rating Tab */
+  .ratingTab {
+    animation: fadeIn 0.6s ease-out;
+  }
+  
+  .ratingOverview {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 40px;
+    padding: 32px;
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.5) 0%, rgba(241, 245, 249, 0.3) 100%);
+    border-radius: 20px;
+    border: 1px solid rgba(226, 232, 240, 0.5);
+    margin-bottom: 32px;
+  }
+  
+  .overallRating {
     display: flex;
     flex-direction: column;
     align-items: center;
-}
-
-.price-label,
-.duration-label {
-    font-size: 12px;
-    color: #6b7280;
-    margin-bottom: 4px;
-}
-
-.price-value {
-    font-size: 18px;
+    justify-content: center;
+    gap: 16px;
+    text-align: center;
+  }
+  
+  .ratingScore {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  
+  .ratingScore .ratingNumber {
+    font-size: 64px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1;
+  }
+  
+  .ratingMax {
+    font-size: 32px;
     font-weight: 600;
-    color: #059669;
-}
-
-.duration-value {
-    font-size: 16px;
+    color: #94a3b8;
+  }
+  
+  .totalReviews {
+    font-size: 14px;
+    color: #64748b;
     font-weight: 500;
-    color: #374151;
-}
-
-.booking-button {
-    width: 100%;
-    background: #3b82f6;
+    margin: 0;
+  }
+  
+  .ratingBreakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .ratingBarItem {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .starLabel {
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+    width: 60px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .starLabel i {
+    color: #fbbf24;
+    font-size: 12px;
+  }
+  
+  .ratingBarContainer {
+    flex: 1;
+    height: 12px;
+    background: #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  
+  .ratingBarFill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 6px;
+    transition: width 0.6s ease;
+  }
+  
+  .ratingCount {
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    width: 50px;
+    text-align: right;
+  }
+  
+  .reviewsSection {
+    padding: 32px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(226, 232, 240, 0.5);
+  }
+  
+  .reviewsTitle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 24px 0;
+  }
+  
+  .reviewsTitle i {
+    font-size: 24px;
+    color: #667eea;
+  }
+  
+  .reviewsList {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .reviewCard {
+    padding: 24px;
+    background: #f8fafc;
+    border-radius: 16px;
+    border: 1px solid rgba(226, 232, 240, 0.5);
+    transition: all 0.3s ease;
+  }
+  
+  .reviewCard:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+  }
+  
+  .reviewHeader {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .reviewerAvatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  
+  .reviewerAvatar i {
+    font-size: 28px;
+    color: white;
+  }
+  
+  .reviewerInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .reviewerName {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+  }
+  
+  .reviewRating {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .reviewDate {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 500;
+  }
+  
+  .reviewText {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #475569;
+    margin: 0;
+  }
+  
+  .noReviews {
+    text-align: center;
+    padding: 60px 20px;
+    color: #94a3b8;
+  }
+  
+  .noReviews i {
+    font-size: 64px;
+    color: #cbd5e1;
+    margin-bottom: 16px;
+  }
+  
+  .noReviews p {
+    font-size: 16px;
+    margin: 0;
+  }
+  
+  /* Loading & Error States */
+  .loadingContainer,
+  .errorContainer {
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+  
+  .loadingSpinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid #e2e8f0;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  .loadingContainer p {
+    font-size: 16px;
+    color: #64748b;
+    font-weight: 500;
+  }
+  
+  .errorContainer i {
+    font-size: 80px;
+    color: #ef4444;
+  }
+  
+  .errorContainer h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+  }
+  
+  .backButton {
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    padding: 16px 24px;
-    border-radius: 8px;
-    font-size: 16px;
+    border-radius: 12px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
-}
-
-.booking-button:hover {
-    background: #2563eb;
-    transform: translateY(-1px);
-}
-
-.booking-button:active {
-    transform: translateY(0);
-}
-
-@media (max-width: 768px) {
-    .doctor-profile {
-        flex-direction: column;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  }
+  
+  .backButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  }
+  
+  .backButton i {
+    font-size: 16px;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 1200px) {
+    .doctorProfileCard {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
     }
-
-    .time-slots-grid {
-        grid-template-columns: repeat(2, 1fr);
+  
+    .profileRight {
+      width: 100%;
     }
-
-    .footer-content {
-        grid-template-columns: 1fr;
+  
+    .infoGrid {
+      grid-template-columns: 1fr;
     }
-    
-    .booking-info {
-        flex-direction: column;
-        gap: 15px;
+  
+    .ratingOverview {
+      grid-template-columns: 1fr;
     }
-    
-    .booking-form {
-        padding: 20px;
+  
+    .summaryGrid {
+      grid-template-columns: 1fr;
     }
-    
-    .booking-layout {
-        grid-template-columns: 1fr;
-        gap: 20px;
+  }
+  
+  @media (max-width: 968px) {
+    .container {
+      padding: 0 16px 40px;
     }
-    
-    .timeslots-grid {
-        grid-template-columns: 1fr;
+  
+    .doctorProfileCard {
+      padding: 28px;
+      border-radius: 24px;
     }
-    
-    .legend {
-        flex-direction: column;
-        gap: 10px;
+  
+    .avatarWrapper {
+      width: 160px;
+      height: 160px;
     }
-    
-    .calendar-section,
-    .timeslots-section {
-        padding: 15px;
+  
+    .verifiedBadge {
+      width: 48px;
+      height: 48px;
     }
-}
+  
+    .verifiedBadge i {
+      font-size: 24px;
+    }
+  
+    .doctorName {
+      font-size: 28px;
+    }
+  
+    .bookingLayout {
+      grid-template-columns: 1fr;
+    }
+  
+    .tabButtons {
+      flex-direction: column;
+    }
+  
+    .tabButton {
+      justify-content: flex-start;
+    }
+  
+    .timeslotsGrid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  @media (max-width: 640px) {
+    .breadcrumb {
+      padding: 16px;
+      font-size: 12px;
+    }
+  
+    .container {
+      padding: 0 12px 32px;
+    }
+  
+    .doctorProfileCard {
+      padding: 20px;
+      gap: 24px;
+    }
+  
+    .avatarWrapper {
+      width: 120px;
+      height: 120px;
+    }
+  
+    .doctorName {
+      font-size: 24px;
+    }
+  
+    .infoGrid {
+      gap: 12px;
+    }
+  
+    .infoCard {
+      padding: 12px 16px;
+    }
+  
+    .infoIcon {
+      width: 40px;
+      height: 40px;
+    }
+  
+    .infoIcon i {
+      font-size: 18px;
+    }
+  
+    .infoValue {
+      font-size: 14px;
+    }
+  
+    .bookNowButton {
+      padding: 14px 20px;
+      font-size: 15px;
+    }
+  
+    .tabContent {
+      padding: 20px;
+    }
+  
+    .calendarSection,
+    .timeslotsSection {
+      padding: 16px;
+    }
+  
+    .bookingSummary {
+      padding: 20px;
+    }
+  
+    .summaryGrid {
+      gap: 12px;
+    }
+  
+    .summaryItem {
+      padding: 12px 16px;
+    }
+  
+    .ratingOverview {
+      padding: 24px;
+    }
+  
+    .ratingScore .ratingNumber {
+      font-size: 48px;
+    }
+  
+    .ratingMax {
+      font-size: 24px;
+    }
+  
+    .reviewsSection {
+      padding: 20px;
+    }
+  
+    .reviewCard {
+      padding: 16px;
+    }
+  
+    .bioCard {
+      padding: 20px;
+    }
+  
+    .bioText {
+      font-size: 15px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .breadcrumb {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  
+    .doctorProfileCard {
+      padding: 16px;
+    }
+  
+    .doctorName {
+      font-size: 20px;
+    }
+  
+    .ratingSection {
+      flex-direction: column;
+      align-items: center;
+    }
+  
+    .infoGrid {
+      gap: 10px;
+    }
+  
+    .bookNowButton {
+      font-size: 14px;
+    }
+  
+    .tabButton {
+      padding: 12px 16px;
+      font-size: 14px;
+    }
+  
+    .calendarDates {
+      gap: 4px;
+    }
+  
+    .calendarDate {
+      font-size: 13px;
+      border-radius: 10px;
+    }
+  
+    .confirmButton,
+    .paymentButton {
+      font-size: 15px;
+      padding: 14px 20px;
+    }
+  }
+  
+  /* Smooth transitions for all interactive elements */
+  * {
+    transition-property: transform, box-shadow, background-color, border-color;
+    transition-duration: 0.3s;
+    transition-timing-function: ease;
+  }
+  
+  button:focus,
+  input:focus {
+    outline: none;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 5px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 5px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+  }

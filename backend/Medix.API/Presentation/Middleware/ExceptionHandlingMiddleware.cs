@@ -53,6 +53,12 @@ namespace Medix.API.Presentation.Middleware
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     await context.Response.WriteAsync(JsonSerializer.Serialize(new { message = mex.Message }));
                     return;
+                // THÊM CASE NÀY ĐỂ XỬ LÝ LỖI NGHIỆP VỤ
+                case InvalidOperationException ioe:
+                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest; // Lỗi nghiệp vụ là Bad Request (400)
+                    // Trả về trực tiếp message của exception, không cần gói trong JSON
+                    await context.Response.WriteAsync(ioe.Message);
+                    return;
                 default:
                     // Log lỗi không xác định (lỗi 500)
                     logger.LogError(exception, "An unhandled exception has occurred.");

@@ -10,5 +10,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task UpdateAsync(Review review);
         Task DeleteAsync(Review review);
         Task SaveChangesAsync();
+        Task<List<Review>> GetReviewsByDoctorUserIdAsync(Guid userId);
+
     }
 }

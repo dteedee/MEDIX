@@ -1,9 +1,39 @@
-﻿import React from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { walletService } from '../../services/walletService';
+import { WalletDto } from '../../types/wallet.types';
 import styles from '../../styles/patient/PatientDashboard.module.css';
 
 export const PatientDashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [wallet, setWallet] = useState<WalletDto | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchWallet = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const walletData = await walletService.getWalletByUserId();
+        setWallet(walletData);
+      } catch (err: any) {
+        console.error('Error fetching wallet:', err);
+        setError(err.message || 'Không thể tải thông tin ví');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWallet();
+  }, []);
+
+  const formatBalance = (balance: number, currency: string): string => {
+    const formatted = new Intl.NumberFormat('vi-VN').format(balance);
+    return `${formatted} ${currency}`;
+  };
 
   return (
     <div className={styles.container}>
@@ -21,8 +51,49 @@ export const PatientDashboard: React.FC = () => {
             <i className={`bi bi-wallet2 ${styles.walletIcon}`}></i>
             <div>
               <div style={{ fontSize: '12px', opacity: 0.9 }}>Số dư ví</div>
-              <div className={styles.walletAmount}>2,450,000 đ</div>
+              {loading ? (
+                <div className={styles.walletAmount}>Đang tải...</div>
+              ) : error ? (
+                <div className={styles.walletAmount} style={{ color: '#ef4444' }}>
+                  Lỗi
+                </div>
+              ) : wallet ? (
+                <div className={styles.walletAmount}>
+                  {formatBalance(wallet.balance, wallet.currency)}
+                </div>
+              ) : (
+                <div className={styles.walletAmount}>0 đ</div>
+              )}
             </div>
+            <button
+              onClick={() => navigate('/app/patient/finance')}
+              style={{
+                marginLeft: '12px',
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: '#667eea',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '18px',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#5568d3';
+                e.currentTarget.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#667eea';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              title="Nạp tiền"
+            >
+              <i className="bi bi-plus-lg"></i>
+            </button>
           </div>
           <div className={styles.dateTime}>
             <i className="bi bi-calendar3"></i>

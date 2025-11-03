@@ -1,4 +1,4 @@
-﻿﻿using AutoMapper;
+﻿﻿﻿﻿using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.Doctor;
@@ -9,26 +9,31 @@ namespace Medix.API.Business.Services.Classification
     public class DoctorScheduleService : IDoctorScheduleService
     {
         private readonly IDoctorScheduleRepository _repository;
+        private readonly IAppointmentRepository _appointmentRepository;
         private readonly IMapper _mapper;
 
-        public DoctorScheduleService(IDoctorScheduleRepository repository, IMapper mapper)
+        public DoctorScheduleService(
+            IDoctorScheduleRepository repository,
+            IAppointmentRepository appointmentRepository,
+            IMapper mapper)
         {
             _repository = repository;
+            _appointmentRepository = appointmentRepository;
             _mapper = mapper;
         }
 
         // 🟢 Lấy tất cả
-        public async Task<IEnumerable<DoctorScheduleDto>> GetAllAsync()
+        public async Task<IEnumerable<DoctorScheduleWorkDto>> GetAllAsync()
         {
             var entities = await _repository.GetAllAsync();
-            return _mapper.Map<IEnumerable<DoctorScheduleDto>>(entities);
+            return _mapper.Map<IEnumerable<DoctorScheduleWorkDto>>(entities);
         }
 
         // 🟢 Lấy theo ID
-        public async Task<DoctorScheduleDto?> GetByIdAsync(Guid id)
+        public async Task<DoctorScheduleWorkDto?> GetByIdAsync(Guid id)
         {
             var entity = await _repository.GetByIdAsync(id);
-            return entity == null ? null : _mapper.Map<DoctorScheduleDto>(entity);
+            return entity == null ? null : _mapper.Map<DoctorScheduleWorkDto>(entity);
         }
 
         // 🟢 Validate logic lịch trùng
@@ -45,9 +50,15 @@ namespace Medix.API.Business.Services.Classification
             => startA < endB && endA > startB;
 
         // 🟢 Tạo mới
-        public async Task<DoctorScheduleDto> CreateAsync(CreateDoctorScheduleDto dto)
+        public async Task<DoctorScheduleWorkDto> CreateAsync(CreateDoctorScheduleDto dto)
         {
             ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
+            
+            var duration = dto.EndTime - dto.StartTime;
+            if (duration.TotalMinutes != 50)
+            {
+                throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 50 phút.");
+            }
 
             var existingSchedules = await _repository.GetByDoctorAndDayAsync(dto.DoctorId, dto.DayOfWeek);
             var overlapping = existingSchedules.FirstOrDefault(s => IsOverlap(dto.StartTime, dto.EndTime, s.StartTime, s.EndTime));
@@ -58,6 +69,8 @@ namespace Medix.API.Business.Services.Classification
                     $"Bác sĩ đã có lịch từ {overlapping.StartTime:HH\\:mm} đến {overlapping.EndTime:HH\\:mm} trong ngày {dto.DayOfWeek}."
                 );
             }
+            
+          
 
             var entity = _mapper.Map<DoctorSchedule>(dto);
             entity.Id = Guid.NewGuid();
@@ -67,17 +80,30 @@ namespace Medix.API.Business.Services.Classification
             await _repository.AddAsync(entity);
 
             var reloaded = await _repository.GetByIdAsync(entity.Id);
-            return _mapper.Map<DoctorScheduleDto>(reloaded);
+            return _mapper.Map<DoctorScheduleWorkDto>(reloaded);
         }
 
         // 🟡 Cập nhật
-        public async Task<DoctorScheduleDto?> UpdateAsync(UpdateDoctorScheduleDto dto)
+        public async Task<DoctorScheduleWorkDto?> UpdateAsync(UpdateDoctorScheduleDto dto)
         {
             ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
+            
+            var duration = dto.EndTime - dto.StartTime;
+            if (duration.TotalMinutes != 50)
+            {
+                throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 50 phút.");
+            }
 
             var existing = await _repository.GetByIdAsync(dto.Id);
             if (existing == null)
                 throw new InvalidOperationException("Không tìm thấy lịch bác sĩ cần cập nhật.");
+
+            // KIỂM TRA BUSINESS RULE: Không cho cập nhật nếu đã có lịch hẹn trong tương lai
+            var hasFutureAppointments = await _appointmentRepository.HasFutureAppointmentsForDoctorOnDay(existing.DoctorId, existing.DayOfWeek);
+            if (hasFutureAppointments)
+            {
+                throw new InvalidOperationException($"Không thể thay đổi lịch làm việc cho ngày này vì đã có lịch hẹn được đặt trong tương lai. Vui lòng sử dụng chức năng 'Ghi đè lịch' (Override) nếu muốn thay đổi đột xuất.");
+            }
 
             var schedules = await _repository.GetByDoctorAndDayAsync(dto.DoctorId, dto.DayOfWeek);
             var hasOverlap = schedules
@@ -95,7 +121,7 @@ namespace Medix.API.Business.Services.Classification
             existing.UpdatedAt = DateTime.UtcNow;
 
             await _repository.UpdateAsync(existing);
-            return _mapper.Map<DoctorScheduleDto>(existing);
+            return _mapper.Map<DoctorScheduleWorkDto>(existing);
         }
 
         // 🔴 Xóa theo ID
@@ -104,75 +130,35 @@ namespace Medix.API.Business.Services.Classification
             var existing = await _repository.GetByIdAsync(id);
             if (existing == null) return false;
 
+            // KIỂM TRA BUSINESS RULE: Không cho xóa nếu đã có lịch hẹn trong tương lai
+            var hasFutureAppointments = await _appointmentRepository.HasFutureAppointmentsForDoctorOnDay(existing.DoctorId, existing.DayOfWeek);
+            if (hasFutureAppointments)
+            {
+                throw new InvalidOperationException($"Không thể xóa lịch làm việc cho ngày này vì đã có lịch hẹn được đặt trong tương lai. Vui lòng hủy các lịch hẹn trước.");
+            }
+
+
             await _repository.DeleteAsync(id);
             return true;
         }
 
         // 🟢 Lấy tất cả lịch theo bác sĩ
-        public async Task<IEnumerable<DoctorScheduleDto>> GetByDoctorIdAsync(Guid doctorId)
+        public async Task<IEnumerable<DoctorScheduleWorkDto>> GetByDoctorIdAsync(Guid doctorId)
         {
             var schedules = await _repository.GetByDoctorAndDayAsync(doctorId, -1);
-            return _mapper.Map<IEnumerable<DoctorScheduleDto>>(schedules);
+            return _mapper.Map<IEnumerable<DoctorScheduleWorkDto>>(schedules);
         }
 
-        //// 🟡 Update toàn bộ lịch theo bác sĩ
-        //// 🟡 Update toàn bộ lịch theo bác sĩ (có transaction)
-        //public async Task<IEnumerable<DoctorScheduleDto>> UpdateByDoctorIdAsync(Guid doctorId, IEnumerable<UpdateDoctorScheduleDto> schedules)
-        //{
-        //    using var transaction = await _repository.BeginTransactionAsync();
-        //    try
-        //    {
-        //        // 1. Lấy tất cả lịch làm việc hiện có của bác sĩ
-        //        var existingSchedules = await _repository.GetByDoctorAndDayAsync(doctorId, -1);
-
-        //        // 2. Xác định các lịch cần xóa (có trong DB nhưng không có trong DTO gửi lên)
-        //        var scheduleIdsInDto = schedules.Select(s => s.Id).ToHashSet();
-        //        var toDelete = existingSchedules.Where(e => !scheduleIdsInDto.Contains(e.Id)).ToList();
-        //        foreach (var item in toDelete)
-        //        {
-        //            await _repository.DeleteAsync(item.Id);
-        //        }
-
-        //        // 3. Cập nhật hoặc tạo mới các lịch từ DTO
-        //        foreach (var dto in schedules)
-        //        {
-        //            // Nếu Id rỗng -> tạo mới
-        //            if (dto.Id == Guid.Empty)
-        //            {
-        //                var createDto = new CreateDoctorScheduleDto
-        //                {
-        //                    DoctorId = doctorId,
-        //                    DayOfWeek = dto.DayOfWeek,
-        //                    StartTime = dto.StartTime,
-        //                    EndTime = dto.EndTime,
-        //                    IsAvailable = dto.IsAvailable
-        //                };
-        //                await CreateAsync(createDto);
-        //            }
-        //            // Nếu có Id -> cập nhật
-        //            else
-        //            {
-        //                await UpdateSingleByDoctorIdAsync(doctorId, dto);
-        //            }
-        //        }
-
-        //        await transaction.CommitAsync();
-
-        //        // 4. Lấy lại danh sách cuối cùng và trả về
-        //        var updatedList = await _repository.GetByDoctorAndDayAsync(doctorId, -1);
-        //        return _mapper.Map<IEnumerable<DoctorScheduleDto>>(updatedList);
-        //    }
-        //    catch
-        //    {
-        //        await transaction.RollbackAsync();
-        //        throw;
-        //    }
-        //}
-
-        // 🟡 Update một lịch duy nhất theo bác sĩ
-        public async Task<DoctorScheduleDto?> UpdateSingleByDoctorIdAsync(Guid doctorId, UpdateDoctorScheduleDto dto)
+       
+        public async Task<DoctorScheduleWorkDto?> UpdateSingleByDoctorIdAsync(Guid doctorId, UpdateDoctorScheduleDto dto)
         {
             ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
+
+            var duration = dto.EndTime - dto.StartTime;
+            if (duration.TotalMinutes != 50)
+            {
+                throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 50 phút.");
+            }
 
             var existing = await _repository.GetByIdAsync(dto.Id);
             if (existing == null)
@@ -180,6 +166,13 @@ namespace Medix.API.Business.Services.Classification
             // Kiểm tra xem lịch này có đúng là của bác sĩ đang yêu cầu không
             if (existing.DoctorId != doctorId)
                 throw new UnauthorizedAccessException("Bạn không có quyền cập nhật lịch này.");
+
+            // KIỂM TRA BUSINESS RULE: Không cho cập nhật nếu đã có lịch hẹn trong tương lai
+            var hasFutureAppointments = await _appointmentRepository.HasFutureAppointmentsForDoctorOnDay(doctorId, existing.DayOfWeek);
+            if (hasFutureAppointments)
+            {
+                throw new InvalidOperationException($"Không thể thay đổi lịch làm việc cho ngày này vì đã có lịch hẹn được đặt trong tương lai. Vui lòng sử dụng chức năng 'Ghi đè lịch' (Override) nếu muốn thay đổi đột xuất.");
+            }
 
             // Kiểm tra trùng lặp với các lịch khác của cùng bác sĩ
             var schedules = await _repository.GetByDoctorAndDayAsync(doctorId, dto.DayOfWeek);
@@ -199,18 +192,27 @@ namespace Medix.API.Business.Services.Classification
             existing.DoctorId = doctorId; // Đảm bảo DoctorId luôn là của bác sĩ đang đăng nhập
 
             await _repository.UpdateAsync(existing);
-            return _mapper.Map<DoctorScheduleDto>(existing);
+            return _mapper.Map<DoctorScheduleWorkDto>(existing);
         }
 
         // 🟢 Tạo nhiều lịch cho 1 bác sĩ
-        public async Task<IEnumerable<DoctorScheduleDto>> CreateByDoctorIdAsync(Guid doctorId, IEnumerable<CreateDoctorScheduleDto> schedules)
+        public async Task<IEnumerable<DoctorScheduleWorkDto>> CreateByDoctorIdAsync(Guid doctorId, IEnumerable<CreateDoctorScheduleDto> schedules)
         {
-            var created = new List<DoctorScheduleDto>();
+            var created = new List<DoctorScheduleWorkDto>();
+            var createdEntitiesForValidation = new List<DoctorSchedule>(); // Danh sách mới để lưu các entity đã tạo
+            // Lấy tất cả lịch hiện có của bác sĩ để kiểm tra tổng số ca và trùng lặp
+            var allExistingSchedules = (await _repository.GetByDoctorAndDayAsync(doctorId, -1)).ToList();
 
             foreach (var dto in schedules)
             {
                 dto.DoctorId = doctorId;
                 ValidateScheduleTime(dto.DayOfWeek, dto.StartTime, dto.EndTime);
+
+                var duration = dto.EndTime - dto.StartTime;
+                if (duration.TotalMinutes != 50)
+                {
+                    throw new InvalidOperationException("Mỗi ca làm việc phải kéo dài chính xác 50 phút.");
+                }
 
                 var existing = await _repository.GetByDoctorAndDayAsync(doctorId, dto.DayOfWeek);
                 var overlap = existing.FirstOrDefault(s => IsOverlap(dto.StartTime, dto.EndTime, s.StartTime, s.EndTime));
@@ -219,19 +221,35 @@ namespace Medix.API.Business.Services.Classification
                     throw new InvalidOperationException(
                         $"Bác sĩ đã có lịch từ {overlap.StartTime:HH\\:mm} đến {overlap.EndTime:HH\\:mm} trong ngày {dto.DayOfWeek}."
                     );
-
+                
                 var entity = _mapper.Map<DoctorSchedule>(dto);
                 entity.Id = Guid.NewGuid();
                 entity.CreatedAt = DateTime.UtcNow;
                 entity.UpdatedAt = DateTime.UtcNow;
-
+    
                 await _repository.AddAsync(entity);
-
+    
                 var reloaded = await _repository.GetByIdAsync(entity.Id);
-                if (reloaded != null)
-                    created.Add(_mapper.Map<DoctorScheduleDto>(reloaded));
+                // Thêm vào danh sách created để kiểm tra số lượng ca trong cùng batch
+                if (reloaded != null) {
+                    created.Add(_mapper.Map<DoctorScheduleWorkDto>(reloaded));
+                    createdEntitiesForValidation.Add(reloaded); // Thêm entity vào danh sách validation
+                }
             }
 
+            // Sau khi thêm, kiểm tra lại toàn bộ lịch
+            var finalSchedules = allExistingSchedules.Concat(createdEntitiesForValidation).ToList();
+            var schedulesByDay = finalSchedules
+                .GroupBy(s => s.DayOfWeek)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // foreach (var dayGroup in schedulesByDay)
+            // {
+            //     if (dayGroup.Value.Count > 0 && dayGroup.Value.Count < 5)
+            //     {
+            //         throw new InvalidOperationException($"Mỗi ngày làm việc phải có ít nhất 5 ca. Ngày {dayGroup.Key} hiện chỉ có {dayGroup.Value.Count} ca.");
+            //     }
+            // }
             return created;
         }
 
@@ -244,6 +262,13 @@ namespace Medix.API.Business.Services.Classification
                 var schedule = await _repository.GetByIdAsync(id);
                 if (schedule != null && schedule.DoctorId == doctorId)
                 {
+                    // KIỂM TRA BUSINESS RULE: Không cho xóa nếu đã có lịch hẹn trong tương lai
+                    var hasFutureAppointments = await _appointmentRepository.HasFutureAppointmentsForDoctorOnDay(doctorId, schedule.DayOfWeek);
+                    if (hasFutureAppointments)
+                    {
+                        throw new InvalidOperationException($"Không thể xóa lịch làm việc (ID: {id}) vì đã có lịch hẹn được đặt trong tương lai cho ngày này.");
+                    }
+
                     await _repository.DeleteAsync(id);
                     deleted++;
                 }

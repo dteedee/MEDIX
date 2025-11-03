@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+﻿﻿using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.ApointmentDTO;
@@ -96,5 +96,19 @@ namespace Medix.API.Business.Services.Classification
             return _mapper.Map<IEnumerable<AppointmentDto>>(list);
         }
 
+        public async Task<IEnumerable<AppointmentDto>> GetByDoctorUserAndDateRangeAsync(Guid userId, DateTime startDate, DateTime endDate)
+        {
+            // 1. Lấy Doctor tương ứng với UserId
+            var doctor = await _repository.GetDoctorByUserIdAsync(userId);
+            if (doctor == null)
+                throw new InvalidOperationException("Doctor not found for this user.");
+
+            // 2. Lấy các lịch hẹn của bác sĩ trong khoảng thời gian đã cho
+            //    Thêm 1 ngày vào endDate để bao gồm tất cả các cuộc hẹn trong ngày cuối cùng.
+            var list = await _repository.GetByDoctorAndDateAsync(doctor.Id, startDate, endDate.AddDays(1));
+
+            // 3. Map sang DTO
+            return _mapper.Map<IEnumerable<AppointmentDto>>(list);
+        }
     }
 }

@@ -15,7 +15,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Net.payOS;
+
+using PayOS;
 using System;
 using System.Text;
 
@@ -32,11 +33,29 @@ builder.Services.ConfigureServices();
 
 IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
 
-PayOS payOS = new PayOS(configuration["Environment:PAYOS_CLIENT_ID"] ?? throw new Exception("Cannot find environment"),
-                    configuration["Environment:PAYOS_API_KEY"] ?? throw new Exception("Cannot find environment"),
-                    configuration["Environment:PAYOS_CHECKSUM_KEY"] ?? throw new Exception("Cannot find environment"));
-builder.Services.AddSingleton(payOS);
 
+builder.Services.AddKeyedSingleton("OrderClient", (sp, key) =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new PayOSClient(new PayOSOptions
+    {
+        ClientId = config["PayOS:ClientId"] ?? Environment.GetEnvironmentVariable("PAYOS_CLIENT_ID"),
+        ApiKey = config["PayOS:ApiKey"] ?? Environment.GetEnvironmentVariable("PAYOS_API_KEY"),
+        ChecksumKey = config["PayOS:ChecksumKey"] ?? Environment.GetEnvironmentVariable("PAYOS_CHECKSUM_KEY"),
+        LogLevel = LogLevel.Debug,
+    });
+});
+builder.Services.AddKeyedSingleton("TransferClient", (sp, key) =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new PayOSClient(new PayOSOptions
+    {
+        ClientId = config["PayOS:PayoutClientId"],
+        ApiKey = config["PayOS:PayoutApiKey"],
+        ChecksumKey = config["PayOS:PayoutChecksumKey"],
+        LogLevel = LogLevel.Debug,
+    });
+});
 // ================= CORS =================
 builder.Services.AddCors(options =>
 {
@@ -122,6 +141,7 @@ builder.Services.AddSwaggerGen(c =>
 // ================= APPLICATION SERVICES =================
 // AutoMapper is already configured in ServiceConfiguration.cs
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
 
 builder.Services.ConfigureServices();
 

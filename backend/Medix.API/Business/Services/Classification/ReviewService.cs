@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+﻿﻿using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.ReviewDTO;
@@ -32,6 +32,8 @@ namespace Medix.API.Business.Services.Classification
             dto.DoctorId = review.Appointment.DoctorId;
             dto.DoctorName = review.Appointment.Doctor.User.FullName;
             dto.PatientName = review.Appointment.Patient.User.FullName;
+            dto.AppointmentStartTime = review.Appointment.AppointmentStartTime;
+            dto.AppointmentEndTime = review.Appointment.AppointmentEndTime;
             return dto;
         }
 
@@ -52,6 +54,7 @@ namespace Medix.API.Business.Services.Classification
                 Rating = dto.Rating,
                 Comment = dto.Comment,
                 Status = "PUBLISHED",
+                AdminResponse = "Thanks for your feedback!",
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -62,6 +65,8 @@ namespace Medix.API.Business.Services.Classification
             result.DoctorId = appointment.DoctorId;
             result.DoctorName = appointment.Doctor.User.FullName;
             result.PatientName = appointment.Patient.User.FullName;
+            result.AppointmentStartTime = appointment.AppointmentStartTime;
+            result.AppointmentEndTime = appointment.AppointmentEndTime;
             return result;
         }
 
@@ -82,6 +87,8 @@ namespace Medix.API.Business.Services.Classification
             result.DoctorId = review.Appointment.DoctorId;
             result.DoctorName = review.Appointment.Doctor.User.FullName;
             result.PatientName = review.Appointment.Patient.User.FullName;
+            result.AppointmentStartTime = review.Appointment.AppointmentStartTime;
+            result.AppointmentEndTime = review.Appointment.AppointmentEndTime;
             return result;
         }
 
@@ -94,5 +101,44 @@ namespace Medix.API.Business.Services.Classification
             await _reviewRepo.DeleteAsync(review);
             await _reviewRepo.SaveChangesAsync();
         }
+
+        public async Task<List<ReviewDoctorDto>> GetByDoctorIdAsync(Guid doctorId)
+        {
+            var reviews = await _reviewRepo.GetReviewsByDoctorAsync(doctorId);
+            var result = _mapper.Map<List<ReviewDoctorDto>>(reviews);
+
+            foreach (var r in result)
+            {
+                var entity = reviews.First(x => x.Id == r.Id);
+                r.DoctorId = entity.Appointment.DoctorId;
+                r.DoctorName = entity.Appointment.Doctor.User.FullName;
+                r.PatientName = entity.Appointment.Patient.User.FullName;
+                r.AppointmentStartTime = entity.Appointment.AppointmentStartTime;
+                r.AppointmentEndTime = entity.Appointment.AppointmentEndTime;
+            }
+
+            return result;
+        }
+        public async Task<List<ReviewDoctorDto>> GetByDoctorUserIdAsync(Guid userId)
+        {
+            var reviews = await _reviewRepo.GetReviewsByDoctorUserIdAsync(userId);
+            if (reviews == null || !reviews.Any())
+                return new List<ReviewDoctorDto>();
+
+            var result = _mapper.Map<List<ReviewDoctorDto>>(reviews);
+
+            foreach (var r in result)
+            {
+                var entity = reviews.First(x => x.Id == r.Id);
+                r.DoctorId = entity.Appointment.DoctorId;
+                r.DoctorName = entity.Appointment.Doctor.User.FullName;
+                r.PatientName = entity.Appointment.Patient.User.FullName;
+                r.AppointmentStartTime = entity.Appointment.AppointmentStartTime;
+                r.AppointmentEndTime = entity.Appointment.AppointmentEndTime;
+            }
+
+            return result;
+        }
+
     }
 }

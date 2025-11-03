@@ -1,5 +1,6 @@
-﻿using Medix.API.Business.Interfaces.Classification;
+﻿﻿using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs.ReviewDTO;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Medix.API.Presentation.Controllers.Community
@@ -51,5 +52,29 @@ namespace Medix.API.Presentation.Controllers.Community
             await _service.DeleteAsync(appointmentId);
             return Ok(new { message = "Đã xóa đánh giá thành công." });
         }
+        [HttpGet("by-doctor/{doctorId:guid}")]
+        public async Task<IActionResult> GetByDoctor(Guid doctorId)
+        {
+            var result = await _service.GetByDoctorIdAsync(doctorId);
+            if (result == null || !result.Any())
+                return NotFound(new { message = "Không tìm thấy đánh giá cho bác sĩ này." });
+
+            return Ok(result);
+        }
+
+        [HttpGet("me")]
+        [Authorize(Roles = "Doctor")]
+        public async Task<IActionResult> GetMyReviews()
+        {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized("Không thể xác định người dùng.");
+            }
+
+            var result = await _service.GetByDoctorUserIdAsync(userId);
+            return Ok(result);
+        }
+
     }
 }

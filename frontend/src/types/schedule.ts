@@ -24,6 +24,18 @@ export interface ScheduleOverride {
   reason: string;
 }
 
+export interface DoctorScheduleOverrideDto {
+  id: string;
+  doctorId: string;
+  overrideDate: string; // DateOnly from backend becomes string
+  startTime: string; // TimeOnly from backend becomes string HH:mm:ss
+  endTime: string; // TimeOnly from backend becomes string HH:mm:ss
+  isAvailable: boolean;
+  reason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CreateScheduleOverridePayload {
   overrideDate: string; // YYYY-MM-DD
   startTime: string; // HH:mm

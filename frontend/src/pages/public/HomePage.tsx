@@ -16,6 +16,7 @@ function HomePage() {
     const [homeMetadata, setHomeMetadata] = useState<HomeMetadata>();
     const [featuredArticles, setFeaturedArticles] = useState<ArticleDTO[]>([]);
     const [doctorEducationMap, setDoctorEducationMap] = useState<Record<string, string>>({});
+    const [doctorIdMap, setDoctorIdMap] = useState<Record<string, string>>({});
 
     useEffect(() => {
         const fetchMetadata = async () => {
@@ -65,6 +66,35 @@ function HomePage() {
             }
         };
         loadEducation();
+    }, [homeMetadata?.displayedDoctors]);
+
+    // Resolve doctorId from username using listing API
+    const resolveDoctorId = async (userName: string): Promise<string | null> => {
+        try {
+            const list = await doctorService.getAll({ page: 1, pageSize: 100, searchTerm: userName });
+            const matched = list.items.find((d: any) => d?.userName === userName) || list.items.find((d: any) => (d?.fullName || '').toLowerCase() === userName.toLowerCase());
+            return matched?.id || null;
+        } catch {
+            return null;
+        }
+    };
+
+    // Hydrate doctorIdMap so we can link by id from homepage
+    useEffect(() => {
+        const hydrate = async () => {
+            const list = homeMetadata?.displayedDoctors || [];
+            if (!list.length) return;
+            const usernames = Array.from(new Set(list.map(d => d.userName)));
+            const entries = await Promise.all(usernames.map(async u => {
+                if (doctorIdMap[u]) return { u, id: doctorIdMap[u] };
+                const id = await resolveDoctorId(u);
+                return { u, id };
+            }));
+            const m: Record<string, string> = {};
+            entries.forEach(e => { if (e.id) m[e.u] = e.id; });
+            if (Object.keys(m).length) setDoctorIdMap(prev => ({ ...prev, ...m }));
+        };
+        hydrate();
     }, [homeMetadata?.displayedDoctors]);
 
     // Doctors carousel (auto-next, wrap-around)
@@ -140,57 +170,39 @@ function HomePage() {
             <nav className={styles["navbar"]}>
                 <ul className={styles["nav-menu"]}>
                     <li>
-                        <a
-                            onClick={() => navigate('/')}
-                            className={`${styles["nav-link"]} ${location.pathname === '/' ? styles["active"] : ''}`}
-                        >
+                        <Link to="/" className={`${styles["nav-link"]} ${location.pathname === '/' ? styles["active"] : ''}`}>
                             {t('nav.home')}
-                        </a>
+                        </Link>
                     </li>
                     <li><span>|</span></li>
                     <li>
-                        <a
-                            onClick={() => navigate('/ai-chat')}
-                            className={`${styles["nav-link"]} ${location.pathname === '/ai-chat' ? styles["active"] : ''}`}
-                        >
+                        <Link to="/ai-chat" className={`${styles["nav-link"]} ${location.pathname === '/ai-chat' ? styles["active"] : ''}`}>
                             {t('nav.ai-diagnosis')}
-                        </a>
+                        </Link>
                     </li>
                     <li><span>|</span></li>
                     <li>
-                        <a
-                            onClick={() => navigate('/specialties')}
-                            className={`${styles["nav-link"]} ${location.pathname === '/specialties' ? styles["active"] : ''}`}
-                        >
+                        <Link to="/specialties" className={`${styles["nav-link"]} ${location.pathname === '/specialties' ? styles["active"] : ''}`}>
                             {t('nav.specialties')}
-                        </a>
+                        </Link>
                     </li>
                     <li><span>|</span></li>
                     <li>
-                        <a
-                            onClick={() => navigate('/doctors')}
-                            className={`${styles["nav-link"]} ${location.pathname === '/doctors' ? styles["active"] : ''}`}
-                        >
+                        <Link to="/doctors" className={`${styles["nav-link"]} ${location.pathname === '/doctors' ? styles["active"] : ''}`}>
                             {t('nav.doctors')}
-                        </a>
+                        </Link>
                     </li>
                     <li><span>|</span></li>
                     <li>
-                        <a
-                            onClick={() => navigate('/app/articles')}
-                            className={`${styles["nav-link"]} ${location.pathname === '/articles' ? styles["active"] : ''}`}
-                        >
+                        <Link to="/app/articles" className={`${styles["nav-link"]} ${location.pathname === '/articles' ? styles["active"] : ''}`}>
                             {t('nav.health-articles')}
-                        </a>
+                        </Link>
                     </li>
                     <li><span>|</span></li>
                     <li>
-                        <a
-                            onClick={() => navigate('/about')}
-                            className={`${styles["nav-link"]} ${location.pathname === '/about' ? styles["active"] : ''}`}
-                        >
+                        <Link to="/about" className={`${styles["nav-link"]} ${location.pathname === '/about' ? styles["active"] : ''}`}>
                             {t('nav.about')}
-                        </a>
+                        </Link>
                     </li>
                 </ul>
             </nav>
@@ -380,7 +392,12 @@ function HomePage() {
                 <div className={styles["doctor-carousel-container"]}>
                     <div className={styles["doctors-grid"]}>
                         {getVisibleDoctors().map((doctor, index) => (
-                            <a key={`doctor-${doctor.userName}-${index}`} href={`/doctor/details/${doctor.userName}`} className={styles["doctor-card"]}>
+                            <Link
+                                key={`doctor-${doctor.userName}-${index}`}
+                                to={`/doctor/details/${doctorIdMap[doctor.userName] || doctor.userName}`}
+                                state={{ doctorId: doctorIdMap[doctor.userName], userName: doctor.userName, fullName: doctor.fullName }}
+                                className={styles["doctor-card"]}
+                            >
                                 <div className={styles["doctor-photo"]} style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
                                     <img className={styles['doctor-photo']} src={doctor.avatarUrl} style={{objectFit:'cover', display:'block'}} />
                                 </div>
@@ -396,7 +413,7 @@ function HomePage() {
                                         {'★'.repeat(Math.round(doctor.averageRating)) + '☆'.repeat(5 - Math.round(doctor.averageRating))}
                                     </div>
                                 </div>
-                            </a>
+                            </Link>
                         ))}
                     </div>
                 </div>

@@ -1,4 +1,4 @@
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import doctorService from "../../services/doctorService";
 import { DoctorProfileDto, ServiceTierWithPaginatedDoctorsDto, DoctorTypeDegreeDto, DoctorInTier, PaginationParams, DoctorQueryParameters } from "../../types/doctor.types";
@@ -25,6 +25,8 @@ function DoctorDetails() {
     const { username } = useParams();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const routeState = (location && (location as any).state) as { doctorId?: string; fullName?: string; userName?: string } | null;
 
     // Sidebar filter states (reuse logic from DoctorBookingList)
     const [tiersData, setTiersData] = useState<ServiceTierWithPaginatedDoctorsDto[]>([]);
@@ -346,18 +348,40 @@ function DoctorDetails() {
 
     useEffect(() => {
         const fetchProfile = async () => {
+            setLoading(true);
+            const key = routeState?.doctorId || username;
             try {
-                setLoading(true);
-                const data = await doctorService.getDoctorProfile(username);
-                setProfileData(data);
-            } catch (error) {
-                console.error('Failed to fetch profile data:', error);
+                if (key) {
+                    const data = await doctorService.getDoctorProfile(key);
+                    setProfileData(data);
+                    setLoading(false);
+                    return;
+                }
+            } catch (primaryError) {
+                console.warn('Fetch by key failed, trying to resolve by search...', primaryError);
+            }
+
+            // Fallback: resolve id by searching list API using username/fullName
+            try {
+                const searchTerm = routeState?.fullName || routeState?.userName || username || '';
+                const list = await doctorService.getAll({ page: 1, pageSize: 100, searchTerm });
+                const lower = String(searchTerm).toLowerCase();
+                const found = (list.items || []).find((d: any) =>
+                    (d?.userName && String(d.userName).toLowerCase() === lower) ||
+                    (d?.fullName && String(d.fullName).toLowerCase() === lower)
+                );
+                if (found?.id) {
+                    const data = await doctorService.getDoctorProfile(found.id);
+                    setProfileData(data);
+                }
+            } catch (fallbackError) {
+                console.error('Fallback fetch failed:', fallbackError);
             } finally {
                 setLoading(false);
             }
         }
         fetchProfile();
-    }, [username]);
+    }, [username, routeState?.doctorId, routeState?.fullName, routeState?.userName]);
 
     if (loading) {
         return (

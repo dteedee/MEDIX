@@ -79,7 +79,7 @@ const convertApiDoctorToDoctor = (
   };
 };
 
-type TierType = 'Basic' | 'Professional' | 'Premium' | 'VIP';
+type DegreeTab = 'Cử nhân y khoa' | 'Thạc sĩ y khoa' | 'Tiến sĩ y khoa' | 'Phó giáo sư' | 'Giáo sư';
 
 const DoctorBookingList: React.FC = () => {
   const navigate = useNavigate();
@@ -87,7 +87,15 @@ const DoctorBookingList: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { t } = useLanguage();
 
-  const [activeTier, setActiveTier] = useState<TierType>('Basic');
+  const degreeTabs: DegreeTab[] = useMemo(() => [
+    'Cử nhân y khoa',
+    'Thạc sĩ y khoa',
+    'Tiến sĩ y khoa',
+    'Phó giáo sư',
+    'Giáo sư'
+  ], []);
+
+  const [activeDegree, setActiveDegree] = useState<DegreeTab>('Cử nhân y khoa');
   const [tiersData, setTiersData] = useState<ServiceTierWithPaginatedDoctorsDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,10 +119,11 @@ const DoctorBookingList: React.FC = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 3000000]);
   const [tempPriceRange, setTempPriceRange] = useState<[number, number]>([0, 3000000]);
 
-  const [basicPagination, setBasicPagination] = useState({ pageNumber: 1, pageSize: 9 });
-  const [professionalPagination, setProfessionalPagination] = useState({ pageNumber: 1, pageSize: 9 });
-  const [premiumPagination, setPremiumPagination] = useState({ pageNumber: 1, pageSize: 9 });
-  const [vipPagination, setVipPagination] = useState({ pageNumber: 1, pageSize: 9 });
+  const [bachelorPagination, setBachelorPagination] = useState({ pageNumber: 1, pageSize: 9 });
+  const [masterPagination, setMasterPagination] = useState({ pageNumber: 1, pageSize: 9 });
+  const [phdPagination, setPhdPagination] = useState({ pageNumber: 1, pageSize: 9 });
+  const [associateProfPagination, setAssociateProfPagination] = useState({ pageNumber: 1, pageSize: 9 });
+  const [profPagination, setProfPagination] = useState({ pageNumber: 1, pageSize: 9 });
 
   // Refs to prevent double loading
   const mountedRef = useRef(true);
@@ -191,7 +200,7 @@ const DoctorBookingList: React.FC = () => {
     );
   }, [normalizeSearchText, doctorAvatars, doctorStatistics]);
 
-  // Auto-switch to tier with search results
+  // Auto-switch to degree tab with search results
   useEffect(() => {
     // Không làm gì nếu chưa có data hoặc chưa nhập gì
     if (!debouncedSearch || !debouncedSearch.trim() || tiersData.length === 0) return;
@@ -202,35 +211,15 @@ const DoctorBookingList: React.FC = () => {
     const searchTerms = searchNormalized.split(/\s+/).filter(term => term.length > 0);
     if (searchTerms.length === 0) return;
 
-    const tiersWithResults: TierType[] = [];
-
-    // Tìm các tier có kết quả
-    for (const tier of tiersData) {
-      if (!tier?.name || !tier?.doctors?.items?.length) continue;
-
-      const hasMatch = tier.doctors.items.some((doctor) =>
-        doctorMatchesSearch(doctor, searchTerms, tier.name)
-      );
-
-      if (hasMatch) tiersWithResults.push(tier.name as TierType);
-    }
-
-    // 1️⃣ Nếu KHÔNG tìm thấy ở tier nào → GIỮ nguyên tier hiện tại
-    if (tiersWithResults.length === 0) {
-      return;
-    }
-
-    // 2️⃣ Nếu tier hiện tại CÓ kết quả → KHÔNG chuyển tier
-    if (tiersWithResults.includes(activeTier)) {
-      return;
-    }
-
-    // 3️⃣ Nếu tier hiện tại KHÔNG có kết quả → CHUYỂN sang tier đầu tiên có kết quả
-    const firstTierWithResults = tiersWithResults[0];
-    if (firstTierWithResults && firstTierWithResults !== activeTier) {
-      setActiveTier(firstTierWithResults);
-    }
-  }, [debouncedSearch, tiersData, activeTier, normalizeSearchText, doctorMatchesSearch]);
+    const allDoctors = tiersData.flatMap(t => t.doctors?.items || []);
+    const resultsByDegree: Partial<Record<DegreeTab, boolean>> = {};
+    degreeTabs.forEach(tab => {
+      const has = allDoctors.some(d => doctorMatchesSearch(d, searchTerms, t.name));
+      if (has) resultsByDegree[tab] = true;
+    });
+    const first = degreeTabs.find(tab => resultsByDegree[tab]);
+    if (first && first !== activeDegree) setActiveDegree(first);
+  }, [debouncedSearch, tiersData, activeDegree, normalizeSearchText, doctorMatchesSearch, degreeTabs]);
 
   // Debounce price range
   useEffect(() => {
@@ -540,21 +529,17 @@ const DoctorBookingList: React.FC = () => {
     };
   }, [basicPagination, professionalPagination, premiumPagination, vipPagination, selectedEducationCode, selectedSpecializationCode, priceRange, loadTierData]);
 
-  // Search doctors across all tiers
-  const searchDoctorsAcrossAllTiers = (searchTerm: string): { tier: TierType; doctors: Doctor[] }[] => {
+  // Search doctors across all degrees
+  const searchDoctorsAcrossAllDegrees = (searchTerm: string): { degree: DegreeTab; doctors: Doctor[] }[] => {
     if (!searchTerm.trim()) return [];
     
     const searchNormalized = normalizeSearchText(searchTerm);
     const searchTerms = searchNormalized.split(/\s+/).filter(term => term.length > 0);
     
-    const results: { tier: TierType; doctors: Doctor[] }[] = [];
-    
-    tiersData.forEach(tier => {
-      if (!tier.doctors || !tier.doctors.items) return;
-      
-      const doctors = tier.doctors.items
-        .map(doctor => convertApiDoctorToDoctor(doctor, tier.name, doctorAvatars, doctorStatistics))
-        .filter(doctor => {
+    const allDoctors = tiersData.flatMap(t => t.doctors?.items || []);
+    const converted = allDoctors.map(d => convertApiDoctorToDoctor(d, 'Basic', doctorAvatars, doctorStatistics));
+
+    const filtered = converted.filter(doctor => {
           const nameNormalized = normalizeSearchText(doctor.fullName);
           const specialtyNormalized = normalizeSearchText(doctor.specialty);
           const degreeNormalized = normalizeSearchText(doctor.degree);
@@ -567,21 +552,22 @@ const DoctorBookingList: React.FC = () => {
             degreeNormalized.includes(term) ||
             bioNormalized.includes(term)
           );
-        });
-      
-      if (doctors.length > 0) {
-        results.push({ tier: tier.name as TierType, doctors });
-      }
     });
-    
+
+    // Group by degree tabs
+    const results: { degree: DegreeTab; doctors: Doctor[] }[] = [];
+    degreeTabs.forEach(tab => {
+      const group = filtered.filter(d => d.degree === tab);
+      if (group.length > 0) results.push({ degree: tab, doctors: group });
+    });
     return results;
   };
 
-  const getDoctorsByTier = useCallback((tierName: string): Doctor[] => {
-    const tier = tiersData.find(t => t.name === tierName);
-    if (!tier || !tier.doctors || !tier.doctors.items) return [];
+  const getDoctorsByDegree = useCallback((degree: DegreeTab): Doctor[] => {
+    const all = tiersData.flatMap(t => t.doctors?.items || []);
     
-    let doctors = tier.doctors.items.map(doctor => convertApiDoctorToDoctor(doctor, tierName, doctorAvatars, doctorStatistics));
+    let doctors = all.map(doctor => convertApiDoctorToDoctor(doctor, t.name || 'Basic', doctorAvatars, doctorStatistics))
+      .filter(d => d.degree === degree);
     
     if (debouncedSearch && debouncedSearch.trim()) {
       const searchNormalized = normalizeSearchText(debouncedSearch);
@@ -612,26 +598,26 @@ const DoctorBookingList: React.FC = () => {
     return doctors;
   }, [tiersData, debouncedSearch, doctorAvatars, doctorStatistics, normalizeSearchText]);
 
-  const getTierPaginationInfo = (tierName: string) => {
-    const tier = tiersData.find(t => t.name === tierName);
-    if (!tier || !tier.doctors) return { totalPages: 0, totalCount: 0 };
-    return {
-      totalPages: tier.doctors.totalPages,
-      totalCount: tier.doctors.totalCount
-    };
+  const getDegreePaginationInfo = (degree: DegreeTab) => {
+    const doctors = getDoctorsByDegree(degree);
+    const pageSize = 9;
+    const totalCount = doctors.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+    return { totalPages, totalCount };
   };
 
-  const currentDoctors = useMemo(() => getDoctorsByTier(activeTier), [getDoctorsByTier, activeTier]);
+  const currentDoctors = useMemo(() => getDoctorsByDegree(activeDegree), [getDoctorsByDegree, activeDegree]);
   const currentPagination = useMemo(() => {
-    switch (activeTier) {
-      case 'Basic': return basicPagination;
-      case 'Professional': return professionalPagination;
-      case 'Premium': return premiumPagination;
-      case 'VIP': return vipPagination;
+    switch (activeDegree) {
+      case 'Cử nhân y khoa': return bachelorPagination;
+      case 'Thạc sĩ y khoa': return masterPagination;
+      case 'Tiến sĩ y khoa': return phdPagination;
+      case 'Phó giáo sư': return associateProfPagination;
+      case 'Giáo sư': return profPagination;
     }
-  }, [activeTier, basicPagination, professionalPagination, premiumPagination, vipPagination]);
+  }, [activeDegree, bachelorPagination, masterPagination, phdPagination, associateProfPagination, profPagination]);
 
-  const currentPaginationInfo = useMemo(() => getTierPaginationInfo(activeTier), [tiersData, activeTier]);
+  const currentPaginationInfo = useMemo(() => getDegreePaginationInfo(activeDegree), [tiersData, activeDegree, getDoctorsByDegree]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
@@ -672,18 +658,21 @@ const DoctorBookingList: React.FC = () => {
   };
 
   const handlePageChange = (page: number) => {
-    switch (activeTier) {
-      case 'Basic':
-        setBasicPagination(prev => ({ ...prev, pageNumber: page }));
+    switch (activeDegree) {
+      case 'Cử nhân y khoa':
+        setBachelorPagination(prev => ({ ...prev, pageNumber: page }));
         break;
-      case 'Professional':
-        setProfessionalPagination(prev => ({ ...prev, pageNumber: page }));
+      case 'Thạc sĩ y khoa':
+        setMasterPagination(prev => ({ ...prev, pageNumber: page }));
         break;
-      case 'Premium':
-        setPremiumPagination(prev => ({ ...prev, pageNumber: page }));
+      case 'Tiến sĩ y khoa':
+        setPhdPagination(prev => ({ ...prev, pageNumber: page }));
         break;
-      case 'VIP':
-        setVipPagination(prev => ({ ...prev, pageNumber: page }));
+      case 'Phó giáo sư':
+        setAssociateProfPagination(prev => ({ ...prev, pageNumber: page }));
+        break;
+      case 'Giáo sư':
+        setProfPagination(prev => ({ ...prev, pageNumber: page }));
         break;
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -698,10 +687,11 @@ const DoctorBookingList: React.FC = () => {
   };
 
   const resetPagination = () => {
-    setBasicPagination(prev => ({ ...prev, pageNumber: 1 }));
-    setProfessionalPagination(prev => ({ ...prev, pageNumber: 1 }));
-    setPremiumPagination(prev => ({ ...prev, pageNumber: 1 }));
-    setVipPagination(prev => ({ ...prev, pageNumber: 1 }));
+    setBachelorPagination(prev => ({ ...prev, pageNumber: 1 }));
+    setMasterPagination(prev => ({ ...prev, pageNumber: 1 }));
+    setPhdPagination(prev => ({ ...prev, pageNumber: 1 }));
+    setAssociateProfPagination(prev => ({ ...prev, pageNumber: 1 }));
+    setProfPagination(prev => ({ ...prev, pageNumber: 1 }));
   };
 
   const renderDoctorCard = (doctor: Doctor) => {
@@ -1108,42 +1098,24 @@ const DoctorBookingList: React.FC = () => {
               </div>
             </div>
 
-            <div className={styles.tierTabs}>
-              <button
-                className={`${styles.tierTab} ${styles.tierTabBasic} ${activeTier === 'Basic' ? styles.active : ''}`}
-                onClick={() => setActiveTier('Basic')}
-              >
-                <i className="bi bi-star"></i>
-                Cơ bản
-              </button>
-              <button
-                className={`${styles.tierTab} ${styles.tierTabProfessional} ${activeTier === 'Professional' ? styles.active : ''}`}
-                onClick={() => setActiveTier('Professional')}
-              >
-                <i className="bi bi-star-fill"></i>
-                Chuyên nghiệp
-              </button>
-              <button
-                className={`${styles.tierTab} ${styles.tierTabPremium} ${activeTier === 'Premium' ? styles.active : ''}`}
-                onClick={() => setActiveTier('Premium')}
-              >
-                <i className="bi bi-gem"></i>
-                Cao cấp
-              </button>
-              <button
-                className={`${styles.tierTab} ${styles.tierTabVip} ${activeTier === 'VIP' ? styles.active : ''}`}
-                onClick={() => setActiveTier('VIP')}
-              >
-                <i className="bi bi-award-fill"></i>
-                VIP
-              </button>
-            </div>
+      <div className={styles.tierTabs}>
+        {degreeTabs.map(tab => (
+          <button
+            key={tab}
+            className={`${styles.tierTab} ${activeDegree === tab ? styles.active : ''}`}
+            onClick={() => setActiveDegree(tab)}
+          >
+            <i className="bi bi-mortarboard-fill"></i>
+            {tab}
+          </button>
+        ))}
+      </div>
 
             {currentDoctors.length > 0 ? (
               <>
                 <div className={styles.resultsInfo}>
                   <i className="bi bi-people-fill"></i>
-                  Tìm thấy <strong>{currentPaginationInfo.totalCount}</strong> bác sĩ
+                  Tìm thấy <strong>{currentPaginationInfo.totalCount}</strong> bác sĩ cho {activeDegree}
                 </div>
 
                 <div className={styles.doctorsGrid}>

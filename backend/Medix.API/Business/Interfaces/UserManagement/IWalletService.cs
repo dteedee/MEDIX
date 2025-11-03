@@ -9,5 +9,8 @@ namespace Medix.API.Business.Interfaces.UserManagement
         public Task<bool> IncreaseWalletBalanceAsync(Guid userId, decimal amount);
         public Task<bool> DecreaseWalletBalanceAsync(Guid userId, decimal amount);
         public Task<WalletDTo?> GetWalletByUserIdAsync(Guid userId);
+
+        public Task<WalletDTo?> GetWalletByIdAsync(Guid walletId);
+
     }
 }

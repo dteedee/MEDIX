@@ -1,5 +1,5 @@
 import { apiClient } from '../lib/apiClient';
-import { DoctorSchedule, CreateSchedulePayload, ScheduleOverride, CreateScheduleOverridePayload } from '../types/schedule';
+import { DoctorSchedule, CreateSchedulePayload, ScheduleOverride, CreateScheduleOverridePayload, DoctorScheduleOverrideDto } from '../types/schedule';
 
 const API_ENDPOINT = '/doctor-schedules';
 
@@ -121,6 +121,16 @@ const deleteScheduleOverride = async (overrideId: string): Promise<void> => {
   await apiClient.delete(`/doctor-schedule-overrides/${overrideId}`);
 };
 
+/**
+ * Lấy danh sách schedule overrides theo doctorId (dành cho patient xem lịch bác sĩ)
+ * @param {string} doctorId - ID của bác sĩ
+ * @returns {Promise<DoctorScheduleOverrideDto[]>} Danh sách schedule overrides
+ */
+const getScheduleOverridesByDoctor = async (doctorId: string): Promise<DoctorScheduleOverrideDto[]> => {
+  const response = await apiClient.get<DoctorScheduleOverrideDto[]>(`/doctor-schedule-overrides/doctor/${doctorId}`);
+  return response.data;
+};
+
 export const scheduleService = {
   getMySchedules,
   createSchedule,
@@ -130,4 +140,5 @@ export const scheduleService = {
   createScheduleOverride,
   updateScheduleOverride,
   deleteScheduleOverride,
+  getScheduleOverridesByDoctor,
 };

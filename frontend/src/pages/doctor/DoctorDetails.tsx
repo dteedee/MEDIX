@@ -7,6 +7,8 @@ import { DoctorProfileDto } from "../../types/doctor.types";
 import {Header } from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import paymentService from "../../services/paymentService";
+import { scheduleService } from "../../services/scheduleService";
+import { DoctorScheduleOverrideDto } from "../../types/schedule";
 
 function DoctorDetails() {
     const [profileData, setProfileData] = useState<DoctorProfileDto>();
@@ -16,7 +18,20 @@ function DoctorDetails() {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
     const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
-    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [scheduleOverrides, setScheduleOverrides] = useState<DoctorScheduleOverrideDto[]>([]);
+    
+    // weekStart is the Monday of the week currently being viewed
+    const getStartOfWeek = (d: Date) => {
+        const date = new Date(d);
+        const day = date.getDay(); // 0 Sun - 6 Sat
+        // Convert so Monday = 1
+        const diff = (day === 0 ? -6 : 1 - day);
+        date.setDate(date.getDate() + diff);
+        date.setHours(0,0,0,0);
+        return date;
+    };
+
+    const [weekStart, setWeekStart] = useState<Date>(getStartOfWeek(new Date()));
     const [showPaymentButton, setShowPaymentButton] = useState(false);
     const [isCreatingPayment, setIsCreatingPayment] = useState(false);
 
@@ -136,10 +151,51 @@ function DoctorDetails() {
         return jsDayOfWeek === 0 ? 7 : jsDayOfWeek; // Sunday = 7, others stay the same
     };
 
-    // Get available time slots based on doctor's schedule
+    // Get available time slots based on doctor's schedule and overrides
     const getAvailableTimeSlots = (date: Date): string[] => {
         if (!profileData?.schedules) return [];
         
+        const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        // Check if there's an override for this specific date
+        const dateOverride = scheduleOverrides.find(override => 
+            override.overrideDate === dateString
+        );
+        
+        // If there's an override for this date
+        if (dateOverride) {
+            if (!dateOverride.isAvailable) {
+                // Doctor is not available on this date
+                return [];
+            } else {
+                // Doctor has a custom schedule for this date
+                const timeSlots: string[] = [];
+                const now = new Date();
+                const isToday = date.toDateString() === now.toDateString();
+                
+                const startTime = dateOverride.startTime.slice(0, 5); // Remove seconds
+                const endTime = dateOverride.endTime.slice(0, 5); // Remove seconds
+                
+                // If it's today, check if the time slot has already passed
+                if (isToday) {
+                    const [startHour, startMinute] = startTime.split(':').map(Number);
+                    const scheduleStartTime = new Date();
+                    scheduleStartTime.setHours(startHour, startMinute, 0, 0);
+                    
+                    // Only add time slot if it hasn't started yet
+                    if (now < scheduleStartTime) {
+                        timeSlots.push(`${startTime} - ${endTime}`);
+                    }
+                } else {
+                    // For future dates, add the override time slot
+                    timeSlots.push(`${startTime} - ${endTime}`);
+                }
+                
+                return timeSlots;
+            }
+        }
+        
+        // No override, use regular schedule
         const backendDayOfWeek = convertDayOfWeek(date.getDay());
         
         const doctorSchedules = profileData.schedules.filter(schedule => 
@@ -148,8 +204,7 @@ function DoctorDetails() {
         
         if (doctorSchedules.length === 0) return [];
         
-        // Generate time slots based on doctor's schedule
-        // Each schedule represents a separate consultation session (ca khám)
+        // Generate time slots based on doctor's regular schedule
         const timeSlots: string[] = [];
         const now = new Date();
         const isToday = date.toDateString() === now.toDateString();
@@ -189,6 +244,19 @@ function DoctorDetails() {
         // Check if doctor has schedule for this day of week
         if (!profileData?.schedules) return false;
         
+        const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        // Check if there's an override for this specific date
+        const dateOverride = scheduleOverrides.find(override => 
+            override.overrideDate === dateString
+        );
+        
+        // If there's an override for this date, use override availability
+        if (dateOverride) {
+            return dateOverride.isAvailable;
+        }
+        
+        // No override, check regular schedule
         const backendDayOfWeek = convertDayOfWeek(date.getDay());
         
         const hasSchedule = profileData.schedules.some(schedule => 
@@ -216,6 +284,14 @@ function DoctorDetails() {
         setShowPaymentButton(false); // Reset payment button when time slot changes
         setIsCreatingPayment(false); // Reset loading state
     };
+
+    // Update available time slots when schedule overrides change
+    useEffect(() => {
+        if (selectedDate) {
+            const slots = getAvailableTimeSlots(selectedDate);
+            setAvailableTimeSlots(slots);
+        }
+    }, [scheduleOverrides, profileData?.schedules, selectedDate]);
 
     // Calculate consultation duration from selected time slot
     const getConsultationDuration = (timeSlot: string): string => {
@@ -257,51 +333,67 @@ function DoctorDetails() {
                 {/* Calendar Section */}
                 <div className={styles["calendar-section"]}>
                     <div className={styles["calendar-header"]}>
+                        {/* Previous week disabled per requirement */}
                         <button 
                             className={styles["calendar-nav"]}
-                            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                            onClick={() => {/* no-op - previous week not viewable */}}
+                            disabled
+                            title="Không thể xem tuần trước"
                         >
                             ←
                         </button>
                         <h4 className={styles["calendar-month"]}>
-                            {currentMonth.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
+                            {weekStart.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                            {' - '}
+                            {new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         </h4>
                         <button 
                             className={styles["calendar-nav"]}
-                            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                            onClick={() => setWeekStart(new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 7))}
+                            disabled={!(() => {
+                                const today = new Date();
+                                // JS getDay: 0=Sun,1=Mon,...5=Fri,6=Sat
+                                const weekday = today.getDay();
+                                // Allow moving to next week only if today is Friday (5) or Saturday (6) or Sunday (0)
+                                const allow = (weekday === 5 || weekday === 6 || weekday === 0);
+                                // Also prevent multiple next jumps: only allow jumping from current week to next week
+                                const currentWeekStart = getStartOfWeek(new Date());
+                                const isViewingCurrentWeek = weekStart.toDateString() === currentWeekStart.toDateString();
+                                return allow && isViewingCurrentWeek;
+                            })()}
+                            title="Xem tuần tiếp theo (chỉ được vào thứ 6, thứ 7, và Chủ nhật)"
                         >
                             →
                         </button>
                     </div>
-                    
+
                     <div className={styles["calendar-grid"]}>
                         <div className={styles["calendar-weekdays"]}>
                             {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(day => (
                                 <div key={day} className={styles["weekday"]}>{day}</div>
                             ))}
                         </div>
-                        
-                        <div className={styles["calendar-dates"]}>
-                            {Array.from({ length: 35 }, (_, i) => {
-                                const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i - 6);
-                                const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
+
+                        <div className={styles["calendar-dates"]} style={{ display: 'flex', gap: '8px' }}>
+                            {Array.from({ length: 7 }, (_, i) => {
+                                const date = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i);
                                 const isAvailable = isDateAvailable(date);
                                 const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
-                                
+
                                 return (
                                     <button
                                         key={i}
                                         className={`${styles["calendar-date"]} ${
-                                            !isCurrentMonth ? styles["other-month"] : ''
-                                        } ${
                                             !isAvailable ? styles["unavailable"] : ''
                                         } ${
                                             isSelected ? styles["selected"] : ''
                                         }`}
                                         onClick={() => isAvailable && handleDateSelect(date)}
                                         disabled={!isAvailable}
+                                        style={{ flex: 1 }}
                                     >
-                                        {date.getDate()}
+                                        <div style={{ fontSize: '14px', fontWeight: 600 }}>{date.getDate()}</div>
+                                        <div style={{ fontSize: '12px', color: '#718096' }}>{date.toLocaleDateString('vi-VN', { month: 'short' })}</div>
                                     </button>
                                 );
                             })}
@@ -483,6 +575,25 @@ function DoctorDetails() {
         }
         fetchProfile();
     }, []);
+
+    // Fetch schedule overrides when profileData is available
+    useEffect(() => {
+        const fetchScheduleOverrides = async () => {
+            if (!profileData?.doctorID) return;
+            
+            try {
+                const overrides = await scheduleService.getScheduleOverridesByDoctor(profileData.doctorID);
+                setScheduleOverrides(overrides);
+                console.log('Schedule overrides:', overrides);
+            } catch (error) {
+                console.error('Failed to fetch schedule overrides:', error);
+                // Set empty array on error so the component still works
+                setScheduleOverrides([]);
+            }
+        };
+        
+        fetchScheduleOverrides();
+    }, [profileData?.doctorID]);
 
     return (
         <div>

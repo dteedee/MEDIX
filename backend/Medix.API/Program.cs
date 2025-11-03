@@ -142,6 +142,7 @@ builder.Services.AddSwaggerGen(c =>
 // AutoMapper is already configured in ServiceConfiguration.cs
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
+
 builder.Services.ConfigureServices();
 
 

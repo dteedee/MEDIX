@@ -48,6 +48,8 @@ namespace Medix.API.Configurations
             services.AddScoped<IPrescriptionRepository, PrescriptionRepository>();
             services.AddScoped<IDoctorScheduleOverrideRepository, DoctorScheduleOverrideRepository>();
             services.AddScoped<IRefArticleStatusRepository, RefArticleStatusRepository>();
+
+            services.AddScoped<IMedicationRepository, MedicationRepository>();
             services.AddScoped<IDoctorRegistrationFormRepository, DoctorRegistrationFormRepository>();
 
 
@@ -82,6 +84,8 @@ namespace Medix.API.Configurations
             services.AddScoped<IPrescriptionService, PrescriptionService>();
             services.AddScoped<IReviewService, ReviewService>();
             services.AddScoped<IDoctorScheduleOverrideService, DoctorScheduleOverrideService>();
+            services.AddScoped<IMedicationService, MedicationService>();
+
             services.AddScoped<IDoctorRegistrationFormService, DoctorRegistrationFormService>();
 
         }

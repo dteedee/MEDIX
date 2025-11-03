@@ -1,0 +1,207 @@
+.container {
+  padding: 2rem;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.header {
+  background-color: #fff;
+  padding: 1.5rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #343a40;
+}
+
+.summary {
+  display: flex;
+  gap: 2rem;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.summaryValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.summaryLabel {
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.reviewList {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.reviewCard {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.reviewCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.reviewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+.patientInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.patientAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #e0e7ff;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.patientName {
+  font-weight: 600;
+  color: #343a40;
+}
+
+.reviewMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.reviewDate {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.reviewTime {
+  font-size: 0.8rem;
+  color: #495057;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stars {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.starFilled {
+  color: #f59e0b;
+}
+
+.starEmpty {
+  color: #d1d5db;
+}
+
+.reviewBody {
+  margin-bottom: 1rem;
+}
+
+.comment {
+  color: #495057;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+.noComment {
+  color: #adb5bd;
+  font-style: italic;
+}
+
+.adminResponse {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.responseTitle {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.replyButton {
+  background-color: #e0e7ff;
+  color: #4f46e5;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.replyButton:hover {
+  background-color: #c7d2fe;
+}
+
+.emptyState, .errorState {
+  text-align: center;
+  padding: 4rem 2rem;
+  background-color: #fff;
+  border-radius: 12px;
+  color: #6c757d;
+}
+
+.emptyState i, .errorState i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #adb5bd;
+}
+
+.emptyState p, .errorState p {
+  font-size: 1.1rem;
+}
+
+.errorState i {
+  color: #dc3545;
+}
+
+.errorState p {
+  color: #dc3545;
+  font-weight: 500;
+}

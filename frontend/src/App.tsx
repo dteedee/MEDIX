@@ -74,6 +74,7 @@ import ErrorPageWrapper from './pages/error/ErrorPageWrapper';
 import PrivacyPolicy from './pages/public/PrivacyPolicy';
 import TermsOfService from './pages/public/TermsOfService';
 import AboutUs from './pages/public/AboutUs';
+import EMRTimeline from './pages/patient/EMRTimeline';
 
 export function App() {
   return (
@@ -166,6 +167,7 @@ export function App() {
                     <Route path="appointments" element={<PatientAppointments />} />
                     <Route path="results" element={<PatientResults />} />
                     <Route path="finance" element={<PatientFinance />} />
+                    <Route path='emr-timeline' element={<EMRTimeline />} />
                   </Route>
 
                   {/* ---------- Doctor routes ---------- */}

@@ -9,6 +9,8 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task<MedicalRecord?> GetByAppointmentIdAsync(Guid appointmentId);
         Task AddAsync(MedicalRecord record);
         Task UpdateAsync(MedicalRecord record);
-        IQueryable<MedicalRecord> Query();
+        IQueryable<MedicalRecord> Query(); 
+        Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query);
+        Task<MedicalRecord?> GetRecordDetailsByIdAsync(Guid id);
     }
 }

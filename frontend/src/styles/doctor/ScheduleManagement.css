@@ -437,6 +437,38 @@
 .indicator.override-off {
   background-color: #f44336; /* Màu đỏ */
 }
+.schedule-guide-note {
+  font-style: italic;
+  font-size: 0.8em;
+  color: #777; /* A more subdued color */
+}
+
+.note-label {
+  font-weight: bold; /* Make "Lưu ý:" stand out */
+  display: inline; /* Display inline */
+  margin-right: 5px; /* Add some spacing */
+}
+
+.note-dot {
+  display: inline-block; /* Display inline */
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.note-dot.orange {
+  background-color: orange;
+}
+
+.note-dot.green {
+  background-color: green;
+}
+
+.important-note {
+  color: red;
+  font-weight: bold;
+}
 
 /* Style cho ca làm việc có cuộc hẹn (thêm viền đỏ quanh chấm tròn) */
 .indicator.has-appointment {

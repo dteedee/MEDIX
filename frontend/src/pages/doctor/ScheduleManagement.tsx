@@ -304,6 +304,15 @@ const ScheduleManagement: React.FC = () => {
 
   return (
     <div className="schedule-management-page">
+      {/* Chú thích */}
+      <div className="schedule-guide-note">
+        <p className="note-label">Lưu ý:</p>
+        <ul>
+          <li><span className="note-dot orange"></span> Có lịch hẹn</li>
+          <li><span className="note-dot green"></span> Có lịch linh hoạt</li>
+          <li><span className="important-note">Quan trọng:</span> Không thể ghi đè nhiều lịch trên 1 khoảng thời gian, nếu muốn thay đổi trạng thái, xin hãy xóa lịch ghi đè trước!!!</li>
+        </ul>
+      </div>
       <div className="schedule-calendar-section">
         <div className="calendar-header">
           <button onClick={() => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - (viewMode === "month" ? 1 : 0), d.getDate() - (viewMode === "week" ? 7 : 0)))}>

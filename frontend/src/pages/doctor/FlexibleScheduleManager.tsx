@@ -88,9 +88,25 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
         await scheduleService.deleteScheduleOverride(overrideId);
         Swal.fire('Đã xóa!', 'Lịch linh hoạt đã được xóa.', 'success');
         onRefresh();
-      } catch (error) {
-        console.error('Failed to delete override:', error);
-        Swal.fire('Lỗi!', 'Không thể xóa lịch. Vui lòng thử lại.', 'error');
+      } catch (err: any) {
+        console.error('Failed to delete override:', err);
+        let errorMessage = 'Không thể xóa lịch. Vui lòng thử lại.'; // Fallback
+
+        if (err.response && err.response.data) {
+          if (typeof err.response.data === 'string') {
+            errorMessage = err.response.data;
+          } else if (typeof err.response.data === 'object') {
+            // Xử lý lỗi từ ProblemDetails của ASP.NET Core
+            errorMessage = err.response.data.detail || err.response.data.title || JSON.stringify(err.response.data);
+          }
+        }
+
+        Swal.fire({
+          title: 'Lỗi!',
+          text: errorMessage,
+          icon: 'error',
+          confirmButtonText: 'Đã hiểu'
+        });
       }
     }
   };
@@ -142,9 +158,33 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
       onRefresh();
       setIsFormVisible(false);
       setEditingOverride(null);
-    } catch (error) {
-      console.error('Failed to save override:', error);
-      Swal.fire('Lỗi!', 'Không thể lưu lịch. Vui lòng kiểm tra lại thông tin.', 'error');
+    } catch (err: any) {
+      console.error('Failed to save override:', err);
+      let errorMessage = 'Không thể lưu lịch. Vui lòng kiểm tra lại thông tin.'; // Fallback
+
+      if (err.response && err.response.data) {
+        if (typeof err.response.data === 'string') {
+          errorMessage = err.response.data;
+        } else if (typeof err.response.data === 'object') {
+          // Xử lý lỗi từ ProblemDetails của ASP.NET Core
+          errorMessage = err.response.data.details || err.response.data.detail || err.response.data.title || JSON.stringify(err.response.data);
+          if (errorMessage.includes('Không thể cập nhật lịch ghi đè này vì đã có cuộc hẹn được đặt'))
+          {
+            errorMessage = "Đã có cuộc hẹn trong khoảng thời gian này, không thể cập nhật!";
+          }
+          if (errorMessage.includes('Bạn đã có ghi đè trong khung giờ'))
+          {
+            errorMessage = "Khung giờ này đã tồn tại một lịch linh hoạt khác. Vui lòng chọn thời gian khác.";
+          }
+        }
+      }
+
+      Swal.fire({
+        title: 'Lỗi!',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonText: 'Đã hiểu'
+      });
     }
   };
 

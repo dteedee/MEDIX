@@ -37,6 +37,7 @@ interface DayDetailsModalProps {
   schedules: DoctorSchedule[];
   overrides: ScheduleOverride[];
   appointments: Appointment[];
+  onAddFlexibleSchedule: () => void;
 }
 
 const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
@@ -45,7 +46,8 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   formattedDate,
   schedules,
   overrides,
-  appointments
+  appointments,
+  onAddFlexibleSchedule
 }) => {
   const allSlots = useMemo(() => {
     // Lấy tất cả lịch linh hoạt
@@ -156,6 +158,16 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
             </p>
           )}
         </div>
+        <div className="details-modal-footer">
+          <button
+            onClick={() => {
+              onAddFlexibleSchedule();
+            }}
+            className="manage-button primary"
+          >
+            Thêm lịch linh hoạt
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -178,6 +190,7 @@ const ScheduleManagement: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [initialOverrideDate, setInitialOverrideDate] = useState<string | null>(null);
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
 
   // --- Fetch dữ liệu ---
@@ -271,6 +284,14 @@ const ScheduleManagement: React.FC = () => {
     setIsDetailsModalOpen(true);
   };
 
+  const handleAddFlexibleSchedule = () => {
+    if (!selectedDate) return;
+    const dateString = getLocalDateKey(selectedDate);
+    setInitialOverrideDate(dateString);
+    setIsDetailsModalOpen(false); // Đóng modal chi tiết
+    setIsOverrideModalOpen(true); // Mở modal thêm lịch linh hoạt
+  };
+
   const getFormattedSelectedDate = () => {
     if (!selectedDate) return "";
     return selectedDate.toLocaleDateString("vi-VN", {
@@ -283,6 +304,15 @@ const ScheduleManagement: React.FC = () => {
 
   return (
     <div className="schedule-management-page">
+      {/* Chú thích */}
+      <div className="schedule-guide-note">
+        <p className="note-label">Lưu ý:</p>
+        <ul>
+          <li><span className="note-dot orange"></span> Có lịch hẹn</li>
+          <li><span className="note-dot green"></span> Có lịch linh hoạt</li>
+          <li><span className="important-note">Quan trọng:</span> Không thể ghi đè nhiều lịch trên 1 khoảng thời gian, nếu muốn thay đổi trạng thái, xin hãy xóa lịch ghi đè trước!!!</li>
+        </ul>
+      </div>
       <div className="schedule-calendar-section">
         <div className="calendar-header">
           <button onClick={() => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - (viewMode === "month" ? 1 : 0), d.getDate() - (viewMode === "week" ? 7 : 0)))}>
@@ -383,7 +413,13 @@ const ScheduleManagement: React.FC = () => {
             <button onClick={() => setIsModalOpen(true)} className="manage-button primary">
               Quản lý lịch cố định
             </button>
-            <button onClick={() => setIsOverrideModalOpen(true)} className="manage-button primary">
+            <button
+              onClick={() => {
+                setInitialOverrideDate(null); // Không truyền ngày ban đầu để hiển thị danh sách
+                setIsOverrideModalOpen(true);
+              }}
+              className="manage-button primary"
+            >
               Quản lý lịch linh hoạt
             </button>
           </div>
@@ -399,8 +435,10 @@ const ScheduleManagement: React.FC = () => {
       )}
       {isOverrideModalOpen && (
         <FlexibleScheduleManager
+          schedules={viewData.schedules}
           overrides={viewData.overrides}
-          onClose={() => setIsOverrideModalOpen(false)}
+          initialDate={initialOverrideDate}
+          onClose={() => { setIsOverrideModalOpen(false); setInitialOverrideDate(null); }}
           onRefresh={refreshAllData}
         />
       )}
@@ -411,6 +449,7 @@ const ScheduleManagement: React.FC = () => {
         formattedDate={getFormattedSelectedDate()}
         schedules={selectedDate ? schedulesByDay.get((selectedDate.getDay() || 7)) || [] : []}
         overrides={selectedDate ? overridesByDate.get(getLocalDateKey(selectedDate)) || [] : []}
+        onAddFlexibleSchedule={handleAddFlexibleSchedule}
         appointments={selectedDate ? appointmentsByDate.get(getLocalDateKey(selectedDate)) || [] : []}
       />
     </div>

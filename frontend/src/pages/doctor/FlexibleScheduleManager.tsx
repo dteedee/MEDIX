@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import Swal from 'sweetalert2';
-import { ScheduleOverride, CreateScheduleOverridePayload } from '../../types/schedule';
+import { ScheduleOverride, CreateScheduleOverridePayload, DoctorSchedule } from '../../types/schedule';
 import { scheduleService } from '../../services/scheduleService';
 import { X, Plus, Edit, Trash2 } from 'lucide-react';
 import '../../styles/doctor/FlexibleScheduleManager.css';
 
 interface Props {
+  schedules: DoctorSchedule[];
   overrides: ScheduleOverride[];
   onClose: () => void;
+  initialDate?: string | null;
   onRefresh: () => void;
 }
 
@@ -25,20 +27,36 @@ const timeSlots = [
   { label: 'Ca 8 (16:00 - 16:50)', startTime: '16:00', endTime: '16:50' },
 ];
 
-const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefresh }) => {
+const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClose, onRefresh, initialDate }) => {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingOverride, setEditingOverride] = useState<ScheduleOverride | null>(null);
 
   const { register, handleSubmit, reset, setValue, getValues, formState: { errors } } = useForm<FormInputs>();
 
+  useEffect(() => {
+    // Khi modal được mở với một ngày cụ thể (từ việc click vào ngày trên lịch)
+    // thì sẽ mở thẳng form thêm mới cho ngày đó.
+    if (initialDate) {
+      setEditingOverride(null);
+      reset({
+        overrideDate: initialDate,
+        startTime: timeSlots[0].startTime,
+        endTime: timeSlots[0].endTime,
+        isAvailable: true, // Mặc định là tăng ca
+        reason: 'Tăng ca' // Lý do mặc định
+      });
+      setIsFormVisible(true); // Hiển thị form
+    }
+  }, [initialDate, reset]);
+
   const handleAddNew = () => {
     setEditingOverride(null);
     reset({
-      overrideDate: '',
-      startTime: '',
-      endTime: '',
+      overrideDate: new Date().toISOString().split('T')[0], // Mặc định là ngày hôm nay
+      startTime: timeSlots[0].startTime,
+      endTime: timeSlots[0].endTime,
       isAvailable: true,
-      reason: ''
+      reason: 'Tăng ca'
     });
     setIsFormVisible(true);
   };
@@ -70,15 +88,53 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
         await scheduleService.deleteScheduleOverride(overrideId);
         Swal.fire('Đã xóa!', 'Lịch linh hoạt đã được xóa.', 'success');
         onRefresh();
-      } catch (error) {
-        console.error('Failed to delete override:', error);
-        Swal.fire('Lỗi!', 'Không thể xóa lịch. Vui lòng thử lại.', 'error');
+      } catch (err: any) {
+        console.error('Failed to delete override:', err);
+        let errorMessage = 'Không thể xóa lịch. Vui lòng thử lại.'; // Fallback
+
+        if (err.response && err.response.data) {
+          if (typeof err.response.data === 'string') {
+            errorMessage = err.response.data;
+          } else if (typeof err.response.data === 'object') {
+            // Xử lý lỗi từ ProblemDetails của ASP.NET Core
+            errorMessage = err.response.data.detail || err.response.data.title || JSON.stringify(err.response.data);
+          }
+        }
+
+        Swal.fire({
+          title: 'Lỗi!',
+          text: errorMessage,
+          icon: 'error',
+          confirmButtonText: 'Đã hiểu'
+        });
       }
     }
   };
 
   const processFormSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
+      // Chuyển đổi overrideDate từ string sang Date để lấy ngày trong tuần
+      const overrideDate = new Date(data.overrideDate);
+      // JavaScript: 0=CN, 1=T2,... | Backend: 7=CN, 1=T2,...
+      const dayOfWeek = overrideDate.getDay() === 0 ? 7 : overrideDate.getDay();
+
+      // Kiểm tra xem có lịch cố định nào trong ngày đó bị trùng không
+      const isOverlappingFixedSchedule = schedules.some(
+        (fixedSchedule) =>
+          fixedSchedule.dayOfWeek === dayOfWeek &&
+          data.startTime < fixedSchedule.endTime.substring(0, 5) && // Bắt đầu của lịch linh hoạt phải trước khi kết thúc của lịch cố định
+          data.endTime > fixedSchedule.startTime.substring(0, 5)    // Kết thúc của lịch linh hoạt phải sau khi bắt đầu của lịch cố định
+      );
+
+      // Nếu có lịch cố định trùng và lý do không phải là "Nghỉ...", hiển thị lỗi
+      if (isOverlappingFixedSchedule && !data.reason.toLowerCase().includes('nghỉ')) {
+        Swal.fire(
+          'Không thể thực hiện!',
+          'Bạn không thể ghi đè (tăng ca) vào một ca đã có trong lịch cố định.',
+          'error'
+        );
+        return; // Dừng thực thi
+      }
       // Tự động xác định isAvailable dựa trên lý do được chọn
       const isWork = data.reason.toLowerCase().includes('tăng ca');
       const isOff = data.reason.toLowerCase().includes('nghỉ');
@@ -102,9 +158,33 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
       onRefresh();
       setIsFormVisible(false);
       setEditingOverride(null);
-    } catch (error) {
-      console.error('Failed to save override:', error);
-      Swal.fire('Lỗi!', 'Không thể lưu lịch. Vui lòng kiểm tra lại thông tin.', 'error');
+    } catch (err: any) {
+      console.error('Failed to save override:', err);
+      let errorMessage = 'Không thể lưu lịch. Vui lòng kiểm tra lại thông tin.'; // Fallback
+
+      if (err.response && err.response.data) {
+        if (typeof err.response.data === 'string') {
+          errorMessage = err.response.data;
+        } else if (typeof err.response.data === 'object') {
+          // Xử lý lỗi từ ProblemDetails của ASP.NET Core
+          errorMessage = err.response.data.details || err.response.data.detail || err.response.data.title || JSON.stringify(err.response.data);
+          if (errorMessage.includes('Không thể cập nhật lịch ghi đè này vì đã có cuộc hẹn được đặt'))
+          {
+            errorMessage = "Đã có cuộc hẹn trong khoảng thời gian này, không thể cập nhật!";
+          }
+          if (errorMessage.includes('Bạn đã có ghi đè trong khung giờ'))
+          {
+            errorMessage = "Khung giờ này đã tồn tại một lịch linh hoạt khác. Vui lòng chọn thời gian khác.";
+          }
+        }
+      }
+
+      Swal.fire({
+        title: 'Lỗi!',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonText: 'Đã hiểu'
+      });
     }
   };
 

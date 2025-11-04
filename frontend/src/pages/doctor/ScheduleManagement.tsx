@@ -37,6 +37,7 @@ interface DayDetailsModalProps {
   schedules: DoctorSchedule[];
   overrides: ScheduleOverride[];
   appointments: Appointment[];
+  onAddFlexibleSchedule: () => void;
 }
 
 const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
@@ -45,7 +46,8 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   formattedDate,
   schedules,
   overrides,
-  appointments
+  appointments,
+  onAddFlexibleSchedule
 }) => {
   const allSlots = useMemo(() => {
     // Lấy tất cả lịch linh hoạt
@@ -156,6 +158,16 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
             </p>
           )}
         </div>
+        <div className="details-modal-footer">
+          <button
+            onClick={() => {
+              onAddFlexibleSchedule();
+            }}
+            className="manage-button primary"
+          >
+            Thêm lịch linh hoạt
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -178,6 +190,7 @@ const ScheduleManagement: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [initialOverrideDate, setInitialOverrideDate] = useState<string | null>(null);
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
 
   // --- Fetch dữ liệu ---
@@ -269,6 +282,14 @@ const ScheduleManagement: React.FC = () => {
   const openDayDetails = (date: Date) => {
     setSelectedDate(date);
     setIsDetailsModalOpen(true);
+  };
+
+  const handleAddFlexibleSchedule = () => {
+    if (!selectedDate) return;
+    const dateString = getLocalDateKey(selectedDate);
+    setInitialOverrideDate(dateString);
+    setIsDetailsModalOpen(false); // Đóng modal chi tiết
+    setIsOverrideModalOpen(true); // Mở modal thêm lịch linh hoạt
   };
 
   const getFormattedSelectedDate = () => {
@@ -383,7 +404,13 @@ const ScheduleManagement: React.FC = () => {
             <button onClick={() => setIsModalOpen(true)} className="manage-button primary">
               Quản lý lịch cố định
             </button>
-            <button onClick={() => setIsOverrideModalOpen(true)} className="manage-button primary">
+            <button
+              onClick={() => {
+                setInitialOverrideDate(null); // Không truyền ngày ban đầu để hiển thị danh sách
+                setIsOverrideModalOpen(true);
+              }}
+              className="manage-button primary"
+            >
               Quản lý lịch linh hoạt
             </button>
           </div>
@@ -399,8 +426,10 @@ const ScheduleManagement: React.FC = () => {
       )}
       {isOverrideModalOpen && (
         <FlexibleScheduleManager
+          schedules={viewData.schedules}
           overrides={viewData.overrides}
-          onClose={() => setIsOverrideModalOpen(false)}
+          initialDate={initialOverrideDate}
+          onClose={() => { setIsOverrideModalOpen(false); setInitialOverrideDate(null); }}
           onRefresh={refreshAllData}
         />
       )}
@@ -411,6 +440,7 @@ const ScheduleManagement: React.FC = () => {
         formattedDate={getFormattedSelectedDate()}
         schedules={selectedDate ? schedulesByDay.get((selectedDate.getDay() || 7)) || [] : []}
         overrides={selectedDate ? overridesByDate.get(getLocalDateKey(selectedDate)) || [] : []}
+        onAddFlexibleSchedule={handleAddFlexibleSchedule}
         appointments={selectedDate ? appointmentsByDate.get(getLocalDateKey(selectedDate)) || [] : []}
       />
     </div>

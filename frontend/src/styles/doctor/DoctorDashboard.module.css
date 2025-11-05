@@ -83,6 +83,32 @@
   100% { transform: rotate(360deg); }
 }
 
+/* Error and Empty States */
+.errorState, .emptyList {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+  color: #718096;
+  width: 100%;
+}
+
+.errorState i, .emptyList i {
+  font-size: 40px;
+  margin-bottom: 16px;
+  color: #a0aec0;
+}
+
+.errorState p, .emptyList p {
+  margin: 0;
+  font-size: 16px;
+}
+.errorState i {
+  color: #f56565; /* Red for errors */
+}
+
 /* Stats Grid */
 .statsGrid {
   display: grid;
@@ -105,6 +131,24 @@
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
+
+.errorCard, .loadingCard {
+  grid-column: 1 / -1; /* Span full width */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 40px;
+  background: #fff;
+  color: #e53e3e;
+}
+
+.loadingCard {
+  color: #4a5568;
+}
+
 
 .statCard1 {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -165,6 +209,16 @@
   font-size: 12px;
   opacity: 0.8;
 }
+.statTrend a {
+  color: white;
+  text-decoration: none;
+  transition: text-decoration 0.2s;
+}
+
+.statTrend a:hover {
+  text-decoration: underline;
+}
+
 
 .statTrend i {
   font-size: 14px;
@@ -261,6 +315,7 @@
   background: #f8f9fa;
   border-radius: 12px;
   transition: background 0.2s ease;
+  text-decoration: none;
 }
 
 .appointmentItem:hover {
@@ -351,6 +406,7 @@
   background: #f8f9fa;
   border-radius: 12px;
   transition: background 0.2s ease;
+  text-decoration: none;
 }
 
 .patientItem:hover {
@@ -428,6 +484,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   color: #4a5568;
+  text-decoration: none;
 }
 
 .actionBtn:hover {

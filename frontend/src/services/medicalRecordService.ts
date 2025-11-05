@@ -1,5 +1,5 @@
 import { apiClient } from '../lib/apiClient';
-import { MedicalRecord } from '../types/medicalRecord.types';
+import { MedicalRecord, MedicalRecordDetail, MedicalRecordDto, MedicalRecordQuery } from '../types/medicalRecord.types';
 
 const API_ENDPOINT = '/MedicalRecord';
 
@@ -26,7 +26,24 @@ const updateMedicalRecord = async (recordId: string, payload: MedicalRecord): Pr
   return response.data;
 };
 
+const getMedicalRecordsOfPatient = async (query: MedicalRecordQuery): Promise<MedicalRecordDto[]> => {
+  const response = await apiClient.get<MedicalRecordDto[]>(`${API_ENDPOINT}/patient`, {
+    params: {
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+    }
+  });
+  return response.data;
+}
+
+const getMedicalRecordDetails = async (id: string): Promise<MedicalRecordDetail> => {
+  const response = await apiClient.get<MedicalRecordDetail>(`${API_ENDPOINT}/${id}`);
+  return response.data;
+};
+
 export const medicalRecordService = {
   getMedicalRecordByAppointmentId,
   updateMedicalRecord,
+  getMedicalRecordsOfPatient,
+  getMedicalRecordDetails,
 };

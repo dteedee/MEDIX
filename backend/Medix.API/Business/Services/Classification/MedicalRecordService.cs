@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.MedicalRecordDTO;
@@ -119,5 +120,11 @@ namespace Medix.API.Business.Services.Classification
             await _medicalRecordRepo.UpdateAsync(existingRecord);
             return _mapper.Map<MedicalRecordDto>(existingRecord);
         }
+
+        public async Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query)
+            => await _medicalRecordRepo.GetRecordsByUserIdAsync(userId, query);
+
+        public async Task<MedicalRecord?> GetRecordDetailsByIdAsync(Guid id)
+            => await _medicalRecordRepo.GetRecordDetailsByIdAsync(id);
     }
 }

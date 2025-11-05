@@ -1,22 +1,35 @@
 ﻿namespace Medix.API.Models.Enums
 {
-    public record DoctorDegree(string Code, string Description)
+    public record OverrideTypeEnum(string Code, string Description)
     {
-        public static readonly DoctorDegree Bachelor = new("BC", "Cử nhân Y khoa");
-        public static readonly DoctorDegree Master = new("MS", "Thạc sĩ Y khoa");
-        public static readonly DoctorDegree Doctor = new("DR", "Tiến sĩ Y khoa");
-        public static readonly DoctorDegree Professor = new("PR", "Giáo sư");
-        public static readonly DoctorDegree AssociateProfessor = new("AP", "Phó giáo sư");
+        public static readonly OverrideTypeEnum Availability = new("AVAILABILITY", "Lịch làm việc bổ sung");
 
-        public static IEnumerable<DoctorDegree> List() => new[]
+        /// <summary>
+        /// Bác sĩ VẮNG MẶT (nghỉ, bận, đi hội thảo...).
+        /// </summary>
+        public static readonly OverrideTypeEnum Unavailability = new("UNAVAILABILITY", "Lịch nghỉ/bận");
+
+        // --- Các hàm tiện ích ---
+
+        /// <summary>
+        /// Trả về một danh sách tất cả các loại ghi đè.
+        /// </summary>
+        public static IEnumerable<OverrideTypeEnum> List() => new[]
         {
-            Bachelor, Master, Doctor, Professor, AssociateProfessor
+            Availability, Unavailability
         };
 
-        public static DoctorDegree? FromCode(string code) =>
-            List().FirstOrDefault(d => d.Code == code); // hàm lấy ra mã code 
+        /// <summary>
+        /// Tìm loại ghi đè dựa trên Mã (Code).
+        /// </summary>
+        public static OverrideTypeEnum? FromCode(string code) =>
+            List().FirstOrDefault(d =>
+                d.Code.Equals(code, System.StringComparison.OrdinalIgnoreCase));
 
+        /// <summary>
+        /// Lấy mô tả (Description) từ Mã (Code).
+        /// </summary>
         public static string? GetDescription(string code) =>
-         FromCode(code)?.Description; // hàm lấy ra descriotion
+            FromCode(code)?.Description;
     }
 }

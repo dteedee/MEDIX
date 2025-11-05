@@ -1,4 +1,5 @@
-﻿using Medix.API.Models.Entities;
+﻿using Medix.API.Business.Helper;
+using Medix.API.Models.Entities;
 
 namespace Medix.API.DataAccess.Interfaces.Classification
 {
@@ -10,5 +11,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task UpdateAsync(MedicalRecord record);
         IQueryable<MedicalRecord> Query();
 
+        Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query);
+        Task<MedicalRecord?> GetRecordDetailsByIdAsync(Guid id);
     }
 }

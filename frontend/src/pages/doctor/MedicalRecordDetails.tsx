@@ -20,6 +20,7 @@ const MedicalRecordDetails: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isEditable, setIsEditable] = useState(false); // Trạng thái chỉnh sửa
 
   useEffect(() => {
     const fetchMedicalRecord = async () => {
@@ -34,6 +35,16 @@ const MedicalRecordDetails: React.FC = () => {
         const data = await medicalRecordService.getMedicalRecordByAppointmentId(appointmentId);
         setMedicalRecord(data);
         setError(null);
+
+        // Xác định xem hồ sơ có được phép chỉnh sửa hay không
+        const appointmentDate = new Date(data.appointmentDate);
+        const today = new Date();
+        const isToday =
+          appointmentDate.getFullYear() === today.getFullYear() &&
+          appointmentDate.getMonth() === today.getMonth() &&
+          appointmentDate.getDate() === today.getDate();
+
+        setIsEditable(isToday);
       } catch (err: any) {
         console.error("Error fetching medical record:", err);
         if (err.response && err.response.status === 404) {
@@ -139,8 +150,7 @@ const MedicalRecordDetails: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Đơn giản hóa: Gửi toàn bộ đối tượng medicalRecord lên API.
-      // Backend sẽ chịu trách nhiệm xử lý việc xóa và tạo lại đơn thuốc.
+      
       await medicalRecordService.updateMedicalRecord(medicalRecord.id, medicalRecord);
 
       Swal.fire({
@@ -228,7 +238,8 @@ const MedicalRecordDetails: React.FC = () => {
               value={medicalRecord.chiefComplaint}
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
-              rows={3} />
+              disabled={!isEditable} // Vô hiệu hóa nếu không được phép chỉnh sửa
+              rows={3} ></textarea>
             {fieldErrors.chiefComplaint && <p className="error-message">{fieldErrors.chiefComplaint}</p>}
           </div>
           <div className="form-column full-width">
@@ -239,7 +250,8 @@ const MedicalRecordDetails: React.FC = () => {
               value={medicalRecord.physicalExamination}
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
-              rows={5} />
+              rows={5}
+              disabled={!isEditable} />
             {fieldErrors.physicalExamination && <p className="error-message">{fieldErrors.physicalExamination}</p>}
           </div>
         </div>
@@ -270,7 +282,8 @@ const MedicalRecordDetails: React.FC = () => {
               value={medicalRecord.diagnosis}
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
-              rows={3} />
+              rows={3}
+              disabled={!isEditable} />
             {fieldErrors.diagnosis && <p className="error-message">{fieldErrors.diagnosis}</p>}
           </div>
           <div className="form-column">
@@ -279,6 +292,7 @@ const MedicalRecordDetails: React.FC = () => {
               name="assessmentNotes"
               className="form-textarea"
               value={medicalRecord.assessmentNotes}
+              disabled={!isEditable}
               onChange={handleFieldChange}
               rows={3} />
           </div>
@@ -290,7 +304,8 @@ const MedicalRecordDetails: React.FC = () => {
               value={medicalRecord.treatmentPlan}
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
-              rows={4} />
+              rows={4}
+              disabled={!isEditable} />
             {fieldErrors.treatmentPlan && <p className="error-message">{fieldErrors.treatmentPlan}</p>}
           </div>
           <div className="form-column">
@@ -299,12 +314,19 @@ const MedicalRecordDetails: React.FC = () => {
               name="doctorNotes"
               className="form-textarea"
               value={medicalRecord.doctorNotes}
+              disabled={!isEditable}
               onChange={handleFieldChange}
               rows={4} />
           </div>
           <div className="form-column">
             <label className="form-label">Hướng dẫn tái khám</label>
-            <textarea name="followUpInstructions" className="form-textarea" value={medicalRecord.followUpInstructions} onChange={handleFieldChange} rows={4} />
+            <textarea
+              name="followUpInstructions"
+              className="form-textarea"
+              value={medicalRecord.followUpInstructions}
+              onChange={handleFieldChange}
+              rows={4}
+              disabled={!isEditable} />
           </div>
         </div>
       </section>
@@ -312,11 +334,13 @@ const MedicalRecordDetails: React.FC = () => {
       <section className="form-section">
         <div className="prescription-header">
           <h3 className="section-title">V. ĐƠN THUỐC</h3>
-          <button type="button" className="btn-add-medicine" onClick={handleAddMedicine}>
+          {isEditable && (
+            <button type="button" className="btn-add-medicine" onClick={handleAddMedicine}>
             Thêm thuốc
           </button>
+          )}
         </div>
-        <MedicineTable medicines={medicalRecord.prescriptions} onDelete={handleDeleteMedicine} onUpdate={handleUpdateMedicine} />
+        <MedicineTable medicines={medicalRecord.prescriptions} onDelete={isEditable ? handleDeleteMedicine : () => {}} onUpdate={isEditable ? handleUpdateMedicine : () => {}} />
       </section>
 
       <div className="form-footer">
@@ -327,9 +351,15 @@ const MedicalRecordDetails: React.FC = () => {
           <br />
           <p>{user?.fullName}</p>
         </div>
-        <button type="submit" className="btn-submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Đang lưu...' : 'Hoàn tất & Lưu hồ sơ'}
-        </button>
+        {isEditable ? (
+          <button type="submit" className="btn-submit" disabled={isSubmitting} >
+            {isSubmitting ? 'Đang lưu...' : 'Hoàn tất & Lưu hồ sơ'}
+          </button>
+        ) : (
+          <button type="button" className="btn-submit" onClick={() => navigate(-1)}>
+            Quay lại
+          </button>
+        )}
       </div>
     </form>
   );

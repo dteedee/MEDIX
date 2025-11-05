@@ -66,7 +66,8 @@ export interface DoctorProfileDto {
   doctorID?: string;
   avatarUrl?: string;
   fullName: string;
-  consultationFee?: number; // phí khám từ backend
+  consulationFee?: number; // phí khám từ backend (typo trong backend)
+  consultationFee?: number; // phí khám từ backend (correct spelling)
   price?: number; // giữ tương thích nếu có nơi dùng price
   yearsOfExperience?: number | string; // kinh nghiệm từ backend
   experience?: number | string; // một số API trả experience
@@ -78,6 +79,19 @@ export interface DoctorProfileDto {
   reviews: ReviewDto[];
   education?: string;
   schedules: DoctorScheduleDto[];
+  scheduleOverride?: DoctorScheduleOverrideDto[]; // Lịch override mới
+}
+
+export interface DoctorScheduleOverrideDto {
+  id: string;
+  doctorId: string;
+  overrideDate: string; // DateOnly from backend
+  startTime: string; // TimeOnly from backend
+  endTime: string; // TimeOnly from backend
+  isAvailable: boolean;
+  reason?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DoctorProfileDetails {
@@ -143,6 +157,34 @@ export interface ServiceTierWithPaginatedDoctorsDto {
   name: string;
   description: string;
   doctors: PaginatedListDto<DoctorInTier>;
+}
+
+// Types for Education Group API
+export interface DoctorInEducation {
+  userId: string;
+  doctorId: string;
+  doctorName: string;
+  specializationCode: string;
+  specialization: string;
+  avatarUrl?: string;
+  educationcode: string;
+  education: string;
+  experience: string;
+  price: number;
+  bio: string;
+  rating: number;
+  totalCases?: number;
+  successfulCases?: number;
+  successRate?: number;
+  averageResponseTime?: number; // in minutes
+  reviewCount?: number;
+}
+
+export interface EducationGroupWithPaginatedDoctorsDto {
+  educationCode: string;
+  education: string;
+  description: string;
+  doctors: PaginatedListDto<DoctorInEducation>;
 }
 
 export interface DoctorRegisterFormList {

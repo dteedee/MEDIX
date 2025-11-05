@@ -114,10 +114,20 @@ namespace Medix.API.Business.Services.Classification
             return _mapper.Map<MedicalRecordDto>(existingRecord);
         }
 
-        public async Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query)
-            => await _medicalRecordRepo.GetRecordsByUserIdAsync(userId, query);
+        public Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query)
+        {
+            throw new NotImplementedException();
+        }
 
-        public async Task<MedicalRecord?> GetRecordDetailsByIdAsync(Guid id)
-            => await _medicalRecordRepo.GetRecordDetailsByIdAsync(id);
+        public Task<MedicalRecord?> GetRecordDetailsByIdAsync(Guid id)
+        {
+            throw new NotImplementedException();
+        }
+
+        //public async Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query)
+        //    => await _medicalRecordRepo.GetRecordsByUserIdAsync(userId, query);
+
+        //public async Task<MedicalRecord?> GetRecordDetailsByIdAsync(Guid id)
+        //    => await _medicalRecordRepo.GetRecordDetailsByIdAsync(id);
     }
 }

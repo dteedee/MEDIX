@@ -18,5 +18,9 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<Doctor?> GetDoctorByIdAsync(Guid id);
         Task<IEnumerable<ServiceTierWithPaginatedDoctorsDto>> GetGroupedDoctorsAsync(DoctorQueryParameters queryParams);
         Task<PagedList<DoctorDto>> GetDoctorsAsync(DoctorQuery query);
+
+        Task<IEnumerable<EducationWithPaginatedDoctorsDto>> GetDoctorsByEducationAsync(DoctorQueryParameters queryParams);
+
+
     }
 }

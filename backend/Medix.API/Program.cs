@@ -33,7 +33,6 @@ builder.Services.ConfigureServices();
 
 IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
 
-
 builder.Services.AddKeyedSingleton("OrderClient", (sp, key) =>
 {
     var config = sp.GetRequiredService<IConfiguration>();

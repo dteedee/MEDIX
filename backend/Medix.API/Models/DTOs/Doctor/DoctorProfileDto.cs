@@ -13,8 +13,9 @@
         public string? Biography { get; set; }
         public int[] RatingByStar { get; set; }
         public string? Education { get; set; }
-        public List<ReviewDto> Reviews { get; set; }
-        public List<DoctorScheduleDto> Schedules { get; set; }
+        public List<ReviewDto>? Reviews { get; set; }
+        public List<DoctorScheduleDto>? Schedules { get; set; }
+        public List<DoctorScheduleOverrideDto>? ScheduleOverride { get; set; }
     }
 
     public class ReviewDto

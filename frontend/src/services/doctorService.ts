@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, ServiceTierWithPaginatedDoctorsDto, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters, DoctorQuery, DoctorList, DoctorDto } from "../types/doctor.types";
+import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, ServiceTierWithPaginatedDoctorsDto, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters, DoctorQuery, DoctorList, DoctorDto, EducationGroupWithPaginatedDoctorsDto } from "../types/doctor.types";
 
 class DoctorService {
     async getDoctorProfile(doctorID: string | undefined): Promise<DoctorProfileDto> {
@@ -70,10 +70,22 @@ class DoctorService {
 
     async getMetadata(): Promise<DoctorRegisterMetadata> {
         try {
-            const response = await apiClient.get<DoctorRegisterMetadata>('/doctor/register-metadata');
+            const response = await apiClient.get<DoctorRegisterMetadata>('/DoctorRegistrationForm/register-metadata');
             return response.data;
         } catch (error: any) {
             console.error('Get metadata error: ', error);
+            throw this.handleApiError(error);
+        }
+    }
+
+    async getDoctorsGroupedByEducation(queryParams: DoctorQueryParameters): Promise<EducationGroupWithPaginatedDoctorsDto[]> {
+        try {
+            const response = await apiClient.get<EducationGroupWithPaginatedDoctorsDto[]>('/booking/grouped-by-education', {
+                params: queryParams
+            });
+            return response.data;
+        } catch (error: any) {
+            console.error('Get doctors grouped by education error: ', error);
             throw this.handleApiError(error);
         }
     }

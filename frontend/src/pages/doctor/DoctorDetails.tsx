@@ -17,8 +17,18 @@ function DoctorDetails() {
     // Booking states
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-    const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
-    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [availableTimeSlots, setAvailableTimeSlots] = useState<Array<{
+        display: string;
+        type: 'regular' | 'override';
+        reason?: string;
+        id?: string;
+        startTime: string;
+        endTime: string;
+    }>>([]);
+    const [currentMonth, setCurrentMonth] = useState(() => {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), 1);
+    });
     const [showPaymentButton, setShowPaymentButton] = useState(false);
     const [isCreatingPayment, setIsCreatingPayment] = useState(false);
 
@@ -128,40 +138,128 @@ function DoctorDetails() {
         return jsDayOfWeek === 0 ? 7 : jsDayOfWeek;
     };
 
-    // Get available time slots based on doctor's schedule
-    const getAvailableTimeSlots = (date: Date): string[] => {
+    // Helper function to format date as YYYY-MM-DD without timezone issues
+    const formatDateString = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    // Helper function to normalize date strings from backend
+    const normalizeDateString = (dateStr: string): string => {
+        // Handle different possible formats from backend
+        if (dateStr.includes('T')) {
+            // If it's ISO format with time, extract just the date part
+            return dateStr.split('T')[0];
+        }
+        return dateStr;
+    };
+
+    // Helper function to check if two time slots overlap
+    const isTimeSlotOverlap = (start1: string, end1: string, start2: string, end2: string): boolean => {
+        return start1 < end2 && end1 > start2;
+    };
+
+    // Get available time slots based on doctor's schedule and overrides
+    const getAvailableTimeSlots = (date: Date): Array<{
+        display: string;
+        type: 'regular' | 'override';
+        reason?: string;
+        id?: string;
+        startTime: string;
+        endTime: string;
+    }> => {
         if (!profileData?.schedules) return [];
         
         const backendDayOfWeek = convertDayOfWeek(date.getDay());
+        const dateString = formatDateString(date);
         
-        const doctorSchedules = profileData.schedules.filter(schedule => 
-            schedule.dayOfWeek === backendDayOfWeek && schedule.isAvailable
-        );
-        
-        if (doctorSchedules.length === 0) return [];
-        
-        const timeSlots: string[] = [];
         const now = new Date();
         const isToday = date.toDateString() === now.toDateString();
         
-        doctorSchedules.forEach(schedule => {
+        // Get all overrides for this specific date
+        const overridesForDate = profileData.scheduleOverride?.filter(override => {
+            const normalizedOverrideDate = normalizeDateString(override.overrideDate);
+            return normalizedOverrideDate === dateString && override.isAvailable;
+        }) || [];
+        
+        // Get regular schedules for this day of week
+        const regularSchedules = profileData.schedules.filter(schedule => 
+            schedule.dayOfWeek === backendDayOfWeek && schedule.isAvailable
+        );
+        
+        // Combine all time slots
+        const allTimeSlots: Array<{
+            startTime: string;
+            endTime: string;
+            type: 'regular' | 'override';
+            reason?: string;
+            id?: string; // Add ID to distinguish slots
+        }> = [];
+        
+        // Add regular schedules first
+        regularSchedules.forEach(schedule => {
             const startTime = schedule.startTime.slice(0, 5);
             const endTime = schedule.endTime.slice(0, 5);
             
-            if (isToday) {
-                const [startHour, startMinute] = startTime.split(':').map(Number);
-                const scheduleStartTime = new Date();
-                scheduleStartTime.setHours(startHour, startMinute, 0, 0);
-                
-                if (now < scheduleStartTime) {
-                    timeSlots.push(`${startTime} - ${endTime}`);
-                }
-            } else {
-                timeSlots.push(`${startTime} - ${endTime}`);
+            // Check if this regular schedule is overridden by any override
+            const isOverridden = overridesForDate.some(override => {
+                const overrideStart = override.startTime.slice(0, 5);
+                const overrideEnd = override.endTime.slice(0, 5);
+                return isTimeSlotOverlap(startTime, endTime, overrideStart, overrideEnd);
+            });
+            
+            // Only add if not overridden
+            if (!isOverridden) {
+                allTimeSlots.push({
+                    startTime,
+                    endTime,
+                    type: 'regular',
+                    id: `regular_${schedule.id || `${schedule.dayOfWeek}_${startTime}`}`
+                });
             }
         });
         
-        return timeSlots;
+        // Add override schedules
+        overridesForDate.forEach(override => {
+            const startTime = override.startTime.slice(0, 5);
+            const endTime = override.endTime.slice(0, 5);
+            
+            allTimeSlots.push({
+                startTime,
+                endTime,
+                type: 'override',
+                reason: override.reason,
+                id: `override_${override.id}`
+            });
+        });
+        
+        // Sort by start time
+        allTimeSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
+        
+        // Filter out past time slots if it's today
+        const availableSlots = allTimeSlots.filter(slot => {
+            if (isToday) {
+                const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+                const scheduleStartTime = new Date();
+                scheduleStartTime.setHours(startHour, startMinute, 0, 0);
+                return now < scheduleStartTime;
+            }
+            return true;
+        });
+        
+        // Format time slots and return with metadata
+        return availableSlots.map(slot => {
+            return {
+                display: `${slot.startTime} - ${slot.endTime}`,
+                type: slot.type,
+                reason: slot.reason,
+                id: slot.id,
+                startTime: slot.startTime,
+                endTime: slot.endTime
+            };
+        });
     };
 
     const isDateAvailable = (date: Date): boolean => {
@@ -172,13 +270,41 @@ function DoctorDetails() {
         
         if (!profileData?.schedules) return false;
         
+        const dateString = formatDateString(date);
         const backendDayOfWeek = convertDayOfWeek(date.getDay());
         
-        const hasSchedule = profileData.schedules.some(schedule => 
+        // Check if there are any available overrides for this specific date
+        const availableOverrides = profileData.scheduleOverride?.filter(override => {
+            const normalizedOverrideDate = normalizeDateString(override.overrideDate);
+            return normalizedOverrideDate === dateString && override.isAvailable;
+        }) || [];
+        
+        // Check if there are regular schedules for this day
+        const regularSchedules = profileData.schedules.filter(schedule => 
             schedule.dayOfWeek === backendDayOfWeek && schedule.isAvailable
         );
         
-        return hasSchedule;
+        // Check if any regular schedule is not overridden by unavailable overrides
+        const hasAvailableRegularSchedule = regularSchedules.some(schedule => {
+            const startTime = schedule.startTime.slice(0, 5);
+            const endTime = schedule.endTime.slice(0, 5);
+            
+            // Check if this regular schedule is made unavailable by any override
+            const isOverriddenUnavailable = profileData.scheduleOverride?.some(override => {
+                const normalizedOverrideDate = normalizeDateString(override.overrideDate);
+                if (normalizedOverrideDate !== dateString) return false;
+                if (override.isAvailable) return false; // Available overrides don't block regular schedules
+                
+                const overrideStart = override.startTime.slice(0, 5);
+                const overrideEnd = override.endTime.slice(0, 5);
+                return isTimeSlotOverlap(startTime, endTime, overrideStart, overrideEnd);
+            });
+            
+            return !isOverriddenUnavailable;
+        });
+        
+        // Date is available if there are available overrides OR available regular schedules
+        return availableOverrides.length > 0 || hasAvailableRegularSchedule;
     };
 
     const handleDateSelect = (date: Date | null) => {
@@ -201,13 +327,51 @@ function DoctorDetails() {
     };
 
     // Calculate consultation duration from selected time slot
-    const getConsultationDuration = (timeSlot: string): string => {
-        if (!timeSlot || !profileData?.schedules) return "30 phút";
+    const getConsultationDuration = (timeSlot: string, selectedDate?: Date): string => {
+        if (!timeSlot || !profileData) return "30 phút";
         
+        // timeSlot is now just the display string like "07:00 - 08:30"
         const [startTime, endTime] = timeSlot.split(' - ');
         
         if (!startTime || !endTime) return "30 phút";
         
+        // Find the corresponding slot metadata to check if it's override
+        const slotMetadata = availableTimeSlots.find(slot => slot.display === timeSlot);
+        
+        if (slotMetadata?.type === 'override' && selectedDate) {
+            // For override slots, get duration from database
+            const dateString = formatDateString(selectedDate);
+            const override = profileData.scheduleOverride?.find(override => {
+                const normalizedOverrideDate = normalizeDateString(override.overrideDate);
+                if (normalizedOverrideDate !== dateString) return false;
+                
+                const overrideStart = override.startTime.slice(0, 5);
+                const overrideEnd = override.endTime.slice(0, 5);
+                return overrideStart === startTime && overrideEnd === endTime;
+            });
+            
+            if (override) {
+                // Calculate duration from database times
+                const dbStart = new Date(`2000-01-01T${override.startTime}`);
+                const dbEnd = new Date(`2000-01-01T${override.endTime}`);
+                
+                const diffMs = dbEnd.getTime() - dbStart.getTime();
+                const diffMinutes = Math.round(diffMs / (1000 * 60));
+                
+                const hours = Math.floor(diffMinutes / 60);
+                const minutes = diffMinutes % 60;
+                
+                if (hours > 0 && minutes > 0) {
+                    return `${hours} giờ ${minutes} phút`;
+                } else if (hours > 0) {
+                    return `${hours} giờ`;
+                } else {
+                    return `${minutes} phút`;
+                }
+            }
+        }
+        
+        // For regular slots or if override not found, calculate from display time
         const start = new Date(`2000-01-01T${startTime}:00`);
         const end = new Date(`2000-01-01T${endTime}:00`);
         
@@ -748,22 +912,82 @@ function DoctorDetails() {
                                                             ))}
                                                         </div>
                                                         <div className={styles.calendarDates}>
-                                                            {Array.from({ length: 35 }, (_, i) => {
-                                                                const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i - 6);
-                                                                const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
-                                                                const isAvailable = isDateAvailable(date);
-                                                                const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
-                                                                return (
-                                                                    <button
-                                                                        key={i}
-                                                                        className={`${styles.calendarDate} ${!isCurrentMonth ? styles.otherMonth : ''} ${!isAvailable ? styles.unavailable : ''} ${isSelected ? styles.selected : ''}`}
-                                                                        onClick={() => isAvailable && handleDateSelect(date)}
-                                                                        disabled={!isAvailable}
-                                                                    >
-                                                                        {date.getDate()}
-                                                                    </button>
-                                                                );
-                                                            })}
+                                                            {(() => {
+                                                                // Get first day of the month
+                                                                const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+                                                                
+                                                                // Convert Sunday (0) to 7 for Monday-based week
+                                                                const firstDayOfWeek = firstDay.getDay() === 0 ? 7 : firstDay.getDay();
+                                                                
+                                                                // Calculate start date (Monday of the week containing first day)
+                                                                const startDate = new Date(firstDay);
+                                                                startDate.setDate(firstDay.getDate() - (firstDayOfWeek - 1));
+                                                                
+                                                                // Generate 42 days (6 weeks) for calendar grid
+                                                                return Array.from({ length: 42 }, (_, i) => {
+                                                                    const date = new Date(startDate);
+                                                                    date.setDate(startDate.getDate() + i);
+                                                                    
+                                                                    const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
+                                                                    const isAvailable = isDateAvailable(date);
+                                                                    const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
+                                                                    const isToday = new Date().toDateString() === date.toDateString();
+                                                                    
+                                                                    // Check if this date has an override
+                                                                    const dateString = formatDateString(date);
+                                                                    const hasOverride = profileData?.scheduleOverride?.some(override => {
+                                                                        const normalizedOverrideDate = normalizeDateString(override.overrideDate);
+                                                                        return normalizedOverrideDate === dateString;
+                                                                    });
+                                                                    
+                                                                    return (
+                                                                        <button
+                                                                            key={i}
+                                                                            className={`${styles.calendarDate} ${!isCurrentMonth ? styles.otherMonth : ''} ${!isAvailable ? styles.unavailable : ''} ${isSelected ? styles.selected : ''} ${isToday ? styles.today : ''} ${hasOverride ? styles.hasOverride : ''}`}
+                                                                            onClick={() => isAvailable && handleDateSelect(date)}
+                                                                            disabled={!isAvailable}
+                                                                        >
+                                                                            {date.getDate()}
+                                                                            {hasOverride && (
+                                                                                <span className={styles.overrideIndicator}>
+                                                                                    <i className="bi bi-star-fill"></i>
+                                                                                </span>
+                                                                            )}
+                                                                        </button>
+                                                                    );
+                                                                });
+                                                            })()}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {/* Calendar Legend */}
+                                                    <div className={styles.calendarLegend}>
+                                                        <div className={styles.legendItem}>
+                                                            <div className={`${styles.legendColor} ${styles.todayLegend}`}></div>
+                                                            <span>Hôm nay</span>
+                                                        </div>
+                                                        <div className={styles.legendItem}>
+                                                            <div className={`${styles.legendColor} ${styles.overrideLegend}`}>
+                                                                <i className="bi bi-star-fill"></i>
+                                                            </div>
+                                                            <span>Có lịch bổ sung</span>
+                                                        </div>
+                                                        <div className={styles.legendItem}>
+                                                            <div className={`${styles.legendColor} ${styles.unavailableLegend}`}></div>
+                                                            <span>Không khả dụng</span>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {/* Time Slot Legend */}
+                                                    <div className={styles.timeSlotLegend}>
+                                                        <div className={styles.legendTitle}>Chú thích khung giờ:</div>
+                                                        <div className={styles.legendItem}>
+                                                            <i className="bi bi-clock-fill" style={{ color: '#475569' }}></i>
+                                                            <span>Lịch thường</span>
+                                                        </div>
+                                                        <div className={styles.legendItem}>
+                                                            <i className="bi bi-star-fill" style={{ color: '#f59e0b' }}></i>
+                                                            <span>Lịch bổ sung</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -781,18 +1005,24 @@ function DoctorDetails() {
                                                             <i className="bi bi-calendar-check"></i>
                                                             <span>{selectedDate.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
                                                         </div>
+                                                        
                                                         {availableTimeSlots.length > 0 ? (
                                                             <div className={styles.timeslotsGrid}>
-                                                                {availableTimeSlots.map((slot, index) => (
-                                                                    <button
-                                                                        key={index}
-                                                                        className={`${styles.timeslot} ${selectedTimeSlot === slot ? styles.selected : ''}`}
-                                                                        onClick={() => handleTimeSlotSelect(slot)}
-                                                                    >
-                                                                        <i className="bi bi-clock-fill"></i>
-                                                                        {slot}
-                                                                    </button>
-                                                                ))}
+                                                                {availableTimeSlots.map((slot, index) => {
+                                                                    const isOverrideSlot = slot.type === 'override';
+                                                                    const isSelected = selectedTimeSlot === slot.display;
+                                                                    
+                                                                    return (
+                                                                        <button
+                                                                            key={index}
+                                                                            className={`${styles.timeslot} ${isSelected ? styles.selected : ''} ${isOverrideSlot ? styles.overrideSlot : styles.regularSlot}`}
+                                                                            onClick={() => handleTimeSlotSelect(slot.display)}
+                                                                        >
+                                                                            <i className={`bi ${isOverrideSlot ? 'bi-star-fill' : 'bi-clock-fill'}`}></i>
+                                                                            <span className={styles.timeText}>{slot.display}</span>
+                                                                        </button>
+                                                                    );
+                                                                })}
                                                             </div>
                                                         ) : (
                                                             <div className={styles.noSlotsMessage}>
@@ -827,7 +1057,7 @@ function DoctorDetails() {
                                                         </div>
                                                         <div className={styles.summaryItem}>
                                                             <span className={styles.summaryLabel}>Thời gian khám</span>
-                                                            <span className={styles.summaryValue}>{getConsultationDuration(selectedTimeSlot)}</span>
+                                                            <span className={styles.summaryValue}>{getConsultationDuration(selectedTimeSlot, selectedDate)}</span>
                                                         </div>
                                                         <div className={styles.summaryItem}>
                                                             <span className={styles.summaryLabel}>Phí khám</span>

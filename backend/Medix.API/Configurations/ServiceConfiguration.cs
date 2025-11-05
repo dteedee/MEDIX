@@ -10,6 +10,7 @@ using Medix.API.DataAccess.Repositories.Classification;
 using Medix.API.DataAccess.Repositories.UserManagement;
 using AutoMapper;
 using Medix.API.Business.Validators;
+using Medix.API.Business.Job;
 
 namespace Medix.API.Configurations
 {
@@ -19,7 +20,9 @@ namespace Medix.API.Configurations
         {
             RegisterRepositories(services);
             RegisterServices(services);
-            
+
+            RegisterBackgroundJobs(services);
+
             // AutoMapper configuration - after all services
             services.AddAutoMapper(typeof(MappingProfile));
         }
@@ -88,6 +91,15 @@ namespace Medix.API.Configurations
 
             services.AddScoped<IDoctorRegistrationFormService, DoctorRegistrationFormService>();
 
+        }
+
+
+        private static void RegisterBackgroundJobs(IServiceCollection services)
+        {
+            
+            services.AddHostedService<JobDoctorScheduleOveride>();
+
+           
         }
     }
 }

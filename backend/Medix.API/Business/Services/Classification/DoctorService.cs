@@ -1,4 +1,6 @@
-﻿using Medix.API.Business.Interfaces.Classification;
+﻿using Medix.API.Business.Helper;
+using Medix.API.Business.Interfaces.Classification;
+using Medix.API.Business.Interfaces.Community;
 using Medix.API.DataAccess;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
@@ -6,8 +8,7 @@ using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
 using Medix.API.Models.Enums;
-using Medix.API.Business.Helper;
-using Medix.API.Business.Interfaces.Community;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -18,6 +19,7 @@ namespace Medix.API.Business.Services.Classification
         private readonly IReviewRepository _reviewRepository;
         private readonly MedixContext _context;
         private readonly IDoctorScheduleRepository _doctorScheduleRepository;
+        private readonly IDoctorScheduleOverrideRepository _doctorScheduleOverrideRepository;
         private readonly IEmailService _emailService;
 
         private readonly IServiceTierRepository _serviceTierRepo;
@@ -25,7 +27,7 @@ namespace Medix.API.Business.Services.Classification
 
         public DoctorService(IDoctorRepository doctorRepository, IUserRepository userRepository,
             MedixContext context, IReviewRepository reviewRepository, IServiceTierRepository serviceTierRepository, IServiceTierRepository serviceTierRepo, IDoctorScheduleRepository doctorScheduleRepository,
-            IEmailService emailService)
+            IEmailService emailService, IDoctorScheduleOverrideRepository doctorScheduleOverrideRepository)
         {
             _doctorRepository = doctorRepository;
             _userRepository = userRepository;
@@ -35,6 +37,7 @@ namespace Medix.API.Business.Services.Classification
             _serviceTierRepo = serviceTierRepo;
             _doctorScheduleRepository = doctorScheduleRepository;
             _emailService = emailService;
+            _doctorScheduleOverrideRepository = doctorScheduleOverrideRepository;
         }
 
         public async Task<List<Doctor>> GetHomePageDoctorsAsync()
@@ -155,6 +158,8 @@ namespace Medix.API.Business.Services.Classification
             if (doctor == null) { return null; }
             var reviews = await _reviewRepository.GetReviewsByDoctorAsync(doctor.Id);
             var schedule = await _doctorScheduleRepository.GetDoctorSchedulesByDoctorIdAsync(doctor.Id);
+
+            var overrides = await _doctorScheduleOverrideRepository.GetByDoctorIdAsync(doctor.Id);
             int[] ratingByStar = new int[5];
             foreach (var review in reviews)
             {
@@ -199,6 +204,22 @@ namespace Medix.API.Business.Services.Classification
                     IsAvailable = s.IsAvailable
                 })
                 .ToList();
+
+            profileDto.ScheduleOverride = overrides.Select(o => new DoctorScheduleOverrideDto
+            {
+                Id = o.Id,
+                DoctorId = o.DoctorId,
+                OverrideDate = o.OverrideDate,
+                StartTime = o.StartTime,
+                EndTime = o.EndTime,
+                IsAvailable = o.IsAvailable,
+                Reason = o.Reason,
+                CreatedAt = o.CreatedAt,
+                UpdatedAt = o.UpdatedAt
+            }).ToList();
+
+
+
 
             return profileDto;
         }
@@ -278,6 +299,86 @@ namespace Medix.API.Business.Services.Classification
                 TotalPages = list.TotalPages
             };
         }
+
+        public async Task<IEnumerable<EducationWithPaginatedDoctorsDto>> GetDoctorsByEducationAsync(DoctorQueryParameters queryParams)
+        {
+            var result = new List<EducationWithPaginatedDoctorsDto>();
+
+            // Lấy tất cả các DoctorDegree
+            var educationTypes = DoctorDegree.List();
+
+            foreach (var educationType in educationTypes)
+            {
+                // Query doctors theo education code
+                var doctorsQuery = _context.Doctors
+                    .Include(d => d.User)
+                    .Include(d => d.Specialization)
+                    .Include(d => d.ServiceTier)
+                    .Where(d => d.Education == educationType.Code && d.User.Status == 1);
+
+                // Áp dụng filter theo SpecializationCode nếu có
+                if (!string.IsNullOrWhiteSpace(queryParams.SpecializationCode))
+                {
+                    doctorsQuery = doctorsQuery.Where(d => d.Specialization.Id == Guid.Parse(queryParams.SpecializationCode));
+                }
+
+                // Áp dụng filter theo MinPrice nếu có
+                if (queryParams.MinPrice.HasValue)
+                {
+                    doctorsQuery = doctorsQuery.Where(d => d.ConsultationFee >= queryParams.MinPrice.Value);
+                }
+
+                // Áp dụng filter theo MaxPrice nếu có
+                if (queryParams.MaxPrice.HasValue)
+                {
+                    doctorsQuery = doctorsQuery.Where(d => d.ConsultationFee <= queryParams.MaxPrice.Value);
+                }
+
+                // Đếm tổng số doctors
+                var totalCount = await doctorsQuery.CountAsync();
+
+                // Áp dụng pagination
+                var doctors = await doctorsQuery
+                    .Skip((queryParams.PageNumber - 1) * queryParams.PageSize)
+                    .Take(queryParams.PageSize)
+                    .Select(d => new DoctorBookinDto
+                    {
+                        userId = d.UserId,
+                        DoctorId = d.Id,
+                        DoctorName = d.User.FullName,
+                        specializationCode = d.Specialization.Code,
+                        specialization = d.Specialization.Name,
+                        AvatarUrl = d.User.AvatarUrl,
+                        educationcode = d.Education,
+                        Education = DoctorDegree.GetDescription(d.Education),
+                        Experience = d.YearsOfExperience.ToString(),
+                        price = d.ConsultationFee,
+                        bio = d.Bio,
+                        rating = d.AverageRating
+                    })
+                    .ToListAsync();
+
+                // Tạo PaginatedListDto
+                var paginatedDoctors = new PaginatedListDto<DoctorBookinDto>(
+                    doctors,
+                    queryParams.PageNumber,
+                    queryParams.PageSize,
+                    totalCount
+                );
+
+                // Thêm vào kết quả
+                result.Add(new EducationWithPaginatedDoctorsDto
+                {
+                    EducationCode = educationType.Code,
+                    Education = educationType.Description,
+                    Description = educationType.Description,
+                    Doctors = paginatedDoctors
+                });
+            }
+
+            return result;
+        }
+
 
         public async Task<Doctor?> GetDoctorByIdAsync(Guid id) => await _doctorRepository.GetDoctorByIdAsync(id);
 

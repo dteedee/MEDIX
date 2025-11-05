@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import doctorService from '../../services/doctorService';
 import DoctorRegistrationFormService from '../../services/doctorRegistrationFormService';
-import { ServiceTierWithPaginatedDoctorsDto, DoctorInTier, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters } from '../../types/doctor.types';
+import { ServiceTierWithPaginatedDoctorsDto, DoctorInTier, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters, EducationGroupWithPaginatedDoctorsDto, DoctorInEducation } from '../../types/doctor.types';
 import { useLanguage } from '../../contexts/LanguageContext';
 import homeStyles from '../../styles/public/home.module.css';
 import styles from '../../styles/patient/DoctorBookingList.module.css';
@@ -79,7 +79,67 @@ const convertApiDoctorToDoctor = (
   };
 };
 
+// Converter for education-based API
+const convertEducationDoctorToDoctor = (
+  apiDoctor: DoctorInEducation,
+  avatarUrlMap?: Record<string, string>,
+  statisticsMap?: Record<string, { totalCases: number; successRate: number; responseTime: string }>
+): Doctor => {
+  const rating = typeof apiDoctor.rating === 'number' ? apiDoctor.rating : parseFloat(String(apiDoctor.rating)) || 0;
+  const experience = typeof apiDoctor.experience === 'number' ? apiDoctor.experience : parseInt(String(apiDoctor.experience)) || 0;
+  
+  // Use avatarUrl from API response or from avatarUrlMap if fetched separately
+  const imageUrl = apiDoctor.avatarUrl || avatarUrlMap?.[apiDoctor.doctorId] || undefined;
+  
+  // Get statistics from separately fetched statistics map (education API doesn't include stats)
+  const stats = statisticsMap?.[apiDoctor.doctorId];
+  const totalCases = stats?.totalCases ?? 0;
+  const successRate = stats?.successRate ?? 0;
+  const responseTime = stats?.responseTime ?? 'N/A';
+  
+  return {
+    id: apiDoctor.doctorId,
+    fullName: apiDoctor.doctorName,
+    degree: apiDoctor.education,
+    specialty: apiDoctor.specialization,
+    experience: `${experience}`,
+    rating: Math.max(0, Math.min(5, rating)),
+    reviewCount: 0, // Not provided in education API
+    price: apiDoctor.price,
+    tier: 'Basic' as 'Basic' | 'Professional' | 'Premium' | 'VIP', // Default tier
+    bio: apiDoctor.bio || 'Bác sĩ chuyên nghiệp với nhiều năm kinh nghiệm trong lĩnh vực y tế.',
+    imageUrl,
+    totalCases,
+    successRate,
+    responseTime
+  };
+};
+
 type DegreeTab = 'Cử nhân y khoa' | 'Thạc sĩ y khoa' | 'Tiến sĩ y khoa' | 'Phó giáo sư' | 'Giáo sư';
+
+// Education code mapping helper
+const getEducationCodeFromDegree = (degree: DegreeTab): string => {
+  switch (degree) {
+    case 'Cử nhân y khoa': return 'BC';
+    case 'Thạc sĩ y khoa': return 'MS';
+    case 'Tiến sĩ y khoa': return 'DR';
+    case 'Phó giáo sư': return 'AP';
+    case 'Giáo sư': return 'PR';
+    default: return 'BC';
+  }
+};
+
+// Education name mapping helper  
+const getDegreeFromEducationName = (educationName: string): DegreeTab => {
+  switch (educationName) {
+    case 'Cử nhân Y khoa': return 'Cử nhân y khoa';
+    case 'Thạc sĩ Y khoa': return 'Thạc sĩ y khoa';
+    case 'Tiến sĩ Y khoa': return 'Tiến sĩ y khoa';
+    case 'Phó giáo sư': return 'Phó giáo sư';
+    case 'Giáo sư': return 'Giáo sư';
+    default: return 'Cử nhân y khoa';
+  }
+};
 
 const DoctorBookingList: React.FC = () => {
   const navigate = useNavigate();
@@ -113,6 +173,7 @@ const DoctorBookingList: React.FC = () => {
 
   const [activeDegree, setActiveDegree] = useState<DegreeTab>('Cử nhân y khoa');
   const [tiersData, setTiersData] = useState<ServiceTierWithPaginatedDoctorsDto[]>([]);
+  const [educationGroupsData, setEducationGroupsData] = useState<EducationGroupWithPaginatedDoctorsDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [doctorAvatars, setDoctorAvatars] = useState<Record<string, string>>({});
@@ -245,19 +306,19 @@ const DoctorBookingList: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [tempPriceRange]);
 
-  // Memoize loadTierData
-  const loadTierData = useCallback(async (tierName: string, paginationParams: PaginationParams, educationCode: string, specializationCode: string, priceRange: [number, number]) => {
+  // Load education groups data
+  const loadEducationData = useCallback(async () => {
     const queryParams: DoctorQueryParameters = {
-      ...paginationParams,
-      educationCode: educationCode === 'all' ? undefined : educationCode,
-      specializationCode: specializationCode === 'all' ? undefined : specializationCode,
+      pageNumber: 1,
+      pageSize: 50, // Load more doctors per group
+      specializationCode: selectedSpecializationCode === 'all' ? undefined : selectedSpecializationCode,
       minPrice: priceRange[0],
       maxPrice: priceRange[1]
     };
     
-    const data = await doctorService.getDoctorsGroupedByTier(queryParams);
-    return data.find(t => t.name === tierName);
-  }, []);
+    const data = await doctorService.getDoctorsGroupedByEducation(queryParams);
+    return data;
+  }, [selectedSpecializationCode, priceRange]);
 
   // Initial load only once on mount
   useEffect(() => {
@@ -280,24 +341,16 @@ const DoctorBookingList: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        const commonPage = { pageNumber: 1, pageSize: 9 };
-        const [basicData, professionalData, premiumData, vipData] = await Promise.all([
-          loadTierData('Basic', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange),
-          loadTierData('Professional', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange),
-          loadTierData('Premium', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange),
-          loadTierData('VIP', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange)
-        ]);
+        // Load education groups data
+        const educationGroupsData = await loadEducationData();
 
         if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
-          const allTiersData = [basicData, professionalData, premiumData, vipData].filter(
-            (tier): tier is ServiceTierWithPaginatedDoctorsDto => tier !== undefined
-          );
-          setTiersData(allTiersData);
+          setEducationGroupsData(educationGroupsData);
           
           // Load avatars and statistics for doctors that don't have them in the response
-          const allDoctors = allTiersData.flatMap(tier => tier.doctors?.items || []);
+          const allDoctors = educationGroupsData.flatMap(group => group.doctors?.items || []);
           const doctorsNeedingAvatar = allDoctors.filter(doctor => 
-            !(doctor as any).avatarUrl && doctor.doctorId
+            !doctor.avatarUrl && doctor.doctorId
           );
           const doctorsNeedingStats = allDoctors.filter(doctor => 
             doctor.doctorId && (doctor.totalCases === undefined || doctor.successRate === undefined || doctor.averageResponseTime === undefined)
@@ -427,24 +480,16 @@ const DoctorBookingList: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        const commonPage = { pageNumber: 1, pageSize: 9 };
-        const [basicData, professionalData, premiumData, vipData] = await Promise.all([
-          loadTierData('Basic', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange),
-          loadTierData('Professional', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange),
-          loadTierData('Premium', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange),
-          loadTierData('VIP', commonPage, selectedEducationCode, selectedSpecializationCode, priceRange)
-        ]);
+        // Load education groups data
+        const educationGroupsData = await loadEducationData();
 
         if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
-          const allTiersData = [basicData, professionalData, premiumData, vipData].filter(
-            (tier): tier is ServiceTierWithPaginatedDoctorsDto => tier !== undefined
-          );
-          setTiersData(allTiersData);
+          setEducationGroupsData(educationGroupsData);
           
           // Load avatars and statistics for doctors that don't have them in the response
-          const allDoctors = allTiersData.flatMap(tier => tier.doctors?.items || []);
+          const allDoctors = educationGroupsData.flatMap(group => group.doctors?.items || []);
           const doctorsNeedingAvatar = allDoctors.filter(doctor => 
-            !(doctor as any).avatarUrl && doctor.doctorId
+            !doctor.avatarUrl && doctor.doctorId
           );
           const doctorsNeedingStats = allDoctors.filter(doctor => 
             doctor.doctorId && (doctor.totalCases === undefined || doctor.successRate === undefined || doctor.averageResponseTime === undefined)
@@ -545,7 +590,7 @@ const DoctorBookingList: React.FC = () => {
         loadRequestIdRef.current = null;
       }
     };
-  }, [selectedEducationCode, selectedSpecializationCode, priceRange, loadTierData]);
+  }, [selectedSpecializationCode, priceRange, loadEducationData]);
 
   // Search doctors across all degrees
   const searchDoctorsAcrossAllDegrees = (searchTerm: string): { degree: DegreeTab; doctors: Doctor[] }[] => {
@@ -582,11 +627,20 @@ const DoctorBookingList: React.FC = () => {
   };
 
   const getDoctorsByDegree = useCallback((degree: DegreeTab): Doctor[] => {
-    const allConverted = tiersData.flatMap(t => (t.doctors?.items || []).map(d => 
-      convertApiDoctorToDoctor(d, t.name, doctorAvatars, doctorStatistics)
-    ));
+    // Find the education group that matches the degree
+    const educationGroup = educationGroupsData.find(group => 
+      getDegreeFromEducationName(group.education) === degree
+    );
     
-    let doctors = allConverted.filter(d => d.degree === degree);
+    if (!educationGroup || !educationGroup.doctors?.items) {
+      return [];
+    }
+
+    const allConverted = educationGroup.doctors.items.map(d => 
+      convertEducationDoctorToDoctor(d, doctorAvatars, doctorStatistics)
+    );
+    
+    let doctors = allConverted;
     
     if (debouncedSearch && debouncedSearch.trim()) {
       const searchNormalized = normalizeSearchText(debouncedSearch);
@@ -615,7 +669,7 @@ const DoctorBookingList: React.FC = () => {
     }
     
     return doctors;
-  }, [tiersData, debouncedSearch, doctorAvatars, doctorStatistics, normalizeSearchText]);
+  }, [educationGroupsData, debouncedSearch, doctorAvatars, doctorStatistics, normalizeSearchText]);
 
   const getDegreePaginationInfo = (degree: DegreeTab) => {
     const doctors = getDoctorsByDegree(degree);
@@ -636,7 +690,7 @@ const DoctorBookingList: React.FC = () => {
     }
   }, [activeDegree, bachelorPagination, masterPagination, phdPagination, associateProfPagination, profPagination]);
 
-  const currentPaginationInfo = useMemo(() => getDegreePaginationInfo(activeDegree), [tiersData, activeDegree, getDoctorsByDegree]);
+  const currentPaginationInfo = useMemo(() => getDegreePaginationInfo(activeDegree), [educationGroupsData, activeDegree, getDoctorsByDegree]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ';

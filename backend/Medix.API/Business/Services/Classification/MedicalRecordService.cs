@@ -33,8 +33,15 @@ namespace Medix.API.Business.Services.Classification
             if (record == null)
                 throw new InvalidOperationException("Không tìm thấy bệnh án cho bệnh nhân này.");
 
-            return _mapper.Map<MedicalRecordDto>(record);
+            var dto = _mapper.Map<MedicalRecordDto>(record);
+
+            dto.AppointmentId = appointment.Id;
+            dto.AppointmentDate = appointment.AppointmentStartTime;
+            dto.DoctorName = appointment.Doctor?.User?.FullName ?? "Không rõ bác sĩ";
+
+            return dto;
         }
+
 
         // ✅ Tạo mới hồ sơ bệnh án
         public async Task<MedicalRecordDto> CreateAsync(CreateOrUpdateMedicalRecordDto dto)

@@ -447,7 +447,11 @@ const ScheduleManagement: React.FC = () => {
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
         formattedDate={getFormattedSelectedDate()}
-        schedules={selectedDate ? schedulesByDay.get((selectedDate.getDay() || 7)) || [] : []}
+        schedules={
+          selectedDate
+            ? schedulesByDay.get(selectedDate.getDay()) || []
+            : []
+        }
         overrides={selectedDate ? overridesByDate.get(getLocalDateKey(selectedDate)) || [] : []}
         onAddFlexibleSchedule={handleAddFlexibleSchedule}
         appointments={selectedDate ? appointmentsByDate.get(getLocalDateKey(selectedDate)) || [] : []}

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+﻿using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
@@ -38,6 +39,7 @@ namespace Medix.API.Business.Services.Classification
         public async Task<DoctorScheduleOverrideDto> CreateAsync(CreateDoctorScheduleOverrideDto dto)
         {
             var entity = _mapper.Map<DoctorScheduleOverride>(dto);
+            entity.IsAvailable = true; // Lịch mới tạo luôn được coi là tồn tại
             entity.Id = Guid.NewGuid();
             entity.CreatedAt = DateTime.UtcNow;
             entity.UpdatedAt = DateTime.UtcNow;
@@ -63,6 +65,7 @@ namespace Medix.API.Business.Services.Classification
             }
 
             _mapper.Map(dto, entity);
+            entity.IsAvailable = true; // Lịch cập nhật luôn được coi là tồn tại
             entity.UpdatedAt = DateTime.UtcNow;
 
             await _repo.UpdateAsync(entity);
@@ -146,7 +149,7 @@ namespace Medix.API.Business.Services.Classification
                         DoctorId = doctorId,
                         OverrideDate = dto.OverrideDate,
                         StartTime = dto.StartTime,
-                        EndTime = dto.EndTime,
+                        EndTime = dto.EndTime, 
                         IsAvailable = dto.IsAvailable,
                         Reason = dto.Reason,
                         CreatedAt = DateTime.UtcNow,
@@ -184,6 +187,7 @@ namespace Medix.API.Business.Services.Classification
                         StartTime = dto.StartTime,
                         EndTime = dto.EndTime,
                         IsAvailable = dto.IsAvailable,
+                        //IsAvailable = dto.OverrideType, // Đồng bộ
                         Reason = dto.Reason,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow,
@@ -205,6 +209,7 @@ namespace Medix.API.Business.Services.Classification
                         }
 
                         _mapper.Map(dto, match);
+                        match.IsAvailable = true; // Lịch cập nhật luôn được coi là tồn tại
                         match.UpdatedAt = DateTime.UtcNow;
                         await _repo.UpdateAsync(match);
                     }
@@ -268,6 +273,7 @@ namespace Medix.API.Business.Services.Classification
             entity.DoctorId = doctorId.Value;
             entity.CreatedAt = DateTime.UtcNow;
             entity.UpdatedAt = DateTime.UtcNow;
+            entity.IsAvailable = true; // Lịch mới tạo luôn được coi là tồn tại
             entity.OverrideType = dto.OverrideType;
 
             await _repo.AddAsync(entity);

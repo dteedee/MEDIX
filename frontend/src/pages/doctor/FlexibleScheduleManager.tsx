@@ -72,7 +72,6 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
     setValue('endTime', override.endTime.substring(0, 5));
     setValue('overrideType', override.overrideType ? 1 : 0);
     setValue('reason', override.reason);
-    setValue('isAvailable', override.isAvailable);
     setIsFormVisible(true);
   };
 
@@ -125,10 +124,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
         overrideDate: data.overrideDate,
         reason: data.reason,
         overrideType: overrideTypeNumber === 1,
-        // isAvailable sẽ được xác định bởi overrideType
-        // 1 (Tăng ca) -> isAvailable = true
-        // 0 (Nghỉ) -> isAvailable = false
-        isAvailable: overrideTypeNumber === 1,
+        isAvailable: true, // Lịch mới tạo/cập nhật luôn được coi là tồn tại
         // Đảm bảo thời gian luôn có định dạng HH:mm:ss
         startTime: data.startTime.length === 5 ? `${data.startTime}:00` : data.startTime,
         endTime: data.endTime.length === 5 ? `${data.endTime}:00` : data.endTime,
@@ -200,7 +196,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
             </div>
             <div className="override-list-container">
               {overrides.length > 0 ? (
-                overrides // Chỉ hiển thị các lịch tăng ca (isAvailable = true)
+                overrides // Lọc theo isAvailable để chỉ hiển thị các lịch còn tồn tại
                   .filter(o => o.isAvailable)
                   .sort((a, b) => {
                     const dateComparison = new Date(b.overrideDate).getTime() - new Date(a.overrideDate).getTime();
@@ -213,8 +209,8 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
                     <div key={override.id} className="override-list-item">
                       <div className="override-info">
                         <span className="override-date">{new Date(override.overrideDate).toLocaleDateString('vi-VN')}</span>
-                        <span className="override-time">{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</span>
-                        <span className={`override-status ${override.isAvailable ? 'available' : 'unavailable'}`}>
+                        <span className="override-time">{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</span> 
+                        <span className={`override-status ${override.overrideType ? 'available' : 'unavailable'}`}>
                           {override.isAvailable
                             ? `Tăng ca${override.reason ? ` - ${override.reason}` : ''}`
                             : `Nghỉ${override.reason ? ` - ${override.reason}` : ''}`}

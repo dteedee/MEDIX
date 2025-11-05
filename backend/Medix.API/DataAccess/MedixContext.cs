@@ -467,8 +467,8 @@ public partial class MedixContext : DbContext
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.OverrideType).HasMaxLength(50); // 👈 THÊM DÒNG NÀY
             entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.OverrideType);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(getutcdate())");
 
             entity.HasOne(d => d.Doctor).WithMany(p => p.DoctorScheduleOverrides)

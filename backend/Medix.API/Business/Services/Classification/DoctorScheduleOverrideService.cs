@@ -186,7 +186,8 @@ namespace Medix.API.Business.Services.Classification
                         IsAvailable = dto.IsAvailable,
                         Reason = dto.Reason,
                         CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
+                        UpdatedAt = DateTime.UtcNow,
+                        OverrideType = dto.OverrideType
                     };
                     await _repo.AddAsync(newEntity);
                 }
@@ -267,6 +268,7 @@ namespace Medix.API.Business.Services.Classification
             entity.DoctorId = doctorId.Value;
             entity.CreatedAt = DateTime.UtcNow;
             entity.UpdatedAt = DateTime.UtcNow;
+            entity.OverrideType = dto.OverrideType;
 
             await _repo.AddAsync(entity);
             await _repo.SaveChangesAsync();

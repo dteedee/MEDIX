@@ -14,7 +14,10 @@ interface Props {
   onRefresh: () => void;
 }
 
-type FormInputs = CreateScheduleOverridePayload;
+type FormInputs = CreateScheduleOverridePayload & {
+  // Thêm trường này vào form để dễ quản lý, không có trong payload gửi đi
+  timeSlot: string; 
+};
 
 const timeSlots = [
   { label: 'Ca 1 (07:00 - 07:50)', startTime: '07:00', endTime: '07:50' },
@@ -42,8 +45,8 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
         overrideDate: initialDate,
         startTime: timeSlots[0].startTime,
         endTime: timeSlots[0].endTime,
-        isAvailable: true, // Mặc định là tăng ca
-        reason: 'Tăng ca' // Lý do mặc định
+        overrideType: true, // Mặc định là tăng ca
+        reason: '' // Để trống cho người dùng nhập
       });
       setIsFormVisible(true); // Hiển thị form
     }
@@ -55,8 +58,8 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
       overrideDate: new Date().toISOString().split('T')[0], // Mặc định là ngày hôm nay
       startTime: timeSlots[0].startTime,
       endTime: timeSlots[0].endTime,
-      isAvailable: true,
-      reason: 'Tăng ca'
+      overrideType: true, // Mặc định là tăng ca
+      reason: ''
     });
     setIsFormVisible(true);
   };
@@ -66,8 +69,9 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
     setValue('overrideDate', override.overrideDate);
     setValue('startTime', override.startTime.substring(0, 5));
     setValue('endTime', override.endTime.substring(0, 5));
-    setValue('isAvailable', override.isAvailable);
+    setValue('overrideType', override.overrideType);
     setValue('reason', override.reason);
+    setValue('isAvailable', override.isAvailable);
     setIsFormVisible(true);
   };
 
@@ -113,39 +117,20 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
 
   const processFormSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
-      // Chuyển đổi overrideDate từ string sang Date để lấy ngày trong tuần
-      const overrideDate = new Date(data.overrideDate);
-      // JavaScript: 0=CN, 1=T2,... | Backend: 7=CN, 1=T2,...
-      const dayOfWeek = overrideDate.getDay() === 0 ? 7 : overrideDate.getDay();
-
-      // Kiểm tra xem có lịch cố định nào trong ngày đó bị trùng không
-      const isOverlappingFixedSchedule = schedules.some(
-        (fixedSchedule) =>
-          fixedSchedule.dayOfWeek === dayOfWeek &&
-          data.startTime < fixedSchedule.endTime.substring(0, 5) && // Bắt đầu của lịch linh hoạt phải trước khi kết thúc của lịch cố định
-          data.endTime > fixedSchedule.startTime.substring(0, 5)    // Kết thúc của lịch linh hoạt phải sau khi bắt đầu của lịch cố định
-      );
-
-      // Nếu có lịch cố định trùng và lý do không phải là "Nghỉ...", hiển thị lỗi
-      if (isOverlappingFixedSchedule && !data.reason.toLowerCase().includes('nghỉ')) {
-        Swal.fire(
-          'Không thể thực hiện!',
-          'Bạn không thể ghi đè (tăng ca) vào một ca đã có trong lịch cố định.',
-          'error'
-        );
-        return; // Dừng thực thi
-      }
-      // Tự động xác định isAvailable dựa trên lý do được chọn
-      const isWork = data.reason.toLowerCase().includes('tăng ca');
-      const isOff = data.reason.toLowerCase().includes('nghỉ');
+      // Chuyển đổi giá trị 'true'/'false' từ form (string) sang boolean
+      const overrideTypeBoolean = data.overrideType.toString() === 'true';
 
       const payload: CreateScheduleOverridePayload = {
-        ...data, // isAvailable, overrideDate, reason
+        overrideDate: data.overrideDate,
+        reason: data.reason,
+        overrideType: overrideTypeBoolean,
+        // isAvailable sẽ được xác định bởi overrideType
+        // true (Tăng ca) -> isAvailable = true
+        // false (Nghỉ) -> isAvailable = false
+        isAvailable: overrideTypeBoolean,
         // Đảm bảo thời gian luôn có định dạng HH:mm:ss
         startTime: data.startTime.length === 5 ? `${data.startTime}:00` : data.startTime,
         endTime: data.endTime.length === 5 ? `${data.endTime}:00` : data.endTime,
-        // Nếu lý do là "Nghỉ...", isAvailable là false, ngược lại là true
-        isAvailable: !isOff,
       };
 
       if (editingOverride) {
@@ -241,28 +226,31 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
             <div className="form-grid">
               <div className="form-group">
                 <label>Ngày</label>
-                <input type="date" {...register('overrideDate', { required: 'Ngày là bắt buộc' })} />
+                <input type="date" {...register('overrideDate', { required: 'Ngày là bắt buộc' })} min={new Date().toISOString().split('T')[0]}/>
                 {errors.overrideDate && <p className="error-text">{errors.overrideDate.message}</p>}
               </div>
               <div className="form-group">
-                <label>Lý do</label>
-                <select {...register('reason', { required: 'Vui lòng chọn lý do' })}>
-                  <option value="Tăng ca">Tăng ca</option>
-                  <option value="Nghỉ phép">Nghỉ phép</option>
-                  <option value="Nghỉ ốm">Nghỉ ốm</option>
-                  <option value="Nghỉ việc riêng">Nghỉ việc riêng</option>
+                <label>Loại</label>
+                <select {...register('overrideType', { required: 'Vui lòng chọn loại' })}>
+                  <option value="true">Tăng ca</option>
+                  <option value="false">Nghỉ</option>
                 </select>
-                {errors.reason && <p className="error-text">{errors.reason.message}</p>}
+                {errors.overrideType && <p className="error-text">{errors.overrideType.message}</p>}
               </div>
               <div className="form-group form-group-span-2">
                 <label>Ca làm việc</label>
                 <select
-                  {...register('startTime', { required: 'Vui lòng chọn ca làm việc' })}
+                  {...register('timeSlot', { required: 'Vui lòng chọn ca làm việc' })}
                   onChange={handleTimeSlotChange}
                 >
                   {timeSlots.map(slot => <option key={slot.startTime} value={slot.startTime}>{slot.label}</option>)}
                 </select>
-                {errors.startTime && <p className="error-text">{errors.startTime.message}</p>}
+                {errors.timeSlot && <p className="error-text">{errors.timeSlot.message}</p>}
+              </div>
+              <div className="form-group form-group-span-2">
+                <label>Lý do</label>
+                <input type="text" {...register('reason')} placeholder="VD: Tăng ca, Nghỉ phép,..." />
+                {errors.reason && <p className="error-text">{errors.reason.message as string}</p>}
               </div>
             </div>
             <div className="form-actions">

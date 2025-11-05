@@ -14,9 +14,10 @@ interface Props {
   onRefresh: () => void;
 }
 
-type FormInputs = CreateScheduleOverridePayload & {
+type FormInputs = Omit<CreateScheduleOverridePayload, 'overrideType'> & {
   // Thêm trường này vào form để dễ quản lý, không có trong payload gửi đi
-  timeSlot: string; 
+  timeSlot: string;
+  overrideType: number; // Trong form, overrideType là number (1 hoặc 0)
 };
 
 const timeSlots = [
@@ -45,7 +46,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
         overrideDate: initialDate,
         startTime: timeSlots[0].startTime,
         endTime: timeSlots[0].endTime,
-        overrideType: true, // Mặc định là tăng ca
+        overrideType: 1,
         reason: '' // Để trống cho người dùng nhập
       });
       setIsFormVisible(true); // Hiển thị form
@@ -58,7 +59,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
       overrideDate: new Date().toISOString().split('T')[0], // Mặc định là ngày hôm nay
       startTime: timeSlots[0].startTime,
       endTime: timeSlots[0].endTime,
-      overrideType: true, // Mặc định là tăng ca
+      overrideType: 1,
       reason: ''
     });
     setIsFormVisible(true);
@@ -69,7 +70,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
     setValue('overrideDate', override.overrideDate);
     setValue('startTime', override.startTime.substring(0, 5));
     setValue('endTime', override.endTime.substring(0, 5));
-    setValue('overrideType', override.overrideType);
+    setValue('overrideType', override.overrideType ? 1 : 0);
     setValue('reason', override.reason);
     setValue('isAvailable', override.isAvailable);
     setIsFormVisible(true);
@@ -117,17 +118,17 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
 
   const processFormSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
-      // Chuyển đổi giá trị 'true'/'false' từ form (string) sang boolean
-      const overrideTypeBoolean = data.overrideType.toString() === 'true';
+      // Chuyển đổi giá trị từ form (string) sang number
+      const overrideTypeNumber = Number(data.overrideType);
 
       const payload: CreateScheduleOverridePayload = {
         overrideDate: data.overrideDate,
         reason: data.reason,
-        overrideType: overrideTypeBoolean,
+        overrideType: overrideTypeNumber === 1,
         // isAvailable sẽ được xác định bởi overrideType
-        // true (Tăng ca) -> isAvailable = true
-        // false (Nghỉ) -> isAvailable = false
-        isAvailable: overrideTypeBoolean,
+        // 1 (Tăng ca) -> isAvailable = true
+        // 0 (Nghỉ) -> isAvailable = false
+        isAvailable: overrideTypeNumber === 1,
         // Đảm bảo thời gian luôn có định dạng HH:mm:ss
         startTime: data.startTime.length === 5 ? `${data.startTime}:00` : data.startTime,
         endTime: data.endTime.length === 5 ? `${data.endTime}:00` : data.endTime,
@@ -199,15 +200,24 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
             </div>
             <div className="override-list-container">
               {overrides.length > 0 ? (
-                overrides
-                  .sort((a, b) => new Date(b.overrideDate).getTime() - new Date(a.overrideDate).getTime())
+                overrides // Chỉ hiển thị các lịch tăng ca (isAvailable = true)
+                  .filter(o => o.isAvailable)
+                  .sort((a, b) => {
+                    const dateComparison = new Date(b.overrideDate).getTime() - new Date(a.overrideDate).getTime();
+                    if (dateComparison !== 0) {
+                      return dateComparison;
+                    }
+                    return b.startTime.localeCompare(a.startTime);
+                  })
                   .map(override => (
                     <div key={override.id} className="override-list-item">
                       <div className="override-info">
                         <span className="override-date">{new Date(override.overrideDate).toLocaleDateString('vi-VN')}</span>
                         <span className="override-time">{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</span>
                         <span className={`override-status ${override.isAvailable ? 'available' : 'unavailable'}`}>
-                          {override.isAvailable ? 'Tăng ca' : 'Nghỉ'}
+                          {override.isAvailable
+                            ? `Tăng ca${override.reason ? ` - ${override.reason}` : ''}`
+                            : `Nghỉ${override.reason ? ` - ${override.reason}` : ''}`}
                         </span>
                       </div>
                       <div className="override-actions">
@@ -232,8 +242,8 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
               <div className="form-group">
                 <label>Loại</label>
                 <select {...register('overrideType', { required: 'Vui lòng chọn loại' })}>
-                  <option value="true">Tăng ca</option>
-                  <option value="false">Nghỉ</option>
+                  <option value="1">Tăng ca</option>
+                  <option value="0">Nghỉ</option>
                 </select>
                 {errors.overrideType && <p className="error-text">{errors.overrideType.message}</p>}
               </div>

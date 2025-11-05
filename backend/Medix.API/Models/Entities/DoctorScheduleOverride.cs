@@ -23,5 +23,7 @@ public partial class DoctorScheduleOverride
 
     public DateTime UpdatedAt { get; set; }
 
+    public string OverrideType { get; set; } = null!;
+
     public virtual Doctor Doctor { get; set; } = null!;
 }

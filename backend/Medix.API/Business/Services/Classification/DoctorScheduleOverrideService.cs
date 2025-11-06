@@ -39,7 +39,7 @@ namespace Medix.API.Business.Services.Classification
         public async Task<DoctorScheduleOverrideDto> CreateAsync(CreateDoctorScheduleOverrideDto dto)
         {
             var entity = _mapper.Map<DoctorScheduleOverride>(dto);
-            entity.IsAvailable = true; // Lịch mới tạo luôn được coi là tồn tại
+            entity.IsAvailable = dto.OverrideType; // Đồng bộ IsAvailable với OverrideType
             entity.Id = Guid.NewGuid();
             entity.CreatedAt = DateTime.UtcNow;
             entity.UpdatedAt = DateTime.UtcNow;
@@ -65,7 +65,7 @@ namespace Medix.API.Business.Services.Classification
             }
 
             _mapper.Map(dto, entity);
-            entity.IsAvailable = true; // Lịch cập nhật luôn được coi là tồn tại
+            entity.IsAvailable = dto.OverrideType; // Đồng bộ IsAvailable với OverrideType
             entity.UpdatedAt = DateTime.UtcNow;
 
             await _repo.UpdateAsync(entity);
@@ -209,7 +209,7 @@ namespace Medix.API.Business.Services.Classification
                         }
 
                         _mapper.Map(dto, match);
-                        match.IsAvailable = true; // Lịch cập nhật luôn được coi là tồn tại
+                        match.IsAvailable = dto.OverrideType; // Đồng bộ IsAvailable với OverrideType
                         match.UpdatedAt = DateTime.UtcNow;
                         await _repo.UpdateAsync(match);
                     }
@@ -273,7 +273,7 @@ namespace Medix.API.Business.Services.Classification
             entity.DoctorId = doctorId.Value;
             entity.CreatedAt = DateTime.UtcNow;
             entity.UpdatedAt = DateTime.UtcNow;
-            entity.IsAvailable = true; // Lịch mới tạo luôn được coi là tồn tại
+            entity.IsAvailable = dto.OverrideType; // Đồng bộ IsAvailable với OverrideType
             entity.OverrideType = dto.OverrideType;
 
             await _repo.AddAsync(entity);

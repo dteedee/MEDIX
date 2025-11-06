@@ -196,8 +196,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
             </div>
             <div className="override-list-container">
               {overrides.length > 0 ? (
-                overrides // Lọc theo isAvailable để chỉ hiển thị các lịch còn tồn tại
-                  .filter(o => o.isAvailable)
+                overrides
                   .sort((a, b) => {
                     const dateComparison = new Date(b.overrideDate).getTime() - new Date(a.overrideDate).getTime();
                     if (dateComparison !== 0) {

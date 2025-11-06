@@ -10,6 +10,7 @@ using Medix.API.DataAccess.Repositories.Classification;
 using Medix.API.DataAccess.Repositories.UserManagement;
 using AutoMapper;
 using Medix.API.Business.Validators;
+using Medix.API.BackgroundServices;
 
 namespace Medix.API.Configurations
 {
@@ -19,7 +20,9 @@ namespace Medix.API.Configurations
         {
             RegisterRepositories(services);
             RegisterServices(services);
-            
+            services.AddHostedService<DoctorScheduleAvailabilityUpdater>();
+
+
             // AutoMapper configuration - after all services
             services.AddAutoMapper(typeof(MappingProfile));
         }

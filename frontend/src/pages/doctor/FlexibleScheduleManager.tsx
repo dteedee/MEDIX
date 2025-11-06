@@ -195,17 +195,18 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
               </button>
             </div>
             <div className="override-list-container">
-              {overrides.length > 0 ? (
+              {overrides.filter(o => o.isAvailable).length > 0 ? (
                 overrides
+                  .filter(o => o.isAvailable) // Chỉ hiển thị các ca tăng ca (isAvailable = true)
                   .sort((a, b) => {
                     const dateComparison = new Date(b.overrideDate).getTime() - new Date(a.overrideDate).getTime();
                     if (dateComparison !== 0) {
                       return dateComparison;
                     }
-                    return b.startTime.localeCompare(a.startTime);
+                    return a.startTime.localeCompare(b.startTime);
                   })
                   .map(override => (
-                    <div key={override.id} className="override-list-item">
+                    <div key={override.id} className={`override-list-item ${override.isAvailable ? 'available' : 'unavailable'}`}>
                       <div className="override-info">
                         <span className="override-date">{new Date(override.overrideDate).toLocaleDateString('vi-VN')}</span>
                         <span className="override-time">{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</span> 

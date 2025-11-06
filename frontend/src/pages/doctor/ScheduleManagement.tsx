@@ -50,20 +50,24 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   onAddFlexibleSchedule
 }) => {
   const allSlots = useMemo(() => {
-    // Lấy tất cả lịch linh hoạt
-    const overrideSlots = overrides.map(o => ({ ...o, type: "override" as const }));
+    // Lấy tất cả lịch linh hoạt (cả tăng ca và nghỉ)
+    const allOverrides = overrides.map(o => ({ ...o, type: "override" as const }));
 
-    // Lọc ra những ca cố định không bị "ghi đè" bởi một lịch "Nghỉ"
+    // Lọc ra những ca cố định không bị "ghi đè" bởi một lịch "Nghỉ" (overrideType = false)
     const visibleFixedSlots = schedules.filter(fixedSlot => {
-      // Một ca cố định sẽ bị ẩn nếu nó trùng giờ với một lịch nghỉ (isAvailable: false)
-      const isOverriddenByOff = overrideSlots.some(overrideSlot => 
-        !overrideSlot.isAvailable && overrideSlot.startTime < fixedSlot.endTime && overrideSlot.endTime > fixedSlot.startTime
+      // Một ca cố định sẽ bị ẩn nếu nó trùng giờ với một lịch "Nghỉ" (overrideType = false)
+      const isOverriddenByNghi = allOverrides.some(overrideSlot => 
+        !overrideSlot.overrideType && // Kiểm tra nếu là lịch "Nghỉ"
+        overrideSlot.startTime < fixedSlot.endTime && overrideSlot.endTime > fixedSlot.startTime
       );
-      return !isOverriddenByOff;
+      return !isOverriddenByNghi;
     }).map(s => ({ ...s, type: "fixed" as const }));
 
+    // Chỉ lấy các ca "Tăng ca" (overrideType = true) mà vẫn còn khả dụng (isAvailable = true)
+    const visibleOverrideSlots = allOverrides.filter(o => o.overrideType && o.isAvailable);
+
     // Gộp các ca cố định hợp lệ và tất cả các ca linh hoạt, sau đó sắp xếp
-    return [...visibleFixedSlots, ...overrideSlots].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    return [...visibleFixedSlots, ...visibleOverrideSlots].sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [schedules, overrides]);
 
   if (!isOpen) return null;
@@ -90,34 +94,35 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                 <div
                   key={slot.id}
                   className={`detail-item ${
-                    slot.type === "override"
-                      ? slot.isAvailable
-                        ? "override-available"
-                        : "override-item"
-                      : ""
+                    slot.type === "override" ? (slot.overrideType ? "override-available" : "override-item") : ""
                   }`}
                 >
                   <p className="detail-time">
                     {slot.startTime.slice(0, 5)} - {slot.endTime.slice(0, 5)}
                   </p>
-                  <p
-                    className={`detail-status ${
-                      slot.isAvailable ? "status-available" : "status-unavailable"
-                    }`}
-                  >
+                  <p className={`detail-status ${
+                    // Chỉ áp dụng class màu cho lịch linh hoạt, lịch cố định có màu mặc định
+                    slot.type === 'override' && (slot.overrideType ? "status-available" : "status-unavailable")
+                  }`}>
                     <span
                       className="status-dot"
                       style={{
-                        backgroundColor: slot.isAvailable ? "#10b981" : "#ef4444"
+                        // Nếu là lịch cố định, màu là xám. Nếu là lịch linh hoạt, màu dựa trên overrideType.
+                        backgroundColor: slot.type === 'fixed' 
+                          ? '#4080ffff' // Màu xám cho lịch cố định
+                          : slot.overrideType 
+                            ? '#10b981' // Màu xanh cho tăng cas
+                            : '#ef4444' // Màu đỏ cho nghỉ
                       }}
                     ></span>
                     {slot.type === "fixed"
                       ? slot.isAvailable
                         ? "Sẵn sàng"
                         : "Không sẵn sàng"
-                      : slot.isAvailable
-                      ? `Tăng ca - ${slot.reason}`
-                      : `Nghỉ - ${slot.reason}`}
+                      : slot.overrideType // Nếu là override, hiển thị dựa trên overrideType
+                        ? `Tăng ca${slot.reason ? ` - ${slot.reason}` : ''}`
+                        : `Nghỉ${slot.reason ? ` - ${slot.reason}` : ''}`
+                    }
                   </p>
 
                   {apps.length > 0 && (
@@ -368,12 +373,13 @@ const ScheduleManagement: React.FC = () => {
                 const workSlots = [
                   // Lấy các ca cố định không bị lịch nghỉ ghi đè
                   ...fixedSchedules.filter(fs =>
+                    // Lịch cố định bị ẩn nếu trùng với lịch "Nghỉ" (overrideType = false)
                     !dayOverrides.some(
-                      o => !o.isAvailable && o.startTime < fs.endTime && o.endTime > fs.startTime
+                      o => !o.overrideType && o.startTime < fs.endTime && o.endTime > fs.startTime
                     )
                   ),
-                  // Lấy các ca tăng ca (lịch linh hoạt có isAvailable = true)
-                  ...dayOverrides.filter(o => o.isAvailable)
+                  // Lấy các ca "Tăng ca" (overrideType = true) mà vẫn còn khả dụng (isAvailable = true)
+                  ...dayOverrides.filter(o => o.overrideType && o.isAvailable)
                 ];
 
                 const isToday = getLocalDateKey(date) === getLocalDateKey(new Date());
@@ -447,7 +453,11 @@ const ScheduleManagement: React.FC = () => {
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
         formattedDate={getFormattedSelectedDate()}
-        schedules={selectedDate ? schedulesByDay.get((selectedDate.getDay() || 7)) || [] : []}
+        schedules={
+          selectedDate
+            ? schedulesByDay.get(selectedDate.getDay()) || []
+            : []
+        }
         overrides={selectedDate ? overridesByDate.get(getLocalDateKey(selectedDate)) || [] : []}
         onAddFlexibleSchedule={handleAddFlexibleSchedule}
         appointments={selectedDate ? appointmentsByDate.get(getLocalDateKey(selectedDate)) || [] : []}

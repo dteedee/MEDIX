@@ -1,6 +1,6 @@
+﻿﻿﻿﻿using AutoMapper;
 ﻿using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
-using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
@@ -11,16 +11,19 @@ namespace Medix.API.Business.Services.Classification
     {
         private readonly IDoctorScheduleOverrideRepository _repo;
         private readonly IAppointmentRepository _appointmentRepo;
+        private readonly IDoctorScheduleRepository _doctorScheduleRepo; // Added
         private readonly IMapper _mapper;
 
         public DoctorScheduleOverrideService(
             IDoctorScheduleOverrideRepository repo,
             IAppointmentRepository appointmentRepo,
+            IDoctorScheduleRepository doctorScheduleRepo, // Added
             IMapper mapper)
         {
             _repo = repo;
             _mapper = mapper;
             _appointmentRepo = appointmentRepo;
+            _doctorScheduleRepo = doctorScheduleRepo; // Assigned
         }
 
         public async Task<List<DoctorScheduleOverrideDto>> GetByDoctorAsync(Guid doctorId)
@@ -38,9 +41,13 @@ namespace Medix.API.Business.Services.Classification
         public async Task<DoctorScheduleOverrideDto> CreateAsync(CreateDoctorScheduleOverrideDto dto)
         {
             var entity = _mapper.Map<DoctorScheduleOverride>(dto);
+            entity.IsAvailable = true; // Always default IsAvailable to true
             entity.Id = Guid.NewGuid();
             entity.CreatedAt = DateTime.UtcNow;
             entity.UpdatedAt = DateTime.UtcNow;
+
+            // Validate overlap with fixed schedules before adding
+            await ValidateFixedScheduleOverlap(dto.DoctorId, dto.OverrideDate, dto.StartTime, dto.EndTime, dto.OverrideType);
 
             await _repo.AddAsync(entity);
             await _repo.SaveChangesAsync();
@@ -62,7 +69,11 @@ namespace Medix.API.Business.Services.Classification
                     $"Không thể cập nhật lịch ghi đè này vì đã có cuộc hẹn được đặt trong khoảng thời gian từ {entity.StartTime:HH\\:mm} đến {entity.EndTime:HH\\:mm} vào ngày {entity.OverrideDate:dd/MM/yyyy}.");
             }
 
+            // Validate overlap with fixed schedules before updating
+            await ValidateFixedScheduleOverlap(entity.DoctorId, dto.OverrideDate, dto.StartTime, dto.EndTime, dto.OverrideType);
+
             _mapper.Map(dto, entity);
+            entity.IsAvailable = true; // IsAvailable và OverrideType là 2 trường khác nhau, IsAvailable luôn mặc định là true khi cập nhật
             entity.UpdatedAt = DateTime.UtcNow;
 
             await _repo.UpdateAsync(entity);
@@ -132,13 +143,20 @@ namespace Medix.API.Business.Services.Classification
                             $"Không thể cập nhật lịch ghi đè ({match.StartTime:HH\\:mm} - {match.OverrideDate:dd/MM/yyyy}) vì đã có cuộc hẹn được đặt trong khoảng thời gian này.");
                     }
 
+                    // Validate overlap with fixed schedules before updating
+                    await ValidateFixedScheduleOverlap(match.DoctorId, dto.OverrideDate, dto.StartTime, dto.EndTime, dto.OverrideType);
+
                     // update
                     _mapper.Map(dto, match);
                     match.UpdatedAt = DateTime.UtcNow;
+                    match.IsAvailable = true; // IsAvailable luôn mặc định là true khi cập nhật
                     await _repo.UpdateAsync(match);
                 }
                 else
                 {
+                    // Validate overlap with fixed schedules before adding
+                    await ValidateFixedScheduleOverlap(doctorId, dto.OverrideDate, dto.StartTime, dto.EndTime, dto.OverrideType);
+
                     // add new
                     var entity = new DoctorScheduleOverride
                     {
@@ -146,8 +164,8 @@ namespace Medix.API.Business.Services.Classification
                         DoctorId = doctorId,
                         OverrideDate = dto.OverrideDate,
                         StartTime = dto.StartTime,
-                        EndTime = dto.EndTime,
-                        IsAvailable = dto.IsAvailable,
+                        EndTime = dto.EndTime, 
+                        IsAvailable = true, // IsAvailable luôn mặc định là true khi thêm mới
                         Reason = dto.Reason,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
@@ -183,10 +201,12 @@ namespace Medix.API.Business.Services.Classification
                         OverrideDate = dto.OverrideDate,
                         StartTime = dto.StartTime,
                         EndTime = dto.EndTime,
-                        IsAvailable = dto.IsAvailable,
+                        IsAvailable = true, // IsAvailable luôn mặc định là true khi thêm mới
+                        //IsAvailable = dto.OverrideType, // Đồng bộ
                         Reason = dto.Reason,
                         CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
+                        UpdatedAt = DateTime.UtcNow,
+                        OverrideType = dto.OverrideType
                     };
                     await _repo.AddAsync(newEntity);
                 }
@@ -203,12 +223,17 @@ namespace Medix.API.Business.Services.Classification
                                 $"Không thể cập nhật lịch ghi đè này vì đã có cuộc hẹn được đặt trong khoảng thời gian từ {match.StartTime:HH\\:mm} đến {match.EndTime:HH\\:mm} vào ngày {match.OverrideDate:dd/MM/yyyy}.");
                         }
 
+                        // Validate overlap with fixed schedules before updating
+                        await ValidateFixedScheduleOverlap(doctorId.Value, dto.OverrideDate, dto.StartTime, dto.EndTime, dto.OverrideType);
+
                         _mapper.Map(dto, match);
+                        match.IsAvailable = true; // IsAvailable luôn mặc định là true khi cập nhật
                         match.UpdatedAt = DateTime.UtcNow;
                         await _repo.UpdateAsync(match);
                     }
                 }
             }
+
 
             await _repo.SaveChangesAsync();
 
@@ -267,12 +292,38 @@ namespace Medix.API.Business.Services.Classification
             entity.DoctorId = doctorId.Value;
             entity.CreatedAt = DateTime.UtcNow;
             entity.UpdatedAt = DateTime.UtcNow;
+            entity.IsAvailable = true; // IsAvailable luôn mặc định là true khi tạo mới
+            entity.OverrideType = dto.OverrideType;
+
+            // Validate overlap with fixed schedules before creating
+            await ValidateFixedScheduleOverlap(doctorId.Value, dto.OverrideDate, dto.StartTime, dto.EndTime, dto.OverrideType);
 
             await _repo.AddAsync(entity);
             await _repo.SaveChangesAsync();
 
             // 4️⃣ Trả về DTO
             return _mapper.Map<DoctorScheduleOverrideDto>(entity);
+        }
+
+        private static bool IsOverlap(TimeOnly startA, TimeOnly endA, TimeOnly startB, TimeOnly endB)
+            => startA < endB && endA > startB;
+
+        private async Task ValidateFixedScheduleOverlap(Guid doctorId, DateOnly overrideDate, TimeOnly startTime, TimeOnly endTime, bool overrideType)
+        {
+            // Chỉ kiểm tra khi là "Tăng ca" (OverrideType = true)
+            if (overrideType)
+            {
+                var dayOfWeek = (int)overrideDate.DayOfWeek; // Sunday = 0, Monday = 1, ...
+                var fixedSchedules = await _doctorScheduleRepo.GetByDoctorAndDayAsync(doctorId, dayOfWeek);
+
+                var isOverlapWithFixed = fixedSchedules.Any(fs =>
+                    IsOverlap(startTime, endTime, fs.StartTime, fs.EndTime));
+
+                if (isOverlapWithFixed)
+                {
+                    throw new InvalidOperationException("Lịch tăng ca không được phép trùng với lịch cố định đã có.");
+                }
+            }
         }
 
         public async Task<List<DoctorScheduleOverrideDto>> GetByDoctorUserAsync(Guid userId)

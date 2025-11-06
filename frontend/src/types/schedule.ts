@@ -22,6 +22,7 @@ export interface ScheduleOverride {
   endTime: string; // HH:mm:ss
   isAvailable: boolean; // true for extra shift, false for absence
   reason: string;
+  overrideType: boolean;
 }
 
 export interface DoctorScheduleOverrideDto {
@@ -42,4 +43,5 @@ export interface CreateScheduleOverridePayload {
   endTime: string; // HH:mm
   isAvailable: boolean;
   reason: string;
+  overrideType: boolean;
 }

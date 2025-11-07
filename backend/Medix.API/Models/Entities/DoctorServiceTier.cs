@@ -26,4 +26,6 @@ public partial class DoctorServiceTier
     public DateTime CreatedAt { get; set; }
 
     public virtual ICollection<Doctor> Doctors { get; set; } = new List<Doctor>();
+
+    public virtual ICollection<ServiceTierSubscription> ServiceTierSubscriptions { get; set; } = new List<ServiceTierSubscription>();
 }

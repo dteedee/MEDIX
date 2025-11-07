@@ -95,6 +95,8 @@ public partial class MedixContext : DbContext
 
     public virtual DbSet<ServicePackage> ServicePackages { get; set; }
 
+    public virtual DbSet<ServiceTierSubscription> ServiceTierSubscriptions { get; set; }
+
     public virtual DbSet<SiteBanner> SiteBanners { get; set; }
 
     public virtual DbSet<Specialization> Specializations { get; set; }
@@ -914,6 +916,26 @@ public partial class MedixContext : DbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.MonthlyFee).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Name).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<ServiceTierSubscription>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__ServiceT__3214EC0746F9D665");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Status).HasMaxLength(20);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(getutcdate())");
+
+            entity.HasOne(d => d.Doctor).WithMany(p => p.ServiceTierSubscriptions)
+                .HasForeignKey(d => d.DoctorId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__ServiceTi__Docto__04459E07");
+
+            entity.HasOne(d => d.ServiceTier).WithMany(p => p.ServiceTierSubscriptions)
+                .HasForeignKey(d => d.ServiceTierId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__ServiceTi__Servi__0539C240");
         });
 
         modelBuilder.Entity<SiteBanner>(entity =>

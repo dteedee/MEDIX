@@ -55,6 +55,8 @@ public partial class Doctor
 
     public virtual DoctorServiceTier? ServiceTier { get; set; }
 
+    public virtual ICollection<ServiceTierSubscription> ServiceTierSubscriptions { get; set; } = new List<ServiceTierSubscription>();
+
     public virtual Specialization Specialization { get; set; } = null!;
 
     public virtual User User { get; set; } = null!;

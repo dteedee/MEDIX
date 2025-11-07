@@ -1,220 +1,215 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import doctorDashboardService from '../../services/doctorDashboardService';
-import { reviewService } from '../../services/reviewService';
-import { appointmentService } from '../../services/appointmentService';
-import styles from '../../styles/doctor/DoctorDashboard.module.css';
-import { Link } from 'react-router-dom';
-import { PageLoader } from '../../components/ui';
+"use client"
 
-interface DoctorStats {
-  totalAppointments: number;
-  todayAppointments: number;
-  totalPatients: number;
-  monthlyEarnings: number;
-  averageRating: number;
-  totalReviews: number;
+import React, { useState, useEffect } from "react"
+import { useAuth } from "../../contexts/AuthContext"
+import doctorDashboardService from "../../services/doctorDashboardService"
+import { appointmentService } from "../../services/appointmentService"
+import styles from "../../styles/doctor/DoctorDashboard.module.css"
+import { Link } from "react-router-dom"
+import { PageLoader } from "../../components/ui"
+
+// --- NEW TYPE DEFINITIONS TO MATCH THE API RESPONSE ---
+
+interface DashboardSummary {
+  todayAppointments: number
+  todayRevenue: number
+  monthRevenue: number
+  totalRevenue: number
+  averageRating: number
 }
+
+interface RegularSchedule {
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  isAvailable: boolean
+}
+
+interface ScheduleOverride {
+  overrideDate: string
+  startTime: string
+  endTime: string
+  isAvailable: boolean
+  overrideType: boolean // true: Tăng ca, false: Nghỉ
+  reason: string
+}
+
+interface DashboardSchedule {
+  regular: RegularSchedule[]
+  overrides: ScheduleOverride[]
+}
+
+interface DashboardSubscription {
+  name: string
+  features: string
+  monthlyFee: number
+}
+
+interface DashboardWallet {
+  balance: number
+}
+
+interface DashboardSalary {
+  periodStartDate: string
+  periodEndDate: string
+  netSalary: number
+  status: string
+}
+
+interface DashboardReviewItem {
+  rating: number
+  comment: string
+  patientName: string
+  createdAt: string
+}
+
+interface DashboardReview {
+  averageRating: number
+  recent: DashboardReviewItem[]
+}
+
+interface DoctorDashboardData {
+  summary: DashboardSummary
+  schedule: DashboardSchedule
+  subscription: DashboardSubscription | null
+  wallet: DashboardWallet | null
+  salary: DashboardSalary | null
+  reviews: DashboardReview
+}
+
+// --- NEW TYPE DEFINITION FOR COMBINED SCHEDULE SLOTS ---
+type TodayScheduleSlot = (RegularSchedule & { type: "fixed" }) | (ScheduleOverride & { type: "override" })
 
 interface UpcomingAppointment {
-
-  id: string;
-  patientName: string;
-  patientAvatar?: string;
-  appointmentTime: string;
-  appointmentDate: string;
-  serviceType: string;
-  status: string;
-}
-
-interface RecentPatient {
-  id: string;
-  name: string;
-  avatar?: string;
-  lastVisit: string;
-  diagnosis: string;
-  rating: number;
+  id: string
+  patientName: string
+  patientAvatar?: string
+  appointmentTime: string
+  appointmentDate: string
+  serviceType: string
 }
 
 const DoctorDashboard: React.FC = () => {
-  const { user } = useAuth();
-  const [stats, setStats] = useState<DoctorStats | null>(null);
-  const [upcomingAppointments, setUpcomingAppointments] = useState<UpcomingAppointment[]>([]);
-  const [recentPatients, setRecentPatients] = useState<RecentPatient[]>([]);
-  
-  // Tách biệt trạng thái loading và error cho từng khối dữ liệu
-  const [isPageLoading, setIsPageLoading] = useState(true);
-  const [appointmentsError, setAppointmentsError] = useState<string | null>(null);
-  const [patientsError, setPatientsError] = useState<string | null>(null);
-  
-  
-  const toYYYYMMDD = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+  const { user } = useAuth()
+  const [dashboardData, setDashboardData] = useState<DoctorDashboardData | null>(null)
+  const [upcomingAppointments, setUpcomingAppointments] = useState<UpcomingAppointment[]>([])
+
+  // Tách trạng thái loading cho từng phần để có trải nghiệm người dùng tốt hơn
+  const [isDashboardLoading, setIsDashboardLoading] = useState(true)
+  const [isAppointmentsLoading, setIsAppointmentsLoading] = useState(true)
+  const [appointmentsError, setAppointmentsError] = useState<string | null>(null)
+  const [dashboardError, setDashboardError] = useState<string | null>(null)
+
+  // Helper to format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount)
+  }
+
+  // Helper to format time from "HH:mm:ss" to "HH:mm"
+  const formatTime = (time: string) => time.substring(0, 5)
 
   const getRelativeDate = (date: Date): string => {
-    const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(today.getDate() + 1);
+    const today = new Date()
+    const tomorrow = new Date()
+    tomorrow.setDate(today.getDate() + 1)
 
     // Reset time part for accurate date comparison
-    today.setHours(0, 0, 0, 0);
-    tomorrow.setHours(0, 0, 0, 0);
-    const checkDate = new Date(date);
-    checkDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0)
+    tomorrow.setHours(0, 0, 0, 0)
+    const checkDate = new Date(date)
+    checkDate.setHours(0, 0, 0, 0)
 
     if (checkDate.getTime() === today.getTime()) {
-      return 'Hôm nay';
+      return "Hôm nay"
     }
     if (checkDate.getTime() === tomorrow.getTime()) {
-      return 'Ngày mai';
+      return "Ngày mai"
     }
-    return date.toLocaleDateString('vi-VN');
-  };
+    return date.toLocaleDateString("vi-VN")
+  }
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      setIsDashboardLoading(true)
+      setIsAppointmentsLoading(true)
+      setDashboardError(null)
+      setAppointmentsError(null)
+
+      // Fetch new dashboard data and upcoming appointments concurrently
       try {
-        const today = new Date();
-        const todayStr = toYYYYMMDD(today);
+        const [dashboardResult, appointmentsResult] = await Promise.allSettled([
+          doctorDashboardService.getDashboard(),
+          appointmentService.getMyAppointmentsByDateRange("2020-01-01", "2030-12-31"),
+        ])
 
-        // Sử dụng Promise.allSettled để xử lý lỗi của từng API một cách độc lập
-        const results = await Promise.allSettled([
-          doctorDashboardService.getDashboardStats(),
-          appointmentService.getMyAppointmentsByDateRange("2020-01-01", "2030-12-31"), // Lấy tất cả lịch hẹn để tính tổng
-          reviewService.getReviewsForCurrentDoctor()
-        ]);
+        // Handle Dashboard API result
+        if (dashboardResult.status === "fulfilled") {
+          setDashboardData(dashboardResult.value)
+        } else {
+          console.error("Error fetching dashboard data:", dashboardResult.reason)
+          setDashboardError("Không thể tải dữ liệu tổng quan.")
+        }
+        setIsDashboardLoading(false)
 
-        const [statsResult, appointmentsResult, reviewsResult] = results;
-
-        // Xử lý kết quả của reviews và appointments trước vì chúng cần cho stats
-        let totalAppointments = 0;
-        let totalUniquePatients = 0;
-        let todayAppointmentsCount = 0; // Vẫn giữ để hiển thị lịch hẹn hôm nay
-
-        if (appointmentsResult.status === 'fulfilled') {
-          const allAppointments = appointmentsResult.value;
-
-          // DEBUG: In ra danh sách các cuộc hẹn để kiểm tra patientId
-          console.log("Tất cả các cuộc hẹn đã tải:", allAppointments.map(a => ({ appointmentId: a.id, patientName: a.patientName, patientId: a.patientId })));
-
-          totalAppointments = allAppointments.length;
-          // Sửa lỗi đếm bệnh nhân: Sử dụng tổ hợp patientId và patientName để đảm bảo tính duy nhất
-          // trong trường hợp patientId có thể bị trùng lặp cho các bệnh nhân khác nhau.
-          const uniquePatientKeys = new Set(allAppointments.map(app => `${app.patientId}-${app.patientName}`));
-          totalUniquePatients = uniquePatientKeys.size;
-
+        // Handle Appointments API result
+        if (appointmentsResult.status === "fulfilled") {
+          const allAppointments = appointmentsResult.value
           const upcoming = allAppointments
-            .filter(app => new Date(app.appointmentStartTime) > new Date())
+            .filter((app) => new Date(app.appointmentStartTime) > new Date())
             .sort((a, b) => new Date(a.appointmentStartTime).getTime() - new Date(b.appointmentStartTime).getTime())
-            .map(app => {
-              const appDate = new Date(app.appointmentStartTime);
+            .slice(0, 5) // Limit to 5 upcoming appointments
+            .map((app) => {
+              const appDate = new Date(app.appointmentStartTime)
               return {
                 id: app.id,
                 patientName: app.patientName,
-                appointmentTime: appDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-                appointmentDate: getRelativeDate(appDate), // Sửa lỗi hiển thị ngày
-                serviceType: 'Khám bệnh', // Có thể thay đổi nếu API trả về
-                status: app.statusDisplayName || 'Chưa xác định'
-              };
-            });
-          setUpcomingAppointments(upcoming);
-
-          // Đếm lịch hẹn hôm nay từ danh sách đã có
-          todayAppointmentsCount = allAppointments.filter(app => toYYYYMMDD(new Date(app.appointmentStartTime)) === todayStr).length;
-
-          // Tạo danh sách bệnh nhân gần đây từ lịch hẹn
-          const now = new Date();
-          // Lọc ra các cuộc hẹn đã diễn ra (trong quá khứ hoặc hôm nay)
-          const pastAppointments = allAppointments.filter(app => new Date(app.appointmentStartTime) <= now);
-
-          const patientMap = new Map<string, any>(); // Sử dụng khóa duy nhất (patientId-patientName)
-          pastAppointments.forEach(app => {
-            const patientKey = `${app.patientId}-${app.patientName}`;
-            // Từ các cuộc hẹn đã qua, tìm ra cuộc hẹn gần nhất của mỗi bệnh nhân
-            if (!patientMap.has(patientKey) || new Date(app.appointmentStartTime) > new Date(patientMap.get(patientKey).appointmentStartTime)) {
-              patientMap.set(patientKey, app);
-            }
-          });
-
-          const recentPatientsFromAppointments: RecentPatient[] = Array.from(patientMap.values())
-            .sort((a, b) => new Date(b.appointmentStartTime).getTime() - new Date(a.appointmentStartTime).getTime()) // Sắp xếp mới nhất lên đầu
-            .slice(0, 5) // Chỉ lấy 5 bệnh nhân gần nhất
-            .map(app => ({
-              id: app.patientId, // Sử dụng patientId
-              name: app.patientName,
-              avatar: app.patientAvatar, // API cần trả về trường này
-              lastVisit: new Date(app.appointmentStartTime).toLocaleDateString('vi-VN'),
-              diagnosis: '', // Để trống vì thông tin này không có trong dữ liệu cuộc hẹn
-              rating: 0, // Thông tin này không có trong appointment
-            }));
-          
-          setRecentPatients(recentPatientsFromAppointments);
-
+                appointmentTime: appDate.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+                appointmentDate: getRelativeDate(appDate),
+                serviceType: "Khám bệnh",
+              }
+            })
+          setUpcomingAppointments(upcoming)
         } else {
-          console.error("Error fetching appointments:", appointmentsResult.reason);
-          setAppointmentsError("Không tải được lịch hẹn.");
+          console.error("Error fetching appointments:", appointmentsResult.reason)
+          setAppointmentsError("Không tải được lịch hẹn.")
         }
-
-        let totalReviews = 0;
-        let averageRating = 0;
-        if (reviewsResult.status === 'fulfilled') {
-          const reviewsData = reviewsResult.value;
-          totalReviews = reviewsData.length;
-          averageRating = totalReviews > 0
-            ? parseFloat((reviewsData.reduce((sum: number, review: { rating: number }) => sum + review.rating, 0) / totalReviews).toFixed(1))
-            : 0;
-        }
-        // Không set lỗi cho review vì nó chỉ là một phần của stats
-
-        // Xử lý kết quả của stats
-        if (statsResult.status === 'fulfilled') {
-          setStats({ // Sử dụng dữ liệu thật khi thành công
-            ...statsResult.value,
-            totalAppointments: totalAppointments, // Ghi đè bằng dữ liệu thật
-            totalPatients: totalUniquePatients, // Ghi đè bằng dữ liệu thật
-            todayAppointments: todayAppointmentsCount,
-            averageRating: averageRating,
-            totalReviews: totalReviews,
-          });
-        } else {
-          console.warn("Could not fetch stats, using fallback data:", statsResult.reason);
-          // Sử dụng mock data khi API stats lỗi, nhưng vẫn giữ lại dữ liệu đã lấy được
-          setStats({
-            monthlyEarnings: 0, // Dữ liệu giả
-            totalAppointments: totalAppointments, // Dữ liệu thật nếu có
-            totalPatients: totalUniquePatients, // Dữ liệu thật nếu có
-            todayAppointments: todayAppointmentsCount, // Dữ liệu thật nếu có
-            averageRating: averageRating, // Dữ liệu thật nếu có
-            totalReviews: totalReviews, // Dữ liệu thật nếu có
-          });
-        }
-
+        setIsAppointmentsLoading(false)
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        // Lỗi chung nếu `Promise.allSettled` có vấn đề (rất hiếm)
-        setAppointmentsError('Lỗi không xác định.');
-        setPatientsError('Lỗi không xác định.');
-      } finally {
-        setIsPageLoading(false);
+        console.error("General error fetching data:", err)
+        setDashboardError("Đã xảy ra lỗi không xác định.")
+        setIsDashboardLoading(false)
+        setIsAppointmentsLoading(false)
       }
-    };
+    }
 
-    fetchDashboardData();
-  }, []);
+    fetchDashboardData()
+  }, []) // ✅ Bỏ [user] để chỉ fetch data một lần khi component được mount
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount);
-  };
+  // Combine and sort today's schedule
+  const todaySchedule: TodayScheduleSlot[] = React.useMemo(() => {
+    if (!dashboardData) return []
 
-  if (isPageLoading) {
-    return <PageLoader />;
+    const { regular, overrides } = dashboardData.schedule
+
+    const visibleFixedSlots: TodayScheduleSlot[] = regular
+      .filter(
+        (fixedSlot) =>
+          !overrides.some(
+            (overrideSlot) =>
+              !overrideSlot.overrideType && // It's a "Nghỉ" override
+              overrideSlot.startTime < fixedSlot.endTime &&
+              overrideSlot.endTime > fixedSlot.startTime,
+          ),
+      )
+      .map((s) => ({ ...s, type: "fixed" }))
+
+    const visibleOverrideSlots: TodayScheduleSlot[] = overrides.map((o) => ({ ...o, type: "override" }))
+
+    return [...visibleFixedSlots, ...visibleOverrideSlots].sort((a, b) => a.startTime.localeCompare(b.startTime))
+  }, [dashboardData]) // ✅ Chỉ tính toán lại khi dashboardData thay đổi
+
+  if (isDashboardLoading && isAppointmentsLoading) {
+    return <PageLoader />
   }
 
   return (
@@ -225,109 +220,114 @@ const DoctorDashboard: React.FC = () => {
           <h1 className={styles.title}>Dashboard</h1>
           <p className={styles.subtitle}>
             <span className={styles.waveEmoji}>👋</span>
-            Chào mừng trở lại, <strong>{user?.fullName || 'Bác sĩ'}</strong>!
+            Chào mừng trở lại, <strong>{user?.fullName || "Bác sĩ"}</strong>!
           </p>
         </div>
         <div className={styles.headerRight}>
           <div className={styles.dateTime}>
             <i className="bi bi-calendar3"></i>
-            <span>{new Date().toLocaleDateString('vi-VN')}</span>
+            <span>{new Date().toLocaleDateString("vi-VN")}</span>
           </div>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className={styles.statsGrid}>
-
-        {stats ? (
-          <>
-            <div className={`${styles.statCard} ${styles.statCard1}`}>
-            <div className={styles.statIcon}>
-              <i className="bi bi-calendar-check"></i>
-            </div>
-            <div className={styles.statContent}>
-              <div className={styles.statLabel}>Lịch hẹn hôm nay</div>
-              <div className={styles.statValue}>{stats.todayAppointments}</div>
-              <div className={styles.statTrend}>
-                <i className="bi bi-arrow-right-circle"></i>
-                <Link to="/app/doctor/appointments">Xem chi tiết</Link>
+      {dashboardError ? (
+        <div className={`${styles.card} ${styles.errorCard}`}>{dashboardError}</div>
+      ) : (
+        <div className={styles.statsGrid}>
+          {dashboardData ? (
+            <>
+              <div className={`${styles.statCard} ${styles.statCard1}`}>
+                <div className={styles.statIcon}>
+                  <i className="bi bi-cash-coin"></i>
+                </div>
+                <div className={styles.statContent}>
+                  <div className={styles.statLabel}>Doanh thu hôm nay</div>
+                  <div className={styles.statValue}>{formatCurrency(dashboardData.summary.todayRevenue)}</div>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-cash-coin"></i>
+                </div>
               </div>
-            </div>
-            <div className={styles.statBg}>
-              <i className="bi bi-calendar-check"></i>
-            </div>
-            </div>
 
-            <div className={`${styles.statCard} ${styles.statCard2}`}>
-            <div className={styles.statIcon}>
-              <i className="bi bi-people"></i>
-            </div>
-            <div className={styles.statContent}>
-              <div className={styles.statLabel}>Tổng bệnh nhân</div>
-              <div className={styles.statValue}>{stats.totalPatients}</div>
-              <div className={styles.statTrend}>
-                <i className="bi bi-arrow-right-circle"></i>
-                <Link to="/app/doctor/patients">Xem danh sách</Link>
+              <div className={`${styles.statCard} ${styles.statCard2}`}>
+                <div className={styles.statIcon}>
+                  <i className="bi bi-wallet2"></i>
+                </div>
+                <div className={styles.statContent}>
+                  <div className={styles.statLabel}>Doanh thu tháng</div>
+                  <div className={styles.statValue}>{formatCurrency(dashboardData.summary.monthRevenue)}</div>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-wallet2"></i>
+                </div>
               </div>
-            </div>
-            <div className={styles.statBg}>
-              <i className="bi bi-people"></i>
-            </div>
-            </div>
 
-            <div className={`${styles.statCard} ${styles.statCard3}`}>
-            <div className={styles.statIcon}>
-              <i className="bi bi-wallet2"></i>
-            </div>
-            <div className={styles.statContent}>
-              <div className={styles.statLabel}>Thu nhập tháng</div>
-              <div className={styles.statValue}>{formatCurrency(stats.monthlyEarnings)}</div>
-              <div className={styles.statTrend}>
-                <i className="bi bi-arrow-right-circle"></i>
-                <Link to="/app/doctor/wallet">Xem chi tiết</Link>
+              <div className={`${styles.statCard} ${styles.statCard5}`}>
+                <div className={styles.statIcon}>
+                  <i className="bi bi-gem"></i>
+                </div>
+                <div className={styles.statContent}>
+                  <div className={styles.statLabel}>Tổng doanh thu</div>
+                  <div className={styles.statValue}>{formatCurrency(dashboardData.summary.totalRevenue)}</div>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-gem"></i>
+                </div>
               </div>
-            </div>
-            <div className={styles.statBg}>
-              <i className="bi bi-wallet2"></i>
-            </div>
-            </div>
 
-            <div className={`${styles.statCard} ${styles.statCard3}`}>
-            <div className={styles.statIcon}>
-              <i className="bi bi-wallet2"></i>
-            </div>
-            <div className={styles.statContent}>
-              <div className={styles.statLabel}>Tổng các lịch hẹn</div>
-              <div className={styles.statValue}>{stats.totalAppointments}</div>
-              <div className={styles.statTrend}>
+              <div className={`${styles.statCard} ${styles.statCard3}`}>
+                <div className={styles.statIcon}>
+                  <i className="bi bi-calendar-check"></i>
+                </div>
+                <div className={styles.statContent}>
+                  <div className={styles.statLabel}>Lịch hẹn hôm nay</div>
+                  <div className={styles.statValue}>{dashboardData.summary.todayAppointments}</div>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-calendar-check"></i>
+                </div>
               </div>
-            </div>
-            <div className={styles.statBg}>
-              <i className="bi bi-wallet2"></i>
-            </div>
-            </div>
 
-            <div className={`${styles.statCard} ${styles.statCard4}`}>
-            <div className={styles.statIcon}>
-              <i className="bi bi-star-fill"></i>
-            </div>
-            <div className={styles.statContent}>
-              <div className={styles.statLabel}>Đánh giá trung bình</div>
-              <div className={styles.statValue}>{stats.averageRating}</div>
-              <div className={styles.statTrend}>
-                <i className="bi bi-chat-quote"></i>
-                <Link to="/app/doctor/feedback">({stats.totalReviews} đánh giá)</Link>
+              {dashboardData.wallet && (
+                <div className={`${styles.statCard} ${styles.statCard6}`}>
+                  <div className={styles.statIcon}>
+                    <i className="bi bi-wallet-fill"></i>
+                  </div>
+                  <div className={styles.statContent}>
+                    <div className={styles.statLabel}>Số dư ví</div>
+                    <div className={styles.statValue}>{formatCurrency(dashboardData.wallet.balance)}</div>
+                  </div>
+                  <div className={styles.statBg}>
+                    <i className="bi bi-wallet-fill"></i>
+                  </div>
+                </div>
+              )}
+
+              <div className={`${styles.statCard} ${styles.statCard4}`}>
+                <div className={styles.statIcon}>
+                  <i className="bi bi-star-half"></i>
+                </div>
+                <div className={styles.statContent}>
+                  <div className={styles.statLabel}>Đánh giá TB</div>
+                  <div className={styles.statValue}>{dashboardData.summary.averageRating.toFixed(1)}</div>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-star-half"></i>
+                </div>
               </div>
-            </div>
-            <div className={styles.statBg}>
-              <i className="bi bi-star-fill"></i>
-            </div>
-            </div>
-          </>
-        ) : (
-          <div className={`${styles.statCard} ${styles.loadingCard}`}>Đang tải thống kê...</div>
-        )}
-      </div>
+            </>
+          ) : (
+            Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className={`${styles.statCard} ${styles.loadingCard}`}>
+                <div className={styles.skeleton} style={{ width: "80%", height: "20px" }}></div>
+                <div className={styles.skeleton} style={{ width: "50%", height: "24px", marginTop: "8px" }}></div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className={styles.contentGrid}>
@@ -338,7 +338,9 @@ const DoctorDashboard: React.FC = () => {
               <i className="bi bi-calendar-check"></i>
             </div>
             <h3 className={styles.cardTitle}>Lịch hẹn sắp tới</h3>
-            <Link to="/app/doctor/appointments" className={styles.viewAllBtn}>Xem tất cả</Link>
+            <Link to="/app/doctor/appointments" className={styles.viewAllBtn}>
+              Xem tất cả
+            </Link>
           </div>
           <div className={styles.appointmentsList}>
             {appointmentsError ? (
@@ -347,134 +349,200 @@ const DoctorDashboard: React.FC = () => {
                 <p>{appointmentsError}</p>
               </div>
             ) : upcomingAppointments.length > 0 ? (
-                upcomingAppointments.map((appointment) => (
-                  <Link to={`/app/doctor/medical-records/${appointment.id}`} key={appointment.id} className={styles.appointmentItem}>
-                    <div className={styles.patientInfo}>
-                      <div className={styles.patientAvatar}>
-                        <img src={appointment.patientAvatar || `https://ui-avatars.com/api/?name=${appointment.patientName.replace(/\s/g, '+')}&background=667eea&color=fff`} alt={appointment.patientName} />
-                      </div>
-                      <div className={styles.patientDetails}>
-                        <div className={styles.patientName}>{appointment.patientName}</div>
-                        <div className={styles.serviceType}>{appointment.serviceType}</div>
-                      </div>
+              upcomingAppointments.map((appointment) => (
+                <Link
+                  to={`/app/doctor/medical-records/${appointment.id}`}
+                  key={appointment.id}
+                  className={styles.appointmentItem}
+                >
+                  <div className={styles.patientInfo}>
+                    <div className={styles.patientAvatar}>
+                      <img
+                        src={
+                          appointment.patientAvatar ||
+                          `https://ui-avatars.com/api/?name=${appointment.patientName.replace(/\s/g, "+")}&background=667eea&color=fff`
+                        }
+                        alt={appointment.patientName}
+                      />
                     </div>
-                    <div className={styles.appointmentTime}>
-                      <div className={styles.timeText}>{appointment.appointmentTime}</div>
-                      <div className={styles.dateText}>{appointment.appointmentDate}</div>
+                    <div className={styles.patientDetails}>
+                      <div className={styles.patientName}>{appointment.patientName}</div>
+                      <div className={styles.serviceType}>{appointment.serviceType}</div>
                     </div>
-                    <div className={styles.appointmentStatus}>
-                      <span className={`${styles.statusBadge} ${styles.statusPending}`}>
-                        {appointment.status}
-                      </span>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <div className={styles.emptyList}>
-                  <i className="bi bi-calendar-x"></i>
-                  <p>Không có lịch hẹn nào sắp tới.</p>
-                </div>
-              )}
+                  </div>
+                  <div className={styles.appointmentTime}>
+                    <div className={styles.timeText}>{appointment.appointmentTime}</div>
+                    <div className={styles.dateText}>{appointment.appointmentDate}</div>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className={styles.emptyList}>
+                <i className="bi bi-calendar-x-fill"></i>
+                <p>Không có lịch hẹn nào sắp tới.</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Recent Patients */}
-        <div className={styles.card}>
+        {/* Recent Reviews */}
+        <div className={`${styles.card} ${styles.recentReviewsCard}`}>
           <div className={styles.cardHeader}>
             <div className={styles.cardIcon}>
-              <i className="bi bi-people"></i>
+              <i className="bi bi-chat-quote-fill"></i>
             </div>
-            <h3 className={styles.cardTitle}>Bệnh nhân gần đây</h3>
-            <Link to="/app/doctor/patients" className={styles.viewAllBtn}>Xem tất cả</Link>
+            <h3 className={styles.cardTitle}>Đánh giá gần đây</h3>
+            <Link to="/app/doctor/feedback" className={styles.viewAllBtn}>
+              Xem tất cả <i className="bi bi-arrow-right"></i>
+            </Link>
           </div>
-          <div className={styles.patientsList}>
-            {patientsError ? (
-              <div className={styles.emptyList}>
-                <i className="bi bi-exclamation-circle-fill"></i>
-                <p>{patientsError}</p>
-              </div>
-            ) : recentPatients.length > 0 ? (
-                recentPatients.map((patient) => (
-                  <Link to={`/app/doctor/patients/${patient.id}`} key={patient.id} className={styles.patientItem}>
-                    <div className={styles.patientAvatar}>
-                      <img src={patient.avatar || `https://ui-avatars.com/api/?name=${patient.name.replace(/\s/g, '+')}&background=f093fb&color=fff`} alt={patient.name} />
-                    </div>
+          <div className={styles.reviewsList}>
+            {dashboardData && dashboardData.reviews.recent.length > 0 ? (
+              dashboardData.reviews.recent.map((review, index) => (
+                <div key={index} className={styles.reviewCard}>
+                  <div className={styles.reviewHeader}>
                     <div className={styles.patientInfo}>
-                      <div className={styles.patientName}>{patient.name}</div>
-                      <div className={styles.patientDiagnosis}>{patient.diagnosis}</div>
-                      <div className={styles.patientLastVisit}>{patient.lastVisit}</div>
+                      <div className={styles.patientAvatar}>
+                        <i className="bi bi-person-fill"></i>
+                      </div>
+                      <span className={styles.patientName}>{review.patientName}</span>
                     </div>
-                    <div className={styles.patientRating}>
+                    <div className={styles.reviewMeta}>
                       <div className={styles.stars}>
                         {Array.from({ length: 5 }, (_, i) => (
                           <i
                             key={i}
-                            className={`bi bi-star-fill ${i < (patient.rating || 0) ? styles.starFilled : styles.starEmpty}`}
+                            className={`bi bi-star-fill ${i < review.rating ? styles.starFilled : styles.starEmpty}`}
                           ></i>
                         ))}
                       </div>
+                      <span className={styles.reviewDate}>
+                        {new Date(review.createdAt).toLocaleDateString("vi-VN")}
+                      </span>
                     </div>
-                  </Link>
-                ))
-              ) : (
-                <div className={styles.emptyList}>
-                  <i className="bi bi-person-x"></i>
-                  <p>Không có bệnh nhân nào gần đây.</p>
+                  </div>
+                  <div className={styles.reviewBody}>
+                    <p className={styles.comment}>{review.comment || "Bệnh nhân không để lại bình luận."}</p>
+                  </div>
                 </div>
-              )}
+              ))
+            ) : (
+              <div className={styles.emptyList}>
+                <i className="bi bi-chat-dots-fill"></i>
+                <p>Chưa có đánh giá nào.</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className={styles.card}>
+        {/* Today's Schedule */}
+        <div className={`${styles.card} ${styles.todayScheduleCard}`}>
           <div className={styles.cardHeader}>
-            <div className={styles.cardIcon}>
-              <i className="bi bi-lightning"></i>
+            <h3 className={styles.cardTitle}>Lịch làm việc hôm nay</h3>
+            <Link to="/app/doctor/schedule" className={styles.viewAllBtn}>
+              Quản lý
+            </Link>
+          </div>
+          <div className={styles.scheduleList}>
+            {todaySchedule.length > 0 ? (
+              todaySchedule.map((slot, index) => {
+                let statusText = ""
+                let statusClass = ""
+
+                if (slot.type === "fixed") {
+                  statusText = "Lịch cố định"
+                  statusClass = styles.statusFixed
+                } else if (slot.type === "override") {
+                  statusText = slot.overrideType ? "Tăng ca" : "Nghỉ"
+                  statusClass = slot.overrideType ? styles.statusOvertime : styles.statusOff
+                }
+
+                return (
+                  <div key={index} className={styles.scheduleItem}>
+                    <span className={styles.scheduleTime}>
+                      {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                    </span>
+                    <span className={`${styles.scheduleStatus} ${statusClass}`}>{statusText}</span>
+                    {slot.type === "override" && slot.reason && (
+                      <span className={styles.scheduleReason}>({slot.reason})</span>
+                    )}
+                  </div>
+                )
+              })
+            ) : (
+              <div className={styles.emptyList}>
+                <i className="bi bi-calendar-x-fill"></i>
+                <p>Không có lịch làm việc nào hôm nay.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Other Info Cards */}
+        <div className={styles.otherInfoGrid}>
+          {!isDashboardLoading && dashboardData?.subscription && (
+            <div className={`${styles.card} ${styles.infoCard}`}>
+              <div className={styles.cardHeader}>
+                <h3 className={styles.cardTitle}>Gói dịch vụ</h3>
+              </div>
+              <div className={styles.infoCardContent}>
+                <div className={`${styles.infoBadge} ${styles.subscriptionBadge}`}>
+                  {dashboardData.subscription.name}
+                </div>
+                <p className={styles.infoText}>Phí: {formatCurrency(dashboardData.subscription.monthlyFee)}/tháng</p>
+                <Link to="/app/doctor/packages" className={styles.infoLink}>
+                  Nâng cấp
+                </Link>
+              </div>
             </div>
+          )}
+          {!isDashboardLoading && dashboardData?.salary && (
+            <div className={`${styles.card} ${styles.infoCard}`}>
+              <div className={styles.cardHeader}>
+                <h3 className={styles.cardTitle}>Lương gần nhất</h3>
+              </div>
+              <div className={styles.infoCardContent}>
+                <div
+                  className={`${styles.infoBadge} ${dashboardData.salary.status === "Paid" ? styles.salaryPaid : styles.salaryPending}`}
+                >
+                  {dashboardData.salary.status}
+                </div>
+                <p className={styles.infoText}>{formatCurrency(dashboardData.salary.netSalary)}</p>
+                <span className={styles.infoSubtext}>
+                  Kỳ: {new Date(dashboardData.salary.periodStartDate).toLocaleDateString("vi-VN")} -{" "}
+                  {new Date(dashboardData.salary.periodEndDate).toLocaleDateString("vi-VN")}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className={`${styles.card} ${styles.quickActionsCard}`}>
+          <div className={styles.cardHeader}>
             <h3 className={styles.cardTitle}>Thao tác nhanh</h3>
           </div>
-          <div className={styles.quickActions}>
-            <Link to="/app/doctor/schedule" className={styles.actionBtn}>
-              <i className="bi bi-calendar-plus"></i>
-              <span>Quản lý lịch</span>
+          <div className={styles.quickActionsGrid}>
+            <Link to="/app/doctor/appointments" className={styles.actionItem}>
+              <i className="bi bi-calendar-week"></i>
+              <span>Lịch hẹn</span>
             </Link>
-            <Link to="/app/doctor/appointments" className={styles.actionBtn}>
-              <i className="bi bi-file-text"></i>
-              <span>Xem lịch hẹn</span>
-            </Link>
-            <Link to="/app/doctor/patients" className={styles.actionBtn}>
-              <i className="bi bi-chat-dots"></i>
+            <Link to="/app/doctor/patients" className={styles.actionItem}>
+              <i className="bi bi-people"></i>
               <span>Bệnh nhân</span>
             </Link>
-            <Link to="/app/doctor/feedback" className={styles.actionBtn}>
-              <i className="bi bi-graph-up"></i>
-              <span>Xem phản hồi</span>
+            <Link to="/app/doctor/wallet" className={styles.actionItem}>
+              <i className="bi bi-wallet"></i>
+              <span>Doanh thu</span>
             </Link>
-          </div>
-        </div>
-
-        {/* Performance Chart */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div className={styles.cardIcon}>
-              <i className="bi bi-bar-chart"></i>
-            </div>
-            <h3 className={styles.cardTitle}>Hiệu suất tuần này</h3>
-            <div className={styles.chartActions}>
-              <button className={`${styles.chartBtn} ${styles.active}`}>Tuần</button>
-              <button className={styles.chartBtn}>Tháng</button>
-            </div>
-          </div>
-          <div className={styles.chartContent}>
-            <div className={styles.chartPlaceholder}>
-              <i className="bi bi-bar-chart"></i>
-              <p>Biểu đồ hiệu suất</p>
-            </div>
+            <Link to="/app/doctor/profile" className={styles.actionItem}>
+              <i className="bi bi-person-circle"></i>
+              <span>Hồ sơ</span>
+            </Link>
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default DoctorDashboard;
+export default DoctorDashboard

@@ -54,6 +54,7 @@ namespace Medix.API.Configurations
 
             services.AddScoped<IMedicationRepository, MedicationRepository>();
             services.AddScoped<IDoctorRegistrationFormRepository, DoctorRegistrationFormRepository>();
+            services.AddScoped<IDoctorDashboardRepository, DoctorDashboardRepository>();
 
 
         }
@@ -90,6 +91,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IMedicationService, MedicationService>();
 
             services.AddScoped<IDoctorRegistrationFormService, DoctorRegistrationFormService>();
+            services.AddScoped<IDoctorDashboardService, DoctorDashboardService>();
 
         }
 

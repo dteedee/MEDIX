@@ -155,8 +155,6 @@ export function App() {
                     <Route path="services" element={<ServicePackageManagement />} />
                     <Route path="commissions" element={<CommissionManagement />} />
                     <Route path="feedback" element={<FeedbackManagement />} />
-                    <Route path='doctor-profiles' element={<DoctorProfileList />} />
-                    <Route path='doctor-profiles/details/:id' element={<DoctorProfileDetails />} />
                   </Route>
 
                   {/* ---------- Patient routes ---------- */}

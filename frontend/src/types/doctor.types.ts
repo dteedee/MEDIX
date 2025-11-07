@@ -196,3 +196,14 @@ export interface DoctorList {
   totalPages: number;
   items: DoctorDto[];
 }
+
+export interface DoctorSalary{
+  id: string;
+  periodStartDate: string;
+  periodEndDate: string;
+  totalAppointments: number;
+  totalEarnings: number;
+  commissionDeductions: number;
+  netSalary: number;
+  paidAt: string;
+}

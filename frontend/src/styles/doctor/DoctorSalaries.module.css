@@ -1,0 +1,144 @@
+/* Main Content */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px 60px;
+}
+
+.page-title {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 40px;
+    color: #000;
+}
+
+/* Salary list */
+.salaries-section {
+    margin-top: 50px;
+}
+
+.section-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 35px;
+    color: #000;
+}
+
+.salaries {
+    position: relative;
+    padding-left: 40px;
+}
+
+.salaries::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    background: #0066b3;
+}
+
+.salaries-item {
+    position: relative;
+    margin-bottom: 40px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.salaries-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.salaries-dot {
+    position: absolute;
+    left: -36px;
+    top: 5px;
+    width: 18px;
+    height: 18px;
+    background: #0066b3;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px #0066b3;
+}
+
+.salaries-date {
+    font-size: 16px;
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 12px;
+}
+
+.salaries-detail {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.salaries-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.salaries-row:last-child {
+    margin-bottom: 0;
+}
+
+.salaries-label {
+    font-weight: 600;
+    color: #000;
+}
+
+.salaries-value {
+    color: #4a4a4a;
+}
+
+.final-record {
+    font-size: 14px;
+    color: #4a4a4a;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+}
+
+.errorMessage {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+  color: #c53030;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  border: 1px solid #f56565;
+  font-weight: 500;
+  animation: slideInDown 0.3s ease-out;
+}
+
+.errorMessage i {
+  font-size: 18px;
+}
+
+.successMessage {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+  color: #2f855a;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  border: 1px solid #48bb78;
+  font-weight: 500;
+  animation: slideInDown 0.3s ease-out;
+}
+
+.successMessage i {
+  font-size: 18px;
+}

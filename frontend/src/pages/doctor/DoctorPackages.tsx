@@ -1,23 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import PlaceholderPage from './PlaceholderPage';
 import serviceTierService from '../../services/serviceTierService';
 import { TierListPresenter } from '../../types/serviceTier.types';
 import styles from '../../styles/doctor/DoctorPackage.module.css';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 import { useToast } from '../../contexts/ToastContext';
+import { LoadingSpinner } from '../../components/ui';
 
 const DoctorPackages: React.FC = () => {
   const { showToast } = useToast();
 
+  const [pageLoading, setPageLoading] = useState(true);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+
   const [data, setData] = useState<TierListPresenter | null>(null);
 
-  const [showConfirmation, setShowConfirmation] = useState(false);
   const [tierName, setTierName] = useState<string>("");
   const [tierId, setTierId] = useState<string>("");
 
   useEffect(() => {
     (async () => {
       await fetchDisplayedList();
+      setPageLoading(false);
     })();
   }, []);
 
@@ -39,7 +42,7 @@ const DoctorPackages: React.FC = () => {
   const upgrade = async () => {
     try {
       await serviceTierService.upgradePackage(tierId);
-      showToast(`Mua gói ${tierName} thành công}!`, 'success');
+      showToast(`Mua gói ${tierName} thành công!`, 'success');
     }
     catch (error: any) {
       if (error.response?.status === 400) {
@@ -52,13 +55,37 @@ const DoctorPackages: React.FC = () => {
   }
 
   const handleUpgrade = async () => {
+    setPageLoading(true);
     await upgrade();
     await fetchDisplayedList();
+    setPageLoading(false);
     setShowConfirmation(false);
+  }
+
+  if (pageLoading) {
+    return (
+      <div className={styles.loading}>
+        <div className={styles.loadingContainer}>
+          <LoadingSpinner />
+        </div>
+      </div>
+    );
   }
 
   return (
     <>
+      {/* Header */}
+      <div className={styles.header}>
+        <div className={styles.headerLeft}>
+        </div>
+        <div className={styles.balance}>
+          <div className={styles.balance}>
+            <i className="bi bi-cash"></i>
+            <span>{data?.balance}</span>
+          </div>
+        </div>
+      </div>
+
       <div className={styles.cardRowWrapper}>
         {data?.list.map((item) => (
           <div className="card text-dark bg-white shadow-sm h-100" style={{ width: '18rem' }}>
@@ -81,7 +108,7 @@ const DoctorPackages: React.FC = () => {
                 {data.currentTierId === item.id ? (
                   <span>Đang sở hữu</span>
                 ) : (
-                  <button onClick={() => handleShowConfirmation(item.name, item.id)} className="btn btn-primary px-4">Choose Package</button>
+                  <button onClick={() => handleShowConfirmation(item.name, item.id)} className="btn btn-primary px-4">Mua</button>
                 )}
               </div>
             </div>
@@ -92,7 +119,7 @@ const DoctorPackages: React.FC = () => {
         isOpen={showConfirmation}
         title={`Mua gói ${tierName}`}
         message={'Gói sẽ được làm mới mỗi tháng và sẽ sử dụng số tiền trong ví của bạn để thanh toán.'}
-        onConfirm={() => handleUpgrade()} 
+        onConfirm={() => handleUpgrade()}
         onCancel={() => setShowConfirmation(false)} />
     </>
   );

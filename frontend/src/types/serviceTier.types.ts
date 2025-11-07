@@ -8,4 +8,5 @@ export interface ServiceTierDto{
 export interface TierListPresenter{
     list: ServiceTierDto[];
     currentTierId: string;
+    balance: number;
 }

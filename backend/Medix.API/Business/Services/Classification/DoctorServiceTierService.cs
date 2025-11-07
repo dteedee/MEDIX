@@ -42,11 +42,13 @@ namespace Medix.API.Business.Services.Classification
         {
             var doctor = await _doctorRepository.GetDoctorByUserIdAsync(userId);
             var list = await _serviceTierRepository.GetActiveTiersAsync();
+            var balance = await _walletRepository.GetWalletBalanceAsync(userId);
 
             return new ServiceTierPresenter
             {
                 ServiceTierList = list.Where(st => st.PriorityBoost >= doctor?.ServiceTier?.PriorityBoost).ToList(),
-                CurrentTierId = doctor?.ServiceTierId
+                CurrentTierId = doctor?.ServiceTierId,
+                Balance = balance,
             };
         }
 

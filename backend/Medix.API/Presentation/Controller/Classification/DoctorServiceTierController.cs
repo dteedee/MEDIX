@@ -34,6 +34,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     return Unauthorized(new { Message = "User ID not found in token" });
                 }
                 var userId = Guid.Parse(userIdClaim.Value);
+
                 var presenter = await _doctorServiceTierService.GetDisplayedTierForDoctor(userId);
                 var list = presenter.ServiceTierList.Select(st => new
                 {
@@ -42,7 +43,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     st.MonthlyPrice,
                     st.Features
                 });
-                return Ok(new { list, presenter.CurrentTierId });
+                return Ok(new { list, presenter.CurrentTierId, presenter.Balance });
             }
             catch (Exception ex)
             {

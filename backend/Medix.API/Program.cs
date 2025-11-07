@@ -1,22 +1,11 @@
-using Medix.API.Business.Interfaces.Classification;
-using Medix.API.Business.Interfaces.Community;
-using Medix.API.Business.Interfaces.UserManagement;
-using Medix.API.Business.Services.Classification;
-using Medix.API.Business.Services.Community;
-using Medix.API.Business.Services.UserManagement;
-using Medix.API.Business.Validators;
+using Hangfire;
 using Medix.API.Configurations;
 using Medix.API.DataAccess;
-using Medix.API.DataAccess.Interfaces.Classification;
-using Medix.API.DataAccess.Interfaces.UserManagement;
-using Medix.API.DataAccess.Repositories.Classification;
-using Medix.API.DataAccess.Repositories.UserManagement;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Net.payOS;
-using System;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,6 +25,12 @@ PayOS payOS = new PayOS(configuration["Environment:PAYOS_CLIENT_ID"] ?? throw ne
                     configuration["Environment:PAYOS_API_KEY"] ?? throw new Exception("Cannot find environment"),
                     configuration["Environment:PAYOS_CHECKSUM_KEY"] ?? throw new Exception("Cannot find environment"));
 builder.Services.AddSingleton(payOS);
+
+// ================= HangFire =================
+builder.Services.AddHangfire(config =>
+    config.UseSqlServerStorage(builder.Configuration.GetConnectionString("MyCnn")));
+
+builder.Services.AddHangfireServer();
 
 // ================= CORS =================
 builder.Services.AddCors(options =>
@@ -144,6 +139,8 @@ app.UseStaticFiles();
 
 // Middleware xử lý exception toàn cục
 app.UseMiddleware<Medix.API.Presentation.Middleware.ExceptionHandlingMiddleware>();
+
+app.UseHangfireDashboard(); // Optional: enables the dashboard at /hangfire
 
 app.UseAuthentication();
 app.UseAuthorization();

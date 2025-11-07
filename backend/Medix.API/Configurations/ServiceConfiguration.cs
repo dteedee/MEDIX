@@ -50,7 +50,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IRefArticleStatusRepository, RefArticleStatusRepository>();
             services.AddScoped<IDoctorRegistrationFormRepository, DoctorRegistrationFormRepository>();
             services.AddScoped<IDoctorSalaryRepository, DoctorSalaryRepository>();
-
+            services.AddScoped<IServiceTierSubscriptionsRepository,  ServiceTierSubscriptionsRepository>();
         }
 
         private static void RegisterServices(IServiceCollection services)
@@ -84,6 +84,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IDoctorScheduleOverrideService, DoctorScheduleOverrideService>();
             services.AddScoped<IDoctorRegistrationFormService, DoctorRegistrationFormService>();
             services.AddScoped<IDoctorSalaryService, DoctorSalaryService>();
+            services.AddScoped<IDoctorServiceTierService, DoctorServiceTierService>();
         }
     }
 }

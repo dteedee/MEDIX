@@ -1,5 +1,6 @@
 ﻿using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medix.API.DataAccess.Repositories.Classification
 {
@@ -18,14 +19,14 @@ namespace Medix.API.DataAccess.Repositories.Classification
             await _context.SaveChangesAsync();
             return wallet;
         }
-        public Task<bool> DecreaseWalletBalanceAsync(Guid userId, decimal amount)
+        public async Task<bool> DecreaseWalletBalanceAsync(Guid userId, decimal amount)
         {
-            var wallet = _context.Wallets.FirstOrDefault(w => w.UserId == userId);
+            var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == userId);
           
             wallet.Balance -= amount;
             _context.Wallets.Update(wallet);
-            _context.SaveChangesAsync();
-            return Task.FromResult(true);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         public Task<bool> DeleteWalletBalanceAsync(Guid userId, decimal amount)
@@ -33,9 +34,10 @@ namespace Medix.API.DataAccess.Repositories.Classification
             throw new NotImplementedException();
         }
 
-        public Task<decimal> GetWalletBalanceAsync(Guid userId)
+        public async Task<decimal> GetWalletBalanceAsync(Guid userId)
         {
-          return Task.FromResult(_context.Wallets.FirstOrDefault(w => w.UserId == userId).Balance);
+            var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == userId);
+            return (wallet == null ? 0 : wallet.Balance);
         }
 
         public Task<Wallet> GetWalletByUserIdAsync(Guid userId)

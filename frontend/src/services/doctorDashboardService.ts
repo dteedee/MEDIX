@@ -1,119 +1,86 @@
 import { apiClient } from "../lib/apiClient";
 
-interface DoctorDashboardStats {
-  totalAppointments: number;
+// --- NEW TYPE DEFINITIONS TO MATCH THE API RESPONSE ---
+
+interface DashboardSummary {
   todayAppointments: number;
-  totalPatients: number;
-  monthlyEarnings: number;
+  todayRevenue: number;
+  monthRevenue: number;
+  totalRevenue: number;
   averageRating: number;
-  totalReviews: number;
 }
 
-interface UpcomingAppointment {
-  id: string;
-  patientName: string;
-  patientAvatar?: string;
-  appointmentTime: string;
-  appointmentDate: string;
-  serviceType: string;
+interface RegularSchedule {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+}
+
+interface ScheduleOverride {
+  overrideDate: string;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+  overrideType: boolean;
+  reason: string;
+}
+
+interface DashboardSchedule {
+  regular: RegularSchedule[];
+  overrides: ScheduleOverride[];
+}
+
+interface DashboardSubscription {
+  name: string;
+  features: string;
+  monthlyFee: number;
+}
+
+interface DashboardSalary {
+  periodStartDate: string;
+  periodEndDate: string;
+  netSalary: number;
   status: string;
 }
 
-interface RecentPatient {
-  id: string;
-  name: string;
-  avatar?: string;
-  lastVisit: string;
-  diagnosis: string;
+interface DashboardWallet {
+  balance: number;
+}
+
+interface DashboardReviewItem {
   rating: number;
+  comment: string;
+  patientName: string;
+  createdAt: string;
+}
+
+interface DashboardReview {
+  averageRating: number;
+  recent: DashboardReviewItem[];
+}
+
+interface DoctorDashboardData {
+  summary: DashboardSummary;
+  schedule: DashboardSchedule;
+  subscription: DashboardSubscription | null;
+  wallet: DashboardWallet | null;
+  salary: DashboardSalary | null;
+  reviews: DashboardReview;
+  campaigns: any[]; // Define campaign type if needed
 }
 
 class DoctorDashboardService {
-  async getDashboardStats(): Promise<DoctorDashboardStats> {
+  /**
+   * Fetches all dashboard data for the currently logged-in doctor from a single endpoint.
+   */
+  async getDashboard(): Promise<DoctorDashboardData> {
     try {
-      const response = await apiClient.get<DoctorDashboardStats>('/doctor/dashboard/stats');
+      // The API now uses a consolidated endpoint. The backend determines the doctor via auth token.
+      const response = await apiClient.get<DoctorDashboardData>('/Dashboard/doctor');
       return response.data;
     } catch (error: any) {
-      console.error('Get doctor dashboard stats error: ', error);
-      throw this.handleApiError(error);
-    }
-  }
-
-  async getUpcomingAppointments(): Promise<UpcomingAppointment[]> {
-    try {
-      const response = await apiClient.get<UpcomingAppointment[]>('/doctor/dashboard/upcoming-appointments');
-      return response.data;
-    } catch (error: any) {
-      console.error('Get upcoming appointments error: ', error);
-      throw this.handleApiError(error);
-    }
-  }
-
-  async getRecentPatients(): Promise<RecentPatient[]> {
-    try {
-      const response = await apiClient.get<RecentPatient[]>('/doctor/dashboard/recent-patients');
-      return response.data;
-    } catch (error: any) {
-      console.error('Get recent patients error: ', error);
-      throw this.handleApiError(error);
-    }
-  }
-
-  async getAppointmentsByDateRange(startDate: string, endDate: string): Promise<any[]> {
-    try {
-      const response = await apiClient.get<any[]>('/doctor/appointments', {
-        params: {
-          startDate,
-          endDate
-        }
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error('Get appointments by date range error: ', error);
-      throw this.handleApiError(error);
-    }
-  }
-
-  async getPatientList(page: number = 1, pageSize: number = 10): Promise<any> {
-    try {
-      const response = await apiClient.get<any>('/doctor/patients', {
-        params: {
-          page,
-          pageSize
-        }
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error('Get patient list error: ', error);
-      throw this.handleApiError(error);
-    }
-  }
-
-  async getEarningsReport(period: 'week' | 'month' | 'year'): Promise<any> {
-    try {
-      const response = await apiClient.get<any>('/doctor/earnings', {
-        params: {
-          period
-        }
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error('Get earnings report error: ', error);
-      throw this.handleApiError(error);
-    }
-  }
-
-  async getFeedbackList(page: number = 1, pageSize: number = 10): Promise<any> {
-    try {
-      const response = await apiClient.get<any>('/doctor/feedback', {
-        params: {
-          page,
-          pageSize
-        }
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error('Get feedback list error: ', error);
+      console.error('Error fetching doctor dashboard data:', error);
       throw this.handleApiError(error);
     }
   }

@@ -123,7 +123,7 @@
   padding: 24px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   position: relative;
-  overflow: hidden;
+  overflow: hidden; 
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -244,7 +244,7 @@
   background: white;
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); 
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -315,7 +315,7 @@
   background: #f8f9fa;
   border-radius: 12px;
   transition: background 0.2s ease;
-  text-decoration: none;
+  text-decoration: none; 
 }
 
 .appointmentItem:hover {
@@ -406,7 +406,7 @@
   background: #f8f9fa;
   border-radius: 12px;
   transition: background 0.2s ease;
-  text-decoration: none;
+  text-decoration: none; 
 }
 
 .patientItem:hover {
@@ -482,7 +482,7 @@
   border: none;
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s ease; 
   color: #4a5568;
   text-decoration: none;
 }

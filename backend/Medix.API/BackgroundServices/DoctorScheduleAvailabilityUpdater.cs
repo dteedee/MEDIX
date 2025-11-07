@@ -19,6 +19,15 @@ namespace Medix.API.BackgroundServices
         {
             _logger.LogInformation("DoctorScheduleAvailabilityUpdater started.");
 
+            try
+            {
+                await UpdateIsAvailableAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while running initial update on startup.");
+            }
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 var now = DateTime.Now;
@@ -27,18 +36,21 @@ namespace Medix.API.BackgroundServices
 
                 _logger.LogInformation("Next update scheduled at {NextRun}", nextRun);
 
-                // chạy job ngay nếu khởi động sau 1h sáng
+                // Nếu server khởi động sau 1h sáng → chạy lại vào 1h sáng ngày kế
                 if (delay.TotalMilliseconds < 0)
                 {
                     nextRun = DateTime.Today.AddDays(1).AddHours(1);
                     delay = nextRun - now;
                 }
 
-                await Task.Delay(delay, stoppingToken);
-
                 try
                 {
+                    await Task.Delay(delay, stoppingToken);
                     await UpdateIsAvailableAsync();
+                }
+                catch (TaskCanceledException)
+                {
+                    // ignore stop event
                 }
                 catch (Exception ex)
                 {
@@ -47,12 +59,15 @@ namespace Medix.API.BackgroundServices
             }
         }
 
+
         private async Task UpdateIsAvailableAsync()
         {
             using var scope = _serviceProvider.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<MedixContext>();
 
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var vietnamTime = DateTime.UtcNow.AddHours(7);
+            var today = DateOnly.FromDateTime(vietnamTime);
+
 
             var outdated = await db.DoctorScheduleOverrides
                 .Where(x => x.OverrideDate < today && x.IsAvailable == true)

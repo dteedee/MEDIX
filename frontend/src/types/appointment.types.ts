@@ -1,3 +1,20 @@
+export interface CreateAppointmentDto {
+  patientId?: string;
+  doctorId?: string;
+  aiSymptomAnalysisId?: string;
+  appointmentStartTime?: string; // ISO DateTime
+  appointmentEndTime?: string; // ISO DateTime
+  durationMinutes?: number;
+  consultationFee?: number;
+  platformFee?: number;
+  discountAmount?: number;
+  totalAmount?: number;
+  statusCode?: string;
+  paymentStatusCode?: string;
+  paymentMethodCode?: string;
+  medicalInfo?: string;
+}
+
 export interface Appointment {
   id: string;
   patientName: string;

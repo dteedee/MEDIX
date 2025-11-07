@@ -1,8 +1,10 @@
-﻿namespace Medix.API.Models.DTOs.Doctor
+﻿using Medix.API.Models.Entities;
+
+namespace Medix.API.Models.DTOs.Doctor
 {
     public class DoctorProfileDto
     {
-        public string? doctorID { get; set; }
+        public Guid? doctorID { get; set; }
 
        public string? AvatarUrl { get; set; }
         public string FullName { get; set; }
@@ -16,6 +18,8 @@
         public List<ReviewDto>? Reviews { get; set; }
         public List<DoctorScheduleDto>? Schedules { get; set; }
         public List<DoctorScheduleOverrideDto>? ScheduleOverride { get; set; }
+
+        public List<AppointmentBookedDto> appointmentBookedDtos { get; set; }
     }
 
     public class ReviewDto
@@ -24,7 +28,11 @@
         public string? Comment { get; set; }
         public string? Date { get; set; }
     }
-
+    public class AppointmentBookedDto
+    {
+        public DateTime? StartTime { get; set; }
+        public DateTime? EndTime { get; set; }
+    }
     public class DoctorScheduleDto
     {
         public Guid Id { get; set; }

@@ -19,9 +19,9 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
             return walletTransaction;
         }
 
-        public Task<List<WalletTransaction>> GetTransactionsByWalletIdAsync(Guid walletId)
+        public async Task<List<WalletTransaction>> GetTransactionsByWalletIdAsync(Guid walletId)
         {
-         return  _context.WalletTransactions
+         return await  _context.WalletTransactions
                 .Where(x => x.WalletId == walletId)
                 .OrderByDescending(x => x.TransactionDate)
                 .ToListAsync();

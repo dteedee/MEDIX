@@ -5,6 +5,10 @@ import { DoctorProfileDto, ServiceTierWithPaginatedDoctorsDto, DoctorTypeDegreeD
 import { Header } from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import paymentService from "../../services/paymentService";
+import promotionService from "../../services/promotionService";
+import { appointmentService } from "../../services/appointmentService";
+import { PromotionDto } from "../../types/promotion.types";
+import { CreateAppointmentDto } from "../../types/appointment.types";
 import styles from '../../styles/doctor/doctor-details.module.css';
 import bookingStyles from '../../styles/patient/DoctorBookingList.module.css';
 import DoctorRegistrationFormService from "../../services/doctorRegistrationFormService";
@@ -15,8 +19,15 @@ function DoctorDetails() {
     const [loading, setLoading] = useState(true);
     
     // Booking states
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-    const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);    
+    const [selectedTimeSlot, setSelectedTimeSlot] = useState<{
+        display: string;
+        type: 'regular' | 'override';
+        reason?: string;
+        id?: string;
+        startTime: string;
+        endTime: string;
+    } | null>(null);
     const [availableTimeSlots, setAvailableTimeSlots] = useState<Array<{
         display: string;
         type: 'regular' | 'override';
@@ -31,6 +42,12 @@ function DoctorDetails() {
     });
     const [showPaymentButton, setShowPaymentButton] = useState(false);
     const [isCreatingPayment, setIsCreatingPayment] = useState(false);
+    const [promotionCode, setPromotionCode] = useState<string>('');
+    const [appliedPromotion, setAppliedPromotion] = useState<PromotionDto | null>(null);
+    const [promotionError, setPromotionError] = useState<string>('');
+    const [isCheckingPromotion, setIsCheckingPromotion] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [pendingBookingAction, setPendingBookingAction] = useState<'wallet' | 'payos' | null>(null);
 
     const { username } = useParams();
     const [searchParams] = useSearchParams();
@@ -76,7 +93,7 @@ function DoctorDetails() {
     };
 
     // Function to handle booking confirmation with login check
-    const handleBookingConfirm = () => {
+    const handleBookingConfirm = async () => {
         if (!profileData || !selectedDate || !selectedTimeSlot) return;
         
         if (!checkUserLogin()) {
@@ -100,29 +117,314 @@ function DoctorDetails() {
             }
         }
         
-        setShowPaymentButton(true);
+        // Hiển thị modal xác nhận
+        setPendingBookingAction('wallet');
+        setShowConfirmModal(true);
+    };
+    
+    // Function to proceed with wallet booking after confirmation
+    const proceedWithWalletBooking = async () => {
+        if (!profileData || !selectedDate || !selectedTimeSlot) return;
+        
+        setShowConfirmModal(false);
+        setPendingBookingAction(null);
+        
+        // Proceed to create appointment
+        setIsCreatingPayment(true);
+        
+        try {
+            // LẤY GIỜ TỪ DISPLAY STRING thay vì từ doctor schedule
+            const displayTime = selectedTimeSlot.display;
+            const timeParts = displayTime.split(' - ');
+            
+            if (timeParts.length !== 2) {
+                alert('Định dạng giờ không hợp lệ');
+                setIsCreatingPayment(false);
+                return;
+            }
+            
+            const [startTime, endTime] = timeParts;
+            
+            // Create DateTime from selected date and time
+            const appointmentStart = new Date(selectedDate);
+            const startTimeParts = startTime.trim().split(':');
+            const startHour = parseInt(startTimeParts[0], 10);
+            const startMinute = parseInt(startTimeParts[1], 10);
+            appointmentStart.setHours(startHour, startMinute, 0, 0);
+            
+            const appointmentEnd = new Date(selectedDate);
+            const endTimeParts = endTime.trim().split(':');
+            const endHour = parseInt(endTimeParts[0], 10);
+            const endMinute = parseInt(endTimeParts[1], 10);
+            appointmentEnd.setHours(endHour, endMinute, 0, 0);
+            
+            // Calculate duration in minutes
+            const durationMinutes = Math.round((appointmentEnd.getTime() - appointmentStart.getTime()) / (1000 * 60));
+            
+            // Format datetime theo local timezone
+            const formatLocalDateTime = (date: Date): string => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                const seconds = String(date.getSeconds()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+            };
+            
+            // Calculate fees
+            const consultationFee = profileData.consulationFee || 0;
+            const finalPrice = calculateFinalPrice();
+            const discountAmount = appliedPromotion ? (consultationFee - finalPrice) : 0;
+            const platformFee = 0; // Có thể tính theo % nếu cần
+            const totalAmount = finalPrice + platformFee;
+                
+            // Create appointment DTO
+            const appointmentDto: CreateAppointmentDto = {
+                doctorId: profileData.doctorID,
+                appointmentStartTime: formatLocalDateTime(appointmentStart),
+                appointmentEndTime: formatLocalDateTime(appointmentEnd),
+                durationMinutes: durationMinutes,
+                consultationFee: consultationFee,
+                platformFee: platformFee,
+                discountAmount: discountAmount,
+                totalAmount: totalAmount,
+                // Các field khác sẽ được set ở backend
+            };
+           
+            console.log('Creating appointment:', appointmentDto);
+            
+            // Call API
+            const createdAppointment = await appointmentService.createAppointment(appointmentDto);
+            
+            console.log('Appointment created:', createdAppointment);
+            
+            // Success - redirect to appointments page
+            alert('Đặt lịch thành công! Vui lòng kiểm tra email để xác nhận.');
+            navigate('/app/patient/appointments');
+            
+        } catch (error: any) {
+            console.error('Error creating appointment:', error);
+            
+            let errorMessage = 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
+            
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.response?.status === 400) {
+                errorMessage = 'Thông tin đặt lịch không hợp lệ. Vui lòng kiểm tra lại.';
+            } else if (error.response?.status === 401) {
+                errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+                navigate('/login');
+            }
+            
+            alert(errorMessage);
+        } finally {
+            setIsCreatingPayment(false);
+        }
+    };
+
+    // Function to apply promotion code
+    const handleApplyPromotion = async () => {
+        if (!promotionCode.trim()) {
+            setPromotionError('Vui lòng nhập mã khuyến mãi');
+            return;
+        }
+
+        setIsCheckingPromotion(true);
+        setPromotionError('');
+
+        try {
+            const promotion = await promotionService.getPromotionByCode(promotionCode.trim());
+            
+            if (!promotion) {
+                setPromotionError('Mã khuyến mãi không tồn tại');
+                setAppliedPromotion(null);
+                return;
+            }
+
+            // Check if promotion is active
+            if (!promotion.isActive) {
+                setPromotionError('Mã khuyến mãi đã hết hạn hoặc không còn hiệu lực');
+                setAppliedPromotion(null);
+                return;
+            }
+
+            // Check if promotion is within valid date range
+            const now = new Date();
+            const startDate = new Date(promotion.startDate);
+            const endDate = new Date(promotion.endDate);
+
+            if (now < startDate || now > endDate) {
+                setPromotionError('Mã khuyến mãi không trong thời gian sử dụng');
+                setAppliedPromotion(null);
+                return;
+            }
+
+            // Check if promotion has reached max usage
+            if (promotion.maxUsage && promotion.usedCount >= promotion.maxUsage) {
+                setPromotionError('Mã khuyến mãi đã hết lượt sử dụng');
+                setAppliedPromotion(null);
+                return;
+            }
+
+            // Success - apply promotion
+            setAppliedPromotion(promotion);
+            setPromotionError('');
+        } catch (error) {
+            console.error('Error applying promotion:', error);
+            setPromotionError('Có lỗi xảy ra khi kiểm tra mã khuyến mãi');
+            setAppliedPromotion(null);
+        } finally {
+            setIsCheckingPromotion(false);
+        }
+    };
+
+    // Function to calculate final price with promotion
+    const calculateFinalPrice = (): number => {
+        if (!profileData?.consulationFee) return 0;
+        
+        const basePrice = Number(profileData.consulationFee);
+        
+        if (!appliedPromotion) return basePrice;
+
+        if (appliedPromotion.discountType === 'Percentage') {
+            const discount = (basePrice * appliedPromotion.discountValue) / 100;
+            return basePrice - discount;
+        } else if (appliedPromotion.discountType === 'FixedAmount') {
+            return Math.max(0, basePrice - appliedPromotion.discountValue);
+        }
+
+        return basePrice;
     };
 
     // Function to create payment link using service
     const handleCreatePaymentLink = async () => {
         if (!profileData || !selectedDate || !selectedTimeSlot) return;
         
+        // Hiển thị modal xác nhận
+        setPendingBookingAction('payos');
+        setShowConfirmModal(true);
+    };
+    
+    // Function to proceed with PayOS booking after confirmation
+    const proceedWithPayOSBooking = async () => {
+        if (!profileData || !selectedDate || !selectedTimeSlot) return;
+        
+        setShowConfirmModal(false);
+        setPendingBookingAction(null);
+        
         setIsCreatingPayment(true);
         
         try {
-            const rawPrice: unknown = profileData.consultationFee ?? profileData.price;
-            const normalizedPrice = Number(rawPrice);
-            const finalPrice = Number.isFinite(normalizedPrice) && normalizedPrice > 0 ? normalizedPrice : 200000;
+            const finalPrice = calculateFinalPrice();
+            
+            console.log('Selected Date:', selectedDate);
+            console.log('Selected Date Details - Year:', selectedDate.getFullYear(), 'Month:', selectedDate.getMonth() + 1, 'Date:', selectedDate.getDate());
+            console.log('Selected Time Slot Object:', selectedTimeSlot);
+            
+            // LẤY GIỜ TỪ DISPLAY STRING (hiển thị trên UI) thay vì từ doctor schedule
+            // Display format: "14:00 - 14:50"
+            const displayTime = selectedTimeSlot.display;
+            console.log('🕐 Display Time String:', displayTime);
+            
+            // Parse display string
+            const timeParts = displayTime.split(' - ');
+            if (timeParts.length !== 2) {
+                alert('Định dạng giờ không hợp lệ');
+                setIsCreatingPayment(false);
+                return;
+            }
+            
+            const [startTime, endTime] = timeParts;
+            console.log('🕐 Parsed from Display - Start Time:', startTime, 'End Time:', endTime);
+            
+            // Create DateTime from selected date and time
+            const year = selectedDate.getFullYear();
+            const month = selectedDate.getMonth(); // 0-indexed
+            const day = selectedDate.getDate();
+            
+            const appointmentStart = new Date(year, month, day);
+            const startTimeParts = startTime.trim().split(':');
+            const startHour = parseInt(startTimeParts[0], 10);
+            const startMinute = parseInt(startTimeParts[1], 10);
+            
+            console.log('📊 Creating Start DateTime - Year:', year, 'Month:', month + 1, 'Day:', day, 'Hour:', startHour, 'Minute:', startMinute);
+            
+            if (isNaN(startHour) || isNaN(startMinute)) {
+                alert(`Lỗi parse giờ bắt đầu: "${startTime}"`);
+                setIsCreatingPayment(false);
+                return;
+            }
+            
+            appointmentStart.setHours(startHour, startMinute, 0, 0);
+       
+            const appointmentEnd = new Date(year, month, day);
+            const endTimeParts = endTime.trim().split(':');
+            const endHour = parseInt(endTimeParts[0], 10);
+            const endMinute = parseInt(endTimeParts[1], 10);
+            
+            console.log('📊 Creating End DateTime - Year:', year, 'Month:', month + 1, 'Day:', day, 'Hour:', endHour, 'Minute:', endMinute);
+            
+            if (isNaN(endHour) || isNaN(endMinute)) {
+                alert(`Lỗi parse giờ kết thúc: "${endTime}"`);
+                setIsCreatingPayment(false);
+                return;
+            }
+            
+            appointmentEnd.setHours(endHour, endMinute, 0, 0);
+            
+            console.log('✅ Appointment Start (local):', appointmentStart.toString());
+            console.log('✅ Appointment End (local):', appointmentEnd.toString());
+            
+            // Format datetime theo local timezone thay vì UTC
+            // Backend cần parse datetime này và hiểu đây là giờ địa phương (GMT+7)
+            const formatLocalDateTime = (date: Date): string => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                const seconds = String(date.getSeconds()).padStart(2, '0');
+                
+                // Format: "YYYY-MM-DDTHH:mm:ss" (ISO 8601 local time)
+                return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+            };
+            
+            const appointmentStartStr = formatLocalDateTime(appointmentStart);
+            const appointmentEndStr = formatLocalDateTime(appointmentEnd);
+            
+            console.log('📤 Appointment Start (Local Format):', appointmentStartStr);
+            console.log('📤 Appointment End (Local Format):', appointmentEndStr);
 
             const itemData = paymentService.createDoctorConsultationItem(
                 profileData.fullName,
-                finalPrice
+                finalPrice,
+                profileData.doctorID, // Truyền doctorId
+                appointmentStartStr, // Gửi local datetime
+                appointmentEndStr, // Gửi local datetime
+                appliedPromotion?.code // Truyền mã khuyến mãi nếu có
             );
+            
+            console.log('Payment Item Data:', itemData);
 
             const result = await paymentService.createPaymentLink(itemData);
 
             if (result.success && result.checkoutUrl) {
+                // Lưu thông tin booking vào localStorage để tracking
+                localStorage.setItem('pendingAppointment', JSON.stringify({
+                    doctorId: profileData.doctorID,
+                    doctorName: profileData.fullName,
+                    date: selectedDate.toLocaleDateString('vi-VN'),
+                    time: selectedTimeSlot.display,
+                    amount: finalPrice
+                }));
+                
+                // Redirect đến trang thanh toán PayOS
                 paymentService.redirectToPayment(result.checkoutUrl);
+                
+                // Sau khi thanh toán thành công, PayOS sẽ redirect về returnUrl
+                // Backend sẽ xử lý webhook và tạo appointment
+                // User sẽ được redirect đến /app/patient/appointments từ returnUrl
             } else {
                 alert(result.error || 'Có lỗi xảy ra khi tạo link thanh toán.');
             }
@@ -156,9 +458,16 @@ function DoctorDetails() {
         return dateStr;
     };
 
-    // Helper function to check if two time slots overlap
+    // Helper function to check if two time slots overlap or match exactly
+    // This checks if ANY part of the time ranges overlap
     const isTimeSlotOverlap = (start1: string, end1: string, start2: string, end2: string): boolean => {
+        // Check if the slots overlap or are exactly the same
         return start1 < end2 && end1 > start2;
+    };
+    
+    // Helper function to check if a time slot is completely within another time slot
+    const isTimeSlotWithin = (innerStart: string, innerEnd: string, outerStart: string, outerEnd: string): boolean => {
+        return innerStart >= outerStart && innerEnd <= outerEnd;
     };
 
     // Get available time slots based on doctor's schedule and overrides
@@ -181,9 +490,73 @@ function DoctorDetails() {
         // Get all overrides for this specific date
         const overridesForDate = profileData.scheduleOverride?.filter(override => {
             const normalizedOverrideDate = normalizeDateString(override.overrideDate);
-            return normalizedOverrideDate === dateString && override.isAvailable;
+            return normalizedOverrideDate === dateString;
         }) || [];
         
+        // Separate overrides by type
+        // overrideType = true: Doctor works (add additional slots or modify existing)
+        // overrideType = false: Doctor doesn't work (hide specific DoctorSchedule slots)
+        // 
+        // Example scenarios:
+        // - DoctorSchedule: [08:00-08:50, 14:00-14:50, 16:00-16:50] on Monday
+        // - Override: 08:00-08:50 (overrideType: false, reason: "Nghỉ phép")
+        // - Result: Show only [14:00-14:50, 16:00-16:50] for this specific day
+        
+        // DEBUG: Log all overrides for this date
+        console.log('🔍 DEBUG - Date:', dateString);
+        console.log('🔍 DEBUG - All overrides for date:', overridesForDate);
+        console.log('🔍 DEBUG - Override types check:', overridesForDate.map(o => ({
+            startTime: o.startTime,
+            endTime: o.endTime,
+            overrideType: o.overrideType,
+            overrideTypeType: typeof o.overrideType,
+            isAvailable: o.isAvailable,
+            reason: o.reason
+        })));
+        
+        // IMPORTANT: overrideType determines the behavior
+        // - overrideType = true: Doctor WORKS (add new slots or replace existing ones)
+        //   → Must also check isAvailable = true
+        // - overrideType = false: Doctor does NOT work (block/hide regular schedule slots)
+        //   → Ignore isAvailable value, always block the time slot
+        
+        const workingOverrides = overridesForDate.filter(override => {
+            // Only add as working override if overrideType = true AND isAvailable = true
+            const overrideTypeValue = override.overrideType === true || (override.overrideType as any) === 'true';
+            const result = overrideTypeValue && override.isAvailable;
+            console.log('🔍 Checking if working override:', { 
+                overrideType: override.overrideType, 
+                isAvailable: override.isAvailable,
+                result,
+                time: `${override.startTime} - ${override.endTime}`
+            });
+            return result;
+        });
+        
+        const nonWorkingOverrides = overridesForDate.filter(override => {
+            // If overrideType = false, doctor does NOT work regardless of isAvailable
+            // This blocks regular schedule slots from showing
+            const overrideTypeValue = override.overrideType === false || 
+                                     (override.overrideType as any) === 'false' || 
+                                     override.overrideType === null ||
+                                     override.overrideType === undefined ||
+                                     (override.overrideType as any) === 0;
+            console.log('🔍 Checking if non-working override:', { 
+                overrideType: override.overrideType, 
+                overrideTypeType: typeof override.overrideType,
+                isAvailable: override.isAvailable,
+                overrideTypeValue,
+                time: `${override.startTime} - ${override.endTime}`,
+                reason: override.reason
+            });
+            return overrideTypeValue;
+        });
+        
+        console.log('✅ Working overrides (overrideType=true):', workingOverrides);
+        console.log('❌ Non-working overrides (overrideType=false):', nonWorkingOverrides);
+        console.log('❌ Non-working overrides COUNT:', nonWorkingOverrides.length);
+        console.log('📊 Total regular schedules for this day:', profileData.schedules.filter(s => s.dayOfWeek === backendDayOfWeek && s.isAvailable).length);
+         
         // Get regular schedules for this day of week
         const regularSchedules = profileData.schedules.filter(schedule => 
             schedule.dayOfWeek === backendDayOfWeek && schedule.isAvailable
@@ -198,20 +571,56 @@ function DoctorDetails() {
             id?: string; // Add ID to distinguish slots
         }> = [];
         
-        // Add regular schedules first
+        // Add regular schedules first, but exclude those blocked by nonWorkingOverrides
         regularSchedules.forEach(schedule => {
             const startTime = schedule.startTime.slice(0, 5);
             const endTime = schedule.endTime.slice(0, 5);
             
-            // Check if this regular schedule is overridden by any override
-            const isOverridden = overridesForDate.some(override => {
+            console.log('📅 Checking regular schedule:', { startTime, endTime });
+            
+            // Check if this specific DoctorSchedule time slot is blocked by overrideType = false
+            // overrideType = false means: Doctor does NOT work during this override time
+            // We need to hide ANY regular schedule that overlaps with the non-working override time
+            // 
+            // Example 1: Regular: 07:00-07:50, Override(false): 07:00-07:50 → HIDE (exact match)
+            // Example 2: Regular: 07:00-07:50, Override(false): 07:00-08:00 → HIDE (regular is within override)
+            // Example 3: Regular: 07:00-08:00, Override(false): 07:30-07:50 → HIDE (override overlaps with regular)
+            const isBlockedByNonWorking = nonWorkingOverrides.some(override => {
+                const overrideStart = override.startTime.slice(0, 5);
+                const overrideEnd = override.endTime.slice(0, 5);
+                
+                // ANY overlap should block the regular schedule
+                const overlaps = isTimeSlotOverlap(startTime, endTime, overrideStart, overrideEnd);
+                
+                console.log('  🔍 Checking against non-working override:', { 
+                    overrideStart, 
+                    overrideEnd, 
+                    overlaps,
+                    overrideType: override.overrideType,
+                    reason: override.reason 
+                });
+                
+                return overlaps;
+            });
+            
+            // Check if this regular schedule is replaced by any working override
+            // (overrideType = true can replace existing schedules with new times)
+            const isReplacedByWorking = workingOverrides.some(override => {
                 const overrideStart = override.startTime.slice(0, 5);
                 const overrideEnd = override.endTime.slice(0, 5);
                 return isTimeSlotOverlap(startTime, endTime, overrideStart, overrideEnd);
             });
             
-            // Only add if not overridden
-            if (!isOverridden) {
+            console.log('  📊 Result:', { 
+                isBlockedByNonWorking, 
+                isReplacedByWorking, 
+                willBeAdded: !isBlockedByNonWorking && !isReplacedByWorking 
+            });
+            
+            // Only add DoctorSchedule time slot if:
+            // 1. Not blocked by overrideType = false (doctor doesn't work this specific slot)
+            // 2. Not replaced by overrideType = true (doctor works different time)
+            if (!isBlockedByNonWorking && !isReplacedByWorking) {
                 allTimeSlots.push({
                     startTime,
                     endTime,
@@ -221,8 +630,11 @@ function DoctorDetails() {
             }
         });
         
-        // Add override schedules
-        overridesForDate.forEach(override => {
+        // Add working override schedules (overrideType = true)
+        // These can be additional slots or replacements for regular slots
+        // Example: Add 18:00-18:50 (new slot) or replace 08:00-08:50 with 08:30-09:30
+        console.log('➕ Adding working overrides...');
+        workingOverrides.forEach(override => {
             const startTime = override.startTime.slice(0, 5);
             const endTime = override.endTime.slice(0, 5);
             
@@ -238,6 +650,8 @@ function DoctorDetails() {
         // Sort by start time
         allTimeSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
         
+        console.log('📋 Final time slots before filtering past times:', allTimeSlots);
+        
         // Filter out past time slots if it's today
         const availableSlots = allTimeSlots.filter(slot => {
             if (isToday) {
@@ -249,8 +663,47 @@ function DoctorDetails() {
             return true;
         });
         
+        // Filter out booked appointments
+        // Check if slot overlaps with any booked appointment on this specific date
+        const bookedAppointments = profileData.appointmentBookedDtos || [];
+        const availableSlotsNotBooked = availableSlots.filter(slot => {
+            // Check if any booked appointment overlaps with this slot on this date
+            const isBooked = bookedAppointments.some(booked => {
+                if (!booked.startTime || !booked.endTime) return false;
+                
+                // Parse booked appointment datetime
+                const bookedStart = new Date(booked.startTime);
+                const bookedEnd = new Date(booked.endTime);
+                
+                // Check if booked appointment is on the same date
+                const bookedDateString = formatDateString(bookedStart);
+                if (bookedDateString !== dateString) return false;
+                
+                // Extract time from booked appointment (HH:mm format)
+                const bookedStartTime = `${String(bookedStart.getHours()).padStart(2, '0')}:${String(bookedStart.getMinutes()).padStart(2, '0')}`;
+                const bookedEndTime = `${String(bookedEnd.getHours()).padStart(2, '0')}:${String(bookedEnd.getMinutes()).padStart(2, '0')}`;
+                
+                // Check if slot overlaps with booked time
+                const overlaps = isTimeSlotOverlap(slot.startTime, slot.endTime, bookedStartTime, bookedEndTime);
+                
+                if (overlaps) {
+                    console.log('🚫 Slot blocked by booked appointment:', {
+                        slot: `${slot.startTime} - ${slot.endTime}`,
+                        booked: `${bookedStartTime} - ${bookedEndTime}`,
+                        date: bookedDateString
+                    });
+                }
+                
+                return overlaps;
+            });
+            
+            return !isBooked;
+        });
+        
+        console.log('✅ Available slots after filtering booked appointments:', availableSlotsNotBooked.length);
+        
         // Format time slots and return with metadata
-        return availableSlots.map(slot => {
+        return availableSlotsNotBooked.map(slot => {
             return {
                 display: `${slot.startTime} - ${slot.endTime}`,
                 type: slot.type,
@@ -273,38 +726,47 @@ function DoctorDetails() {
         const dateString = formatDateString(date);
         const backendDayOfWeek = convertDayOfWeek(date.getDay());
         
-        // Check if there are any available overrides for this specific date
-        const availableOverrides = profileData.scheduleOverride?.filter(override => {
+        // Check if there are any overrides for this specific date
+        const overridesForDate = profileData.scheduleOverride?.filter(override => {
             const normalizedOverrideDate = normalizeDateString(override.overrideDate);
-            return normalizedOverrideDate === dateString && override.isAvailable;
+            return normalizedOverrideDate === dateString;
         }) || [];
+        
+        // Separate overrides by type
+        const workingOverrides = overridesForDate.filter(override => {
+            const overrideTypeValue = override.overrideType === true || (override.overrideType as any) === 'true';
+            return overrideTypeValue && override.isAvailable;
+        });
+        const nonWorkingOverrides = overridesForDate.filter(override => {
+            const overrideTypeValue = override.overrideType === false || (override.overrideType as any) === 'false' || !override.overrideType;
+            return overrideTypeValue;
+        });
+        
+        // Check for working overrides (overrideType = true and isAvailable = true)
+        const availableWorkingOverrides = workingOverrides;
         
         // Check if there are regular schedules for this day
         const regularSchedules = profileData.schedules.filter(schedule => 
             schedule.dayOfWeek === backendDayOfWeek && schedule.isAvailable
         );
         
-        // Check if any regular schedule is not overridden by unavailable overrides
+        // Check if any regular schedule is available (not blocked by non-working overrides)
         const hasAvailableRegularSchedule = regularSchedules.some(schedule => {
             const startTime = schedule.startTime.slice(0, 5);
             const endTime = schedule.endTime.slice(0, 5);
             
-            // Check if this regular schedule is made unavailable by any override
-            const isOverriddenUnavailable = profileData.scheduleOverride?.some(override => {
-                const normalizedOverrideDate = normalizeDateString(override.overrideDate);
-                if (normalizedOverrideDate !== dateString) return false;
-                if (override.isAvailable) return false; // Available overrides don't block regular schedules
-                
+            // Check if this regular schedule is blocked by any non-working override
+            const isBlockedByNonWorking = nonWorkingOverrides.some(override => {
                 const overrideStart = override.startTime.slice(0, 5);
                 const overrideEnd = override.endTime.slice(0, 5);
                 return isTimeSlotOverlap(startTime, endTime, overrideStart, overrideEnd);
             });
             
-            return !isOverriddenUnavailable;
+            return !isBlockedByNonWorking;
         });
         
-        // Date is available if there are available overrides OR available regular schedules
-        return availableOverrides.length > 0 || hasAvailableRegularSchedule;
+        // Date is available if there are working overrides OR available regular schedules
+        return availableWorkingOverrides.length > 0 || hasAvailableRegularSchedule;
     };
 
     const handleDateSelect = (date: Date | null) => {
@@ -320,8 +782,15 @@ function DoctorDetails() {
         }
     };
 
-    const handleTimeSlotSelect = (timeSlot: string) => {
-        setSelectedTimeSlot(timeSlot);
+    const handleTimeSlotSelect = (slot: {
+        display: string;
+        type: 'regular' | 'override';
+        reason?: string;
+        id?: string;
+        startTime: string;
+        endTime: string;
+    }) => {
+        setSelectedTimeSlot(slot);
         setShowPaymentButton(false);
         setIsCreatingPayment(false);
     };
@@ -344,6 +813,7 @@ function DoctorDetails() {
             const override = profileData.scheduleOverride?.find(override => {
                 const normalizedOverrideDate = normalizeDateString(override.overrideDate);
                 if (normalizedOverrideDate !== dateString) return false;
+                if (override.overrideType === false) return false; // Skip non-working overrides
                 
                 const overrideStart = override.startTime.slice(0, 5);
                 const overrideEnd = override.endTime.slice(0, 5);
@@ -513,6 +983,9 @@ function DoctorDetails() {
             try {
                 setLoading(true);
                 const data = await doctorService.getDoctorProfile(username);
+                console.log('📊 Profile Data:', data);
+          
+                
                 setProfileData(data);
             } catch (error) {
                 console.error('Failed to fetch profile data:', error);
@@ -813,13 +1286,9 @@ function DoctorDetails() {
                                             <div className={styles.infoContent}>
                                                 <span className={styles.infoLabel}>Phí khám</span>
                                                 <span className={styles.infoPriceValue}>
-                                                    {(() => {
-                                                        const rawPrice: unknown = profileData.consultationFee ?? profileData.price;
-                                                        const value = Number(rawPrice);
-                                                        return Number.isFinite(value) && value > 0
-                                                            ? `${value.toLocaleString('vi-VN')}đ`
-                                                            : 'Liên hệ';
-                                                    })()}
+                                                    {profileData.consulationFee && profileData.consulationFee > 0
+                                                        ? `${Number(profileData.consulationFee).toLocaleString('vi-VN')}đ`
+                                                        : 'Liên hệ'}
                                                 </span>
                                             </div>
                                         </div>
@@ -933,26 +1402,14 @@ function DoctorDetails() {
                                                                     const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
                                                                     const isToday = new Date().toDateString() === date.toDateString();
                                                                     
-                                                                    // Check if this date has an override
-                                                                    const dateString = formatDateString(date);
-                                                                    const hasOverride = profileData?.scheduleOverride?.some(override => {
-                                                                        const normalizedOverrideDate = normalizeDateString(override.overrideDate);
-                                                                        return normalizedOverrideDate === dateString;
-                                                                    });
-                                                                    
                                                                     return (
                                                                         <button
                                                                             key={i}
-                                                                            className={`${styles.calendarDate} ${!isCurrentMonth ? styles.otherMonth : ''} ${!isAvailable ? styles.unavailable : ''} ${isSelected ? styles.selected : ''} ${isToday ? styles.today : ''} ${hasOverride ? styles.hasOverride : ''}`}
+                                                                            className={`${styles.calendarDate} ${!isCurrentMonth ? styles.otherMonth : ''} ${!isAvailable ? styles.unavailable : ''} ${isSelected ? styles.selected : ''} ${isToday ? styles.today : ''}`}
                                                                             onClick={() => isAvailable && handleDateSelect(date)}
                                                                             disabled={!isAvailable}
                                                                         >
                                                                             {date.getDate()}
-                                                                            {hasOverride && (
-                                                                                <span className={styles.overrideIndicator}>
-                                                                                    <i className="bi bi-star-fill"></i>
-                                                                                </span>
-                                                                            )}
                                                                         </button>
                                                                     );
                                                                 });
@@ -967,27 +1424,8 @@ function DoctorDetails() {
                                                             <span>Hôm nay</span>
                                                         </div>
                                                         <div className={styles.legendItem}>
-                                                            <div className={`${styles.legendColor} ${styles.overrideLegend}`}>
-                                                                <i className="bi bi-star-fill"></i>
-                                                            </div>
-                                                            <span>Có lịch bổ sung</span>
-                                                        </div>
-                                                        <div className={styles.legendItem}>
                                                             <div className={`${styles.legendColor} ${styles.unavailableLegend}`}></div>
                                                             <span>Không khả dụng</span>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    {/* Time Slot Legend */}
-                                                    <div className={styles.timeSlotLegend}>
-                                                        <div className={styles.legendTitle}>Chú thích khung giờ:</div>
-                                                        <div className={styles.legendItem}>
-                                                            <i className="bi bi-clock-fill" style={{ color: '#475569' }}></i>
-                                                            <span>Lịch thường</span>
-                                                        </div>
-                                                        <div className={styles.legendItem}>
-                                                            <i className="bi bi-star-fill" style={{ color: '#f59e0b' }}></i>
-                                                            <span>Lịch bổ sung</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1009,16 +1447,15 @@ function DoctorDetails() {
                                                         {availableTimeSlots.length > 0 ? (
                                                             <div className={styles.timeslotsGrid}>
                                                                 {availableTimeSlots.map((slot, index) => {
-                                                                    const isOverrideSlot = slot.type === 'override';
-                                                                    const isSelected = selectedTimeSlot === slot.display;
+                                                                    const isSelected = selectedTimeSlot?.id === slot.id;
                                                                     
                                                                     return (
                                                                         <button
                                                                             key={index}
-                                                                            className={`${styles.timeslot} ${isSelected ? styles.selected : ''} ${isOverrideSlot ? styles.overrideSlot : styles.regularSlot}`}
-                                                                            onClick={() => handleTimeSlotSelect(slot.display)}
+                                                                            className={`${styles.timeslot} ${isSelected ? styles.selected : ''}`}
+                                                                            onClick={() => handleTimeSlotSelect(slot)}
                                                                         >
-                                                                            <i className={`bi ${isOverrideSlot ? 'bi-star-fill' : 'bi-clock-fill'}`}></i>
+                                                                            <i className="bi bi-clock-fill"></i>
                                                                             <span className={styles.timeText}>{slot.display}</span>
                                                                         </button>
                                                                     );
@@ -1053,45 +1490,129 @@ function DoctorDetails() {
                                                         </div>
                                                         <div className={styles.summaryItem}>
                                                             <span className={styles.summaryLabel}>Giờ khám</span>
-                                                            <span className={styles.summaryValue}>{selectedTimeSlot}</span>
+                                                            <span className={styles.summaryValue}>{selectedTimeSlot.display}</span>
                                                         </div>
                                                         <div className={styles.summaryItem}>
                                                             <span className={styles.summaryLabel}>Thời gian khám</span>
-                                                            <span className={styles.summaryValue}>{getConsultationDuration(selectedTimeSlot, selectedDate)}</span>
+                                                            <span className={styles.summaryValue}>{getConsultationDuration(selectedTimeSlot.display, selectedDate)}</span>
                                                         </div>
                                                         <div className={styles.summaryItem}>
                                                             <span className={styles.summaryLabel}>Phí khám</span>
                                                             <span className={styles.summaryPrice}>
-                                                                {(() => {
-                                                                    const rawPrice: unknown = profileData.consultationFee ?? profileData.price;
-                                                                    const value = Number(rawPrice);
-                                                                    return Number.isFinite(value) && value > 0
-                                                                        ? `${value.toLocaleString('vi-VN')}đ`
-                                                                        : 'Liên hệ';
-                                                                })()}
+                                                                {profileData.consulationFee != null && profileData.consulationFee !== undefined
+                                                                    ? `${Number(profileData.consulationFee).toLocaleString('vi-VN')}đ`
+                                                                    : 'Liên hệ'}
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    {!showPaymentButton ? (
-                                                        <button className={styles.confirmButton} onClick={handleBookingConfirm}>
-                                                            <i className="bi bi-check-circle-fill"></i>
-                                                            Xác nhận đặt lịch
-                                                        </button>
-                                                    ) : (
-                                                        <button className={styles.paymentButton} onClick={handleCreatePaymentLink} disabled={isCreatingPayment}>
-                                                            {isCreatingPayment ? (
-                                                                <>
+                                                    
+                                                    {/* Promotion Code Input */}
+                                                    <div className={styles.promotionCodeSection}>
+                                                        <label htmlFor="promotionCode" className={styles.promotionLabel}>
+                                                            <i className="bi bi-tag-fill"></i>
+                                                            Mã khuyến mãi (nếu có)
+                                                        </label>
+                                                        <div className={styles.promotionInputGroup}>
+                                                            <input
+                                                                type="text"
+                                                                id="promotionCode"
+                                                                className={`${styles.promotionInput} ${promotionError ? styles.promotionInputError : ''} ${appliedPromotion ? styles.promotionInputSuccess : ''}`}
+                                                                placeholder="Nhập mã khuyến mãi"
+                                                                value={promotionCode}
+                                                                onChange={(e) => {
+                                                                    setPromotionCode(e.target.value.toUpperCase());
+                                                                    setPromotionError('');
+                                                                    setAppliedPromotion(null);
+                                                                }}
+                                                                disabled={isCheckingPromotion}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                className={styles.applyPromoButton}
+                                                                onClick={handleApplyPromotion}
+                                                                disabled={isCheckingPromotion || !promotionCode.trim()}
+                                                            >
+                                                                {isCheckingPromotion ? (
                                                                     <div className={styles.buttonSpinner}></div>
-                                                                    Đang tạo link thanh toán...
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <i className="bi bi-credit-card-fill"></i>
-                                                                    Thanh toán ngay
-                                                                </>
-                                                            )}
-                                                        </button>
+                                                                ) : (
+                                                                    'Áp dụng'
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                        
+                                                        {/* Promotion Error */}
+                                                        {promotionError && (
+                                                            <div className={styles.promotionError}>
+                                                                <i className="bi bi-exclamation-circle"></i>
+                                                                <span>{promotionError}</span>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {/* Promotion Success */}
+                                                        {appliedPromotion && (
+                                                            <div className={styles.promotionSuccess}>
+                                                                <div className={styles.promotionSuccessHeader}>
+                                                                    <i className="bi bi-check-circle-fill"></i>
+                                                                    <span className={styles.promotionSuccessTitle}>Áp dụng thành công!</span>
+                                                                </div>
+                                                                <div className={styles.promotionDetails}>
+                                                                    <p className={styles.promotionName}>{appliedPromotion.name}</p>
+                                                                    {appliedPromotion.description && (
+                                                                        <p className={styles.promotionDescription}>{appliedPromotion.description}</p>
+                                                                    )}
+                                                                    <p className={styles.promotionDiscount}>
+                                                                        Giảm: {appliedPromotion.discountType === 'Percentage' 
+                                                                            ? `${appliedPromotion.discountValue}%`
+                                                                            : `${appliedPromotion.discountValue.toLocaleString('vi-VN')}đ`}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {/* Final Price Display */}
+                                                    {appliedPromotion && profileData.consulationFee && (
+                                                        <div className={styles.finalPriceSection}>
+                                                            <div className={styles.priceBreakdown}>
+                                                                <div className={styles.priceRow}>
+                                                                    <span className={styles.priceLabel}>Phí khám gốc:</span>
+                                                                    <span className={styles.priceValue}>
+                                                                        {Number(profileData.consulationFee).toLocaleString('vi-VN')}đ
+                                                                    </span>
+                                                                </div>
+                                                                <div className={styles.priceRow}>
+                                                                    <span className={styles.priceLabel}>Giảm giá:</span>
+                                                                    <span className={styles.discountValue}>
+                                                                        -{(Number(profileData.consulationFee) - calculateFinalPrice()).toLocaleString('vi-VN')}đ
+                                                                    </span>
+                                                                </div>
+                                                                <div className={styles.priceRowTotal}>
+                                                                    <span className={styles.priceLabelTotal}>Tổng thanh toán:</span>
+                                                                    <span className={styles.priceValueTotal}>
+                                                                        {calculateFinalPrice().toLocaleString('vi-VN')}đ
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     )}
+                                                    
+                                                    <button 
+                                                        className={styles.confirmButton} 
+                                                        onClick={handleBookingConfirm}
+                                                        disabled={isCreatingPayment}
+                                                    >
+                                                        {isCreatingPayment ? (
+                                                            <>
+                                                                <div className={styles.buttonSpinner}></div>
+                                                                Đang đặt lịch...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <i className="bi bi-check-circle-fill"></i>
+                                                                Xác nhận đặt lịch
+                                                            </>
+                                                        )}
+                                                    </button>
                                                 </div>
                                             </div>
                                         )}
@@ -1169,6 +1690,113 @@ function DoctorDetails() {
                     </div>
                 </div>
             </div>
+            
+            {/* Confirmation Modal */}
+            {showConfirmModal && profileData && selectedDate && selectedTimeSlot && (
+                <div className={styles.modalOverlay} onClick={() => {
+                    setShowConfirmModal(false);
+                    setPendingBookingAction(null);
+                }}>
+                    <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.modalHeader}>
+                            <h3>
+                                <i className="bi bi-check-circle"></i>
+                                Xác nhận đặt lịch
+                            </h3>
+                            <button 
+                                className={styles.modalClose}
+                                onClick={() => {
+                                    setShowConfirmModal(false);
+                                    setPendingBookingAction(null);
+                                }}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        
+                        <div className={styles.modalBody}>
+                            <div className={styles.confirmInfo}>
+                                <div className={styles.doctorInfo}>
+                                    <i className="bi bi-person-circle"></i>
+                                    <div>
+                                        <p className={styles.label}>Bác sĩ</p>
+                                        <p className={styles.value}>{profileData.fullName}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className={styles.appointmentInfo}>
+                                    <div className={styles.infoItem}>
+                                        <i className="bi bi-calendar-event"></i>
+                                        <div>
+                                            <p className={styles.label}>Ngày khám</p>
+                                            <p className={styles.value}>{selectedDate.toLocaleDateString('vi-VN')}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className={styles.infoItem}>
+                                        <i className="bi bi-clock"></i>
+                                        <div>
+                                            <p className={styles.label}>Giờ khám</p>
+                                            <p className={styles.value}>{selectedTimeSlot.display}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className={styles.infoItem}>
+                                        <i className="bi bi-credit-card"></i>
+                                        <div>
+                                            <p className={styles.label}>Phí khám</p>
+                                            <p className={styles.valuePrice}>
+                                                {calculateFinalPrice().toLocaleString('vi-VN')}đ
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    {pendingBookingAction === 'wallet' && (
+                                        <div className={styles.paymentNote}>
+                                            <i className="bi bi-wallet2"></i>
+                                            <p>Số tiền sẽ được trừ từ ví của bạn</p>
+                                        </div>
+                                    )}
+                                    
+                                    {pendingBookingAction === 'payos' && (
+                                        <div className={styles.paymentNote}>
+                                            <i className="bi bi-credit-card-2-front"></i>
+                                            <p>Bạn sẽ được chuyển đến trang thanh toán</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className={styles.modalFooter}>
+                            <button 
+                                className={styles.btnCancel}
+                                onClick={() => {
+                                    setShowConfirmModal(false);
+                                    setPendingBookingAction(null);
+                                }}
+                            >
+                                <i className="bi bi-x-circle"></i>
+                                Hủy
+                            </button>
+                            <button 
+                                className={styles.btnConfirm}
+                                onClick={() => {
+                                    if (pendingBookingAction === 'wallet') {
+                                        proceedWithWalletBooking();
+                                    } else if (pendingBookingAction === 'payos') {
+                                        proceedWithPayOSBooking();
+                                    }
+                                }}
+                                disabled={isCreatingPayment}
+                            >
+                                <i className="bi bi-check-circle"></i>
+                                {isCreatingPayment ? 'Đang xử lý...' : 'Xác nhận đặt lịch'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             <Footer />
         </div>

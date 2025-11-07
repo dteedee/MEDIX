@@ -27,7 +27,6 @@ builder.Services.ConfigureServices();
 builder.Services.AddDbContext<MedixContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
 
-builder.Services.ConfigureServices();
 
 
 

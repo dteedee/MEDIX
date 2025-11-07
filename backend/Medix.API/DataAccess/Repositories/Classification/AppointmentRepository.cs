@@ -16,6 +16,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
         public async Task<IEnumerable<Appointment>> GetAllAsync()
         {
             return await _context.Appointments
+                 .AsNoTracking()
                 .Include(a => a.Doctor).ThenInclude(d => d.User)
                 .Include(a => a.Patient).ThenInclude(p => p.User)
                 .Include(a => a.StatusCodeNavigation)
@@ -27,6 +28,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
         public async Task<Appointment?> GetByIdAsync(Guid id)
         {
             return await _context.Appointments
+                 .AsNoTracking()
                 .Include(a => a.Doctor).ThenInclude(d => d.User)
                 .Include(a => a.Patient).ThenInclude(p => p.User)
                 .Include(a => a.StatusCodeNavigation)
@@ -71,9 +73,8 @@ namespace Medix.API.DataAccess.Repositories.Classification
         public async Task<IEnumerable<Appointment>> GetByDoctorAsync(Guid doctorId)
         {
             return await _context.Appointments
-                .Include(a => a.Patient).ThenInclude(p => p.User)
-                .Include(a => a.Doctor).ThenInclude(d => d.User)
-                .Where(a => a.DoctorId == doctorId && a.TransactionId != null)
+                 .AsNoTracking()
+                .Where(a => a.DoctorId == doctorId)
                 .OrderBy(a => a.AppointmentStartTime)
                 .ToListAsync();
         }
@@ -153,6 +154,13 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 a.AppointmentStartTime < endDate &&
                 a.AppointmentEndTime > startDate
             );
+        }
+
+       public async Task<Appointment> CreateApppointmentAsync(Appointment entity)
+        {
+            await _context.Appointments.AddAsync(entity);
+            await _context.SaveChangesAsync();
+            return entity;
         }
     }
 }

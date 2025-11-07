@@ -4,6 +4,10 @@ export interface ItemData {
   name: string;
   quantity: number;
   price: number;
+  doctorId?: string;
+  appointmentStartTime?: string;
+  appointmentEndTime?: string;
+  promotionCode?: string;
 }
 
 export interface PaymentResponse {
@@ -131,13 +135,28 @@ class PaymentService {
    * Tạo ItemData cho việc khám bác sĩ
    * @param doctorName - Tên bác sĩ
    * @param consultationFee - Phí khám
+   * @param doctorId - ID của bác sĩ (optional)
+   * @param appointmentStartTime - Thời gian bắt đầu lịch hẹn (optional)
+   * @param appointmentEndTime - Thời gian kết thúc lịch hẹn (optional)
+   * @param promotionCode - Mã khuyến mãi (optional)
    * @returns ItemData
    */
-  createDoctorConsultationItem(doctorName: string, consultationFee: number): ItemData {
+  createDoctorConsultationItem(
+    doctorName: string, 
+    consultationFee: number,
+    doctorId?: string,
+    appointmentStartTime?: string,
+    appointmentEndTime?: string,
+    promotionCode?: string
+  ): ItemData {
     return {
       name: `Khám bác sĩ ${doctorName}`,
       quantity: 1,
-      price: consultationFee
+      price: consultationFee,
+      doctorId,
+      appointmentStartTime,
+      appointmentEndTime,
+      promotionCode
     };
   }
 

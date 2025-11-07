@@ -17,5 +17,6 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task<bool> HasFutureAppointmentsForDoctorOnDay(Guid doctorId, int dayOfWeek);
         Task<bool> HasAppointmentsInTimeRangeAsync(Guid doctorId, DateTime overrideDate, TimeOnly startTime, TimeOnly endTime);
 
+        Task<Appointment> CreateApppointmentAsync(Appointment entity);
     }
 }

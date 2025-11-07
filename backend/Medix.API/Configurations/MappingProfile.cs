@@ -41,6 +41,7 @@ namespace Medix.API.Configurations
              CreateMap<HealthArticleUpdateDto, HealthArticle>()
                 .ForMember(dest => dest.Categories, opt => opt.Ignore()) 
                 .ForMember(dest => dest.PublishedAt, opt => opt.Ignore()); 
+           
 
             CreateMap<SiteBanner, SiteBannerDto>();
             CreateMap<PasswordUpdatePresenter, PasswordUpdateRequest>();
@@ -166,6 +167,8 @@ namespace Medix.API.Configurations
                 .ForMember(dest => dest.Dosage, opt => opt.MapFrom(src => src.DosageForms));
 
             CreateMap<DoctorProfileUpdatePresenter, DoctorProfileUpdateRequest>();
+
+            CreateMap<Promotion, PromotionDto>().ReverseMap();
         }
     }
 }

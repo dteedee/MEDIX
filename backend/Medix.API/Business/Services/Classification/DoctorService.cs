@@ -21,13 +21,13 @@ namespace Medix.API.Business.Services.Classification
         private readonly IDoctorScheduleRepository _doctorScheduleRepository;
         private readonly IDoctorScheduleOverrideRepository _doctorScheduleOverrideRepository;
         private readonly IEmailService _emailService;
-
+        private readonly IAppointmentService _appointmentService;
         private readonly IServiceTierRepository _serviceTierRepo;
         private readonly IServiceTierRepository _serviceTierRepository;
 
         public DoctorService(IDoctorRepository doctorRepository, IUserRepository userRepository,
             MedixContext context, IReviewRepository reviewRepository, IServiceTierRepository serviceTierRepository, IServiceTierRepository serviceTierRepo, IDoctorScheduleRepository doctorScheduleRepository,
-            IEmailService emailService, IDoctorScheduleOverrideRepository doctorScheduleOverrideRepository)
+            IEmailService emailService, IDoctorScheduleOverrideRepository doctorScheduleOverrideRepository, IAppointmentService appointmentService)
         {
             _doctorRepository = doctorRepository;
             _userRepository = userRepository;
@@ -38,6 +38,7 @@ namespace Medix.API.Business.Services.Classification
             _doctorScheduleRepository = doctorScheduleRepository;
             _emailService = emailService;
             _doctorScheduleOverrideRepository = doctorScheduleOverrideRepository;
+            _appointmentService = appointmentService;
         }
 
         public async Task<List<Doctor>> GetHomePageDoctorsAsync()
@@ -160,6 +161,7 @@ namespace Medix.API.Business.Services.Classification
             var schedule = await _doctorScheduleRepository.GetDoctorSchedulesByDoctorIdAsync(doctor.Id);
 
             var overrides = await _doctorScheduleOverrideRepository.GetByDoctorIdAsync(doctor.Id);
+            var appoint = await _appointmentService.GetByDoctorAsync(Guid.Parse(doctorID));
             int[] ratingByStar = new int[5];
             foreach (var review in reviews)
             {
@@ -171,12 +173,14 @@ namespace Medix.API.Business.Services.Classification
 
             var profileDto = new DoctorProfileDto
             {
+                doctorID = doctor.Id,
                 consulationFee = doctor.ConsultationFee,
                 FullName = doctor.User.FullName,
                 AverageRating = reviews.Count > 0
                     ? Math.Round((decimal)reviews.Average(r => r.Rating), 1)
                     : 0,
                 Specialization = doctor.Specialization.Name,
+                
                 Biography = doctor.Bio,
                 Education = DoctorDegree.GetDescription(doctor.Education),
                 AvatarUrl = doctor.User.AvatarUrl,
@@ -215,9 +219,16 @@ namespace Medix.API.Business.Services.Classification
                 IsAvailable = o.IsAvailable,
                 Reason = o.Reason,
                 CreatedAt = o.CreatedAt,
-                UpdatedAt = o.UpdatedAt
+                UpdatedAt = o.UpdatedAt,OverrideType = o.OverrideType
+
             }).ToList();
 
+            profileDto.appointmentBookedDtos = appoint.Select(a => new AppointmentBookedDto
+            {
+           
+                StartTime = a.AppointmentStartTime,
+                EndTime = a.AppointmentEndTime,
+            }).ToList();
 
 
 

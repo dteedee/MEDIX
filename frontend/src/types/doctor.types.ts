@@ -62,12 +62,16 @@ export interface DoctorTypeDegreeDto {
   description: string;
 }
 
+export interface AppointmentBookedDto {
+  startTime: string; // DateTime from backend
+  endTime: string; // DateTime from backend
+}
+
 export interface DoctorProfileDto {
   doctorID?: string;
   avatarUrl?: string;
   fullName: string;
-  consulationFee?: number; // phí khám từ backend (typo trong backend)
-  consultationFee?: number; // phí khám từ backend (correct spelling)
+  consulationFee: number; // phí khám từ backend (correct spelling)
   price?: number; // giữ tương thích nếu có nơi dùng price
   yearsOfExperience?: number | string; // kinh nghiệm từ backend
   experience?: number | string; // một số API trả experience
@@ -80,6 +84,7 @@ export interface DoctorProfileDto {
   education?: string;
   schedules: DoctorScheduleDto[];
   scheduleOverride?: DoctorScheduleOverrideDto[]; // Lịch override mới
+  appointmentBookedDtos?: AppointmentBookedDto[]; // Danh sách slot đã được book
 }
 
 export interface DoctorScheduleOverrideDto {
@@ -92,6 +97,7 @@ export interface DoctorScheduleOverrideDto {
   reason?: string;
   createdAt: string;
   updatedAt: string;
+  overrideType: boolean; // true = doctor works, false = doctor doesn't work
 }
 
 export interface DoctorProfileDetails {

@@ -35,8 +35,10 @@ namespace Medix.API.Business.Services.Classification
             entity.Id = Guid.NewGuid();
             entity.CreatedAt = DateTime.UtcNow;
             entity.UpdatedAt = DateTime.UtcNow;
+            entity.AppointmentStartTime = (DateTime)dto.AppointmentStartTime;
+            entity.AppointmentEndTime= (DateTime)dto.AppointmentEndTime;
 
-            await _repository.AddAsync(entity);
+            await _repository.CreateApppointmentAsync(entity);
             return _mapper.Map<AppointmentDto>(entity);
         }
 
@@ -109,6 +111,35 @@ namespace Medix.API.Business.Services.Classification
 
             // 3. Map sang DTO
             return _mapper.Map<IEnumerable<AppointmentDto>>(list);
+        }
+
+        public async Task<bool> IsDoctorBusyAsync(Guid doctorId, DateTime appointmentStartTime, DateTime appointmentEndTime)
+        {
+            // Lấy tất cả lịch hẹn của bác sĩ trong khoảng thời gian này
+            var conflictingAppointments = await GetConflictingAppointmentsAsync(doctorId, appointmentStartTime, appointmentEndTime);
+
+            // Nếu có bất kỳ lịch hẹn nào trùng thì bác sĩ đang bận
+            return conflictingAppointments.Any();
+        }
+
+
+        public async Task<List<AppointmentDto>> GetConflictingAppointmentsAsync(
+            Guid doctorId,
+            DateTime appointmentStartTime,
+            DateTime appointmentEndTime)
+        {
+            // Lấy tất cả lịch hẹn của bác sĩ
+            var allAppointments = await _repository.GetByDoctorAsync(doctorId);
+
+       var conflictingAppointments = allAppointments.Where(a =>
+    // ✅ Chỉ kiểm tra các lịch hẹn CHƯA bị hủy hoặc hoàn thành
+    a.StatusCode == "OnProgressing" &&
+  // ✅ Kiểm tra trùng thời gian (overlap)
+  appointmentStartTime < a.AppointmentEndTime &&
+        appointmentEndTime > a.AppointmentStartTime
+).ToList();
+
+            return _mapper.Map<List<AppointmentDto>>(conflictingAppointments);
         }
     }
 }

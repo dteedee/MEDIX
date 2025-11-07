@@ -67,7 +67,7 @@ namespace Medix.API.Presentation.Controller.Classification
 
                 if (profileDto == null)
                 {
-                    return NotFound(new { Message = "Doctor not found" });
+                    return NotFound(new { Message = "Doctor not found" });  
                 }
 
                 return Ok(profileDto);

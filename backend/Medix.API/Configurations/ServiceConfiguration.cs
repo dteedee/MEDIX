@@ -1,16 +1,17 @@
+using AutoMapper;
+using Medix.API.BackgroundServices;
 using Medix.API.Business.Interfaces.Classification;
-using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Interfaces.Community;
+using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.Classification;
-using Medix.API.Business.Services.UserManagement;
 using Medix.API.Business.Services.Community;
+using Medix.API.Business.Services.UserManagement;
+using Medix.API.Business.Validators;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.DataAccess.Repositories.Classification;
 using Medix.API.DataAccess.Repositories.UserManagement;
-using AutoMapper;
-using Medix.API.Business.Validators;
-using Medix.API.Business.Job;
+//using Medix.API.Business.Job;
 
 namespace Medix.API.Configurations
 {
@@ -56,7 +57,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IDoctorRegistrationFormRepository, DoctorRegistrationFormRepository>();
             services.AddScoped<IDoctorDashboardRepository, DoctorDashboardRepository>();
 
-
+            services.AddScoped<IPromotionRepository, PromotionRepository>();
         }
 
         private static void RegisterServices(IServiceCollection services)
@@ -92,6 +93,7 @@ namespace Medix.API.Configurations
 
             services.AddScoped<IDoctorRegistrationFormService, DoctorRegistrationFormService>();
             services.AddScoped<IDoctorDashboardService, DoctorDashboardService>();
+            services.AddScoped<IPromotionService, PromotionService>();
 
         }
 
@@ -101,7 +103,7 @@ namespace Medix.API.Configurations
             
             services.AddHostedService<JobDoctorScheduleOveride>();
 
-           
+
         }
     }
 }

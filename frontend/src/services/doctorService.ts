@@ -4,10 +4,14 @@ import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, Service
 class DoctorService {
     async getDoctorProfile(doctorID: string | undefined): Promise<DoctorProfileDto> {
         try {
+            console.log('🔵 Calling API: /doctor/profile/' + doctorID);
             const response = await apiClient.get<DoctorProfileDto>('/doctor/profile/' + doctorID);
+            console.log('🟢 API Response:', response);
+            console.log('🟢 Response Data:', response.data);
+        
             return response.data;
         } catch (error: any) {
-            console.error('Get doctor profile data error: ', error);
+            console.error('🔴 Get doctor profile data error: ', error);
             throw this.handleApiError(error);
         }
     }

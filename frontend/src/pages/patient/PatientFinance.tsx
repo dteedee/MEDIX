@@ -54,6 +54,61 @@ export const PatientFinance: React.FC = () => {
     return `${formatted} ${currency}`;
   };
 
+  const getTransactionTypeName = (typeCode: string | undefined): string => {
+    if (!typeCode) return 'Giao dịch';
+    
+    const typeMap: { [key: string]: string } = {
+      'AppointmentPayment': 'Thanh toán cuộc hẹn',
+      'AppointmentRefund': 'Hoàn tiền cuộc hẹn',
+      'Deposit': 'Nạp tiền',
+      'DoctorSalary': 'Lương bác sĩ',
+      'SystemCommission': 'Hoa hồng hệ thống',
+      'Withdrawal': 'Rút tiền'
+    };
+    
+    return typeMap[typeCode] || typeCode;
+  };
+
+  const getTransactionTypeIcon = (typeCode: string | undefined): string => {
+    if (!typeCode) return 'bi-arrow-left-right';
+    
+    const iconMap: { [key: string]: string } = {
+      'AppointmentPayment': 'bi-calendar-check',
+      'AppointmentRefund': 'bi-arrow-counterclockwise',
+      'Deposit': 'bi-cash-coin',
+      'DoctorSalary': 'bi-wallet2',
+      'SystemCommission': 'bi-percent',
+      'Withdrawal': 'bi-cash-stack'
+    };
+    
+    return iconMap[typeCode] || 'bi-arrow-left-right';
+  };
+
+  // Check if transaction is debit (money out) or credit (money in)
+  const isDebitTransaction = (typeCode: string | undefined): boolean => {
+    if (!typeCode) return false;
+    
+    // AppointmentPayment and Withdrawal are debit transactions (money out, negative)
+    const debitTypes = ['AppointmentPayment', 'Withdrawal'];
+    return debitTypes.includes(typeCode);
+  };
+
+  // Format amount with proper sign based on transaction type
+  const formatTransactionAmount = (amount: number | undefined, typeCode: string | undefined): string => {
+    if (!amount) return 'N/A';
+    
+    const isDebit = isDebitTransaction(typeCode);
+    const sign = isDebit ? '-' : '+';
+    const absAmount = Math.abs(amount);
+    
+    return `${sign}${formatBalance(absAmount, 'VND')}`;
+  };
+
+  // Get color for transaction amount
+  const getTransactionColor = (typeCode: string | undefined): string => {
+    return isDebitTransaction(typeCode) ? '#e53e3e' : '#38a169';
+  };
+
   const handleDeposit = async () => {
     const amount = parseFloat(depositAmount);
     if (!amount || amount <= 0) {
@@ -318,8 +373,26 @@ export const PatientFinance: React.FC = () => {
                   padding: '16px 0',
                   borderBottom: index < Math.min(transactions.length, 5) - 1 ? '1px solid #e2e8f0' : 'none'
                 }}>
-                  <div>
-                    <div style={{ fontSize: '14px', color: '#718096', marginBottom: '4px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      marginBottom: '6px'
+                    }}>
+                      <i className={getTransactionTypeIcon(transaction.transactionTypeCode)} style={{
+                        fontSize: '18px',
+                        color: '#667eea'
+                      }}></i>
+                      <span style={{ 
+                        fontSize: '15px', 
+                        fontWeight: '600', 
+                        color: '#2d3748' 
+                      }}>
+                        {getTransactionTypeName(transaction.transactionTypeCode)}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#718096', marginLeft: '26px' }}>
                       {transaction.transactionDate ? 
                         new Date(transaction.transactionDate).toLocaleDateString('vi-VN', {
                           day: '2-digit',
@@ -331,28 +404,37 @@ export const PatientFinance: React.FC = () => {
                         'N/A'
                       }
                     </div>
+                    {transaction.description && (
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: '#a0aec0',
+                        marginLeft: '26px',
+                        marginTop: '2px'
+                      }}>
+                        {transaction.description}
+                      </div>
+                    )}
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{
                       fontWeight: '600',
-                      color: transaction.amount && transaction.amount > 0 ? '#38a169' : '#e53e3e',
+                      color: getTransactionColor(transaction.transactionTypeCode),
                       marginBottom: '8px',
                       fontSize: '16px'
                     }}>
-                      {transaction.amount && transaction.amount > 0 ? '+' : ''}
-                      {transaction.amount ? formatBalance(transaction.amount, 'VND') : 'N/A'}
+                      {formatTransactionAmount(transaction.amount, transaction.transactionTypeCode)}
                     </div>
                     <div style={{
                       fontSize: '12px',
                       padding: '4px 8px',
                       borderRadius: '12px',
-                      backgroundColor: transaction.status === 'Completed' ? '#c6f6d5' : 
+                      backgroundColor: (transaction.status === 'Completed' || transaction.status === 'Compeleted') ? '#c6f6d5' : 
                                      transaction.status === 'Pending' ? '#fef5e7' : '#e2e8f0',
-                      color: transaction.status === 'Completed' ? '#22543d' : 
+                      color: (transaction.status === 'Completed' || transaction.status === 'Compeleted') ? '#22543d' : 
                              transaction.status === 'Pending' ? '#744210' : '#2d3748',
                       fontWeight: '500'
                     }}>
-                      {transaction.status || 'N/A'}
+                      {transaction.status === 'Compeleted' ? 'Completed' : transaction.status || 'N/A'}
                     </div>
                   </div>
                 </div>
@@ -455,8 +537,26 @@ export const PatientFinance: React.FC = () => {
                       padding: '16px 0',
                       borderBottom: index < transactions.length - 1 ? '1px solid #e2e8f0' : 'none'
                     }}>
-                      <div>
-                        <div style={{ fontSize: '14px', color: '#718096', marginBottom: '4px' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '10px',
+                          marginBottom: '8px'
+                        }}>
+                          <i className={getTransactionTypeIcon(transaction.transactionTypeCode)} style={{
+                            fontSize: '20px',
+                            color: '#667eea'
+                          }}></i>
+                          <span style={{ 
+                            fontSize: '16px', 
+                            fontWeight: '600', 
+                            color: '#2d3748' 
+                          }}>
+                            {getTransactionTypeName(transaction.transactionTypeCode)}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#718096', marginLeft: '30px', marginBottom: '4px' }}>
                           {transaction.transactionDate ? 
                             new Date(transaction.transactionDate).toLocaleDateString('vi-VN', {
                               day: '2-digit',
@@ -469,12 +569,12 @@ export const PatientFinance: React.FC = () => {
                           }
                         </div>
                         {transaction.description && (
-                          <div style={{ fontSize: '14px', color: '#4a5568', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '13px', color: '#a0aec0', marginLeft: '30px', marginBottom: '4px' }}>
                             {transaction.description}
                           </div>
                         )}
-                        {transaction.orderCode && (
-                          <div style={{ fontSize: '12px', color: '#a0aec0' }}>
+                        {transaction.orderCode && transaction.orderCode !== 0 && (
+                          <div style={{ fontSize: '12px', color: '#a0aec0', marginLeft: '30px' }}>
                             Mã đơn: {transaction.orderCode}
                           </div>
                         )}
@@ -482,24 +582,23 @@ export const PatientFinance: React.FC = () => {
                       <div style={{ textAlign: 'right' }}>
                         <div style={{
                           fontWeight: '600',
-                          color: transaction.amount && transaction.amount > 0 ? '#38a169' : '#e53e3e',
+                          color: getTransactionColor(transaction.transactionTypeCode),
                           marginBottom: '8px',
                           fontSize: '16px'
                         }}>
-                          {transaction.amount && transaction.amount > 0 ? '+' : ''}
-                          {transaction.amount ? formatBalance(transaction.amount, 'VND') : 'N/A'}
+                          {formatTransactionAmount(transaction.amount, transaction.transactionTypeCode)}
                         </div>
                         <div style={{
                           fontSize: '12px',
                           padding: '4px 8px',
                           borderRadius: '12px',
-                          backgroundColor: transaction.status === 'Completed' ? '#c6f6d5' : 
+                          backgroundColor: (transaction.status === 'Completed' || transaction.status === 'Compeleted') ? '#c6f6d5' : 
                                          transaction.status === 'Pending' ? '#fef5e7' : '#e2e8f0',
-                          color: transaction.status === 'Completed' ? '#22543d' : 
+                          color: (transaction.status === 'Completed' || transaction.status === 'Compeleted') ? '#22543d' : 
                                  transaction.status === 'Pending' ? '#744210' : '#2d3748',
                           fontWeight: '500'
                         }}>
-                          {transaction.status || 'N/A'}
+                          {transaction.status === 'Compeleted' ? 'Completed' : transaction.status || 'N/A'}
                         </div>
                       </div>
                     </div>

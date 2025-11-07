@@ -1,5 +1,5 @@
 import { apiClient } from '../lib/apiClient';
-import { Appointment } from '../types/appointment.types';
+import { Appointment, CreateAppointmentDto } from '../types/appointment.types';
 
 const API_ENDPOINT = '/Appointment';
 
@@ -26,7 +26,18 @@ const getMyAppointmentsByDateRange = async (startDate: string, endDate: string):
   return response.data;
 };
 
+/**
+ * Tạo appointment mới (booking).
+ * @param dto - Thông tin appointment cần tạo.
+ * @returns {Promise<Appointment>} Appointment đã được tạo.
+ */
+const createAppointment = async (dto: CreateAppointmentDto): Promise<Appointment> => {
+  const response = await apiClient.post<Appointment>(`${API_ENDPOINT}/appointment-Booking`, dto);
+  return response.data;
+};
+
 export const appointmentService = {
   getMyDayAppointments,
   getMyAppointmentsByDateRange,
+  createAppointment,
 };

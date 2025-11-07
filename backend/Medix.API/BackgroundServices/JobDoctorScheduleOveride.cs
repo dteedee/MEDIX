@@ -1,13 +1,13 @@
 ﻿using Medix.API.DataAccess.Interfaces.Classification;
 using Microsoft.EntityFrameworkCore;
 
-namespace Medix.API.Business.Job
+namespace Medix.API.BackgroundServices
 {
-    public class JobDoctorScheduleOveride : Microsoft.Extensions.Hosting.BackgroundService
+    public class JobDoctorScheduleOveride : BackgroundService
     {
         private readonly ILogger<JobDoctorScheduleOveride> _logger;
         private readonly IServiceProvider _serviceProvider;
-        private readonly TimeSpan _runInterval = TimeSpan.FromSeconds(30); // Chạy mỗi 1 giờ
+        private readonly TimeSpan _runInterval = TimeSpan.FromDays(1); 
 
         public JobDoctorScheduleOveride(
             ILogger<JobDoctorScheduleOveride> logger,

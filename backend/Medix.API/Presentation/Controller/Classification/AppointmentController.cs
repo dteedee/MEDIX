@@ -100,7 +100,7 @@ namespace Medix.API.Presentation.Controllers
                 BalanceBefore = wallet.Balance - Decimal.Parse(dto.TotalAmount.ToString()),
                 walletId = wallet.Id
             };
-            await walletTransactionService.createWalletTransactionAsync(WalletTransaction);
+          var transaction =  await walletTransactionService.createWalletTransactionAsync(WalletTransaction);
           
 
            await _walletService.DecreaseWalletBalanceAsync(wallet.UserId, dto.TotalAmount ?? 0);
@@ -109,6 +109,8 @@ namespace Medix.API.Presentation.Controllers
             dto.PaymentMethodCode = "Wallet";
             dto.PaymentStatusCode = "Paid";
             dto.StatusCode = "OnProgressing";
+            dto.TransactionID = transaction.id;
+
             // 3️⃣ Tạo lịch hẹn
             var created = await _service.CreateAsync(dto);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
@@ -210,25 +212,162 @@ namespace Medix.API.Presentation.Controllers
 
         [HttpGet("patient-appointments")]
         [Authorize(Roles = "Patient")]
-        public async Task<IActionResult> GetAppointmentsForPatientByRange([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
+        public async Task<IActionResult> GetAppointments()
         {
-            //try
-            //{
-            //    var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            //                 ?? User.FindFirst("sub")?.Value;
-            //    if (userId == null)
-            //        return Unauthorized(new { Message = "User ID not found in token" });
-            //    var patient = await _patientService.GetByUserIdAsync(Guid.Parse(userId));
-            //    if (patient == null)
-            //        return NotFound(new { Message = "Patient not found for this user." });
-            //    var result = await _service.GetByPatientAndDateRangeAsync(patient.Id, startDate, endDate);
-            //    return Ok(result);
-            //}
-            //catch (Exception ex)
-            //{
-            //    return StatusCode(500, new { Message = "An error occurred while fetching appointments.", Details = ex.Message });
-            //}
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null)
+                return Unauthorized(new { message = "User ID not found in token" });
+
+            if (!Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized(new { message = "Invalid user ID in token" });
+            var patient = await _patientService.GetPatientByUserIdAsync(userId);
+            if (patient != null)
+            {
+                var result = await _service.GetByPatientAsync(patient.Id);
+                return Ok(result);
+            }
+
+
+            return BadRequest();
         }
+
+
+        [HttpPatch("cancel-patient-appointments")]
+        [Authorize(Roles = "Patient")]
+        public async Task<IActionResult> CancelAppointment([FromBody] CancelAppointmentRequest request)
+        {
+            // 1️⃣ Validate input
+            if (request?.AppointmentId == Guid.Empty)
+            {
+                return BadRequest(new { message = "Invalid appointment ID" });
+            }
+
+            // 2️⃣ Get user from token
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null)
+                return Unauthorized(new { message = "User ID not found in token" });
+
+            if (!Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized(new { message = "Invalid user ID in token" });
+
+            // 3️⃣ Get patient info
+            var patient = await _patientService.GetPatientByUserIdAsync(userId);
+            if (patient == null)
+            {
+                return NotFound(new { message = "Patient not found" });
+            }
+
+            // 4️⃣ Get appointment
+            var appointment = await _service.GetByIdAsync(request.AppointmentId);
+            if (appointment == null)
+            {
+                return NotFound(new { message = "Appointment not found" });
+            }
+
+            // 5️⃣ Verify ownership
+            if (appointment.PatientID != patient.Id)
+            {
+                return Forbid(); // 403 - Patient không sở hữu appointment này
+            }
+
+            // 6️⃣ Check if appointment can be cancelled
+            if (appointment.StatusCode == "Cancelled" ||
+                appointment.StatusCode == "CancelledByPatient" ||
+                appointment.StatusCode == "Completed")
+            {
+                return BadRequest(new { message = $"Cannot cancel appointment with status: {appointment.StatusDisplayName}" });
+            }
+
+            // 7️⃣ Check if appointment is too close (ví dụ: không cho hủy trong vòng 2 giờ trước giờ hẹn)
+            var timeUntilAppointment = appointment.AppointmentStartTime - DateTime.UtcNow;
+            if (timeUntilAppointment.TotalHours < 2)
+            {
+                return BadRequest(new { message = "Cannot cancel appointment less than 2 hours before scheduled time" });
+            }
+
+            // 8️⃣ Update appointment status
+            var updateAppointment = new UpdateAppointmentDto
+            {
+                Id = request.AppointmentId,
+                StatusCode = "CancelledByPatient",
+                AppointmentStartTime = appointment.AppointmentStartTime,
+                AppointmentEndTime = appointment.AppointmentEndTime,
+                TotalAmount = appointment.TotalAmount,
+                PaymentStatusCode = "Refunded",
+                RefundAmount = appointment.TotalAmount,
+                RefundStatus ="Paid",
+                ConsultationFee = appointment.ConsultationFee,
+             DiscountAmount = appointment.DiscountAmount,
+                PlatformFee = appointment.PlatformFee,
+                 DurationMinutes = appointment.DurationMinutes,
+                 MedicalInfo = appointment.MedicalInfo,
+                 PaymentMethodCode = appointment.PaymentMethodCode,
+
+
+
+            };
+
+            var updateResult = await _service.UpdateAsync(updateAppointment);
+            if (updateResult == null)
+            {
+                return StatusCode(500, new { message = "Unable to cancel appointment" });
+            }
+
+            // 9️⃣ Process refund if payment was made
+            if (updateResult.PaymentStatusCode == "Refunded")
+            {
+                var wallet = await _walletService.GetWalletByUserIdAsync(userId);
+                if (wallet == null)
+                {
+                    return StatusCode(500, new { message = "Appointment cancelled but wallet not found for refund" });
+                }
+
+                try
+                {
+                    // Create refund transaction
+                    var walletTransaction = new WalletTransactionDto
+                    {
+                        Amount = appointment.TotalAmount,
+                        TransactionTypeCode = "AppointmentRefund",
+                        Description = $"Hoàn tiền cho hủy lịch hẹn #{appointment.Id}",
+                        CreatedAt = DateTime.UtcNow,
+                        orderCode = 0, // Generate proper order code if needed
+                        Status = "Completed",
+                        BalanceBefore = wallet.Balance,
+                        BalanceAfter = wallet.Balance + appointment.TotalAmount,
+                        walletId = wallet.Id,
+                        RelatedAppointmentId = appointment.Id
+                    };
+
+                    var transaction = await walletTransactionService.createWalletTransactionAsync(walletTransaction);
+
+                    // Increase wallet balance
+                    await _walletService.IncreaseWalletBalanceAsync(wallet.UserId, appointment.TotalAmount);
+
+                    return Ok(new
+                    {
+                        message = "Appointment cancelled and refunded successfully",
+                        appointmentId = appointment.Id,
+                        refundAmount = appointment.TotalAmount,
+                        transactionId = transaction.id
+                    });
+                }
+                catch (Exception ex)
+                {
+                    // Log error
+                    return StatusCode(500, new
+                    {
+                        message = "Appointment cancelled but refund failed. Please contact support.",
+                        appointmentId = appointment.Id,
+                        error = ex.Message
+                    });
+                }
+            }
+
+            // 🔟 No refund needed (appointment not paid yet)
+            return BadRequest();    
+        }
+
 
     }
 }

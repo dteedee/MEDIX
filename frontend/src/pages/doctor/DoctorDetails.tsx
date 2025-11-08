@@ -47,7 +47,7 @@ function DoctorDetails() {
     const [promotionError, setPromotionError] = useState<string>('');
     const [isCheckingPromotion, setIsCheckingPromotion] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [pendingBookingAction, setPendingBookingAction] = useState<'wallet' | 'payos' | null>(null);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     const { username } = useParams();
     const [searchParams] = useSearchParams();
@@ -117,17 +117,16 @@ function DoctorDetails() {
             }
         }
         
-        // Hiển thị modal xác nhận
-        setPendingBookingAction('wallet');
+        // Show confirmation modal instead of creating appointment directly
         setShowConfirmModal(true);
     };
-    
-    // Function to proceed with wallet booking after confirmation
-    const proceedWithWalletBooking = async () => {
+
+    // Function to actually create the appointment after user confirms
+    const handleConfirmedBooking = async () => {
         if (!profileData || !selectedDate || !selectedTimeSlot) return;
         
+        // Close confirmation modal
         setShowConfirmModal(false);
-        setPendingBookingAction(null);
         
         // Proceed to create appointment
         setIsCreatingPayment(true);
@@ -199,9 +198,8 @@ function DoctorDetails() {
             
             console.log('Appointment created:', createdAppointment);
             
-            // Success - redirect to appointments page
-            alert('Đặt lịch thành công! Vui lòng kiểm tra email để xác nhận.');
-            navigate('/app/patient/appointments');
+            // Success - show success modal instead of alert
+            setShowSuccessModal(true);
             
         } catch (error: any) {
             console.error('Error creating appointment:', error);
@@ -301,18 +299,6 @@ function DoctorDetails() {
     const handleCreatePaymentLink = async () => {
         if (!profileData || !selectedDate || !selectedTimeSlot) return;
         
-        // Hiển thị modal xác nhận
-        setPendingBookingAction('payos');
-        setShowConfirmModal(true);
-    };
-    
-    // Function to proceed with PayOS booking after confirmation
-    const proceedWithPayOSBooking = async () => {
-        if (!profileData || !selectedDate || !selectedTimeSlot) return;
-        
-        setShowConfirmModal(false);
-        setPendingBookingAction(null);
-        
         setIsCreatingPayment(true);
         
         try {
@@ -410,21 +396,7 @@ function DoctorDetails() {
             const result = await paymentService.createPaymentLink(itemData);
 
             if (result.success && result.checkoutUrl) {
-                // Lưu thông tin booking vào localStorage để tracking
-                localStorage.setItem('pendingAppointment', JSON.stringify({
-                    doctorId: profileData.doctorID,
-                    doctorName: profileData.fullName,
-                    date: selectedDate.toLocaleDateString('vi-VN'),
-                    time: selectedTimeSlot.display,
-                    amount: finalPrice
-                }));
-                
-                // Redirect đến trang thanh toán PayOS
                 paymentService.redirectToPayment(result.checkoutUrl);
-                
-                // Sau khi thanh toán thành công, PayOS sẽ redirect về returnUrl
-                // Backend sẽ xử lý webhook và tạo appointment
-                // User sẽ được redirect đến /app/patient/appointments từ returnUrl
             } else {
                 alert(result.error || 'Có lỗi xảy ra khi tạo link thanh toán.');
             }
@@ -1692,23 +1664,17 @@ function DoctorDetails() {
             </div>
             
             {/* Confirmation Modal */}
-            {showConfirmModal && profileData && selectedDate && selectedTimeSlot && (
-                <div className={styles.modalOverlay} onClick={() => {
-                    setShowConfirmModal(false);
-                    setPendingBookingAction(null);
-                }}>
-                    <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            {showConfirmModal && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.confirmModal}>
                         <div className={styles.modalHeader}>
                             <h3>
-                                <i className="bi bi-check-circle"></i>
-                                Xác nhận đặt lịch
+                                <i className="bi bi-clipboard-check"></i>
+                                Xác nhận đặt lịch khám
                             </h3>
                             <button 
-                                className={styles.modalClose}
-                                onClick={() => {
-                                    setShowConfirmModal(false);
-                                    setPendingBookingAction(null);
-                                }}
+                                className={styles.closeBtn}
+                                onClick={() => setShowConfirmModal(false)}
                             >
                                 <i className="bi bi-x-lg"></i>
                             </button>
@@ -1716,82 +1682,137 @@ function DoctorDetails() {
                         
                         <div className={styles.modalBody}>
                             <div className={styles.confirmInfo}>
-                                <div className={styles.doctorInfo}>
-                                    <i className="bi bi-person-circle"></i>
-                                    <div>
-                                        <p className={styles.label}>Bác sĩ</p>
-                                        <p className={styles.value}>{profileData.fullName}</p>
+                                <h4>Thông tin lịch hẹn</h4>
+                                <div className={styles.infoRow}>
+                                    <div className={styles.infoLabel}>
+                                        <i className="bi bi-person-circle"></i>
+                                        Bác sĩ
+                                    </div>
+                                    <div className={styles.infoValue}>{profileData?.fullName}</div>
+                                </div>
+                                <div className={styles.infoRow}>
+                                    <div className={styles.infoLabel}>
+                                        <i className="bi bi-hospital"></i>
+                                        Chuyên khoa
+                                    </div>
+                                    <div className={styles.infoValue}>{profileData?.specialization}</div>
+                                </div>
+                                <div className={styles.infoRow}>
+                                    <div className={styles.infoLabel}>
+                                        <i className="bi bi-calendar-check"></i>
+                                        Ngày khám
+                                    </div>
+                                    <div className={styles.infoValue}>
+                                        {selectedDate?.toLocaleDateString('vi-VN', { 
+                                            weekday: 'long', 
+                                            year: 'numeric', 
+                                            month: 'long', 
+                                            day: 'numeric' 
+                                        })}
                                     </div>
                                 </div>
-                                
-                                <div className={styles.appointmentInfo}>
-                                    <div className={styles.infoItem}>
-                                        <i className="bi bi-calendar-event"></i>
-                                        <div>
-                                            <p className={styles.label}>Ngày khám</p>
-                                            <p className={styles.value}>{selectedDate.toLocaleDateString('vi-VN')}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className={styles.infoItem}>
+                                <div className={styles.infoRow}>
+                                    <div className={styles.infoLabel}>
                                         <i className="bi bi-clock"></i>
-                                        <div>
-                                            <p className={styles.label}>Giờ khám</p>
-                                            <p className={styles.value}>{selectedTimeSlot.display}</p>
-                                        </div>
+                                        Giờ khám
                                     </div>
-                                    
-                                    <div className={styles.infoItem}>
-                                        <i className="bi bi-credit-card"></i>
-                                        <div>
-                                            <p className={styles.label}>Phí khám</p>
-                                            <p className={styles.valuePrice}>
-                                                {calculateFinalPrice().toLocaleString('vi-VN')}đ
-                                            </p>
-                                        </div>
-                                    </div>
-                                    
-                                    {pendingBookingAction === 'wallet' && (
-                                        <div className={styles.paymentNote}>
-                                            <i className="bi bi-wallet2"></i>
-                                            <p>Số tiền sẽ được trừ từ ví của bạn</p>
-                                        </div>
-                                    )}
-                                    
-                                    {pendingBookingAction === 'payos' && (
-                                        <div className={styles.paymentNote}>
-                                            <i className="bi bi-credit-card-2-front"></i>
-                                            <p>Bạn sẽ được chuyển đến trang thanh toán</p>
-                                        </div>
-                                    )}
+                                    <div className={styles.infoValue}>{selectedTimeSlot?.display}</div>
                                 </div>
+                                <div className={styles.infoRow}>
+                                    <div className={styles.infoLabel}>
+                                        <i className="bi bi-currency-dollar"></i>
+                                        Phí khám
+                                    </div>
+                                    <div className={styles.infoValuePrice}>
+                                        {new Intl.NumberFormat('vi-VN', {
+                                            style: 'currency',
+                                            currency: 'VND'
+                                        }).format(calculateFinalPrice())}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className={styles.confirmNote}>
+                                <i className="bi bi-info-circle"></i>
+                                <p>Vui lòng kiểm tra kỹ thông tin trước khi xác nhận. Bạn có thể hủy lịch hẹn trong vòng 2 giờ trước giờ khám.</p>
                             </div>
                         </div>
                         
                         <div className={styles.modalFooter}>
                             <button 
                                 className={styles.btnCancel}
-                                onClick={() => {
-                                    setShowConfirmModal(false);
-                                    setPendingBookingAction(null);
-                                }}
+                                onClick={() => setShowConfirmModal(false)}
                             >
                                 <i className="bi bi-x-circle"></i>
                                 Hủy
                             </button>
                             <button 
                                 className={styles.btnConfirm}
-                                onClick={() => {
-                                    if (pendingBookingAction === 'wallet') {
-                                        proceedWithWalletBooking();
-                                    } else if (pendingBookingAction === 'payos') {
-                                        proceedWithPayOSBooking();
-                                    }
-                                }}
+                                onClick={handleConfirmedBooking}
                                 disabled={isCreatingPayment}
                             >
-                                <i className="bi bi-check-circle"></i>
-                                {isCreatingPayment ? 'Đang xử lý...' : 'Xác nhận đặt lịch'}
+                                {isCreatingPayment ? (
+                                    <>
+                                        <span className={styles.spinner}></span>
+                                        Đang xử lý...
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="bi bi-check-circle"></i>
+                                        Xác nhận đặt lịch
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.successModal}>
+                        <button 
+                            className={styles.successCloseBtn}
+                            onClick={() => setShowSuccessModal(false)}
+                        >
+                            <i className="bi bi-x-lg"></i>
+                        </button>
+                        <div className={styles.successIcon}>
+                            <i className="bi bi-check-circle-fill"></i>
+                        </div>
+                        <h2>Đặt lịch thành công!</h2>
+                        <p>Lịch hẹn của bạn đã được xác nhận</p>
+                        <div className={styles.appointmentSummary}>
+                            <div className={styles.summaryItem}>
+                                <i className="bi bi-person-circle"></i>
+                                <span>Bác sĩ {profileData?.fullName}</span>
+                            </div>
+                            <div className={styles.summaryItem}>
+                                <i className="bi bi-calendar-check"></i>
+                                <span>{selectedDate?.toLocaleDateString('vi-VN', { 
+                                    weekday: 'long', 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                })}</span>
+                            </div>
+                            <div className={styles.summaryItem}>
+                                <i className="bi bi-clock"></i>
+                                <span>{selectedTimeSlot?.display}</span>
+                            </div>
+                        </div>
+                        <p className={styles.emailNote}>
+                            <i className="bi bi-envelope"></i>
+                            Vui lòng kiểm tra email để xem chi tiết lịch hẹn
+                        </p>
+                        <div className={styles.modalActions}>
+                            <button 
+                                className={styles.viewAppointmentsBtn}
+                                onClick={() => navigate('/app/patient/appointments')}
+                            >
+                                <i className="bi bi-calendar2-check"></i>
+                                Xem lịch hẹn của tôi
                             </button>
                         </div>
                     </div>

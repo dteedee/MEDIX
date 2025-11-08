@@ -4,6 +4,9 @@
     {
         public Guid Id { get; set; }
 
+       public Guid? PatientID { get; set; }
+        public Guid? DoctorID { get; set; }
+
         public string PatientName { get; set; } = null!;  
         public string DoctorName { get; set; } = null!;   
 
@@ -34,5 +37,11 @@
 
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+    }
+
+    public class CancelAppointmentRequest
+    {
+        public Guid AppointmentId { get; set; }
+        public string? CancellationReason { get; set; } // Optional
     }
 }

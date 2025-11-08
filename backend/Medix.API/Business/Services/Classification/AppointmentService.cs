@@ -35,8 +35,7 @@ namespace Medix.API.Business.Services.Classification
             entity.Id = Guid.NewGuid();
             entity.CreatedAt = DateTime.UtcNow;
             entity.UpdatedAt = DateTime.UtcNow;
-            entity.AppointmentStartTime = (DateTime)dto.AppointmentStartTime;
-            entity.AppointmentEndTime= (DateTime)dto.AppointmentEndTime;
+        
 
             await _repository.CreateApppointmentAsync(entity);
             return _mapper.Map<AppointmentDto>(entity);
@@ -49,7 +48,7 @@ namespace Medix.API.Business.Services.Classification
 
             _mapper.Map(dto, existing);
             existing.UpdatedAt = DateTime.UtcNow;
-
+        
             await _repository.UpdateAsync(existing);
             return _mapper.Map<AppointmentDto>(existing);
         }

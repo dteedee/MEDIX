@@ -223,7 +223,7 @@ namespace Medix.API.Business.Services.Classification
 
             }).ToList();
 
-            profileDto.appointmentBookedDtos = appoint.Select(a => new AppointmentBookedDto
+            profileDto.appointmentBookedDtos = appoint.Where(x=>x.StatusCode== "OnProgressing").Select(a => new AppointmentBookedDto
             {
            
                 StartTime = a.AppointmentStartTime,

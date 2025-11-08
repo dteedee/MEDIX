@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from '../../styles/patient/PatientAppointments.module.css';
+import { appointmentService } from '../../services/appointmentService';
+import { Appointment as AppointmentDto } from '../../types/appointment.types';
 
 interface Appointment {
   id: string;
@@ -15,6 +17,14 @@ interface Appointment {
   rating?: number;
   review?: string;
   emrId?: string;
+  // Thêm các field từ API
+  appointmentStartTime?: string;
+  appointmentEndTime?: string;
+  statusCode?: string;
+  statusDisplayName?: string;
+  paymentStatusCode?: string;
+  totalAmount?: number;
+  medicalInfo?: string;
 }
 
 interface FilterOptions {
@@ -31,6 +41,8 @@ export const PatientAppointments: React.FC = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showEMRModal, setShowEMRModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({
     status: 'all',
     specialty: 'all',
@@ -38,50 +50,79 @@ export const PatientAppointments: React.FC = () => {
     doctor: ''
   });
 
-  // Mock data
-  const [appointments] = useState<Appointment[]>([
-    {
-      id: '1',
-      doctorName: 'Vũ Nam Anh',
-      doctorTitle: 'Giáo sư',
-      specialty: 'Xương khớp',
-      date: '2025-01-15',
-      time: '14:00',
-      status: 'upcoming',
-      room: 'Phòng 201',
-      fee: 500000,
-      avatar: 'https://ui-avatars.com/api/?name=Vu+Nam+Anh&background=667eea&color=fff'
-    },
-    {
-      id: '2',
-      doctorName: 'Phạm Xuân Ẩn',
-      doctorTitle: 'Tiến sĩ',
-      specialty: 'Tim mạch',
-      date: '2025-01-10',
-      time: '09:30',
-      status: 'completed',
-      room: 'Phòng 105',
-      fee: 600000,
-      avatar: 'https://ui-avatars.com/api/?name=Pham+Xuan+An&background=48bb78&color=fff',
-      rating: 5,
-      review: 'Bác sĩ rất tận tâm và chuyên nghiệp',
-      emrId: 'EMR001'
-    },
-    {
-      id: '3',
-      doctorName: 'Hoàng Nam Thuận',
-      doctorTitle: 'Thạc sĩ',
-      specialty: 'Thần kinh',
-      date: '2025-01-05',
-      time: '16:00',
-      status: 'cancelled',
-      room: 'Phòng 302',
-      fee: 450000,
-      avatar: 'https://ui-avatars.com/api/?name=Hoang+Nam+Thuan&background=f56565&color=fff'
-    }
-  ]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
 
-  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>(appointments);
+  // Load appointments from API
+  useEffect(() => {
+    const loadAppointments = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await appointmentService.getPatientAppointments();
+        
+        // Transform API data to UI format
+        const transformedData: Appointment[] = data.map(apt => {
+          const startDate = new Date(apt.appointmentStartTime);
+          const endDate = new Date(apt.appointmentEndTime);
+          
+          // Map statusCode to UI status
+          // Status codes từ backend:
+          // - Confirmed: Đã xác nhận (upcoming)
+          // - OnProgressing: Đang xử lý thanh toán (upcoming)
+          // - Completed: Đã hoàn thành
+          // - CancelledByPatient: Bệnh nhân hủy
+          // - CancelledByDoctor: Bác sĩ hủy
+          // - NoShow: Không đến khám
+          let status: 'upcoming' | 'completed' | 'cancelled' = 'upcoming';
+          
+          if (apt.statusCode === 'Completed') {
+            status = 'completed';
+          } else if (
+            apt.statusCode === 'CancelledByPatient' || 
+            apt.statusCode === 'CancelledByDoctor' || 
+            apt.statusCode === 'NoShow'
+          ) {
+            status = 'cancelled';
+          } else if (apt.statusCode === 'Confirmed' || apt.statusCode === 'OnProgressing') {
+            status = 'upcoming';
+          }
+          
+          return {
+            id: apt.id,
+            doctorName: apt.doctorName,
+            doctorTitle: '', // Backend chưa có field này
+            specialty: '', // Backend chưa có field này
+            date: startDate.toISOString().split('T')[0],
+            time: `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`,
+            status,
+            room: '', // Backend chưa có field này
+            fee: apt.consultationFee,
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.doctorName)}&background=667eea&color=fff`,
+            // API fields
+            appointmentStartTime: apt.appointmentStartTime,
+            appointmentEndTime: apt.appointmentEndTime,
+            statusCode: apt.statusCode,
+            statusDisplayName: apt.statusDisplayName,
+            paymentStatusCode: apt.paymentStatusCode,
+            totalAmount: apt.totalAmount,
+          };
+        });
+        
+        setAppointments(transformedData);
+        setFilteredAppointments(transformedData);
+      } catch (err: any) {
+        console.error('Error loading appointments:', err);
+        setError(err.response?.data?.message || 'Không thể tải danh sách lịch hẹn');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAppointments();
+  }, []);
 
   // Statistics
   const stats = {
@@ -120,11 +161,45 @@ export const PatientAppointments: React.FC = () => {
     setShowCancelDialog(true);
   };
 
-  const confirmCancel = () => {
-    // Handle cancel logic here
-    console.log('Cancelling appointment:', selectedAppointment?.id);
-    setShowCancelDialog(false);
-    setSelectedAppointment(null);
+  const confirmCancel = async () => {
+    if (!selectedAppointment) return;
+
+    try {
+      setIsCancelling(true);
+      
+      // Call API to cancel appointment (without reason)
+      const result = await appointmentService.cancelPatientAppointment(
+        selectedAppointment.id
+      );
+
+      // Update local state to reflect cancellation
+      setAppointments(prevAppointments =>
+        prevAppointments.map(apt =>
+          apt.id === selectedAppointment.id
+            ? { ...apt, status: 'cancelled' as const, statusCode: 'CancelledByPatient' }
+            : apt
+        )
+      );
+
+      // Close dialog and reset
+      setShowCancelDialog(false);
+      setSelectedAppointment(null);
+
+      // Show success message (you can use toast notification here)
+      alert(result.message || 'Hủy lịch hẹn thành công!');
+      
+      // If refund was processed, show refund amount
+      if (result.refundAmount) {
+        alert(`Số tiền hoàn lại: ${formatCurrency(result.refundAmount)}`);
+      }
+
+    } catch (error: any) {
+      console.error('Error cancelling appointment:', error);
+      const errorMessage = error.response?.data?.message || 'Không thể hủy lịch hẹn. Vui lòng thử lại.';
+      alert(errorMessage);
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   const handleRateDoctor = (appointment: Appointment) => {
@@ -135,6 +210,11 @@ export const PatientAppointments: React.FC = () => {
   const handleViewEMR = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setShowEMRModal(true);
+  };
+
+  const handleViewDetail = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setShowDetailModal(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -181,12 +261,34 @@ export const PatientAppointments: React.FC = () => {
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className={styles.statsGrid}>
-        <div className={`${styles.statCard} ${styles.statCard1}`}>
-          <div className={styles.statIcon}>
-            <i className="bi bi-calendar-check"></i>
-          </div>
+      {/* Loading State */}
+      {loading && (
+        <div className={styles.loadingContainer}>
+          <div className={styles.spinner}></div>
+          <p>Đang tải danh sách lịch hẹn...</p>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className={styles.errorContainer}>
+          <i className="bi bi-exclamation-triangle"></i>
+          <p>{error}</p>
+          <button onClick={() => window.location.reload()}>
+            Thử lại
+          </button>
+        </div>
+      )}
+
+      {/* Content */}
+      {!loading && !error && (
+        <>
+          {/* Statistics Cards */}
+          <div className={styles.statsGrid}>
+            <div className={`${styles.statCard} ${styles.statCard1}`}>
+              <div className={styles.statIcon}>
+                <i className="bi bi-calendar-check"></i>
+              </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Tổng số cuộc hẹn</div>
             <div className={styles.statValue}>{stats.total}</div>
@@ -327,7 +429,12 @@ export const PatientAppointments: React.FC = () => {
           </div>
         ) : (
           filteredAppointments.map((appointment) => (
-            <div key={appointment.id} className={styles.appointmentCard}>
+            <div 
+              key={appointment.id} 
+              className={styles.appointmentCard}
+              onClick={() => handleViewDetail(appointment)}
+              style={{ cursor: 'pointer' }}
+            >
               <div className={styles.appointmentHeader}>
                 <div className={styles.doctorInfo}>
                   <div className={styles.doctorAvatar}>
@@ -361,7 +468,7 @@ export const PatientAppointments: React.FC = () => {
                 </div>
               </div>
 
-              <div className={styles.appointmentActions}>
+              <div className={styles.appointmentActions} onClick={(e) => e.stopPropagation()}>
                 {appointment.status === 'upcoming' && (
                   <button 
                     className={styles.cancelBtn}
@@ -405,29 +512,62 @@ export const PatientAppointments: React.FC = () => {
               <button 
                 className={styles.closeBtn}
                 onClick={() => setShowCancelDialog(false)}
+                disabled={isCancelling}
               >
                 <i className="bi bi-x"></i>
               </button>
             </div>
             <div className={styles.modalBody}>
-              <p>Bạn có chắc chắn muốn hủy lịch khám với <strong>{selectedAppointment?.doctorName}</strong>?</p>
+              <div className={styles.cancelInfo}>
+                <p>Bạn có chắc chắn muốn hủy lịch khám với <strong>{selectedAppointment?.doctorName}</strong>?</p>
+                <div className={styles.appointmentSummary}>
+                  <div className={styles.summaryItem}>
+                    <i className="bi bi-calendar3"></i>
+                    <span>{formatDate(selectedAppointment?.date || '')}</span>
+                  </div>
+                  <div className={styles.summaryItem}>
+                    <i className="bi bi-clock"></i>
+                    <span>{selectedAppointment?.time}</span>
+                  </div>
+                </div>
+              </div>
+
               <div className={styles.refundInfo}>
                 <i className="bi bi-info-circle"></i>
-                <span>Bạn sẽ được hoàn lại 80% phí khám bệnh: <strong>{formatCurrency((selectedAppointment?.fee || 0) * 0.8)}</strong></span>
+                <span>
+                  {selectedAppointment?.paymentStatusCode === 'Paid' 
+                    ? `Số tiền ${formatCurrency(selectedAppointment?.totalAmount || selectedAppointment?.fee || 0)} sẽ được hoàn lại vào ví của bạn.`
+                    : 'Lịch hẹn sẽ được hủy miễn phí.'
+                  }
+                </span>
+              </div>
+
+              <div className={styles.warningInfo}>
+                <i className="bi bi-exclamation-triangle"></i>
+                <span>Lưu ý: Không thể hủy lịch hẹn trong vòng 2 giờ trước giờ khám.</span>
               </div>
             </div>
             <div className={styles.modalActions}>
               <button 
                 className={styles.cancelModalBtn}
                 onClick={() => setShowCancelDialog(false)}
+                disabled={isCancelling}
               >
                 Không hủy
               </button>
               <button 
                 className={styles.confirmBtn}
                 onClick={confirmCancel}
+                disabled={isCancelling}
               >
-                Xác nhận hủy
+                {isCancelling ? (
+                  <>
+                    <span className={styles.buttonSpinner}></span>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  'Xác nhận hủy'
+                )}
               </button>
             </div>
           </div>
@@ -518,6 +658,182 @@ export const PatientAppointments: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Detail Modal */}
+      {showDetailModal && selectedAppointment && (
+        <div className={styles.modalOverlay} onClick={() => setShowDetailModal(false)}>
+          <div className={styles.detailModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>
+                <i className="bi bi-clipboard2-pulse"></i>
+                Chi tiết lịch hẹn
+              </h3>
+              <button 
+                className={styles.closeBtn}
+                onClick={() => setShowDetailModal(false)}
+              >
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            
+            <div className={styles.modalBody}>
+              {/* Doctor Info Section */}
+              <div className={styles.detailSection}>
+                <h4>
+                  <i className="bi bi-person-circle"></i>
+                  Thông tin bác sĩ
+                </h4>
+                <div className={styles.doctorInfoDetail}>
+                  <div className={styles.doctorAvatarLarge}>
+                    <img src={selectedAppointment.avatar} alt={selectedAppointment.doctorName} />
+                  </div>
+                  <div className={styles.doctorTextInfo}>
+                    <h5>{selectedAppointment.doctorName}</h5>
+                    <p className={styles.doctorTitle}>{selectedAppointment.doctorTitle}</p>
+                    {selectedAppointment.specialty && (
+                      <span className={styles.specialtyBadge}>
+                        <i className="bi bi-star"></i>
+                        {selectedAppointment.specialty}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Appointment Info Section */}
+              <div className={styles.detailSection}>
+                <h4>
+                  <i className="bi bi-calendar-check"></i>
+                  Thông tin lịch hẹn
+                </h4>
+                <div className={styles.infoGrid}>
+                  <div className={styles.infoItem}>
+                    <div className={styles.infoLabel}>
+                      <i className="bi bi-calendar3"></i>
+                      Ngày khám
+                    </div>
+                    <div className={styles.infoValue}>{formatDate(selectedAppointment.date)}</div>
+                  </div>
+                  
+                  <div className={styles.infoItem}>
+                    <div className={styles.infoLabel}>
+                      <i className="bi bi-clock"></i>
+                      Giờ khám
+                    </div>
+                    <div className={styles.infoValue}>{selectedAppointment.time}</div>
+                  </div>
+                  
+                  {selectedAppointment.room && (
+                    <div className={styles.infoItem}>
+                      <div className={styles.infoLabel}>
+                        <i className="bi bi-geo-alt"></i>
+                        Phòng khám
+                      </div>
+                      <div className={styles.infoValue}>{selectedAppointment.room}</div>
+                    </div>
+                  )}
+                  
+                  <div className={styles.infoItem}>
+                    <div className={styles.infoLabel}>
+                      <i className="bi bi-info-circle"></i>
+                      Trạng thái
+                    </div>
+                    <div className={styles.infoValue}>
+                      {getStatusBadge(selectedAppointment.status)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Info Section */}
+              <div className={styles.detailSection}>
+                <h4>
+                  <i className="bi bi-credit-card"></i>
+                  Thông tin thanh toán
+                </h4>
+                <div className={styles.paymentInfo}>
+                  <div className={styles.paymentRow}>
+                    <span>Phí khám:</span>
+                    <span className={styles.amount}>{formatCurrency(selectedAppointment.fee)}</span>
+                  </div>
+                  {selectedAppointment.totalAmount && selectedAppointment.totalAmount !== selectedAppointment.fee && (
+                    <>
+                      <div className={styles.paymentRow}>
+                        <span>Phí nền tảng:</span>
+                        <span className={styles.amount}>
+                          {formatCurrency((selectedAppointment.totalAmount || 0) - selectedAppointment.fee)}
+                        </span>
+                      </div>
+                      <div className={styles.paymentDivider}></div>
+                      <div className={styles.paymentRow}>
+                        <span className={styles.totalLabel}>Tổng cộng:</span>
+                        <span className={styles.totalAmount}>{formatCurrency(selectedAppointment.totalAmount)}</span>
+                      </div>
+                    </>
+                  )}
+                  {selectedAppointment.paymentStatusCode && (
+                    <div className={styles.paymentStatus}>
+                      <i className="bi bi-check-circle-fill"></i>
+                      <span>Trạng thái: {selectedAppointment.paymentStatusCode}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Medical Info Section (if available) */}
+              {selectedAppointment.medicalInfo && (
+                <div className={styles.detailSection}>
+                  <h4>
+                    <i className="bi bi-file-text"></i>
+                    Thông tin y tế
+                  </h4>
+                  <div className={styles.medicalNote}>
+                    {selectedAppointment.medicalInfo}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className={styles.modalFooter}>
+              <button 
+                className={styles.cancelModalBtn}
+                onClick={() => setShowDetailModal(false)}
+              >
+                <i className="bi bi-x-circle"></i>
+                Đóng
+              </button>
+              {selectedAppointment.status === 'upcoming' && (
+                <button 
+                  className={styles.confirmBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDetailModal(false);
+                    handleCancelAppointment(selectedAppointment);
+                  }}
+                >
+                  <i className="bi bi-x-octagon"></i>
+                  Hủy lịch hẹn
+                </button>
+              )}
+              {selectedAppointment.status === 'completed' && (
+                <button 
+                  className={styles.confirmBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDetailModal(false);
+                    handleViewEMR(selectedAppointment);
+                  }}
+                >
+                  <i className="bi bi-file-text"></i>
+                  Xem EMR
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      </>
       )}
     </div>
   );

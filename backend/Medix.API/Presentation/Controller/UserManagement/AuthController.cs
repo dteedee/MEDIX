@@ -1,12 +1,13 @@
-using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using Medix.API.Exceptions;
-using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Interfaces.Community;
-using Medix.API.Models.DTOs;
-using Microsoft.EntityFrameworkCore;
-using Medix.API.DataAccess;
+using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.UserManagement;
+using Medix.API.DataAccess;
+using Medix.API.Exceptions;
+using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Wallet;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Medix.API.Presentation.Controller.UserManagement
 {

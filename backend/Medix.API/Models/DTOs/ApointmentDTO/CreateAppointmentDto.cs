@@ -18,6 +18,8 @@ namespace Medix.API.Models.DTOs.ApointmentDTO
         public decimal? DiscountAmount { get; set; }
         public decimal?  TotalAmount { get; set; }
 
+        public Guid? TransactionID { get; set; }
+
         public string? StatusCode { get; set; } = null!;
         public string? PaymentStatusCode { get; set; } = null!;
         public string? PaymentMethodCode { get; set; }

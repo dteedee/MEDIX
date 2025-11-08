@@ -36,8 +36,33 @@ const createAppointment = async (dto: CreateAppointmentDto): Promise<Appointment
   return response.data;
 };
 
+/**
+ * Lấy danh sách appointments của patient đã đăng nhập.
+ * @returns {Promise<Appointment[]>} Danh sách appointments của patient.
+ */
+const getPatientAppointments = async (): Promise<Appointment[]> => {
+  const response = await apiClient.get<Appointment[]>(`${API_ENDPOINT}/patient-appointments`);
+  return response.data;
+};
+
+/**
+ * Hủy appointment của patient.
+ * @param appointmentId - ID của appointment cần hủy.
+ * @param cancellationReason - Lý do hủy (optional).
+ * @returns {Promise<any>} Kết quả hủy appointment.
+ */
+const cancelPatientAppointment = async (appointmentId: string, cancellationReason?: string): Promise<any> => {
+  const response = await apiClient.patch(`${API_ENDPOINT}/cancel-patient-appointments`, {
+    appointmentId,
+    cancellationReason
+  });
+  return response.data;
+};
+
 export const appointmentService = {
   getMyDayAppointments,
   getMyAppointmentsByDateRange,
   createAppointment,
+  getPatientAppointments,
+  cancelPatientAppointment,
 };

@@ -1,10 +1,11 @@
-using Medix.API.Business.Interfaces.UserManagement;
+using Google.Apis.Auth;
 using Medix.API.Business.Interfaces.Community;
+using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Exceptions;
 using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Wallet;
 using Medix.API.Models.Entities;
-using Google.Apis.Auth;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medix.API.Business.Services.UserManagement
@@ -18,13 +19,16 @@ namespace Medix.API.Business.Services.UserManagement
         private readonly IPatientRepository _patientRepository;
         private readonly DataAccess.MedixContext _context;
 
+        private readonly IWalletService _walletService;
+
         public AuthService(
             IUserRepository userRepository,
             IJwtService jwtService,
             IEmailService emailService,
             IUserRoleRepository userRoleRepository,
             IPatientRepository patientRepository,
-            DataAccess.MedixContext context)
+            DataAccess.MedixContext context,
+            IWalletService walletService)
         {
             _userRepository = userRepository;
             _jwtService = jwtService;
@@ -32,6 +36,7 @@ namespace Medix.API.Business.Services.UserManagement
             _userRoleRepository = userRoleRepository;
             _patientRepository = patientRepository;
             _context = context;
+            _walletService = walletService;
         }
 
         // =====================
@@ -267,6 +272,17 @@ namespace Medix.API.Business.Services.UserManagement
                 };
 
                 await _patientRepository.SavePatientAsync(newPatient);
+
+                var walletDto = new WalletDTo
+                {
+                    UserId = newPatient.Id,
+                    Balance = 0,
+                    Currency = "VND",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                var createdWallet = await _walletService.CreateWalletAsync(walletDto);
 
                 existingUser = newUser;
                 existingUser.Role = "Patient";

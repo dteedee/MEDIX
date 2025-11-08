@@ -16,7 +16,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
         public async Task<IEnumerable<Appointment>> GetAllAsync()
         {
             return await _context.Appointments
-                 .AsNoTracking()
                 .Include(a => a.Doctor).ThenInclude(d => d.User)
                 .Include(a => a.Patient).ThenInclude(p => p.User)
                 .Include(a => a.StatusCodeNavigation)
@@ -28,7 +27,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
         public async Task<Appointment?> GetByIdAsync(Guid id)
         {
             return await _context.Appointments
-                 .AsNoTracking()
                 .Include(a => a.Doctor).ThenInclude(d => d.User)
                 .Include(a => a.Patient).ThenInclude(p => p.User)
                 .Include(a => a.StatusCodeNavigation)
@@ -73,7 +71,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
         public async Task<IEnumerable<Appointment>> GetByDoctorAsync(Guid doctorId)
         {
             return await _context.Appointments
-                 .AsNoTracking()
+                 
                 .Where(a => a.DoctorId == doctorId)
                 .OrderBy(a => a.AppointmentStartTime)
                 .ToListAsync();

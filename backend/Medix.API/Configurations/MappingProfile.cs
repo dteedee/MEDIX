@@ -75,7 +75,9 @@ namespace Medix.API.Configurations
 
             // ✅ DTO → Entity
             CreateMap<CreateAppointmentDto, Appointment>();
-            CreateMap<UpdateAppointmentDto, Appointment>();
+            CreateMap<UpdateAppointmentDto, Appointment>()
+           .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+            // ✅ CHỈ map khi source member KHÔNG null
             CreateMap<MedicalRecord, MedicalRecordDto>()
                .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => src.Appointment.Patient.User.FullName))
                .ForMember(dest => dest.DoctorName, opt => opt.MapFrom(src => src.Appointment.Doctor.User.FullName))

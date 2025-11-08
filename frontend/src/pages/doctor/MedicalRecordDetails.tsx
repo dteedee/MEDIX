@@ -21,6 +21,9 @@ const MedicalRecordDetails: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isEditable, setIsEditable] = useState(false); // Trạng thái chỉnh sửa
+  const [updatePatientHistory, setUpdatePatientHistory] = useState(true);
+  const [newAllergy, setNewAllergy] = useState('');
+  const [updatePatientAllergies, setUpdatePatientAllergies] = useState(false);
 
   useEffect(() => {
     const fetchMedicalRecord = async () => {
@@ -151,7 +154,15 @@ const MedicalRecordDetails: React.FC = () => {
     setIsSubmitting(true);
     try {
       
-      await medicalRecordService.updateMedicalRecord(medicalRecord.id, medicalRecord);
+      const payload = {
+        ...medicalRecord,
+        updatePatientMedicalHistory: updatePatientHistory,
+        // Chỉ gửi dị ứng mới nếu người dùng đã chọn cập nhật
+        newAllergy: updatePatientAllergies ? newAllergy : "",
+        updatePatientAllergies: updatePatientAllergies,
+      };
+
+      await medicalRecordService.updateMedicalRecord(medicalRecord.id, payload);
 
       Swal.fire({
         title: 'Thành công!',
@@ -268,6 +279,30 @@ const MedicalRecordDetails: React.FC = () => {
             <label className="form-label">Dị ứng</label>
             <p className="info-value-box">{medicalRecord.allergies || 'Không có'}</p>
           </div>
+          {isEditable && (
+            <div className="form-column full-width">
+              <label htmlFor="newAllergy" className="form-label">Thêm dị ứng mới</label>
+              <input
+                type="text"
+                id="newAllergy"
+                name="newAllergy"
+                className="form-input"
+                value={newAllergy}
+                onChange={(e) => setNewAllergy(e.target.value)}
+                placeholder="Nhập dị ứng mới nếu có (VD: Dị ứng phấn hoa)"
+              />
+              <div className="form-checkbox-group mt-2">
+                <input
+                  type="checkbox"
+                  id="updatePatientAllergies"
+                  name="updatePatientAllergies"
+                  checked={updatePatientAllergies}
+                  onChange={(e) => setUpdatePatientAllergies(e.target.checked)}
+                />
+                <label htmlFor="updatePatientAllergies">Cập nhật dị ứng mới này vào hồ sơ bệnh nhân</label>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -307,6 +342,19 @@ const MedicalRecordDetails: React.FC = () => {
               rows={4}
               disabled={!isEditable} />
             {fieldErrors.treatmentPlan && <p className="error-message">{fieldErrors.treatmentPlan}</p>}
+          </div>
+          <div className="form-column full-width">
+            <div className="form-checkbox-group">
+              <input
+                type="checkbox"
+                id="updatePatientHistory"
+                name="updatePatientHistory"
+                checked={updatePatientHistory}
+                onChange={(e) => setUpdatePatientHistory(e.target.checked)}
+                disabled={!isEditable}
+              />
+              <label htmlFor="updatePatientHistory">Cập nhật chẩn đoán vào tiền sử bệnh của bệnh nhân</label>
+            </div>
           </div>
           <div className="form-column">
             <label className="form-label">Ghi chú của bác sĩ</label>

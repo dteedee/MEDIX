@@ -4,6 +4,8 @@
     {
         public Guid Id { get; set; }
         public Guid AppointmentId { get; set; }
+        public Guid PatientId { get; set; }
+        public int VisitNumber { get; set; }
 
         // --- Thông tin bệnh nhân ---
         public string PatientName { get; set; } = null!;
@@ -72,5 +74,9 @@
         public string? DoctorNotes { get; set; }
 
         public List<CreatePrescriptionDto>? Prescriptions { get; set; }
+        public bool UpdatePatientMedicalHistory { get; set; } = false;
+        public string? NewAllergy { get; set; }
+        public bool UpdatePatientAllergies { get; set; } = false;
+
     }
 }

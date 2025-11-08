@@ -5,17 +5,38 @@ import styles from '../../styles/doctor/DoctorPackage.module.css';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 import { useToast } from '../../contexts/ToastContext';
 import { LoadingSpinner } from '../../components/ui';
+import { formatDistanceToNow } from "date-fns";
+import { vi } from "date-fns/locale";
 
 const DoctorPackages: React.FC = () => {
   const { showToast } = useToast();
 
   const [pageLoading, setPageLoading] = useState(true);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showUnsubscribe, setShowUnsubscribe] = useState(false);
+  const [confirmationMessage, setConfirmationMessage] = useState("");
 
   const [data, setData] = useState<TierListPresenter | null>(null);
 
   const [tierName, setTierName] = useState<string>("");
   const [tierId, setTierId] = useState<string>("");
+
+  const getTimeLeftLabel = (utcDateString: string) => {
+    try {
+      const date = new Date(utcDateString);
+      if (date == null) {
+        return null;
+      }
+
+      return formatDistanceToNow(date, {
+        addSuffix: false,
+        locale: vi,
+      });
+    } catch (error) {
+      console.error('Invalid date:', utcDateString);
+      return 'Không xác định thời gian';
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -33,7 +54,8 @@ const DoctorPackages: React.FC = () => {
     }
   }
 
-  const handleShowConfirmation = (name: string, id: string) => {
+  const handleShowConfirmation = (name: string, id: string, message: string) => {
+    setConfirmationMessage(message);
     setShowConfirmation(true);
     setTierName(name);
     setTierId(id);
@@ -60,6 +82,30 @@ const DoctorPackages: React.FC = () => {
     await fetchDisplayedList();
     setPageLoading(false);
     setShowConfirmation(false);
+  }
+
+  const handleShowUnsubscribe = (name: string, id: string) => {
+    setTierName(name);
+    setTierId(id);
+    setShowUnsubscribe(true);
+  }
+
+  const unsubscribe = async () => {
+    try {
+      await serviceTierService.unsubscribe(tierId);
+      showToast(`Hủy đăng kí gói ${tierName} thành công!`, 'success');
+    }
+    catch {
+      showToast('Hủy đăng kí gói không thành công. Vui lòng thử lại sau', 'error');
+    }
+  }
+
+  const handleUnsubscribe = async () => {
+    setPageLoading(true);
+    await unsubscribe();
+    await fetchDisplayedList();
+    setPageLoading(false);
+    setShowUnsubscribe(false);
   }
 
   if (pageLoading) {
@@ -106,21 +152,58 @@ const DoctorPackages: React.FC = () => {
               </ul>
               <div className="mt-auto text-center">
                 {data.currentTierId === item.id ? (
-                  <span>Đang sở hữu</span>
+                  <>
+                    <span className='mb-3'>Đang sở hữu</span>
+                    {item.monthlyPrice > 0 && (
+                      <>
+                        <div>
+                          <span className='mb-3'>
+                            {!data.currentSubscriptionActive && (
+                              <>
+                                <span>Đã hủy - </span> 
+                              </>
+                            )}
+                            Còn {getTimeLeftLabel(data.expiredAt)}
+                          </span>
+                        </div>
+                        {data.currentSubscriptionActive ? (
+                          <div>
+                            <button
+                              onClick={() => handleShowUnsubscribe(item.name, item.id)}
+                              className="btn btn-warning px-4">Hủy đăng kí</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => handleShowConfirmation(item.name, item.id, 
+                            "Nếu bạn tiếp tục đăng ký, hệ thống sẽ trừ số dư trong ví của bạn để gia hạn gói dịch vụ cho kỳ tiếp theo. Vui lòng xác nhận nếu bạn muốn tiếp tục đăng ký."
+                          )} className="btn btn-primary px-4">Đăng kí</button>
+                        )}
+                      </>
+                    )}
+                  </>
                 ) : (
-                  <button onClick={() => handleShowConfirmation(item.name, item.id)} className="btn btn-primary px-4">Mua</button>
+                  <button onClick={() => handleShowConfirmation(item.name, item.id,
+                    "Gói sẽ được làm mới mỗi tháng và sẽ sử dụng số tiền trong ví của bạn để thanh toán."
+                  )} className="btn btn-primary px-4">Mua</button>
                 )}
               </div>
             </div>
           </div>
         ))}
       </div>
+
       <ConfirmationDialog
         isOpen={showConfirmation}
         title={`Mua gói ${tierName}`}
-        message={'Gói sẽ được làm mới mỗi tháng và sẽ sử dụng số tiền trong ví của bạn để thanh toán.'}
+        message={confirmationMessage}
         onConfirm={() => handleUpgrade()}
         onCancel={() => setShowConfirmation(false)} />
+
+      <ConfirmationDialog
+        isOpen={showUnsubscribe}
+        title={`Hủy đăng kí gói ${tierName}`}
+        message={'Sau khi hủy, bạn vẫn sẽ tiếp tục được sử dụng đầy đủ quyền lợi của gói hiện tại cho đến khi hết thời hạn. Gói sẽ không được gia hạn tự động và số dư trong ví của bạn sẽ không bị trừ thêm khi gói hết hạn.'}
+        onConfirm={() => handleUnsubscribe()}
+        onCancel={() => setShowUnsubscribe(false)} />
     </>
   );
 };

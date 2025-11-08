@@ -8,5 +8,6 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task<ServiceTierSubscription?> GetActiveSubscriptionOfDoctorAsync(Guid doctorId);
         Task UpdateSubscriptionAsync(ServiceTierSubscription subscription);
         Task<ServiceTierSubscription?> GetByIdAsync(Guid id);
+        Task<ServiceTierSubscription?> GetCurrentSubscriptionOfDoctorAsync(Guid doctorId);
     }
 }

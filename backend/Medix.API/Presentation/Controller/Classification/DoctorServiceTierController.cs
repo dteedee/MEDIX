@@ -43,7 +43,14 @@ namespace Medix.API.Presentation.Controller.Classification
                     st.MonthlyPrice,
                     st.Features
                 });
-                return Ok(new { list, presenter.CurrentTierId, presenter.Balance });
+                return Ok(new
+                {
+                    list,
+                    presenter.CurrentTierId,
+                    presenter.Balance,
+                    presenter.ExpiredAt,
+                    presenter.CurrentSubscriptionActive
+                });
             }
             catch (Exception ex)
             {
@@ -75,6 +82,29 @@ namespace Medix.API.Presentation.Controller.Classification
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to upgrade services tier");
+                return StatusCode(500);
+            }
+        }
+
+        [HttpPut("unsubscribe")]
+        [Authorize(Roles = "Doctor")]
+        public async Task<IActionResult> UnsubscribeTier([FromBody] UpgradeServiceTierRequest request)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+                if (userIdClaim == null)
+                {
+                    return Unauthorized(new { Message = "User ID not found in token" });
+                }
+                var userId = Guid.Parse(userIdClaim.Value);
+
+                await _doctorServiceTierService.Unsubscribe(userId, request.ServiceTierId);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to unsubscribe services tier");
                 return StatusCode(500);
             }
         }

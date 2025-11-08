@@ -31,5 +31,25 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
         public async Task<ServiceTierSubscription?> GetByIdAsync(Guid id)
             => await _context.ServiceTierSubscriptions.FirstOrDefaultAsync(s => s.Id == id);
+
+        public async Task<ServiceTierSubscription?> GetCurrentSubscriptionOfDoctorAsync(Guid doctorId)
+        {
+            var activeSubscription = await GetActiveSubscriptionOfDoctorAsync(doctorId);
+            if (activeSubscription != null)
+            {
+                return activeSubscription;
+            }
+
+            var today = DateTime.UtcNow;
+
+            return await _context.ServiceTierSubscriptions
+                .Where(s =>
+                    s.DoctorId == doctorId
+                    && s.StartDate <= today
+                    && today <= s.EndDate
+                    && s.Status == "Cancelled")
+                .OrderByDescending(s => s.EndDate)
+                .FirstOrDefaultAsync();
+        }
     }
 }

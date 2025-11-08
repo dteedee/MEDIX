@@ -6,7 +6,6 @@ using Medix.API.DataAccess.Repositories.Classification;
 using Medix.API.Exceptions;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
-using System.Numerics;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -44,50 +43,79 @@ namespace Medix.API.Business.Services.Classification
             var list = await _serviceTierRepository.GetActiveTiersAsync();
             var balance = await _walletRepository.GetWalletBalanceAsync(userId);
 
+            if (doctor == null)
+            {
+                throw new Exception($"Doctor with userId = {userId} not found");
+            }
+
+            var currentSubscription = await _subscriptionsRepository.GetCurrentSubscriptionOfDoctorAsync(doctor.Id);
+
             return new ServiceTierPresenter
             {
                 ServiceTierList = list.Where(st => st.PriorityBoost >= doctor?.ServiceTier?.PriorityBoost).ToList(),
                 CurrentTierId = doctor?.ServiceTierId,
                 Balance = balance,
+                ExpiredAt = currentSubscription?.EndDate,
+                CurrentSubscriptionActive = currentSubscription != null && currentSubscription.Status == "Active"
             };
         }
 
         public async Task Upgrade(Guid userId, Guid serviceTierId)
         {
+            var serviceTier = await _serviceTierRepository.GetByIdAsync(serviceTierId);
+            var doctor = await _doctorRepository.GetDoctorByUserIdAsync(userId);
+
+            if (serviceTier == null || doctor == null)
+            {
+                throw new Exception("Doctor / Service tier can not be found");
+            }
+
+            //if current service tier is higher than purchased tier, cancel
+            if (doctor.ServiceTier == null)
+            {
+                throw new Exception("Unexpected error");
+            }
+            else if (doctor.ServiceTier.PriorityBoost > serviceTier.PriorityBoost)
+            {
+                throw new MedixException("Gói dịch vụ hiện tại của bạn có giá trị cao hơn gói bạn muốn mua.");
+            }
+
+            //if another subscription exists
+            var currentSubscription = await _subscriptionsRepository.GetCurrentSubscriptionOfDoctorAsync(doctor.Id);
+            if (currentSubscription != null)
+            {
+                //if new subscription is of the same value
+                if (doctor.ServiceTier.PriorityBoost == serviceTier.PriorityBoost)
+                {
+                    if (currentSubscription.Status != "Expired")
+                    {
+                        //resume next month subscription at Cancelled
+                        if (currentSubscription.Status == "Cancelled")
+                        {
+                            currentSubscription.Status = "Active";
+                            await _subscriptionsRepository.UpdateSubscriptionAsync(currentSubscription);
+                        }
+                        //no adding subscription add Cancelled / Active
+                        return;
+                    }
+                }
+                //bigger
+                else
+                {
+                    //deactivate the lower subscription
+                    if (currentSubscription.Status == "Active")
+                    {
+                        currentSubscription.Status = "Cancelled";
+                        await _subscriptionsRepository.UpdateSubscriptionAsync(currentSubscription);
+                    }
+                }
+            }
+
             using var transaction = await _context.Database.BeginTransactionAsync();
+            var committed = false;
 
             try
             {
-                var serviceTier = await _serviceTierRepository.GetByIdAsync(serviceTierId);
-                var doctor = await _doctorRepository.GetDoctorByUserIdAsync(userId);
-
-                if (serviceTier == null || doctor == null)
-                {
-                    throw new Exception("Doctor / Service tier can not be found");
-                }
-
-                //if current service tier is higher than or equal to purchased tier, cancel
-                if (doctor.ServiceTier == null)
-                {
-                    throw new Exception("Unexpected error");
-                }
-                else if (doctor.ServiceTier.PriorityBoost > serviceTier.PriorityBoost)
-                {
-                    throw new MedixException("Gói dịch vụ hiện tại của bạn có giá trị cao hơn gói bạn muốn mua.");
-                }
-                else if (doctor.ServiceTier.PriorityBoost == serviceTier.PriorityBoost)
-                {
-                    throw new MedixException($"Bạn đang sở hữu gói {serviceTier.Name}.");
-                }
-
-                //if lower subscription exist, deactivate it
-                var currentSubscription = await _subscriptionsRepository.GetActiveSubscriptionOfDoctorAsync(doctor.Id);
-                if (currentSubscription != null)
-                {
-                    currentSubscription.Status = "Cancelled";
-                    await _subscriptionsRepository.UpdateSubscriptionAsync(currentSubscription);
-                }
-
                 //update doctor table
                 doctor.ServiceTierId = serviceTierId;
                 doctor.ServiceTier = null;
@@ -105,6 +133,7 @@ namespace Medix.API.Business.Services.Classification
                 await _walletRepository.DecreaseWalletBalanceAsync(userId, serviceTier.MonthlyPrice);
 
                 await transaction.CommitAsync();
+                committed = true;
 
                 //add to tranasction
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
@@ -133,9 +162,27 @@ namespace Medix.API.Business.Services.Classification
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Commit exception");
-                await transaction.RollbackAsync();
+                if (!committed)
+                {
+                    await transaction.RollbackAsync();
+                }
                 throw;
             }
+        }
+
+        public async Task Unsubscribe(Guid userId, Guid serviceTierId)
+        {
+            var doctor = await _doctorRepository.GetDoctorByUserIdAsync(userId)
+                ?? throw new Exception($"Doctor with userId = {userId} can not be found");
+
+            var subscription = await _subscriptionsRepository.GetActiveSubscriptionOfDoctorAsync(doctor.Id);
+            if (subscription == null || subscription.ServiceTierId != serviceTierId)
+            {
+                throw new Exception($"Active subscription with userId = {userId} & serviceTierId = {serviceTierId} can not be found");
+            }
+
+            subscription.Status = "Cancelled";
+            await _subscriptionsRepository.UpdateSubscriptionAsync(subscription);
         }
 
         public async Task RenewSubscription(Guid subscriptionId)
@@ -162,8 +209,8 @@ namespace Medix.API.Business.Services.Classification
                         if (doctor != null)
                         {
                             await SetServiceTierToBasic(doctor);
-                            return;
                         }
+                        return;
                     }
                 }
             }
@@ -174,6 +221,7 @@ namespace Medix.API.Business.Services.Classification
             }
 
             using var transaction = await _context.Database.BeginTransactionAsync();
+            var committed = false;
 
             try
             {
@@ -203,6 +251,7 @@ namespace Medix.API.Business.Services.Classification
                 var newSubscription = await CreateNewSubscription(currentSubscription.DoctorId, currentSubscription.ServiceTierId);
 
                 await transaction.CommitAsync();
+                committed = true;
 
                 //add transaction
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(doctor.User.Id);
@@ -235,7 +284,10 @@ namespace Medix.API.Business.Services.Classification
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Failed to renew subscription with id = {subscriptionId}");
-                await transaction.RollbackAsync();
+                if (!committed)
+                {
+                    await transaction.RollbackAsync();
+                }
             }
         }
 
@@ -246,7 +298,7 @@ namespace Medix.API.Business.Services.Classification
                 DoctorId = doctorId,
                 ServiceTierId = serviceTierId,
                 StartDate = DateTime.UtcNow,
-                EndDate = DateTime.UtcNow.AddSeconds(10),
+                EndDate = DateTime.UtcNow.AddDays(30),
                 Status = "Active"
             };
             return await _subscriptionsRepository.CreateAsync(subscription);

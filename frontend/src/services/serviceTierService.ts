@@ -12,6 +12,12 @@ class ServiceTierService {
             serviceTierId
         })
     }
+
+    async unsubscribe(serviceTierId: string): Promise<any>{
+        await apiClient.put("doctorServiceTier/unsubscribe", {
+            serviceTierId
+        })
+    }
 }
 
 export default new ServiceTierService();

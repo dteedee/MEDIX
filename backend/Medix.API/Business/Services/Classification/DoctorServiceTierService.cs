@@ -6,7 +6,6 @@ using Medix.API.DataAccess.Repositories.Classification;
 using Medix.API.Exceptions;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
-using System.Numerics;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -42,17 +41,28 @@ namespace Medix.API.Business.Services.Classification
         {
             var doctor = await _doctorRepository.GetDoctorByUserIdAsync(userId);
             var list = await _serviceTierRepository.GetActiveTiersAsync();
+            var balance = await _walletRepository.GetWalletBalanceAsync(userId);
+
+            if (doctor == null)
+            {
+                throw new Exception($"Doctor with userId = {userId} not found");
+            }
+
+            var activeSubscription = await _subscriptionsRepository.GetActiveSubscriptionOfDoctorAsync(doctor.Id);
 
             return new ServiceTierPresenter
             {
                 ServiceTierList = list.Where(st => st.PriorityBoost >= doctor?.ServiceTier?.PriorityBoost).ToList(),
-                CurrentTierId = doctor?.ServiceTierId
+                CurrentTierId = doctor?.ServiceTierId,
+                Balance = balance,
+                ExpiredAt = activeSubscription?.EndDate,
             };
         }
 
         public async Task Upgrade(Guid userId, Guid serviceTierId)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
+            var committed = false;
 
             try
             {
@@ -103,6 +113,7 @@ namespace Medix.API.Business.Services.Classification
                 await _walletRepository.DecreaseWalletBalanceAsync(userId, serviceTier.MonthlyPrice);
 
                 await transaction.CommitAsync();
+                committed = true;
 
                 //add to tranasction
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
@@ -131,9 +142,27 @@ namespace Medix.API.Business.Services.Classification
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Commit exception");
-                await transaction.RollbackAsync();
+                if (!committed)
+                {
+                    await transaction.RollbackAsync();
+                }
                 throw;
             }
+        }
+
+        public async Task Unsubscribe(Guid userId, Guid serviceTierId)
+        {
+            var doctor = await _doctorRepository.GetDoctorByUserIdAsync(userId)
+                ?? throw new Exception($"Doctor with userId = {userId} can not be found");
+
+            var subscription = await _subscriptionsRepository.GetActiveSubscriptionOfDoctorAsync(doctor.Id);
+            if (subscription == null || subscription.ServiceTierId != serviceTierId)
+            {
+                throw new Exception($"Active subscription with userId = {userId} & serviceTierId = {serviceTierId} can not be found");
+            }
+
+            subscription.Status = "Cancelled";
+            await _subscriptionsRepository.UpdateSubscriptionAsync(subscription);
         }
 
         public async Task RenewSubscription(Guid subscriptionId)
@@ -160,8 +189,8 @@ namespace Medix.API.Business.Services.Classification
                         if (doctor != null)
                         {
                             await SetServiceTierToBasic(doctor);
-                            return;
                         }
+                        return;
                     }
                 }
             }
@@ -172,6 +201,7 @@ namespace Medix.API.Business.Services.Classification
             }
 
             using var transaction = await _context.Database.BeginTransactionAsync();
+            var committed = false;
 
             try
             {
@@ -201,6 +231,7 @@ namespace Medix.API.Business.Services.Classification
                 var newSubscription = await CreateNewSubscription(currentSubscription.DoctorId, currentSubscription.ServiceTierId);
 
                 await transaction.CommitAsync();
+                committed = true;
 
                 //add transaction
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(doctor.User.Id);
@@ -233,7 +264,10 @@ namespace Medix.API.Business.Services.Classification
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Failed to renew subscription with id = {subscriptionId}");
-                await transaction.RollbackAsync();
+                if (!committed)
+                {
+                    await transaction.RollbackAsync();
+                }
             }
         }
 
@@ -244,7 +278,7 @@ namespace Medix.API.Business.Services.Classification
                 DoctorId = doctorId,
                 ServiceTierId = serviceTierId,
                 StartDate = DateTime.UtcNow,
-                EndDate = DateTime.UtcNow.AddSeconds(10),
+                EndDate = DateTime.UtcNow.AddDays(30),
                 Status = "Active"
             };
             return await _subscriptionsRepository.CreateAsync(subscription);

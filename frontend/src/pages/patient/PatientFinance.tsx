@@ -121,6 +121,16 @@ export const PatientFinance: React.FC = () => {
     };
 
     fetchWallet();
+
+    // Check if returning from payment success
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentSuccess = urlParams.get('payment_success');
+    if (paymentSuccess === 'true') {
+      // Refresh transactions after a short delay to ensure backend has processed
+      setTimeout(() => {
+        fetchTransactions();
+      }, 1000);
+    }
   }, []);
 
   const fetchTransactions = async () => {
@@ -841,16 +851,28 @@ export const PatientFinance: React.FC = () => {
                         {getTransactionTypeName(transaction.transactionTypeCode)}
                         <span className={styles.transactionDateInline}>
                           {' '}
-                          {transaction.transactionDate ? 
-                            new Date(transaction.transactionDate).toLocaleString('vi-VN', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            }) : 
-                            'N/A'
-                          }
+                          {(() => {
+                            // Use transactionDate if available, otherwise fall back to createdAt
+                            const dateStr = transaction.transactionDate || transaction.createdAt;
+                            if (dateStr) {
+                              try {
+                                const date = new Date(dateStr);
+                                // Check if date is valid
+                                if (!isNaN(date.getTime())) {
+                                  return date.toLocaleString('vi-VN', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  });
+                                }
+                              } catch (e) {
+                                console.error('Error parsing date:', e);
+                              }
+                            }
+                            return 'N/A';
+                          })()}
                         </span>
                       </div>
                     </div>

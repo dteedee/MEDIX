@@ -33,7 +33,6 @@ const DoctorPackages: React.FC = () => {
         locale: vi,
       });
     } catch (error) {
-      console.error('Invalid date:', utcDateString);
       return 'Không xác định thời gian';
     }
   }
@@ -118,77 +117,155 @@ const DoctorPackages: React.FC = () => {
     );
   }
 
+  const formatBalance = (balance: number) => {
+    return new Intl.NumberFormat('vi-VN').format(balance);
+  };
+
   return (
-    <>
-      {/* Header */}
+    <div className={styles.container}>
+      {/* Phần đầu trang */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
+          <h1 className={styles.title}>Gói dịch vụ</h1>
+          <p className={styles.subtitle}>
+            <i className="bi bi-box-seam"></i>
+            Chọn gói dịch vụ phù hợp với nhu cầu của bạn
+          </p>
         </div>
-        <div className={styles.balance}>
-          <div className={styles.balance}>
-            <i className="bi bi-cash"></i>
-            <span>{data?.balance}</span>
+        <div className={styles.headerRight}>
+          <div className={styles.balanceCard}>
+            <div className={styles.balanceIcon}>
+              <i className="bi bi-wallet2"></i>
+            </div>
+            <div className={styles.balanceInfo}>
+              <span className={styles.balanceLabel}>Số dư ví</span>
+              <span className={styles.balanceAmount}>
+                {data?.balance ? formatBalance(data.balance) : '0'} đ
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className={styles.cardRowWrapper}>
-        {data?.list.map((item) => (
-          <div className="card text-dark bg-white shadow-sm h-100" style={{ width: '18rem' }}>
-            <div className="card-body d-flex flex-column">
-              <h5 className="card-title">Gói {item.name}</h5>
-              <h6 className="card-subtitle mb-3 text-end fw-bold">
-                {item.monthlyPrice ? (
-                  <span>{item.monthlyPrice} đ/tháng</span>
-                ) : (
-                  <span>Miễn phí</span>
-                )}
-              </h6>
+      {/* Lưới hiển thị gói dịch vụ */}
+      <div className={styles.packagesGrid}>
+        {data?.list.map((item, index) => {
+          const isCurrentTier = data.currentTierId === item.id;
+          const features = JSON.parse(item.features || '[]');
+          
+          // Xác định màu sắc theo thứ tự gói
+          const getPackageTheme = (idx: number) => {
+            if (idx === 0) return 'themeBlue';
+            if (idx === 1) return 'themeGreen';
+            return 'themeGold';
+          };
+          
+          const themeClass = getPackageTheme(index);
+          
+          return (
+            <div 
+              key={item.id} 
+              className={`${styles.packageCard} ${styles[themeClass]} ${isCurrentTier ? styles.currentTier : ''}`}
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
+              {isCurrentTier && (
+                <div className={`${styles.badge} ${!data.currentSubscriptionActive ? styles.cancelledBadgeTop : ''}`}>
+                  {data.currentSubscriptionActive ? (
+                    <>
+                      <i className="bi bi-check-circle-fill"></i>
+                      {data.expiredAt ? (
+                        <>
+                          Đang sở hữu • Còn {getTimeLeftLabel(data.expiredAt)}
+                        </>
+                      ) : (
+                        'Đang sở hữu'
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-x-circle"></i>
+                      Đã hủy
+                    </>
+                  )}
+                </div>
+              )}
+              
+              <div className={styles.packageHeader}>
+                <div className={`${styles.packageIcon} ${styles[`${themeClass}Icon`]}`}>
+                  <i className="bi bi-star-fill"></i>
+                </div>
+                <h3 className={`${styles.packageName} ${styles[`${themeClass}Name`]}`}>Gói {item.name}</h3>
+                <div className={styles.packagePrice}>
+                  {item.monthlyPrice ? (
+                    <>
+                      <span className={`${styles.priceAmount} ${styles[`${themeClass}Price`]}`}>
+                        {formatBalance(item.monthlyPrice)}
+                      </span>
+                      <span className={styles.priceUnit}>đ/tháng</span>
+                    </>
+                  ) : (
+                    <span className={styles.freeLabel}>Miễn phí</span>
+                  )}
+                </div>
+              </div>
 
-              <ul className="list-group list-group-flush mb-3">
-                {JSON.parse(item.features).map((feature: any) => (
-                  <li className="list-group-item">{feature}</li>
-                ))}
-              </ul>
-              <div className="mt-auto text-center">
-                {data.currentTierId === item.id ? (
+              <div className={styles.packageFeatures}>
+                <ul className={styles.featuresList}>
+                  {features.map((feature: string, idx: number) => (
+                    <li key={idx} className={styles.featureItem}>
+                      <i className="bi bi-check-circle-fill"></i>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className={styles.packageFooter}>
+                {isCurrentTier ? (
                   <>
-                    <span className='mb-3'>Đang sở hữu</span>
                     {item.monthlyPrice > 0 && (
                       <>
-                        <div>
-                          <span className='mb-3'>
-                            {!data.currentSubscriptionActive && (
-                              <>
-                                <span>Đã hủy - </span> 
-                              </>
-                            )}
-                            Còn {getTimeLeftLabel(data.expiredAt)}
-                          </span>
-                        </div>
                         {data.currentSubscriptionActive ? (
-                          <div>
-                            <button
-                              onClick={() => handleShowUnsubscribe(item.name, item.id)}
-                              className="btn btn-warning px-4">Hủy đăng kí</button>
-                          </div>
+                          <button
+                            onClick={() => handleShowUnsubscribe(item.name, item.id)}
+                            className={`${styles.actionButton} ${styles.cancelButton}`}
+                          >
+                            <i className="bi bi-x-circle"></i>
+                            Hủy đăng kí
+                          </button>
                         ) : (
-                          <button onClick={() => handleShowConfirmation(item.name, item.id, 
-                            "Nếu bạn tiếp tục đăng ký, hệ thống sẽ trừ số dư trong ví của bạn để gia hạn gói dịch vụ cho kỳ tiếp theo. Vui lòng xác nhận nếu bạn muốn tiếp tục đăng ký."
-                          )} className="btn btn-primary px-4">Đăng kí</button>
+                          <button
+                            onClick={() => handleShowConfirmation(
+                              item.name, 
+                              item.id, 
+                              "Nếu bạn tiếp tục đăng ký, hệ thống sẽ trừ số dư trong ví của bạn để gia hạn gói dịch vụ cho kỳ tiếp theo. Vui lòng xác nhận nếu bạn muốn tiếp tục đăng ký."
+                            )}
+                            className={`${styles.actionButton} ${styles[`${themeClass}Button`]}`}
+                          >
+                            <i className="bi bi-arrow-clockwise"></i>
+                            Đăng kí lại
+                          </button>
                         )}
                       </>
                     )}
                   </>
                 ) : (
-                  <button onClick={() => handleShowConfirmation(item.name, item.id,
-                    "Gói sẽ được làm mới mỗi tháng và sẽ sử dụng số tiền trong ví của bạn để thanh toán."
-                  )} className="btn btn-primary px-4">Mua</button>
+                  <button
+                    onClick={() => handleShowConfirmation(
+                      item.name, 
+                      item.id,
+                      "Gói sẽ được làm mới mỗi tháng và sẽ sử dụng số tiền trong ví của bạn để thanh toán."
+                    )}
+                    className={`${styles.actionButton} ${styles[`${themeClass}Button`]}`}
+                  >
+                    <i className="bi bi-cart-plus"></i>
+                    Mua gói
+                  </button>
                 )}
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <ConfirmationDialog
@@ -204,7 +281,7 @@ const DoctorPackages: React.FC = () => {
         message={'Sau khi hủy, bạn vẫn sẽ tiếp tục được sử dụng đầy đủ quyền lợi của gói hiện tại cho đến khi hết thời hạn. Gói sẽ không được gia hạn tự động và số dư trong ví của bạn sẽ không bị trừ thêm khi gói hết hạn.'}
         onConfirm={() => handleUnsubscribe()}
         onCancel={() => setShowUnsubscribe(false)} />
-    </>
+    </div>
   );
 };
 

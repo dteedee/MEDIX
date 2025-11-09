@@ -19,6 +19,8 @@ export interface MedicalRecord {
   appointmentId: string;
   patientName: string;
   appointmentDate: string;
+  appointmentStartTime?: string;
+  appointmentEndTime?: string;
   chiefComplaint: string;
   physicalExamination: string;
   diagnosis: string;

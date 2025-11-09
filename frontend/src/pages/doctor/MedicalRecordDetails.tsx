@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState, FormEvent } from 'react';
+import React, { useEffect, useState, FormEvent, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { medicalRecordService } from '../../services/medicalRecordService';
 import { prescriptionService } from '../../services/prescriptionService';
@@ -35,14 +35,6 @@ const MedicalRecordDetails: React.FC = () => {
         const data = await medicalRecordService.getMedicalRecordByAppointmentId(appointmentId);
         setMedicalRecord(data);
         setError(null);
-
-        // Xác định xem hồ sơ có được phép chỉnh sửa hay không
-        const appointmentDate = new Date(data.appointmentDate);
-        const today = new Date();
-        const isToday =
-          appointmentDate.getFullYear() === today.getFullYear() &&
-          appointmentDate.getMonth() === today.getMonth() &&
-          appointmentDate.getDate() === today.getDate();
 
       } catch (err: any) {
         console.error("Error fetching medical record:", err);
@@ -174,6 +166,22 @@ const MedicalRecordDetails: React.FC = () => {
     }
   };
 
+  // Xác định xem hồ sơ có được phép chỉnh sửa hay không
+  const isEditable = useMemo(() => {
+    if (!medicalRecord) return false;
+    
+    // Sử dụng appointmentDate để xác định khoảng thời gian chỉnh sửa
+    if (medicalRecord.appointmentDate) {
+      const now = new Date();
+      const startTime = new Date(medicalRecord.appointmentDate);
+      // Giả sử một ca khám kéo dài 50 phút
+      const endTime = new Date(startTime.getTime() + 50 * 60000);
+      // Cho phép chỉnh sửa nếu thời gian hiện tại nằm trong khoảng thời gian của cuộc hẹn
+      return now >= startTime && now <= endTime;
+    }
+    return false;
+  }, [medicalRecord]);
+
   if (isLoading) {
     return <PageLoader />;
   }
@@ -193,15 +201,6 @@ const MedicalRecordDetails: React.FC = () => {
     );
   }
 
-  // Xác định xem hồ sơ có được phép chỉnh sửa hay không
-  const appointmentDate = medicalRecord ? new Date(medicalRecord.appointmentDate) : new Date();
-  const today = new Date();
-  const isEditable = !!(
-    medicalRecord &&
-    appointmentDate.getFullYear() === today.getFullYear() &&
-    appointmentDate.getMonth() === today.getMonth() &&
-    appointmentDate.getDate() === today.getDate()
-  );
   if (!medicalRecord) {
     return (
       <div className="container mx-auto p-6 text-center">

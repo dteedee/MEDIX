@@ -1807,6 +1807,30 @@ function DoctorDetails() {
                                                     
                                                     <div className={styles.summaryCards}>
                                                         <div className={styles.summaryCard}>
+                                                            <div className={styles.summaryCardAvatar}>
+                                                                {profileData.avatarUrl ? (
+                                                                    <img src={profileData.avatarUrl} alt={profileData.fullName} />
+                                                                ) : (
+                                                                    <i className="bi bi-person-circle"></i>
+                                                                )}
+                                                            </div>
+                                                            <div className={styles.summaryCardContent}>
+                                                                <span className={styles.summaryLabel}>Bác sĩ</span>
+                                                                <span className={styles.summaryValue}>{profileData.fullName}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className={styles.summaryCard}>
+                                                            <div className={styles.summaryCardIcon}>
+                                                                <i className="bi bi-mortarboard-fill"></i>
+                                                            </div>
+                                                            <div className={styles.summaryCardContent}>
+                                                                <span className={styles.summaryLabel}>Trình độ</span>
+                                                                <span className={styles.summaryValue}>
+                                                                    {profileData.education || 'Chưa cập nhật'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className={styles.summaryCard}>
                                                             <div className={styles.summaryCardIcon}>
                                                                 <i className="bi bi-calendar-event"></i>
                                                             </div>

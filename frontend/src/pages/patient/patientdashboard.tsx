@@ -56,40 +56,56 @@ export const PatientDashboard: React.FC = () => {
   };
 
   const now = new Date();
+  
+  // 即将到来的预约（使用正确的状态码）
   const upcomingAppointments = appointments.filter(apt => {
     const aptDate = new Date(apt.appointmentStartTime);
-    return aptDate >= now && (apt.statusCode === 'CONFIRMED' || apt.statusCode === 'PENDING');
+    const isUpcoming = apt.statusCode === 'Confirmed' || apt.statusCode === 'OnProgressing';
+    return aptDate >= now && isUpcoming;
   }).sort((a, b) => 
     new Date(a.appointmentStartTime).getTime() - new Date(b.appointmentStartTime).getTime()
   );
 
+  // 今天的预约
+  const todayAppointments = upcomingAppointments.filter(apt => {
+    const aptDate = new Date(apt.appointmentStartTime);
+    return aptDate.toDateString() === now.toDateString();
+  });
+
+  // 本周开始的日期
   const thisWeekStart = new Date(now);
   thisWeekStart.setDate(now.getDate() - now.getDay());
   thisWeekStart.setHours(0, 0, 0, 0);
-  const thisWeekAppointments = appointments.filter(apt => {
-    const aptDate = new Date(apt.appointmentStartTime);
-    return aptDate >= thisWeekStart && aptDate <= now;
+  
+  // 本周新增的医疗记录
+  const thisWeekRecords = medicalRecords.filter(record => {
+    const recordDate = new Date(record.date);
+    return recordDate >= thisWeekStart;
   });
 
+  // 本月的医疗记录
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const thisMonthRecords = medicalRecords.filter(record => {
     const recordDate = new Date(record.date);
     return recordDate >= thisMonthStart;
   });
 
+  // AI 检查结果
   const aiResults = appointments.filter(apt => apt.aiSymptomAnalysisId).length;
-  const thisWeekAiResults = appointments.filter(apt => {
+  
+  // 最近的 AI 结果（最近 7 天）
+  const recentAiResults = appointments.filter(apt => {
     const aptDate = new Date(apt.appointmentStartTime);
-    return aptDate >= thisWeekStart && apt.aiSymptomAnalysisId;
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
+    return aptDate >= sevenDaysAgo && apt.aiSymptomAnalysisId;
   }).length;
 
+  // Dashboard 概览统计数据
   const upcomingCount = upcomingAppointments.length;
   const historyCount = medicalRecords.length;
-  const remindersCount = upcomingAppointments.length + (medicalRecords.length > 0 ? 1 : 0);
-  const todayReminders = upcomingAppointments.filter(apt => {
-    const aptDate = new Date(apt.appointmentStartTime);
-    return aptDate.toDateString() === now.toDateString();
-  }).length;
+  const aiResultsCount = aiResults;
+  const remindersCount = upcomingAppointments.length;
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
@@ -105,26 +121,27 @@ export const PatientDashboard: React.FC = () => {
 
   const getStatusBadge = (statusCode: string): string => {
     switch (statusCode) {
-      case 'CONFIRMED':
+      case 'Confirmed':
         return 'Đã xác nhận';
-      case 'PENDING':
-        return 'Chờ xác nhận';
-      case 'COMPLETED':
+      case 'OnProgressing':
+        return 'Đang xử lý';
+      case 'Completed':
         return 'Đã hoàn thành';
-      case 'CANCELLED':
+      case 'CancelledByPatient':
+      case 'CancelledByDoctor':
+      case 'NoShow':
         return 'Đã hủy';
       default:
-        return 'Không xác định';
+        return statusCode || 'Không xác định';
     }
   };
 
   const getStatusBadgeClass = (statusCode: string): string => {
     switch (statusCode) {
-      case 'CONFIRMED':
+      case 'Confirmed':
+      case 'OnProgressing':
         return styles.statusBadge;
-      case 'PENDING':
-        return styles.statusBadge;
-      case 'COMPLETED':
+      case 'Completed':
         return styles.statusBadge;
       default:
         return styles.statusBadge;
@@ -176,7 +193,7 @@ export const PatientDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Dashboard Overview */}
       <div className={styles.statsGrid}>
         <div className={`${styles.statCard} ${styles.statCard1}`}>
           <div className={styles.statIcon}>
@@ -186,8 +203,8 @@ export const PatientDashboard: React.FC = () => {
             <div className={styles.statLabel}>Lịch hẹn sắp tới</div>
             <div className={styles.statValue}>{statsLoading ? '...' : upcomingCount}</div>
             <div className={styles.statTrend}>
-              <i className="bi bi-graph-up"></i>
-              <span>+{thisWeekAppointments.length} tuần này</span>
+              <i className="bi bi-calendar-event"></i>
+              <span>{todayAppointments.length} hôm nay</span>
             </div>
           </div>
           <div className={styles.statBg}>
@@ -218,10 +235,10 @@ export const PatientDashboard: React.FC = () => {
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Kết quả AI</div>
-            <div className={styles.statValue}>{statsLoading ? '...' : aiResults}</div>
+            <div className={styles.statValue}>{statsLoading ? '...' : aiResultsCount}</div>
             <div className={styles.statTrend}>
               <i className="bi bi-graph-up"></i>
-              <span>+{thisWeekAiResults} tuần này</span>
+              <span>+{recentAiResults} 7 ngày qua</span>
             </div>
           </div>
           <div className={styles.statBg}>
@@ -237,8 +254,8 @@ export const PatientDashboard: React.FC = () => {
             <div className={styles.statLabel}>Nhắc nhở</div>
             <div className={styles.statValue}>{statsLoading ? '...' : remindersCount}</div>
             <div className={styles.statTrend}>
-              <i className="bi bi-graph-up"></i>
-              <span>+{todayReminders} hôm nay</span>
+              <i className="bi bi-bell-fill"></i>
+              <span>{todayAppointments.length} cần chú ý</span>
             </div>
           </div>
           <div className={styles.statBg}>

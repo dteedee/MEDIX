@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Net.payOS;
+using PayOS;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);

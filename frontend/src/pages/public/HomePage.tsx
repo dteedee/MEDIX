@@ -392,7 +392,7 @@ function HomePage() {
                 <div className={styles["doctor-carousel-container"]}>
                     <div className={styles["doctors-grid"]}>
                         {getVisibleDoctors().map((doctor, index) => (
-                            <link key={`doctor-${doctor.userName}-${index}`} href={`/doctor/details/${doctor.id}`} className={styles["doctor-card"]}>
+                            <a key={`doctor-${doctor.userName}-${index}`} href={`/doctor/details/${doctor.id}`} className={styles["doctor-card"]}>
                                 <div className={styles["doctor-photo"]} style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
                                     <img className={styles['doctor-photo']} src={doctor.avatarUrl} style={{objectFit:'cover', display:'block'}} />
                                 </div>
@@ -408,7 +408,7 @@ function HomePage() {
                                         {'★'.repeat(Math.round(doctor.averageRating)) + '☆'.repeat(5 - Math.round(doctor.averageRating))}
                                     </div>
                                 </div>
-                            </link>
+                            </a>
                         ))}
                     </div>
                 </div>
@@ -421,6 +421,7 @@ function HomePage() {
                     </button>
                 </div>
             </section >
+
             {/* Knowledge Section */}
             <section className={styles["knowledge"]}>
                 <h2>{t('knowledge.title')}</h2>

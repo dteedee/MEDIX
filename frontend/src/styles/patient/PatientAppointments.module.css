@@ -1327,3 +1327,213 @@
     width: 100%;
   }
 }
+
+/* Success Modal */
+.successModal {
+  background: white;
+  border-radius: 24px;
+  max-width: 500px;
+  width: 90%;
+  padding: 40px 32px;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  position: relative;
+  animation: modalSlideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-align: center;
+}
+
+.successCloseBtn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(107, 114, 128, 0.1);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #6b7280;
+  font-size: 18px;
+}
+
+.successCloseBtn:hover {
+  background: rgba(107, 114, 128, 0.2);
+  transform: rotate(90deg);
+  color: #374151;
+}
+
+.successIcon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s backwards;
+}
+
+.successIcon i {
+  color: white;
+  font-size: 42px;
+}
+
+.successTitle {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.successMessage {
+  font-size: 15px;
+  color: #6b7280;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.refundDetails {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-radius: 16px;
+  padding: 20px;
+  margin: 24px 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 2px solid #10b981;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.refundIcon {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.refundIcon i {
+  color: white;
+  font-size: 24px;
+}
+
+.refundContent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  flex: 1;
+}
+
+.refundLabel {
+  font-size: 13px;
+  color: #059669;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.refundAmount {
+  font-size: 28px;
+  font-weight: 800;
+  color: #047857;
+  margin-bottom: 4px;
+}
+
+.refundNote {
+  font-size: 12px;
+  color: #10b981;
+  font-style: italic;
+}
+
+.successOkBtn {
+  width: 100%;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  margin-top: 8px;
+}
+
+.successOkBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.successOkBtn:active {
+  transform: translateY(0);
+}
+
+.successOkBtn i {
+  font-size: 18px;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Responsive for Success Modal */
+@media (max-width: 576px) {
+  .successModal {
+    padding: 32px 24px;
+  }
+
+  .successIcon {
+    width: 70px;
+    height: 70px;
+  }
+
+  .successIcon i {
+    font-size: 36px;
+  }
+
+  .successTitle {
+    font-size: 22px;
+  }
+
+  .refundDetails {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .refundContent {
+    align-items: center;
+    text-align: center;
+  }
+
+  .refundAmount {
+    font-size: 24px;
+  }
+}

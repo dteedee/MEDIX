@@ -42,6 +42,8 @@ export const PatientAppointments: React.FC = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showEMRModal, setShowEMRModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [cancelResult, setCancelResult] = useState<{ message: string; refundAmount?: number } | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({
     status: 'all',
@@ -185,13 +187,12 @@ export const PatientAppointments: React.FC = () => {
       setShowCancelDialog(false);
       setSelectedAppointment(null);
 
-      // Show success message (you can use toast notification here)
-      alert(result.message || 'Hủy lịch hẹn thành công!');
-      
-      // If refund was processed, show refund amount
-      if (result.refundAmount) {
-        alert(`Số tiền hoàn lại: ${formatCurrency(result.refundAmount)}`);
-      }
+      // Store result and show success modal
+      setCancelResult({
+        message: result.message || 'Hủy lịch hẹn thành công!',
+        refundAmount: result.refundAmount
+      });
+      setShowSuccessModal(true);
 
     } catch (error: any) {
       console.error('Error cancelling appointment:', error);
@@ -830,6 +831,54 @@ export const PatientAppointments: React.FC = () => {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal after cancellation */}
+      {showSuccessModal && cancelResult && (
+        <div className={styles.modalOverlay} onClick={() => setShowSuccessModal(false)}>
+          <div className={styles.successModal} onClick={(e) => e.stopPropagation()}>
+            <button 
+              className={styles.successCloseBtn}
+              onClick={() => setShowSuccessModal(false)}
+              aria-label="Đóng"
+            >
+              <i className="bi bi-x-lg"></i>
+            </button>
+
+            <div className={styles.successIcon}>
+              <i className="bi bi-check-circle-fill"></i>
+            </div>
+
+            <h2 className={styles.successTitle}>Hủy lịch hẹn thành công!</h2>
+            
+            <p className={styles.successMessage}>{cancelResult.message}</p>
+
+            {cancelResult.refundAmount && cancelResult.refundAmount > 0 && (
+              <div className={styles.refundDetails}>
+                <div className={styles.refundIcon}>
+                  <i className="bi bi-wallet2"></i>
+                </div>
+                <div className={styles.refundContent}>
+                  <span className={styles.refundLabel}>Số tiền hoàn lại</span>
+                  <span className={styles.refundAmount}>
+                    {formatCurrency(cancelResult.refundAmount)}
+                  </span>
+                  <span className={styles.refundNote}>
+                    (Đã được hoàn vào ví của bạn)
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <button 
+              className={styles.successOkBtn}
+              onClick={() => setShowSuccessModal(false)}
+            >
+              <i className="bi bi-check2"></i>
+              Đồng ý
+            </button>
           </div>
         </div>
       )}

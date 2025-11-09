@@ -154,11 +154,18 @@ namespace Medix.API.DataAccess.Repositories.Classification
             );
         }
 
+
+
        public async Task<Appointment> CreateApppointmentAsync(Appointment entity)
         {
             await _context.Appointments.AddAsync(entity);
             await _context.SaveChangesAsync();
             return entity;
+        }
+
+        public async Task<int> CountStatus(Guid id, string Status)
+        {
+            return await _context.Appointments.Where(d => d.DoctorId == id && d.StatusCode == Status).CountAsync();
         }
     }
 }

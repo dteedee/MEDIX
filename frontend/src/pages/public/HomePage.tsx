@@ -380,7 +380,7 @@ function HomePage() {
                 <div className={styles["doctor-carousel-container"]}>
                     <div className={styles["doctors-grid"]}>
                         {getVisibleDoctors().map((doctor, index) => (
-                            <a key={`doctor-${doctor.userName}-${index}`} href={`/doctor/details/${doctor.userName}`} className={styles["doctor-card"]}>
+                            <a key={`doctor-${doctor.userName}-${index}`} href={`/doctor/details/${doctor.id}`} className={styles["doctor-card"]}>
                                 <div className={styles["doctor-photo"]} style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
                                     <img className={styles['doctor-photo']} src={doctor.avatarUrl} style={{objectFit:'cover', display:'block'}} />
                                 </div>

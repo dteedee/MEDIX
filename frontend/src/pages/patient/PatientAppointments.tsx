@@ -536,7 +536,7 @@ export const PatientAppointments: React.FC = () => {
                 <i className="bi bi-info-circle"></i>
                 <span>
                   {selectedAppointment?.paymentStatusCode === 'Paid' 
-                    ? `Số tiền ${formatCurrency(selectedAppointment?.totalAmount || selectedAppointment?.fee || 0)} sẽ được hoàn lại vào ví của bạn.`
+                    ? `Số tiền ${formatCurrency(Math.round((selectedAppointment?.totalAmount || selectedAppointment?.fee || 0) * 0.8))} (80% của ${formatCurrency(selectedAppointment?.totalAmount || selectedAppointment?.fee || 0)}) sẽ được hoàn lại vào ví của bạn.`
                     : 'Lịch hẹn sẽ được hủy miễn phí.'
                   }
                 </span>

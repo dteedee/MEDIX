@@ -24,10 +24,11 @@ namespace Medix.API.Business.Services.Classification
         private readonly IAppointmentService _appointmentService;
         private readonly IServiceTierRepository _serviceTierRepo;
         private readonly IServiceTierRepository _serviceTierRepository;
+        private readonly IAppointmentRepository _appointmentRepository;
 
         public DoctorService(IDoctorRepository doctorRepository, IUserRepository userRepository,
             MedixContext context, IReviewRepository reviewRepository, IServiceTierRepository serviceTierRepository, IServiceTierRepository serviceTierRepo, IDoctorScheduleRepository doctorScheduleRepository,
-            IEmailService emailService, IDoctorScheduleOverrideRepository doctorScheduleOverrideRepository, IAppointmentService appointmentService)
+            IEmailService emailService, IDoctorScheduleOverrideRepository doctorScheduleOverrideRepository, IAppointmentService appointmentService, IAppointmentRepository appointmentRepository)
         {
             _doctorRepository = doctorRepository;
             _userRepository = userRepository;
@@ -39,6 +40,7 @@ namespace Medix.API.Business.Services.Classification
             _emailService = emailService;
             _doctorScheduleOverrideRepository = doctorScheduleOverrideRepository;
             _appointmentService = appointmentService;
+            _appointmentRepository = appointmentRepository;
         }
 
         public async Task<List<Doctor>> GetHomePageDoctorsAsync()
@@ -186,6 +188,8 @@ namespace Medix.API.Business.Services.Classification
                 AvatarUrl = doctor.User.AvatarUrl,
                 NumberOfReviews = reviews.Count,
                 RatingByStar = ratingByStar,
+
+        Experiece = doctor.YearsOfExperience
             };
 
             profileDto.Reviews = reviews.OrderByDescending(r => r.CreatedAt)
@@ -365,7 +369,11 @@ namespace Medix.API.Business.Services.Classification
                         Experience = d.YearsOfExperience.ToString(),
                         price = d.ConsultationFee,
                         bio = d.Bio,
-                        rating = d.AverageRating
+                        rating = d.AverageRating,
+                        TotalDone = _context.Appointments.Count(a => a.DoctorId == d.Id && a.StatusCode == "Completed" && a.PaymentStatusCode== "Paid"),
+TotalAppointments = _context.Appointments.Count(a => a.DoctorId == d.Id),
+
+                        TotalReviews = _context.Reviews.Count(r => r.Appointment.DoctorId == d.Id)
                     })
                     .ToListAsync();
 

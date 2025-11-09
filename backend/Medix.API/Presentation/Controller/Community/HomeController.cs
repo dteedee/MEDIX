@@ -32,6 +32,7 @@ namespace Medix.API.Presentation.Controller.Community
                 var doctors = await _doctorService.GetHomePageDoctorsAsync();
                 var displayedDoctors = doctors.Select(d => new
                 {
+                    d.Id,
                     d.User.AvatarUrl,
                     d.User.FullName,
                     d.User.UserName,

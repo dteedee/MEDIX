@@ -44,6 +44,7 @@
     // 4. LỚP DOCTORBOOKINDTO (ĐỘC LẬP)
     public class DoctorBookinDto
     {
+       
         public Guid userId { get; set; }
         public Guid DoctorId { get; set; }
         public string DoctorName { get; set; }
@@ -56,6 +57,28 @@
         public decimal? price { get; set; }
         public string? bio { get; set; }
         public decimal? rating { get; set; }
+
+        public int? TotalDone { get; set; }
+
+        public int TotalAppointments { get; set; } 
+        public double SuccessPercentage
+        {
+            get
+            {
+               
+                if (TotalAppointments == 0)
+                {
+                    return 0;
+                }
+
+              
+                return ((double)TotalDone / TotalAppointments) * 100;
+            }
+        }
+        public int TotalReviews { get; set; }
+
+
+
     }
 
     // 5. LỚP SERVICETIER (ĐỘC LẬP - ĐÃ ĐƯỢC DI CHUYỂN RA NGOÀI)

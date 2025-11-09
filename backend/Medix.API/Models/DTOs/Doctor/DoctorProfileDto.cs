@@ -14,6 +14,7 @@ namespace Medix.API.Models.DTOs.Doctor
         public string Specialization { get; set; }
         public string? Biography { get; set; }
         public int[] RatingByStar { get; set; }
+        public int Experiece { get; set; }
         public string? Education { get; set; }
         public List<ReviewDto>? Reviews { get; set; }
         public List<DoctorScheduleDto>? Schedules { get; set; }

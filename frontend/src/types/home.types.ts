@@ -1,4 +1,5 @@
 export interface HomePageDoctor {
+    id: string;
     avatarUrl: string;
     fullName: string;
     userName: string;

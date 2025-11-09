@@ -111,6 +111,8 @@ public partial class MedixContext : DbContext
 
     public virtual DbSet<WalletTransaction> WalletTransactions { get; set; }
 
+    public virtual DbSet<NoticeSetup> NoticeSetups { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AISymptomAnalysis>(entity =>
@@ -1055,6 +1057,35 @@ public partial class MedixContext : DbContext
                 .HasForeignKey<Wallet>(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Wallets_User");
+        });
+
+        modelBuilder.Entity<NoticeSetup>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__NoticeSe__3214EC07XXXXXXXX");
+
+            // Index for quick lookup by NoticeCode
+            entity.HasIndex(e => e.NoticeCode, "IX_NoticeSetup_NoticeCode");
+
+            // Index for active notices
+            entity.HasIndex(e => e.Status, "IX_NoticeSetup_Status")
+                .HasFilter("([Status]=(1))");
+
+            // Primary key configuration
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+
+            // String properties
+            entity.Property(e => e.ReminderHeader).HasMaxLength(500);
+            entity.Property(e => e.ReminderBody).HasMaxLength(2000);
+            entity.Property(e => e.NoticeCode).HasMaxLength(50);
+            entity.Property(e => e.TemplateEmailHeader).HasMaxLength(500);
+            entity.Property(e => e.TemplateEmailBody).HasMaxLength(4000);
+
+            // ✅ Status default value = true (1)
+            entity.Property(e => e.Status).HasDefaultValue(true);
+
+            // DateTime properties with defaults
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.UpdatedDate).HasDefaultValueSql("(getutcdate())");
         });
 
         modelBuilder.Entity<WalletTransaction>(entity =>

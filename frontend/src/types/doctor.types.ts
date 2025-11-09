@@ -75,6 +75,7 @@ export interface DoctorProfileDto {
   price?: number; // giữ tương thích nếu có nơi dùng price
   yearsOfExperience?: number | string; // kinh nghiệm từ backend
   experience?: number | string; // một số API trả experience
+  experiece?: number | string; // typo từ backend (Experiece)
   averageRating: number;
   numberOfReviews: number;
   specialization: string;
@@ -131,6 +132,10 @@ export interface DoctorInTier {
   price: number;
   bio: string;
   rating: number;
+  totalDone?: number; // Số ca đã thực hiện
+  totalAppointments?: number; // Tổng số lịch hẹn
+  successPercentage?: number; // Tỷ lệ thành công (%)
+  totalReviews?: number; // Tổng số đánh giá
   totalCases?: number;
   successfulCases?: number;
   successRate?: number;
@@ -179,6 +184,10 @@ export interface DoctorInEducation {
   price: number;
   bio: string;
   rating: number;
+  totalDone?: number; // Số ca đã thực hiện
+  totalAppointments?: number; // Tổng số lịch hẹn
+  successPercentage?: number; // Tỷ lệ thành công (%)
+  totalReviews?: number; // Tổng số đánh giá
   totalCases?: number;
   successfulCases?: number;
   successRate?: number;

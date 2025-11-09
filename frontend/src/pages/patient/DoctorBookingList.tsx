@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -20,6 +21,10 @@ interface Doctor {
   tier: 'Basic' | 'Professional' | 'Premium' | 'VIP';
   bio: string;
   imageUrl?: string;
+  totalDone?: number; // Số ca đã thực hiện
+  totalAppointments?: number; // Tổng số lịch hẹn
+  successPercentage?: number; // Tỷ lệ thành công (%)
+  totalReviews?: number; // Tổng số đánh giá
   totalCases?: number;
   successRate?: number;
   responseTime?: string;
@@ -54,6 +59,10 @@ const convertApiDoctorToDoctor = (
   const successRate = stats?.successRate ?? 0;
   const responseTime = stats?.responseTime ?? 'N/A';
   const reviewCount = apiDoctor.reviewCount || (typeof (apiDoctor as any).numberOfReviews === 'number' ? (apiDoctor as any).numberOfReviews : 0);
+  const totalDone = apiDoctor.totalDone ?? 0;
+  const totalAppointments = apiDoctor.totalAppointments ?? 0;
+  const successPercentage = apiDoctor.successPercentage ?? 0;
+  const totalReviews = apiDoctor.totalReviews ?? 0;
   
   // Validate tierName to prevent crash from invalid UUIDs or null values
   const safeTier =
@@ -73,6 +82,10 @@ const convertApiDoctorToDoctor = (
     tier: safeTier as 'Basic' | 'Professional' | 'Premium' | 'VIP',
     bio: apiDoctor.bio || 'Bác sĩ chuyên nghiệp với nhiều năm kinh nghiệm trong lĩnh vực y tế.',
     imageUrl,
+    totalDone,
+    totalAppointments,
+    successPercentage,
+    totalReviews,
     totalCases,
     successRate,
     responseTime
@@ -96,6 +109,10 @@ const convertEducationDoctorToDoctor = (
   const totalCases = stats?.totalCases ?? 0;
   const successRate = stats?.successRate ?? 0;
   const responseTime = stats?.responseTime ?? 'N/A';
+  const totalDone = apiDoctor.totalDone ?? 0;
+  const totalAppointments = apiDoctor.totalAppointments ?? 0;
+  const successPercentage = apiDoctor.successPercentage ?? 0;
+  const totalReviews = apiDoctor.totalReviews ?? 0;
   
   return {
     id: apiDoctor.doctorId,
@@ -109,6 +126,10 @@ const convertEducationDoctorToDoctor = (
     tier: 'Basic' as 'Basic' | 'Professional' | 'Premium' | 'VIP', // Default tier
     bio: apiDoctor.bio || 'Bác sĩ chuyên nghiệp với nhiều năm kinh nghiệm trong lĩnh vực y tế.',
     imageUrl,
+    totalDone,
+    totalAppointments,
+    successPercentage,
+    totalReviews,
     totalCases,
     successRate,
     responseTime
@@ -138,6 +159,18 @@ const getDegreeFromEducationName = (educationName: string): DegreeTab => {
     case 'Phó giáo sư': return 'Phó giáo sư';
     case 'Giáo sư': return 'Giáo sư';
     default: return 'Cử nhân y khoa';
+  }
+};
+
+// Map education code to DegreeTab
+const getDegreeFromEducationCode = (code: string): DegreeTab | null => {
+  switch (code) {
+    case 'BC': return 'Cử nhân y khoa';
+    case 'MS': return 'Thạc sĩ y khoa';
+    case 'DR': return 'Tiến sĩ y khoa';
+    case 'AP': return 'Phó giáo sư';
+    case 'PR': return 'Giáo sư';
+    default: return null;
   }
 };
 
@@ -779,8 +812,12 @@ const DoctorBookingList: React.FC = () => {
     };
 
     // Calculate stats for display
-    const totalCases = doctor.totalCases || 0;
-    const successRate = doctor.successRate || 0;
+    const totalDone = doctor.totalDone || 0; // Số ca đã thực hiện
+    const totalAppointments = doctor.totalAppointments || 0; // Tổng số lịch hẹn
+    const successPercentage = doctor.successPercentage 
+      ? Math.round(doctor.successPercentage) 
+      : (doctor.successRate || 0); // Fallback to successRate if successPercentage not available
+    const totalReviews = doctor.totalReviews || 0; // Tổng số đánh giá
     const responseTime = doctor.responseTime || 'N/A';
 
     return (
@@ -821,11 +858,11 @@ const DoctorBookingList: React.FC = () => {
         <div className={styles.doctorStats}>
           <div className={styles.statItem}>
             <div className={styles.statIcon}>
-              <i className="bi bi-people"></i>
+              <i className="bi bi-clipboard-check"></i>
             </div>
             <div className={styles.statContent}>
-              <div className={styles.statValue}>{totalCases.toLocaleString('vi-VN')}</div>
-              <div className={styles.statLabel}>Ca đã khám</div>
+              <div className={styles.statValue}>{totalDone.toLocaleString('vi-VN')}</div>
+              <div className={styles.statLabel}>Ca đã thực hiện</div>
             </div>
           </div>
           <div className={styles.statItem}>
@@ -833,16 +870,16 @@ const DoctorBookingList: React.FC = () => {
               <i className="bi bi-check-circle"></i>
             </div>
             <div className={styles.statContent}>
-              <div className={styles.statValue}>{successRate}%</div>
+              <div className={styles.statValue}>{successPercentage}%</div>
               <div className={styles.statLabel}>Thành công</div>
             </div>
           </div>
           <div className={styles.statItem}>
             <div className={styles.statIcon}>
-              <i className="bi bi-clock"></i>
+              <i className="bi bi-chat-left-text"></i>
             </div>
             <div className={styles.statContent}>
-              <div className={styles.statValue}>{responseTime}</div>
+              <div className={styles.statValue}>{totalReviews.toLocaleString('vi-VN')}</div>
               <div className={styles.statLabel}>Phản hồi</div>
             </div>
           </div>
@@ -1059,7 +1096,17 @@ const DoctorBookingList: React.FC = () => {
               <select
                 value={selectedEducationCode}
                 onChange={(e) => {
-                  setSelectedEducationCode(e.target.value);
+                  const newCode = e.target.value;
+                  setSelectedEducationCode(newCode);
+                  
+                  // Tự động chuyển sang tab học vị tương ứng
+                  if (newCode !== 'all') {
+                    const correspondingDegree = getDegreeFromEducationCode(newCode);
+                    if (correspondingDegree) {
+                      setActiveDegree(correspondingDegree);
+                    }
+                  }
+                  
                   resetPagination();
                 }}
                 className={styles.filterSelect}

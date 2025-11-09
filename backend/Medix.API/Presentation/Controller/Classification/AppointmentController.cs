@@ -70,11 +70,11 @@ namespace Medix.API.Presentation.Controllers
                 if (isDoctorBusy)
                 {
                     // Lấy danh sách các lịch hẹn bị trùng để thông báo chi tiết
-                
+
                     return BadRequest(new
                     {
                         message = "Bác sĩ đã có lịch hẹn trong khoảng thời gian này",
-                   
+
                     });
                 }
             }
@@ -100,10 +100,10 @@ namespace Medix.API.Presentation.Controllers
                 BalanceBefore = wallet.Balance - Decimal.Parse(dto.TotalAmount.ToString()),
                 walletId = wallet.Id
             };
-          var transaction =  await walletTransactionService.createWalletTransactionAsync(WalletTransaction);
-          
+            var transaction = await walletTransactionService.createWalletTransactionAsync(WalletTransaction);
 
-           await _walletService.DecreaseWalletBalanceAsync(wallet.UserId, dto.TotalAmount ?? 0);
+
+            await _walletService.DecreaseWalletBalanceAsync(wallet.UserId, dto.TotalAmount ?? 0);
 
             dto.PatientId = patient.Id;
             dto.PaymentMethodCode = "Wallet";
@@ -278,14 +278,19 @@ namespace Medix.API.Presentation.Controllers
                 return BadRequest(new { message = $"Cannot cancel appointment with status: {appointment.StatusDisplayName}" });
             }
 
-            // 7️⃣ Check if appointment is too close (ví dụ: không cho hủy trong vòng 2 giờ trước giờ hẹn)
+            // 7️⃣ Check if appointment is too close
             var timeUntilAppointment = appointment.AppointmentStartTime - DateTime.UtcNow;
             if (timeUntilAppointment.TotalHours < 2)
             {
                 return BadRequest(new { message = "Cannot cancel appointment less than 2 hours before scheduled time" });
             }
 
-            // 8️⃣ Update appointment status
+            // 8️⃣ Calculate refund amount (80% of total)
+            const decimal REFUND_PERCENTAGE = 0.80m; // 80%
+            decimal refundAmount = Math.Round(appointment.TotalAmount * REFUND_PERCENTAGE, 2);
+            decimal cancellationFee = appointment.TotalAmount - refundAmount; // 20%
+
+            // 9️⃣ Update appointment status
             var updateAppointment = new UpdateAppointmentDto
             {
                 Id = request.AppointmentId,
@@ -294,17 +299,14 @@ namespace Medix.API.Presentation.Controllers
                 AppointmentEndTime = appointment.AppointmentEndTime,
                 TotalAmount = appointment.TotalAmount,
                 PaymentStatusCode = "Refunded",
-                RefundAmount = appointment.TotalAmount,
-                RefundStatus ="Paid",
+                RefundAmount = refundAmount, // ✅ 80% of total
+                RefundStatus = "Completed",
                 ConsultationFee = appointment.ConsultationFee,
-             DiscountAmount = appointment.DiscountAmount,
+                DiscountAmount = appointment.DiscountAmount,
                 PlatformFee = appointment.PlatformFee,
-                 DurationMinutes = appointment.DurationMinutes,
-                 MedicalInfo = appointment.MedicalInfo,
-                 PaymentMethodCode = appointment.PaymentMethodCode,
-
-
-
+                DurationMinutes = appointment.DurationMinutes,
+                MedicalInfo = appointment.MedicalInfo,
+                PaymentMethodCode = appointment.PaymentMethodCode,
             };
 
             var updateResult = await _service.UpdateAsync(updateAppointment);
@@ -313,7 +315,7 @@ namespace Medix.API.Presentation.Controllers
                 return StatusCode(500, new { message = "Unable to cancel appointment" });
             }
 
-            // 9️⃣ Process refund if payment was made
+            // 🔟 Process refund if payment was made
             if (updateResult.PaymentStatusCode == "Refunded")
             {
                 var wallet = await _walletService.GetWalletByUserIdAsync(userId);
@@ -324,37 +326,40 @@ namespace Medix.API.Presentation.Controllers
 
                 try
                 {
-                    // Create refund transaction
+                    // Create refund transaction with 80% amount
                     var walletTransaction = new WalletTransactionDto
                     {
-                        Amount = appointment.TotalAmount,
+                        Amount = refundAmount, // ✅ 80% refund
                         TransactionTypeCode = "AppointmentRefund",
-                        Description = $"Hoàn tiền cho hủy lịch hẹn #{appointment.Id}",
+                        Description = $"Hoàn tiền hủy lịch hẹn #{appointment.Id} (80% - Phí hủy: {cancellationFee:N0} VND)",
                         CreatedAt = DateTime.UtcNow,
-                        orderCode = 0, // Generate proper order code if needed
+                        orderCode = 0,
                         Status = "Completed",
                         BalanceBefore = wallet.Balance,
-                        BalanceAfter = wallet.Balance + appointment.TotalAmount,
+                        BalanceAfter = wallet.Balance + refundAmount, // ✅ Add 80%
                         walletId = wallet.Id,
                         RelatedAppointmentId = appointment.Id
                     };
 
                     var transaction = await walletTransactionService.createWalletTransactionAsync(walletTransaction);
 
-                    // Increase wallet balance
-                    await _walletService.IncreaseWalletBalanceAsync(wallet.UserId, appointment.TotalAmount);
+                    // Increase wallet balance with 80% refund
+                    await _walletService.IncreaseWalletBalanceAsync(wallet.UserId, refundAmount);
 
                     return Ok(new
                     {
                         message = "Appointment cancelled and refunded successfully",
                         appointmentId = appointment.Id,
-                        refundAmount = appointment.TotalAmount,
+                        totalAmount = appointment.TotalAmount,
+                        refundAmount = refundAmount, // ✅ 80%
+                        cancellationFee = cancellationFee, // ✅ 20%
+                        refundPercentage = "80%",
+                        note = "Phí hủy lịch 20% đã được trừ",
                         transactionId = transaction.id
                     });
                 }
                 catch (Exception ex)
                 {
-                    // Log error
                     return StatusCode(500, new
                     {
                         message = "Appointment cancelled but refund failed. Please contact support.",
@@ -364,10 +369,13 @@ namespace Medix.API.Presentation.Controllers
                 }
             }
 
-            // 🔟 No refund needed (appointment not paid yet)
-            return BadRequest();    
+            // ⚠️ No refund needed (appointment not paid yet)
+            return Ok(new
+            {
+                message = "Appointment cancelled successfully",
+                appointmentId = appointment.Id,
+                note = "No refund processed as payment was not completed"
+            });
         }
-
-
     }
-}
+    }

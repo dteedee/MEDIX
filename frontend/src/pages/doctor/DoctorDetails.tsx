@@ -1237,7 +1237,9 @@ function DoctorDetails() {
                                                 <span className={styles.infoLabel}>Kinh nghiệm</span>
                                                 <span className={styles.infoValue}>
                                                     {(() => {
-                                                        const rawExp: unknown = profileData.yearsOfExperience ?? (profileData as any)?.experience;
+                                                        const rawExp: unknown = profileData.yearsOfExperience ?? 
+                                                                               profileData.experience ?? 
+                                                                               (profileData as any)?.experiece;
                                                         const value = Number(rawExp);
                                                         if (Number.isFinite(value) && value > 0) {
                                                             return `${value} năm`;

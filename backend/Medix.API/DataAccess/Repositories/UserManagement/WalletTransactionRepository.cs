@@ -5,7 +5,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Medix.API.DataAccess.Repositories.UserManagement
 {
     public class WalletTransactionRepository : IWalletTransactionRepository
-    {private readonly MedixContext _context;
+    {
+        private readonly MedixContext _context;
 
         public WalletTransactionRepository(MedixContext context)
         {

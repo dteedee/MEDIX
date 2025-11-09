@@ -1,23 +1,11 @@
-using Medix.API.Business.Interfaces.Classification;
-using Medix.API.Business.Interfaces.Community;
-using Medix.API.Business.Interfaces.UserManagement;
-using Medix.API.Business.Services.Classification;
-using Medix.API.Business.Services.Community;
-using Medix.API.Business.Services.UserManagement;
-using Medix.API.Business.Validators;
+using Hangfire;
 using Medix.API.Configurations;
 using Medix.API.DataAccess;
-using Medix.API.DataAccess.Interfaces.Classification;
-using Medix.API.DataAccess.Interfaces.UserManagement;
-using Medix.API.DataAccess.Repositories.Classification;
-using Medix.API.DataAccess.Repositories.UserManagement;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-
-using PayOS;
-using System;
+using Net.payOS;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,8 +14,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.ConfigureServices();
 builder.Services.AddDbContext<MedixContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
-
-
 
 
 IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
@@ -43,6 +29,7 @@ builder.Services.AddKeyedSingleton("OrderClient", (sp, key) =>
         LogLevel = LogLevel.Debug,
     });
 });
+
 builder.Services.AddKeyedSingleton("TransferClient", (sp, key) =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
@@ -54,6 +41,7 @@ builder.Services.AddKeyedSingleton("TransferClient", (sp, key) =>
         LogLevel = LogLevel.Debug,
     });
 });
+
 // ================= CORS =================
 builder.Services.AddCors(options =>
 {
@@ -76,6 +64,7 @@ var jwtAudience = jwtSection["Audience"];
 Console.WriteLine($"JWT Key present: {!string.IsNullOrWhiteSpace(jwtKey)}");
 Console.WriteLine($"JWT Issuer: {jwtIssuer}");
 Console.WriteLine($"JWT Audience: {jwtAudience}");
+
 if (string.IsNullOrWhiteSpace(jwtKey))
 {
     throw new InvalidOperationException("JWT Key is missing or empty!");
@@ -139,11 +128,7 @@ builder.Services.AddSwaggerGen(c =>
 // ================= APPLICATION SERVICES =================
 // AutoMapper is already configured in ServiceConfiguration.cs
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-
-
 builder.Services.ConfigureServices();
-
-
 
 // ================= BUILD APP =================
 var app = builder.Build();
@@ -163,9 +148,14 @@ app.UseStaticFiles();
 // Middleware xử lý exception toàn cục
 app.UseMiddleware<Medix.API.Presentation.Middleware.ExceptionHandlingMiddleware>();
 
+// Hangfire dashboard
+app.UseHangfireDashboard();
+
+// Authentication + Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Map controllers
 app.MapControllers();
 
 app.Run();

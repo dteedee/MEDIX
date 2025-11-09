@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState, FormEvent } from 'react';
+import React, { useEffect, useState, FormEvent, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { medicalRecordService } from '../../services/medicalRecordService';
 import { prescriptionService } from '../../services/prescriptionService';
@@ -20,7 +20,7 @@ const MedicalRecordDetails: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [isEditable, setIsEditable] = useState(false); // Trạng thái chỉnh sửa
+  const [newAllergy, setNewAllergy] = useState('');
 
   useEffect(() => {
     const fetchMedicalRecord = async () => {
@@ -36,15 +36,6 @@ const MedicalRecordDetails: React.FC = () => {
         setMedicalRecord(data);
         setError(null);
 
-        // Xác định xem hồ sơ có được phép chỉnh sửa hay không
-        const appointmentDate = new Date(data.appointmentDate);
-        const today = new Date();
-        const isToday =
-          appointmentDate.getFullYear() === today.getFullYear() &&
-          appointmentDate.getMonth() === today.getMonth() &&
-          appointmentDate.getDate() === today.getDate();
-
-        setIsEditable(isToday);
       } catch (err: any) {
         console.error("Error fetching medical record:", err);
         if (err.response && err.response.status === 404) {
@@ -151,7 +142,13 @@ const MedicalRecordDetails: React.FC = () => {
     setIsSubmitting(true);
     try {
       
-      await medicalRecordService.updateMedicalRecord(medicalRecord.id, medicalRecord);
+      const payload = {
+        ...medicalRecord,
+        updatePatientMedicalHistory: true, // Luôn cập nhật tiền sử bệnh khi có chẩn đoán
+        newAllergy: newAllergy.trim(), // Gửi dị ứng mới nếu có
+      };
+
+      await medicalRecordService.updateMedicalRecord(medicalRecord.id, payload);
 
       Swal.fire({
         title: 'Thành công!',
@@ -168,6 +165,22 @@ const MedicalRecordDetails: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Xác định xem hồ sơ có được phép chỉnh sửa hay không
+  const isEditable = useMemo(() => {
+    if (!medicalRecord) return false;
+    
+    // Sử dụng appointmentDate để xác định khoảng thời gian chỉnh sửa
+    if (medicalRecord.appointmentDate) {
+      const now = new Date();
+      const startTime = new Date(medicalRecord.appointmentDate);
+      // Giả sử một ca khám kéo dài 50 phút
+      const endTime = new Date(startTime.getTime() + 50 * 60000);
+      // Cho phép chỉnh sửa nếu thời gian hiện tại nằm trong khoảng thời gian của cuộc hẹn
+      return now >= startTime && now <= endTime;
+    }
+    return false;
+  }, [medicalRecord]);
 
   if (isLoading) {
     return <PageLoader />;
@@ -268,6 +281,20 @@ const MedicalRecordDetails: React.FC = () => {
             <label className="form-label">Dị ứng</label>
             <p className="info-value-box">{medicalRecord.allergies || 'Không có'}</p>
           </div>
+          {isEditable && (
+            <div className="form-column full-width">
+              <label htmlFor="newAllergy" className="form-label">Thêm dị ứng mới</label>
+              <input
+                type="text"
+                id="newAllergy"
+                name="newAllergy"
+                className="form-input"
+                value={newAllergy}
+                onChange={(e) => setNewAllergy(e.target.value)}
+                placeholder="Nhập dị ứng mới nếu có (VD: Dị ứng phấn hoa)"
+              />
+            </div>
+          )}
         </div>
       </section>
 
@@ -340,7 +367,12 @@ const MedicalRecordDetails: React.FC = () => {
           </button>
           )}
         </div>
-        <MedicineTable medicines={medicalRecord.prescriptions} onDelete={isEditable ? handleDeleteMedicine : () => {}} onUpdate={isEditable ? handleUpdateMedicine : () => {}} />
+        <MedicineTable 
+          medicines={medicalRecord.prescriptions} 
+          onDelete={handleDeleteMedicine} 
+          onUpdate={handleUpdateMedicine} 
+          isEditable={isEditable}
+        />
       </section>
 
       <div className="form-footer">

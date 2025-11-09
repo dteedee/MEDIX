@@ -1,4 +1,4 @@
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import doctorService from "../../services/doctorService";
 import { DoctorProfileDto, ServiceTierWithPaginatedDoctorsDto, DoctorTypeDegreeDto, DoctorInTier, PaginationParams, DoctorQueryParameters } from "../../types/doctor.types";
@@ -52,6 +52,8 @@ function DoctorDetails() {
     const { username } = useParams();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const routeState = (location && (location as any).state) as { doctorId?: string; fullName?: string; userName?: string } | null;
 
     // Sidebar filter states (reuse logic from DoctorBookingList)
     const [tiersData, setTiersData] = useState<ServiceTierWithPaginatedDoctorsDto[]>([]);
@@ -952,6 +954,8 @@ function DoctorDetails() {
 
     useEffect(() => {
         const fetchProfile = async () => {
+            setLoading(true);
+            const key = routeState?.doctorId || username;
             try {
                 setLoading(true);
                 const data = await doctorService.getDoctorProfile(username);
@@ -966,7 +970,7 @@ function DoctorDetails() {
             }
         }
         fetchProfile();
-    }, [username]);
+    }, [username, routeState?.doctorId, routeState?.fullName, routeState?.userName]);
 
     if (loading) {
         return (

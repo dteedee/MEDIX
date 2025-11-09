@@ -1,6 +1,6 @@
 ﻿using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.Entities;
-using Microsoft.EntityFrameworkCore; // <-- THÊM DÒNG NÀY
+using Microsoft.EntityFrameworkCore;
 
 namespace Medix.API.DataAccess.Repositories.Classification
 {

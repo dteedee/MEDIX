@@ -6,5 +6,6 @@ namespace Medix.API.DataAccess.Interfaces.Classification
     {
         Task<IEnumerable<DoctorServiceTier>> GetActiveTiersAsync();
         Task<DoctorServiceTier?> GetServiceTierByNameAsync(string name);
+        Task<DoctorServiceTier?> GetByIdAsync(Guid id);
     }
 }

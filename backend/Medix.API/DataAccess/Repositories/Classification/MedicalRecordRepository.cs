@@ -127,5 +127,17 @@ namespace Medix.API.DataAccess.Repositories.Classification
                     .ThenInclude(p => p.Medication)
                 .FirstOrDefaultAsync(mr => mr.Id == id);
         }
+        public async Task<List<MedicalRecord>> GetByPatientIdAllAsync(Guid patientId)
+        {
+            return await _context.MedicalRecords
+                .Include(r => r.Prescriptions)
+                .Include(r => r.Appointment)
+                .ThenInclude(a => a.Doctor)
+                .ThenInclude(d => d.User)
+                .Where(r => r.Appointment.PatientId == patientId)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
+
     }
 }

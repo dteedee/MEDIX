@@ -120,6 +120,42 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
       // Chuyển đổi giá trị từ form (string) sang number
       const overrideTypeNumber = Number(data.overrideType);
 
+      // --- VALIDATION: Ngăn đăng ký nghỉ quá gần ---
+      if (overrideTypeNumber === 0) { // Chỉ áp dụng cho lịch "Nghỉ"
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Chuẩn hóa về đầu ngày
+        const selectedDate = new Date(data.overrideDate);
+
+        const twoDaysFromNow = new Date(today);
+        twoDaysFromNow.setDate(today.getDate() + 2);
+
+        if (selectedDate <= twoDaysFromNow) {
+          Swal.fire('Lỗi!', 'Bạn chỉ có thể đăng ký lịch nghỉ sau 2 ngày kể từ hôm nay.', 'error');
+          return; // Dừng thực thi
+        }
+      }
+
+      // --- VALIDATION: Giới hạn số ngày nghỉ ---
+      // Chỉ kiểm tra khi tạo mới một lịch "Nghỉ"
+      if (overrideTypeNumber === 0 && !editingOverride) {
+        const today = new Date().toISOString().split('T')[0]; // Lấy ngày hôm nay dạng 'YYYY-MM-DD'
+
+        // Lấy tất cả các ngày nghỉ (overrideType === false) từ hôm nay trở về sau
+        const existingNghiDays = new Set(
+          overrides
+            .filter(o => !o.overrideType && o.overrideDate >= today)
+            .map(o => o.overrideDate)
+        );
+
+        // Nếu ngày đang tạo chưa có trong danh sách ngày nghỉ và đã đủ 2 ngày nghỉ
+        if (!existingNghiDays.has(data.overrideDate) && existingNghiDays.size >= 2) {
+          Swal.fire('Lỗi!', 'Bạn chỉ được phép đăng ký lịch nghỉ tối đa trong 2 ngày khác nhau.', 'error');
+          return; // Dừng thực thi
+        }
+      }
+      // --- END VALIDATION ---
+
+
       const payload: CreateScheduleOverridePayload = {
         overrideDate: data.overrideDate,
         reason: data.reason,

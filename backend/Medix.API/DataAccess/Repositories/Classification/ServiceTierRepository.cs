@@ -28,5 +28,8 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return await _context.DoctorServiceTiers
                 .FirstOrDefaultAsync(t => t.Name == name);
         }
+
+        public async Task<DoctorServiceTier?> GetByIdAsync(Guid id)
+            => await _context.DoctorServiceTiers.FirstOrDefaultAsync(t => t.Id == id);
     }
 }

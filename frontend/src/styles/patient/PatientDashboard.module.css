@@ -101,11 +101,41 @@
   display: flex;
   align-items: center;
   gap: 20px;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 50%, #fef3c7 100%);
+  padding: 24px 32px;
+  border-radius: 20px;
+  box-shadow: 
+    0 4px 20px rgba(251, 191, 36, 0.15),
+    0 2px 8px rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.greetingSection > div {
+  position: relative;
+  z-index: 2;
+}
+
+.greetingSection::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.2) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float 15s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .greetingIcon {
   font-size: 56px;
   animation: bounce 2s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes bounce {
@@ -123,20 +153,24 @@
 .greeting {
   font-size: 32px;
   font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ea580c 0%, #f59e0b 50%, #eab308 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin: 0 0 8px 0;
   animation: fadeIn 0.8s ease-out 0.2s both;
+  position: relative;
+  z-index: 1;
 }
 
 .userName {
   font-size: 18px;
-  color: #64748b;
+  color: #78350f;
   margin: 0;
   font-weight: 600;
   animation: fadeIn 0.8s ease-out 0.4s both;
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes fadeIn {
@@ -1198,65 +1232,7 @@
   }
 }
 
-/* Dark Mode Support (Optional) */
-@media (prefers-color-scheme: dark) {
-  .container {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  }
-
-  .welcomeHeader,
-  .sectionCard,
-  .statCard {
-    background: #1e293b;
-    border-color: #334155;
-  }
-
-  .greeting {
-    background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .userName,
-  .statLabel,
-  .metricLabel,
-  .recordDate,
-  .emptyState p {
-    color: #94a3b8;
-  }
-
-  .sectionTitle h2,
-  .appointmentDetails h4,
-  .recordInfo h5,
-  .metricValue,
-  .statValue,
-  .actionCard span {
-    color: #f1f5f9;
-  }
-
-  .dateCard {
-    background: #334155;
-  }
-
-  .appointmentItem,
-  .recordItem,
-  .metricCard,
-  .actionCard {
-    background: #334155;
-  }
-
-  .appointmentItem:hover,
-  .recordItem:hover,
-  .metricCard:hover,
-  .actionCard:hover {
-    background: #475569;
-  }
-
-  .emptyIcon {
-    background: #334155;
-  }
-}
+/* Dark Mode Support - Disabled, using light theme only */
 
 /* High Contrast Mode */
 @media (prefers-contrast: high) {

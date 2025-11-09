@@ -338,7 +338,7 @@ export const PatientDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className={styles.statCard} onClick={() => navigate('/app/patient/medical-records')}>
+        <div className={styles.statCard} onClick={() => navigate('/app/patient/emr-timeline')}>
           <div className={styles.statIconWrapper}>
             <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
               <i className="bi bi-file-medical"></i>
@@ -486,7 +486,7 @@ export const PatientDashboard: React.FC = () => {
                 <p>Đặt lịch khám với bác sĩ ngay hôm nay</p>
                 <button 
                   className={styles.primaryBtn}
-                  onClick={() => navigate('/app/patient/book-appointment')}
+                  onClick={() => navigate('/doctors')}
                 >
                   <i className="bi bi-plus-circle"></i>
                   Đặt lịch khám
@@ -556,7 +556,7 @@ export const PatientDashboard: React.FC = () => {
             <div className={styles.quickActions}>
               <button 
                 className={styles.actionCard}
-                onClick={() => navigate('/app/patient/book-appointment')}
+                onClick={() => navigate('/doctors')}
               >
                 <div className={styles.actionIcon} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
                   <i className="bi bi-calendar-plus"></i>
@@ -576,7 +576,7 @@ export const PatientDashboard: React.FC = () => {
 
               <button 
                 className={styles.actionCard}
-                onClick={() => navigate('/app/patient/medical-records')}
+                onClick={() => navigate('/app/patient/emr-timeline')}
               >
                 <div className={styles.actionIcon} style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
                   <i className="bi bi-file-medical"></i>
@@ -605,7 +605,7 @@ export const PatientDashboard: React.FC = () => {
               </div>
               <button 
                 className={styles.viewAllLink}
-                onClick={() => navigate('/app/patient/medical-records')}
+                onClick={() => navigate('/app/patient/emr-timeline')}
               >
                 Xem tất cả
                 <i className="bi bi-arrow-right"></i>
@@ -619,7 +619,7 @@ export const PatientDashboard: React.FC = () => {
                     key={record.id} 
                     className={styles.recordItem}
                     style={{ animationDelay: `${index * 0.1}s` }}
-                    onClick={() => navigate('/app/patient/medical-records')}
+                    onClick={() => navigate('/app/patient/emr-timeline')}
                   >
                     <div className={styles.recordIcon}>
                       <i className="bi bi-file-text"></i>
@@ -811,7 +811,7 @@ export const PatientDashboard: React.FC = () => {
                     className={modalStyles.modalEmrBtn}
                     onClick={() => {
                       setShowDetailModal(false);
-                      navigate('/app/patient/medical-records');
+                      navigate('/app/patient/emr-timeline');
                     }}
                   >
                     <i className="bi bi-file-text"></i>

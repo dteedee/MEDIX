@@ -5,9 +5,12 @@ import { walletService } from '../../services/walletService';
 import { WalletDto } from '../../types/wallet.types';
 import { appointmentService } from '../../services/appointmentService';
 import { medicalRecordService } from '../../services/medicalRecordService';
+import doctorService from '../../services/doctorService';
 import { Appointment } from '../../types/appointment.types';
 import { MedicalRecordDto } from '../../types/medicalRecord.types';
+import { DoctorProfileDto } from '../../types/doctor.types';
 import styles from '../../styles/patient/PatientDashboard.module.css';
+import modalStyles from '../../styles/patient/PatientAppointments.module.css';
 
 export const PatientDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -16,6 +19,10 @@ export const PatientDashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecordDto[]>([]);
+  const [doctorProfiles, setDoctorProfiles] = useState<Map<string, DoctorProfileDto>>(new Map());
+  const [loadingDoctors, setLoadingDoctors] = useState<Set<string>>(new Set());
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -117,6 +124,146 @@ export const PatientDashboard: React.FC = () => {
     if (hour < 18) return 'Chào buổi chiều';
     return 'Chào buổi tối';
   };
+
+  const formatTimeRange = (startTime?: string, endTime?: string) => {
+    if (!startTime) return '';
+    const start = new Date(startTime);
+    const startFormatted = start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    
+    if (endTime) {
+      const end = new Date(endTime);
+      const endFormatted = end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      return `${startFormatted} - ${endFormatted}`;
+    }
+    
+    return startFormatted;
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(amount);
+  };
+
+  const getAppointmentStatus = (apt: Appointment): 'upcoming' | 'completed' | 'cancelled' => {
+    if (apt.statusCode === 'Completed') {
+      return 'completed';
+    } else if (
+      apt.statusCode === 'CancelledByPatient' || 
+      apt.statusCode === 'CancelledByDoctor' || 
+      apt.statusCode === 'NoShow'
+    ) {
+      return 'cancelled';
+    }
+    return 'upcoming';
+  };
+
+  const getStatusConfig = (status: 'upcoming' | 'completed' | 'cancelled', appointmentStartTime?: string, appointmentEndTime?: string) => {
+    const currentTime = new Date();
+    
+    // Check if appointment is currently in progress
+    const isInProgress = appointmentStartTime && appointmentEndTime && 
+      currentTime >= new Date(appointmentStartTime) && 
+      currentTime <= new Date(appointmentEndTime);
+    
+    const configs = {
+      upcoming: { 
+        label: isInProgress ? 'Đang diễn ra' : 'Sắp diễn ra', 
+        icon: 'bi-clock-history',
+        color: '#f59e0b'
+      },
+      completed: { 
+        label: 'Hoàn thành', 
+        icon: 'bi-check-circle-fill',
+        color: '#10b981'
+      },
+      cancelled: { 
+        label: 'Đã hủy', 
+        icon: 'bi-x-circle-fill',
+        color: '#ef4444'
+      }
+    };
+    return configs[status];
+  };
+
+  const getPaymentStatusLabel = (statusCode?: string): string => {
+    if (!statusCode) return 'Chưa thanh toán';
+    
+    const statusMap: { [key: string]: string } = {
+      'Paid': 'Đã thanh toán',
+      'Unpaid': 'Chưa thanh toán',
+      'Pending': 'Đang chờ thanh toán',
+      'Failed': 'Thanh toán thất bại',
+      'Refunded': 'Đã hoàn tiền',
+      'Cancelled': 'Đã hủy'
+    };
+    
+    return statusMap[statusCode] || statusCode;
+  };
+
+  const getPaymentStatusIcon = (statusCode?: string): string => {
+    if (!statusCode) return 'bi-x-circle';
+    
+    const iconMap: { [key: string]: string } = {
+      'Paid': 'bi-check-circle-fill',
+      'Unpaid': 'bi-x-circle',
+      'Pending': 'bi-clock-history',
+      'Failed': 'bi-exclamation-triangle-fill',
+      'Refunded': 'bi-arrow-counterclockwise',
+      'Cancelled': 'bi-x-circle-fill'
+    };
+    
+    return iconMap[statusCode] || 'bi-info-circle';
+  };
+
+  const formatDetailDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  // Load doctor profiles for upcoming appointments
+  useEffect(() => {
+    const loadDoctorProfiles = async () => {
+      const uniqueDoctorIds = Array.from(
+        new Set(upcomingAppointments.filter(apt => apt.doctorID).map(apt => apt.doctorID!))
+      );
+
+      for (const doctorID of uniqueDoctorIds) {
+        if (doctorProfiles.has(doctorID) || loadingDoctors.has(doctorID)) {
+          continue;
+        }
+
+        try {
+          setLoadingDoctors(prev => new Set(prev).add(doctorID));
+          const profile = await doctorService.getDoctorProfile(doctorID);
+          setDoctorProfiles(prev => {
+            const newMap = new Map(prev);
+            newMap.set(doctorID, profile);
+            return newMap;
+          });
+        } catch (err) {
+          console.error(`Error loading doctor profile for ${doctorID}:`, err);
+        } finally {
+          setLoadingDoctors(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(doctorID);
+            return newSet;
+          });
+        }
+      }
+    };
+
+    if (upcomingAppointments.length > 0) {
+      loadDoctorProfiles();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [upcomingAppointments]);
 
   return (
     <div className={styles.container}>
@@ -264,53 +411,71 @@ export const PatientDashboard: React.FC = () => {
               </div>
             ) : upcomingAppointments.length > 0 ? (
               <div className={styles.appointmentsList}>
-                {upcomingAppointments.slice(0, 3).map((apt, index) => (
-                  <div 
-                    key={apt.id} 
-                    className={styles.appointmentItem}
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                    onClick={() => navigate(`/app/patient/appointments/${apt.id}`)}
-                  >
-                    <div className={styles.appointmentLeft}>
-                      <div className={styles.doctorAvatarLarge}>
-                        <img 
-                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(apt.doctorName)}&background=667eea&color=fff`}
-                          alt={apt.doctorName}
-                        />
-                        <div className={styles.onlineBadge}></div>
-                      </div>
-                      <div className={styles.appointmentDetails}>
-                        <h4>{apt.doctorName}</h4>
-                        <p className={styles.specialty}>Bác sĩ chuyên khoa</p>
-                        <div className={styles.appointmentMeta}>
-                          <span className={styles.metaItem}>
-                            <i className="bi bi-clock"></i>
-                            {formatTime(apt.appointmentStartTime)}
-                          </span>
-                          <span className={styles.metaItem}>
-                            <i className="bi bi-calendar3"></i>
-                            {formatDate(apt.appointmentStartTime)}
-                          </span>
+                {upcomingAppointments.slice(0, 3).map((apt, index) => {
+                  const doctorProfile = apt.doctorID ? doctorProfiles.get(apt.doctorID) : null;
+                  const avatarUrl = doctorProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.doctorName)}&background=667eea&color=fff`;
+                  const education = doctorProfile?.education || '';
+                  const specialization = doctorProfile?.specialization || '';
+                  const specialtyText = education && specialization 
+                    ? `${education} - ${specialization}`
+                    : education || specialization || 'Bác sĩ chuyên khoa';
+
+                  return (
+                    <div 
+                      key={apt.id} 
+                      className={styles.appointmentItem}
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                      onClick={() => {
+                        setSelectedAppointment(apt);
+                        setShowDetailModal(true);
+                      }}
+                    >
+                      <div className={styles.appointmentLeft}>
+                        <div className={styles.doctorAvatarLarge}>
+                          <img 
+                            src={avatarUrl}
+                            alt={apt.doctorName}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.doctorName)}&background=667eea&color=fff`;
+                            }}
+                          />
+                          <div className={styles.onlineBadge}></div>
+                        </div>
+                        <div className={styles.appointmentDetails}>
+                          <h4>{apt.doctorName}</h4>
+                          <p className={styles.specialty}>{specialtyText}</p>
+                          <div className={styles.appointmentMeta}>
+                            <span className={styles.metaItem}>
+                              <i className="bi bi-clock"></i>
+                              {formatTime(apt.appointmentStartTime)}
+                            </span>
+                            <span className={styles.metaItem}>
+                              <i className="bi bi-calendar3"></i>
+                              {formatDate(apt.appointmentStartTime)}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className={styles.appointmentRight}>
-                      <div className={styles.timeUntil}>
-                        <i className="bi bi-hourglass-split"></i>
-                        {getTimeUntil(apt.appointmentStartTime)}
+                      <div className={styles.appointmentRight}>
+                        <div className={styles.timeUntil}>
+                          <i className="bi bi-hourglass-split"></i>
+                          {getTimeUntil(apt.appointmentStartTime)}
+                        </div>
+                        <button 
+                          className={styles.viewDetailsBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedAppointment(apt);
+                            setShowDetailModal(true);
+                          }}
+                        >
+                          <i className="bi bi-arrow-right-circle"></i>
+                        </button>
                       </div>
-                      <button 
-                        className={styles.viewDetailsBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/app/patient/appointments/${apt.id}`);
-                        }}
-                      >
-                        <i className="bi bi-arrow-right-circle"></i>
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className={styles.emptyState}>
@@ -513,6 +678,151 @@ export const PatientDashboard: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Detail Modal */}
+      {showDetailModal && selectedAppointment && (() => {
+        const doctorProfile = selectedAppointment.doctorID ? doctorProfiles.get(selectedAppointment.doctorID) : null;
+        const avatarUrl = doctorProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedAppointment.doctorName)}&background=667eea&color=fff`;
+        const education = doctorProfile?.education || '';
+        const specialization = doctorProfile?.specialization || '';
+        const appointmentStatus = getAppointmentStatus(selectedAppointment);
+        const statusConfig = getStatusConfig(
+          appointmentStatus,
+          selectedAppointment.appointmentStartTime,
+          selectedAppointment.appointmentEndTime
+        );
+
+        return (
+          <div className={modalStyles.modalOverlay} onClick={() => setShowDetailModal(false)}>
+            <div className={modalStyles.detailModal} onClick={(e) => e.stopPropagation()}>
+              <button className={modalStyles.closeModalBtn} onClick={() => setShowDetailModal(false)}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+
+              <div className={modalStyles.modalHeader}>
+                <div className={modalStyles.modalDoctorInfo}>
+                  <div className={modalStyles.modalAvatarWrapper}>
+                    <img 
+                      src={avatarUrl} 
+                      alt={selectedAppointment.doctorName}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedAppointment.doctorName)}&background=667eea&color=fff`;
+                      }}
+                    />
+                    <div className={modalStyles.modalAvatarBadge}>
+                      <i className="bi bi-patch-check-fill"></i>
+                    </div>
+                  </div>
+                  <div className={modalStyles.modalDoctorDetails}>
+                    <h2 className={modalStyles.modalDoctorName}>{selectedAppointment.doctorName}</h2>
+                    <div className={modalStyles.modalDoctorMeta}>
+                      {education && (
+                        <span className={modalStyles.modalDoctorTitle}>
+                          <i className="bi bi-mortarboard-fill"></i>
+                          {education}
+                        </span>
+                      )}
+                      {specialization && (
+                        <span className={modalStyles.modalSpecialty}>
+                          <i className="bi bi-heart-pulse-fill"></i>
+                          {specialization}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className={modalStyles.modalStatus} style={{ background: statusConfig.color }}>
+                  <i className={statusConfig.icon}></i>
+                  {statusConfig.label}
+                </div>
+              </div>
+
+              <div className={modalStyles.modalBody}>
+                <div className={modalStyles.detailSection}>
+                  <h4 className={modalStyles.sectionTitle}>
+                    <i className="bi bi-calendar-event"></i>
+                    Thông tin lịch hẹn
+                  </h4>
+                  <div className={modalStyles.detailGrid}>
+                    <div className={modalStyles.detailCard}>
+                      <div className={modalStyles.detailCardLabel}>NGÀY KHÁM</div>
+                      <div className={modalStyles.detailCardValue}>{formatDetailDate(selectedAppointment.appointmentStartTime)}</div>
+                    </div>
+                    <div className={modalStyles.detailCard}>
+                      <div className={modalStyles.detailCardLabel}>GIỜ KHÁM</div>
+                      <div className={modalStyles.detailCardValue}>
+                        {selectedAppointment.appointmentStartTime && selectedAppointment.appointmentEndTime
+                          ? formatTimeRange(selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime)
+                          : formatTime(selectedAppointment.appointmentStartTime)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={modalStyles.detailSection}>
+                  <h4 className={modalStyles.sectionTitle}>
+                    <i className="bi bi-credit-card"></i>
+                    Thông tin thanh toán
+                  </h4>
+                  <div className={modalStyles.paymentDetails}>
+                    <div className={modalStyles.paymentRow}>
+                      <span className={modalStyles.paymentLabel}>Phí khám bệnh</span>
+                      <span className={modalStyles.paymentAmount}>{formatCurrency(selectedAppointment.consultationFee)}</span>
+                    </div>
+                    {selectedAppointment.platformFee > 0 && (
+                      <>
+                        <div className={modalStyles.paymentRow}>
+                          <span className={modalStyles.paymentLabel}>Phí nền tảng</span>
+                          <span className={modalStyles.paymentAmount}>{formatCurrency(selectedAppointment.platformFee)}</span>
+                        </div>
+                        <div className={modalStyles.paymentDivider}></div>
+                        <div className={modalStyles.paymentRow}>
+                          <span className={modalStyles.totalLabel}>Tổng cộng</span>
+                          <span className={modalStyles.totalValue}>{formatCurrency(selectedAppointment.totalAmount)}</span>
+                        </div>
+                      </>
+                    )}
+                    {selectedAppointment.paymentStatusCode && (
+                      <div className={`${modalStyles.paymentStatus} ${modalStyles[`paymentStatus${selectedAppointment.paymentStatusCode}`] || ''}`}>
+                        <i className={`bi ${getPaymentStatusIcon(selectedAppointment.paymentStatusCode)}`}></i>
+                        <span>Trạng thái: {getPaymentStatusLabel(selectedAppointment.paymentStatusCode)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className={modalStyles.modalFooter}>
+                {(selectedAppointment.statusCode === 'Confirmed' || selectedAppointment.statusCode === 'OnProgressing') && (
+                  <button 
+                    className={modalStyles.modalCancelBtn}
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      navigate('/app/patient/appointments');
+                    }}
+                  >
+                    <i className="bi bi-x-circle"></i>
+                    Hủy lịch hẹn
+                  </button>
+                )}
+                {selectedAppointment.statusCode === 'Completed' && (
+                  <button 
+                    className={modalStyles.modalEmrBtn}
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      navigate('/app/patient/medical-records');
+                    }}
+                  >
+                    <i className="bi bi-file-text"></i>
+                    Xem hồ sơ bệnh án
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

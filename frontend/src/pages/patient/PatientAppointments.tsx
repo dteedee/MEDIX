@@ -1,21 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import styles from '../../styles/patient/PatientAppointments.module.css';
 import { appointmentService } from '../../services/appointmentService';
+import doctorService from '../../services/doctorService';
+import { DoctorProfileDto } from '../../types/doctor.types';
 
 interface Appointment {
   id: string;
   doctorName: string;
-  doctorTitle: string;
-  specialty: string;
+  doctorTitle?: string;
+  specialty?: string;
   date: string;
   time: string;
   status: 'upcoming' | 'completed' | 'cancelled';
-  room: string;
+  room?: string;
   fee: number;
   avatar?: string;
   rating?: number;
   review?: string;
   emrId?: string;
+  doctorID?: string;
   appointmentStartTime?: string;
   appointmentEndTime?: string;
   statusCode?: string;
@@ -45,6 +48,8 @@ export const PatientAppointments: React.FC = () => {
   const [cancelResult, setCancelResult] = useState<{ message: string; refundAmount?: number } | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [activeView, setActiveView] = useState<'grid' | 'list'>('grid');
+  const [doctorProfiles, setDoctorProfiles] = useState<Map<string, DoctorProfileDto>>(new Map());
+  const [loadingDoctors, setLoadingDoctors] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<FilterOptions>({
     status: 'all',
     timeRange: 'all',
@@ -84,12 +89,14 @@ export const PatientAppointments: React.FC = () => {
             room: '',
             fee: apt.consultationFee,
             avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.doctorName)}&background=667eea&color=fff`,
+            doctorID: apt.doctorID,
             appointmentStartTime: apt.appointmentStartTime,
             appointmentEndTime: apt.appointmentEndTime,
             statusCode: apt.statusCode,
             statusDisplayName: apt.statusDisplayName,
             paymentStatusCode: apt.paymentStatusCode,
             totalAmount: apt.totalAmount,
+            medicalInfo: apt.medicalInfo,
           };
         });
         
@@ -106,17 +113,73 @@ export const PatientAppointments: React.FC = () => {
     loadAppointments();
   }, []);
 
+  // Load doctor profiles for appointments
+  useEffect(() => {
+    const loadDoctorProfiles = async () => {
+      const uniqueDoctorIds = Array.from(
+        new Set(appointments.filter(apt => apt.doctorID).map(apt => apt.doctorID!))
+      );
+
+      for (const doctorID of uniqueDoctorIds) {
+        // Skip if already loaded or loading
+        if (doctorProfiles.has(doctorID) || loadingDoctors.has(doctorID)) {
+          continue;
+        }
+
+        try {
+          setLoadingDoctors(prev => new Set(prev).add(doctorID));
+          const profile = await doctorService.getDoctorProfile(doctorID);
+          setDoctorProfiles(prev => {
+            const newMap = new Map(prev);
+            newMap.set(doctorID, profile);
+            return newMap;
+          });
+        } catch (err) {
+          console.error(`Error loading doctor profile for ${doctorID}:`, err);
+        } finally {
+          setLoadingDoctors(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(doctorID);
+            return newSet;
+          });
+        }
+      }
+    };
+
+    if (appointments.length > 0) {
+      loadDoctorProfiles();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appointments]);
+
+  // Merge doctor profiles with appointments
+  const appointmentsWithDoctorInfo = useMemo(() => {
+    return appointments.map(apt => {
+      if (!apt.doctorID) return apt;
+      
+      const profile = doctorProfiles.get(apt.doctorID);
+      if (!profile) return apt;
+
+      return {
+        ...apt,
+        avatar: profile.avatarUrl || apt.avatar,
+        specialty: profile.specialization || apt.specialty,
+        doctorTitle: profile.education || apt.doctorTitle,
+      };
+    });
+  }, [appointments, doctorProfiles]);
+
   // Statistics
   const stats = {
-    total: appointments.length,
-    upcoming: appointments.filter(apt => apt.status === 'upcoming').length,
-    completed: appointments.filter(apt => apt.status === 'completed').length,
-    cancelled: appointments.filter(apt => apt.status === 'cancelled').length
+    total: appointmentsWithDoctorInfo.length,
+    upcoming: appointmentsWithDoctorInfo.filter(apt => apt.status === 'upcoming').length,
+    completed: appointmentsWithDoctorInfo.filter(apt => apt.status === 'completed').length,
+    cancelled: appointmentsWithDoctorInfo.filter(apt => apt.status === 'cancelled').length
   };
 
   // Filter appointments
   useEffect(() => {
-    let filtered = [...appointments];
+    let filtered = [...appointmentsWithDoctorInfo];
 
     if (filters.status !== 'all') {
       filtered = filtered.filter(apt => apt.status === filters.status);
@@ -125,7 +188,7 @@ export const PatientAppointments: React.FC = () => {
     if (filters.search) {
       filtered = filtered.filter(apt => 
         apt.doctorName.toLowerCase().includes(filters.search.toLowerCase()) ||
-        apt.specialty.toLowerCase().includes(filters.search.toLowerCase())
+        (apt.specialty && apt.specialty.toLowerCase().includes(filters.search.toLowerCase()))
       );
     }
 
@@ -149,7 +212,7 @@ export const PatientAppointments: React.FC = () => {
     filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     setFilteredAppointments(filtered);
-  }, [filters, appointments]);
+  }, [filters, appointmentsWithDoctorInfo]);
 
   const handleCancelAppointment = async () => {
     if (!selectedAppointment) return;
@@ -191,6 +254,20 @@ export const PatientAppointments: React.FC = () => {
     });
   };
 
+  const formatTimeRange = (startTime?: string, endTime?: string) => {
+    if (!startTime) return '';
+    const start = new Date(startTime);
+    const startFormatted = start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    
+    if (endTime) {
+      const end = new Date(endTime);
+      const endFormatted = end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      return `${startFormatted} - ${endFormatted}`;
+    }
+    
+    return startFormatted;
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -217,6 +294,36 @@ export const PatientAppointments: React.FC = () => {
       }
     };
     return configs[status as keyof typeof configs];
+  };
+
+  const getPaymentStatusLabel = (statusCode?: string): string => {
+    if (!statusCode) return 'Chưa thanh toán';
+    
+    const statusMap: { [key: string]: string } = {
+      'Paid': 'Đã thanh toán',
+      'Unpaid': 'Chưa thanh toán',
+      'Pending': 'Đang chờ thanh toán',
+      'Failed': 'Thanh toán thất bại',
+      'Refunded': 'Đã hoàn tiền',
+      'Cancelled': 'Đã hủy'
+    };
+    
+    return statusMap[statusCode] || statusCode;
+  };
+
+  const getPaymentStatusIcon = (statusCode?: string): string => {
+    if (!statusCode) return 'bi-x-circle';
+    
+    const iconMap: { [key: string]: string } = {
+      'Paid': 'bi-check-circle-fill',
+      'Unpaid': 'bi-x-circle',
+      'Pending': 'bi-clock-history',
+      'Failed': 'bi-exclamation-triangle-fill',
+      'Refunded': 'bi-arrow-counterclockwise',
+      'Cancelled': 'bi-x-circle-fill'
+    };
+    
+    return iconMap[statusCode] || 'bi-info-circle';
   };
 
   if (loading) {
@@ -373,14 +480,16 @@ export const PatientAppointments: React.FC = () => {
       ) : (
         <div className={activeView === 'grid' ? styles.appointmentsGrid : styles.appointmentsList}>
           {filteredAppointments.map((appointment) => {
-            const statusConfig = getStatusConfig(appointment.status);
+            // Get the appointment with doctor info
+            const appointmentWithInfo = appointmentsWithDoctorInfo.find(apt => apt.id === appointment.id) || appointment;
+            const statusConfig = getStatusConfig(appointmentWithInfo.status);
             
             return (
               <div 
-                key={appointment.id} 
+                key={appointmentWithInfo.id} 
                 className={styles.appointmentCard}
                 onClick={() => {
-                  setSelectedAppointment(appointment);
+                  setSelectedAppointment(appointmentWithInfo);
                   setShowDetailModal(true);
                 }}
               >
@@ -389,10 +498,10 @@ export const PatientAppointments: React.FC = () => {
                     <i className={statusConfig.icon}></i>
                     <span>{statusConfig.label}</span>
                   </div>
-                  {appointment.paymentStatusCode === 'Paid' && (
+                  {appointmentWithInfo.paymentStatusCode === 'Paid' && (
                     <div className={styles.paidBadge}>
                       <i className="bi bi-check-circle-fill"></i>
-                      Đã thanh toán
+                      {getPaymentStatusLabel(appointmentWithInfo.paymentStatusCode)}
                     </div>
                   )}
                 </div>
@@ -400,57 +509,81 @@ export const PatientAppointments: React.FC = () => {
                 <div className={styles.cardBody}>
                   <div className={styles.doctorSection}>
                     <div className={styles.doctorAvatar}>
-                      <img src={appointment.avatar} alt={appointment.doctorName} />
+                      <img src={appointmentWithInfo.avatar} alt={appointmentWithInfo.doctorName} />
                       <div className={styles.avatarBadge}>
                         <i className="bi bi-patch-check-fill"></i>
                       </div>
                     </div>
                     <div className={styles.doctorInfo}>
-                      <h3>{appointment.doctorName}</h3>
-                      {appointment.specialty && (
-                        <p className={styles.specialty}>
-                          <i className="bi bi-star-fill"></i>
-                          {appointment.specialty}
-                        </p>
-                      )}
+                      <h3>{appointmentWithInfo.doctorName}</h3>
+                      <div className={styles.doctorMeta}>
+                        {appointmentWithInfo.doctorTitle && (
+                          <span className={styles.doctorTitle}>
+                            <i className="bi bi-mortarboard-fill"></i>
+                            {appointmentWithInfo.doctorTitle}
+                          </span>
+                        )}
+                        {appointmentWithInfo.specialty && (
+                          <span className={styles.specialty}>
+                            <i className="bi bi-heart-pulse-fill"></i>
+                            {appointmentWithInfo.specialty}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
                   <div className={styles.appointmentInfo}>
                     <div className={styles.infoRow}>
                       <i className="bi bi-calendar3"></i>
-                      <span>{formatDate(appointment.date)}</span>
+                      <span>{formatDate(appointmentWithInfo.date)}</span>
                     </div>
                     <div className={styles.infoRow}>
                       <i className="bi bi-clock"></i>
-                      <span>{appointment.time}</span>
+                      <span>
+                        {appointmentWithInfo.appointmentStartTime && appointmentWithInfo.appointmentEndTime
+                          ? formatTimeRange(appointmentWithInfo.appointmentStartTime, appointmentWithInfo.appointmentEndTime)
+                          : appointmentWithInfo.time}
+                      </span>
                     </div>
                     <div className={styles.infoRow}>
                       <i className="bi bi-credit-card"></i>
-                      <span className={styles.fee}>{formatCurrency(appointment.totalAmount || appointment.fee)}</span>
+                      <span className={styles.fee}>{formatCurrency(appointmentWithInfo.totalAmount || appointmentWithInfo.fee)}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className={styles.cardFooter} onClick={(e) => e.stopPropagation()}>
-                  {appointment.status === 'upcoming' && (
-                    <button 
-                      className={styles.cancelBtn}
-                      onClick={() => {
-                        setSelectedAppointment(appointment);
-                        setShowCancelDialog(true);
-                      }}
-                    >
-                      <i className="bi bi-x-circle"></i>
-                      Hủy lịch
-                    </button>
+                  {appointmentWithInfo.status === 'upcoming' && (
+                    <div className={styles.footerActions}>
+                      <button 
+                        className={styles.viewInfoBtn}
+                        onClick={() => {
+                          setSelectedAppointment(appointmentWithInfo);
+                          setShowDetailModal(true);
+                        }}
+                      >
+                        <i className="bi bi-info-circle"></i>
+                        Thông tin
+                      </button>
+                      <button 
+                        className={styles.cancelBtn}
+                        onClick={() => {
+                          setSelectedAppointment(appointmentWithInfo);
+                          setShowCancelDialog(true);
+                        }}
+                      >
+                        <i className="bi bi-x-circle"></i>
+                        Hủy lịch
+                      </button>
+                    </div>
                   )}
-                  {appointment.status === 'completed' && (
-                    <>
+                  {appointmentWithInfo.status === 'completed' && (
+                    <div className={styles.footerActions}>
                       <button 
                         className={styles.emrBtn}
                         onClick={() => {
-                          setSelectedAppointment(appointment);
+                          setSelectedAppointment(appointmentWithInfo);
                           setShowEMRModal(true);
                         }}
                       >
@@ -460,19 +593,15 @@ export const PatientAppointments: React.FC = () => {
                       <button 
                         className={styles.rateBtn}
                         onClick={() => {
-                          setSelectedAppointment(appointment);
+                          setSelectedAppointment(appointmentWithInfo);
                           setShowRatingModal(true);
                         }}
                       >
                         <i className="bi bi-star"></i>
                         Đánh giá
                       </button>
-                    </>
+                    </div>
                   )}
-                  <button className={styles.detailBtn}>
-                    <i className="bi bi-eye"></i>
-                    Chi tiết
-                  </button>
                 </div>
               </div>
             );
@@ -490,10 +619,28 @@ export const PatientAppointments: React.FC = () => {
 
             <div className={styles.modalHeader}>
               <div className={styles.modalDoctorInfo}>
-                <img src={selectedAppointment.avatar} alt={selectedAppointment.doctorName} />
-                <div>
-                  <h2>{selectedAppointment.doctorName}</h2>
-                  {selectedAppointment.specialty && <p>{selectedAppointment.specialty}</p>}
+                <div className={styles.modalAvatarWrapper}>
+                  <img src={selectedAppointment.avatar} alt={selectedAppointment.doctorName} />
+                  <div className={styles.modalAvatarBadge}>
+                    <i className="bi bi-patch-check-fill"></i>
+                  </div>
+                </div>
+                <div className={styles.modalDoctorDetails}>
+                  <h2 className={styles.modalDoctorName}>{selectedAppointment.doctorName}</h2>
+                  <div className={styles.modalDoctorMeta}>
+                    {selectedAppointment.doctorTitle && (
+                      <span className={styles.modalDoctorTitle}>
+                        <i className="bi bi-mortarboard-fill"></i>
+                        {selectedAppointment.doctorTitle}
+                      </span>
+                    )}
+                    {selectedAppointment.specialty && (
+                      <span className={styles.modalSpecialty}>
+                        <i className="bi bi-heart-pulse-fill"></i>
+                        {selectedAppointment.specialty}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className={styles.modalStatus} style={{ background: getStatusConfig(selectedAppointment.status).color }}>
@@ -504,37 +651,47 @@ export const PatientAppointments: React.FC = () => {
 
             <div className={styles.modalBody}>
               <div className={styles.detailSection}>
-                <h4><i className="bi bi-calendar-event"></i> Thông tin lịch hẹn</h4>
+                <h4 className={styles.sectionTitle}>
+                  <i className="bi bi-calendar-event"></i>
+                  Thông tin lịch hẹn
+                </h4>
                 <div className={styles.detailGrid}>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Ngày khám</span>
-                    <span className={styles.detailValue}>{formatDate(selectedAppointment.date)}</span>
+                  <div className={styles.detailCard}>
+                    <div className={styles.detailCardLabel}>NGÀY KHÁM</div>
+                    <div className={styles.detailCardValue}>{formatDate(selectedAppointment.date)}</div>
                   </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Giờ khám</span>
-                    <span className={styles.detailValue}>{selectedAppointment.time}</span>
+                  <div className={styles.detailCard}>
+                    <div className={styles.detailCardLabel}>GIỜ KHÁM</div>
+                    <div className={styles.detailCardValue}>
+                      {selectedAppointment.appointmentStartTime && selectedAppointment.appointmentEndTime
+                        ? formatTimeRange(selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime)
+                        : selectedAppointment.time}
+                    </div>
                   </div>
                   {selectedAppointment.room && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Phòng khám</span>
-                      <span className={styles.detailValue}>{selectedAppointment.room}</span>
+                    <div className={styles.detailCard}>
+                      <div className={styles.detailCardLabel}>PHÒNG KHÁM</div>
+                      <div className={styles.detailCardValue}>{selectedAppointment.room}</div>
                     </div>
                   )}
                 </div>
               </div>
 
               <div className={styles.detailSection}>
-                <h4><i className="bi bi-credit-card"></i> Thông tin thanh toán</h4>
+                <h4 className={styles.sectionTitle}>
+                  <i className="bi bi-credit-card"></i>
+                  Thông tin thanh toán
+                </h4>
                 <div className={styles.paymentDetails}>
                   <div className={styles.paymentRow}>
-                    <span>Phí khám bệnh</span>
-                    <span>{formatCurrency(selectedAppointment.fee)}</span>
+                    <span className={styles.paymentLabel}>Phí khám bệnh</span>
+                    <span className={styles.paymentAmount}>{formatCurrency(selectedAppointment.fee)}</span>
                   </div>
                   {selectedAppointment.totalAmount && selectedAppointment.totalAmount !== selectedAppointment.fee && (
                     <>
                       <div className={styles.paymentRow}>
-                        <span>Phí nền tảng</span>
-                        <span>{formatCurrency(selectedAppointment.totalAmount - selectedAppointment.fee)}</span>
+                        <span className={styles.paymentLabel}>Phí nền tảng</span>
+                        <span className={styles.paymentAmount}>{formatCurrency(selectedAppointment.totalAmount - selectedAppointment.fee)}</span>
                       </div>
                       <div className={styles.paymentDivider}></div>
                       <div className={styles.paymentRow}>
@@ -544,9 +701,9 @@ export const PatientAppointments: React.FC = () => {
                     </>
                   )}
                   {selectedAppointment.paymentStatusCode && (
-                    <div className={styles.paymentStatus}>
-                      <i className="bi bi-check-circle-fill"></i>
-                      Trạng thái: {selectedAppointment.paymentStatusCode}
+                    <div className={`${styles.paymentStatus} ${styles[`paymentStatus${selectedAppointment.paymentStatusCode}`] || ''}`}>
+                      <i className={`bi ${getPaymentStatusIcon(selectedAppointment.paymentStatusCode)}`}></i>
+                      <span>Trạng thái: {getPaymentStatusLabel(selectedAppointment.paymentStatusCode)}</span>
                     </div>
                   )}
                 </div>
@@ -665,12 +822,14 @@ export const PatientAppointments: React.FC = () => {
               <i className="bi bi-check-circle-fill"></i>
             </div>
             <h3>Hủy lịch thành công!</h3>
-            <p>{cancelResult.message}</p>
+            <p className={styles.successMessage}>
+              {cancelResult.message || 'Lịch hẹn đã được hủy và tiền đã được hoàn lại thành công'}
+            </p>
             
             {cancelResult.refundAmount && cancelResult.refundAmount > 0 && (
               <div className={styles.refundAmount}>
-                <span>Số tiền hoàn lại</span>
-                <strong>{formatCurrency(cancelResult.refundAmount)}</strong>
+                <div className={styles.refundLabel}>SỐ TIỀN HOÀN LẠI</div>
+                <div className={styles.refundValue}>{formatCurrency(cancelResult.refundAmount)}</div>
               </div>
             )}
 

@@ -14,17 +14,13 @@ export const PatientDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [wallet, setWallet] = useState<WalletDto | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecordDto[]>([]);
-  const [statsLoading, setStatsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        setStatsLoading(true);
-        setError(null);
         
         const [walletData, appointmentsData, medicalRecordsData] = await Promise.all([
           walletService.getWalletByUserId().catch(() => null),
@@ -40,10 +36,8 @@ export const PatientDashboard: React.FC = () => {
         setMedicalRecords(medicalRecordsData);
       } catch (err: any) {
         console.error('Error fetching data:', err);
-        setError(err.message || 'Không thể tải dữ liệu');
       } finally {
         setLoading(false);
-        setStatsLoading(false);
       }
     };
 
@@ -57,7 +51,6 @@ export const PatientDashboard: React.FC = () => {
 
   const now = new Date();
   
-  // 即将到来的预约（使用正确的状态码）
   const upcomingAppointments = appointments.filter(apt => {
     const aptDate = new Date(apt.appointmentStartTime);
     const isUpcoming = apt.statusCode === 'Confirmed' || apt.statusCode === 'OnProgressing';
@@ -66,412 +59,457 @@ export const PatientDashboard: React.FC = () => {
     new Date(a.appointmentStartTime).getTime() - new Date(b.appointmentStartTime).getTime()
   );
 
-  // 今天的预约
   const todayAppointments = upcomingAppointments.filter(apt => {
     const aptDate = new Date(apt.appointmentStartTime);
     return aptDate.toDateString() === now.toDateString();
   });
 
-  // 本周开始的日期
-  const thisWeekStart = new Date(now);
-  thisWeekStart.setDate(now.getDate() - now.getDay());
-  thisWeekStart.setHours(0, 0, 0, 0);
+  const completedAppointments = appointments.filter(apt => apt.statusCode === 'Completed');
   
-  // 本周新增的医疗记录
-  const thisWeekRecords = medicalRecords.filter(record => {
-    const recordDate = new Date(record.date);
-    return recordDate >= thisWeekStart;
-  });
-
-  // 本月的医疗记录
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const thisMonthRecords = medicalRecords.filter(record => {
-    const recordDate = new Date(record.date);
-    return recordDate >= thisMonthStart;
+  const thisMonthAppointments = appointments.filter(apt => {
+    const aptDate = new Date(apt.appointmentStartTime);
+    return aptDate >= thisMonthStart;
   });
 
-  // AI 检查结果
-  const aiResults = appointments.filter(apt => apt.aiSymptomAnalysisId).length;
+  const aiResults = appointments.filter(apt => apt.aiSymptomAnalysisId);
   
-  // 最近的 AI 结果（最近 7 天）
-  const recentAiResults = appointments.filter(apt => {
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+  const lastMonthAppointments = appointments.filter(apt => {
     const aptDate = new Date(apt.appointmentStartTime);
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(now.getDate() - 7);
-    return aptDate >= sevenDaysAgo && apt.aiSymptomAnalysisId;
-  }).length;
+    return aptDate >= lastMonthStart && aptDate <= lastMonthEnd;
+  });
 
-  // Dashboard 概览统计数据
-  const upcomingCount = upcomingAppointments.length;
-  const historyCount = medicalRecords.length;
-  const aiResultsCount = aiResults;
-  const remindersCount = upcomingAppointments.length;
+  const calculateTrend = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100);
+  };
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN');
+    return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const formatTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
   };
 
   const formatDateTime = (dateString: string): string => {
+    return `${formatTime(dateString)} - ${formatDate(dateString)}`;
+  };
+
+  const getTimeUntil = (dateString: string): string => {
     const date = new Date(dateString);
-    const time = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    const dateStr = date.toLocaleDateString('vi-VN');
-    return `${time}, ${dateStr}`;
+    const diff = date.getTime() - now.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days} ngày nữa`;
+    if (hours > 0) return `${hours} giờ nữa`;
+    return 'Sắp diễn ra';
   };
 
-  const getStatusBadge = (statusCode: string): string => {
-    switch (statusCode) {
-      case 'Confirmed':
-        return 'Đã xác nhận';
-      case 'OnProgressing':
-        return 'Đang xử lý';
-      case 'Completed':
-        return 'Đã hoàn thành';
-      case 'CancelledByPatient':
-      case 'CancelledByDoctor':
-      case 'NoShow':
-        return 'Đã hủy';
-      default:
-        return statusCode || 'Không xác định';
-    }
-  };
-
-  const getStatusBadgeClass = (statusCode: string): string => {
-    switch (statusCode) {
-      case 'Confirmed':
-      case 'OnProgressing':
-        return styles.statusBadge;
-      case 'Completed':
-        return styles.statusBadge;
-      default:
-        return styles.statusBadge;
-    }
+  const getGreeting = () => {
+    const hour = now.getHours();
+    if (hour < 12) return 'Chào buổi sáng';
+    if (hour < 18) return 'Chào buổi chiều';
+    return 'Chào buổi tối';
   };
 
   return (
     <div className={styles.container}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <h1>Dashboard</h1>
-          <p>
-            <span className={styles.waveEmoji}>👋</span>
-            Chào mừng trở lại, <strong>{user?.fullName || 'Bệnh nhân'}</strong>!
-          </p>
-        </div>
-        <div className={styles.headerRight}>
-          <div className={styles.walletBalance}>
-            <i className={`bi bi-wallet2 ${styles.walletIcon}`}></i>
+      {/* Welcome Header */}
+      <div className={styles.welcomeHeader}>
+        <div className={styles.welcomeContent}>
+          <div className={styles.greetingSection}>
+            <span className={styles.greetingIcon}>
+              {now.getHours() < 12 ? '🌅' : now.getHours() < 18 ? '☀️' : '🌙'}
+            </span>
             <div>
-              <div style={{ fontSize: '12px', opacity: 0.9 }}>Số dư ví</div>
-              {loading ? (
-                <div className={styles.walletAmount}>Đang tải...</div>
-              ) : error ? (
-                <div className={styles.walletAmount} style={{ color: '#ef4444' }}>
-                  Lỗi
-                </div>
-              ) : wallet ? (
-                <div className={styles.walletAmount}>
-                  {formatBalance(wallet.balance, wallet.currency)}
-                </div>
-              ) : (
-                <div className={styles.walletAmount}>0 đ</div>
-              )}
+              <h1 className={styles.greeting}>{getGreeting()}</h1>
+              <p className={styles.userName}>{user?.fullName || 'Bệnh nhân'}</p>
             </div>
-            <button
-              onClick={() => navigate('/app/patient/finance')}
-              className={styles.walletAddButton}
-              title="Nạp tiền"
-            >
-              <i className="bi bi-plus-lg"></i>
-            </button>
           </div>
-          <div className={styles.dateTime}>
-            <i className="bi bi-calendar3"></i>
-            <span>{new Date().toLocaleDateString('vi-VN')}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards - Dashboard Overview */}
-      <div className={styles.statsGrid}>
-        <div className={`${styles.statCard} ${styles.statCard1}`}>
-          <div className={styles.statIcon}>
-            <i className="bi bi-calendar-check"></i>
-          </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Lịch hẹn sắp tới</div>
-            <div className={styles.statValue}>{statsLoading ? '...' : upcomingCount}</div>
-            <div className={styles.statTrend}>
+          <div className={styles.headerActions}>
+            <div className={styles.walletCard} onClick={() => navigate('/app/patient/finance')}>
+              <div className={styles.walletIcon}>
+                <i className="bi bi-wallet2"></i>
+              </div>
+              <div className={styles.walletInfo}>
+                <span className={styles.walletLabel}>Số dư ví</span>
+                {loading ? (
+                  <span className={styles.walletAmount}>...</span>
+                ) : wallet ? (
+                  <span className={styles.walletAmount}>
+                    {formatBalance(wallet.balance, wallet.currency)}
+                  </span>
+                ) : (
+                  <span className={styles.walletAmount}>0 ₫</span>
+                )}
+              </div>
+              <button className={styles.addMoneyBtn} onClick={(e) => {
+                e.stopPropagation();
+                navigate('/app/patient/finance');
+              }}>
+                <i className="bi bi-plus-lg"></i>
+              </button>
+            </div>
+            <div className={styles.dateCard}>
               <i className="bi bi-calendar-event"></i>
-              <span>{todayAppointments.length} hôm nay</span>
+              <div>
+                <span className={styles.dateLabel}>Hôm nay</span>
+                <span className={styles.dateValue}>
+                  {now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className={styles.statBg}>
-            <i className="bi bi-calendar-check"></i>
-          </div>
-        </div>
-
-        <div className={`${styles.statCard} ${styles.statCard2}`}>
-          <div className={styles.statIcon}>
-            <i className="bi bi-clipboard-data"></i>
-          </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Lịch sử khám</div>
-            <div className={styles.statValue}>{statsLoading ? '...' : historyCount}</div>
-            <div className={styles.statTrend}>
-              <i className="bi bi-graph-up"></i>
-              <span>+{thisMonthRecords.length} tháng này</span>
-            </div>
-          </div>
-          <div className={styles.statBg}>
-            <i className="bi bi-clipboard-data"></i>
-          </div>
-        </div>
-
-        <div className={`${styles.statCard} ${styles.statCard3}`}>
-          <div className={styles.statIcon}>
-            <i className="bi bi-robot"></i>
-          </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Kết quả AI</div>
-            <div className={styles.statValue}>{statsLoading ? '...' : aiResultsCount}</div>
-            <div className={styles.statTrend}>
-              <i className="bi bi-graph-up"></i>
-              <span>+{recentAiResults} 7 ngày qua</span>
-            </div>
-          </div>
-          <div className={styles.statBg}>
-            <i className="bi bi-robot"></i>
-          </div>
-        </div>
-
-        <div className={`${styles.statCard} ${styles.statCard4}`}>
-          <div className={styles.statIcon}>
-            <i className="bi bi-bell"></i>
-          </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Nhắc nhở</div>
-            <div className={styles.statValue}>{statsLoading ? '...' : remindersCount}</div>
-            <div className={styles.statTrend}>
-              <i className="bi bi-bell-fill"></i>
-              <span>{todayAppointments.length} cần chú ý</span>
-            </div>
-          </div>
-          <div className={styles.statBg}>
-            <i className="bi bi-bell"></i>
           </div>
         </div>
       </div>
 
-      {/* Main Content Grid */}
-      <div className={styles.contentGrid}>
-        {/* Upcoming Appointment */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div className={styles.cardIcon}>
+      {/* Quick Stats */}
+      <div className={styles.quickStats}>
+        <div className={styles.statCard} onClick={() => navigate('/app/patient/appointments')}>
+          <div className={styles.statIconWrapper}>
+            <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
               <i className="bi bi-calendar-check"></i>
             </div>
-            <h3 className={styles.cardTitle}>Lịch hẹn sắp tới</h3>
           </div>
-          {upcomingAppointments.length > 0 ? (
-            upcomingAppointments.slice(0, 1).map((apt) => (
-              <div key={apt.id} className={styles.appointmentCard}>
-                <div className={styles.doctorInfo}>
-                  <div className={styles.doctorAvatar}>
-                    <img 
-                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(apt.doctorName)}&background=667eea&color=fff`} 
-                      alt={apt.doctorName} 
-                    />
-                  </div>
-                  <div className={styles.doctorDetails}>
-                    <div className={styles.doctorName}>{apt.doctorName}</div>
-                    <div className={styles.doctorTitle}>Bác sĩ</div>
-                    <div className={styles.doctorSpecialty}>Lịch hẹn</div>
-                  </div>
-                </div>
-                <div className={styles.appointmentTime}>
-                  <span className={styles.timeText}>{formatDateTime(apt.appointmentStartTime)}</span>
-                  <span className={getStatusBadgeClass(apt.statusCode)}>{getStatusBadge(apt.statusCode)}</span>
-                </div>
-                <div className={styles.appointmentActions}>
-                  <button 
-                    className={styles.updateBtn}
-                    onClick={() => navigate(`/app/patient/appointments/${apt.id}`)}
-                  >
-                    XEM CHI TIẾT
-                  </button>
-                  <button 
-                    className={styles.cancelBtn}
-                    onClick={async () => {
-                      if (window.confirm('Bạn có chắc chắn muốn hủy lịch hẹn này không?')) {
-                        try {
-                          await appointmentService.cancelPatientAppointment(apt.id);
-                          window.location.reload();
-                        } catch (err) {
-                          alert('Không thể hủy lịch hẹn');
-                        }
-                      }
-                    }}
-                  >
-                    HỦY LỊCH KHÁM
-                  </button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <>
-              <div style={{ textAlign: 'center', padding: '40px', color: '#718096', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <i className="bi bi-calendar-x" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
-                <p>Chưa có lịch hẹn sắp tới</p>
-              </div>
-              <button 
-                className={styles.viewAllBtn}
-                onClick={() => navigate('/app/patient/appointments')}
-              >
-                XEM TẤT CẢ
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Examination History */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div className={styles.cardIcon}>
-              <i className="bi bi-clipboard-data"></i>
+          <div className={styles.statInfo}>
+            <span className={styles.statLabel}>Lịch hẹn sắp tới</span>
+            <div className={styles.statValueRow}>
+              <span className={styles.statValue}>{upcomingAppointments.length}</span>
+              {todayAppointments.length > 0 && (
+                <span className={styles.statBadge}>
+                  <i className="bi bi-clock"></i>
+                  {todayAppointments.length} hôm nay
+                </span>
+              )}
             </div>
-            <h3 className={styles.cardTitle}>Lịch sử khám</h3>
           </div>
-          {medicalRecords.length > 0 ? (
-            <>
-              <div className={styles.historyList}>
-                {medicalRecords.slice(0, 2).map((record) => (
-                  <div key={record.id} className={styles.historyItem}>
-                    <div className={styles.historyDate}>{formatDate(record.date)}</div>
-                    <div className={styles.historyDoctor}>{record.doctor}</div>
-                    <div className={styles.historyDiagnosis}>{record.diagnosis || record.chiefComplaint || 'Chưa có chẩn đoán'}</div>
-                  </div>
-                ))}
-              </div>
-              <button 
-                className={styles.viewAllBtn}
-                onClick={() => navigate('/app/patient/medical-records')}
-              >
-                XEM TẤT CẢ
-              </button>
-            </>
-          ) : (
-            <>
-              <div style={{ textAlign: 'center', padding: '40px', color: '#718096', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <i className="bi bi-clipboard-x" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
-                <p>Chưa có lịch sử khám</p>
-              </div>
-              <button 
-                className={styles.viewAllBtn}
-                onClick={() => navigate('/app/patient/medical-records')}
-              >
-                XEM TẤT CẢ
-              </button>
-            </>
-          )}
         </div>
 
-        {/* AI Checkup Results */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div className={styles.cardIcon}>
+        <div className={styles.statCard} onClick={() => navigate('/app/patient/medical-records')}>
+          <div className={styles.statIconWrapper}>
+            <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+              <i className="bi bi-file-medical"></i>
+            </div>
+          </div>
+          <div className={styles.statInfo}>
+            <span className={styles.statLabel}>Hồ sơ bệnh án</span>
+            <div className={styles.statValueRow}>
+              <span className={styles.statValue}>{medicalRecords.length}</span>
+              <span className={styles.statSubtext}>hồ sơ</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.statCard} onClick={() => navigate('/app/patient/appointments')}>
+          <div className={styles.statIconWrapper}>
+            <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+              <i className="bi bi-check-circle"></i>
+            </div>
+          </div>
+          <div className={styles.statInfo}>
+            <span className={styles.statLabel}>Đã hoàn thành</span>
+            <div className={styles.statValueRow}>
+              <span className={styles.statValue}>{completedAppointments.length}</span>
+              <span className={styles.statSubtext}>lịch khám</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.statCard} onClick={() => navigate('/app/patient/ai-checkup')}>
+          <div className={styles.statIconWrapper}>
+            <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
               <i className="bi bi-robot"></i>
             </div>
-            <h3 className={styles.cardTitle}>Kết quả kiểm tra AI gần đây</h3>
           </div>
-          {appointments.filter(apt => apt.aiSymptomAnalysisId).length > 0 ? (
-            (() => {
-              const latestAiAppointment = appointments
-                .filter(apt => apt.aiSymptomAnalysisId)
-                .sort((a, b) => new Date(b.appointmentStartTime).getTime() - new Date(a.appointmentStartTime).getTime())[0];
-              
-              return (
-                <>
-                  <div className={styles.aiResult}>
-                    <div className={styles.aiAvatar}>
-                      <div className={styles.aiLogo}>MEDIX</div>
-                      <div className={styles.aiDate}>{formatDate(latestAiAppointment.appointmentStartTime)}</div>
-                    </div>
-                    <div className={styles.aiContent}>
-                      <div className={styles.aiSymptoms}>
-                        {latestAiAppointment.medicalInfo || 'Đã có kết quả phân tích AI'}
-                      </div>
-                      <div className={styles.aiStatus}>Cần chú ý</div>
-                    </div>
-                  </div>
-                  <button 
-                    className={styles.viewAllBtn}
-                    onClick={() => navigate(`/app/patient/appointments/${latestAiAppointment.id}`)}
-                  >
-                    XEM CHI TIẾT
-                  </button>
-                </>
-              );
-            })()
-          ) : (
-            <>
-              <div style={{ textAlign: 'center', padding: '40px', color: '#718096', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <i className="bi bi-robot" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
-                <p>Chưa có kết quả kiểm tra AI</p>
+          <div className={styles.statInfo}>
+            <span className={styles.statLabel}>Phân tích AI</span>
+            <div className={styles.statValueRow}>
+              <span className={styles.statValue}>{aiResults.length}</span>
+              <span className={styles.statSubtext}>kết quả</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className={styles.mainContent}>
+        {/* Left Column */}
+        <div className={styles.leftColumn}>
+          {/* Upcoming Appointments */}
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionTitle}>
+                <i className="bi bi-calendar-heart"></i>
+                <h2>Lịch hẹn sắp tới</h2>
               </div>
               <button 
-                className={styles.viewAllBtn}
-                onClick={() => navigate('/app/patient/ai-checkup')}
+                className={styles.viewAllLink}
+                onClick={() => navigate('/app/patient/appointments')}
               >
-                KIỂM TRA NGAY
+                Xem tất cả
+                <i className="bi bi-arrow-right"></i>
               </button>
-            </>
-          )}
-        </div>
-
-        {/* Reminders */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div className={styles.cardIcon}>
-              <i className="bi bi-bell"></i>
             </div>
-            <h3 className={styles.cardTitle}>Nhắc nhở</h3>
-          </div>
-          {upcomingAppointments.length > 0 ? (
-            <>
-              <div className={styles.remindersList}>
-                {upcomingAppointments.slice(0, 3).map((apt) => (
-                  <div key={apt.id} className={styles.reminderItem}>
-                    <div className={styles.reminderIcon}>
-                      <i className="bi bi-calendar-event"></i>
+            
+            {loading ? (
+              <div className={styles.loadingState}>
+                <div className={styles.loadingSpinner}></div>
+                <p>Đang tải...</p>
+              </div>
+            ) : upcomingAppointments.length > 0 ? (
+              <div className={styles.appointmentsList}>
+                {upcomingAppointments.slice(0, 3).map((apt, index) => (
+                  <div 
+                    key={apt.id} 
+                    className={styles.appointmentItem}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                    onClick={() => navigate(`/app/patient/appointments/${apt.id}`)}
+                  >
+                    <div className={styles.appointmentLeft}>
+                      <div className={styles.doctorAvatarLarge}>
+                        <img 
+                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(apt.doctorName)}&background=667eea&color=fff`}
+                          alt={apt.doctorName}
+                        />
+                        <div className={styles.onlineBadge}></div>
+                      </div>
+                      <div className={styles.appointmentDetails}>
+                        <h4>{apt.doctorName}</h4>
+                        <p className={styles.specialty}>Bác sĩ chuyên khoa</p>
+                        <div className={styles.appointmentMeta}>
+                          <span className={styles.metaItem}>
+                            <i className="bi bi-clock"></i>
+                            {formatTime(apt.appointmentStartTime)}
+                          </span>
+                          <span className={styles.metaItem}>
+                            <i className="bi bi-calendar3"></i>
+                            {formatDate(apt.appointmentStartTime)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className={styles.reminderText}>
-                      Lịch hẹn với BS. {apt.doctorName} vào {formatDateTime(apt.appointmentStartTime)}
+                    <div className={styles.appointmentRight}>
+                      <div className={styles.timeUntil}>
+                        <i className="bi bi-hourglass-split"></i>
+                        {getTimeUntil(apt.appointmentStartTime)}
+                      </div>
+                      <button 
+                        className={styles.viewDetailsBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/app/patient/appointments/${apt.id}`);
+                        }}
+                      >
+                        <i className="bi bi-arrow-right-circle"></i>
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
+            ) : (
+              <div className={styles.emptyState}>
+                <div className={styles.emptyIcon}>
+                  <i className="bi bi-calendar-x"></i>
+                </div>
+                <h3>Chưa có lịch hẹn</h3>
+                <p>Đặt lịch khám với bác sĩ ngay hôm nay</p>
+                <button 
+                  className={styles.primaryBtn}
+                  onClick={() => navigate('/app/patient/book-appointment')}
+                >
+                  <i className="bi bi-plus-circle"></i>
+                  Đặt lịch khám
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Health Summary */}
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionTitle}>
+                <i className="bi bi-activity"></i>
+                <h2>Tổng quan sức khỏe</h2>
+              </div>
+            </div>
+            
+            <div className={styles.healthMetrics}>
+              <div className={styles.metricCard}>
+                <div className={styles.metricIcon} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                  <i className="bi bi-calendar-check"></i>
+                </div>
+                <div className={styles.metricInfo}>
+                  <span className={styles.metricLabel}>Lịch khám tháng này</span>
+                  <span className={styles.metricValue}>{thisMonthAppointments.length}</span>
+                  {(() => {
+                    const trend = calculateTrend(thisMonthAppointments.length, lastMonthAppointments.length);
+                    return trend !== 0 ? (
+                      <span className={`${styles.metricTrend} ${trend > 0 ? styles.trendUp : styles.trendDown}`}>
+                        <i className={`bi bi-arrow-${trend > 0 ? 'up' : 'down'}`}></i>
+                        {Math.abs(trend)}% so với tháng trước
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+
+              <div className={styles.metricCard}>
+                <div className={styles.metricIcon} style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+                  <i className="bi bi-heart-pulse"></i>
+                </div>
+                <div className={styles.metricInfo}>
+                  <span className={styles.metricLabel}>Lần khám gần nhất</span>
+                  <span className={styles.metricValue}>
+                    {completedAppointments.length > 0 
+                      ? formatDate(completedAppointments[completedAppointments.length - 1].appointmentStartTime)
+                      : 'Chưa có'
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className={styles.rightColumn}>
+          {/* Quick Actions */}
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionTitle}>
+                <i className="bi bi-lightning-charge"></i>
+                <h2>Thao tác nhanh</h2>
+              </div>
+            </div>
+            
+            <div className={styles.quickActions}>
               <button 
-                className={styles.viewAllBtn}
-                onClick={() => navigate('/app/patient/appointments')}
+                className={styles.actionCard}
+                onClick={() => navigate('/app/patient/book-appointment')}
               >
-                XEM TẤT CẢ
+                <div className={styles.actionIcon} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                  <i className="bi bi-calendar-plus"></i>
+                </div>
+                <span>Đặt lịch khám</span>
               </button>
-            </>
-          ) : (
-            <>
-              <div style={{ textAlign: 'center', padding: '40px', color: '#718096', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <i className="bi bi-bell-slash" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
-                <p>Chưa có nhắc nhở</p>
+
+              <button 
+                className={styles.actionCard}
+                onClick={() => navigate('/app/patient/ai-checkup')}
+              >
+                <div className={styles.actionIcon} style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+                  <i className="bi bi-robot"></i>
+                </div>
+                <span>Kiểm tra AI</span>
+              </button>
+
+              <button 
+                className={styles.actionCard}
+                onClick={() => navigate('/app/patient/medical-records')}
+              >
+                <div className={styles.actionIcon} style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+                  <i className="bi bi-file-medical"></i>
+                </div>
+                <span>Hồ sơ bệnh án</span>
+              </button>
+
+              <button 
+                className={styles.actionCard}
+                onClick={() => navigate('/app/patient/finance')}
+              >
+                <div className={styles.actionIcon} style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+                  <i className="bi bi-wallet2"></i>
+                </div>
+                <span>Nạp tiền</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Recent Medical Records */}
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionTitle}>
+                <i className="bi bi-clock-history"></i>
+                <h2>Lịch sử khám gần đây</h2>
               </div>
               <button 
-                className={styles.viewAllBtn}
-                onClick={() => navigate('/app/patient/appointments')}
+                className={styles.viewAllLink}
+                onClick={() => navigate('/app/patient/medical-records')}
               >
-                XEM LỊCH HẸN
+                Xem tất cả
+                <i className="bi bi-arrow-right"></i>
               </button>
-            </>
+            </div>
+            
+            {medicalRecords.length > 0 ? (
+              <div className={styles.recordsList}>
+                {medicalRecords.slice(0, 4).map((record, index) => (
+                  <div 
+                    key={record.id} 
+                    className={styles.recordItem}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                    onClick={() => navigate('/app/patient/medical-records')}
+                  >
+                    <div className={styles.recordIcon}>
+                      <i className="bi bi-file-text"></i>
+                    </div>
+                    <div className={styles.recordInfo}>
+                      <h5>{record.diagnosis || record.chiefComplaint || 'Khám tổng quát'}</h5>
+                      <p>{record.doctor}</p>
+                      <span className={styles.recordDate}>
+                        <i className="bi bi-calendar3"></i>
+                        {formatDate(record.date)}
+                      </span>
+                    </div>
+                    <i className="bi bi-chevron-right"></i>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.emptyState}>
+                <div className={styles.emptyIcon}>
+                  <i className="bi bi-file-medical"></i>
+                </div>
+                <p>Chưa có hồ sơ bệnh án</p>
+              </div>
+            )}
+          </div>
+
+          {/* AI Analysis Results */}
+          {aiResults.length > 0 && (
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionHeader}>
+                <div className={styles.sectionTitle}>
+                  <i className="bi bi-stars"></i>
+                  <h2>Phân tích AI</h2>
+                </div>
+              </div>
+              
+              <div className={styles.aiResultCard}>
+                <div className={styles.aiHeader}>
+                  <div className={styles.aiLogo}>
+                    <i className="bi bi-robot"></i>
+                  </div>
+                  <div className={styles.aiInfo}>
+                    <h4>Kết quả phân tích mới nhất</h4>
+                    <p>{aiResults.length} kết quả có sẵn</p>
+                  </div>
+                </div>
+                <button 
+                  className={styles.secondaryBtn}
+                  onClick={() => navigate('/app/patient/ai-checkup')}
+                >
+                  <i className="bi bi-eye"></i>
+                  Xem chi tiết
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>

@@ -27,6 +27,8 @@
 .pageHeader {
   margin-bottom: 32px;
   animation: slideDown 0.6s ease-out;
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes slideDown {
@@ -62,6 +64,14 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  transition: all 0.3s ease;
+}
+
+.pageTitle:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .pageTitle i {
@@ -134,11 +144,21 @@
   align-items: center;
   gap: 20px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 2px solid transparent;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(226, 232, 240, 0.8);
   position: relative;
   overflow: hidden;
+}
+
+.statCard:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.12),
+    0 8px 30px rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.3);
 }
 
 .statCard::before {
@@ -234,18 +254,24 @@
 .searchBox input {
   width: 100%;
   padding: 16px 20px 16px 56px;
-  border: 2px solid transparent;
+  border: 2px solid rgba(226, 232, 240, 0.8);
   border-radius: 16px;
   font-size: 16px;
   background: white;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.searchBox input:hover {
+  border-color: rgba(102, 126, 234, 0.3);
+  box-shadow: 0 6px 25px rgba(102, 126, 234, 0.15);
 }
 
 .searchBox input:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2), 0 0 0 3px rgba(102, 126, 234, 0.1);
+  transform: translateY(-1px);
 }
 
 .filterButtons {
@@ -255,22 +281,29 @@
 
 .filterSelect {
   padding: 16px 20px;
-  border: 2px solid transparent;
+  border: 2px solid rgba(226, 232, 240, 0.8);
   border-radius: 16px;
   font-size: 14px;
   font-weight: 600;
   background: white;
   color: #334155;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   min-width: 180px;
+}
+
+.filterSelect:hover {
+  border-color: rgba(102, 126, 234, 0.3);
+  box-shadow: 0 6px 25px rgba(102, 126, 234, 0.15);
+  transform: translateY(-1px);
 }
 
 .filterSelect:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2), 0 0 0 3px rgba(102, 126, 234, 0.1);
+  transform: translateY(-1px);
 }
 
 /* Appointments Grid & List */
@@ -304,11 +337,32 @@
   background: white;
   border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.05);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  border: 2px solid transparent;
+  border: 1px solid rgba(226, 232, 240, 0.8);
   position: relative;
+  animation: fadeInUp 0.6s ease-out both;
+}
+
+.appointmentCard:nth-child(1) { animation-delay: 0.1s; }
+.appointmentCard:nth-child(2) { animation-delay: 0.2s; }
+.appointmentCard:nth-child(3) { animation-delay: 0.3s; }
+.appointmentCard:nth-child(4) { animation-delay: 0.4s; }
+.appointmentCard:nth-child(5) { animation-delay: 0.5s; }
+.appointmentCard:nth-child(n+6) { animation-delay: 0.6s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .appointmentCard::before {
@@ -317,20 +371,23 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-  transform: scaleX(0);
-  transition: transform 0.3s ease;
-}
-
-.appointmentCard:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-  border-color: #667eea;
+  height: 5px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #48bb78 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 1;
 }
 
 .appointmentCard:hover::before {
-  transform: scaleX(1);
+  opacity: 1;
+}
+
+.appointmentCard:hover {
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.12),
+    0 8px 30px rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.3);
 }
 
 .cardHeader {
@@ -384,45 +441,133 @@
 }
 
 .doctorAvatar {
-  width: 64px;
-  height: 64px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   overflow: hidden;
   position: relative;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
-  border: 3px solid white;
+  flex-shrink: 0;
+  box-shadow: 
+    0 8px 20px rgba(102, 126, 234, 0.2),
+    0 0 0 3px rgba(255, 255, 255, 1),
+    0 0 0 4px rgba(102, 126, 234, 0.1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.appointmentCard:hover .doctorAvatar {
+  transform: scale(1.05);
+  box-shadow: 
+    0 12px 30px rgba(102, 126, 234, 0.3),
+    0 0 0 3px rgba(255, 255, 255, 1),
+    0 0 0 5px rgba(102, 126, 234, 0.2);
 }
 
 .doctorAvatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.appointmentCard:hover .doctorAvatar img {
+  transform: scale(1.1);
 }
 
 .avatarBadge {
   position: absolute;
   bottom: -2px;
   right: -2px;
-  width: 24px;
-  height: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid white;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  z-index: 2;
+  animation: pulse 2s ease-in-out infinite;
+  transition: all 0.3s ease;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.6);
+  }
+}
+
+.appointmentCard:hover .avatarBadge {
+  transform: scale(1.15);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.6);
 }
 
 .avatarBadge i {
-  font-size: 12px;
+  font-size: 14px;
   color: white;
 }
 
 .doctorInfo h3 {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 4px 0;
+  color: #1a202c;
+  margin: 0 0 8px 0;
+  background: linear-gradient(135deg, #1a202c 0%, #4a5568 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transition: all 0.3s ease;
+}
+
+.appointmentCard:hover .doctorInfo h3 {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.doctorMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.doctorTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #667eea;
+  font-weight: 600;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+  border: 1px solid rgba(102, 126, 234, 0.15);
+  border-radius: 12px;
+  width: fit-content;
+  transition: all 0.3s ease;
+}
+
+.appointmentCard:hover .doctorTitle {
+  color: #764ba2;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
+  border-color: rgba(102, 126, 234, 0.25);
+  transform: translateY(-1px);
+}
+
+.doctorTitle i {
+  font-size: 13px;
+  color: #667eea;
+  transition: color 0.3s ease;
+}
+
+.appointmentCard:hover .doctorTitle i {
+  color: #764ba2;
 }
 
 .specialty {
@@ -432,22 +577,39 @@
   font-size: 13px;
   color: #667eea;
   font-weight: 600;
-  background: rgba(102, 126, 234, 0.1);
-  padding: 4px 10px;
-  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  padding: 6px 12px;
+  border-radius: 20px;
+  width: fit-content;
+  transition: all 0.3s ease;
+}
+
+.appointmentCard:hover .specialty {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-1px);
 }
 
 .specialty i {
-  font-size: 11px;
+  font-size: 12px;
+  color: #667eea;
 }
 
 .appointmentInfo {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
   border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.5);
+  transition: all 0.3s ease;
+}
+
+.appointmentCard:hover .appointmentInfo {
+  border-color: rgba(102, 126, 234, 0.2);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
 .infoRow {
@@ -457,12 +619,26 @@
   font-size: 14px;
   color: #475569;
   font-weight: 500;
+  transition: all 0.3s ease;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.appointmentCard:hover .infoRow {
+  color: #1e293b;
+  background: rgba(102, 126, 234, 0.05);
 }
 
 .infoRow i {
   font-size: 18px;
   color: #667eea;
   width: 20px;
+  transition: all 0.3s ease;
+}
+
+.appointmentCard:hover .infoRow i {
+  color: #764ba2;
+  transform: scale(1.1);
 }
 
 .fee {
@@ -475,34 +651,60 @@
   padding: 16px 24px;
   display: flex;
   gap: 8px;
-  background: #fafbfc;
-  border-top: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #fafbfc 0%, #ffffff 100%);
+  border-top: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.footerActions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  justify-content: flex-end;
 }
 
 .cardFooter button {
-  flex: 1;
-  padding: 12px 16px;
+  padding: 10px 20px;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  transition: all 0.3s ease;
+  gap: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.viewInfoBtn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.viewInfoBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
 }
 
 .cancelBtn {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  background: transparent;
+  color: #64748b;
+  border: 1.5px solid #cbd5e0;
+  padding: 10px 18px;
+  font-weight: 500;
 }
 
 .cancelBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.05);
+  border-color: #fca5a5;
+  color: #dc2626;
+  transform: translateY(-1px);
+}
+
+.cancelBtn i {
+  font-size: 16px;
 }
 
 .emrBtn {
@@ -681,10 +883,12 @@
   width: 100%;
   max-width: 700px;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes slideUp {
@@ -722,175 +926,305 @@
 }
 
 .modalHeader {
-  padding: 32px;
+  padding: 20px 24px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  flex-shrink: 0;
 }
 
 .modalDoctorInfo {
   display: flex;
-  align-items: center;
-  gap: 20px;
+  align-items: flex-start;
+  gap: 16px;
+  flex: 1;
 }
 
-.modalDoctorInfo img {
-  width: 80px;
-  height: 80px;
+.modalAvatarWrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.modalAvatarWrapper img {
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
-  border: 4px solid white;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  object-fit: cover;
 }
 
-.modalDoctorInfo h2 {
-  font-size: 26px;
-  font-weight: 700;
-  margin: 0 0 8px 0;
+.modalAvatarBadge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
 }
 
-.modalDoctorInfo p {
-  font-size: 14px;
+.modalAvatarBadge i {
+  font-size: 12px;
+  color: white;
+}
+
+.modalDoctorDetails {
+  flex: 1;
+}
+
+.modalDoctorName {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 10px 0;
+  color: white;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
+.modalDoctorMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modalDoctorTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.95;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.modalDoctorTitle i {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.modalSpecialty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
   opacity: 0.9;
-  margin: 0;
+  background: rgba(255, 255, 255, 0.25);
+  padding: 5px 10px;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  width: fit-content;
+}
+
+.modalSpecialty i {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .modalStatus {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: 12px;
-  font-size: 14px;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 12px;
   font-weight: 700;
   color: white;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .modalBody {
-  padding: 32px;
+  padding: 20px 24px;
+  overflow: visible;
+  flex: 1;
 }
 
 .detailSection {
-  margin-bottom: 32px;
+  margin-bottom: 20px;
 }
 
 .detailSection:last-child {
   margin-bottom: 0;
 }
 
-.detailSection h4 {
-  font-size: 18px;
+.sectionTitle {
+  font-size: 16px;
   font-weight: 700;
   color: #1e293b;
-  margin: 0 0 20px 0;
+  margin: 0 0 14px 0;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e2e8f0;
 }
 
-.detailSection h4 i {
-  font-size: 22px;
+.sectionTitle i {
+  font-size: 18px;
   color: #667eea;
 }
 
 .detailGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
 }
 
-.detailItem {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  padding: 16px;
+.detailCard {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  padding: 12px 14px;
   border-radius: 12px;
-  border-left: 4px solid #667eea;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
 }
 
-.detailLabel {
+.detailCard:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+  transform: translateY(-1px);
+}
+
+.detailCardLabel {
   display: block;
-  font-size: 13px;
+  font-size: 10px;
   color: #64748b;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.detailValue {
+.detailCardValue {
   display: block;
-  font-size: 16px;
+  font-size: 15px;
   color: #1e293b;
   font-weight: 700;
+  line-height: 1.3;
 }
 
 .paymentDetails {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  padding: 24px;
-  border-radius: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
 }
 
 .paymentRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
-  font-size: 15px;
-  color: #475569;
+  padding: 10px 0;
+  font-size: 14px;
 }
 
 .paymentRow:not(:last-child) {
   border-bottom: 1px solid #e2e8f0;
 }
 
+.paymentLabel {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.paymentAmount {
+  color: #1e293b;
+  font-weight: 600;
+}
+
 .paymentDivider {
   height: 2px;
   background: linear-gradient(90deg, transparent, #cbd5e0, transparent);
-  margin: 16px 0;
+  margin: 10px 0;
 }
 
 .totalLabel {
   font-weight: 700;
   color: #1e293b !important;
-  font-size: 16px !important;
+  font-size: 15px !important;
 }
 
 .totalValue {
   font-weight: 800;
   color: #667eea !important;
-  font-size: 20px !important;
+  font-size: 18px !important;
 }
 
 .paymentStatus {
-  margin-top: 16px;
-  padding: 12px;
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-  border-radius: 12px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: #059669;
+  gap: 8px;
   font-weight: 600;
+  font-size: 13px;
+}
+
+.paymentStatusPaid {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #059669;
+  border: 1px solid #6ee7b7;
+}
+
+.paymentStatusUnpaid {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+
+.paymentStatusPending {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #d97706;
+  border: 1px solid #fcd34d;
+}
+
+.paymentStatusFailed {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+
+.paymentStatusRefunded {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #6366f1;
+  border: 1px solid #a5b4fc;
+}
+
+.paymentStatusCancelled {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  color: #6b7280;
+  border: 1px solid #d1d5db;
 }
 
 .paymentStatus i {
-  font-size: 20px;
+  font-size: 16px;
 }
 
 .modalFooter {
-  padding: 24px 32px;
-  background: #fafbfc;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #fafbfc 0%, #ffffff 100%);
   border-top: 1px solid #e2e8f0;
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .modalFooter button {
   flex: 1;
-  padding: 14px 20px;
+  padding: 10px 16px;
   border: none;
   border-radius: 12px;
   font-size: 15px;
@@ -930,64 +1264,85 @@
   background: white;
   border-radius: 24px;
   width: 100%;
-  max-width: 500px;
+  max-width: 520px;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .cancelModalHeader {
-  padding: 32px 32px 24px;
+  padding: 28px 32px 20px;
   text-align: center;
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  position: relative;
 }
 
 .cancelIcon {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 20px;
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 16px;
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.6);
+  }
 }
 
 .cancelIcon i {
-  font-size: 40px;
+  font-size: 36px;
   color: white;
 }
 
 .cancelModalHeader h3 {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   color: #1e293b;
   margin: 0 0 8px 0;
+  letter-spacing: -0.3px;
 }
 
 .cancelModalHeader p {
-  font-size: 15px;
+  font-size: 14px;
   color: #64748b;
   margin: 0;
+  font-weight: 500;
 }
 
 .cancelModalBody {
   padding: 24px 32px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .appointmentSummary {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  padding: 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  padding: 18px;
   border-radius: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .summaryRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
+  padding: 10px 0;
   font-size: 14px;
 }
 
@@ -997,20 +1352,24 @@
 
 .summaryRow span {
   color: #64748b;
+  font-weight: 500;
 }
 
 .summaryRow strong {
   color: #1e293b;
   font-weight: 700;
+  text-align: right;
 }
 
 .refundNotice {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   padding: 16px;
   background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  border-radius: 12px;
+  border-radius: 14px;
   margin-bottom: 16px;
+  border: 2px solid #93c5fd;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
 }
 
 .refundNotice i {
@@ -1021,50 +1380,56 @@
 
 .refundNotice strong {
   display: block;
-  font-size: 14px;
+  font-size: 15px;
   color: #1e40af;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  font-weight: 700;
 }
 
 .refundNotice p {
   font-size: 13px;
   color: #3b82f6;
   margin: 0;
+  line-height: 1.5;
 }
 
 .warningNotice {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 14px 16px;
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   border-radius: 12px;
   border-left: 4px solid #f59e0b;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);
 }
 
 .warningNotice i {
   font-size: 20px;
   color: #d97706;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .warningNotice span {
   font-size: 13px;
   color: #92400e;
   font-weight: 500;
+  line-height: 1.5;
 }
 
 .cancelModalFooter {
-  padding: 24px 32px;
-  background: #fafbfc;
+  padding: 20px 32px;
+  background: linear-gradient(135deg, #fafbfc 0%, #ffffff 100%);
   border-top: 1px solid #e2e8f0;
   display: flex;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .keepBtn {
   flex: 1;
-  padding: 14px 20px;
+  padding: 12px 20px;
   background: white;
   border: 2px solid #e2e8f0;
   border-radius: 12px;
@@ -1072,12 +1437,17 @@
   font-weight: 600;
   color: #475569;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.keepBtn:hover {
+.keepBtn:hover:not(:disabled) {
   background: #f8fafc;
   border-color: #cbd5e0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .keepBtn:disabled {
@@ -1087,7 +1457,7 @@
 
 .confirmCancelBtn {
   flex: 1;
-  padding: 14px 20px;
+  padding: 12px 20px;
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   border: none;
   border-radius: 12px;
@@ -1099,13 +1469,14 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .confirmCancelBtn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
 }
 
 .confirmCancelBtn:disabled {
@@ -1127,11 +1498,12 @@
   background: white;
   border-radius: 24px;
   width: 100%;
-  max-width: 450px;
-  padding: 40px 32px;
+  max-width: 480px;
+  padding: 36px 32px 32px;
   text-align: center;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
   animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
 }
 
 @keyframes scaleIn {
@@ -1146,16 +1518,39 @@
 }
 
 .successIcon {
-  width: 100px;
-  height: 100px;
-  margin: 0 auto 24px;
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 20px;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.4);
   animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.2s both;
+  position: relative;
+}
+
+.successIcon::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  opacity: 0.3;
+  animation: ripple 1.5s ease-out infinite;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
 }
 
 @keyframes bounceIn {
@@ -1171,47 +1566,53 @@
 }
 
 .successIcon i {
-  font-size: 50px;
+  font-size: 48px;
   color: white;
+  position: relative;
+  z-index: 1;
 }
 
 .successModal h3 {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 800;
   color: #1e293b;
-  margin: 0 0 12px 0;
+  margin: 0 0 10px 0;
+  letter-spacing: -0.3px;
 }
 
-.successModal p {
+.successMessage {
   font-size: 15px;
   color: #64748b;
   margin: 0 0 24px 0;
   line-height: 1.6;
+  font-weight: 500;
 }
 
 .refundAmount {
   background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-  padding: 20px;
+  padding: 20px 24px;
   border-radius: 16px;
   margin-bottom: 24px;
-  border: 2px solid #10b981;
+  border: 2px solid #6ee7b7;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
 }
 
-.refundAmount span {
+.refundLabel {
   display: block;
-  font-size: 13px;
+  font-size: 12px;
   color: #059669;
-  font-weight: 600;
-  margin-bottom: 8px;
+  font-weight: 700;
+  margin-bottom: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
-.refundAmount strong {
+.refundValue {
   display: block;
   font-size: 32px;
   font-weight: 800;
   color: #047857;
+  line-height: 1.2;
 }
 
 .successBtn {
@@ -1228,13 +1629,14 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .successBtn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
 }
 
 /* EMR Modal */

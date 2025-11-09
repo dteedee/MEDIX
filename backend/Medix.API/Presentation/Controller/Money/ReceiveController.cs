@@ -250,10 +250,10 @@ namespace Medix.API.Presentation.Controller.Money
             // Fallback to current time if parsing fails    
             return DateTimeOffset.Now;
         }
-   
+
 
         [HttpGet("payment-success")]
-        public Task<IActionResult> paymentSuccess([FromQuery]PaymentReturnDto paymentReturnDto)
+        public Task<IActionResult> paymentSuccess([FromQuery] PaymentReturnDto paymentReturnDto)
         {
             //var reusultPayOS = _client.PaymentRequests.GetAsync(paymentReturnDto.OrderCode.ToString());
 
@@ -283,7 +283,7 @@ namespace Medix.API.Presentation.Controller.Money
                 return Task.FromResult<IActionResult>(BadRequest(new { message = "Wallet transaction not found for the given order code" }));
             }
             walletTransaction.Status = "Completed";
-             
+
             transactionService.UppdateWalletTrasactionAsync(walletTransaction);
 
             var wallet = walletService.GetWalletByIdAsync((Guid)walletTransaction.walletId).Result;
@@ -370,8 +370,5 @@ namespace Medix.API.Presentation.Controller.Money
 }
 
 
-
-
-    
 
 

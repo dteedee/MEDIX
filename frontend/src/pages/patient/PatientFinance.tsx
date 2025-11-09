@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { walletService } from '../../services/walletService';
 import { appointmentService } from '../../services/appointmentService';
@@ -67,6 +67,7 @@ export const PatientFinance: React.FC = () => {
   const [showWithdrawalConfirm, setShowWithdrawalConfirm] = useState<boolean>(false);
   const [bankSearchTerm, setBankSearchTerm] = useState<string>('');
   const [banksWithLogos, setBanksWithLogos] = useState<BankInfo[]>(BANKS);
+  const accountNumberInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchBanksFromAPI = async () => {
@@ -187,6 +188,32 @@ export const PatientFinance: React.FC = () => {
 
   const handleBankSelect = (bank: BankInfo) => {
     setSelectedBank(bank);
+    // Scroll to account number input after a short delay to ensure DOM is updated
+    setTimeout(() => {
+      accountNumberInputRef.current?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+      // Focus the input after scrolling
+      setTimeout(() => {
+        accountNumberInputRef.current?.focus();
+      }, 300);
+    }, 100);
+  };
+
+  const handleAccountNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Only allow numbers, remove all non-numeric characters
+    const numericValue = value.replace(/\D/g, '');
+    setAccountNumber(numericValue);
+  };
+
+  const handleAccountNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Only allow English letters and spaces, remove numbers and special characters
+    const englishOnly = value.replace(/[^A-Za-z\s]/g, '');
+    // Convert to uppercase
+    setAccountName(englishOnly.toUpperCase());
   };
 
   const handleConfirmWithdrawal = () => {
@@ -198,11 +225,37 @@ export const PatientFinance: React.FC = () => {
       alert('Vui lòng nhập số tài khoản');
       return;
     }
+    // Validate account number is numeric only
+    if (!/^\d+$/.test(accountNumber)) {
+      alert('Số tài khoản chỉ được chứa số');
+      return;
+    }
+    if (!accountName || accountName.trim() === '') {
+      alert('Vui lòng nhập tên chủ tài khoản');
+      return;
+    }
+    // Validate account name is English letters and spaces only
+    if (!/^[A-Za-z\s]+$/.test(accountName)) {
+      alert('Tên chủ tài khoản chỉ được chứa chữ cái tiếng Anh và khoảng trắng');
+      return;
+    }
     setShowWithdrawalConfirm(true);
   };
 
   const handleSubmitWithdrawal = async () => {
-    if (!selectedBank || !accountNumber) return;
+    if (!selectedBank || !accountNumber || !accountName) return;
+    
+    // Validate account number is numeric only
+    if (!/^\d+$/.test(accountNumber)) {
+      alert('Số tài khoản chỉ được chứa số');
+      return;
+    }
+    
+    // Validate account name is English letters and spaces only
+    if (!/^[A-Za-z\s]+$/.test(accountName)) {
+      alert('Tên chủ tài khoản chỉ được chứa chữ cái tiếng Anh và khoảng trắng');
+      return;
+    }
 
     const amount = parseFormattedNumber(withdrawalAmount || depositAmount);
     if (!amount || amount <= 0) {
@@ -217,7 +270,7 @@ export const PatientFinance: React.FC = () => {
         bankBin: selectedBank.bin,
         bankName: selectedBank.name,
         accountNumber: accountNumber.trim(),
-        accountName: accountName.trim() || user?.fullName || '',
+        accountName: accountName.trim(),
         description: `Rút tiền về ${selectedBank.name} - Số tài khoản: ${accountNumber.trim()}`
       };
 
@@ -798,23 +851,26 @@ export const PatientFinance: React.FC = () => {
                       <div className={styles.formGroup}>
                         <label>Số tài khoản *</label>
                         <input
+                          ref={accountNumberInputRef}
                           type="text"
                           value={accountNumber}
-                          onChange={(e) => setAccountNumber(e.target.value)}
+                          onChange={handleAccountNumberChange}
                           placeholder="Nhập số tài khoản ngân hàng"
                           className={styles.formInput}
                           inputMode="numeric"
+                          pattern="[0-9]*"
                         />
                       </div>
 
                       <div className={styles.formGroup}>
-                        <label>Tên chủ tài khoản (tùy chọn)</label>
+                        <label>Tên chủ tài khoản *</label>
                         <input
                           type="text"
                           value={accountName}
-                          onChange={(e) => setAccountName(e.target.value)}
+                          onChange={handleAccountNameChange}
                           placeholder="Nhập tên chủ tài khoản"
                           className={styles.formInput}
+                          style={{ textTransform: 'uppercase' }}
                         />
                       </div>
                     </>
@@ -837,7 +893,7 @@ export const PatientFinance: React.FC = () => {
                   <button
                     className={styles.modalConfirmBtn}
                     onClick={handleConfirmWithdrawal}
-                    disabled={!selectedBank || !accountNumber || accountNumber.trim() === ''}
+                    disabled={!selectedBank || !accountNumber || accountNumber.trim() === '' || !accountName || accountName.trim() === ''}
                   >
                     Tiếp tục
                   </button>
@@ -863,12 +919,10 @@ export const PatientFinance: React.FC = () => {
                       <span className={styles.confirmLabel}>Số tài khoản:</span>
                       <span className={styles.confirmValue}>{accountNumber}</span>
                     </div>
-                    {accountName && (
-                      <div className={styles.confirmRow}>
-                        <span className={styles.confirmLabel}>Tên chủ tài khoản:</span>
-                        <span className={styles.confirmValue}>{accountName}</span>
-                      </div>
-                    )}
+                    <div className={styles.confirmRow}>
+                      <span className={styles.confirmLabel}>Tên chủ tài khoản:</span>
+                      <span className={styles.confirmValue}>{accountName}</span>
+                    </div>
                   </div>
                 </div>
 

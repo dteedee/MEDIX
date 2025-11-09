@@ -632,6 +632,62 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-height: 600px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 12px;
+  scroll-behavior: smooth;
+  position: relative;
+}
+
+.transactionsList::-webkit-scrollbar {
+  width: 8px;
+}
+
+.transactionsList::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+  margin: 4px 0;
+}
+
+.transactionsList::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 
+    inset 0 0 4px rgba(255, 255, 255, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  min-height: 30px;
+  opacity: 0.6;
+}
+
+.transactionsList:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
+}
+
+.transactionsList::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5568d3 0%, #653a8f 100%);
+  box-shadow: 
+    inset 0 0 4px rgba(255, 255, 255, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+  opacity: 1;
+  width: 10px;
+}
+
+.transactionsList::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #4c51bf 0%, #553c9a 100%);
+  opacity: 1;
+}
+
+.transactionsList {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(102, 126, 234, 0.6) transparent;
+}
+
+.transactionsList:hover {
+  scrollbar-color: rgba(102, 126, 234, 1) transparent;
 }
 
 .transactionItem {
@@ -917,29 +973,15 @@
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
   position: relative;
   animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
 }
 
-.modalContent::-webkit-scrollbar {
-  width: 8px;
-}
 
-.modalContent::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
-}
-
-.modalContent::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 4px;
-}
-
-.modalContent::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #5568d3 0%, #653a8f 100%);
-}
 
 .modalCloseBtn {
   position: absolute;
@@ -968,6 +1010,7 @@
 .modalHeader {
   padding: 32px 32px 24px;
   border-bottom: 2px solid #f1f5f9;
+  flex-shrink: 0;
 }
 
 .modalHeader h2 {
@@ -990,6 +1033,61 @@
 
 .modalBody {
   padding: 24px 32px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  padding-right: 20px;
+  position: relative;
+}
+
+.modalBody::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modalBody::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+  margin: 4px 0;
+}
+
+.modalBody::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 
+    inset 0 0 4px rgba(255, 255, 255, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+
+.modalBody:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
+}
+
+.modalBody::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5568d3 0%, #653a8f 100%);
+  box-shadow: 
+    inset 0 0 4px rgba(255, 255, 255, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+  opacity: 1;
+  width: 10px;
+}
+
+.modalBody::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #4c51bf 0%, #553c9a 100%);
+  opacity: 1;
+}
+
+.modalBody {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(102, 126, 234, 0.6) transparent;
+}
+
+.modalBody:hover {
+  scrollbar-color: rgba(102, 126, 234, 1) transparent;
 }
 
 .formGroup {
@@ -1077,12 +1175,15 @@
 .bankList {
   max-height: 400px;
   overflow-y: auto;
+  overflow-x: hidden;
   border: 2px solid #e2e8f0;
   border-radius: 12px;
-  padding: 8px;
+  padding: 8px 12px 8px 8px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 12px;
+  scroll-behavior: smooth;
+  position: relative;
 }
 
 .bankList::-webkit-scrollbar {
@@ -1090,13 +1191,49 @@
 }
 
 .bankList::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
+  background: transparent;
+  border-radius: 10px;
+  margin: 4px 0;
 }
 
 .bankList::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 4px;
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 
+    inset 0 0 4px rgba(255, 255, 255, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  min-height: 30px;
+  opacity: 0.6;
+}
+
+.bankList:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
+}
+
+.bankList::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5568d3 0%, #653a8f 100%);
+  box-shadow: 
+    inset 0 0 4px rgba(255, 255, 255, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+  opacity: 1;
+  width: 10px;
+}
+
+.bankList::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #4c51bf 0%, #553c9a 100%);
+  opacity: 1;
+}
+
+.bankList {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(102, 126, 234, 0.6) transparent;
+}
+
+.bankList:hover {
+  scrollbar-color: rgba(102, 126, 234, 1) transparent;
 }
 
 .bankItem {
@@ -1193,6 +1330,7 @@
   gap: 12px;
   justify-content: flex-end;
   border-top: 2px solid #f1f5f9;
+  flex-shrink: 0;
 }
 
 .modalCancelBtn,

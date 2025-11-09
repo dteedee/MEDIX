@@ -115,7 +115,7 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
           onClick={() => setShowUserMenu(false)}
         >
           <i className="bi bi-file-medical-fill"></i>
-          {sidebarOpen && <span>Chi tiết hồ sơ khám bệnh & EMR</span>}
+          {sidebarOpen && <span>Hồ sơ EMR</span>}
         </Link>
       </nav>
 

@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { walletService } from '../../services/walletService';
+import { appointmentService } from '../../services/appointmentService';
 import { WalletDto, OrderCreateRequest, WalletTransactionDto } from '../../types/wallet.types';
+import { Appointment } from '../../types/appointment.types';
 import styles from '../../styles/patient/PatientFinance.module.css';
 
 type TabType = 'all' | 'deposit' | 'withdrawal' | 'payment' | 'refund';
@@ -10,6 +12,7 @@ export const PatientFinance: React.FC = () => {
   const { user } = useAuth();
   const [wallet, setWallet] = useState<WalletDto | null>(null);
   const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingTransactions, setLoadingTransactions] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,8 +25,12 @@ export const PatientFinance: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const walletData = await walletService.getWalletByUserId();
+        const [walletData, appointmentsData] = await Promise.all([
+          walletService.getWalletByUserId(),
+          appointmentService.getPatientAppointments().catch(() => [])
+        ]);
         setWallet(walletData);
+        setAppointments(appointmentsData);
         await fetchTransactions();
       } catch (err: any) {
         console.error('Error fetching wallet:', err);
@@ -118,6 +125,84 @@ export const PatientFinance: React.FC = () => {
 
   const getTransactionColor = (typeCode: string | undefined): string => {
     return isDebitTransaction(typeCode) ? '#e53e3e' : '#38a169';
+  };
+
+  const getStatusLabel = (status?: string): string => {
+    if (!status) return 'Không xác định';
+    
+    const statusMap: { [key: string]: string } = {
+      'Completed': 'Hoàn thành',
+      'Compeleted': 'Hoàn thành', // Typo from backend
+      'Pending': 'Đang chờ',
+      'Failed': 'Thất bại',
+      'Cancelled': 'Đã hủy',
+      'Processing': 'Đang xử lý'
+    };
+    
+    return statusMap[status] || status;
+  };
+
+  const formatTransactionDescription = (transaction: WalletTransactionDto): string => {
+    const appointment = transaction.relatedAppointmentId 
+      ? appointments.find(apt => apt.id === transaction.relatedAppointmentId)
+      : null;
+
+    const transactionDate = transaction.transactionDate 
+      ? new Date(transaction.transactionDate)
+      : null;
+
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    };
+
+    switch (transaction.transactionTypeCode) {
+      case 'AppointmentPayment':
+        if (appointment) {
+          return `Thanh toán đặt lịch thành công cho bác sĩ ${appointment.doctorName} ngày ${formatDate(new Date(appointment.appointmentStartTime))}`;
+        }
+        return transaction.description || `Thanh toán cuộc hẹn${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
+      
+      case 'AppointmentRefund':
+        if (appointment) {
+          const refundPercent = transaction.description?.match(/(\d+)%/)?.[1] || '80';
+          const cancelFee = transaction.description?.match(/Phí hủy: ([\d.,]+)/)?.[1] || '';
+          let desc = `Hoàn tiền hủy lịch hẹn cho bác sĩ ${appointment.doctorName} ngày ${formatDate(new Date(appointment.appointmentStartTime))}`;
+          if (refundPercent) {
+            desc += ` (${refundPercent}%`;
+            if (cancelFee) {
+              desc += ` - Phí hủy: ${cancelFee}`;
+            }
+            desc += ')';
+          }
+          return desc;
+        }
+        return transaction.description || `Hoàn tiền cuộc hẹn${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
+      
+      case 'Deposit':
+        if (transaction.description) {
+          // Handle English descriptions like "Payment for order 123456"
+          if (transaction.description.toLowerCase().includes('payment for order')) {
+            const orderMatch = transaction.description.match(/order\s+(\d+)/i);
+            if (orderMatch) {
+              return `Nạp tiền vào ví - Mã đơn: ${orderMatch[1]}`;
+            }
+            return `Nạp tiền vào ví`;
+          }
+          // If description is already in Vietnamese or doesn't match pattern, use it
+          return transaction.description;
+        }
+        return `Nạp tiền vào ví${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
+      
+      case 'Withdrawal':
+        return transaction.description || `Rút tiền từ ví${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
+      
+      default:
+        return transaction.description || 'Giao dịch';
+    }
   };
 
   const filteredTransactions = useMemo(() => {
@@ -364,7 +449,7 @@ export const PatientFinance: React.FC = () => {
                     </div>
                     <div className={styles.transactionDate}>
                       {transaction.transactionDate ? 
-                        new Date(transaction.transactionDate).toLocaleDateString('vi-VN', {
+                        new Date(transaction.transactionDate).toLocaleString('vi-VN', {
                           day: '2-digit',
                           month: '2-digit',
                           year: 'numeric',
@@ -374,11 +459,9 @@ export const PatientFinance: React.FC = () => {
                         'N/A'
                       }
                     </div>
-                    {transaction.description && (
-                      <div className={styles.transactionDescription}>
-                        {transaction.description}
-                      </div>
-                    )}
+                    <div className={styles.transactionDescription}>
+                      {formatTransactionDescription(transaction)}
+                    </div>
                     {transaction.orderCode && transaction.orderCode !== 0 && (
                       <div className={styles.transactionDescription}>
                         Mã đơn: {transaction.orderCode}
@@ -400,7 +483,7 @@ export const PatientFinance: React.FC = () => {
                       ? styles.statusPending 
                       : styles.statusFailed
                   }`}>
-                    {transaction.status === 'Compeleted' ? 'Completed' : transaction.status || 'N/A'}
+                    {getStatusLabel(transaction.status)}
                   </div>
                 </div>
               </div>

@@ -273,12 +273,8 @@ namespace Medix.API.Presentation.Controller.Money
             }
 
             walletTransaction.Status = "Completed";
-
-            // Fix: Add await keyword here
-            await transactionService.UppdateWalletTrasactionAsync(walletTransaction);
-
-            // Fix: Add await keyword and remove .Result
-            var wallet = await walletService.GetWalletByIdAsync((Guid)walletTransaction.walletId);
+             
+            transactionService.UppdateWalletTrasactionAsync(walletTransaction);
 
             if (wallet == null)
             {
@@ -362,8 +358,5 @@ namespace Medix.API.Presentation.Controller.Money
 }
 
 
-
-
-    
 
 

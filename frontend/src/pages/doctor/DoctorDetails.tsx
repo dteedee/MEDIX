@@ -1,4 +1,4 @@
-import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import doctorService from "../../services/doctorService";
 import { DoctorProfileDto, ServiceTierWithPaginatedDoctorsDto, DoctorTypeDegreeDto, DoctorInTier, PaginationParams, DoctorQueryParameters } from "../../types/doctor.types";
@@ -11,7 +11,9 @@ import { PromotionDto } from "../../types/promotion.types";
 import { CreateAppointmentDto } from "../../types/appointment.types";
 import styles from '../../styles/doctor/doctor-details.module.css';
 import bookingStyles from '../../styles/patient/DoctorBookingList.module.css';
+import homeStyles from '../../styles/public/home.module.css';
 import DoctorRegistrationFormService from "../../services/doctorRegistrationFormService";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 function DoctorDetails() {
     const [profileData, setProfileData] = useState<DoctorProfileDto>();
@@ -53,6 +55,7 @@ function DoctorDetails() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useLanguage();
     const routeState = (location && (location as any).state) as { doctorId?: string; fullName?: string; userName?: string } | null;
 
     // Sidebar filter states (reuse logic from DoctorBookingList)
@@ -1006,18 +1009,45 @@ function DoctorDetails() {
         <div className={styles.pageWrapper}>
             <Header />
             
-            <div className={styles.breadcrumb}>
-                <button onClick={() => navigate('/')} className={styles.breadcrumbLink}>
-                    <i className="bi bi-house-door"></i>
-                    Trang chủ
-                </button>
-                <i className="bi bi-chevron-right"></i>
-                <button onClick={() => navigate('/doctors')} className={styles.breadcrumbLink}>
-                    Bác sĩ
-                </button>
-                <i className="bi bi-chevron-right"></i>
-                <span className={styles.breadcrumbCurrent}>{profileData.fullName}</span>
-            </div>
+            <nav className={homeStyles["navbar"]}>
+                <ul className={homeStyles["nav-menu"]}>
+                    <li>
+                        <Link to="/" className={`${homeStyles["nav-link"]} ${location.pathname === '/' ? homeStyles["active"] : ''}`}>
+                            {t('nav.home')}
+                        </Link>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <Link to="/ai-chat" className={`${homeStyles["nav-link"]} ${location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}>
+                            {t('nav.ai-diagnosis')}
+                        </Link>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <Link to="/specialties" className={`${homeStyles["nav-link"]} ${location.pathname === '/specialties' ? homeStyles["active"] : ''}`}>
+                            {t('nav.specialties')}
+                        </Link>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <Link to="/doctors" className={`${homeStyles["nav-link"]} ${location.pathname === '/doctors' ? homeStyles["active"] : ''}`}>
+                            {t('nav.doctors')}
+                        </Link>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <Link to="/app/articles" className={`${homeStyles["nav-link"]} ${location.pathname === '/app/articles' ? homeStyles["active"] : ''}`}>
+                            {t('nav.health-articles')}
+                        </Link>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <Link to="/about" className={`${homeStyles["nav-link"]} ${location.pathname === '/about' ? homeStyles["active"] : ''}`}>
+                            {t('nav.about')}
+                        </Link>
+                    </li>
+                </ul>
+            </nav>
 
             <div className={styles.container}>
                 {/* Two-column layout is rendered below (sidebar + main content) */}

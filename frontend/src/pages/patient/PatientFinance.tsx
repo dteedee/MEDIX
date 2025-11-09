@@ -454,19 +454,39 @@ export const PatientFinance: React.FC = () => {
     );
   }, [transactions, activeTab]);
 
-  // Calculate weekly spending and deposit
+  // Calculate all-time spending and deposit, and weekly change percentage
   const weeklyReport = useMemo(() => {
     const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
-    startOfWeek.setHours(0, 0, 0, 0);
     
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    endOfWeek.setHours(23, 59, 59, 999);
+    // Current week (this week)
+    const startOfCurrentWeek = new Date(now);
+    startOfCurrentWeek.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+    startOfCurrentWeek.setHours(0, 0, 0, 0);
+    
+    const endOfCurrentWeek = new Date(startOfCurrentWeek);
+    endOfCurrentWeek.setDate(startOfCurrentWeek.getDate() + 6);
+    endOfCurrentWeek.setHours(23, 59, 59, 999);
 
+    // Last week
+    const startOfLastWeek = new Date(startOfCurrentWeek);
+    startOfLastWeek.setDate(startOfCurrentWeek.getDate() - 7);
+    startOfLastWeek.setHours(0, 0, 0, 0);
+    
+    const endOfLastWeek = new Date(startOfLastWeek);
+    endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
+    endOfLastWeek.setHours(23, 59, 59, 999);
+
+    // All-time totals
     let totalSpent = 0;
     let totalDeposited = 0;
+    
+    // Current week totals
+    let currentWeekSpent = 0;
+    let currentWeekDeposited = 0;
+    
+    // Last week totals
+    let lastWeekSpent = 0;
+    let lastWeekDeposited = 0;
 
     transactions.forEach(transaction => {
       const transactionDate = transaction.transactionDate 
@@ -475,30 +495,54 @@ export const PatientFinance: React.FC = () => {
       
       if (!transactionDate) return;
       
-      if (transactionDate >= startOfWeek && transactionDate <= endOfWeek) {
-        const amount = Math.abs(transaction.amount || 0);
-        const typeCode = transaction.transactionTypeCode;
+      const amount = Math.abs(transaction.amount || 0);
+      const typeCode = transaction.transactionTypeCode;
 
-        // Spending: payments and withdrawals
+      // All-time totals
+      if (typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') {
+        totalSpent += amount;
+      }
+      if (typeCode === 'Deposit') {
+        totalDeposited += amount;
+      }
+
+      // Current week totals
+      if (transactionDate >= startOfCurrentWeek && transactionDate <= endOfCurrentWeek) {
         if (typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') {
-          totalSpent += amount;
+          currentWeekSpent += amount;
         }
-        // Deposits
         if (typeCode === 'Deposit') {
-          totalDeposited += amount;
+          currentWeekDeposited += amount;
+        }
+      }
+
+      // Last week totals
+      if (transactionDate >= startOfLastWeek && transactionDate <= endOfLastWeek) {
+        if (typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') {
+          lastWeekSpent += amount;
+        }
+        if (typeCode === 'Deposit') {
+          lastWeekDeposited += amount;
         }
       }
     });
 
-    const total = totalSpent + totalDeposited;
-    const spentPercentage = total > 0 ? Math.round((totalSpent / total) * 100) : 0;
-    const depositPercentage = total > 0 ? Math.round((totalDeposited / total) * 100) : 0;
+    // Calculate percentage change for this week compared to last week
+    const calculatePercentageChange = (current: number, last: number): number => {
+      if (last === 0) {
+        return current > 0 ? 100 : 0;
+      }
+      return Math.round(((current - last) / last) * 100);
+    };
+
+    const spentChangePercentage = calculatePercentageChange(currentWeekSpent, lastWeekSpent);
+    const depositChangePercentage = calculatePercentageChange(currentWeekDeposited, lastWeekDeposited);
 
     return {
       totalSpent,
       totalDeposited,
-      spentPercentage,
-      depositPercentage
+      spentChangePercentage,
+      depositChangePercentage
     };
   }, [transactions]);
 
@@ -633,12 +677,14 @@ export const PatientFinance: React.FC = () => {
                   <i className={`bi bi-arrow-down-circle ${styles.reportIconDown}`}></i>
                   <div className={styles.reportItemInfo}>
                     <div className={styles.reportLabel}>Đã chi</div>
-                    <div className={styles.reportAmount}>
-                      {formatBalance(weeklyReport.totalSpent, wallet?.currency || 'VND')}
+                    <div className={styles.reportAmountRow}>
+                      <div className={styles.reportAmount}>
+                        {formatBalance(weeklyReport.totalSpent, wallet?.currency || 'VND')}
+                      </div>
+                      <div className={`${styles.reportPercentage} ${weeklyReport.spentChangePercentage >= 0 ? styles.percentageIncrease : styles.percentageDecrease}`}>
+                        {weeklyReport.spentChangePercentage >= 0 ? '+' : ''}{weeklyReport.spentChangePercentage}% so với tuần trước
+                      </div>
                     </div>
-                  </div>
-                  <div className={styles.reportPercentage}>
-                    {weeklyReport.spentPercentage}%
                   </div>
                 </div>
               </div>
@@ -647,18 +693,17 @@ export const PatientFinance: React.FC = () => {
                   <i className={`bi bi-arrow-up-circle ${styles.reportIconUp}`}></i>
                   <div className={styles.reportItemInfo}>
                     <div className={styles.reportLabel}>Đã nạp</div>
-                    <div className={styles.reportAmount}>
-                      {formatBalance(weeklyReport.totalDeposited, wallet?.currency || 'VND')}
+                    <div className={styles.reportAmountRow}>
+                      <div className={styles.reportAmount}>
+                        {formatBalance(weeklyReport.totalDeposited, wallet?.currency || 'VND')}
+                      </div>
+                      <div className={`${styles.reportPercentage} ${weeklyReport.depositChangePercentage >= 0 ? styles.percentageIncrease : styles.percentageDecrease}`}>
+                        {weeklyReport.depositChangePercentage >= 0 ? '+' : ''}{weeklyReport.depositChangePercentage}% so với tuần trước
+                      </div>
                     </div>
-                  </div>
-                  <div className={styles.reportPercentage}>
-                    {weeklyReport.depositPercentage}%
                   </div>
                 </div>
               </div>
-            </div>
-            <div className={styles.reportFooter}>
-              <span className={styles.reportPeriod}>Trong tuần này</span>
             </div>
           </div>
         </div>

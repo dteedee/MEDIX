@@ -14,8 +14,10 @@ import bookingStyles from '../../styles/patient/DoctorBookingList.module.css';
 import homeStyles from '../../styles/public/home.module.css';
 import DoctorRegistrationFormService from "../../services/doctorRegistrationFormService";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { useToast } from "../../contexts/ToastContext";
 
 function DoctorDetails() {
+    const { showToast } = useToast();
     const [profileData, setProfileData] = useState<DoctorProfileDto>();
     const [activeTabIndex, setActiveTabIndex] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -184,7 +186,7 @@ function DoctorDetails() {
         if (!profileData || !selectedDate || !selectedTimeSlot) return;
         
         if (!checkUserLogin()) {
-            alert("Bạn cần đăng nhập để đặt lịch hẹn với bác sĩ. Vui lòng đăng nhập để tiếp tục.");
+            showToast("Bạn cần đăng nhập để đặt lịch hẹn với bác sĩ. Vui lòng đăng nhập để tiếp tục.", 'warning');
             navigate('/login');
             return;
         }
@@ -194,12 +196,12 @@ function DoctorDetails() {
             try {
                 const user = JSON.parse(userData);
                 if (user.role !== 'Patient') {
-                    alert("Chỉ có bệnh nhân mới có thể đặt lịch hẹn với bác sĩ.");
+                    showToast("Chỉ có bệnh nhân mới có thể đặt lịch hẹn với bác sĩ.", 'error');
                     return;
                 }
             } catch (error) {
                 console.error("Error parsing user data:", error);
-                alert("Có lỗi xảy ra khi xác thực thông tin người dùng.");
+                showToast("Có lỗi xảy ra khi xác thực thông tin người dùng.", 'error');
                 return;
             }
         }
@@ -224,7 +226,7 @@ function DoctorDetails() {
             const timeParts = displayTime.split(' - ');
             
             if (timeParts.length !== 2) {
-                alert('Định dạng giờ không hợp lệ');
+                showToast('Định dạng giờ không hợp lệ', 'error');
                 setIsCreatingPayment(false);
                 return;
             }
@@ -302,7 +304,7 @@ function DoctorDetails() {
                 navigate('/login');
             }
             
-            alert(errorMessage);
+            showToast(errorMessage, 'error');
         } finally {
             setIsCreatingPayment(false);
         }
@@ -438,7 +440,7 @@ function DoctorDetails() {
             // Parse display string
             const timeParts = displayTime.split(' - ');
             if (timeParts.length !== 2) {
-                alert('Định dạng giờ không hợp lệ');
+                showToast('Định dạng giờ không hợp lệ', 'error');
                 setIsCreatingPayment(false);
                 return;
             }
@@ -459,7 +461,7 @@ function DoctorDetails() {
             console.log('📊 Creating Start DateTime - Year:', year, 'Month:', month + 1, 'Day:', day, 'Hour:', startHour, 'Minute:', startMinute);
             
             if (isNaN(startHour) || isNaN(startMinute)) {
-                alert(`Lỗi parse giờ bắt đầu: "${startTime}"`);
+                showToast(`Lỗi parse giờ bắt đầu: "${startTime}"`, 'error');
                 setIsCreatingPayment(false);
                 return;
             }
@@ -474,7 +476,7 @@ function DoctorDetails() {
             console.log('📊 Creating End DateTime - Year:', year, 'Month:', month + 1, 'Day:', day, 'Hour:', endHour, 'Minute:', endMinute);
             
             if (isNaN(endHour) || isNaN(endMinute)) {
-                alert(`Lỗi parse giờ kết thúc: "${endTime}"`);
+                showToast(`Lỗi parse giờ kết thúc: "${endTime}"`, 'error');
                 setIsCreatingPayment(false);
                 return;
             }
@@ -520,11 +522,11 @@ function DoctorDetails() {
             if (result.success && result.checkoutUrl) {
                 paymentService.redirectToPayment(result.checkoutUrl);
             } else {
-                alert(result.error || 'Có lỗi xảy ra khi tạo link thanh toán.');
+                showToast(result.error || 'Có lỗi xảy ra khi tạo link thanh toán.', 'error');
             }
         } catch (error) {
             console.error('Error creating payment link:', error);
-            alert('Có lỗi xảy ra khi tạo link thanh toán. Vui lòng thử lại.');
+            showToast('Có lỗi xảy ra khi tạo link thanh toán. Vui lòng thử lại.', 'error');
         }
         
         setIsCreatingPayment(false);

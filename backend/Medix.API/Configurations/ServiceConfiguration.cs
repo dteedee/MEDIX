@@ -60,6 +60,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IDoctorDashboardRepository, DoctorDashboardRepository>();
 
             services.AddScoped<IPromotionRepository, PromotionRepository>();
+            services.AddScoped<INoticeSetupRepository, NoticeSetupRepository>();
         }
 
         private static void RegisterServices(IServiceCollection services)
@@ -98,6 +99,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IDoctorServiceTierService, DoctorServiceTierService>();
             services.AddScoped<IDoctorDashboardService, DoctorDashboardService>();
             services.AddScoped<IPromotionService, PromotionService>();
+            services.AddScoped<INoticeSetupService, NoticeSetupService>();
 
         }
 

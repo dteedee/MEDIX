@@ -454,6 +454,54 @@ export const PatientFinance: React.FC = () => {
     );
   }, [transactions, activeTab]);
 
+  // Calculate weekly spending and deposit
+  const weeklyReport = useMemo(() => {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    let totalSpent = 0;
+    let totalDeposited = 0;
+
+    transactions.forEach(transaction => {
+      const transactionDate = transaction.transactionDate 
+        ? new Date(transaction.transactionDate)
+        : null;
+      
+      if (!transactionDate) return;
+      
+      if (transactionDate >= startOfWeek && transactionDate <= endOfWeek) {
+        const amount = Math.abs(transaction.amount || 0);
+        const typeCode = transaction.transactionTypeCode;
+
+        // Spending: payments and withdrawals
+        if (typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') {
+          totalSpent += amount;
+        }
+        // Deposits
+        if (typeCode === 'Deposit') {
+          totalDeposited += amount;
+        }
+      }
+    });
+
+    const total = totalSpent + totalDeposited;
+    const spentPercentage = total > 0 ? Math.round((totalSpent / total) * 100) : 0;
+    const depositPercentage = total > 0 ? Math.round((totalDeposited / total) * 100) : 0;
+
+    return {
+      totalSpent,
+      totalDeposited,
+      spentPercentage,
+      depositPercentage
+    };
+  }, [transactions]);
+
   const handleDeposit = async () => {
     const amount = parseFormattedNumber(depositAmount);
     if (!amount || amount <= 0) {
@@ -564,17 +612,54 @@ export const PatientFinance: React.FC = () => {
             ) : error ? (
               <div className={styles.walletAmount}>Lỗi</div>
             ) : wallet ? (
-              <>
-                <div className={styles.walletAmount}>
-                  {formatBalance(wallet.balance, wallet.currency)}
-                </div>
-                <div className={styles.walletCurrency}>
-                  {wallet.currency}
-                </div>
-              </>
+              <div className={styles.walletAmount}>
+                {formatBalance(wallet.balance, wallet.currency)}
+              </div>
             ) : (
               <div className={styles.walletAmount}>N/A</div>
             )}
+          </div>
+          
+          <div className={styles.walletReport}>
+            <div className={styles.reportHeader}>
+              <div className={styles.reportIcon}>
+                <i className="bi bi-graph-up-arrow"></i>
+              </div>
+              <h3 className={styles.reportTitle}>Báo cáo chi tiêu</h3>
+            </div>
+            <div className={styles.reportContent}>
+              <div className={styles.reportItem}>
+                <div className={styles.reportItemHeader}>
+                  <i className={`bi bi-arrow-down-circle ${styles.reportIconDown}`}></i>
+                  <div className={styles.reportItemInfo}>
+                    <div className={styles.reportLabel}>Đã chi</div>
+                    <div className={styles.reportAmount}>
+                      {formatBalance(weeklyReport.totalSpent, wallet?.currency || 'VND')}
+                    </div>
+                  </div>
+                  <div className={styles.reportPercentage}>
+                    {weeklyReport.spentPercentage}%
+                  </div>
+                </div>
+              </div>
+              <div className={styles.reportItem}>
+                <div className={styles.reportItemHeader}>
+                  <i className={`bi bi-arrow-up-circle ${styles.reportIconUp}`}></i>
+                  <div className={styles.reportItemInfo}>
+                    <div className={styles.reportLabel}>Đã nạp</div>
+                    <div className={styles.reportAmount}>
+                      {formatBalance(weeklyReport.totalDeposited, wallet?.currency || 'VND')}
+                    </div>
+                  </div>
+                  <div className={styles.reportPercentage}>
+                    {weeklyReport.depositPercentage}%
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.reportFooter}>
+              <span className={styles.reportPeriod}>Trong tuần này</span>
+            </div>
           </div>
         </div>
 

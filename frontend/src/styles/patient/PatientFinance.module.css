@@ -119,8 +119,8 @@
 
 .mainGrid {
   display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 20px;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 16px;
   margin-bottom: 20px;
   z-index: 1;
   position: relative;
@@ -129,16 +129,39 @@
 .walletCard {
   grid-column: span 1;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
-  padding: 32px;
+  border-radius: 24px;
+  padding: 32px 28px;
   box-shadow: 
-    0 10px 40px rgba(102, 126, 234, 0.3),
-    0 4px 20px rgba(118, 75, 162, 0.2);
+    0 20px 60px rgba(102, 126, 234, 0.25),
+    0 8px 30px rgba(118, 75, 162, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   color: white;
   position: relative;
   overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   animation: fadeInUp 0.8s ease-out;
+  display: flex;
+  flex-direction: column;
+  min-height: 500px;
+  cursor: pointer;
+}
+
+.walletCard::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease;
+}
+
+.walletCard:hover::after {
+  width: 300px;
+  height: 300px;
 }
 
 .walletCard::before {
@@ -153,17 +176,18 @@
 }
 
 .walletCard:hover {
-  transform: translateY(-4px);
+  transform: translateY(-6px) scale(1.01);
   box-shadow: 
-    0 20px 60px rgba(102, 126, 234, 0.4),
-    0 8px 30px rgba(118, 75, 162, 0.3);
+    0 30px 80px rgba(102, 126, 234, 0.35),
+    0 12px 40px rgba(118, 75, 162, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .walletHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   position: relative;
   z-index: 1;
 }
@@ -183,9 +207,19 @@
 }
 
 .walletCard:hover .walletIcon {
-  transform: scale(1.1) rotate(5deg);
-  background: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+  transform: scale(1.15) rotate(8deg);
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 6px 25px rgba(255, 255, 255, 0.3);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 6px 25px rgba(255, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 6px 35px rgba(255, 255, 255, 0.5);
+  }
 }
 
 .walletStatus {
@@ -201,21 +235,25 @@
 .walletBalance {
   position: relative;
   z-index: 1;
+  margin-bottom: auto;
 }
 
 .walletLabel {
-  font-size: 14px;
-  opacity: 0.9;
-  margin-bottom: 8px;
+  font-size: 13px;
+  opacity: 0.85;
+  margin-bottom: 12px;
   font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .walletAmount {
-  font-size: 42px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  line-height: 1.2;
+  font-size: 48px;
+  font-weight: 800;
+  margin-bottom: 0;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  line-height: 1.1;
+  letter-spacing: -1px;
 }
 
 .walletCurrency {
@@ -224,19 +262,46 @@
   font-weight: 500;
 }
 
+.walletReport {
+  margin-top: auto;
+  padding-top: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  position: relative;
+  z-index: 1;
+}
+
 .depositCard {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 20px;
-  padding: 32px;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 28px;
   box-shadow: 
-    0 10px 40px rgba(0, 0, 0, 0.1),
-    0 4px 20px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+    0 10px 40px rgba(0, 0, 0, 0.08),
+    0 4px 20px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.8);
   position: relative;
   overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   animation: fadeInUp 0.8s ease-out 0.2s both;
   z-index: 1;
+}
+
+.depositCard::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  transform: rotate(0deg);
+}
+
+.depositCard:hover::after {
+  opacity: 1;
+  transform: rotate(180deg);
 }
 
 .depositCard::before {
@@ -256,19 +321,21 @@
 }
 
 .depositCard:hover {
-  transform: translateY(-4px) scale(1.01);
+  transform: translateY(-6px) scale(1.02);
   box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.15),
-    0 8px 30px rgba(0, 0, 0, 0.1);
+    0 25px 70px rgba(0, 0, 0, 0.12),
+    0 10px 35px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  border-color: rgba(102, 126, 234, 0.3);
 }
 
 .depositHeader {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 28px;
   padding-bottom: 20px;
-  border-bottom: 2px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
   position: relative;
 }
 
@@ -302,8 +369,18 @@
 }
 
 .depositCard:hover .depositIcon {
-  transform: scale(1.1) rotate(5deg);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  transform: scale(1.15) rotate(10deg);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+  animation: iconBounce 0.6s ease-in-out;
+}
+
+@keyframes iconBounce {
+  0%, 100% {
+    transform: scale(1.15) rotate(10deg);
+  }
+  50% {
+    transform: scale(1.25) rotate(15deg);
+  }
 }
 
 .depositTitle {
@@ -324,24 +401,236 @@
   background-clip: text;
 }
 
+.reportHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.reportIcon {
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.walletCard:hover .reportIcon {
+  transform: scale(1.05) rotate(3deg);
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15);
+}
+
+.reportTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+  opacity: 0.9;
+  transition: all 0.3s ease;
+  letter-spacing: 0.3px;
+}
+
+.reportContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reportItem {
+  display: flex;
+  flex-direction: column;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  padding: 8px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.reportItem::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.reportItem:hover {
+  transform: translateX(6px) translateY(-2px);
+}
+
+.reportItem:hover::before {
+  opacity: 1;
+}
+
+.reportItemHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reportIconDown {
+  font-size: 32px;
+  color: rgba(255, 200, 200, 0.95);
+  flex-shrink: 0;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.reportIconUp {
+  font-size: 32px;
+  color: rgba(200, 255, 200, 0.95);
+  flex-shrink: 0;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.reportItem:hover .reportIconDown {
+  transform: scale(1.2) rotate(-5deg) translateY(2px);
+  color: rgba(255, 180, 180, 1);
+  filter: drop-shadow(0 4px 8px rgba(255, 100, 100, 0.4));
+}
+
+.reportItem:hover .reportIconUp {
+  transform: scale(1.2) rotate(5deg) translateY(-2px);
+  color: rgba(180, 255, 180, 1);
+  filter: drop-shadow(0 4px 8px rgba(100, 255, 100, 0.4));
+}
+
+.reportItemInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reportLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.reportAmount {
+  font-size: 20px;
+  font-weight: 700;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  color: white;
+  line-height: 1.2;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.reportItem:hover .reportAmount {
+  transform: scale(1.05);
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.reportPercentage {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 50px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.reportPercentage::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+.reportItem:hover .reportPercentage {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.reportItem:hover .reportPercentage::before {
+  left: 100%;
+}
+
+.reportFooter {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+}
+
+.reportPeriod {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
 .depositInput {
   width: 100%;
-  padding: 16px 20px;
+  padding: 18px 20px;
   border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 18px;
+  border-radius: 14px;
+  font-size: 20px;
   font-weight: 600;
   outline: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: white;
-  color: #2d3748;
+  background: #f8fafc;
+  color: #1e293b;
   margin-bottom: 20px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .depositInput:focus {
   border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-  transform: translateY(-2px);
+  background: white;
+  box-shadow: 
+    0 0 0 4px rgba(102, 126, 234, 0.15),
+    0 4px 12px rgba(102, 126, 234, 0.1),
+    inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  transform: translateY(-2px) scale(1.01);
+  animation: inputPulse 2s ease-in-out infinite;
+}
+
+@keyframes inputPulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 0 4px rgba(102, 126, 234, 0.15),
+      0 4px 12px rgba(102, 126, 234, 0.1),
+      inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  }
+  50% {
+    box-shadow: 
+      0 0 0 6px rgba(102, 126, 234, 0.2),
+      0 6px 16px rgba(102, 126, 234, 0.15),
+      inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  }
 }
 
 .quickAmounts {
@@ -359,15 +648,15 @@
 }
 
 .quickAmountBtn {
-  padding: 10px 20px;
+  padding: 12px 16px;
   border: 2px solid #e2e8f0;
-  border-radius: 10px;
-  background: white;
-  color: #4a5568;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #475569;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
 }
@@ -389,32 +678,52 @@
 
 .quickAmountBtn:hover {
   border-color: #667eea;
-  background: #f7fafc;
-  transform: translateY(-2px);
+  background: linear-gradient(135deg, #f7fafc 0%, #ffffff 100%);
+  transform: translateY(-2px) scale(1.05);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  animation: buttonGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes buttonGlow {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  }
+  50% {
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+  }
 }
 
 .quickAmountBtn.active {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-color: #667eea;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+  transform: translateY(-2px) scale(1.05);
+  animation: activePulse 2s ease-in-out infinite;
+}
+
+@keyframes activePulse {
+  0%, 100% {
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+  }
+  50% {
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.45);
+  }
 }
 
 .depositButton {
   width: 100%;
-  padding: 16px;
+  padding: 16px 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
@@ -449,30 +758,50 @@
 .actionButtons {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 8px;
+  gap: 14px;
+  margin-top: 12px;
 }
 
 .depositActionBtn {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.25);
 }
 
 .depositActionBtn:hover:not(:disabled) {
   background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  animation: depositButtonGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes depositButtonGlow {
+  0%, 100% {
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
+  }
 }
 
 .withdrawalActionBtn {
   background: linear-gradient(135deg, #f56565 0%, #c53030 100%);
-  box-shadow: 0 4px 15px rgba(245, 101, 101, 0.3);
+  box-shadow: 0 4px 16px rgba(245, 101, 101, 0.25);
 }
 
 .withdrawalActionBtn:hover:not(:disabled) {
   background: linear-gradient(135deg, #e53e3e 0%, #b91c1c 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(245, 101, 101, 0.4);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 10px 30px rgba(245, 101, 101, 0.4);
+  animation: withdrawalButtonGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes withdrawalButtonGlow {
+  0%, 100% {
+    box-shadow: 0 10px 30px rgba(245, 101, 101, 0.4);
+  }
+  50% {
+    box-shadow: 0 12px 35px rgba(245, 101, 101, 0.5);
+  }
 }
 
 .withdrawalActionBtn:disabled {

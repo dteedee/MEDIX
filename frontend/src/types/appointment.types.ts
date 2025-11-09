@@ -22,8 +22,8 @@ export interface Appointment {
   appointmentStartTime: string; // "YYYY-MM-DDTHH:mm:ss"
   appointmentEndTime: string;   // "YYYY-MM-DDTHH:mm:ss"
   durationMinutes: number;
-  patientId?: string;
-  doctorId?: string;
+  patientID?: string;
+  doctorID?: string;
   statusCode: string;           // e.g., "CONFIRMED", "COMPLETED"
   statusDisplayName?: string;
   consultationFee: number;

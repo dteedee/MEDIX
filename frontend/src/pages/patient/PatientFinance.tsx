@@ -836,29 +836,30 @@ export const PatientFinance: React.FC = () => {
                     <i className={getTransactionTypeIcon(transaction.transactionTypeCode)}></i>
                   </div>
                   <div className={styles.transactionInfo}>
-                    <div className={styles.transactionName}>
-                      {getTransactionTypeName(transaction.transactionTypeCode)}
-                    </div>
-                    <div className={styles.transactionDate}>
-                      {transaction.transactionDate ? 
-                        new Date(transaction.transactionDate).toLocaleString('vi-VN', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }) : 
-                        'N/A'
-                      }
+                    <div className={styles.transactionHeader}>
+                      <div className={styles.transactionName}>
+                        {getTransactionTypeName(transaction.transactionTypeCode)}
+                        <span className={styles.transactionDateInline}>
+                          {' '}
+                          {transaction.transactionDate ? 
+                            new Date(transaction.transactionDate).toLocaleString('vi-VN', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : 
+                            'N/A'
+                          }
+                        </span>
+                      </div>
                     </div>
                     <div className={styles.transactionDescription}>
                       {formatTransactionDescription(transaction)}
+                      {transaction.orderCode && transaction.orderCode !== 0 && !formatTransactionDescription(transaction).includes('Mã đơn:') && (
+                        <span className={styles.orderCode}> • Mã đơn: {transaction.orderCode}</span>
+                      )}
                     </div>
-                    {transaction.orderCode && transaction.orderCode !== 0 && (
-                      <div className={styles.transactionDescription}>
-                        Mã đơn: {transaction.orderCode}
-                      </div>
-                    )}
                   </div>
                 </div>
                 <div className={styles.transactionRight}>

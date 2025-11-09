@@ -917,10 +917,12 @@
     0 4px 20px rgba(0, 0, 0, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.8);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   animation: fadeInUp 0.8s ease-out 0.4s both;
   z-index: 1;
+  width: 100%;
+  max-width: 100%;
 }
 
 .transactionsCard::before {
@@ -1058,13 +1060,17 @@
 .transactionsList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-height: 600px;
+  gap: 0;
+  max-height: 650px;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 12px;
+  padding-right: 8px;
+  padding-left: 4px;
+  padding-top: 4px;
+  padding-bottom: 4px;
   scroll-behavior: smooth;
   position: relative;
+  width: 100%;
 }
 
 .transactionsList::-webkit-scrollbar {
@@ -1121,35 +1127,26 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 24px;
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   border: 2px solid #f1f5f9;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  overflow: hidden;
-}
-
-.transactionItem::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  overflow: visible;
+  min-height: 100px;
+  margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 20px;
 }
 
 .transactionItem:hover {
   border-color: #667eea;
-  transform: translateX(4px);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
-}
-
-.transactionItem:hover::before {
-  opacity: 1;
+  box-shadow: 
+    0 8px 24px rgba(102, 126, 234, 0.15),
+    0 2px 8px rgba(102, 126, 234, 0.1);
+  background: linear-gradient(to right, #ffffff 0%, #f8faff 100%);
 }
 
 .transactionLeft {
@@ -1157,20 +1154,23 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  min-width: 0;
+  max-width: calc(100% - 140px);
 }
 
 .transactionIconWrapper {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 26px;
   color: #667eea;
   flex-shrink: 0;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
 }
 
 .transactionItem:hover .transactionIconWrapper {
@@ -1181,24 +1181,67 @@
 
 .transactionInfo {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  justify-content: center;
+}
+
+.transactionHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
+  width: 100%;
 }
 
 .transactionName {
-  font-size: 16px;
-  font-weight: 600;
-  color: #2d3748;
-  margin-bottom: 6px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.4;
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.transactionDateInline {
+  font-size: 11px;
+  font-weight: 400;
+  color: #94a3b8;
+  opacity: 0.7;
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .transactionDate {
   font-size: 13px;
   color: #718096;
-  margin-bottom: 4px;
+  line-height: 1.4;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .transactionDescription {
-  font-size: 12px;
-  color: #a0aec0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  margin-top: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.orderCode {
+  display: inline-block;
+  margin-left: 4px;
+  color: #94a3b8;
+  font-weight: 500;
 }
 
 .transactionRight {
@@ -1206,13 +1249,19 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  justify-content: center;
   gap: 8px;
+  flex-shrink: 0;
+  min-width: 120px;
+  max-width: 120px;
 }
 
 .transactionAmount {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 19px;
+  font-weight: 800;
   margin-bottom: 4px;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
 }
 
 .transactionStatus {
@@ -1360,10 +1409,16 @@
   }
   
   .transactionItem {
-    padding: 16px;
+    padding: 20px;
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 16px;
+    min-height: auto;
+  }
+  
+  .transactionLeft {
+    width: 100%;
+    max-width: 100%;
   }
   
   .transactionRight {
@@ -1371,6 +1426,12 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+    min-width: auto;
+    max-width: 100%;
+  }
+  
+  .transactionDescription {
+    font-size: 12px;
   }
 }
 

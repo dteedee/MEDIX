@@ -255,36 +255,37 @@ namespace Medix.API.Presentation.Controller.Money
         [HttpGet("payment-success")]
         public async Task<IActionResult> paymentSuccess([FromQuery] PaymentReturnDto paymentReturnDto)
         {
+         
+
             if (paymentReturnDto.Status != "PAID")
             {
-                return BadRequest(new { message = "Payment was not successful" });
-            }
 
+                return BadRequest(new { message = "Payment was not successfull" });
+            }
             var order = OrderService.GetOrderByOrderCode(paymentReturnDto.OrderCode);
 
             var frontendBaseUrl = order.baseURLFE ?? "http://localhost:5173";
-
-            // Fix: Add await keyword here
             var walletTransaction = await transactionService.GetWalletTransactionByOrderCodeAsync(paymentReturnDto.OrderCode);
 
             if (walletTransaction == null)
             {
                 return BadRequest(new { message = "Wallet transaction not found for the given order code" });
             }
-
             walletTransaction.Status = "Completed";
-             
-            transactionService.UppdateWalletTrasactionAsync(walletTransaction);
 
+          await  transactionService.UppdateWalletTrasactionAsync(walletTransaction);
+
+            var wallet = walletService.GetWalletByIdAsync((Guid)walletTransaction.walletId).Result;
             if (wallet == null)
             {
                 return BadRequest(new { message = "Wallet not found for the transaction" });
             }
-
-            // Fix: Add await keyword here
+            wallet.Balance += walletTransaction.Amount ?? 0;
             await walletService.IncreaseWalletBalanceAsync(wallet.UserId, walletTransaction.Amount ?? 0);
-
             return Redirect($"{frontendBaseUrl}/app/patient/finance");
+
+
+
         }
 
 

@@ -2076,42 +2076,43 @@ function DoctorDetails() {
             {showConfirmModal && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.confirmModal}>
-                        <div className={styles.modalHeader}>
-                            <h3>
-                                <i className="bi bi-clipboard-check"></i>
-                                Xác nhận đặt lịch khám
-                            </h3>
+                        <div className={styles.confirmModalHeader}>
+                            <div className={styles.confirmModalIcon}>
+                                <i className="bi bi-clipboard-check-fill"></i>
+                            </div>
+                            <h3>Xác nhận đặt lịch khám</h3>
                             <button 
-                                className={styles.closeBtn}
+                                className={styles.confirmModalClose}
                                 onClick={() => setShowConfirmModal(false)}
                             >
                                 <i className="bi bi-x-lg"></i>
                             </button>
                         </div>
                         
-                        <div className={styles.modalBody}>
-                            <div className={styles.confirmInfo}>
-                                <h4>Thông tin lịch hẹn</h4>
-                                <div className={styles.infoRow}>
-                                    <div className={styles.infoLabel}>
+                        <div className={styles.confirmModalBody}>
+                            <div className={styles.confirmModalInfo}>
+                                <div className={styles.confirmInfoRow}>
+                                    <div className={styles.confirmInfoLabel}>
                                         <i className="bi bi-person-circle"></i>
                                         Bác sĩ
                                     </div>
-                                    <div className={styles.infoValue}>{profileData?.fullName}</div>
+                                    <div className={styles.confirmInfoValue}>{profileData?.fullName}</div>
                                 </div>
-                                <div className={styles.infoRow}>
-                                    <div className={styles.infoLabel}>
-                                        <i className="bi bi-hospital"></i>
-                                        Chuyên khoa
+                                <div className={styles.confirmInfoRow}>
+                                    <div className={styles.confirmInfoLabel}>
+                                        <i className="bi bi-mortarboard-fill"></i>
+                                        Trình độ
                                     </div>
-                                    <div className={styles.infoValue}>{profileData?.specialization}</div>
+                                    <div className={styles.confirmInfoValue}>
+                                        {profileData?.education || 'Chưa cập nhật'}
+                                    </div>
                                 </div>
-                                <div className={styles.infoRow}>
-                                    <div className={styles.infoLabel}>
+                                <div className={styles.confirmInfoRow}>
+                                    <div className={styles.confirmInfoLabel}>
                                         <i className="bi bi-calendar-check"></i>
                                         Ngày khám
                                     </div>
-                                    <div className={styles.infoValue}>
+                                    <div className={styles.confirmInfoValue}>
                                         {selectedDate?.toLocaleDateString('vi-VN', { 
                                             weekday: 'long', 
                                             year: 'numeric', 
@@ -2120,19 +2121,19 @@ function DoctorDetails() {
                                         })}
                                     </div>
                                 </div>
-                                <div className={styles.infoRow}>
-                                    <div className={styles.infoLabel}>
+                                <div className={styles.confirmInfoRow}>
+                                    <div className={styles.confirmInfoLabel}>
                                         <i className="bi bi-clock"></i>
                                         Giờ khám
                                     </div>
-                                    <div className={styles.infoValue}>{selectedTimeSlot?.display}</div>
+                                    <div className={styles.confirmInfoValue}>{selectedTimeSlot?.display}</div>
                                 </div>
-                                <div className={styles.infoRow}>
-                                    <div className={styles.infoLabel}>
+                                <div className={styles.confirmInfoRow}>
+                                    <div className={styles.confirmInfoLabel}>
                                         <i className="bi bi-currency-dollar"></i>
                                         Phí khám
                                     </div>
-                                    <div className={styles.infoValuePrice}>
+                                    <div className={styles.confirmInfoValuePrice}>
                                         {new Intl.NumberFormat('vi-VN', {
                                             style: 'currency',
                                             currency: 'VND'
@@ -2141,22 +2142,22 @@ function DoctorDetails() {
                                 </div>
                             </div>
                             
-                            <div className={styles.confirmNote}>
-                                <i className="bi bi-info-circle"></i>
+                            <div className={styles.confirmModalNote}>
+                                <i className="bi bi-info-circle-fill"></i>
                                 <p>Vui lòng kiểm tra kỹ thông tin trước khi xác nhận. Bạn có thể hủy lịch hẹn trong vòng 2 giờ trước giờ khám.</p>
                             </div>
                         </div>
                         
-                        <div className={styles.modalFooter}>
+                        <div className={styles.confirmModalFooter}>
                             <button 
-                                className={styles.btnCancel}
+                                className={styles.confirmModalCancel}
                                 onClick={() => setShowConfirmModal(false)}
                             >
                                 <i className="bi bi-x-circle"></i>
                                 Hủy
                             </button>
                             <button 
-                                className={styles.btnConfirm}
+                                className={styles.confirmModalConfirm}
                                 onClick={handleConfirmedBooking}
                                 disabled={isCreatingPayment}
                             >
@@ -2167,7 +2168,7 @@ function DoctorDetails() {
                                     </>
                                 ) : (
                                     <>
-                                        <i className="bi bi-check-circle"></i>
+                                        <i className="bi bi-check-circle-fill"></i>
                                         Xác nhận đặt lịch
                                     </>
                                 )}

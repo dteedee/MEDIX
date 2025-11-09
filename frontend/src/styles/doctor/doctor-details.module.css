@@ -4272,11 +4272,232 @@
 /* Confirmation Modal */
 .confirmModal {
   background: white;
-  border-radius: 20px;
-  max-width: 600px;
+  border-radius: 24px;
+  max-width: 480px;
   width: 90%;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: modalSlideUp 0.3s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+/* New Confirmation Modal Styles */
+.confirmModalHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+}
+
+.confirmModalIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  backdrop-filter: blur(10px);
+}
+
+.confirmModalIcon i {
+  font-size: 24px;
+  color: white;
+}
+
+.confirmModalHeader h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  flex: 1;
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+.confirmModalClose {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+  flex-shrink: 0;
+}
+
+.confirmModalClose:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.confirmModalClose i {
+  font-size: 18px;
+}
+
+.confirmModalBody {
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.confirmModalInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.confirmInfoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(241, 245, 249, 0.6) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  transition: all 0.3s ease;
+}
+
+.confirmInfoRow:hover {
+  background: linear-gradient(135deg, rgba(248, 250, 252, 1) 0%, rgba(241, 245, 249, 0.8) 100%);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateX(2px);
+}
+
+.confirmInfoLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+.confirmInfoLabel i {
+  color: #667eea;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.confirmInfoValue {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  text-align: right;
+  max-width: 60%;
+  font-family: 'Be Vietnam Pro', sans-serif;
+  word-break: break-word;
+}
+
+.confirmInfoValuePrice {
+  font-size: 16px;
+  font-weight: 700;
+  color: #667eea;
+  text-align: right;
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+.confirmModalNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.confirmModalNote i {
+  color: #667eea;
+  font-size: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.confirmModalNote p {
+  margin: 0;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.6;
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+.confirmModalFooter {
+  padding: 20px 28px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  background: #fafbfc;
+}
+
+.confirmModalCancel {
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  border: 2px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+.confirmModalCancel:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #475569;
+  transform: translateY(-1px);
+}
+
+.confirmModalCancel i {
+  font-size: 18px;
+}
+
+.confirmModalConfirm {
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+.confirmModalConfirm:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.confirmModalConfirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.confirmModalConfirm i {
+  font-size: 18px;
 }
 
 .modalHeader {
@@ -4426,7 +4647,83 @@
 @media (max-width: 768px) {
   .confirmModal {
     width: 95%;
+    max-width: 100%;
     margin: 20px;
+  }
+
+  .confirmModalHeader {
+    padding: 20px;
+    gap: 12px;
+  }
+
+  .confirmModalIcon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .confirmModalIcon i {
+    font-size: 20px;
+  }
+
+  .confirmModalHeader h3 {
+    font-size: 18px;
+  }
+
+  .confirmModalClose {
+    width: 32px;
+    height: 32px;
+  }
+
+  .confirmModalBody {
+    padding: 24px 20px;
+    gap: 16px;
+  }
+
+  .confirmModalInfo {
+    gap: 12px;
+  }
+
+  .confirmInfoRow {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .confirmInfoLabel {
+    font-size: 12px;
+  }
+
+  .confirmInfoValue,
+  .confirmInfoValuePrice {
+    max-width: 100%;
+    text-align: left;
+    font-size: 14px;
+  }
+
+  .confirmInfoValuePrice {
+    font-size: 15px;
+  }
+
+  .confirmModalNote {
+    padding: 14px;
+  }
+
+  .confirmModalNote p {
+    font-size: 12px;
+  }
+
+  .confirmModalFooter {
+    padding: 16px 20px;
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+
+  .confirmModalCancel,
+  .confirmModalConfirm {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 20px;
   }
 
   .modalHeader {

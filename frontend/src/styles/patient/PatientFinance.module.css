@@ -351,6 +351,11 @@
   z-index: 1;
 }
 
+.depositCard > div {
+  position: relative;
+  z-index: 2;
+}
+
 .depositCard::after {
   content: '';
   position: absolute;
@@ -362,6 +367,8 @@
   opacity: 0;
   transition: opacity 0.5s ease, transform 0.5s ease;
   transform: rotate(0deg);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .depositCard:hover::after {
@@ -379,6 +386,8 @@
   background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #48bb78 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .depositCard:hover::before {

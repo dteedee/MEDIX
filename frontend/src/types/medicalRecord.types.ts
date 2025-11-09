@@ -81,4 +81,3 @@ export interface MedicalRecordDetail {
   attatchments: AttatchmentDto[];
 }
 
-}

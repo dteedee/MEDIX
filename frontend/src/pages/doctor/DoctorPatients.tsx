@@ -45,10 +45,12 @@ const DoctorPatients: React.FC = () => {
     const patientMap = new Map<string, { appointments: Appointment[] }>();
 
     appointments.forEach(app => {
-      if (!patientMap.has(app.patientId)) {
-        patientMap.set(app.patientId, { appointments: [] });
+      if (app.patientID) { // Chỉ xử lý các cuộc hẹn có patientID
+        if (!patientMap.has(app.patientID)) {
+          patientMap.set(app.patientID, { appointments: [] });
+        }
+        patientMap.get(app.patientID)!.appointments.push(app);
       }
-      patientMap.get(app.patientId)!.appointments.push(app);
     });
 
     const patientList: Patient[] = Array.from(patientMap.entries()).map(([patientId, data]) => {

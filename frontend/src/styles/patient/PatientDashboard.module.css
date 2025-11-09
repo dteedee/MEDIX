@@ -1,6 +1,6 @@
 /* Container */
 .container {
-  padding: 32px;
+  padding: 20px 24px;
   max-width: 1600px;
   margin: 0 auto;
   background: linear-gradient(135deg, #f5f7fa 0%, #e2e8f0 100%);
@@ -250,8 +250,8 @@
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
-  margin-bottom: 32px;
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
 .statCard {
@@ -451,14 +451,14 @@
 .contentGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 32px;
+  gap: 20px;
+  margin-bottom: 24px;
 }
 
 .card {
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border-radius: 20px;
-  padding: 28px;
+  padding: 24px;
   box-shadow: 
     0 10px 40px rgba(0, 0, 0, 0.1),
     0 4px 20px rgba(0, 0, 0, 0.05);
@@ -467,6 +467,8 @@
   position: relative;
   overflow: hidden;
   animation: fadeInUp 0.8s ease-out both;
+  display: flex;
+  flex-direction: column;
 }
 
 .card:nth-child(1) { animation-delay: 0.5s; }
@@ -501,10 +503,11 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 24px;
-  padding-bottom: 20px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
   border-bottom: 2px solid #f1f5f9;
   position: relative;
+  flex-shrink: 0;
 }
 
 .cardHeader::after {
@@ -561,29 +564,20 @@
 
 /* Appointment Card */
 .appointmentCard {
-  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  background: white;
   border-radius: 16px;
   padding: 24px;
   border: 1px solid #e2e8f0;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .appointmentCard::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, transparent 50%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.appointmentCard:hover::before {
-  opacity: 1;
+  display: none;
 }
 
 .appointmentCard:hover {
@@ -680,6 +674,7 @@
 .appointmentActions {
   display: flex;
   gap: 12px;
+  margin-top: auto;
 }
 
 .updateBtn, .cancelBtn {
@@ -754,6 +749,7 @@
 /* History List */
 .historyList {
   margin-bottom: 20px;
+  flex: 1;
 }
 
 .historyItem {
@@ -806,6 +802,8 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  margin-top: auto;
+  flex-shrink: 0;
 }
 
 .viewAllBtn::before {
@@ -835,9 +833,11 @@
   align-items: center;
   gap: 16px;
   padding: 20px;
-  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  background: white;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+  flex: 1;
 }
 
 .aiAvatar {
@@ -890,24 +890,22 @@
   gap: 8px;
 }
 
-.viewDetailBtn, .recheckBtn {
-  padding: 10px 18px;
+.viewDetailBtn {
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 12px;
+  border-radius: 10px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.viewDetailBtn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .viewDetailBtn::before {
@@ -927,14 +925,26 @@
 
 .viewDetailBtn:hover {
   background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 .recheckBtn {
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  box-shadow: 0 3px 10px rgba(72, 187, 120, 0.3);
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .recheckBtn::before {
@@ -953,14 +963,15 @@
 }
 
 .recheckBtn:hover {
-  background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 /* Reminders */
 .remindersList {
   margin-bottom: 20px;
+  flex: 1;
 }
 
 .reminderItem {
@@ -993,7 +1004,7 @@
 .updateRemindersBtn {
   width: 100%;
   padding: 14px 20px;
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
   border-radius: 10px;
@@ -1005,7 +1016,7 @@
   overflow: hidden;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .updateRemindersBtn::before {
@@ -1024,9 +1035,9 @@
 }
 
 .updateRemindersBtn:hover {
-  background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 /* Responsive */

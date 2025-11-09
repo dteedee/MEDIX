@@ -819,50 +819,15 @@ function DoctorDetails() {
         
         if (!profileData?.schedules) return false;
         
-        const dateString = formatDateString(date);
-        const backendDayOfWeek = convertDayOfWeek(date.getDay());
+        // Use getAvailableTimeSlots to check if there are any available (unbooked) time slots
+        // This function already filters out:
+        // - Past time slots (if today)
+        // - Booked appointments
+        // - Non-working overrides
+        const availableSlots = getAvailableTimeSlots(date);
         
-        // Check if there are any overrides for this specific date
-        const overridesForDate = profileData.scheduleOverride?.filter(override => {
-            const normalizedOverrideDate = normalizeDateString(override.overrideDate);
-            return normalizedOverrideDate === dateString;
-        }) || [];
-        
-        // Separate overrides by type
-        const workingOverrides = overridesForDate.filter(override => {
-            const overrideTypeValue = override.overrideType === true || (override.overrideType as any) === 'true';
-            return overrideTypeValue && override.isAvailable;
-        });
-        const nonWorkingOverrides = overridesForDate.filter(override => {
-            const overrideTypeValue = override.overrideType === false || (override.overrideType as any) === 'false' || !override.overrideType;
-            return overrideTypeValue;
-        });
-        
-        // Check for working overrides (overrideType = true and isAvailable = true)
-        const availableWorkingOverrides = workingOverrides;
-        
-        // Check if there are regular schedules for this day
-        const regularSchedules = profileData.schedules.filter(schedule => 
-            schedule.dayOfWeek === backendDayOfWeek && schedule.isAvailable
-        );
-        
-        // Check if any regular schedule is available (not blocked by non-working overrides)
-        const hasAvailableRegularSchedule = regularSchedules.some(schedule => {
-            const startTime = schedule.startTime.slice(0, 5);
-            const endTime = schedule.endTime.slice(0, 5);
-            
-            // Check if this regular schedule is blocked by any non-working override
-            const isBlockedByNonWorking = nonWorkingOverrides.some(override => {
-                const overrideStart = override.startTime.slice(0, 5);
-                const overrideEnd = override.endTime.slice(0, 5);
-                return isTimeSlotOverlap(startTime, endTime, overrideStart, overrideEnd);
-            });
-            
-            return !isBlockedByNonWorking;
-        });
-        
-        // Date is available if there are working overrides OR available regular schedules
-        return availableWorkingOverrides.length > 0 || hasAvailableRegularSchedule;
+        // Date is only available if there are available (unbooked) time slots
+        return availableSlots.length > 0;
     };
 
     const handleDateSelect = (date: Date | null) => {

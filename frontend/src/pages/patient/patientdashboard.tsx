@@ -303,12 +303,18 @@ export const PatientDashboard: React.FC = () => {
               </div>
             ))
           ) : (
-            <div className={styles.appointmentCard}>
-              <div style={{ textAlign: 'center', padding: '40px', color: '#718096' }}>
+            <>
+              <div style={{ textAlign: 'center', padding: '40px', color: '#718096', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <i className="bi bi-calendar-x" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
                 <p>Chưa có lịch hẹn sắp tới</p>
               </div>
-            </div>
+              <button 
+                className={styles.viewAllBtn}
+                onClick={() => navigate('/app/patient/appointments')}
+              >
+                XEM TẤT CẢ
+              </button>
+            </>
           )}
         </div>
 
@@ -340,7 +346,7 @@ export const PatientDashboard: React.FC = () => {
             </>
           ) : (
             <>
-              <div style={{ textAlign: 'center', padding: '40px', color: '#718096' }}>
+              <div style={{ textAlign: 'center', padding: '40px', color: '#718096', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <i className="bi bi-clipboard-x" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
                 <p>Chưa có lịch sử khám</p>
               </div>
@@ -369,46 +375,41 @@ export const PatientDashboard: React.FC = () => {
                 .sort((a, b) => new Date(b.appointmentStartTime).getTime() - new Date(a.appointmentStartTime).getTime())[0];
               
               return (
-                <div className={styles.aiResult}>
-                  <div className={styles.aiAvatar}>
-                    <div className={styles.aiLogo}>MEDIX</div>
-                    <div className={styles.aiDate}>{formatDate(latestAiAppointment.appointmentStartTime)}</div>
-                  </div>
-                  <div className={styles.aiContent}>
-                    <div className={styles.aiSymptoms}>
-                      {latestAiAppointment.medicalInfo || 'Đã có kết quả phân tích AI'}
+                <>
+                  <div className={styles.aiResult}>
+                    <div className={styles.aiAvatar}>
+                      <div className={styles.aiLogo}>MEDIX</div>
+                      <div className={styles.aiDate}>{formatDate(latestAiAppointment.appointmentStartTime)}</div>
                     </div>
-                    <div className={styles.aiStatus}>Cần chú ý</div>
+                    <div className={styles.aiContent}>
+                      <div className={styles.aiSymptoms}>
+                        {latestAiAppointment.medicalInfo || 'Đã có kết quả phân tích AI'}
+                      </div>
+                      <div className={styles.aiStatus}>Cần chú ý</div>
+                    </div>
                   </div>
-                  <div className={styles.aiActions}>
-                    <button 
-                      className={styles.viewDetailBtn}
-                      onClick={() => navigate(`/app/patient/appointments/${latestAiAppointment.id}`)}
-                    >
-                      XEM CHI TIẾT
-                    </button>
-                    <button 
-                      className={styles.recheckBtn}
-                      onClick={() => navigate('/app/patient/ai-checkup')}
-                    >
-                      KIỂM TRA LẠI
-                    </button>
-                  </div>
-                </div>
+                  <button 
+                    className={styles.viewAllBtn}
+                    onClick={() => navigate(`/app/patient/appointments/${latestAiAppointment.id}`)}
+                  >
+                    XEM CHI TIẾT
+                  </button>
+                </>
               );
             })()
           ) : (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#718096' }}>
-              <i className="bi bi-robot" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
-              <p>Chưa có kết quả kiểm tra AI</p>
+            <>
+              <div style={{ textAlign: 'center', padding: '40px', color: '#718096', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <i className="bi bi-robot" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
+                <p>Chưa có kết quả kiểm tra AI</p>
+              </div>
               <button 
-                className={styles.recheckBtn}
+                className={styles.viewAllBtn}
                 onClick={() => navigate('/app/patient/ai-checkup')}
-                style={{ marginTop: '16px' }}
               >
                 KIỂM TRA NGAY
               </button>
-            </div>
+            </>
           )}
         </div>
 
@@ -435,7 +436,7 @@ export const PatientDashboard: React.FC = () => {
                 ))}
               </div>
               <button 
-                className={styles.updateRemindersBtn}
+                className={styles.viewAllBtn}
                 onClick={() => navigate('/app/patient/appointments')}
               >
                 XEM TẤT CẢ
@@ -443,12 +444,12 @@ export const PatientDashboard: React.FC = () => {
             </>
           ) : (
             <>
-              <div style={{ textAlign: 'center', padding: '40px', color: '#718096' }}>
+              <div style={{ textAlign: 'center', padding: '40px', color: '#718096', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <i className="bi bi-bell-slash" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
                 <p>Chưa có nhắc nhở</p>
               </div>
               <button 
-                className={styles.updateRemindersBtn}
+                className={styles.viewAllBtn}
                 onClick={() => navigate('/app/patient/appointments')}
               >
                 XEM LỊCH HẸN

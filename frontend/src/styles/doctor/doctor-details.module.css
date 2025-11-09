@@ -482,6 +482,11 @@
   /* Booking Tab */
   .bookingTab {
     animation: fadeIn 0.6s ease-out;
+    font-family: 'Be Vietnam Pro', sans-serif;
+  }
+
+  .bookingTab * {
+    font-family: inherit;
   }
   
   .bookingLayout {
@@ -494,89 +499,208 @@
   .calendarSection,
   .timeslotsSection {
     background: white;
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(226, 232, 240, 0.5);
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    animation: fadeInUp 0.5s ease-out;
+    margin-bottom: 24px;
+    width: 100%;
+  }
+
+  .calendarSection {
+    padding: 40px;
+  }
+
+  .timeslotsSection {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .calendarSection::before,
+  .timeslotsSection::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .calendarSection:hover::before,
+  .timeslotsSection:hover::before {
+    opacity: 1;
+  }
+
+  .calendarSection:hover,
+  .timeslotsSection:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(102, 126, 234, 0.1);
+    transform: translateY(-2px);
   }
   
   .sectionHeader {
-    margin-bottom: 20px;
+    margin-bottom: 32px;
   }
-  
-  .sectionHeader h3 {
+
+  .sectionHeaderContent {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .sectionIconWrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 18px;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+  }
+
+  .sectionIconWrapper i {
+    font-size: 24px;
+    color: white;
+  }
+
+  .sectionHeader h3 {
+    font-size: 22px;
     font-weight: 700;
     color: #1e293b;
-    margin: 0;
+    margin: 0 0 6px 0;
+    line-height: 1.3;
+    font-family: 'Be Vietnam Pro', sans-serif;
   }
-  
-  .sectionHeader h3 i {
-    font-size: 20px;
-    color: #667eea;
+
+  .sectionSubtitle {
+    font-size: 15px;
+    color: #64748b;
+    margin: 0;
+    font-weight: 500;
+    font-family: 'Be Vietnam Pro', sans-serif;
   }
   
   .calendarContainer {
-    background: white;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(226, 232, 240, 0.5);
+    background: linear-gradient(135deg, #fafbfc 0%, #f8fafc 100%);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .calendarContainer::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.03) 0%, transparent 70%);
+    pointer-events: none;
   }
 
   /* Calendar Month Header */
   .calendarMonthHeader {
     text-align: center;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 28px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid rgba(226, 232, 240, 0.8);
+    position: relative;
+  }
+
+  .calendarMonthHeader::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 2px;
   }
 
   .calendarMonthTitle {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
     color: #1e293b;
     margin: 0;
     text-transform: capitalize;
     letter-spacing: 0.5px;
+    font-family: 'Be Vietnam Pro', sans-serif;
   }
 
   /* Calendar Weekdays Header */
   .calendarWeekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 8px;
+    gap: 12px;
     margin-bottom: 12px;
   }
 
   .weekdayHeader {
     text-align: center;
-    font-size: 13px;
-    font-weight: 700;
-    color: #64748b;
-    padding: 10px 4px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+    padding: 10px 8px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border-radius: 8px;
+    border-radius: 12px;
+    border: 2px solid rgba(226, 232, 240, 0.5);
+    transition: all 0.3s ease;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    height: auto;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .weekdayHeader:hover {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    color: #1e293b;
   }
 
   /* Calendar Dates Grid */
   .calendarDatesGrid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 8px;
+    gap: 12px;
   }
 
   /* Calendar Date Cell */
   .calendarDateCell {
     aspect-ratio: 1;
-    min-height: 70px;
+    min-height: 80px;
     border: 2px solid #e2e8f0;
-    border-radius: 14px;
+    border-radius: 12px;
     background: white;
     color: #475569;
     font-size: 16px;
@@ -588,148 +712,215 @@
     align-items: center;
     justify-content: center;
     position: relative;
-    padding: 10px 4px;
-    overflow: visible;
+    padding: 8px;
+    overflow: hidden;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .calendarDateCell:not(.unavailable):not(:disabled) {
+    background: white;
+    color: #475569;
+  }
+
+  .calendarDateCell::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(102, 126, 234, 0.1);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+  }
+
+  .calendarDateCell:hover:not(:disabled):not(.unavailable):not(.past)::after {
+    width: 100%;
+    height: 100%;
   }
 
   .calendarDateCell:hover:not(:disabled):not(.unavailable):not(.past) {
     background: #f8fafc;
     border-color: #667eea;
-    transform: translateY(-3px);
-    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.2);
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2);
+    z-index: 1;
   }
 
   .calendarDateCell.today:hover:not(:disabled):not(.unavailable) {
-    transform: scale(1.08) translateY(-2px);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3), 0 8px 20px rgba(59, 130, 246, 0.4);
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 6px 20px rgba(59, 130, 246, 0.3);
+    z-index: 1;
   }
 
   .calendarDateCell.selected {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-color: transparent;
-    color: white;
-    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
-    transform: translateY(-2px);
+    background: linear-gradient(135deg, #0288d1 0%, #1565c0 100%);
+    border-color: #0288d1;
+    color: rgb(255, 255, 255);
+    box-shadow: 0 6px 24px rgba(2, 136, 209, 0.4), 0 0 0 2px rgba(2, 136, 209, 0.2);
+    transform: translateY(-2px) scale(1.03);
+    z-index: 2;
+    animation: selectPulse 0.4s ease-out;
+  }
+
+  @keyframes selectPulse {
+    0% {
+      transform: translateY(-2px) scale(1);
+    }
+    50% {
+      transform: translateY(-2px) scale(1.05);
+    }
+    100% {
+      transform: translateY(-2px) scale(1.03);
+    }
   }
 
   .calendarDateCell.today {
-    border: 3px solid #3b82f6;
+    border: 2px solid #3b82f6;
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
     color: #1e40af;
     font-weight: 700;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 4px 12px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 4px 16px rgba(59, 130, 246, 0.25);
     position: relative;
-    transform: scale(1.05);
+    z-index: 1;
+    min-height: 80px;
   }
 
   .calendarDateCell.today.selected {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-color: transparent;
+    background: linear-gradient(135deg, #0288d1 0%, #1565c0 100%);
+    border-color: #0288d1;
     color: white;
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3), 0 6px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 0 0 2px rgba(2, 136, 209, 0.3), 0 6px 20px rgba(2, 136, 209, 0.4);
   }
 
   .todayRing {
     position: absolute;
-    top: -4px;
-    left: -4px;
-    right: -4px;
-    bottom: -4px;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
     border: 2px solid #3b82f6;
-    border-radius: 14px;
-    animation: pulseRing 2s ease-in-out infinite;
+    border-radius: 16px;
+    animation: pulseRing 3s ease-in-out infinite;
     pointer-events: none;
+    opacity: 0.3;
+    box-sizing: border-box;
   }
 
   .calendarDateCell.today.selected .todayRing {
-    border-color: rgba(255, 255, 255, 0.6);
+    border-color: rgba(255, 255, 255, 0.5);
+    opacity: 0.4;
   }
 
   @keyframes pulseRing {
     0%, 100% {
-      opacity: 1;
+      opacity: 0.3;
       transform: scale(1);
     }
     50% {
-      opacity: 0.6;
-      transform: scale(1.05);
+      opacity: 0.15;
+      transform: scale(1.01);
     }
   }
 
   .calendarDateCell.unavailable,
-  .calendarDateCell.past {
-    background: #f8fafc;
-    border-color: #e2e8f0;
-    color: #cbd5e1;
-    cursor: not-allowed;
+  .calendarDateCell.past,
+  .calendarDateCell:disabled {
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+    color: #cbd5e1 !important;
+    cursor: not-allowed !important;
     opacity: 0.5;
   }
 
   .calendarDateCell.unavailable:hover,
-  .calendarDateCell.past:hover {
-    transform: none;
-    box-shadow: none;
-  }
-
-  .calendarDateCell:disabled {
-    cursor: not-allowed;
+  .calendarDateCell.past:hover,
+  .calendarDateCell:disabled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
   }
 
   .calendarDateCell .dateNumber {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 600;
     line-height: 1.2;
     color: inherit;
     position: relative;
-    z-index: 1;
+    z-index: 3;
+    transition: all 0.3s ease;
+    font-family: 'Be Vietnam Pro', sans-serif;
   }
 
   .calendarDateCell.today .dateNumber {
-    font-size: 22px;
-    font-weight: 800;
+    font-size: 26px;
+    font-weight: 700;
     color: #1e40af;
   }
 
   .calendarDateCell.selected .dateNumber {
-    color: white;
-    font-weight: 700;
+    color: #6a5acd !important;
+    font-weight: 800;
+    transform: scale(1.15);
+    font-size: 26px;
   }
 
   .calendarDateCell.today.selected .dateNumber {
-    color: white;
-    font-weight: 800;
+    color: #ffffff !important;
+    font-weight: 900;
+    transform: scale(1.15);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 6px rgba(0, 0, 0, 0.3);
+    font-size: 28px;
   }
 
 
   .availableDot {
     position: absolute;
-    bottom: 8px;
-    width: 8px;
-    height: 8px;
+    bottom: 10px;
+    width: 10px;
+    height: 10px;
     background: #10b981;
     border-radius: 50%;
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
-    z-index: 2;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    z-index: 3;
+    animation: dotPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes dotPulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 0.8;
+    }
   }
 
   .calendarDateCell.selected .availableDot {
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
+    animation: none;
   }
 
   .calendarDateCell.today .availableDot {
     background: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
   }
 
   .calendarDateCell.today.selected .availableDot {
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
+    animation: none;
   }
 
   .calendarDateCellEmpty {
     aspect-ratio: 1;
-    min-height: 60px;
+    min-height: 80px;
+    background: transparent;
   }
 
   /* Date Card */
@@ -1081,25 +1272,111 @@
   .timeslotsContainer {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
   }
   
   .selectedDateInfo {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 14px 18px;
+    gap: 16px;
+    padding: 20px 24px;
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-    border-radius: 12px;
-    border: 1px solid rgba(102, 126, 234, 0.2);
-    font-size: 14px;
-    font-weight: 600;
-    color: #475569;
+    border-radius: 18px;
+    border: 2px solid rgba(102, 126, 234, 0.25);
+    margin-bottom: 24px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slideIn 0.5s ease-out;
+    position: relative;
+    overflow: hidden;
   }
-  
-  .selectedDateInfo i {
-    font-size: 18px;
-    color: #667eea;
+
+  .selectedDateInfo::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.6s ease;
+  }
+
+  .selectedDateInfo:hover::before {
+    left: 100%;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .selectedDateInfo:hover {
+    border-color: rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+  }
+
+  .selectedDateIcon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.35);
+    position: relative;
+    z-index: 1;
+    animation: iconBounce 0.6s ease-out;
+  }
+
+  @keyframes iconBounce {
+    0% {
+      transform: scale(0);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .selectedDateIcon i {
+    font-size: 26px;
+    color: white;
+  }
+
+  .selectedDateText {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+  }
+
+  .selectedDateLabel {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .selectedDateValue {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.4;
   }
   
 
@@ -1122,44 +1399,195 @@
     font-weight: 600;
   }
   
+  .timeslotsHeader {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid rgba(226, 232, 240, 0.8);
+    position: relative;
+  }
+
+  .timeslotsHeader::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 2px;
+  }
+
+  .availableSlotsCount {
+    font-size: 15px;
+    font-weight: 600;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: inherit;
+  }
+
+  .availableSlotsCount::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    background: #10b981;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    animation: dotPulse 2s ease-in-out infinite;
+  }
+
   .timeslotsGrid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 14px;
   }
-  
+
   .timeslot {
-    padding: 14px 18px;
+    padding: 18px 20px;
     border: 2px solid #e2e8f0;
-    border-radius: 12px;
+    border-radius: 16px;
     background: white;
     color: #475569;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
     cursor: pointer;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    transition: all 0.3s ease;
+    gap: 10px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    min-height: 80px;
+    font-family: 'Be Vietnam Pro', sans-serif;
   }
-  
+
+  .timeslot::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    transform: scaleX(0);
+    transition: transform 0.4s ease;
+  }
+
+  .timeslot::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(102, 126, 234, 0.1);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+  }
+
+  .timeslot:hover:not(.selected)::after {
+    width: 100%;
+    height: 100%;
+  }
+
+  .timeslotContent {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    position: relative;
+    z-index: 2;
+  }
+
   .timeslot i {
-    font-size: 16px;
+    font-size: 20px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
-  .timeslot:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-    transform: translateY(-2px);
+
+  .timeslot:hover:not(.selected) {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-color: #667eea;
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+    z-index: 1;
   }
-  
+
+  .timeslot:hover:not(.selected)::before {
+    transform: scaleX(1);
+  }
+
   .timeslot.selected {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border-color: transparent;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(102, 126, 234, 0.45), 0 0 0 2px rgba(102, 126, 234, 0.2);
+    transform: translateY(-4px) scale(1.03);
+    z-index: 2;
+    animation: slotSelect 0.4s ease-out;
+  }
+
+  @keyframes slotSelect {
+    0% {
+      transform: translateY(-4px) scale(1);
+    }
+    50% {
+      transform: translateY(-4px) scale(1.05);
+    }
+    100% {
+      transform: translateY(-4px) scale(1.03);
+    }
+  }
+
+  .timeslot.selected::before {
+    transform: scaleX(1);
+    background: rgba(255, 255, 255, 0.3);
+    height: 100%;
+    opacity: 0.15;
+  }
+
+  .timeslot.selected i {
+    transform: scale(1.15) rotate(5deg);
+    animation: iconSpin 0.4s ease-out;
+  }
+
+  @keyframes iconSpin {
+    0% {
+      transform: scale(1) rotate(0deg);
+    }
+    50% {
+      transform: scale(1.2) rotate(10deg);
+    }
+    100% {
+      transform: scale(1.15) rotate(5deg);
+    }
+  }
+
+  .timeslotBadge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 12px;
+    background: rgba(59, 130, 246, 0.12);
+    color: #3b82f6;
+    border-radius: 10px;
+    margin-top: 6px;
+    position: relative;
+    z-index: 2;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+  }
+
+  .timeslot.selected .timeslotBadge {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.3);
   }
   
 
@@ -1175,19 +1603,45 @@
     text-align: center;
     padding: 60px 20px;
     color: #94a3b8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
   }
-  
-  .noDateSelected i,
-  .noSlotsMessage i {
-    font-size: 48px;
+
+  .noDateIcon,
+  .noSlotsIcon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+
+  .noDateIcon i,
+  .noSlotsIcon i {
+    font-size: 40px;
     color: #cbd5e1;
-    margin-bottom: 12px;
   }
-  
+
+  .noDateSelected h4,
+  .noSlotsMessage h4 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #475569;
+    margin: 0;
+  }
+
   .noDateSelected p,
   .noSlotsMessage p {
-    font-size: 15px;
+    font-size: 14px;
+    color: #64748b;
     margin: 0;
+    max-width: 300px;
+    line-height: 1.6;
   }
   
   .bookingConfirmation {
@@ -1197,88 +1651,299 @@
   
   .bookingSummary {
     background: white;
-    border-radius: 20px;
-    padding: 32px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 28px;
+    padding: 36px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    position: relative;
+    overflow: hidden;
+    animation: slideUp 0.6s ease-out;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
   }
-  
-  .bookingSummary h3 {
+
+  .bookingSummary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .bookingSummary::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .summaryHeader {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid rgba(241, 245, 249, 0.8);
+    position: relative;
+    z-index: 1;
+  }
+
+  .summaryHeader::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100px;
+    height: 2px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 2px;
+  }
+
+  .summaryHeaderContent {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .summaryIconWrapper {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 20px;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.35);
+    position: relative;
+    animation: iconFloat 3s ease-in-out infinite;
+  }
+
+  @keyframes iconFloat {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+
+  .summaryIconWrapper i {
+    font-size: 28px;
+    color: white;
+  }
+
+  .summaryHeader h3 {
+    font-size: 22px;
     font-weight: 700;
     color: #1e293b;
-    margin: 0 0 24px 0;
+    margin: 0 0 6px 0;
+    line-height: 1.3;
+    font-family: inherit;
   }
-  
-  .bookingSummary h3 i {
-    font-size: 24px;
-    color: #667eea;
+
+  .summarySubtitle {
+    font-size: 15px;
+    color: #64748b;
+    margin: 0;
+    font-weight: 500;
+    font-family: inherit;
   }
-  
-  .summaryGrid {
+
+  .summaryCards {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-    margin-bottom: 28px;
+    gap: 18px;
+    margin-bottom: 32px;
+    position: relative;
+    z-index: 1;
   }
-  
-  .summaryItem {
+
+  .summaryCard {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 24px;
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(241, 245, 249, 0.6) 100%);
+    border-radius: 18px;
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    animation: cardFadeIn 0.5s ease-out backwards;
+  }
+
+  .summaryCard:nth-child(1) { animation-delay: 0.1s; }
+  .summaryCard:nth-child(2) { animation-delay: 0.2s; }
+  .summaryCard:nth-child(3) { animation-delay: 0.3s; }
+  .summaryCard:nth-child(4) { animation-delay: 0.4s; }
+
+  @keyframes cardFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .summaryCard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    transform: scaleY(0);
+    transition: transform 0.4s ease;
+  }
+
+  .summaryCard::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(102, 126, 234, 0.05);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+  }
+
+  .summaryCard:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.1);
+    border-color: rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, rgba(248, 250, 252, 1) 0%, rgba(241, 245, 249, 0.8) 100%);
+  }
+
+  .summaryCard:hover::before {
+    transform: scaleY(1);
+  }
+
+  .summaryCard:hover::after {
+    width: 200%;
+    height: 200%;
+  }
+
+  .summaryCardIcon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+    position: relative;
+    z-index: 1;
+    transition: all 0.4s ease;
+  }
+
+  .summaryCard:hover .summaryCardIcon {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+  }
+
+  .summaryCardIcon i {
+    font-size: 22px;
+    color: white;
+  }
+
+  .summaryCardContent {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 16px 20px;
-    background: linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(241, 245, 249, 0.6) 100%);
-    border-radius: 14px;
-    border: 1px solid rgba(226, 232, 240, 0.5);
+    gap: 8px;
+    flex: 1;
   }
-  
+
   .summaryLabel {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    font-family: inherit;
   }
-  
+
   .summaryValue {
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 600;
     color: #1e293b;
+    line-height: 1.5;
+    font-family: inherit;
   }
-  
+
   .summaryPrice {
     font-size: 18px;
     font-weight: 700;
     color: #10b981;
+    font-family: inherit;
   }
   
   /* Promotion Code Section */
   .promotionCodeSection {
-    margin: 20px 0 28px;
-    padding: 20px;
-    background: linear-gradient(135deg, rgba(249, 250, 251, 0.8) 0%, rgba(243, 244, 246, 0.6) 100%);
-    border-radius: 14px;
-    border: 1px solid rgba(209, 213, 219, 0.5);
+    margin: 24px 0 32px;
+    padding: 24px;
+    background: linear-gradient(135deg, rgba(249, 250, 251, 0.9) 0%, rgba(243, 244, 246, 0.7) 100%);
+    border-radius: 18px;
+    border: 2px solid rgba(209, 213, 219, 0.6);
+    position: relative;
+    z-index: 1;
+    transition: all 0.4s ease;
+  }
+
+  .promotionCodeSection:hover {
+    border-color: rgba(245, 158, 11, 0.4);
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.1);
   }
   
   .promotionLabel {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
+    gap: 10px;
+    font-size: 15px;
     font-weight: 600;
-    color: #6b7280;
-    margin-bottom: 12px;
+    color: #92400e;
+    margin-bottom: 16px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    font-family: inherit;
   }
-  
+
   .promotionLabel i {
     color: #f59e0b;
-    font-size: 16px;
+    font-size: 18px;
+    animation: tagPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes tagPulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
   }
   
   .promotionInputGroup {
@@ -1290,21 +1955,24 @@
   
   .promotionInput {
     flex: 1;
-    padding: 12px 16px;
+    padding: 14px 18px;
     border: 2px solid rgba(209, 213, 219, 0.6);
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 500;
     color: #1f2937;
     background: white;
-    transition: all 0.3s ease;
+    transition: all 0.4s ease;
     text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: inherit;
   }
-  
+
   .promotionInput:focus {
     outline: none;
     border-color: #f59e0b;
-    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15), 0 4px 12px rgba(245, 158, 11, 0.1);
+    transform: translateY(-1px);
   }
   
   .promotionInput::placeholder {
@@ -1322,25 +1990,47 @@
   }
   
   .applyPromoButton {
-    padding: 12px 24px;
+    padding: 14px 28px;
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     color: white;
     border: none;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 700;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     white-space: nowrap;
-    min-width: 90px;
+    min-width: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+    position: relative;
+    overflow: hidden;
+    font-family: inherit;
   }
-  
+
+  .applyPromoButton::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+  }
+
+  .applyPromoButton:hover:not(:disabled)::before {
+    width: 300px;
+    height: 300px;
+  }
+
   .applyPromoButton:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
   }
   
   .applyPromoButton:disabled {
@@ -1503,28 +2193,59 @@
   .confirmButton,
   .paymentButton {
     width: 100%;
-    padding: 16px 24px;
+    padding: 18px 28px;
     border: none;
-    border-radius: 14px;
+    border-radius: 16px;
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    transition: all 0.3s ease;
+    gap: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 0.3px;
+    font-family: inherit;
   }
-  
+
+  .confirmButton::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.5s ease, height 0.5s ease;
+  }
+
+  .confirmButton:hover::before {
+    width: 400px;
+    height: 400px;
+  }
+
   .confirmButton {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.35);
+    z-index: 1;
   }
-  
-  .confirmButton:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 28px rgba(102, 126, 234, 0.4);
+
+  .confirmButton:hover:not(:disabled) {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.45);
+  }
+
+  .confirmButton:active:not(:disabled) {
+    transform: translateY(-2px) scale(1);
+  }
+
+  .confirmButton i {
+    font-size: 20px;
   }
   
   .paymentButton {
@@ -1973,13 +2694,199 @@
       padding: 20px;
     }
   
-    .calendarSection,
-    .timeslotsSection {
-      padding: 16px;
+    .calendarSection {
+      padding: 24px;
     }
-  
+
+    .calendarContainer {
+      padding: 24px;
+    }
+
+    .timeslotsSection {
+      padding: 24px;
+      max-width: 100%;
+    }
+
     .bookingSummary {
+      padding: 24px;
+      max-width: 100%;
+    }
+
+    .calendarWeekdays {
+      gap: 8px;
+    }
+
+    .calendarDatesGrid {
+      gap: 8px;
+    }
+
+    .weekdayHeader {
+      padding: 8px 6px;
+      min-height: 40px;
+      font-size: 12px;
+    }
+
+    .calendarDateCell {
+      min-height: 60px;
+      padding: 6px;
+    }
+
+    .calendarDateCell .dateNumber {
+      font-size: 20px;
+    }
+
+    .calendarDateCell.today .dateNumber {
+      font-size: 22px;
+    }
+
+    .calendarDateCellEmpty {
+      min-height: 60px;
+    }
+
+    .sectionHeaderContent {
+      gap: 12px;
+    }
+
+    .sectionIconWrapper {
+      width: 40px;
+      height: 40px;
+    }
+
+    .sectionIconWrapper i {
+      font-size: 20px;
+    }
+
+    .sectionHeader h3 {
+      font-size: 18px;
+    }
+
+    .sectionSubtitle {
+      font-size: 13px;
+    }
+
+    .calendarContainer {
       padding: 20px;
+    }
+
+    .calendarMonthTitle {
+      font-size: 18px;
+    }
+
+    .weekdayHeader {
+      font-size: 11px;
+      padding: 10px 2px;
+    }
+
+    .calendarDateCell {
+      min-height: 60px;
+      max-height: 60px;
+      padding: 8px 2px;
+    }
+
+    .calendarDateCell .dateNumber {
+      font-size: 18px;
+    }
+
+    .calendarDateCell.today .dateNumber {
+      font-size: 20px;
+    }
+
+    .selectedDateInfo {
+      padding: 16px;
+      gap: 12px;
+    }
+
+    .selectedDateIcon {
+      width: 44px;
+      height: 44px;
+    }
+
+    .selectedDateIcon i {
+      font-size: 22px;
+    }
+
+    .selectedDateValue {
+      font-size: 15px;
+    }
+
+    .timeslotsGrid {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+    }
+
+    .timeslot {
+      padding: 14px 16px;
+      min-height: 70px;
+    }
+
+    .timeslot i {
+      font-size: 18px;
+    }
+
+    .bookingSummary {
+      padding: 24px;
+    }
+
+    .summaryHeader {
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+    }
+
+    .summaryIconWrapper {
+      width: 48px;
+      height: 48px;
+    }
+
+    .summaryIconWrapper i {
+      font-size: 24px;
+    }
+
+    .summaryHeader h3 {
+      font-size: 20px;
+    }
+
+    .summaryCards {
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .summaryCard {
+      padding: 18px;
+      gap: 14px;
+    }
+
+    .summaryCardIcon {
+      width: 42px;
+      height: 42px;
+    }
+
+    .summaryCardIcon i {
+      font-size: 20px;
+    }
+
+    .summaryValue {
+      font-size: 15px;
+    }
+
+    .summaryPrice {
+      font-size: 18px;
+    }
+
+    .promotionCodeSection {
+      padding: 20px;
+      margin: 20px 0 24px;
+    }
+
+    .promotionInput {
+      padding: 12px 16px;
+      font-size: 14px;
+    }
+
+    .applyPromoButton {
+      padding: 12px 20px;
+      font-size: 14px;
+      min-width: 90px;
     }
   
     .summaryGrid {
@@ -2081,30 +2988,114 @@
       gap: 4px;
     }
 
+    .calendarSection,
+    .timeslotsSection {
+      padding: 16px;
+      border-radius: 20px;
+    }
+
+    .calendarContainer {
+      padding: 16px;
+      border-radius: 16px;
+    }
+
+    .calendarMonthTitle {
+      font-size: 16px;
+    }
+
+    .weekdayHeader {
+      font-size: 10px;
+      padding: 8px 2px;
+    }
+
     .calendarDateCell {
       min-height: 50px;
+      max-height: 50px;
       padding: 6px 2px;
+      border-radius: 12px;
     }
 
     .calendarDateCell .dateNumber {
       font-size: 16px;
     }
 
-    .todayLabel {
-      font-size: 8px;
-      padding: 1px 4px;
+    .calendarDateCell.today .dateNumber {
+      font-size: 18px;
     }
 
     .availableDot {
-      width: 5px;
-      height: 5px;
-      bottom: 4px;
+      width: 6px;
+      height: 6px;
+      bottom: 6px;
+    }
+
+    .selectedDateInfo {
+      padding: 14px;
+      gap: 10px;
+    }
+
+    .selectedDateIcon {
+      width: 40px;
+      height: 40px;
+    }
+
+    .selectedDateIcon i {
+      font-size: 20px;
+    }
+
+    .selectedDateValue {
+      font-size: 14px;
+    }
+
+    .timeslotsGrid {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .timeslot {
+      padding: 12px 14px;
+      min-height: 65px;
+    }
+
+    .bookingSummary {
+      padding: 20px;
+      border-radius: 24px;
+    }
+
+    .summaryHeader h3 {
+      font-size: 18px;
+    }
+
+    .summaryCard {
+      padding: 16px;
+    }
+
+    .summaryCardIcon {
+      width: 40px;
+      height: 40px;
+    }
+
+    .summaryCardIcon i {
+      font-size: 18px;
+    }
+
+    .promotionCodeSection {
+      padding: 16px;
+    }
+
+    .promotionInputGroup {
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .applyPromoButton {
+      width: 100%;
     }
   
     .confirmButton,
     .paymentButton {
       font-size: 15px;
-      padding: 14px 20px;
+      padding: 16px 24px;
     }
   }
   

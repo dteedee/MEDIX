@@ -6,6 +6,7 @@ import HomeService from '../../services/homeService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ArticleDTO } from '../../types/article.types';
 import { articleService } from '../../services/articleService';
+import doctorService from '../../services/doctorService';
 
 function HomePage() {
     const navigate = useNavigate();
@@ -14,6 +15,8 @@ function HomePage() {
     //get home page details
     const [homeMetadata, setHomeMetadata] = useState<HomeMetadata>();
     const [featuredArticles, setFeaturedArticles] = useState<ArticleDTO[]>([]);
+    const [doctorEducationMap, setDoctorEducationMap] = useState<Record<string, string>>({});
+    const [doctorIdMap, setDoctorIdMap] = useState<Record<string, string>>({});
 
     useEffect(() => {
         const fetchMetadata = async () => {
@@ -38,26 +41,84 @@ function HomePage() {
         fetchArticles();
     }, []);
 
-    //handle doctors sliding
+    // Prefetch extra doctor info (education) for cards to show "học vị - chuyên ngành"
+    useEffect(() => {
+        const loadEducation = async () => {
+            const list = homeMetadata?.displayedDoctors || [];
+            if (!list.length) return;
+            const usernames = Array.from(new Set(list.map(d => d.userName))).slice(0, 20);
+            try {
+                const results = await Promise.all(
+                    usernames.map(async (u) => {
+                        try {
+                            const profile = await doctorService.getDoctorProfile(u);
+                            return { u, education: profile.education || '' };
+                        } catch {
+                            return { u, education: '' };
+                        }
+                    })
+                );
+                const map: Record<string, string> = {};
+                results.forEach(r => { if (r.education) map[r.u] = r.education; });
+                setDoctorEducationMap(prev => ({ ...prev, ...map }));
+            } catch (e) {
+                console.error('Load doctor education failed', e);
+            }
+        };
+        loadEducation();
+    }, [homeMetadata?.displayedDoctors]);
+
+    // Resolve doctorId from username using listing API
+    const resolveDoctorId = async (userName: string): Promise<string | null> => {
+        try {
+            const list = await doctorService.getAll({ page: 1, pageSize: 100, searchTerm: userName });
+            const matched = list.items.find((d: any) => d?.userName === userName) || list.items.find((d: any) => (d?.fullName || '').toLowerCase() === userName.toLowerCase());
+            return matched?.id || null;
+        } catch {
+            return null;
+        }
+    };
+
+    // Hydrate doctorIdMap so we can link by id from homepage
+    useEffect(() => {
+        const hydrate = async () => {
+            const list = homeMetadata?.displayedDoctors || [];
+            if (!list.length) return;
+            const usernames = Array.from(new Set(list.map(d => d.userName)));
+            const entries = await Promise.all(usernames.map(async u => {
+                if (doctorIdMap[u]) return { u, id: doctorIdMap[u] };
+                const id = await resolveDoctorId(u);
+                return { u, id };
+            }));
+            const m: Record<string, string> = {};
+            entries.forEach(e => { if (e.id) m[e.u] = e.id; });
+            if (Object.keys(m).length) setDoctorIdMap(prev => ({ ...prev, ...m }));
+        };
+        hydrate();
+    }, [homeMetadata?.displayedDoctors]);
+
+    // Doctors carousel (auto-next, wrap-around)
     const [currentIndex, setCurrentIndex] = useState(0);
     const doctorsPerPage = 4;
 
-    const visibleDoctors = homeMetadata?.displayedDoctors.slice(
-        currentIndex,
-        currentIndex + doctorsPerPage
-    );
-
-    const handlePrev = () => {
-        setCurrentIndex((prev) => Math.max(prev - doctorsPerPage, 0));
-    };
-
-    const handleNext = () => {
-        if (homeMetadata?.displayedDoctors) {
-            setCurrentIndex((prev) =>
-                Math.min(prev + doctorsPerPage, homeMetadata.displayedDoctors.length - doctorsPerPage)
-            );
+    const getVisibleDoctors = () => {
+        const list = homeMetadata?.displayedDoctors || [];
+        if (!list.length) return [] as typeof list;
+        const result: typeof list = [] as any;
+        for (let i = 0; i < Math.min(doctorsPerPage, list.length); i++) {
+            result.push(list[(currentIndex + i) % list.length]);
         }
+        return result;
     };
+
+    useEffect(() => {
+        const list = homeMetadata?.displayedDoctors || [];
+        if (!list.length) return;
+        const interval = setInterval(() => {
+            setCurrentIndex((prev) => (prev + 1) % list.length);
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [homeMetadata?.displayedDoctors?.length]);
 
     const [showButton, setShowButton] = useState(false);
 
@@ -109,57 +170,39 @@ function HomePage() {
             <nav className={styles["navbar"]}>
                 <ul className={styles["nav-menu"]}>
                     <li>
-                        <a
-                            onClick={() => navigate('/')}
-                            className={`${styles["nav-link"]} ${location.pathname === '/' ? styles["active"] : ''}`}
-                        >
+                        <Link to="/" className={`${styles["nav-link"]} ${location.pathname === '/' ? styles["active"] : ''}`}>
                             {t('nav.home')}
-                        </a>
+                        </Link>
                     </li>
                     <li><span>|</span></li>
                     <li>
-                        <a
-                            onClick={() => navigate('/ai-chat')}
-                            className={`${styles["nav-link"]} ${location.pathname === '/ai-chat' ? styles["active"] : ''}`}
-                        >
+                        <Link to="/ai-chat" className={`${styles["nav-link"]} ${location.pathname === '/ai-chat' ? styles["active"] : ''}`}>
                             {t('nav.ai-diagnosis')}
-                        </a>
+                        </Link>
                     </li>
                     <li><span>|</span></li>
                     <li>
-                        <a
-                            onClick={() => navigate('/specialties')}
-                            className={`${styles["nav-link"]} ${location.pathname === '/specialties' ? styles["active"] : ''}`}
-                        >
+                        <Link to="/specialties" className={`${styles["nav-link"]} ${location.pathname === '/specialties' ? styles["active"] : ''}`}>
                             {t('nav.specialties')}
-                        </a>
+                        </Link>
                     </li>
                     <li><span>|</span></li>
                     <li>
-                        <a
-                            onClick={() => navigate('/doctors')}
-                            className={`${styles["nav-link"]} ${location.pathname === '/doctors' ? styles["active"] : ''}`}
-                        >
+                        <Link to="/doctors" className={`${styles["nav-link"]} ${location.pathname === '/doctors' ? styles["active"] : ''}`}>
                             {t('nav.doctors')}
-                        </a>
+                        </Link>
                     </li>
                     <li><span>|</span></li>
                     <li>
-                        <a
-                            onClick={() => navigate('/app/articles')}
-                            className={`${styles["nav-link"]} ${location.pathname === '/articles' ? styles["active"] : ''}`}
-                        >
+                        <Link to="/app/articles" className={`${styles["nav-link"]} ${location.pathname === '/articles' ? styles["active"] : ''}`}>
                             {t('nav.health-articles')}
-                        </a>
+                        </Link>
                     </li>
                     <li><span>|</span></li>
                     <li>
-                        <a
-                            onClick={() => navigate('/about')}
-                            className={`${styles["nav-link"]} ${location.pathname === '/about' ? styles["active"] : ''}`}
-                        >
+                        <Link to="/about" className={`${styles["nav-link"]} ${location.pathname === '/about' ? styles["active"] : ''}`}>
                             {t('nav.about')}
-                        </a>
+                        </Link>
                     </li>
                 </ul>
             </nav>
@@ -347,31 +390,32 @@ function HomePage() {
             <section className={styles["doctors"]}>
                 <h2>{t('doctors.title')}</h2>
                 <div className={styles["doctor-carousel-container"]}>
-                    <button onClick={handlePrev} disabled={currentIndex === 0} className={styles["doctor-nav-button"]}>←</button>
-
                     <div className={styles["doctors-grid"]}>
-                        {visibleDoctors?.map((doctor, index) => (
-                            <a key={`doctor-${doctor.userName}-${index}`} href={`/doctor/details/${doctor.userName}`} className={styles["doctor-card"]}>
-                                <div className={styles["doctor-photo"]}>
-                                    <img className={styles['doctor-photo']} src={doctor.avatarUrl}></img>
+                        {getVisibleDoctors().map((doctor, index) => (
+                            <Link
+                                key={`doctor-${doctor.userName}-${index}`}
+                                to={`/doctor/details/${doctorIdMap[doctor.userName] || doctor.userName}`}
+                                state={{ doctorId: doctorIdMap[doctor.userName], userName: doctor.userName, fullName: doctor.fullName }}
+                                className={styles["doctor-card"]}
+                            >
+                                <div className={styles["doctor-photo"]} style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                    <img className={styles['doctor-photo']} src={doctor.avatarUrl} style={{objectFit:'cover', display:'block'}} />
                                 </div>
-                                <h3>{doctor.fullName}</h3>
-                                <p className={styles["specialty"]}>{t('doctors.specialty')} - {doctor.specializationName}</p>
-                                <p className={styles["specialty"]}>{doctor.yearsOfExperience} {t('common.years-experience')}</p>
-                                <div className={styles["rating"]}>
-                                    {'★'.repeat(Math.round(doctor.averageRating)) + '☆'.repeat(5 - Math.round(doctor.averageRating))}
+                                <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'center'}}>
+                                    <h3 style={{margin:0}}>{doctor.fullName}</h3>
+                                    <p className={styles["specialty"]} style={{margin:0}}>
+                                        {(doctorEducationMap[doctor.userName] || '—')} - {doctor.specializationName}
+                                    </p>
+                                    <p className={styles["specialty"]} style={{margin:0}}>
+                                        {doctor.yearsOfExperience} {t('common.years-experience')}
+                                    </p>
+                                    <div className={styles["rating"]}>
+                                        {'★'.repeat(Math.round(doctor.averageRating)) + '☆'.repeat(5 - Math.round(doctor.averageRating))}
+                                    </div>
                                 </div>
-                            </a>
+                            </Link>
                         ))}
                     </div>
-
-                    <button
-                        onClick={handleNext}
-                        disabled={currentIndex + doctorsPerPage >= (homeMetadata?.displayedDoctors?.length ?? 0)}
-                        className={styles["doctor-nav-button"]}>
-                        →
-                    </button>
-
                 </div>
                 <div className={styles["view-all"]}>
                     <button 

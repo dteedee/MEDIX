@@ -74,8 +74,6 @@ import ErrorPageWrapper from './pages/error/ErrorPageWrapper';
 import PrivacyPolicy from './pages/public/PrivacyPolicy';
 import TermsOfService from './pages/public/TermsOfService';
 import AboutUs from './pages/public/AboutUs';
-import DoctorProfileList from './pages/manager/DoctorProfileList';
-import DoctorProfileDetails from './pages/manager/DoctorProfileDetails';
 import EMRTimeline from './pages/patient/EMRTimeline';
 
 export function App() {

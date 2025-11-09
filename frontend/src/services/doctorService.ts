@@ -68,6 +68,26 @@ class DoctorService {
         return response.data;
     }
 
+    async getMetadata(): Promise<DoctorRegisterMetadata> {
+        try {
+            const response = await apiClient.get<DoctorRegisterMetadata>('/doctor/register-metadata');
+            return response.data;
+        } catch (error: any) {
+            console.error('Get metadata error: ', error);
+            throw this.handleApiError(error);
+        }
+    }
+
+    async getStatistics(id: string): Promise<any> {
+        try {
+            const response = await apiClient.get<any>(`/doctor/${id}/statistics`);
+            return response.data;
+        } catch (error: any) {
+            console.error('Get doctor statistics error: ', error);
+            throw this.handleApiError(error);
+        }
+    }
+
     private handleApiError(error: any): Error {
         if (error.response?.data) {
             const apiError = error.response.data;

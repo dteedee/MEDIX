@@ -17,20 +17,37 @@ builder.Services.AddDbContext<MedixContext>(options =>
 
 builder.Services.ConfigureServices();
 
-
-
 IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-
-PayOS payOS = new PayOS(configuration["Environment:PAYOS_CLIENT_ID"] ?? throw new Exception("Cannot find environment"),
-                    configuration["Environment:PAYOS_API_KEY"] ?? throw new Exception("Cannot find environment"),
-                    configuration["Environment:PAYOS_CHECKSUM_KEY"] ?? throw new Exception("Cannot find environment"));
-builder.Services.AddSingleton(payOS);
 
 // ================= HangFire =================
 builder.Services.AddHangfire(config =>
     config.UseSqlServerStorage(builder.Configuration.GetConnectionString("MyCnn")));
-
 builder.Services.AddHangfireServer();
+
+// ================= PayOS CLIENTS =================
+builder.Services.AddKeyedSingleton("OrderClient", (sp, key) =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new PayOSClient(new PayOSOptions
+    {
+        ClientId = config["PayOS:ClientId"] ?? Environment.GetEnvironmentVariable("PAYOS_CLIENT_ID"),
+        ApiKey = config["PayOS:ApiKey"] ?? Environment.GetEnvironmentVariable("PAYOS_API_KEY"),
+        ChecksumKey = config["PayOS:ChecksumKey"] ?? Environment.GetEnvironmentVariable("PAYOS_CHECKSUM_KEY"),
+        LogLevel = LogLevel.Debug,
+    });
+});
+
+builder.Services.AddKeyedSingleton("TransferClient", (sp, key) =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new PayOSClient(new PayOSOptions
+    {
+        ClientId = config["PayOS:PayoutClientId"],
+        ApiKey = config["PayOS:PayoutApiKey"],
+        ChecksumKey = config["PayOS:PayoutChecksumKey"],
+        LogLevel = LogLevel.Debug,
+    });
+});
 
 // ================= CORS =================
 builder.Services.AddCors(options =>
@@ -54,6 +71,7 @@ var jwtAudience = jwtSection["Audience"];
 Console.WriteLine($"JWT Key present: {!string.IsNullOrWhiteSpace(jwtKey)}");
 Console.WriteLine($"JWT Issuer: {jwtIssuer}");
 Console.WriteLine($"JWT Audience: {jwtAudience}");
+
 if (string.IsNullOrWhiteSpace(jwtKey))
 {
     throw new InvalidOperationException("JWT Key is missing or empty!");
@@ -117,11 +135,7 @@ builder.Services.AddSwaggerGen(c =>
 // ================= APPLICATION SERVICES =================
 // AutoMapper is already configured in ServiceConfiguration.cs
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-
-
 builder.Services.ConfigureServices();
-
-
 
 // ================= BUILD APP =================
 var app = builder.Build();
@@ -141,11 +155,14 @@ app.UseStaticFiles();
 // Middleware xử lý exception toàn cục
 app.UseMiddleware<Medix.API.Presentation.Middleware.ExceptionHandlingMiddleware>();
 
-app.UseHangfireDashboard(); // Optional: enables the dashboard at /hangfire
+// Hangfire dashboard
+app.UseHangfireDashboard();
 
+// Authentication + Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Map controllers
 app.MapControllers();
 
 app.Run();

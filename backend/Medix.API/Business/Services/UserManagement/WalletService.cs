@@ -57,6 +57,30 @@ namespace Medix.API.Business.Services.UserManagement
           return  _walletRepository.GetWalletBalanceAsync(userId);
         }
 
+        public async Task<WalletDTo?> GetWalletByIdAsync(Guid walletId)
+        {
+            // 1. Gọi repository để lấy Wallet Entity
+            var wallet = await _walletRepository.GetWalletByIdAsync(walletId);
+
+            // 2. Nếu không tìm thấy, trả về null
+            if (wallet == null)
+            {
+                return null;
+            }
+
+            // 3. Nếu tìm thấy, ánh xạ từ Entity sang DTO
+            return new WalletDTo
+            {
+                Id = wallet.Id,
+                UserId = wallet.UserId,
+                Balance = wallet.Balance,
+                Currency = wallet.Currency,
+                IsActive = wallet.IsActive,
+                CreatedAt = wallet.CreatedAt,
+                UpdatedAt = wallet.UpdatedAt
+            };
+        }
+
         public Task<WalletDTo?> GetWalletByUserIdAsync(Guid userId)
         {
            var result =  _walletRepository.GetWalletByUserIdAsync(userId);

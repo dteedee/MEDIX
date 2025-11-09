@@ -1,24 +1,87 @@
 import React, { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useLanguage } from '../../contexts/LanguageContext';
 import styles from '../../styles/public/about.module.css';
+import homeStyles from '../../styles/public/home.module.css';
 
 const AboutUs: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { t } = useLanguage();
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
   return (
-    <div className={styles["about-container"]}>
-      <div className={styles["about-content"]}>
-        <div className={styles["breadcrumb"]}>
-          <Link to="/">Trang chủ</Link> / <span>Về chúng tôi</span>
-        </div>
+    <>
+      {/* Navigation Bar - Giống HomePage và ArticleReaderPage */}
+      <nav className={homeStyles["navbar"]}>
+        <ul className={homeStyles["nav-menu"]}>
+          <li>
+            <a
+              onClick={() => navigate('/')}
+              className={`${homeStyles["nav-link"]} ${location.pathname === '/' ? homeStyles["active"] : ''}`}
+            >
+              {t('nav.home')}
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a
+              onClick={() => navigate('/ai-chat')}
+              className={`${homeStyles["nav-link"]} ${location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}
+            >
+              {t('nav.ai-diagnosis')}
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a
+              onClick={() => navigate('/specialties')}
+              className={`${homeStyles["nav-link"]} ${location.pathname === '/specialties' ? homeStyles["active"] : ''}`}
+            >
+              {t('nav.specialties')}
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a
+              onClick={() => navigate('/doctors')}
+              className={`${homeStyles["nav-link"]} ${location.pathname === '/doctors' ? homeStyles["active"] : ''}`}
+            >
+              {t('nav.doctors')}
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a
+              onClick={() => navigate('/app/articles')}
+              className={`${homeStyles["nav-link"]} ${location.pathname === '/articles' ? homeStyles["active"] : ''}`}
+            >
+              {t('nav.health-articles')}
+            </a>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <a
+              onClick={() => navigate('/about')}
+              className={`${homeStyles["nav-link"]} ${location.pathname === '/about' ? homeStyles["active"] : ''}`}
+            >
+              {t('nav.about')}
+            </a>
+          </li>
+        </ul>
+      </nav>
 
-        <div className={styles["about-header"]}>
-          <h1>GIỚI THIỆU VỀ MEDIX</h1>
-        </div>
+      <div className={styles["about-container"]}>
+        <div className={styles["about-content"]}>
+          <div className={styles["aboutContentInner"]}>
+            <div className={styles["about-header"]}>
+              <h1>GIỚI THIỆU VỀ MEDIX</h1>
+            </div>
 
-        <div className={styles["about-body"]}>
+            <div className={styles["about-body"]}>
           <section className={styles["intro-section"]}>
             <h2>Giới thiệu chung</h2>
             <p>
@@ -249,9 +312,11 @@ const AboutUs: React.FC = () => {
               </div>
             </div>
           </section>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

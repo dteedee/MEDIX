@@ -41,5 +41,44 @@ export interface MedicalRecord {
   dateOfBirth?: string;
   address?: string;
   identificationNumber?: string;
-  
+}
+
+export interface MedicalRecordDto {
+  id: string;
+  date: string;
+  doctor: string;
+  chiefComplaint: string;
+  diagnosis: string;
+  treatmentPlan: string;
+  attatchments: AttatchmentDto[];
+}
+
+export interface MedicalRecordQuery {
+  dateFrom: string | null;
+  dateTo: string | null;
+}
+
+export interface PrescriptionDto {
+  id: string;
+  medicationName: string;
+  instructions: string;
+}
+
+export interface AttatchmentDto {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+}
+
+export interface MedicalRecordDetail {
+  id: string;
+  date: string;
+  doctor: string;
+  chiefComplaint: string;
+  diagnosis: string;
+  treatmentPlan: string;
+  prescription: PrescriptionDto[];
+  attatchments: AttatchmentDto[];
+}
+
 }

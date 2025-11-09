@@ -292,7 +292,7 @@ public async Task<UserDto> CreateUserAsync(CreateUserDTO createUserDto, string p
             };
         }
 
-        public async Task<UserBasicInfoDto> UpdateUserBasicInfo(UpdateUserDto updateDto)
+        public async Task<UserBasicInfoDto> UpdateUserBasicInfo(UpdateUserDto updateDto) //f54afdd6-4c49-4584-8fcd-5fd910653bf4
         {
             var user = await _userRepository.GetByIdAsync(updateDto.Id);
             if (user == null) throw new ArgumentException("Không tìm thấy người dùng");

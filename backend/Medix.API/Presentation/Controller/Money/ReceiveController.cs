@@ -250,53 +250,45 @@ namespace Medix.API.Presentation.Controller.Money
             // Fallback to current time if parsing fails    
             return DateTimeOffset.Now;
         }
-   
+
 
         [HttpGet("payment-success")]
-        public Task<IActionResult> paymentSuccess([FromQuery]PaymentReturnDto paymentReturnDto)
+        public async Task<IActionResult> paymentSuccess([FromQuery] PaymentReturnDto paymentReturnDto)
         {
-            //var reusultPayOS = _client.PaymentRequests.GetAsync(paymentReturnDto.OrderCode.ToString());
-
-
-            //if (reusultPayOS == null)
-            //{
-            //    return Task.FromResult<IActionResult>(BadRequest(new { message = "Payment was not found" }));
-            //}
-
-            //if (!reusultPayOS.Status.Equals("PAID"))
-            //{
-            //    return Task.FromResult<IActionResult>(BadRequest(new { message = "Payment was not successful" }));
-            //}
-
             if (paymentReturnDto.Status != "PAID")
             {
-
-                return Task.FromResult<IActionResult>(BadRequest(new { message = "Payment was not successfull" }));
+                return BadRequest(new { message = "Payment was not successful" });
             }
+
             var order = OrderService.GetOrderByOrderCode(paymentReturnDto.OrderCode);
 
             var frontendBaseUrl = order.baseURLFE ?? "http://localhost:5173";
-            var walletTransaction = transactionService.GetWalletTransactionByOrderCodeAsync(paymentReturnDto.OrderCode).Result;
+
+            // Fix: Add await keyword here
+            var walletTransaction = await transactionService.GetWalletTransactionByOrderCodeAsync(paymentReturnDto.OrderCode);
 
             if (walletTransaction == null)
             {
-                return Task.FromResult<IActionResult>(BadRequest(new { message = "Wallet transaction not found for the given order code" }));
+                return BadRequest(new { message = "Wallet transaction not found for the given order code" });
             }
-            walletTransaction.Status = "Completed";
-             
-            transactionService.UppdateWalletTrasactionAsync(walletTransaction);
 
-            var wallet = walletService.GetWalletByIdAsync((Guid)walletTransaction.walletId).Result;
+            walletTransaction.Status = "Completed";
+
+            // Fix: Add await keyword here
+            await transactionService.UppdateWalletTrasactionAsync(walletTransaction);
+
+            // Fix: Add await keyword and remove .Result
+            var wallet = await walletService.GetWalletByIdAsync((Guid)walletTransaction.walletId);
+
             if (wallet == null)
             {
-                return Task.FromResult<IActionResult>(BadRequest(new { message = "Wallet not found for the transaction" }));
+                return BadRequest(new { message = "Wallet not found for the transaction" });
             }
-            wallet.Balance += walletTransaction.Amount ?? 0;
-            walletService.IncreaseWalletBalanceAsync(wallet.UserId, walletTransaction.Amount ?? 0);
-            return Task.FromResult<IActionResult>(Redirect($"{frontendBaseUrl}/app/patient/finance"));
 
+            // Fix: Add await keyword here
+            await walletService.IncreaseWalletBalanceAsync(wallet.UserId, walletTransaction.Amount ?? 0);
 
-
+            return Redirect($"{frontendBaseUrl}/app/patient/finance");
         }
 
 

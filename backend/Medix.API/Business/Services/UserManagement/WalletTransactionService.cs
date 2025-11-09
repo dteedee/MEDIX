@@ -87,41 +87,50 @@ namespace Medix.API.Business.Services.UserManagement
             };
         }
 
+        // Trong WalletTransactionService
         public async Task<WalletTransactionDto?> UppdateWalletTrasactionAsync(WalletTransactionDto walletTransactionDto)
         {
-            // 1. Kiểm tra DTO đầu vào
+            // 1. Kiểm tra DTO đầu vào (Giữ nguyên)
             if (walletTransactionDto?.id == null)
             {
-                return null; // Hoặc throw exception tùy theo business logic
+                return null;
             }
 
-            // 2. Ánh xạ từ DTO sang Entity
-            var trans = new WalletTransaction
-            {
-                Id = walletTransactionDto.id.Value,
-                WalletId = walletTransactionDto.walletId ?? Guid.Empty,
-                TransactionTypeCode = walletTransactionDto.TransactionTypeCode ?? string.Empty,
-                Amount = walletTransactionDto.Amount ?? 0,
-                BalanceBefore = walletTransactionDto.BalanceBefore ?? 0,
-                BalanceAfter = walletTransactionDto.BalanceAfter,
-                Status = walletTransactionDto.Status ?? "Pending",
-                OrderCode = walletTransactionDto.orderCode,
-                RelatedAppointmentId = walletTransactionDto.RelatedAppointmentId,
-                Description = walletTransactionDto.Description,
-                TransactionDate = walletTransactionDto.TransactionDate ?? DateTime.UtcNow,
-                CreatedAt = walletTransactionDto.CreatedAt ?? DateTime.UtcNow
-            };
+            // ********** PHẦN SỬA ĐỔI QUAN TRỌNG **********
+            // THAY VÌ TẠO ENTITY MỚI, CHÚNG TA CẦN LẤY ENTITY HIỆN CÓ TỪ DB.
+            // Vì không có GetById, ta giả sử có GetById, hoặc tìm cách khác để lấy entity cần update.
 
-            // 3. Gọi repository để update
-            var updated = await walletTransactionRepository.UpdateWalletTransactionAsync(trans);
+            // Nếu bạn dùng OrderCode để tìm Entity gốc
+            if (walletTransactionDto.orderCode == null) return null; // Không có orderCode để tìm
 
-            // 4. Kiểm tra kết quả update
+            var transToUpdate = await walletTransactionRepository.GetWalletTransactionByOrderCodeAsync(walletTransactionDto.orderCode.Value);
+
+            if (transToUpdate == null) return null;
+
+            // 2. ÁP DỤNG CÁC THAY ĐỔI TỪ DTO LÊN ENTITY ĐANG ĐƯỢC THEO DÕI
+            // Chỉ cập nhật các trường được truyền từ DTO và cho phép thay đổi.
+            transToUpdate.WalletId = walletTransactionDto.walletId ?? transToUpdate.WalletId;
+            transToUpdate.TransactionTypeCode = walletTransactionDto.TransactionTypeCode ?? transToUpdate.TransactionTypeCode;
+            transToUpdate.Amount = walletTransactionDto.Amount ?? transToUpdate.Amount;
+            transToUpdate.BalanceBefore = walletTransactionDto.BalanceBefore ?? transToUpdate.BalanceBefore;
+            transToUpdate.BalanceAfter = walletTransactionDto.BalanceAfter; // Giữ nguyên nullability
+            transToUpdate.Status = walletTransactionDto.Status ?? "Pending";
+            transToUpdate.RelatedAppointmentId = walletTransactionDto.RelatedAppointmentId;
+            transToUpdate.Description = walletTransactionDto.Description;
+            // Bỏ qua TransactionDate và CreatedAt nếu không muốn chúng bị ghi đè.
+
+            // ********** KẾT THÚC PHẦN SỬA ĐỔI QUAN TRỌNG **********
+
+            // 3. Gọi repository để update (truyền Entity đã được theo dõi)
+            var updated = await walletTransactionRepository.UpdateWalletTransactionAsync(transToUpdate);
+
+            // 4. Kiểm tra kết quả update (Giữ nguyên)
             if (updated == null)
             {
                 return null;
             }
 
-            // 5. Ánh xạ từ Entity về DTO
+            // 5. Ánh xạ từ Entity về DTO (Giữ nguyên)
             return new WalletTransactionDto
             {
                 id = updated.Id,

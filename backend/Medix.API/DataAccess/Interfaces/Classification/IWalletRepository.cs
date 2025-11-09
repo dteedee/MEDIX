@@ -11,6 +11,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
 
         public Task<Wallet> CreateWalletAsync(Wallet wallet);
         public Task<Wallet> GetWalletByUserIdAsync(Guid userId);
+        public Task<Wallet> GetWalletByIdAsync(Guid walletId);
 
     }
 }

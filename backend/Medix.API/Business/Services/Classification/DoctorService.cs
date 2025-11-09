@@ -101,7 +101,7 @@ namespace Medix.API.Business.Services.Classification
         }
 
         public async Task<IEnumerable<ServiceTierWithPaginatedDoctorsDto>> GetGroupedDoctorsAsync(
-         DoctorQueryParameters queryParams) // <-- THAY ĐỔI Ở ĐÂY
+         DoctorQueryParameters queryParams)
         {
             var tiers = await _serviceTierRepo.GetActiveTiersAsync();
             var resultList = new List<ServiceTierWithPaginatedDoctorsDto>();

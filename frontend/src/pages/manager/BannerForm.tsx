@@ -87,6 +87,14 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
       newErrors.displayOrder = 'Thứ tự hiển thị phải lớn hơn hoặc bằng 0';
     }
 
+    if (!startDateLocal) {
+      newErrors.startDate = 'Ngày bắt đầu là bắt buộc.';
+    }
+
+    if (!endDateLocal) {
+      newErrors.endDate = 'Ngày kết thúc là bắt buộc.';
+    }
+
     if (startDateLocal && endDateLocal) {
       const start = new Date(startDateLocal);
       const end = new Date(endDateLocal);
@@ -99,7 +107,7 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
       const end = new Date(endDateLocal);
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Chuẩn hóa về đầu ngày để so sánh
-      if (end < today) {
+      if (mode !== 'edit' && end < today) { // Chỉ kiểm tra cho mode create
         newErrors.dateRange = 'Ngày kết thúc không được là một ngày trong quá khứ.';
       }
     }
@@ -374,8 +382,7 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
         {/* Date Range */}
         <div className={styles.formGroup}>
           <label className={styles.label}>
-            <i className="bi bi-calendar-range"></i>
-            Thời gian hiển thị (tùy chọn)
+            <i className="bi bi-calendar-range"></i> Thời gian hiển thị <span className={styles.required}>*</span>
           </label>
           <div className={styles.gridTwoCols}>
             <div className={styles.formGroup}>
@@ -385,17 +392,18 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
               </label>
               <input
                 type="date"
-                value={formData.startDate}
+                value={startDateLocal}
                 onChange={e => {
-                  setFormData(prev => ({ ...prev, startDate: e.target.value }));
-                  if (errors.dateRange) {
+                  setStartDateLocal(e.target.value);
+                  if (errors.dateRange || errors.startDate) {
                     const newErrors = { ...errors };
                     delete newErrors.dateRange;
+                    delete newErrors.startDate;
                     setErrors(newErrors);
                   }
                 }}
                 max="9999-12-31"
-                className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
+                className={`${styles.input} ${errors.dateRange || errors.startDate ? styles.inputError : ''}`}
                 disabled={mode === 'view'}
               />
             </div>
@@ -406,18 +414,19 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
               </label>
               <input
                 type="date"
-                value={formData.endDate}
+                value={endDateLocal}
                 onChange={e => {
-                  setFormData(prev => ({ ...prev, endDate: e.target.value }));
-                  if (errors.dateRange) {
+                  setEndDateLocal(e.target.value);
+                  if (errors.dateRange || errors.endDate) {
                     const newErrors = { ...errors };
                     delete newErrors.dateRange;
+                    delete newErrors.endDate;
                     setErrors(newErrors);
                   }
                 }}
-                min={today}
+                min={startDateLocal || today}
                 max="9999-12-31"
-                className={`${styles.input} ${errors.dateRange ? styles.inputError : ''}`}
+                className={`${styles.input} ${errors.dateRange || errors.endDate ? styles.inputError : ''}`}
                 disabled={mode === 'view'}
               />
             </div>
@@ -426,6 +435,8 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
           {mode !== 'view' && (
             <span className={styles.helpText}>Banner sẽ tự động ẩn khi hết hạn</span>
           )}
+          {errors.startDate && <p className={styles.errorText}>{errors.startDate}</p>}
+          {errors.endDate && <p className={styles.errorText}>{errors.endDate}</p>}
         </div>
 {/* Status */}
         <div className={styles.formGroup}>

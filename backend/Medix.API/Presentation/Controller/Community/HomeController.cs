@@ -1,4 +1,4 @@
-﻿using Medix.API.Business.Interfaces.Classification;
+﻿﻿using Medix.API.Business.Interfaces.Classification;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Medix.API.Presentation.Controller.Community
@@ -27,7 +27,13 @@ namespace Medix.API.Presentation.Controller.Community
             try
             {
                 var banners = await _siteBannerService.GetHomePageBanners();
-                var bannerUrls = banners.Select(b => b.BannerImageUrl).ToList();
+                var bannerDetails = banners.Select(b => new
+                {
+                    b.BannerImageUrl,
+                    b.BannerUrl,
+                    b.DisplayOrder,
+                    b.CreatedAt
+                }).ToList();
 
                 var doctors = await _doctorService.GetHomePageDoctorsAsync();
                 var displayedDoctors = doctors.Select(d => new
@@ -50,7 +56,7 @@ namespace Medix.API.Presentation.Controller.Community
                     PublishedAt = a.PublishedAt?.ToString("dd/MM/yyyy")
                 }).Take(3).ToList();
 
-                return Ok(new { bannerUrls, displayedDoctors, articles });
+                return Ok(new { banners = bannerDetails, displayedDoctors, articles });
             }
             catch (Exception ex)
             {

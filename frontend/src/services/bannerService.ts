@@ -1,13 +1,18 @@
 import { BannerDTO, CreateBannerRequest, UpdateBannerRequest } from '../types/banner.types'
 import { apiClient } from '../lib/apiClient'
-const BASE = '/SiteBanners'
+const BASE = '/SiteBanners';
+
+interface GetAllParams {
+  page?: number;
+  pageSize?: number;
+}
 
 // Helper function to map API response to our DTO consistently
 function mapToDTO(x: any): BannerDTO {
   console.log('Mapping banner data:', x);
   return {
     id: x.id,
-    bannerTitle: x.bannerTitle ?? x.title ?? '',
+    bannerTitle: x.bannerTitle || x.title || '',
     bannerImageUrl: x.bannerImageUrl ?? x.imageUrl,
     bannerUrl: x.bannerUrl ?? x.link,
     displayOrder: x.displayOrder ?? x.order ?? 0,
@@ -20,8 +25,8 @@ function mapToDTO(x: any): BannerDTO {
 }
 
 export const bannerService = {
-  getAll: async (): Promise<BannerDTO[]> => {
-    const r = await apiClient.get(BASE);
+  getAll: async (params?: GetAllParams): Promise<BannerDTO[]> => {
+    const r = await apiClient.get(BASE, { params });
     const data = r.data;
     
     // Handle multiple response shapes from backend

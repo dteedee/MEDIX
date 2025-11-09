@@ -43,6 +43,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
   const [coverPreview, setCoverPreview] = useState<string>(article?.coverImageUrl || '');
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [wordCount, setWordCount] = useState(0);
 
   useEffect(() => {
     if (article) {
@@ -62,6 +63,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
       });
       setThumbnailPreview(article.thumbnailUrl || '');
       setCoverPreview(article.coverImageUrl || '');
+      setWordCount(countWords(article.content || ''));
     }
   }, [article]);
 
@@ -88,6 +90,15 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
 
     fetchStatusesAndCategories();
   }, [mode, formData.statusCode]); // Re-run if mode or initial status changes
+
+  // Word count utility
+  const countWords = (htmlString: string): number => {
+    if (!htmlString) return 0;
+    const text = htmlString.replace(/<[^>]*>/g, ' ');
+    const cleanedText = text.replace(/\s+/g, ' ').trim();
+    if (cleanedText === '') return 0;
+    return cleanedText.split(' ').length;
+  };
 
   // Ensure authorId is always set if user is available
   useEffect(() => { if (user?.id && formData.authorId !== user.id) setFormData(prev => ({ ...prev, authorId: user.id })); }, [user?.id, formData.authorId]);
@@ -120,12 +131,16 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
 
     if (!formData.summary.trim()) {
       newErrors.summary = 'Tóm tắt không được để trống';
-    } else if (formData.summary.length > 500) {
+    } else if (formData.summary.length > 255) {
       newErrors.summary = 'Tóm tắt không được vượt quá 500 ký tự';
     }
 
     if (!formData.content.trim()) {
       newErrors.content = 'Nội dung không được để trống';
+    } else {
+      if (countWords(formData.content) > 7000) {
+        newErrors.content = 'Nội dung không được vượt quá 7000 từ';
+      }
     }
 
     if (formData.displayOrder < 0) {
@@ -428,10 +443,10 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
             className={`${styles.textarea} ${errors.summary ? styles.inputError : ''}`}
             placeholder="Nhập tóm tắt bài viết"
             rows={3}
-            maxLength={500}
+            maxLength={255}
           />
           {errors.summary && <p className={styles.errorText}>{errors.summary}</p>}
-          {mode !== 'view' && <p className={styles.helpText}>{formData.summary.length}/500 ký tự</p>}
+          {mode !== 'view' && <p className={styles.helpText}>{formData.summary.length}/255 ký tự</p>}
         </div>
 
         {/* Content */}
@@ -447,7 +462,12 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
               onChange={(event, editor) => {
                 const data = editor.getData();
                 setFormData(prev => ({ ...prev, content: data }));
-                if (errors.content && data.trim()) {
+                const currentWordCount = countWords(data);
+                setWordCount(currentWordCount);
+
+                if (currentWordCount > 7000) {
+                  setErrors(prev => ({ ...prev, content: 'Nội dung không được vượt quá 7000 từ' }));
+                } else if (errors.content && data.trim()) {
                   const newErrors = { ...errors };
                   delete newErrors.content;
                   setErrors(newErrors);
@@ -464,6 +484,9 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
             />
           </div>
           {errors.content && <p className={styles.errorText}>{errors.content}</p>}
+          {mode !== 'view' && (
+            <p className={`${styles.helpText} ${wordCount > 7000 ? styles.errorText : ''}`}>{wordCount}/7000 từ</p>
+          )}
         </div>
 
         {/* Images */}

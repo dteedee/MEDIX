@@ -309,6 +309,17 @@ const ScheduleManagement: React.FC = () => {
 
   return (
     <div className="schedule-management-page">
+      {/* Header */}
+      <div className="page-header">
+        <div className="header-left">
+          <h1>Quản lý lịch làm việc</h1>
+          <p>Thiết lập lịch cố định và đăng ký các ca làm việc linh hoạt.</p>
+        </div>
+        <div className="header-right">
+          <div className="_dateTime_1lhoz_107"><i className="bi bi-calendar3"></i><span>{new Date().toLocaleDateString('vi-VN')}</span></div>
+        </div>
+      </div>
+
       {/* Chú thích */}
       <div className="schedule-guide-note">
         <p className="note-label">Lưu ý:</p>

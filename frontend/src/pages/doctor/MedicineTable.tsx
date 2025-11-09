@@ -8,6 +8,7 @@ interface MedicineTableProps {
   medicines: Prescription[];
   onDelete: (id: string) => void;
   onUpdate: (id: string, field: keyof Prescription, value: any) => void;
+  isEditable: boolean;
 }
 
 interface MedicationDetailsModalProps {
@@ -16,7 +17,7 @@ interface MedicationDetailsModalProps {
   onUpdate: (id: string, field: keyof Prescription, value: any) => void;
 }
 
-export default function MedicineTable({ medicines, onDelete, onUpdate }: MedicineTableProps) {
+export default function MedicineTable({ medicines, onDelete, onUpdate, isEditable }: MedicineTableProps) {
   const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
 
   return (
@@ -44,6 +45,7 @@ export default function MedicineTable({ medicines, onDelete, onUpdate }: Medicin
                   onChange={(e) => onUpdate(medicine.id, "medicationName", e.target.value)}
                   className="table-input"
                   placeholder="Nhập tên thuốc"
+                  disabled={!isEditable}
                 />
               </td>
               <td>
@@ -52,7 +54,8 @@ export default function MedicineTable({ medicines, onDelete, onUpdate }: Medicin
                   value={medicine.dosage}
                   onChange={(e) => onUpdate(medicine.id, "dosage", e.target.value)}
                   className="table-input"
-                  placeholder=""
+                  placeholder="Viên"
+                  disabled={!isEditable}
                 />
               </td>
               <td>
@@ -61,7 +64,8 @@ export default function MedicineTable({ medicines, onDelete, onUpdate }: Medicin
                   value={medicine.frequency}
                   onChange={(e) => onUpdate(medicine.id, "frequency", e.target.value)}
                   className="table-input"
-                  placeholder="2 lần/ngày"
+                  placeholder="VD: 2 lần/ngày"
+                  disabled={!isEditable}
                 />
               </td>
               <td>
@@ -70,7 +74,8 @@ export default function MedicineTable({ medicines, onDelete, onUpdate }: Medicin
                   value={medicine.duration}
                   onChange={(e) => onUpdate(medicine.id, "duration", e.target.value)}
                   className="table-input"
-                  placeholder="7 ngày"
+                  placeholder="VD: 7 ngày"
+                  disabled={!isEditable}
                 />
               </td>
               <td>
@@ -79,14 +84,17 @@ export default function MedicineTable({ medicines, onDelete, onUpdate }: Medicin
                   value={medicine.instructions}
                   onChange={(e) => onUpdate(medicine.id, "instructions", e.target.value)}
                   className="table-input"
-                  placeholder="Sau ăn"
+                  placeholder="VD: Sau ăn"
+                  disabled={!isEditable}
                 />
               </td>
               
               <td>
-                <button className="btn-delete" onClick={() => onDelete(medicine.id)} title="Xóa">
-                  ✕
-                </button>
+                {isEditable && (
+                  <button className="btn-delete" onClick={() => onDelete(medicine.id)} title="Xóa">
+                    ✕
+                  </button>
+                )}
               </td>
             </tr>
           ))}

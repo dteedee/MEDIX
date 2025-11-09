@@ -196,11 +196,12 @@ const MedicalRecordDetails: React.FC = () => {
   // Xác định xem hồ sơ có được phép chỉnh sửa hay không
   const appointmentDate = medicalRecord ? new Date(medicalRecord.appointmentDate) : new Date();
   const today = new Date();
-  const isEditable =
+  const isEditable = !!(
     medicalRecord &&
     appointmentDate.getFullYear() === today.getFullYear() &&
     appointmentDate.getMonth() === today.getMonth() &&
-    appointmentDate.getDate() === today.getDate();
+    appointmentDate.getDate() === today.getDate()
+  );
   if (!medicalRecord) {
     return (
       <div className="container mx-auto p-6 text-center">
@@ -367,7 +368,12 @@ const MedicalRecordDetails: React.FC = () => {
           </button>
           )}
         </div>
-        <MedicineTable medicines={medicalRecord.prescriptions} onDelete={isEditable ? handleDeleteMedicine : () => {}} onUpdate={isEditable ? handleUpdateMedicine : () => {}} />
+        <MedicineTable 
+          medicines={medicalRecord.prescriptions} 
+          onDelete={handleDeleteMedicine} 
+          onUpdate={handleUpdateMedicine} 
+          isEditable={isEditable}
+        />
       </section>
 
       <div className="form-footer">

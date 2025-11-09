@@ -38,6 +38,11 @@ function DoctorDetails() {
         startTime: string;
         endTime: string;
     }>>([]);
+    
+    // Refs for scrolling
+    const calendarSectionRef = useRef<HTMLDivElement>(null);
+    const timeslotsSectionRef = useRef<HTMLDivElement>(null);
+    const bookingConfirmationRef = useRef<HTMLDivElement>(null);
     // Helper function to get available dates (only today and future dates)
     // In Vietnam, week starts on Monday (1) and ends on Sunday (7)
     // Rules:
@@ -828,6 +833,16 @@ function DoctorDetails() {
         if (date) {
             const slots = getAvailableTimeSlots(date);
             setAvailableTimeSlots(slots);
+            
+            // Scroll to time slots section after a short delay to allow DOM update
+            setTimeout(() => {
+                if (timeslotsSectionRef.current) {
+                    timeslotsSectionRef.current.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                    });
+                }
+            }, 100);
         } else {
             setAvailableTimeSlots([]);
         }
@@ -844,6 +859,16 @@ function DoctorDetails() {
         setSelectedTimeSlot(slot);
         setShowPaymentButton(false);
         setIsCreatingPayment(false);
+        
+        // Scroll to booking confirmation section after a short delay to allow DOM update
+        setTimeout(() => {
+            if (bookingConfirmationRef.current) {
+                bookingConfirmationRef.current.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+            }
+        }, 100);
     };
 
     // Calculate consultation duration from selected time slot
@@ -942,6 +967,15 @@ function DoctorDetails() {
         const tab = searchParams.get('tab');
         if (tab === 'booking') {
             setActiveTabIndex(1);
+            // Scroll to calendar section after a short delay to allow DOM update
+            setTimeout(() => {
+                if (calendarSectionRef.current) {
+                    calendarSectionRef.current.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                    });
+                }
+            }, 200);
         }
     }, [searchParams]);
 
@@ -1376,9 +1410,20 @@ function DoctorDetails() {
                                         </div>
                                     </div>
 
-                                    <button 
+                                    <button
                                         className={styles.bookNowButton}
-                                        onClick={() => setActiveTabIndex(1)}
+                                        onClick={() => {
+                                            setActiveTabIndex(1);
+                                            // Scroll to calendar section after a short delay to allow DOM update
+                                            setTimeout(() => {
+                                                if (calendarSectionRef.current) {
+                                                    calendarSectionRef.current.scrollIntoView({ 
+                                                        behavior: 'smooth', 
+                                                        block: 'center' 
+                                                    });
+                                                }
+                                            }, 100);
+                                        }}
                                     >
                                         <i className="bi bi-calendar-check-fill"></i>
                                         Đặt lịch khám ngay
@@ -1399,7 +1444,18 @@ function DoctorDetails() {
                                 </button>
                                 <button
                                     className={`${styles.tabButton} ${activeTabIndex === 1 ? styles.active : ''}`}
-                                    onClick={() => setActiveTabIndex(1)}
+                                    onClick={() => {
+                                        setActiveTabIndex(1);
+                                        // Scroll to calendar section after a short delay to allow DOM update
+                                        setTimeout(() => {
+                                            if (calendarSectionRef.current) {
+                                                calendarSectionRef.current.scrollIntoView({ 
+                                                    behavior: 'smooth', 
+                                                    block: 'center' 
+                                                });
+                                            }
+                                        }, 100);
+                                    }}
                                 >
                                     <i className="bi bi-calendar-event"></i>
                                     Đặt lịch khám
@@ -1431,7 +1487,7 @@ function DoctorDetails() {
                                 {activeTabIndex === 1 && (
                                     <div className={styles.bookingTab}>
                                         {/* Step 1: Select Date */}
-                                        <div className={styles.calendarSection}>
+                                        <div ref={calendarSectionRef} className={styles.calendarSection}>
                                             <div className={styles.sectionHeader}>
                                                 <div className={styles.sectionHeaderContent}>
                                                     <div className={styles.sectionIconWrapper}>
@@ -1555,7 +1611,7 @@ function DoctorDetails() {
                                         
                                         {/* Step 2: Select Time (only shown after date is selected) */}
                                         {selectedDate && (
-                                            <div className={styles.timeslotsSection}>
+                                            <div ref={timeslotsSectionRef} className={styles.timeslotsSection}>
                                                 <div className={styles.sectionHeader}>
                                                     <div className={styles.sectionHeaderContent}>
                                                         <div className={styles.sectionIconWrapper}>
@@ -1570,35 +1626,117 @@ function DoctorDetails() {
                                                 <div className={styles.timeslotsContainer}>
                                                     {availableTimeSlots.length > 0 ? (
                                                         <>
-                                                            <div className={styles.timeslotsHeader}>
-                                                                <span className={styles.availableSlotsCount}>
-                                                                    {availableTimeSlots.length} ca khám có sẵn
-                                                                </span>
-                                                            </div>
-                                                            <div className={styles.timeslotsGrid}>
-                                                                {availableTimeSlots.map((slot, index) => {
-                                                                    const isSelected = selectedTimeSlot?.id === slot.id;
-                                                                    
-                                                                    return (
-                                                                        <button
-                                                                            key={index}
-                                                                            className={`${styles.timeslot} ${isSelected ? styles.selected : ''}`}
-                                                                            onClick={() => handleTimeSlotSelect(slot)}
-                                                                        >
-                                                                            <div className={styles.timeslotContent}>
-                                                                                <i className={`bi ${isSelected ? 'bi-check-circle-fill' : 'bi-clock-fill'}`}></i>
-                                                                                <span className={styles.timeText}>{slot.display}</span>
-                                                                            </div>
-                                                                            {slot.type === 'override' && slot.reason && (
-                                                                                <div className={styles.timeslotBadge}>
-                                                                                    <i className="bi bi-info-circle"></i>
-                                                                                    <span>{slot.reason}</span>
+                                                            {(() => {
+                                                                // 分组时段：上午（< 12:00）和下午（>= 12:00）
+                                                                const morningSlots = availableTimeSlots.filter(slot => {
+                                                                    let hour = 0;
+                                                                    if (slot.startTime) {
+                                                                        hour = parseInt(slot.startTime.split(':')[0], 10);
+                                                                    } else if (slot.display) {
+                                                                        // 从 display 字符串中提取时间，例如 "07:00 - 07:50"
+                                                                        const timeMatch = slot.display.match(/^(\d{1,2}):\d{2}/);
+                                                                        if (timeMatch) {
+                                                                            hour = parseInt(timeMatch[1], 10);
+                                                                        }
+                                                                    }
+                                                                    return hour < 12;
+                                                                });
+                                                                const afternoonSlots = availableTimeSlots.filter(slot => {
+                                                                    let hour = 0;
+                                                                    if (slot.startTime) {
+                                                                        hour = parseInt(slot.startTime.split(':')[0], 10);
+                                                                    } else if (slot.display) {
+                                                                        // 从 display 字符串中提取时间，例如 "07:00 - 07:50"
+                                                                        const timeMatch = slot.display.match(/^(\d{1,2}):\d{2}/);
+                                                                        if (timeMatch) {
+                                                                            hour = parseInt(timeMatch[1], 10);
+                                                                        }
+                                                                    }
+                                                                    return hour >= 12;
+                                                                });
+                                                                
+                                                                return (
+                                                                    <>
+                                                                        {/* 上午时段 */}
+                                                                        {morningSlots.length > 0 && (
+                                                                            <div className={styles.timeSlotGroup}>
+                                                                                <div className={styles.timeSlotGroupHeader}>
+                                                                                    <div className={styles.timeSlotGroupIcon}>
+                                                                                        <i className="bi bi-sunrise"></i>
+                                                                                    </div>
+                                                                                    <div className={styles.timeSlotGroupContent}>
+                                                                                        <h4 className={styles.timeSlotGroupTitle}>Buổi sáng</h4>
+                                                                                        <p className={styles.timeSlotGroupSubtitle}>{morningSlots.length} ca khám</p>
+                                                                                    </div>
                                                                                 </div>
-                                                                            )}
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
+                                                                                <div className={styles.timeslotsGrid}>
+                                                                                    {morningSlots.map((slot, index) => {
+                                                                                        const isSelected = selectedTimeSlot?.id === slot.id;
+                                                                                        
+                                                                                        return (
+                                                                                            <button
+                                                                                                key={index}
+                                                                                                className={`${styles.timeslot} ${isSelected ? styles.selected : ''}`}
+                                                                                                onClick={() => handleTimeSlotSelect(slot)}
+                                                                                            >
+                                                                                                <div className={styles.timeslotContent}>
+                                                                                                    <i className={`bi ${isSelected ? 'bi-check-circle-fill' : 'bi-clock-fill'}`}></i>
+                                                                                                    <span className={styles.timeText}>{slot.display}</span>
+                                                                                                </div>
+                                                                                                {slot.type === 'override' && slot.reason && (
+                                                                                                    <div className={styles.timeslotBadge}>
+                                                                                                        <i className="bi bi-info-circle"></i>
+                                                                                                        <span>{slot.reason}</span>
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </button>
+                                                                                        );
+                                                                                    })}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                        
+                                                                        {/* 下午时段 */}
+                                                                        {afternoonSlots.length > 0 && (
+                                                                            <div className={styles.timeSlotGroup}>
+                                                                                <div className={styles.timeSlotGroupHeader}>
+                                                                                    <div className={styles.timeSlotGroupIcon}>
+                                                                                        <i className="bi bi-sunset"></i>
+                                                                                    </div>
+                                                                                    <div className={styles.timeSlotGroupContent}>
+                                                                                        <h4 className={styles.timeSlotGroupTitle}>Buổi chiều</h4>
+                                                                                        <p className={styles.timeSlotGroupSubtitle}>{afternoonSlots.length} ca khám</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className={styles.timeslotsGrid}>
+                                                                                    {afternoonSlots.map((slot, index) => {
+                                                                                        const isSelected = selectedTimeSlot?.id === slot.id;
+                                                                                        
+                                                                                        return (
+                                                                                            <button
+                                                                                                key={index}
+                                                                                                className={`${styles.timeslot} ${isSelected ? styles.selected : ''}`}
+                                                                                                onClick={() => handleTimeSlotSelect(slot)}
+                                                                                            >
+                                                                                                <div className={styles.timeslotContent}>
+                                                                                                    <i className={`bi ${isSelected ? 'bi-check-circle-fill' : 'bi-clock-fill'}`}></i>
+                                                                                                    <span className={styles.timeText}>{slot.display}</span>
+                                                                                                </div>
+                                                                                                {slot.type === 'override' && slot.reason && (
+                                                                                                    <div className={styles.timeslotBadge}>
+                                                                                                        <i className="bi bi-info-circle"></i>
+                                                                                                        <span>{slot.reason}</span>
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </button>
+                                                                                        );
+                                                                                    })}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </>
+                                                                );
+                                                            })()}
                                                         </>
                                                     ) : (
                                                         <div className={styles.noSlotsMessage}>
@@ -1615,7 +1753,7 @@ function DoctorDetails() {
                                         
                                         {/* Step 3: Booking Information (only shown after date and time are selected) */}
                                         {selectedDate && selectedTimeSlot && (
-                                            <div className={styles.bookingConfirmation}>
+                                            <div ref={bookingConfirmationRef} className={styles.bookingConfirmation}>
                                                 <div className={styles.bookingSummary}>
                                                     <div className={styles.summaryHeader}>
                                                         <div className={styles.summaryHeaderContent}>

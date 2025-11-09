@@ -298,7 +298,7 @@ export const PatientAppointments: React.FC = () => {
 
   const getPaymentStatusLabel = (statusCode?: string): string => {
     if (!statusCode) return 'Chưa thanh toán';
-    
+
     const statusMap: { [key: string]: string } = {
       'Paid': 'Đã thanh toán',
       'Unpaid': 'Chưa thanh toán',
@@ -327,15 +327,15 @@ export const PatientAppointments: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className={styles.container}>
+  return (
+    <div className={styles.container}>
         <div className={styles.loadingContainer}>
           <div className={styles.loadingSpinner}>
             <div className={styles.spinner}></div>
             <p>Đang tải lịch hẹn của bạn...</p>
+        </div>
           </div>
         </div>
-      </div>
     );
   }
 
@@ -362,13 +362,13 @@ export const PatientAppointments: React.FC = () => {
         <div className={styles.headerContent}>
           <div className={styles.headerText}>
             <h1 className={styles.pageTitle}>
-              <i className="bi bi-calendar-check"></i>
+                <i className="bi bi-calendar-check"></i>
               Lịch hẹn của tôi
             </h1>
             <p className={styles.pageSubtitle}>
               Quản lý và theo dõi các cuộc hẹn khám bệnh
             </p>
-          </div>
+              </div>
           <div className={styles.headerActions}>
             <div className={styles.viewToggle}>
               <button 
@@ -392,27 +392,27 @@ export const PatientAppointments: React.FC = () => {
           <div className={styles.statCard} onClick={() => setFilters({...filters, status: 'all'})}>
             <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
               <i className="bi bi-calendar3"></i>
-            </div>
+          </div>
             <div className={styles.statInfo}>
               <span className={styles.statValue}>{stats.total}</span>
               <span className={styles.statLabel}>Tổng số</span>
-            </div>
           </div>
+        </div>
 
           <div className={styles.statCard} onClick={() => setFilters({...filters, status: 'upcoming'})}>
             <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
               <i className="bi bi-clock-history"></i>
-            </div>
+          </div>
             <div className={styles.statInfo}>
               <span className={styles.statValue}>{stats.upcoming}</span>
               <span className={styles.statLabel}>Sắp tới</span>
-            </div>
           </div>
+        </div>
 
           <div className={styles.statCard} onClick={() => setFilters({...filters, status: 'completed'})}>
             <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
               <i className="bi bi-check-circle-fill"></i>
-            </div>
+          </div>
             <div className={styles.statInfo}>
               <span className={styles.statValue}>{stats.completed}</span>
               <span className={styles.statLabel}>Hoàn thành</span>
@@ -434,9 +434,9 @@ export const PatientAppointments: React.FC = () => {
       {/* Filters Section */}
       <div className={styles.filtersSection}>
         <div className={styles.searchBox}>
-          <i className="bi bi-search"></i>
-          <input
-            type="text"
+            <i className="bi bi-search"></i>
+            <input
+              type="text"
             placeholder="Tìm kiếm bác sĩ, chuyên khoa..."
             value={filters.search}
             onChange={(e) => setFilters({...filters, search: e.target.value})}
@@ -444,40 +444,40 @@ export const PatientAppointments: React.FC = () => {
         </div>
 
         <div className={styles.filterButtons}>
-          <select 
-            value={filters.status} 
-            onChange={(e) => setFilters({...filters, status: e.target.value})}
+                <select 
+                  value={filters.status} 
+                  onChange={(e) => setFilters({...filters, status: e.target.value})}
             className={styles.filterSelect}
-          >
+                >
             <option value="all">Tất cả trạng thái</option>
-            <option value="upcoming">Sắp diễn ra</option>
+                  <option value="upcoming">Sắp diễn ra</option>
             <option value="completed">Hoàn thành</option>
-            <option value="cancelled">Đã hủy</option>
-          </select>
+                  <option value="cancelled">Đã hủy</option>
+                </select>
 
-          <select 
+                <select 
             value={filters.timeRange} 
             onChange={(e) => setFilters({...filters, timeRange: e.target.value})}
             className={styles.filterSelect}
-          >
+                >
             <option value="all">Tất cả thời gian</option>
-            <option value="today">Hôm nay</option>
-            <option value="week">Tuần này</option>
-            <option value="month">Tháng này</option>
-          </select>
-        </div>
+                  <option value="today">Hôm nay</option>
+                  <option value="week">Tuần này</option>
+                  <option value="month">Tháng này</option>
+                </select>
+              </div>
       </div>
 
       {/* Appointments List */}
-      {filteredAppointments.length === 0 ? (
-        <div className={styles.emptyState}>
+        {filteredAppointments.length === 0 ? (
+          <div className={styles.emptyState}>
           <div className={styles.emptyIcon}>
             <i className="bi bi-calendar-x"></i>
           </div>
           <h3>Không tìm thấy lịch hẹn</h3>
           <p>Hãy thử thay đổi bộ lọc hoặc tạo lịch hẹn mới</p>
-        </div>
-      ) : (
+          </div>
+        ) : (
         <div className={activeView === 'grid' ? styles.appointmentsGrid : styles.appointmentsList}>
           {filteredAppointments.map((appointment) => {
             // Get the appointment with doctor info
@@ -485,14 +485,14 @@ export const PatientAppointments: React.FC = () => {
             const statusConfig = getStatusConfig(appointmentWithInfo.status);
             
             return (
-              <div 
+            <div 
                 key={appointmentWithInfo.id} 
-                className={styles.appointmentCard}
+              className={styles.appointmentCard}
                 onClick={() => {
                   setSelectedAppointment(appointmentWithInfo);
                   setShowDetailModal(true);
                 }}
-              >
+            >
                 <div className={styles.cardHeader}>
                   <div className={styles.statusBadge} style={{ background: statusConfig.color }}>
                     <i className={statusConfig.icon}></i>
@@ -502,9 +502,9 @@ export const PatientAppointments: React.FC = () => {
                     <div className={styles.paidBadge}>
                       <i className="bi bi-check-circle-fill"></i>
                       {getPaymentStatusLabel(appointmentWithInfo.paymentStatusCode)}
-                    </div>
+                  </div>
                   )}
-                </div>
+              </div>
 
                 <div className={styles.cardBody}>
                   <div className={styles.doctorSection}>
@@ -512,8 +512,8 @@ export const PatientAppointments: React.FC = () => {
                       <img src={appointmentWithInfo.avatar} alt={appointmentWithInfo.doctorName} />
                       <div className={styles.avatarBadge}>
                         <i className="bi bi-patch-check-fill"></i>
-                      </div>
-                    </div>
+                </div>
+                </div>
                     <div className={styles.doctorInfo}>
                       <h3>{appointmentWithInfo.doctorName}</h3>
                       <div className={styles.doctorMeta}>
@@ -522,87 +522,87 @@ export const PatientAppointments: React.FC = () => {
                             <i className="bi bi-mortarboard-fill"></i>
                             {appointmentWithInfo.doctorTitle}
                           </span>
-                        )}
+                )}
                         {appointmentWithInfo.specialty && (
                           <span className={styles.specialty}>
                             <i className="bi bi-heart-pulse-fill"></i>
                             {appointmentWithInfo.specialty}
                           </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                )}
+              </div>
+            </div>
+      </div>
 
                   <div className={styles.appointmentInfo}>
                     <div className={styles.infoRow}>
-                      <i className="bi bi-calendar3"></i>
+                    <i className="bi bi-calendar3"></i>
                       <span>{formatDate(appointmentWithInfo.date)}</span>
-                    </div>
+                  </div>
                     <div className={styles.infoRow}>
-                      <i className="bi bi-clock"></i>
-                      <span>
+                    <i className="bi bi-clock"></i>
+                <span>
                         {appointmentWithInfo.appointmentStartTime && appointmentWithInfo.appointmentEndTime
                           ? formatTimeRange(appointmentWithInfo.appointmentStartTime, appointmentWithInfo.appointmentEndTime)
                           : appointmentWithInfo.time}
-                      </span>
-                    </div>
+                </span>
+              </div>
                     <div className={styles.infoRow}>
                       <i className="bi bi-credit-card"></i>
                       <span className={styles.fee}>{formatCurrency(appointmentWithInfo.totalAmount || appointmentWithInfo.fee)}</span>
-                    </div>
-                  </div>
-                </div>
+              </div>
+            </div>
+            </div>
 
                 <div className={styles.cardFooter} onClick={(e) => e.stopPropagation()}>
                   {appointmentWithInfo.status === 'upcoming' && (
                     <div className={styles.footerActions}>
-                      <button 
+              <button 
                         className={styles.viewInfoBtn}
                         onClick={() => {
                           setSelectedAppointment(appointmentWithInfo);
                           setShowDetailModal(true);
                         }}
-                      >
+              >
                         <i className="bi bi-info-circle"></i>
                         Thông tin
-                      </button>
-                      <button 
+              </button>
+              <button 
                         className={styles.cancelBtn}
                         onClick={() => {
                           setSelectedAppointment(appointmentWithInfo);
                           setShowCancelDialog(true);
                         }}
-                      >
+              >
                         <i className="bi bi-x-circle"></i>
                         Hủy lịch
-                      </button>
-                    </div>
-                  )}
+              </button>
+        </div>
+      )}
                   {appointmentWithInfo.status === 'completed' && (
                     <div className={styles.footerActions}>
-                      <button 
+              <button 
                         className={styles.emrBtn}
                         onClick={() => {
                           setSelectedAppointment(appointmentWithInfo);
                           setShowEMRModal(true);
                         }}
-                      >
+              >
                         <i className="bi bi-file-text"></i>
                         Xem EMR
-                      </button>
-                      <button 
+              </button>
+              <button 
                         className={styles.rateBtn}
                         onClick={() => {
                           setSelectedAppointment(appointmentWithInfo);
                           setShowRatingModal(true);
                         }}
-                      >
+              >
                         <i className="bi bi-star"></i>
                         Đánh giá
-                      </button>
-                    </div>
+              </button>
+            </div>
                   )}
-                </div>
+          </div>
               </div>
             );
           })}
@@ -614,13 +614,13 @@ export const PatientAppointments: React.FC = () => {
         <div className={styles.modalOverlay} onClick={() => setShowDetailModal(false)}>
           <div className={styles.detailModal} onClick={(e) => e.stopPropagation()}>
             <button className={styles.closeModalBtn} onClick={() => setShowDetailModal(false)}>
-              <i className="bi bi-x-lg"></i>
-            </button>
-
+                <i className="bi bi-x-lg"></i>
+              </button>
+            
             <div className={styles.modalHeader}>
               <div className={styles.modalDoctorInfo}>
                 <div className={styles.modalAvatarWrapper}>
-                  <img src={selectedAppointment.avatar} alt={selectedAppointment.doctorName} />
+                    <img src={selectedAppointment.avatar} alt={selectedAppointment.doctorName} />
                   <div className={styles.modalAvatarBadge}>
                     <i className="bi bi-patch-check-fill"></i>
                   </div>
@@ -646,8 +646,8 @@ export const PatientAppointments: React.FC = () => {
               <div className={styles.modalStatus} style={{ background: getStatusConfig(selectedAppointment.status).color }}>
                 <i className={getStatusConfig(selectedAppointment.status).icon}></i>
                 {getStatusConfig(selectedAppointment.status).label}
+                </div>
               </div>
-            </div>
 
             <div className={styles.modalBody}>
               <div className={styles.detailSection}>
@@ -659,15 +659,15 @@ export const PatientAppointments: React.FC = () => {
                   <div className={styles.detailCard}>
                     <div className={styles.detailCardLabel}>NGÀY KHÁM</div>
                     <div className={styles.detailCardValue}>{formatDate(selectedAppointment.date)}</div>
-                  </div>
+                    </div>
                   <div className={styles.detailCard}>
                     <div className={styles.detailCardLabel}>GIỜ KHÁM</div>
                     <div className={styles.detailCardValue}>
                       {selectedAppointment.appointmentStartTime && selectedAppointment.appointmentEndTime
                         ? formatTimeRange(selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime)
                         : selectedAppointment.time}
-                    </div>
                   </div>
+                    </div>
                   {selectedAppointment.room && (
                     <div className={styles.detailCard}>
                       <div className={styles.detailCardLabel}>PHÒNG KHÁM</div>
@@ -709,7 +709,7 @@ export const PatientAppointments: React.FC = () => {
                 </div>
               </div>
             </div>
-
+            
             <div className={styles.modalFooter}>
               {selectedAppointment.status === 'upcoming' && (
                 <button 
@@ -785,13 +785,13 @@ export const PatientAppointments: React.FC = () => {
             </div>
 
             <div className={styles.cancelModalFooter}>
-              <button 
+            <button 
                 className={styles.keepBtn}
                 onClick={() => setShowCancelDialog(false)}
                 disabled={isCancelling}
-              >
+            >
                 Giữ lịch hẹn
-              </button>
+            </button>
               <button 
                 className={styles.confirmCancelBtn}
                 onClick={handleCancelAppointment}
@@ -825,7 +825,7 @@ export const PatientAppointments: React.FC = () => {
             <p className={styles.successMessage}>
               {cancelResult.message || 'Lịch hẹn đã được hủy và tiền đã được hoàn lại thành công'}
             </p>
-            
+
             {cancelResult.refundAmount && cancelResult.refundAmount > 0 && (
               <div className={styles.refundAmount}>
                 <div className={styles.refundLabel}>SỐ TIỀN HOÀN LẠI</div>
@@ -852,7 +852,7 @@ export const PatientAppointments: React.FC = () => {
             <div className={styles.emrHeader}>
               <i className="bi bi-file-text"></i>
               <h3>Hồ sơ bệnh án điện tử</h3>
-            </div>
+                </div>
 
             <div className={styles.emrBody}>
               <div className={styles.emrSection}>
@@ -871,9 +871,9 @@ export const PatientAppointments: React.FC = () => {
                 Tải xuống PDF
               </button>
             </div>
-          </div>
-        </div>
-      )}
+                </div>
+              </div>
+            )}
 
       {/* Rating Modal */}
       {showRatingModal && selectedAppointment && (
@@ -912,4 +912,3 @@ export const PatientAppointments: React.FC = () => {
     </div>
   );
 };
-            

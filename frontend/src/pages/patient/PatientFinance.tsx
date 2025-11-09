@@ -2,11 +2,50 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { walletService } from '../../services/walletService';
 import { appointmentService } from '../../services/appointmentService';
-import { WalletDto, OrderCreateRequest, WalletTransactionDto } from '../../types/wallet.types';
+import { WalletDto, OrderCreateRequest, WalletTransactionDto, BankInfo, WithdrawalRequest } from '../../types/wallet.types';
 import { Appointment } from '../../types/appointment.types';
 import styles from '../../styles/patient/PatientFinance.module.css';
 
 type TabType = 'all' | 'deposit' | 'withdrawal' | 'payment' | 'refund';
+
+const BANKS: BankInfo[] = [
+  { name: 'Ngân hàng TMCP Ngoại thương Việt Nam', bin: '970436', shortName: 'Vietcombank', code: 'VCB', logo: 'https://api.vietqr.io/img/VCB.png' },
+  { name: 'Ngân hàng Nông nghiệp và Phát triển Nông thôn Việt Nam', bin: '970405', shortName: 'Agribank', code: 'VBA', logo: 'https://api.vietqr.io/img/VBA.png' },
+  { name: 'Ngân hàng TMCP Công Thương Việt Nam', bin: '970415', shortName: 'VietinBank', code: 'CTG', logo: 'https://api.vietqr.io/img/CTG.png' },
+  { name: 'Ngân hàng Đầu tư và Phát triển Việt Nam', bin: '970418', shortName: 'BIDV', code: 'BID', logo: 'https://api.vietqr.io/img/BIDV.png' },
+  { name: 'Ngân hàng TMCP Á Châu', bin: '970416', shortName: 'ACB', code: 'ACB', logo: 'https://api.vietqr.io/img/ACB.png' },
+  { name: 'Ngân hàng TMCP Kỹ Thương Việt Nam', bin: '970407', shortName: 'Techcombank', code: 'TCB', logo: 'https://api.vietqr.io/img/TCB.png' },
+  { name: 'Ngân hàng TMCP Việt Nam Thịnh Vượng', bin: '970432', shortName: 'VPBank', code: 'VPB', logo: 'https://api.vietqr.io/img/VPB.png' },
+  { name: 'Ngân hàng TMCP Phương Đông', bin: '970448', shortName: 'OCB', code: 'OCB', logo: 'https://api.vietqr.io/img/OCB.png' },
+  { name: 'Ngân hàng TMCP Bưu Điện Liên Việt', bin: '970449', shortName: 'LienVietPostBank', code: 'LPB', logo: 'https://api.vietqr.io/img/LPB.png' },
+  { name: 'Ngân hàng TMCP Sài Gòn - Hà Nội', bin: '970443', shortName: 'SHB', code: 'SHB', logo: 'https://api.vietqr.io/img/SHB.png' },
+  { name: 'Ngân hàng TMCP Tiên Phong', bin: '970423', shortName: 'TPBank', code: 'TPB', logo: 'https://api.vietqr.io/img/TPB.png' },
+  { name: 'Ngân hàng TMCP Đông Nam Á', bin: '970440', shortName: 'SeABank', code: 'SEA', logo: 'https://api.vietqr.io/img/SEAB.png' },
+  { name: 'Ngân hàng TMCP Quân Đội', bin: '970422', shortName: 'MB', code: 'MBB', logo: 'https://api.vietqr.io/img/MB.png' },
+  { name: 'Ngân hàng TMCP Hàng Hải', bin: '970426', shortName: 'MSB', code: 'MSB', logo: 'https://api.vietqr.io/img/MSB.png' },
+  { name: 'Ngân hàng TMCP Quốc tế Việt Nam', bin: '970441', shortName: 'VIB', code: 'VIB', logo: 'https://api.vietqr.io/img/VIB.png' },
+  { name: 'Ngân hàng TMCP Quốc Dân', bin: '970419', shortName: 'NCB', code: 'NCB', logo: 'https://api.vietqr.io/img/NCB.png' },
+  { name: 'Ngân hàng TMCP Xăng dầu Petrolimex', bin: '970430', shortName: 'PGBank', code: 'PGB', logo: 'https://api.vietqr.io/img/PGB.png' },
+  { name: 'Ngân hàng TNHH Một Thành Viên Xây Dựng Việt Nam', bin: '970444', shortName: 'CB', code: 'CBB', logo: 'https://api.vietqr.io/img/CBB.png' },
+  { name: 'Ngân hàng TMCP Sài Gòn', bin: '970429', shortName: 'SCB', code: 'SCB', logo: 'https://api.vietqr.io/img/SCB.png' },
+  { name: 'Ngân hàng TMCP Xuất Nhập khẩu Việt Nam', bin: '970431', shortName: 'Eximbank', code: 'EIB', logo: 'https://api.vietqr.io/img/EIB.png' },
+  { name: 'Ngân hàng TMCP An Bình', bin: '970425', shortName: 'ABBANK', code: 'ABB', logo: 'https://api.vietqr.io/img/ABB.png' },
+  { name: 'Ngân hàng TMCP Bản Việt', bin: '970427', shortName: 'VietCapitalBank', code: 'VCB', logo: 'https://api.vietqr.io/img/VCB.png' },
+  { name: 'Ngân hàng TMCP Việt Á', bin: '970433', shortName: 'VietABank', code: 'VAB', logo: 'https://api.vietqr.io/img/VAB.png' },
+  { name: 'Ngân hàng TMCP Việt Nam Thương Tín', bin: '970434', shortName: 'VietBank', code: 'VTB', logo: 'https://api.vietqr.io/img/VTB.png' },
+  { name: 'Ngân hàng TMCP Phát triển Thành phố Hồ Chí Minh', bin: '970437', shortName: 'HDBank', code: 'HDB', logo: 'https://api.vietqr.io/img/HDB.png' },
+  { name: 'Ngân hàng TMCP Sài Gòn Thương Tín', bin: '970439', shortName: 'Sacombank', code: 'STB', logo: 'https://api.vietqr.io/img/STB.png' },
+  { name: 'Ngân hàng TMCP Bắc Á', bin: '970409', shortName: 'BacABank', code: 'BAB', logo: 'https://api.vietqr.io/img/BAB.png' },
+  { name: 'Ngân hàng TMCP Kiên Long', bin: '970452', shortName: 'KienLongBank', code: 'KLB', logo: 'https://api.vietqr.io/img/KLB.png' },
+  { name: 'Ngân hàng TMCP Đại Dương', bin: '970414', shortName: 'OceanBank', code: 'OCE', logo: 'https://api.vietqr.io/img/OCEANBANK.png' },
+  { name: 'Ngân hàng TMCP Dầu Khí Toàn Cầu', bin: '970438', shortName: 'GPBank', code: 'GPB', logo: 'https://api.vietqr.io/img/GPB.png' },
+  { name: 'Ngân hàng TMCP Đông Á', bin: '970406', shortName: 'DongABank', code: 'DAB', logo: 'https://api.vietqr.io/img/DAB.png' },
+  { name: 'Ngân hàng TNHH Một Thành Viên Standard Chartered', bin: '970410', shortName: 'Standard Chartered', code: 'SCB', logo: 'https://api.vietqr.io/img/SCB.png' },
+  { name: 'Ngân hàng TNHH Một Thành Viên Shinhan Việt Nam', bin: '970424', shortName: 'Shinhan Bank', code: 'SHB', logo: 'https://api.vietqr.io/img/SHB.png' },
+  { name: 'Ngân hàng TMCP Nam Á', bin: '970428', shortName: 'NamABank', code: 'NAB', logo: 'https://api.vietqr.io/img/NAB.png' },
+  { name: 'Ngân hàng KEB HANA - Chi nhánh TP.HCM', bin: '970466', shortName: 'KEB Hana Bank', code: 'KEB', logo: 'https://api.vietqr.io/img/KEBHANABANK.png' },
+  { name: 'Ngân hàng Industrial Bank of Korea - Chi nhánh TP.HCM', bin: '970456', shortName: 'IBK', code: 'IBK', logo: 'https://api.vietqr.io/img/IBK.png' }
+];
 
 export const PatientFinance: React.FC = () => {
   const { user } = useAuth();
@@ -17,8 +56,48 @@ export const PatientFinance: React.FC = () => {
   const [loadingTransactions, setLoadingTransactions] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState<string>('');
+  const [withdrawalAmount, setWithdrawalAmount] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [isProcessingWithdrawal, setIsProcessingWithdrawal] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
+  const [showWithdrawalModal, setShowWithdrawalModal] = useState<boolean>(false);
+  const [selectedBank, setSelectedBank] = useState<BankInfo | null>(null);
+  const [accountNumber, setAccountNumber] = useState<string>('');
+  const [accountName, setAccountName] = useState<string>('');
+  const [showWithdrawalConfirm, setShowWithdrawalConfirm] = useState<boolean>(false);
+  const [bankSearchTerm, setBankSearchTerm] = useState<string>('');
+  const [banksWithLogos, setBanksWithLogos] = useState<BankInfo[]>(BANKS);
+
+  useEffect(() => {
+    const fetchBanksFromAPI = async () => {
+      try {
+        const response = await fetch('https://api.vietqr.io/v2/banks');
+        const data = await response.json();
+        if (data.code === '00' && data.data) {
+          const bankMap = new Map<string, string>();
+          data.data.forEach((bank: any) => {
+            if (bank.bin && bank.logo) {
+              bankMap.set(bank.bin, bank.logo);
+            }
+          });
+          
+          const updatedBanks = BANKS.map(bank => {
+            const logoFromAPI = bankMap.get(bank.bin);
+            return {
+              ...bank,
+              logo: logoFromAPI || bank.logo
+            };
+          });
+          setBanksWithLogos(updatedBanks);
+        }
+      } catch (err) {
+        console.error('Error fetching banks from API:', err);
+        setBanksWithLogos(BANKS);
+      }
+    };
+
+    fetchBanksFromAPI();
+  }, []);
 
   useEffect(() => {
     const fetchWallet = async () => {
@@ -77,6 +156,104 @@ export const PatientFinance: React.FC = () => {
     const inputValue = e.target.value;
     const formatted = formatNumberInput(inputValue);
     setDepositAmount(formatted);
+  };
+
+  const handleWithdrawalAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const formatted = formatNumberInput(inputValue);
+    setWithdrawalAmount(formatted);
+  };
+
+  const handleOpenWithdrawalModal = () => {
+    const amount = withdrawalAmount ? parseFormattedNumber(withdrawalAmount) : parseFormattedNumber(depositAmount);
+    if (!amount || amount <= 0) {
+      alert('Vui lòng nhập số tiền hợp lệ');
+      return;
+    }
+    if (!wallet || amount > wallet.balance) {
+      alert('Số tiền rút không được vượt quá số dư ví');
+      return;
+    }
+    if (!withdrawalAmount && depositAmount) {
+      setWithdrawalAmount(depositAmount);
+    }
+    setShowWithdrawalModal(true);
+    setShowWithdrawalConfirm(false);
+    setSelectedBank(null);
+    setAccountNumber('');
+    setAccountName('');
+    setBankSearchTerm('');
+  };
+
+  const handleBankSelect = (bank: BankInfo) => {
+    setSelectedBank(bank);
+  };
+
+  const handleConfirmWithdrawal = () => {
+    if (!selectedBank) {
+      alert('Vui lòng chọn ngân hàng');
+      return;
+    }
+    if (!accountNumber || accountNumber.trim() === '') {
+      alert('Vui lòng nhập số tài khoản');
+      return;
+    }
+    setShowWithdrawalConfirm(true);
+  };
+
+  const handleSubmitWithdrawal = async () => {
+    if (!selectedBank || !accountNumber) return;
+
+    const amount = parseFormattedNumber(withdrawalAmount || depositAmount);
+    if (!amount || amount <= 0) {
+      alert('Vui lòng nhập số tiền hợp lệ');
+      return;
+    }
+
+    setIsProcessingWithdrawal(true);
+    try {
+      const withdrawalRequest: WithdrawalRequest = {
+        amount: Math.round(amount),
+        bankBin: selectedBank.bin,
+        bankName: selectedBank.name,
+        accountNumber: accountNumber.trim(),
+        accountName: accountName.trim() || user?.fullName || '',
+        description: `Rút tiền về ${selectedBank.name} - Số tài khoản: ${accountNumber.trim()}`
+      };
+
+      await walletService.createWithdrawal(withdrawalRequest);
+      
+      alert('Yêu cầu rút tiền đã được gửi thành công!');
+      
+      // Reset form
+      setWithdrawalAmount('');
+      setDepositAmount('');
+      setShowWithdrawalModal(false);
+      setShowWithdrawalConfirm(false);
+      setSelectedBank(null);
+      setAccountNumber('');
+      setAccountName('');
+      setBankSearchTerm('');
+      
+      // Refresh wallet and transactions
+      const walletData = await walletService.getWalletByUserId();
+      setWallet(walletData);
+      await fetchTransactions();
+    } catch (err: any) {
+      console.error('Error processing withdrawal:', err);
+      
+      let errorMessage = 'Có lỗi xảy ra khi rút tiền. Vui lòng thử lại.';
+      
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setIsProcessingWithdrawal(false);
+    }
   };
 
   const getTransactionTypeName = (typeCode: string | undefined): string => {
@@ -351,16 +528,16 @@ export const PatientFinance: React.FC = () => {
         <div className={styles.depositCard}>
           <div className={styles.depositHeader}>
             <div className={styles.depositIcon}>
-              <i className="bi bi-cash-stack"></i>
+              <i className="bi bi-wallet2"></i>
             </div>
-            <h3 className={styles.depositTitle}>Nạp tiền vào ví</h3>
+            <h3 className={styles.depositTitle}>Giao dịch ví</h3>
           </div>
           <div>
             <input
               type="text"
               value={depositAmount}
               onChange={handleAmountChange}
-              placeholder="Nhập số tiền muốn nạp"
+              placeholder="Nhập số tiền"
               className={styles.depositInput}
               inputMode="numeric"
             />
@@ -381,23 +558,55 @@ export const PatientFinance: React.FC = () => {
               })}
             </div>
 
-            <button
-              onClick={handleDeposit}
-              disabled={isProcessing || !depositAmount || parseFormattedNumber(depositAmount) <= 0}
-              className={styles.depositButton}
-            >
-              {isProcessing ? (
-                <>
-                  <i className="bi bi-hourglass-split" style={{ marginRight: '8px' }}></i>
-                  Đang xử lý...
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-plus-circle" style={{ marginRight: '8px' }}></i>
-                  Nạp tiền
-                </>
-              )}
-            </button>
+            <div className={styles.actionButtons}>
+              <button
+                onClick={handleDeposit}
+                disabled={isProcessing || !depositAmount || parseFormattedNumber(depositAmount) <= 0}
+                className={`${styles.depositButton} ${styles.depositActionBtn}`}
+              >
+                {isProcessing ? (
+                  <>
+                    <i className="bi bi-hourglass-split" style={{ marginRight: '8px' }}></i>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-plus-circle" style={{ marginRight: '8px' }}></i>
+                    Nạp tiền
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  const amount = parseFormattedNumber(depositAmount);
+                  if (!amount || amount <= 0) {
+                    alert('Vui lòng nhập số tiền hợp lệ');
+                    return;
+                  }
+                  if (!wallet || amount > wallet.balance) {
+                    alert('Số tiền rút không được vượt quá số dư ví');
+                    return;
+                  }
+                  setWithdrawalAmount(depositAmount);
+                  handleOpenWithdrawalModal();
+                }}
+                disabled={isProcessingWithdrawal || !depositAmount || parseFormattedNumber(depositAmount) <= 0 || !wallet || parseFormattedNumber(depositAmount) > wallet.balance}
+                className={`${styles.depositButton} ${styles.withdrawalActionBtn}`}
+              >
+                {isProcessingWithdrawal ? (
+                  <>
+                    <i className="bi bi-hourglass-split" style={{ marginRight: '8px' }}></i>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-arrow-down-circle" style={{ marginRight: '8px' }}></i>
+                    Rút tiền
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -491,6 +700,208 @@ export const PatientFinance: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Withdrawal Modal */}
+      {showWithdrawalModal && (
+        <div className={styles.modalOverlay} onClick={() => !showWithdrawalConfirm && setShowWithdrawalModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <button 
+              className={styles.modalCloseBtn} 
+              onClick={() => {
+                setShowWithdrawalModal(false);
+                setShowWithdrawalConfirm(false);
+                setBankSearchTerm('');
+              }}
+            >
+              <i className="bi bi-x-lg"></i>
+            </button>
+
+            {!showWithdrawalConfirm ? (
+              <>
+                <div className={styles.modalHeader}>
+                  <h2>Rút tiền về tài khoản ngân hàng</h2>
+                  <p>Số tiền: <strong>{(withdrawalAmount || depositAmount) || '0'} đ</strong></p>
+                </div>
+
+                <div className={styles.modalBody}>
+                  <div className={styles.formGroup}>
+                    <label>Chọn ngân hàng *</label>
+                    <div className={styles.bankSearchContainer}>
+                      <i className="bi bi-search"></i>
+                      <input
+                        type="text"
+                        value={bankSearchTerm}
+                        onChange={(e) => setBankSearchTerm(e.target.value)}
+                        placeholder="Tìm kiếm ngân hàng..."
+                        className={styles.bankSearchInput}
+                      />
+                      {bankSearchTerm && (
+                        <button
+                          className={styles.bankSearchClear}
+                          onClick={() => setBankSearchTerm('')}
+                        >
+                          <i className="bi bi-x"></i>
+                        </button>
+                      )}
+                    </div>
+                    <div className={styles.bankList}>
+                      {banksWithLogos.filter(bank => {
+                        if (!bankSearchTerm) return true;
+                        const searchLower = bankSearchTerm.toLowerCase();
+                        return (
+                          bank.name.toLowerCase().includes(searchLower) ||
+                          bank.shortName?.toLowerCase().includes(searchLower) ||
+                          bank.bin.includes(searchLower)
+                        );
+                      }).map((bank) => (
+                        <div
+                          key={bank.bin}
+                          className={`${styles.bankItem} ${selectedBank?.bin === bank.bin ? styles.bankItemSelected : ''}`}
+                          onClick={() => handleBankSelect(bank)}
+                        >
+                          {bank.logo ? (
+                            <div className={styles.bankLogo}>
+                              <img 
+                                src={bank.logo} 
+                                alt={bank.shortName || bank.name}
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  const fallback = target.nextElementSibling as HTMLElement;
+                                  if (fallback) {
+                                    target.style.display = 'none';
+                                    fallback.style.display = 'flex';
+                                  }
+                                }}
+                              />
+                              <div className={styles.bankLogoFallback} style={{ display: 'none' }}>
+                                <span>{bank.shortName || bank.name.substring(0, 2)}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className={styles.bankLogoFallback}>
+                              <span>{bank.shortName || bank.name.substring(0, 2)}</span>
+                            </div>
+                          )}
+                          <div className={styles.bankInfo}>
+                            <div className={styles.bankName}>{bank.shortName || bank.name}</div>
+                          </div>
+                          {selectedBank?.bin === bank.bin && (
+                            <i className="bi bi-check-circle-fill"></i>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {selectedBank && (
+                    <>
+                      <div className={styles.formGroup}>
+                        <label>Số tài khoản *</label>
+                        <input
+                          type="text"
+                          value={accountNumber}
+                          onChange={(e) => setAccountNumber(e.target.value)}
+                          placeholder="Nhập số tài khoản ngân hàng"
+                          className={styles.formInput}
+                          inputMode="numeric"
+                        />
+                      </div>
+
+                      <div className={styles.formGroup}>
+                        <label>Tên chủ tài khoản (tùy chọn)</label>
+                        <input
+                          type="text"
+                          value={accountName}
+                          onChange={(e) => setAccountName(e.target.value)}
+                          placeholder="Nhập tên chủ tài khoản"
+                          className={styles.formInput}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className={styles.modalFooter}>
+                  <button
+                    className={styles.modalCancelBtn}
+                    onClick={() => {
+                      setShowWithdrawalModal(false);
+                      setSelectedBank(null);
+                      setAccountNumber('');
+                      setAccountName('');
+                      setBankSearchTerm('');
+                    }}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    className={styles.modalConfirmBtn}
+                    onClick={handleConfirmWithdrawal}
+                    disabled={!selectedBank || !accountNumber || accountNumber.trim() === ''}
+                  >
+                    Tiếp tục
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={styles.modalHeader}>
+                  <h2>Xác nhận thông tin rút tiền</h2>
+                </div>
+
+                <div className={styles.modalBody}>
+                  <div className={styles.confirmInfo}>
+                    <div className={styles.confirmRow}>
+                      <span className={styles.confirmLabel}>Số tiền rút:</span>
+                      <span className={styles.confirmValue}>{(withdrawalAmount || depositAmount) || '0'} đ</span>
+                    </div>
+                    <div className={styles.confirmRow}>
+                      <span className={styles.confirmLabel}>Ngân hàng:</span>
+                      <span className={styles.confirmValue}>{selectedBank?.shortName || selectedBank?.name}</span>
+                    </div>
+                    <div className={styles.confirmRow}>
+                      <span className={styles.confirmLabel}>Số tài khoản:</span>
+                      <span className={styles.confirmValue}>{accountNumber}</span>
+                    </div>
+                    {accountName && (
+                      <div className={styles.confirmRow}>
+                        <span className={styles.confirmLabel}>Tên chủ tài khoản:</span>
+                        <span className={styles.confirmValue}>{accountName}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className={styles.modalFooter}>
+                  <button
+                    className={styles.modalCancelBtn}
+                    onClick={() => setShowWithdrawalConfirm(false)}
+                  >
+                    Quay lại
+                  </button>
+                  <button
+                    className={styles.modalConfirmBtn}
+                    onClick={handleSubmitWithdrawal}
+                    disabled={isProcessingWithdrawal}
+                  >
+                    {isProcessingWithdrawal ? (
+                      <>
+                        <i className="bi bi-hourglass-split" style={{ marginRight: '8px' }}></i>
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-check-circle" style={{ marginRight: '8px' }}></i>
+                        Xác nhận rút tiền
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

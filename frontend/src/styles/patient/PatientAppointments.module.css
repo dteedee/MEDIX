@@ -318,11 +318,11 @@
   from {
     opacity: 0;
     transform: translateY(20px);
-  }
+}
   to {
     opacity: 1;
     transform: translateY(0);
-  }
+}
 }
 
 .appointmentsList {
@@ -495,7 +495,7 @@
   0%, 100% {
     transform: scale(1);
     box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
-  }
+}
   50% {
     transform: scale(1.1);
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.6);
@@ -568,7 +568,7 @@
 
 .appointmentCard:hover .doctorTitle i {
   color: #764ba2;
-}
+  }
 
 .specialty {
   display: inline-flex;
@@ -716,25 +716,25 @@
 .emrBtn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
+  }
+  
 .rateBtn {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: white;
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-}
-
+  }
+  
 .rateBtn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
-}
+  }
 
 .detailBtn {
   background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
   color: white;
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-}
-
+  }
+  
 .detailBtn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
@@ -745,8 +745,8 @@
   text-align: center;
   padding: 80px 20px;
   animation: fadeIn 0.6s ease-out;
-}
-
+  }
+  
 .emptyIcon {
   width: 120px;
   height: 120px;
@@ -756,20 +756,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
+  }
+  
 .emptyIcon i {
   font-size: 60px;
   color: #cbd5e0;
-}
-
+  }
+  
 .emptyState h3 {
   font-size: 24px;
   font-weight: 700;
   color: #1e293b;
   margin: 0 0 8px 0;
-}
-
+  }
+  
 .emptyState p {
   font-size: 16px;
   color: #64748b;
@@ -1195,13 +1195,13 @@
   background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
   color: #dc2626;
   border: 1px solid #fca5a5;
-}
+  }
 
 .paymentStatusRefunded {
   background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
   color: #6366f1;
   border: 1px solid #a5b4fc;
-}
+  }
 
 .paymentStatusCancelled {
   background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
@@ -1471,13 +1471,13 @@
   gap: 8px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-}
+  }
 
 .confirmCancelBtn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-}
+  }
 
 .confirmCancelBtn:disabled {
   opacity: 0.6;
@@ -1510,7 +1510,7 @@
   from {
     opacity: 0;
     transform: scale(0.8);
-  }
+}
   to {
     opacity: 1;
     transform: scale(1);
@@ -1829,8 +1829,8 @@
 @media (max-width: 1200px) {
   .statsContainer {
     grid-template-columns: repeat(2, 1fr);
-  }
-  
+}
+
   .appointmentsGrid {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   }
@@ -1843,12 +1843,12 @@
   
   .pageTitle {
     font-size: 28px;
-  }
-  
+}
+
   .pageTitle i {
     font-size: 32px;
-  }
-  
+}
+
   .headerContent {
     flex-direction: column;
     align-items: flex-start;
@@ -1921,16 +1921,16 @@
   .cancelModalHeader {
     padding: 24px;
   }
-  
+
   .cancelIcon {
     width: 70px;
     height: 70px;
   }
-  
+
   .cancelIcon i {
     font-size: 36px;
   }
-  
+
   .successIcon {
     width: 80px;
     height: 80px;
@@ -1939,11 +1939,11 @@
   .successIcon i {
     font-size: 40px;
   }
-  
+
   .successModal h3 {
     font-size: 24px;
   }
-  
+
   .refundAmount strong {
     font-size: 28px;
   }

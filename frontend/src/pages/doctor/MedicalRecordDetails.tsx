@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState, FormEvent } from 'react';
+import React, { useEffect, useState, FormEvent, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { medicalRecordService } from '../../services/medicalRecordService';
 import { prescriptionService } from '../../services/prescriptionService';
@@ -8,15 +8,19 @@ import { MedicalRecord, Prescription } from '../../types/medicalRecord.types';
 import { PageLoader } from '../../components/ui';
 import Swal from 'sweetalert2';
 import MedicineTable from './MedicineTable';
-import "../../styles/PatientVisitForm.css";
+import { useAuth } from '../../contexts/AuthContext';
+import "../../styles/doctor/PatientVisitForm.css";
 
 const MedicalRecordDetails: React.FC = () => {
   const { appointmentId } = useParams<{ appointmentId: string }>();
   const navigate = useNavigate();
   const [medicalRecord, setMedicalRecord] = useState<MedicalRecord | null>(null);
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [newAllergy, setNewAllergy] = useState('');
 
   useEffect(() => {
     const fetchMedicalRecord = async () => {
@@ -31,6 +35,7 @@ const MedicalRecordDetails: React.FC = () => {
         const data = await medicalRecordService.getMedicalRecordByAppointmentId(appointmentId);
         setMedicalRecord(data);
         setError(null);
+
       } catch (err: any) {
         console.error("Error fetching medical record:", err);
         if (err.response && err.response.status === 404) {
@@ -49,6 +54,43 @@ const MedicalRecordDetails: React.FC = () => {
 
   const handleUpdateField = (field: keyof MedicalRecord, value: any) => {
     setMedicalRecord(prev => prev ? { ...prev, [field]: value } : null);
+  };
+
+  const fieldDisplayNames: { [key in keyof MedicalRecord]?: string } = {
+    chiefComplaint: 'Lý do khám',
+    physicalExamination: 'Khám lâm sàng',
+    diagnosis: 'Chẩn đoán chính',
+    treatmentPlan: 'Kế hoạch điều trị',
+  };
+
+  const validateField = (fieldName: keyof MedicalRecord, value: any): string => {
+    const requiredFields: (keyof MedicalRecord)[] = [
+      'chiefComplaint',
+      'physicalExamination',
+      'diagnosis',
+      'treatmentPlan',
+    ];
+
+    if (requiredFields.includes(fieldName)) {
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        return `${fieldDisplayNames[fieldName] || fieldName} không được để trống.`;
+      }
+    }
+    return '';
+  };
+
+  const handleFieldChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const { name, value } = e.target as { name: keyof MedicalRecord, value: string };
+    handleUpdateField(name, value);
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleFieldBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+    const { name, value } = e.target as { name: keyof MedicalRecord, value: string };
+    const error = validateField(name, value);
+    setFieldErrors(prev => ({ ...prev, [name]: error }));
   };
 
   const handleAddMedicine = () => {
@@ -76,29 +118,37 @@ const MedicalRecordDetails: React.FC = () => {
     e.preventDefault();
     if (!medicalRecord) return;
 
+    // --- VALIDATION ---
+    const requiredFields: (keyof MedicalRecord)[] = [
+      'chiefComplaint',
+      'physicalExamination',
+      'diagnosis',
+      'treatmentPlan',
+    ];
+
+    const missingFields = requiredFields.filter(field => {
+      const value = medicalRecord[field];
+      return !value || (typeof value === 'string' && value.trim() === '');
+    });
+
+    if (missingFields.length > 0) {
+      // Cập nhật trạng thái lỗi để hiển thị trên UI
+      missingFields.forEach(field => setFieldErrors(prev => ({ ...prev, [field]: `${fieldDisplayNames[field]} không được để trống.` })));
+      const missingFieldNames = missingFields.map(field => fieldDisplayNames[field] || field).join(', ');
+      Swal.fire('Thiếu thông tin', `Vui lòng điền đầy đủ các trường bắt buộc: ${missingFieldNames}.`, 'warning');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // Tách đơn thuốc mới (có id tạm) và đơn thuốc cũ
-      const newPrescriptions = medicalRecord.prescriptions.filter(p => p.id.startsWith('new-'));
-      const existingPrescriptions = medicalRecord.prescriptions.filter(p => !p.id.startsWith('new-'));
-
-      // Bước 1: Tạo các đơn thuốc mới
-      const createdPrescriptionPromises = newPrescriptions.map(p => {
-        const { id, ...payload } = p; // Loại bỏ id tạm thời
-        return prescriptionService.createPrescription({
-          ...payload,
-          medicalRecordId: medicalRecord.id // Đảm bảo medicalRecordId được gửi đi
-        });
-      });
-      const createdPrescriptions = await Promise.all(createdPrescriptionPromises);
-
-      // Bước 2: Cập nhật lại hồ sơ bệnh án với danh sách đơn thuốc đầy đủ (cũ + mới đã có id thật)
-      const updatedRecordPayload: MedicalRecord = {
+      
+      const payload = {
         ...medicalRecord,
-        prescriptions: [...existingPrescriptions, ...createdPrescriptions],
+        updatePatientMedicalHistory: true, // Luôn cập nhật tiền sử bệnh khi có chẩn đoán
+        newAllergy: newAllergy.trim(), // Gửi dị ứng mới nếu có
       };
 
-      await medicalRecordService.updateMedicalRecord(medicalRecord.id, updatedRecordPayload);
+      await medicalRecordService.updateMedicalRecord(medicalRecord.id, payload);
 
       Swal.fire({
         title: 'Thành công!',
@@ -115,6 +165,22 @@ const MedicalRecordDetails: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Xác định xem hồ sơ có được phép chỉnh sửa hay không
+  const isEditable = useMemo(() => {
+    if (!medicalRecord) return false;
+    
+    // Sử dụng appointmentDate để xác định khoảng thời gian chỉnh sửa
+    if (medicalRecord.appointmentDate) {
+      const now = new Date();
+      const startTime = new Date(medicalRecord.appointmentDate);
+      // Giả sử một ca khám kéo dài 50 phút
+      const endTime = new Date(startTime.getTime() + 50 * 60000);
+      // Cho phép chỉnh sửa nếu thời gian hiện tại nằm trong khoảng thời gian của cuộc hẹn
+      return now >= startTime && now <= endTime;
+    }
+    return false;
+  }, [medicalRecord]);
 
   if (isLoading) {
     return <PageLoader />;
@@ -152,86 +218,180 @@ const MedicalRecordDetails: React.FC = () => {
 
   return (
     <form onSubmit={handleSubmit} className="patient-visit-form container mx-auto my-6">
-      {/* Header */}
       <div className="form-header">
-        <h2>Cập nhật hồ sơ bệnh án cho {medicalRecord.patientName} - {new Date(medicalRecord.appointmentDate).toLocaleDateString('vi-VN')}</h2>
+        <h1>HỒ SƠ BỆNH ÁN</h1>
+        <div className="header-info">
+          <span>Bệnh nhân: <strong>{medicalRecord.patientName}</strong></span>
+          <span>Ngày khám: <strong>{new Date(medicalRecord.appointmentDate).toLocaleDateString('vi-VN')}</strong></span>
+        </div>
       </div>
 
-      {/* Examination Information Section */}
       <section className="form-section">
-        <h3 className="section-title">Thông tin khám</h3>
-        <div className="section-content two-columns">
+        <h3 className="section-title">I. THÔNG TIN HÀNH CHÍNH</h3>
+        <div className="info-grid">
+          <div className="info-item"><strong>Mã hồ sơ bệnh án:</strong> {medicalRecord.medicalRecordNumber}</div>
+          <div className="info-item"><strong>Giới tính:</strong> {medicalRecord.genderCode === 'MALE' ? 'Nam' : medicalRecord.genderCode === 'FEMALE' ? 'Nữ' : 'Khác'}</div>
+          <div className="info-item"><strong>Ngày sinh:</strong> {medicalRecord.dateOfBirth ? new Date(medicalRecord.dateOfBirth).toLocaleDateString('vi-VN') : 'N/A'}</div>
+          <div className="info-item"><strong>CCCD:</strong> {medicalRecord.identificationNumber || 'N/A'}</div>
+          <div className="info-item full-span"><strong>Địa chỉ:</strong> {medicalRecord.address || 'N/A'}</div>
+          <div className="info-item"><strong>Nhóm máu:</strong> {medicalRecord.bloodTypeCode || 'N/A'}</div>
+          <div className="info-item"><strong>Chiều cao:</strong> {medicalRecord.height ? `${medicalRecord.height} cm` : 'N/A'}</div>
+          <div className="info-item"><strong>Cân nặng:</strong> {medicalRecord.weight ? `${medicalRecord.weight} kg` : 'N/A'}</div>
+        </div>
+      </section>
+
+      <section className="form-section">
+        <h3 className="section-title">II. LÝ DO VÀO VIỆN VÀ BỆNH SỬ</h3>
+        <div className="section-grid">
           <div className="form-column">
             <label className="form-label">Lý do khám</label>
             <textarea
-              className="form-textarea"
+              name="chiefComplaint"
+              className={`form-textarea ${fieldErrors.chiefComplaint ? 'input-error' : ''}`}
               value={medicalRecord.chiefComplaint}
-              onChange={(e) => handleUpdateField('chiefComplaint', e.target.value)}
-              rows={4}
-            />
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              disabled={!isEditable} // Vô hiệu hóa nếu không được phép chỉnh sửa
+              rows={3} ></textarea>
+            {fieldErrors.chiefComplaint && <p className="error-message">{fieldErrors.chiefComplaint}</p>}
           </div>
-          <div className="form-column">
-            <label className="form-label">Khám thực thể</label>
+          <div className="form-column full-width">
+            <label className="form-label">Quá trình bệnh lý và diễn biến (Khám lâm sàng)</label>
             <textarea
-              className="form-textarea"
+              name="physicalExamination"
+              className={`form-textarea ${fieldErrors.physicalExamination ? 'input-error' : ''}`}
               value={medicalRecord.physicalExamination}
-              onChange={(e) => handleUpdateField('physicalExamination', e.target.value)}
-              rows={4}
-            />
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              rows={5}
+              disabled={!isEditable} />
+            {fieldErrors.physicalExamination && <p className="error-message">{fieldErrors.physicalExamination}</p>}
           </div>
         </div>
       </section>
-
-      {/* Diagnosis Section */}
+      
       <section className="form-section">
-        <h3 className="section-title">Chẩn đoán</h3>
-        <div className="section-content two-columns">
+        <h3 className="section-title">III. TIỀN SỬ BỆNH VÀ DỊ ỨNG</h3>
+        <div className="section-grid">
+          <div className="form-column">
+            <label className="form-label">Tiền sử bệnh</label>
+            <p className="info-value-box">{medicalRecord.medicalHistory || 'Không có'}</p>
+          </div>
+          <div className="form-column">
+            <label className="form-label">Dị ứng</label>
+            <p className="info-value-box">{medicalRecord.allergies || 'Không có'}</p>
+          </div>
+          {isEditable && (
+            <div className="form-column full-width">
+              <label htmlFor="newAllergy" className="form-label">Thêm dị ứng mới</label>
+              <input
+                type="text"
+                id="newAllergy"
+                name="newAllergy"
+                className="form-input"
+                value={newAllergy}
+                onChange={(e) => setNewAllergy(e.target.value)}
+                placeholder="Nhập dị ứng mới nếu có (VD: Dị ứng phấn hoa)"
+              />
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="form-section">
+        <h3 className="section-title">IV. CHẨN ĐOÁN VÀ ĐIỀU TRỊ</h3>
+        <div className="section-grid">
           <div className="form-column">
             <label className="form-label">Chẩn đoán chính</label>
-            <textarea className="form-textarea" value={medicalRecord.diagnosis} onChange={(e) => handleUpdateField('diagnosis', e.target.value)} rows={3} />
+            <textarea
+              name="diagnosis"
+              className={`form-textarea ${fieldErrors.diagnosis ? 'input-error' : ''}`}
+              value={medicalRecord.diagnosis}
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              rows={3}
+              disabled={!isEditable} />
+            {fieldErrors.diagnosis && <p className="error-message">{fieldErrors.diagnosis}</p>}
           </div>
           <div className="form-column">
             <label className="form-label">Ghi chú đánh giá</label>
-            <textarea className="form-textarea" value={medicalRecord.assessmentNotes} onChange={(e) => handleUpdateField('assessmentNotes', e.target.value)} rows={3} />
+            <textarea
+              name="assessmentNotes"
+              className="form-textarea"
+              value={medicalRecord.assessmentNotes}
+              disabled={!isEditable}
+              onChange={handleFieldChange}
+              rows={3} />
           </div>
-        </div>
-        <div className="form-column full-width mt-4">
-          <label className="form-label">Ghi chú của bác sĩ</label>
-          <textarea className="form-textarea" value={medicalRecord.doctorNotes} onChange={(e) => handleUpdateField('doctorNotes', e.target.value)} rows={2} />
-        </div>
-      </section>
-
-      {/* Treatment Plan Section */}
-      <section className="form-section">
-        <h3 className="section-title">Kế hoạch điều trị</h3>
-        <div className="section-content two-columns">
+          <div className="form-column full-width">
+            <label className="form-label">Kế hoạch điều trị</label>
+            <textarea
+              name="treatmentPlan"
+              className={`form-textarea ${fieldErrors.treatmentPlan ? 'input-error' : ''}`}
+              value={medicalRecord.treatmentPlan}
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              rows={4}
+              disabled={!isEditable} />
+            {fieldErrors.treatmentPlan && <p className="error-message">{fieldErrors.treatmentPlan}</p>}
+          </div>
           <div className="form-column">
-            <label className="form-label">Hướng dẫn điều trị</label>
-            <textarea className="form-textarea" value={medicalRecord.treatmentPlan} onChange={(e) => handleUpdateField('treatmentPlan', e.target.value)} rows={3} />
+            <label className="form-label">Ghi chú của bác sĩ</label>
+            <textarea
+              name="doctorNotes"
+              className="form-textarea"
+              value={medicalRecord.doctorNotes}
+              disabled={!isEditable}
+              onChange={handleFieldChange}
+              rows={4} />
           </div>
           <div className="form-column">
             <label className="form-label">Hướng dẫn tái khám</label>
-            <textarea className="form-textarea" value={medicalRecord.followUpInstructions} onChange={(e) => handleUpdateField('followUpInstructions', e.target.value)} rows={3} />
+            <textarea
+              name="followUpInstructions"
+              className="form-textarea"
+              value={medicalRecord.followUpInstructions}
+              onChange={handleFieldChange}
+              rows={4}
+              disabled={!isEditable} />
           </div>
         </div>
       </section>
 
-      {/* Medicine Prescription Section */}
       <section className="form-section">
         <div className="prescription-header">
-          <h3 className="section-title">Kê đơn thuốc</h3>
-          <button className="btn-add-medicine" onClick={handleAddMedicine}>
+          <h3 className="section-title">V. ĐƠN THUỐC</h3>
+          {isEditable && (
+            <button type="button" className="btn-add-medicine" onClick={handleAddMedicine}>
             Thêm thuốc
           </button>
+          )}
         </div>
-        <MedicineTable medicines={medicalRecord.prescriptions} onDelete={handleDeleteMedicine} onUpdate={handleUpdateMedicine} />
+        <MedicineTable 
+          medicines={medicalRecord.prescriptions} 
+          onDelete={handleDeleteMedicine} 
+          onUpdate={handleUpdateMedicine} 
+          isEditable={isEditable}
+        />
       </section>
 
-      {/* Submit Button */}
       <div className="form-footer">
-        <button type="submit" className="btn-submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Đang lưu...' : 'Hoàn tất & Lưu hồ sơ'}
-        </button>
+        <div className="doctor-signature">
+          <p>Ngày {new Date().getDate()} tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}</p>
+          <p><strong>Bác sĩ điều trị</strong></p>
+          <p>(Ký và ghi rõ họ tên)</p>
+          <br />
+          <p>{user?.fullName}</p>
+        </div>
+        {isEditable ? (
+          <button type="submit" className="btn-submit" disabled={isSubmitting} >
+            {isSubmitting ? 'Đang lưu...' : 'Hoàn tất & Lưu hồ sơ'}
+          </button>
+        ) : (
+          <button type="button" className="btn-submit" onClick={() => navigate(-1)}>
+            Quay lại
+          </button>
+        )}
       </div>
     </form>
   );

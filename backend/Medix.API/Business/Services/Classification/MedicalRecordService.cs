@@ -34,8 +34,15 @@ namespace Medix.API.Business.Services.Classification
             if (record == null)
                 throw new InvalidOperationException("Không tìm thấy bệnh án cho bệnh nhân này.");
 
-            return _mapper.Map<MedicalRecordDto>(record);
+            var dto = _mapper.Map<MedicalRecordDto>(record);
+
+            dto.AppointmentId = appointment.Id;
+            dto.AppointmentDate = appointment.AppointmentStartTime;
+            dto.DoctorName = appointment.Doctor?.User?.FullName ?? "Không rõ bác sĩ";
+
+            return dto;
         }
+
 
         // ✅ Tạo mới hồ sơ bệnh án
         public async Task<MedicalRecordDto> CreateAsync(CreateOrUpdateMedicalRecordDto dto)
@@ -73,7 +80,6 @@ namespace Medix.API.Business.Services.Classification
             return _mapper.Map<MedicalRecordDto>(record);
         }
 
-        // ✅ Cập nhật hồ sơ bệnh án
         public async Task<MedicalRecordDto> UpdateAsync(CreateOrUpdateMedicalRecordDto dto)
         {
             var appointment = await _appointmentRepo.GetByIdAsync(dto.AppointmentId);
@@ -84,7 +90,7 @@ namespace Medix.API.Business.Services.Classification
             if (existingRecord == null)
                 throw new InvalidOperationException("Medical record not found for this patient.");
 
-            // Cập nhật thông tin chính
+            // --- Cập nhật thông tin chính ---
             existingRecord.ChiefComplaint = dto.ChiefComplaint;
             existingRecord.PhysicalExamination = dto.PhysicalExamination;
             existingRecord.Diagnosis = dto.Diagnosis;
@@ -94,7 +100,7 @@ namespace Medix.API.Business.Services.Classification
             existingRecord.DoctorNotes = dto.DoctorNotes;
             existingRecord.UpdatedAt = DateTime.UtcNow;
 
-            // Cập nhật đơn thuốc
+            // --- Cập nhật đơn thuốc ---
             existingRecord.Prescriptions.Clear();
             if (dto.Prescriptions != null && dto.Prescriptions.Any())
             {
@@ -110,9 +116,43 @@ namespace Medix.API.Business.Services.Classification
                 }).ToList();
             }
 
+            var patient = appointment.Patient;
+            if (patient != null)
+            {
+                // ✅ Cập nhật tiền sử bệnh nhân (MedicalHistory)
+                if (dto.UpdatePatientMedicalHistory && !string.IsNullOrWhiteSpace(dto.Diagnosis))
+                {
+                    var newEntry = dto.Diagnosis.Trim();
+                    if (string.IsNullOrWhiteSpace(patient.MedicalHistory))
+                        patient.MedicalHistory = newEntry;
+                    else if (!patient.MedicalHistory.Contains(newEntry, StringComparison.OrdinalIgnoreCase))
+                        patient.MedicalHistory += $"; {newEntry}";
+                }
+
+                // ✅ Cập nhật dị ứng mới (Allergies)
+                if (!string.IsNullOrWhiteSpace(dto.NewAllergy))
+                {
+                    var allergies = (patient.Allergies ?? "")
+                        .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(a => a.Trim())
+                        .ToList();
+
+                    var newAllergy = dto.NewAllergy.Trim();
+                    if (!allergies.Contains(newAllergy, StringComparer.OrdinalIgnoreCase))
+                    {
+                        allergies.Add(newAllergy);
+                        patient.Allergies = string.Join("; ", allergies);
+                    }
+                }
+
+                patient.UpdatedAt = DateTime.UtcNow;
+            }
+
             await _medicalRecordRepo.UpdateAsync(existingRecord);
             return _mapper.Map<MedicalRecordDto>(existingRecord);
         }
+
+
 
         public async Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query)
             => await _medicalRecordRepo.GetRecordsByUserIdAsync(userId, query);

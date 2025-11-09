@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Medix.API.Migrations
 {
     [DbContext(typeof(MedixContext))]
-    [Migration("20251019184058_CreateEmailVerificationCodesTable")]
-    partial class CreateEmailVerificationCodesTable
+    [Migration("20251105172230_newdb1")]
+    partial class newdb1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -454,6 +454,12 @@ namespace Medix.API.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("(getutcdate())");
 
+                    b.Property<string>("DegreeFilesUrl")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("");
+
                     b.Property<string>("Education")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -635,6 +641,108 @@ namespace Medix.API.Migrations
                     b.ToTable("DoctorPerformanceMetrics");
                 });
 
+            modelBuilder.Entity("Medix.API.Models.Entities.DoctorRegistrationForm", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("(newid())");
+
+                    b.Property<string>("AvatarUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Bio")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getutcdate())");
+
+                    b.Property<DateOnly>("DateOfBirth")
+                        .HasColumnType("date");
+
+                    b.Property<string>("DegreeFilesUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Education")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("EmailNormalized")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("GenderCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("IdentificationNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("IdentityCardImageUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LicenseImageUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LicenseNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("SpecializationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UserNameNormalized")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("YearsOfExperience")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id")
+                        .HasName("PK__DoctorRe__3214EC078AFF2B65");
+
+                    b.HasIndex("SpecializationId");
+
+                    b.HasIndex(new[] { "UserNameNormalized" }, "UQ__DoctorRe__2CB5855F7E011DA4")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "PhoneNumber" }, "UQ__DoctorRe__85FB4E3875223BA8")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "IdentificationNumber" }, "UQ__DoctorRe__9CD14694DB6FF6E0")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "EmailNormalized" }, "UQ__DoctorRe__B5DB8137650358A8")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "LicenseNumber" }, "UQ__DoctorRe__E889016606590140")
+                        .IsUnique();
+
+                    b.ToTable("DoctorRegistrationForms");
+                });
+
             modelBuilder.Entity("Medix.API.Models.Entities.DoctorSalary", b =>
                 {
                     b.Property<Guid>("Id")
@@ -759,6 +867,9 @@ namespace Medix.API.Migrations
 
                     b.Property<DateOnly>("OverrideDate")
                         .HasColumnType("date");
+
+                    b.Property<bool>("OverrideType")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Reason")
                         .HasMaxLength(500)
@@ -1003,6 +1114,30 @@ namespace Medix.API.Migrations
                         .IsUnique();
 
                     b.ToTable("HealthArticles");
+                });
+
+            modelBuilder.Entity("Medix.API.Models.Entities.HealthArticleLike", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ArticleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArticleId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("HealthArticleLikes");
                 });
 
             modelBuilder.Entity("Medix.API.Models.Entities.MedicalRecord", b =>
@@ -1952,6 +2087,9 @@ namespace Medix.API.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<long?>("OrderCode")
+                        .HasColumnType("bigint");
+
                     b.Property<Guid?>("RelatedAppointmentId")
                         .HasColumnType("uniqueidentifier");
 
@@ -2502,6 +2640,17 @@ namespace Medix.API.Migrations
                     b.Navigation("Doctor");
                 });
 
+            modelBuilder.Entity("Medix.API.Models.Entities.DoctorRegistrationForm", b =>
+                {
+                    b.HasOne("Medix.API.Models.Entities.Specialization", "Specialization")
+                        .WithMany("DoctorRegistrationForms")
+                        .HasForeignKey("SpecializationId")
+                        .IsRequired()
+                        .HasConstraintName("FK__DoctorReg__Speci__595B4002");
+
+                    b.Navigation("Specialization");
+                });
+
             modelBuilder.Entity("Medix.API.Models.Entities.DoctorSalary", b =>
                 {
                     b.HasOne("Medix.API.Models.Entities.Doctor", "Doctor")
@@ -2573,6 +2722,25 @@ namespace Medix.API.Migrations
                     b.Navigation("Author");
 
                     b.Navigation("StatusCodeNavigation");
+                });
+
+            modelBuilder.Entity("Medix.API.Models.Entities.HealthArticleLike", b =>
+                {
+                    b.HasOne("Medix.API.Models.Entities.HealthArticle", "Article")
+                        .WithMany()
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Medix.API.Models.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Article");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Medix.API.Models.Entities.MedicalRecord", b =>
@@ -2854,6 +3022,8 @@ namespace Medix.API.Migrations
             modelBuilder.Entity("Medix.API.Models.Entities.Specialization", b =>
                 {
                     b.Navigation("AISymptomAnalyses");
+
+                    b.Navigation("DoctorRegistrationForms");
 
                     b.Navigation("Doctors");
                 });

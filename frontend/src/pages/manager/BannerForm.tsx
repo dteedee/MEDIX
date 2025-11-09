@@ -22,12 +22,20 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
     bannerUrl: banner?.bannerUrl || '',
     displayOrder: banner?.displayOrder || 0,
     isActive: banner?.isActive ?? true,
-    startDate: banner?.startDate ? banner.startDate.split('T')[0] : '',
-    endDate: banner?.endDate ? banner.endDate.split('T')[0] : '',
   });
 
   const [imagePreview, setImagePreview] = useState<string>(banner?.bannerImageUrl || '');
   const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // Helper to convert ISO string to a YYYY-MM-DD format for date input
+  const toInputDateString = (isoString?: string | null) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+  };
+
+  const [startDateLocal, setStartDateLocal] = useState<string>(toInputDateString(banner?.startDate));
+  const [endDateLocal, setEndDateLocal] = useState<string>(toInputDateString(banner?.endDate));
 
   useEffect(() => {
     if (banner) {
@@ -37,10 +45,10 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
         bannerUrl: banner.bannerUrl || '',
         displayOrder: banner.displayOrder || 0,
         isActive: banner.isActive ?? true,
-        startDate: banner.startDate ? banner.startDate.split('T')[0] : '',
-        endDate: banner.endDate ? banner.endDate.split('T')[0] : '',
       });
       setImagePreview(banner.bannerImageUrl || '');
+      setStartDateLocal(toInputDateString(banner.startDate));
+      setEndDateLocal(toInputDateString(banner.endDate));
     }
   }, [banner]);
 
@@ -79,11 +87,20 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
       newErrors.displayOrder = 'Thứ tự hiển thị phải lớn hơn hoặc bằng 0';
     }
 
-    if (formData.startDate && formData.endDate) {
-      const start = new Date(formData.startDate);
-      const end = new Date(formData.endDate);
+    if (startDateLocal && endDateLocal) {
+      const start = new Date(startDateLocal);
+      const end = new Date(endDateLocal);
       if (start > end) {
         newErrors.dateRange = 'Ngày bắt đầu phải trước ngày kết thúc';
+      }
+    }
+
+    if (endDateLocal) {
+      const end = new Date(endDateLocal);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Chuẩn hóa về đầu ngày để so sánh
+      if (end < today) {
+        newErrors.dateRange = 'Ngày kết thúc không được là một ngày trong quá khứ.';
       }
     }
 
@@ -122,14 +139,28 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
       finalBannerImageUrl = imagePreview;
     }
     
+    // Helper to convert YYYY-MM-DD string to full ISO string for the backend
+    const toISOString = (localDate?: string, isEndDate = false) => {
+      if (!localDate) return undefined;
+      const date = new Date(localDate);
+      if (isEndDate) {
+        // Set to the end of the day
+        date.setUTCHours(23, 59, 59, 999);
+      } else {
+        // Set to the start of the day
+        date.setUTCHours(0, 0, 0, 0);
+      }
+      return date.toISOString();
+    };
+
     const payload: CreateBannerRequest | UpdateBannerRequest = {
       bannerTitle: formData.bannerTitle,
       bannerImageUrl: finalBannerImageUrl || '',
       bannerUrl: formData.bannerUrl || undefined,
       displayOrder: formData.displayOrder || undefined,
       isActive: formData.isActive,
-      startDate: formData.startDate || undefined,
-      endDate: formData.endDate || undefined,
+      startDate: toISOString(startDateLocal, false),
+      endDate: toISOString(endDateLocal, true),
       bannerFile: imageFile || undefined,
     };
     

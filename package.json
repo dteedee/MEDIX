@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "html2pdf.js": "^0.12.1",
+    "react-select": "^5.10.2"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.17.20",
+    "@types/react-select": "^5.0.0"
+  }
+}

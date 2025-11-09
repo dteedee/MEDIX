@@ -10,6 +10,7 @@ using Medix.API.DataAccess.Repositories.Classification;
 using Medix.API.DataAccess.Repositories.UserManagement;
 using AutoMapper;
 using Medix.API.Business.Validators;
+using Medix.API.BackgroundServices;
 
 namespace Medix.API.Configurations
 {
@@ -19,7 +20,9 @@ namespace Medix.API.Configurations
         {
             RegisterRepositories(services);
             RegisterServices(services);
-            
+            services.AddHostedService<DoctorScheduleAvailabilityUpdater>();
+
+
             // AutoMapper configuration - after all services
             services.AddAutoMapper(typeof(MappingProfile));
         }
@@ -48,9 +51,11 @@ namespace Medix.API.Configurations
             services.AddScoped<IPrescriptionRepository, PrescriptionRepository>();
             services.AddScoped<IDoctorScheduleOverrideRepository, DoctorScheduleOverrideRepository>();
             services.AddScoped<IRefArticleStatusRepository, RefArticleStatusRepository>();
+
+            services.AddScoped<IMedicationRepository, MedicationRepository>();
             services.AddScoped<IDoctorRegistrationFormRepository, DoctorRegistrationFormRepository>();
-            services.AddScoped<IDoctorSalaryRepository, DoctorSalaryRepository>();
-            services.AddScoped<IServiceTierSubscriptionsRepository,  ServiceTierSubscriptionsRepository>();
+
+
         }
 
         private static void RegisterServices(IServiceCollection services)
@@ -82,9 +87,10 @@ namespace Medix.API.Configurations
             services.AddScoped<IPrescriptionService, PrescriptionService>();
             services.AddScoped<IReviewService, ReviewService>();
             services.AddScoped<IDoctorScheduleOverrideService, DoctorScheduleOverrideService>();
+            services.AddScoped<IMedicationService, MedicationService>();
+
             services.AddScoped<IDoctorRegistrationFormService, DoctorRegistrationFormService>();
-            services.AddScoped<IDoctorSalaryService, DoctorSalaryService>();
-            services.AddScoped<IDoctorServiceTierService, DoctorServiceTierService>();
+
         }
     }
 }

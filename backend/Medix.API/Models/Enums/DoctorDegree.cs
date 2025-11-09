@@ -1,5 +1,6 @@
 ﻿namespace Medix.API.Models.Enums
 {
+   
     public record DoctorDegree(string Code, string Description)
     {
         public static readonly DoctorDegree Bachelor = new("BC", "Cử nhân Y khoa");

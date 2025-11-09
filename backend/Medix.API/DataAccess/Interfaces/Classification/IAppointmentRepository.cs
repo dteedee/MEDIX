@@ -1,4 +1,4 @@
-﻿using Medix.API.Models.Entities;
+﻿﻿﻿﻿using Medix.API.Models.Entities;
 
 namespace Medix.API.DataAccess.Interfaces.Classification
 {
@@ -14,6 +14,8 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task<IEnumerable<Appointment>> GetByDateAsync(DateTime date);
         Task<Doctor?> GetDoctorByUserIdAsync(Guid userId);
         Task<IEnumerable<Appointment>> GetByDoctorAndDateAsync(Guid doctorId, DateTime startDate, DateTime endDate);
+        Task<bool> HasFutureAppointmentsForDoctorOnDay(Guid doctorId, int dayOfWeek);
+        Task<bool> HasAppointmentsInTimeRangeAsync(Guid doctorId, DateTime overrideDate, TimeOnly startTime, TimeOnly endTime);
 
     }
 }

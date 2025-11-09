@@ -13,6 +13,20 @@ const getMyDayAppointments = async (dateString: string): Promise<Appointment[]> 
   return response.data;
 };
 
+/**
+ * Lấy danh sách các cuộc hẹn của bác sĩ đã đăng nhập trong một khoảng ngày.
+ * @param startDate - Chuỗi ngày bắt đầu ở định dạng YYYY-MM-DD.
+ * @param endDate - Chuỗi ngày kết thúc ở định dạng YYYY-MM-DD.
+ * @returns {Promise<Appointment[]>} Danh sách các cuộc hẹn trong khoảng ngày.
+ */
+const getMyAppointmentsByDateRange = async (startDate: string, endDate: string): Promise<Appointment[]> => {
+  const response = await apiClient.get<Appointment[]>(
+    `${API_ENDPOINT}/my-appointments-by-range?startDate=${startDate}&endDate=${endDate}`
+  );
+  return response.data;
+};
+
 export const appointmentService = {
   getMyDayAppointments,
+  getMyAppointmentsByDateRange,
 };

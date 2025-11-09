@@ -1,4 +1,4 @@
-﻿using Medix.API.DataAccess.Interfaces.Classification;
+﻿﻿﻿﻿using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -123,5 +123,36 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .ToListAsync();
         }
 
+        public async Task<bool> HasFutureAppointmentsForDoctorOnDay(Guid doctorId, int dayOfWeek)
+        {
+            var today = DateTime.Today;
+            // DayOfWeek trong .NET là một enum (Sunday = 0, ..., Saturday = 6), khớp với giá trị int đầu vào.
+            var day = (DayOfWeek)dayOfWeek;
+            
+            // Lọc trước các điều kiện có thể dịch sang SQL ở phía server
+            var futureAppointments = await _context.Appointments
+                .Where(a =>
+                    a.DoctorId == doctorId &&
+                    a.AppointmentStartTime >= today && // Điều kiện này dịch được
+                    a.TransactionId != null) // Điều kiện này dịch được
+                .Select(a => a.AppointmentStartTime) // Chỉ lấy cột ngày giờ để giảm dữ liệu truyền tải
+                .ToListAsync();
+
+            // Thực hiện kiểm tra DayOfWeek ở phía client (trong bộ nhớ)
+            // Vì dữ liệu đã được lọc trước nên thao tác này rất nhanh.
+            return futureAppointments.Any(appointmentDate => appointmentDate.DayOfWeek == day);
+        }
+
+        public async Task<bool> HasAppointmentsInTimeRangeAsync(Guid doctorId, DateTime overrideDate, TimeOnly startTime, TimeOnly endTime)
+        {
+            var startDate = overrideDate.Date.Add(startTime.ToTimeSpan());
+            var endDate = overrideDate.Date.Add(endTime.ToTimeSpan());
+
+            return await _context.Appointments.AnyAsync(a =>
+                a.DoctorId == doctorId &&
+                a.AppointmentStartTime < endDate &&
+                a.AppointmentEndTime > startDate
+            );
+        }
     }
 }

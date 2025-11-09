@@ -11,6 +11,8 @@
         public string? Reason { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public bool OverrideType { get; set; }
+
     }
 
     public class CreateDoctorScheduleOverrideDto
@@ -21,6 +23,8 @@
         public TimeOnly EndTime { get; set; }
         public bool IsAvailable { get; set; }
         public string? Reason { get; set; }
+        public bool OverrideType { get; set; }
+
     }
 
     public class UpdateDoctorScheduleOverrideDto
@@ -31,5 +35,7 @@
         public TimeOnly EndTime { get; set; }
         public bool IsAvailable { get; set; }
         public string? Reason { get; set; }
+        public bool OverrideType { get; set; }
+
     }
 }

@@ -1,0 +1,334 @@
+.container {
+  padding: 2rem;
+  background-color: #f9fafb;
+  min-height: 100vh;
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.header p {
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.summaryCard {
+  background-color: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+.summaryCard h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 1rem;
+}
+
+.overviewStats {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 100%;
+}
+
+.overviewItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.overviewValue {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.overviewIcon {
+  color: #6b7280;
+}
+
+.overviewLabel {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.ratingDistribution {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.barLabel {
+  font-size: 0.8rem;
+  color: #6b7280;
+  width: 40px;
+  text-align: right;
+}
+
+.barContainer {
+  flex-grow: 1;
+  background-color: #e5e7eb;
+  border-radius: 9999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  background-color: #f59e0b;
+  border-radius: 9999px;
+  transition: width 0.5s ease-in-out;
+}
+
+.barPercentage {
+  font-size: 0.8rem;
+  color: #4b5563;
+  font-weight: 500;
+  width: 35px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.filterGroup, .sortGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.toolbarLabel {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.filterButtons {
+  display: flex;
+  background-color: #e5e7eb;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.filterButton {
+  border: none;
+  background-color: transparent;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4b5563;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.filterButton:hover {
+  background-color: #d1d5db;
+}
+
+.filterButton.active {
+  background-color: #fff;
+  color: #1f2937;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.sortDropdown {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: #fff;
+  font-size: 0.875rem;
+}
+
+.reviewList {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.reviewCard {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.reviewCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.reviewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.patientInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.patientAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.patientName {
+  font-weight: 600;
+  color: #111827;
+}
+
+.appointmentTimeHeader {
+  background-color: #f3f4f6;
+  padding: 0.5rem 1.5rem;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.reviewMeta {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.reviewDate {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+.appointmentTime {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 0.2rem;
+  background-color: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.stars {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.starFilled {
+  color: #f59e0b;
+}
+
+.starEmpty {
+  color: #d1d5db;
+}
+
+.reviewBody {
+  padding: 1rem 1.5rem;
+}
+
+.comment {
+  color: #495057;
+  line-height: 1.6;
+}
+
+.noComment {
+  color: #adb5bd;
+  font-style: italic;
+}
+
+.sentimentPositive, .sentimentNeutral, .sentimentNegative {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+.sentimentPositive {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.sentimentNeutral {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.sentimentNegative {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.adminResponse {
+  margin: 1rem 1.5rem 1.5rem;
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.emptyState, .errorState {
+  text-align: center;
+  padding: 4rem 2rem;
+  background-color: #fff;
+  border-radius: 12px;
+  color: #6b7280;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+.emptyState i,
+.errorState i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #adb5bd;
+}
+
+.emptyState p,
+.errorState p {
+  font-size: 1.1rem;
+}

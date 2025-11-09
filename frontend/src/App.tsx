@@ -141,9 +141,9 @@ export function App() {
 
                   {/* ---------- Manager routes ---------- */}
                   <Route path="manager/*" element={
-                    // <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
+                    <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
                       <ManagerLayout />
-                    // </ProtectedRoute>
+                     </ProtectedRoute>
                   }>
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard" element={<ManageDashboard />} />
@@ -174,9 +174,9 @@ export function App() {
 
                   {/* ---------- Doctor routes ---------- */}
                   <Route path="doctor/*" element={
-                    <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
+                    // <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
                       <DoctorLayout />
-                    </ProtectedRoute>
+                    // </ProtectedRoute>
                   }>
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard" element={<DoctorDashboard />} />

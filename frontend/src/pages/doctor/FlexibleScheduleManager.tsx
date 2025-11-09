@@ -1,32 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import Swal from 'sweetalert2';
-import { ScheduleOverride, CreateScheduleOverridePayload } from '../../types/schedule';
+import { ScheduleOverride, CreateScheduleOverridePayload, DoctorSchedule } from '../../types/schedule';
 import { scheduleService } from '../../services/scheduleService';
 import { X, Plus, Edit, Trash2 } from 'lucide-react';
-import '../../styles/FlexibleScheduleManager.css';
+import '../../styles/doctor/FlexibleScheduleManager.css';
 
 interface Props {
+  schedules: DoctorSchedule[];
   overrides: ScheduleOverride[];
   onClose: () => void;
+  initialDate?: string | null;
   onRefresh: () => void;
 }
 
-type FormInputs = CreateScheduleOverridePayload;
+type FormInputs = Omit<CreateScheduleOverridePayload, 'overrideType'> & {
+  // Thêm trường này vào form để dễ quản lý, không có trong payload gửi đi
+  timeSlot: string;
+  overrideType: number; // Trong form, overrideType là number (1 hoặc 0)
+};
 
-const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefresh }) => {
+const timeSlots = [
+  { label: 'Ca 1 (07:00 - 07:50)', startTime: '07:00', endTime: '07:50' },
+  { label: 'Ca 2 (08:00 - 08:50)', startTime: '08:00', endTime: '08:50' },
+  { label: 'Ca 3 (09:00 - 09:50)', startTime: '09:00', endTime: '09:50' },
+  { label: 'Ca 4 (10:00 - 10:50)', startTime: '10:00', endTime: '10:50' },
+  { label: 'Ca 5 (13:00 - 13:50)', startTime: '13:00', endTime: '13:50' },
+  { label: 'Ca 6 (14:00 - 14:50)', startTime: '14:00', endTime: '14:50' },
+  { label: 'Ca 7 (15:00 - 15:50)', startTime: '15:00', endTime: '15:50' },
+  { label: 'Ca 8 (16:00 - 16:50)', startTime: '16:00', endTime: '16:50' },
+];
+
+const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClose, onRefresh, initialDate }) => {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingOverride, setEditingOverride] = useState<ScheduleOverride | null>(null);
 
   const { register, handleSubmit, reset, setValue, getValues, formState: { errors } } = useForm<FormInputs>();
 
+  useEffect(() => {
+    // Khi modal được mở với một ngày cụ thể (từ việc click vào ngày trên lịch)
+    // thì sẽ mở thẳng form thêm mới cho ngày đó.
+    if (initialDate) {
+      setEditingOverride(null);
+      reset({
+        overrideDate: initialDate,
+        startTime: timeSlots[0].startTime,
+        endTime: timeSlots[0].endTime,
+        overrideType: 1,
+        reason: '' // Để trống cho người dùng nhập
+      });
+      setIsFormVisible(true); // Hiển thị form
+    }
+  }, [initialDate, reset]);
+
   const handleAddNew = () => {
     setEditingOverride(null);
     reset({
-      overrideDate: '',
-      startTime: '',
-      endTime: '',
-      isAvailable: true,
+      overrideDate: new Date().toISOString().split('T')[0], // Mặc định là ngày hôm nay
+      startTime: timeSlots[0].startTime,
+      endTime: timeSlots[0].endTime,
+      overrideType: 1,
       reason: ''
     });
     setIsFormVisible(true);
@@ -37,7 +70,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
     setValue('overrideDate', override.overrideDate);
     setValue('startTime', override.startTime.substring(0, 5));
     setValue('endTime', override.endTime.substring(0, 5));
-    setValue('isAvailable', override.isAvailable);
+    setValue('overrideType', override.overrideType ? 1 : 0);
     setValue('reason', override.reason);
     setIsFormVisible(true);
   };
@@ -59,21 +92,78 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
         await scheduleService.deleteScheduleOverride(overrideId);
         Swal.fire('Đã xóa!', 'Lịch linh hoạt đã được xóa.', 'success');
         onRefresh();
-      } catch (error) {
-        console.error('Failed to delete override:', error);
-        Swal.fire('Lỗi!', 'Không thể xóa lịch. Vui lòng thử lại.', 'error');
+      } catch (err: any) {
+        console.error('Failed to delete override:', err);
+        let errorMessage = 'Không thể xóa lịch. Vui lòng thử lại.'; // Fallback
+
+        if (err.response && err.response.data) {
+          if (typeof err.response.data === 'string') {
+            errorMessage = err.response.data;
+          } else if (typeof err.response.data === 'object') {
+            // Xử lý lỗi từ ProblemDetails của ASP.NET Core
+            errorMessage = err.response.data.detail || err.response.data.title || JSON.stringify(err.response.data);
+          }
+        }
+
+        Swal.fire({
+          title: 'Lỗi!',
+          text: errorMessage,
+          icon: 'error',
+          confirmButtonText: 'Đã hiểu'
+        });
       }
     }
   };
 
   const processFormSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
+      // Chuyển đổi giá trị từ form (string) sang number
+      const overrideTypeNumber = Number(data.overrideType);
+
+      // --- VALIDATION: Ngăn đăng ký nghỉ quá gần ---
+      if (overrideTypeNumber === 0) { // Chỉ áp dụng cho lịch "Nghỉ"
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Chuẩn hóa về đầu ngày
+        const selectedDate = new Date(data.overrideDate);
+
+        const twoDaysFromNow = new Date(today);
+        twoDaysFromNow.setDate(today.getDate() + 2);
+
+        if (selectedDate <= twoDaysFromNow) {
+          Swal.fire('Lỗi!', 'Bạn chỉ có thể đăng ký lịch nghỉ sau 2 ngày kể từ hôm nay.', 'error');
+          return; // Dừng thực thi
+        }
+      }
+
+      // --- VALIDATION: Giới hạn số ngày nghỉ ---
+      // Chỉ kiểm tra khi tạo mới một lịch "Nghỉ"
+      if (overrideTypeNumber === 0 && !editingOverride) {
+        const today = new Date().toISOString().split('T')[0]; // Lấy ngày hôm nay dạng 'YYYY-MM-DD'
+
+        // Lấy tất cả các ngày nghỉ (overrideType === false) từ hôm nay trở về sau
+        const existingNghiDays = new Set(
+          overrides
+            .filter(o => !o.overrideType && o.overrideDate >= today)
+            .map(o => o.overrideDate)
+        );
+
+        // Nếu ngày đang tạo chưa có trong danh sách ngày nghỉ và đã đủ 2 ngày nghỉ
+        if (!existingNghiDays.has(data.overrideDate) && existingNghiDays.size >= 2) {
+          Swal.fire('Lỗi!', 'Bạn chỉ được phép đăng ký lịch nghỉ tối đa trong 2 ngày khác nhau.', 'error');
+          return; // Dừng thực thi
+        }
+      }
+      // --- END VALIDATION ---
+
+
       const payload: CreateScheduleOverridePayload = {
-        ...data, // isAvailable, overrideDate, reason
+        overrideDate: data.overrideDate,
+        reason: data.reason,
+        overrideType: overrideTypeNumber === 1, // true for Tăng ca, false for Nghi
+        isAvailable: true, // Luôn mặc định là true, backend và background service sẽ xử lý logic
         // Đảm bảo thời gian luôn có định dạng HH:mm:ss
         startTime: data.startTime.length === 5 ? `${data.startTime}:00` : data.startTime,
         endTime: data.endTime.length === 5 ? `${data.endTime}:00` : data.endTime,
-        isAvailable: data.isAvailable === true || (data.isAvailable as any) === 'true', // Đảm bảo isAvailable là boolean
       };
 
       if (editingOverride) {
@@ -86,11 +176,44 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
       onRefresh();
       setIsFormVisible(false);
       setEditingOverride(null);
-    } catch (error) {
-      console.error('Failed to save override:', error);
-      Swal.fire('Lỗi!', 'Không thể lưu lịch. Vui lòng kiểm tra lại thông tin.', 'error');
+    } catch (err: any) {
+      console.error('Failed to save override:', err);
+      let errorMessage = 'Không thể lưu lịch. Vui lòng kiểm tra lại thông tin.'; // Fallback
+
+      if (err.response && err.response.data) {
+        if (typeof err.response.data === 'string') {
+          errorMessage = err.response.data;
+        } else if (typeof err.response.data === 'object') {
+          // Xử lý lỗi từ ProblemDetails của ASP.NET Core
+          errorMessage = err.response.data.details || err.response.data.detail || err.response.data.title || JSON.stringify(err.response.data);
+          if (errorMessage.includes('Không thể cập nhật lịch ghi đè này vì đã có cuộc hẹn được đặt'))
+          {
+            errorMessage = "Đã có cuộc hẹn trong khoảng thời gian này, không thể cập nhật!";
+          }
+          if (errorMessage.includes('Bạn đã có ghi đè trong khung giờ'))
+          {
+            errorMessage = "Khung giờ này đã tồn tại một lịch linh hoạt khác. Vui lòng chọn thời gian khác.";
+          }
+        }
+      }
+
+      Swal.fire({
+        title: 'Lỗi!',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonText: 'Đã hiểu'
+      });
     }
   };
+
+  const handleTimeSlotChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedSlot = timeSlots.find(slot => slot.startTime === e.target.value);
+    if (selectedSlot) {
+      setValue('startTime', selectedSlot.startTime);
+      setValue('endTime', selectedSlot.endTime);
+    }
+  };
+
 
   return (
     <div className="modal-overlay">
@@ -108,16 +231,25 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
               </button>
             </div>
             <div className="override-list-container">
-              {overrides.length > 0 ? (
+              {overrides.filter(o => o.isAvailable).length > 0 ? (
                 overrides
-                  .sort((a, b) => new Date(b.overrideDate).getTime() - new Date(a.overrideDate).getTime())
+                  .filter(o => o.isAvailable) // Chỉ hiển thị các ca có IsAvailable = true
+                  .sort((a, b) => {
+                    const dateComparison = new Date(b.overrideDate).getTime() - new Date(a.overrideDate).getTime();
+                    if (dateComparison !== 0) {
+                      return dateComparison;
+                    }
+                    return b.startTime.localeCompare(a.startTime); // Giữ nguyên thứ tự sắp xếp theo thời gian giảm dần
+                  })
                   .map(override => (
-                    <div key={override.id} className="override-list-item">
+                    <div key={override.id} className={`override-list-item ${override.overrideType ? 'available' : 'unavailable'}`}>
                       <div className="override-info">
                         <span className="override-date">{new Date(override.overrideDate).toLocaleDateString('vi-VN')}</span>
-                        <span className="override-time">{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</span>
-                        <span className={`override-status ${override.isAvailable ? 'available' : 'unavailable'}`}>
-                          {override.isAvailable ? 'Tăng ca' : 'Nghỉ'}
+                        <span className="override-time">{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</span> 
+                        <span className={`override-status ${override.overrideType ? 'available' : 'unavailable'}`}>
+                          {override.overrideType
+                            ? `Tăng ca${override.reason ? ` - ${override.reason}` : ''}` // Dùng overrideType để quyết định văn bản
+                            : `Nghỉ${override.reason ? ` - ${override.reason}` : ''}`}
                         </span>
                       </div>
                       <div className="override-actions">
@@ -136,31 +268,31 @@ const FlexibleScheduleManager: React.FC<Props> = ({ overrides, onClose, onRefres
             <div className="form-grid">
               <div className="form-group">
                 <label>Ngày</label>
-                <input type="date" {...register('overrideDate', { required: 'Ngày là bắt buộc' })} />
+                <input type="date" {...register('overrideDate', { required: 'Ngày là bắt buộc' })} min={new Date().toISOString().split('T')[0]}/>
                 {errors.overrideDate && <p className="error-text">{errors.overrideDate.message}</p>}
               </div>
               <div className="form-group">
                 <label>Loại</label>
-                <input type="text" {...register('reason', { required: 'Loại/Lý do là bắt buộc' })} placeholder="VD: Tăng ca, Nghỉ ốm..." />
-                {errors.reason && <p className="error-text">{errors.reason.message}</p>}
-                {/* Giữ trường isAvailable ẩn để form hoạt động đúng, mặc định là true (Tăng ca) */}
-                <input type="hidden" {...register('isAvailable')} value="true" />
+                <select {...register('overrideType', { required: 'Vui lòng chọn loại' })}>
+                  <option value="1">Tăng ca</option>
+                  <option value="0">Nghỉ</option>
+                </select>
+                {errors.overrideType && <p className="error-text">{errors.overrideType.message}</p>}
               </div>
-              <div className="form-group">
-                <label>Giờ bắt đầu</label>
-                <input type="time" {...register('startTime', { required: 'Giờ bắt đầu là bắt buộc' })} />
-                {errors.startTime && <p className="error-text">{errors.startTime.message}</p>}
+              <div className="form-group form-group-span-2">
+                <label>Ca làm việc</label>
+                <select
+                  {...register('timeSlot', { required: 'Vui lòng chọn ca làm việc' })}
+                  onChange={handleTimeSlotChange}
+                >
+                  {timeSlots.map(slot => <option key={slot.startTime} value={slot.startTime}>{slot.label}</option>)}
+                </select>
+                {errors.timeSlot && <p className="error-text">{errors.timeSlot.message}</p>}
               </div>
-              <div className="form-group">
-                <label>Giờ kết thúc</label>
-                <input
-                  type="time"
-                  {...register('endTime', {
-                    required: 'Giờ kết thúc là bắt buộc',
-                    validate: value => getValues('startTime') < value || 'Giờ kết thúc phải sau giờ bắt đầu'
-                  })}
-                />
-                {errors.endTime && <p className="error-text">{errors.endTime.message}</p>}
+              <div className="form-group form-group-span-2">
+                <label>Lý do</label>
+                <input type="text" {...register('reason')} placeholder="VD: Tăng ca, Nghỉ phép,..." />
+                {errors.reason && <p className="error-text">{errors.reason.message as string}</p>}
               </div>
             </div>
             <div className="form-actions">

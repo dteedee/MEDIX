@@ -1,15 +1,12 @@
 .patient-visit-form {
   background: white;
   border-radius: 8px;
-  overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.form-header {
-  background: white;
-  border: 3px solid #2563eb;
-  padding: 16px 20px;
-  margin-bottom: 0;
+  border: 1px solid #e5e7eb;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .form-header h2 {
@@ -19,13 +16,32 @@
   margin: 0;
 }
 
-.form-section {
-  padding: 24px;
-  border-bottom: 1px solid #e5e7eb;
+.form-header {
+  background: #f9fafb;
+  border: 2px solid #2563eb;
+  padding: 16px 24px;
+  border-radius: 8px;
+  text-align: center;
 }
 
-.form-section:last-of-type {
-  border-bottom: none;
+.form-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.header-info {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  font-size: 14px;
+}
+
+.form-section {
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
 }
 
 .section-title {
@@ -33,23 +49,28 @@
   font-weight: 600;
   color: #1f2937;
   margin: 0 0 16px 0;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #f3f4f6;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .section-content {
   display: flex;
   gap: 24px;
+  flex-wrap: wrap;
 }
 
-.section-content.two-columns {
+.section-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 24px;
 }
 
 .form-column {
   flex: 1;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .form-column.full-width {
@@ -104,12 +125,54 @@
   background: #059669;
 }
 
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px 24px;
+  font-size: 14px;
+}
+
+.info-item {
+  padding: 4px 0;
+}
+
+.info-item.full-span {
+  grid-column: 1 / -1;
+}
+
+.info-value-box {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 14px;
+  min-height: 46px; /* Match textarea height */
+  color: #374151;
+}
+
 .form-footer {
   padding: 24px;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: flex-end;
   background: #f9fafb;
   border-top: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.doctor-signature {
+  text-align: center;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.doctor-signature p {
+  margin: 2px 0;
+}
+
+.doctor-signature strong {
+  color: #1f2937;
 }
 
 .btn-submit {
@@ -129,19 +192,21 @@
 }
 
 @media (max-width: 768px) {
-  .section-content.two-columns {
-    grid-template-columns: 1fr;
-  }
-
-  .form-section {
+  .patient-visit-form {
     padding: 16px;
   }
 
-  .form-header {
-    padding: 12px 16px;
+  .form-header h1 {
+    font-size: 20px;
   }
 
-  .form-header h2 {
-    font-size: 14px;
+  .header-info {
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .section-grid, .info-grid {
+    grid-template-columns: 1fr;
   }
 }

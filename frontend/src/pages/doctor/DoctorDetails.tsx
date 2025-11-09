@@ -127,6 +127,9 @@ function DoctorDetails() {
     const [appliedPromotion, setAppliedPromotion] = useState<PromotionDto | null>(null);
     const [promotionError, setPromotionError] = useState<string>('');
     const [isCheckingPromotion, setIsCheckingPromotion] = useState(false);
+    const [showPromotionModal, setShowPromotionModal] = useState(false);
+    const [availablePromotions, setAvailablePromotions] = useState<PromotionDto[]>([]);
+    const [isLoadingPromotions, setIsLoadingPromotions] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -359,6 +362,41 @@ function DoctorDetails() {
         } finally {
             setIsCheckingPromotion(false);
         }
+    };
+
+    // Function to open promotion modal and fetch available promotions
+    const handleOpenPromotionModal = async () => {
+        setShowPromotionModal(true);
+        setIsLoadingPromotions(true);
+        setAvailablePromotions([]);
+
+        try {
+            const promotions = await promotionService.getAvailablePromotions();
+            // Filter only active promotions
+            const now = new Date();
+            const activePromotions = promotions.filter(promo => {
+                if (!promo.isActive) return false;
+                const startDate = new Date(promo.startDate);
+                const endDate = new Date(promo.endDate);
+                if (now < startDate || now > endDate) return false;
+                if (promo.maxUsage && promo.usedCount >= promo.maxUsage) return false;
+                return true;
+            });
+            setAvailablePromotions(activePromotions);
+        } catch (error) {
+            console.error('Error fetching promotions:', error);
+            setAvailablePromotions([]);
+        } finally {
+            setIsLoadingPromotions(false);
+        }
+    };
+
+    // Function to select a promotion from the modal
+    const handleSelectPromotion = (promotion: PromotionDto) => {
+        setAppliedPromotion(promotion);
+        setPromotionCode(promotion.code);
+        setPromotionError('');
+        setShowPromotionModal(false);
     };
 
     // Function to calculate final price with promotion
@@ -1814,10 +1852,21 @@ function DoctorDetails() {
                                                     
                                                     {/* Promotion Code Input */}
                                                     <div className={styles.promotionCodeSection}>
-                                                        <label htmlFor="promotionCode" className={styles.promotionLabel}>
-                                                            <i className="bi bi-tag-fill"></i>
-                                                            Mã khuyến mãi (nếu có)
-                                                        </label>
+                                                        <div className={styles.promotionLabelRow}>
+                                                            <label htmlFor="promotionCode" className={styles.promotionLabel}>
+                                                                <i className="bi bi-tag-fill"></i>
+                                                                Mã khuyến mãi (nếu có)
+                                                            </label>
+                                                            <button
+                                                                type="button"
+                                                                className={styles.selectPromoButton}
+                                                                onClick={handleOpenPromotionModal}
+                                                                title="Chọn mã khuyến mãi"
+                                                            >
+                                                                <i className="bi bi-list-ul"></i>
+                                                                Chọn mã
+                                                            </button>
+                                                        </div>
                                                         <div className={styles.promotionInputGroup}>
                                                             <input
                                                                 type="text"
@@ -1830,13 +1879,13 @@ function DoctorDetails() {
                                                                     setPromotionError('');
                                                                     setAppliedPromotion(null);
                                                                 }}
-                                                                disabled={isCheckingPromotion}
+                                                                disabled={isCheckingPromotion || !!appliedPromotion}
                                                             />
                                                             <button
                                                                 type="button"
                                                                 className={styles.applyPromoButton}
                                                                 onClick={handleApplyPromotion}
-                                                                disabled={isCheckingPromotion || !promotionCode.trim()}
+                                                                disabled={isCheckingPromotion || !promotionCode.trim() || !!appliedPromotion}
                                                             >
                                                                 {isCheckingPromotion ? (
                                                                     <div className={styles.buttonSpinner}></div>
@@ -2147,6 +2196,93 @@ function DoctorDetails() {
                             >
                                 <i className="bi bi-calendar2-check"></i>
                                 Xem lịch hẹn của tôi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Promotion Selection Modal */}
+            {showPromotionModal && (
+                <div className={styles.modalOverlay} onClick={() => setShowPromotionModal(false)}>
+                    <div className={styles.promotionModal} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.promotionModalHeader}>
+                            <h3>
+                                <i className="bi bi-tag-fill"></i>
+                                Chọn mã khuyến mãi
+                            </h3>
+                            <button 
+                                className={styles.modalCloseButton}
+                                onClick={() => setShowPromotionModal(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        
+                        <div className={styles.promotionModalContent}>
+                            {isLoadingPromotions ? (
+                                <div className={styles.promotionLoading}>
+                                    <div className={styles.buttonSpinner}></div>
+                                    <p>Đang tải danh sách mã khuyến mãi...</p>
+                                </div>
+                            ) : availablePromotions.length === 0 ? (
+                                <div className={styles.promotionEmpty}>
+                                    <i className="bi bi-inbox"></i>
+                                    <p>Hiện tại không có mã khuyến mãi nào khả dụng</p>
+                                </div>
+                            ) : (
+                                <div className={styles.promotionList}>
+                                    {availablePromotions.map((promotion) => (
+                                        <div
+                                            key={promotion.id}
+                                            className={`${styles.promotionItem} ${appliedPromotion?.id === promotion.id ? styles.promotionItemSelected : ''}`}
+                                            onClick={() => handleSelectPromotion(promotion)}
+                                        >
+                                            <div className={styles.promotionItemHeader}>
+                                                <div className={styles.promotionItemIcon}>
+                                                    <i className="bi bi-tag-fill"></i>
+                                                </div>
+                                                <div className={styles.promotionItemInfo}>
+                                                    <h4 className={styles.promotionItemName}>{promotion.name}</h4>
+                                                    <p className={styles.promotionItemCode}>{promotion.code}</p>
+                                                </div>
+                                                <div className={styles.promotionItemDiscount}>
+                                                    <span className={styles.discountBadge}>
+                                                        {promotion.discountType === 'Percentage' 
+                                                            ? `-${promotion.discountValue}%`
+                                                            : `-${promotion.discountValue.toLocaleString('vi-VN')}đ`}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {promotion.description && (
+                                                <p className={styles.promotionItemDescription}>{promotion.description}</p>
+                                            )}
+                                            <div className={styles.promotionItemFooter}>
+                                                <div className={styles.promotionItemDate}>
+                                                    <i className="bi bi-calendar3"></i>
+                                                    <span>
+                                                        {new Date(promotion.startDate).toLocaleDateString('vi-VN')} - {new Date(promotion.endDate).toLocaleDateString('vi-VN')}
+                                                    </span>
+                                                </div>
+                                                {appliedPromotion?.id === promotion.id && (
+                                                    <div className={styles.promotionItemSelectedBadge}>
+                                                        <i className="bi bi-check-circle-fill"></i>
+                                                        Đã chọn
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className={styles.promotionModalFooter}>
+                            <button 
+                                className={styles.btnCancel}
+                                onClick={() => setShowPromotionModal(false)}
+                            >
+                                Đóng
                             </button>
                         </div>
                     </div>

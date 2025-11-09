@@ -14,6 +14,16 @@ class PromotionService {
             throw error;
         }
     }
+
+    async getAvailablePromotions(): Promise<PromotionDto[]> {
+        try {
+            const response = await apiClient.get<PromotionDto[]>('/promotion/available');
+            return response.data || [];
+        } catch (error: any) {
+            console.error('Get available promotions error:', error);
+            return [];
+        }
+    }
 }
 
 export default new PromotionService();

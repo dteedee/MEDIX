@@ -1,5 +1,5 @@
 import { useParams, useSearchParams, useNavigate, useLocation, Link } from "react-router-dom";
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import doctorService from "../../services/doctorService";
 import { DoctorProfileDto, ServiceTierWithPaginatedDoctorsDto, DoctorTypeDegreeDto, DoctorInTier, PaginationParams, DoctorQueryParameters } from "../../types/doctor.types";
 import { Header } from "../../components/layout/Header";
@@ -38,10 +38,84 @@ function DoctorDetails() {
         startTime: string;
         endTime: string;
     }>>([]);
-    const [currentMonth, setCurrentMonth] = useState(() => {
-        const now = new Date();
-        return new Date(now.getFullYear(), now.getMonth(), 1);
-    });
+    // Helper function to get available dates (only today and future dates)
+    // In Vietnam, week starts on Monday (1) and ends on Sunday (7)
+    // Rules:
+    // - If today is Sunday: show today + next week (Monday to Sunday) = 8 days
+    // - If today is Friday: show today + Saturday + Sunday + next week (Monday to Sunday) = 9 days
+    // - If today is Saturday: show today + Sunday + next week (Monday to Sunday) = 8 days
+    // - Other days: show from today to Sunday of this week
+    const getAvailableDates = (): Date[] => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Convert to Monday-based week (Monday = 1, Sunday = 7)
+        const dayOfWeek = convertDayOfWeek(today.getDay());
+        const isSunday = dayOfWeek === 7;
+        const isFriday = dayOfWeek === 5;
+        const isSaturday = dayOfWeek === 6;
+        
+        const dates: Date[] = [];
+        
+        if (isSunday) {
+            // If today is Sunday: show today + next week (Monday to Sunday) = 8 days
+            // Add today (Sunday)
+            dates.push(new Date(today));
+            
+            // Add next week (Monday to Sunday)
+            const nextMonday = new Date(today);
+            nextMonday.setDate(today.getDate() + 1); // Next Monday
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(nextMonday);
+                date.setDate(nextMonday.getDate() + i);
+                dates.push(date);
+            }
+        } else if (isFriday) {
+            // If today is Friday: today + Saturday + Sunday + next week (Monday to Sunday) = 9 days
+            // Add today (Friday) and remaining days of this week (Saturday, Sunday)
+            for (let i = 0; i < 3; i++) { // Friday, Saturday, Sunday
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                dates.push(date);
+            }
+            
+            // Add next week (Monday to Sunday)
+            const nextMonday = new Date(today);
+            nextMonday.setDate(today.getDate() + 3); // Skip to next Monday
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(nextMonday);
+                date.setDate(nextMonday.getDate() + i);
+                dates.push(date);
+            }
+        } else if (isSaturday) {
+            // If today is Saturday: show today + Sunday + next week (Monday to Sunday) = 8 days
+            // Add today (Saturday) and Sunday
+            for (let i = 0; i < 2; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                dates.push(date);
+            }
+            
+            // Add next week (Monday to Sunday)
+            const nextMonday = new Date(today);
+            nextMonday.setDate(today.getDate() + 2); // Skip to next Monday
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(nextMonday);
+                date.setDate(nextMonday.getDate() + i);
+                dates.push(date);
+            }
+        } else {
+            // Other days (Monday to Thursday): show from today to Sunday of this week
+            const daysUntilSunday = 8 - dayOfWeek; // Days until Sunday (inclusive)
+            for (let i = 0; i < daysUntilSunday; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                dates.push(date);
+            }
+        }
+        
+        return dates;
+    };
     const [showPaymentButton, setShowPaymentButton] = useState(false);
     const [isCreatingPayment, setIsCreatingPayment] = useState(false);
     const [promotionCode, setPromotionCode] = useState<string>('');
@@ -1365,77 +1439,115 @@ function DoctorDetails() {
                                                     </h3>
                                                 </div>
                                                 <div className={styles.calendarContainer}>
-                                                    <div className={styles.calendarHeader}>
-                                                        <button 
-                                                            className={styles.calendarNav}
-                                                            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-                                                        >
-                                                            <i className="bi bi-chevron-left"></i>
-                                                        </button>
-                                                        <h4 className={styles.calendarMonth}>
-                                                            {currentMonth.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
-                                                        </h4>
-                                                        <button 
-                                                            className={styles.calendarNav}
-                                                            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-                                                        >
-                                                            <i className="bi bi-chevron-right"></i>
-                                                        </button>
-                                                    </div>
-                                                    <div className={styles.calendarGrid}>
-                                                        <div className={styles.calendarWeekdays}>
-                                                            {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(day => (
-                                                                <div key={day} className={styles.weekday}>{day}</div>
-                                                            ))}
-                                                        </div>
-                                                        <div className={styles.calendarDates}>
-                                                            {(() => {
-                                                                // Get first day of the month
-                                                                const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+                                                    {(() => {
+                                                        const availableDates = getAvailableDates();
+                                                        if (availableDates.length === 0) return null;
+                                                        
+                                                        // Get the month name from the first date
+                                                        const firstDate = availableDates[0];
+                                                        const monthName = firstDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+                                                        
+                                                        // Check if we have dates from two different months
+                                                        const lastDate = availableDates[availableDates.length - 1];
+                                                        const hasTwoMonths = firstDate.getMonth() !== lastDate.getMonth();
+                                                        
+                                                        return (
+                                                            <>
+                                                                {/* Month Header */}
+                                                                <div className={styles.calendarMonthHeader}>
+                                                                    <h4 className={styles.calendarMonthTitle}>
+                                                                        {hasTwoMonths 
+                                                                            ? `${firstDate.toLocaleDateString('vi-VN', { month: 'long' })} - ${lastDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}`
+                                                                            : monthName
+                                                                        }
+                                                                    </h4>
+                                                                </div>
                                                                 
-                                                                // Convert Sunday (0) to 7 for Monday-based week
-                                                                const firstDayOfWeek = firstDay.getDay() === 0 ? 7 : firstDay.getDay();
+                                                                {/* Weekday Headers */}
+                                                                <div className={styles.calendarWeekdays}>
+                                                                    {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(day => (
+                                                                        <div key={day} className={styles.weekdayHeader}>{day}</div>
+                                                                    ))}
+                                                                </div>
                                                                 
-                                                                // Calculate start date (Monday of the week containing first day)
-                                                                const startDate = new Date(firstDay);
-                                                                startDate.setDate(firstDay.getDate() - (firstDayOfWeek - 1));
-                                                                
-                                                                // Generate 42 days (6 weeks) for calendar grid
-                                                                return Array.from({ length: 42 }, (_, i) => {
-                                                                    const date = new Date(startDate);
-                                                                    date.setDate(startDate.getDate() + i);
-                                                                    
-                                                                    const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
-                                                                    const isAvailable = isDateAvailable(date);
-                                                                    const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
-                                                                    const isToday = new Date().toDateString() === date.toDateString();
-                                                                    
-                                                                    return (
-                                                                        <button
-                                                                            key={i}
-                                                                            className={`${styles.calendarDate} ${!isCurrentMonth ? styles.otherMonth : ''} ${!isAvailable ? styles.unavailable : ''} ${isSelected ? styles.selected : ''} ${isToday ? styles.today : ''}`}
-                                                                            onClick={() => isAvailable && handleDateSelect(date)}
-                                                                            disabled={!isAvailable}
-                                                                        >
-                                                                            {date.getDate()}
-                                                                        </button>
-                                                                    );
-                                                                });
-                                                            })()}
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    {/* Calendar Legend */}
-                                                    <div className={styles.calendarLegend}>
-                                                        <div className={styles.legendItem}>
-                                                            <div className={`${styles.legendColor} ${styles.todayLegend}`}></div>
-                                                            <span>Hôm nay</span>
-                                                        </div>
-                                                        <div className={styles.legendItem}>
-                                                            <div className={`${styles.legendColor} ${styles.unavailableLegend}`}></div>
-                                                            <span>Không khả dụng</span>
-                                                        </div>
-                                                    </div>
+                                                                {/* Date Grid */}
+                                                                <div className={styles.calendarDatesGrid}>
+                                                                    {(() => {
+                                                                        // Group dates by week: each week gets one row
+                                                                        // Calculate which week each date belongs to (week number from a reference point)
+                                                                        const weekGroups: { [weekKey: string]: Date[] } = {};
+                                                                        
+                                                                        availableDates.forEach(date => {
+                                                                            // Calculate the Monday of the week this date belongs to
+                                                                            const dayOfWeek = convertDayOfWeek(date.getDay());
+                                                                            const mondayOfWeek = new Date(date);
+                                                                            mondayOfWeek.setDate(date.getDate() - (dayOfWeek - 1));
+                                                                            mondayOfWeek.setHours(0, 0, 0, 0);
+                                                                            
+                                                                            // Use Monday's date as the week key
+                                                                            const weekKey = mondayOfWeek.toISOString().split('T')[0];
+                                                                            
+                                                                            if (!weekGroups[weekKey]) {
+                                                                                weekGroups[weekKey] = [];
+                                                                            }
+                                                                            weekGroups[weekKey].push(date);
+                                                                        });
+                                                                        
+                                                                        // Sort weeks by their Monday date
+                                                                        const sortedWeekKeys = Object.keys(weekGroups).sort();
+                                                                        
+                                                                        // Create rows for each week
+                                                                        return sortedWeekKeys.map((weekKey, weekIndex) => {
+                                                                            const weekDates = weekGroups[weekKey];
+                                                                            const row: (Date | null)[] = new Array(7).fill(null);
+                                                                            
+                                                                            // Place each date in its correct column
+                                                                            weekDates.forEach(date => {
+                                                                                const dayOfWeek = convertDayOfWeek(date.getDay());
+                                                                                const columnIndex = dayOfWeek - 1; // 0 = Monday, 6 = Sunday
+                                                                                row[columnIndex] = date;
+                                                                            });
+                                                                            
+                                                                            return (
+                                                                                <React.Fragment key={weekKey}>
+                                                                                    {row.map((date, colIndex) => {
+                                                                                        if (!date) {
+                                                                                            return <div key={colIndex} className={styles.calendarDateCellEmpty}></div>;
+                                                                                        }
+                                                                                        
+                                                                                        const today = new Date();
+                                                                                        today.setHours(0, 0, 0, 0);
+                                                                                        const dateOnly = new Date(date);
+                                                                                        dateOnly.setHours(0, 0, 0, 0);
+                                                                                        
+                                                                                        const isToday = dateOnly.getTime() === today.getTime();
+                                                                                        const isAvailable = isDateAvailable(date);
+                                                                                        const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
+                                                                                        
+                                                                                        return (
+                                                                                            <button
+                                                                                                key={`${weekKey}-${colIndex}`}
+                                                                                                className={`${styles.calendarDateCell} ${!isAvailable ? styles.unavailable : ''} ${isSelected ? styles.selected : ''} ${isToday ? styles.today : ''}`}
+                                                                                                onClick={() => isAvailable && handleDateSelect(date)}
+                                                                                                disabled={!isAvailable}
+                                                                                                title={date.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                                                                            >
+                                                                                                {isToday && <div className={styles.todayRing}></div>}
+                                                                                                <span className={styles.dateNumber}>{date.getDate()}</span>
+                                                                                                {isAvailable && (
+                                                                                                    <div className={styles.availableDot}></div>
+                                                                                                )}
+                                                                                            </button>
+                                                                                        );
+                                                                                    })}
+                                                                                </React.Fragment>
+                                                                            );
+                                                                        });
+                                                                    })()}
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
                                             <div className={styles.timeslotsSection}>

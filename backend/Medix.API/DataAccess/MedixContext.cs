@@ -1,20 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
+using Medix.API.Infrastructure;
 using Medix.API.Models.Entities;
 using Medix.API.Models.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Medix.API.DataAccess;
 
 public partial class MedixContext : DbContext
 {
+    private readonly UserContext _userContext;
+
     public MedixContext()
     {
     }
 
-    public MedixContext(DbContextOptions<MedixContext> options)
+    public MedixContext(DbContextOptions<MedixContext> options, UserContext userContext)
         : base(options)
     {
+        _userContext = userContext;
+
     }
 
     public virtual DbSet<AISymptomAnalysis> AISymptomAnalyses { get; set; }
@@ -1152,4 +1159,77 @@ public partial class MedixContext : DbContext
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+
+    public override int SaveChanges()
+    {
+        AddAuditLogs();
+        return base.SaveChanges();
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        AddAuditLogs();
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void AddAuditLogs()
+    {
+        var auditEntries = new List<AuditLog>();
+
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            if (entry.Entity is AuditLog || entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
+                continue;
+
+            var audit = new AuditLog
+            {
+                Timestamp = DateTime.UtcNow,
+                EntityType = entry.Entity.GetType().Name,
+                UserId = _userContext.UserId,  // ✅ Lấy từ UserContext
+                IpAddress = _userContext.IpAddress ?? "System"
+            };
+
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    audit.ActionType = "CREATE";
+                    audit.NewValues = JsonSerializer.Serialize(entry.CurrentValues.ToObject());
+                    break;
+
+                case EntityState.Modified:
+                    audit.ActionType = "UPDATE";
+                    audit.EntityId = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?.CurrentValue?.ToString();
+                    audit.OldValues = JsonSerializer.Serialize(GetOriginalValues(entry));
+                    audit.NewValues = JsonSerializer.Serialize(GetCurrentValues(entry));
+                    break;
+
+                case EntityState.Deleted:
+                    audit.ActionType = "DELETE";
+                    audit.EntityId = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?.CurrentValue?.ToString();
+                    audit.OldValues = JsonSerializer.Serialize(entry.OriginalValues.ToObject());
+                    break;
+            }
+
+            auditEntries.Add(audit);
+        }
+
+        if (auditEntries.Any())
+            AuditLogs.AddRange(auditEntries);
+    }
+
+    private Dictionary<string, object?> GetOriginalValues(EntityEntry entry)
+    {
+        var dict = new Dictionary<string, object?>();
+        foreach (var prop in entry.Properties)
+            dict[prop.Metadata.Name] = prop.OriginalValue;
+        return dict;
+    }
+
+    private Dictionary<string, object?> GetCurrentValues(EntityEntry entry)
+    {
+        var dict = new Dictionary<string, object?>();
+        foreach (var prop in entry.Properties)
+            dict[prop.Metadata.Name] = prop.CurrentValue;
+        return dict;
+    }
 }

@@ -1,6 +1,8 @@
 using Hangfire;
 using Medix.API.Configurations;
 using Medix.API.DataAccess;
+using Medix.API.Infrastructure;
+using Medix.API.Presentation.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -96,6 +98,8 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddScoped<UserContext>();
+
 
 // ================= SWAGGER =================
 builder.Services.AddSwaggerGen(c =>
@@ -158,6 +162,7 @@ app.UseHangfireDashboard();
 // Authentication + Authorization
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<AuditMiddleware>();
 
 // Map controllers
 app.MapControllers();

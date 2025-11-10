@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Medix.API.Migrations
 {
     [DbContext(typeof(MedixContext))]
-    [Migration("20251031150135_newdb")]
-    partial class newdb
+    [Migration("20251109210033_newdb123")]
+    partial class newdb123
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -868,6 +868,9 @@ namespace Medix.API.Migrations
                     b.Property<DateOnly>("OverrideDate")
                         .HasColumnType("date");
 
+                    b.Property<bool>("OverrideType")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Reason")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -1283,6 +1286,65 @@ namespace Medix.API.Migrations
                     b.ToTable("MedicationDatabase", (string)null);
                 });
 
+            modelBuilder.Entity("Medix.API.Models.Entities.NoticeSetup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("(newid())");
+
+                    b.Property<DateTime?>("CreatedBy")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getutcdate())");
+
+                    b.Property<string>("NoticeCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ReminderBody")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("ReminderHeader")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool?>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("TemplateEmailBody")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("TemplateEmailHeader")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("UpdatedBy")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getutcdate())");
+
+                    b.HasKey("Id")
+                        .HasName("PK__NoticeSe__3214EC07XXXXXXXX");
+
+                    b.HasIndex(new[] { "NoticeCode" }, "IX_NoticeSetup_NoticeCode");
+
+                    b.HasIndex(new[] { "Status" }, "IX_NoticeSetup_Status")
+                        .HasFilter("([Status]=(1))");
+
+                    b.ToTable("NoticeSetups");
+                });
+
             modelBuilder.Entity("Medix.API.Models.Entities.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1686,6 +1748,50 @@ namespace Medix.API.Migrations
                     b.ToTable("ServicePackages");
                 });
 
+            modelBuilder.Entity("Medix.API.Models.Entities.ServiceTierSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("(newid())");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getutcdate())");
+
+                    b.Property<Guid>("DoctorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ServiceTierId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getutcdate())");
+
+                    b.HasKey("Id")
+                        .HasName("PK__ServiceT__3214EC0746F9D665");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("ServiceTierId");
+
+                    b.ToTable("ServiceTierSubscriptions");
+                });
+
             modelBuilder.Entity("Medix.API.Models.Entities.SiteBanner", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1870,6 +1976,78 @@ namespace Medix.API.Migrations
                         .HasName("PK__SystemCo__4A30678590C15854");
 
                     b.ToTable("SystemConfigurations");
+                });
+
+            modelBuilder.Entity("Medix.API.Models.Entities.TransferTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("(newid())");
+
+                    b.Property<long>("Amount")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getutcdate())");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("FromAccountNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("FromBin")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("ReferenceCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<string>("ToAccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ToBin")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("WalletTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id")
+                        .HasName("PK__Transfer__3214EC07XXXXXXXX");
+
+                    b.HasIndex("WalletTransactionId")
+                        .IsUnique()
+                        .HasFilter("[WalletTransactionId] IS NOT NULL");
+
+                    b.HasIndex(new[] { "ReferenceCode" }, "IX_TransferTransactions_ReferenceCode")
+                        .HasFilter("([ReferenceCode] IS NOT NULL)");
+
+                    b.HasIndex(new[] { "Status", "CreatedAt" }, "IX_TransferTransactions_Status_Date");
+
+                    b.HasIndex(new[] { "UserId", "CreatedAt" }, "IX_TransferTransactions_User_Date");
+
+                    b.ToTable("TransferTransactions");
                 });
 
             modelBuilder.Entity("Medix.API.Models.Entities.User", b =>
@@ -2878,6 +3056,43 @@ namespace Medix.API.Migrations
                     b.Navigation("Appointment");
                 });
 
+            modelBuilder.Entity("Medix.API.Models.Entities.ServiceTierSubscription", b =>
+                {
+                    b.HasOne("Medix.API.Models.Entities.Doctor", "Doctor")
+                        .WithMany("ServiceTierSubscriptions")
+                        .HasForeignKey("DoctorId")
+                        .IsRequired()
+                        .HasConstraintName("FK__ServiceTi__Docto__04459E07");
+
+                    b.HasOne("Medix.API.Models.Entities.DoctorServiceTier", "ServiceTier")
+                        .WithMany("ServiceTierSubscriptions")
+                        .HasForeignKey("ServiceTierId")
+                        .IsRequired()
+                        .HasConstraintName("FK__ServiceTi__Servi__0539C240");
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("ServiceTier");
+                });
+
+            modelBuilder.Entity("Medix.API.Models.Entities.TransferTransaction", b =>
+                {
+                    b.HasOne("Medix.API.Models.Entities.User", "User")
+                        .WithMany("TransferTransactions")
+                        .HasForeignKey("UserId")
+                        .IsRequired()
+                        .HasConstraintName("FK_TransferTransactions_User");
+
+                    b.HasOne("Medix.API.Models.Entities.WalletTransaction", "WalletTransaction")
+                        .WithOne("TransferTransaction")
+                        .HasForeignKey("Medix.API.Models.Entities.TransferTransaction", "WalletTransactionId")
+                        .HasConstraintName("FK_TransferTransactions_WalletTransaction");
+
+                    b.Navigation("User");
+
+                    b.Navigation("WalletTransaction");
+                });
+
             modelBuilder.Entity("Medix.API.Models.Entities.User", b =>
                 {
                     b.HasOne("Medix.API.Models.Enums.RefGender", "GenderCodeNavigation")
@@ -2983,11 +3198,15 @@ namespace Medix.API.Migrations
                     b.Navigation("DoctorSchedules");
 
                     b.Navigation("DoctorSubscriptions");
+
+                    b.Navigation("ServiceTierSubscriptions");
                 });
 
             modelBuilder.Entity("Medix.API.Models.Entities.DoctorServiceTier", b =>
                 {
                     b.Navigation("Doctors");
+
+                    b.Navigation("ServiceTierSubscriptions");
                 });
 
             modelBuilder.Entity("Medix.API.Models.Entities.MedicalRecord", b =>
@@ -3045,6 +3264,8 @@ namespace Medix.API.Migrations
 
                     b.Navigation("RefreshTokens");
 
+                    b.Navigation("TransferTransactions");
+
                     b.Navigation("UserRoles");
 
                     b.Navigation("Wallet");
@@ -3053,6 +3274,11 @@ namespace Medix.API.Migrations
             modelBuilder.Entity("Medix.API.Models.Entities.Wallet", b =>
                 {
                     b.Navigation("WalletTransactions");
+                });
+
+            modelBuilder.Entity("Medix.API.Models.Entities.WalletTransaction", b =>
+                {
+                    b.Navigation("TransferTransaction");
                 });
 
             modelBuilder.Entity("Medix.API.Models.Enums.RefAppointmentStatus", b =>

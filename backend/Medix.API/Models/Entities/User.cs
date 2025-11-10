@@ -76,6 +76,9 @@ public partial class User
 
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 
+    // One-to-many relationship with TransferTransaction
+    public virtual ICollection<TransferTransaction> TransferTransactions { get; set; } = new List<TransferTransaction>();
+
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 
     public virtual Wallet? Wallet { get; set; }

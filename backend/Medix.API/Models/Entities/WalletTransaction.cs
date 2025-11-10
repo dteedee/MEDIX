@@ -33,4 +33,7 @@ public partial class WalletTransaction
     public virtual RefWalletTransactionType TransactionTypeCodeNavigation { get; set; } = null!;
 
     public virtual Wallet Wallet { get; set; } = null!;
+
+    // One-to-one relationship with TransferTransaction
+    public virtual TransferTransaction? TransferTransaction { get; set; }
 }

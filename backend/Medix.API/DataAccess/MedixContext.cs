@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using Medix.API.Infrastructure;
+using Medix.API.Infrastructure.Audit;
 using Medix.API.Models.Entities;
 using Medix.API.Models.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ namespace Medix.API.DataAccess;
 public partial class MedixContext : DbContext
 {
     private readonly UserContext _userContext;
+
 
     public MedixContext()
     {
@@ -1168,8 +1170,54 @@ public partial class MedixContext : DbContext
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        AddAuditLogs();
-        return await base.SaveChangesAsync(cancellationToken);
+        var auditEntries = new List<AuditLog>();
+
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            if (entry.Entity is AuditLog || entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
+                continue;
+
+            var audit = new AuditLog
+            {
+                UserId = _userContext.UserId, // ✅ Lấy từ middleware
+                IpAddress = _userContext.IpAddress,
+                EntityType = entry.Entity.GetType().Name,
+                EntityId = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?.CurrentValue?.ToString(),
+                Timestamp = DateTime.UtcNow
+            };
+
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    audit.ActionType = "CREATE";
+                    audit.NewValues = JsonSerializer.Serialize(entry.CurrentValues.ToObject());
+                    break;
+
+                case EntityState.Modified:
+                    audit.ActionType = "UPDATE";
+                    var oldValues = entry.GetDatabaseValues()?.ToObject();
+                    var newValues = entry.CurrentValues.ToObject();
+                    audit.NewValues = AuditDiffHelper.BuildDiff(oldValues, newValues);
+                    break;
+
+                case EntityState.Deleted:
+                    audit.ActionType = "DELETE";
+                    audit.OldValues = JsonSerializer.Serialize(entry.OriginalValues.ToObject());
+                    break;
+            }
+
+            auditEntries.Add(audit);
+        }
+
+        var result = await base.SaveChangesAsync(cancellationToken);
+
+        if (auditEntries.Any())
+        {
+            AuditLogs.AddRange(auditEntries);
+            await base.SaveChangesAsync(cancellationToken);
+        }
+
+        return result;
     }
 
     private void AddAuditLogs()

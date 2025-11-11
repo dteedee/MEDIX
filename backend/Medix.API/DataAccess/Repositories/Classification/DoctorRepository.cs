@@ -181,19 +181,24 @@ namespace Medix.API.DataAccess.Repositories.Classification
                         d.User.NormalizedEmail.Contains(query.SearchTerm.ToUpper()));
             }
 
-            if (query.PageSize == 0)
-            {
-                query.PageSize = 10;
-            }
+            if (query.Page < 1) { query.Page = 1; }
+            if (query.PageSize < 0) { query.PageSize = 0; }
 
-            var doctors = await doctorQueryable
+            doctorQueryable = doctorQueryable
                 .Include(d => d.User)
                 .Include(d => d.Specialization)
+                .Include(d => d.ServiceTier)
                 .Include(d => d.Appointments)
-                    .ThenInclude(a => a.Review)
-                .Skip((query.Page - 1) * query.PageSize)
-                .Take(query.PageSize)
-                .ToListAsync();
+                    .ThenInclude(a => a.Review);
+
+            if (query.PageSize > 0)
+            {
+                doctorQueryable = doctorQueryable
+                    .Skip((query.Page - 1) * query.PageSize)
+                    .Take(query.PageSize);
+            }
+
+            var doctors = await doctorQueryable.ToListAsync();
 
             return new PagedList<Doctor>
             {

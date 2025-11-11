@@ -67,7 +67,7 @@ export default function DoctorManagement() {
 
   const loadAllDoctors = async () => {
     try {
-      const data = await DoctorService.getAll({ page: 1, pageSize: 10000, searchTerm: '' });
+      const data = await DoctorService.getAll({ page: 1, pageSize: 0, searchTerm: '' });
       setAllDoctors(data.items || []);
       
       // Extract unique specializations

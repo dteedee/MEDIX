@@ -297,6 +297,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     Specialization = doctor.Specialization.Name,
                     doctor.Education,
                     Rating = doctor.Appointments
+                        .Where(a => a.Review != null)
                         .Select(a => a.Review.Rating)
                         .DefaultIfEmpty(0)
                         .Average(),

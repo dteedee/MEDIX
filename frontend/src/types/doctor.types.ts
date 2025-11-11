@@ -255,6 +255,7 @@ export interface DoctorDto {
   reviewCount: number;
   statusCode: number;
   createdAt: string;
+  serviceTier: string;
 }
 
 export interface DoctorList {

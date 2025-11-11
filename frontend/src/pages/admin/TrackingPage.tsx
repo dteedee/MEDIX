@@ -370,11 +370,14 @@ export default function TrackingPage() {
                     <td>
                       {(filters.page - 1) * filters.pageSize + index + 1}
                     </td>
-                    <td title={new Date(log.timestamp).toLocaleString('vi-VN')}>
-                      {new Date(log.timestamp).toLocaleTimeString('vi-VN')}
+                    {/* Đảm bảo timestamp được xử lý như UTC trước khi chuyển đổi sang múi giờ Việt Nam */}
+                    {/* Nếu log.timestamp là "YYYY-MM-DDTHH:mm:ss" (không có Z), new Date() sẽ hiểu là giờ địa phương. */}
+                    {/* Thêm 'Z' để buộc hiểu là UTC. */}
+                    <td title={new Date(`${log.timestamp}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}>
+                      {new Date(`${log.timestamp}Z`).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })}
                       <br />
-                      <small>{new Date(log.timestamp).toLocaleDateString('vi-VN')}</small>
-                    </td>
+                      <small>{new Date(`${log.timestamp}Z`).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</small>
+                    </td>                    
                     <td>{log.userName || 'Unknown'}</td>
                     <td><span className={`${styles.actionBadge} ${getActionBadgeStyle(log.displayActionType)}`}>{log.displayActionType}</span></td>
                     <td>{log.entityType || 'N/A'}</td>
@@ -466,11 +469,16 @@ export default function TrackingPage() {
                 <i className="bi bi-x-lg"></i>
               </button>
             </div>
-            <div className={userStyles.modalBody}>
+            <div 
+              className={userStyles.modalBody} 
+              style={{
+                maxHeight: '70vh', // Giới hạn chiều cao tối đa của phần thân modal
+                overflowY: 'auto'  // Thêm thanh cuộn dọc khi nội dung vượt quá chiều cao
+              }}>
               <div className={styles.detailItem}><strong>Hành động:</strong> {viewingLog.actionType}</div>
               <div className={styles.detailItem}><strong>Đối tượng:</strong> {viewingLog.entityType}</div>
               <div className={styles.detailItem}><strong>Người dùng:</strong> {viewingLog.userName}</div>
-              <div className={styles.detailItem}><strong>Thời gian:</strong> {new Date(viewingLog.timestamp).toLocaleString('vi-VN')}</div>
+              <div className={styles.detailItem}><strong>Thời gian:</strong> {new Date(`${viewingLog.timestamp}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</div>
               <div className={styles.detailItem}><strong>Địa chỉ IP:</strong> {viewingLog.ipAddress}</div>
               <div className={styles.jsonContainer}> 
                 <div className={styles.jsonBox}> 

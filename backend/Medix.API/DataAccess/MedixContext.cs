@@ -1162,6 +1162,23 @@ public partial class MedixContext : DbContext
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 
+
+
+    private static readonly string[] IgnoredEntities = new[]
+    {
+    "AuditLog",
+    "RefreshToken",
+    "AccessToken",
+    "UserToken",
+    "LoginSession",
+    "ArticleCategory",
+};
+
+    private static readonly string[] SensitiveFields = new[]
+    {
+    "Password", "Token", "AccessToken", "RefreshToken", "SecretKey", "ApiKey", "PasswordHash", "PasswordSalt"
+};
+
     public override int SaveChanges()
     {
         AddAuditLogs();
@@ -1174,14 +1191,27 @@ public partial class MedixContext : DbContext
 
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog || entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
-                continue;
+            var entityName = entry.Entity.GetType().Name;
 
+            // ✅ Bỏ qua các entity không cần audit
+            if (entry.Entity is AuditLog ||
+                entry.State == EntityState.Detached ||
+                entry.State == EntityState.Unchanged ||
+                IgnoredEntities.Any(x => entityName.Contains(x, StringComparison.OrdinalIgnoreCase)) ||
+        entityName.StartsWith("Dictionary", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            if (entityName.Contains("ArticleCategory", StringComparison.OrdinalIgnoreCase) ||
+        entityName.Contains("ContentCategoryArticle", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
             var audit = new AuditLog
             {
-                UserId = _userContext.UserId, // ✅ Lấy từ middleware
+                UserId = _userContext.UserId,
                 IpAddress = _userContext.IpAddress,
-                EntityType = entry.Entity.GetType().Name,
+                EntityType = entityName,
                 EntityId = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?.CurrentValue?.ToString(),
                 Timestamp = DateTime.UtcNow
             };
@@ -1190,19 +1220,23 @@ public partial class MedixContext : DbContext
             {
                 case EntityState.Added:
                     audit.ActionType = "CREATE";
-                    audit.NewValues = JsonSerializer.Serialize(entry.CurrentValues.ToObject());
+                    var addedObj = SanitizeSensitiveData(
+                        entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.CurrentValue)
+                    );
+                    audit.NewValues = JsonSerializer.Serialize(addedObj);
                     break;
 
                 case EntityState.Modified:
                     audit.ActionType = "UPDATE";
-                    var oldValues = entry.GetDatabaseValues()?.ToObject();
-                    var newValues = entry.CurrentValues.ToObject();
-                    audit.NewValues = AuditDiffHelper.BuildDiff(oldValues, newValues);
+                    var oldObj = SanitizeSensitiveData(entry.GetDatabaseValues()?.ToObject());
+                    var newObj = SanitizeSensitiveData(entry.CurrentValues.ToObject());
+                    audit.NewValues = AuditDiffHelper.BuildDiff(oldObj, newObj);
                     break;
 
                 case EntityState.Deleted:
                     audit.ActionType = "DELETE";
-                    audit.OldValues = JsonSerializer.Serialize(entry.OriginalValues.ToObject());
+                    var deletedObj = SanitizeSensitiveData(entry.OriginalValues.ToObject());
+                    audit.OldValues = JsonSerializer.Serialize(deletedObj);
                     break;
             }
 
@@ -1226,14 +1260,27 @@ public partial class MedixContext : DbContext
 
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog || entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
-                continue;
+            var entityName = entry.Entity.GetType().Name;
 
+            // ✅ Bỏ qua các entity không cần audit
+            if (entry.Entity is AuditLog ||
+                entry.State == EntityState.Detached ||
+                entry.State == EntityState.Unchanged ||
+                IgnoredEntities.Any(x => entityName.Contains(x, StringComparison.OrdinalIgnoreCase)) ||
+        entityName.StartsWith("Dictionary", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            if (entityName.Contains("ArticleCategory", StringComparison.OrdinalIgnoreCase) ||
+       entityName.Contains("ContentCategoryArticle", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
             var audit = new AuditLog
             {
                 Timestamp = DateTime.UtcNow,
-                EntityType = entry.Entity.GetType().Name,
-                UserId = _userContext.UserId,  // ✅ Lấy từ UserContext
+                EntityType = entityName,
+                UserId = _userContext.UserId,
                 IpAddress = _userContext.IpAddress ?? "System"
             };
 
@@ -1241,20 +1288,23 @@ public partial class MedixContext : DbContext
             {
                 case EntityState.Added:
                     audit.ActionType = "CREATE";
-                    audit.NewValues = JsonSerializer.Serialize(entry.CurrentValues.ToObject());
+                    var addedObj = SanitizeSensitiveData(
+                        entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.CurrentValue)
+                    );
+                    audit.NewValues = JsonSerializer.Serialize(addedObj);
                     break;
 
                 case EntityState.Modified:
                     audit.ActionType = "UPDATE";
-                    audit.EntityId = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?.CurrentValue?.ToString();
-                    audit.OldValues = JsonSerializer.Serialize(GetOriginalValues(entry));
-                    audit.NewValues = JsonSerializer.Serialize(GetCurrentValues(entry));
+                    var oldObj = SanitizeSensitiveData(entry.GetDatabaseValues()?.ToObject());
+                    var newObj = SanitizeSensitiveData(entry.CurrentValues.ToObject());
+                    audit.NewValues = AuditDiffHelper.BuildDiff(oldObj, newObj);
                     break;
 
                 case EntityState.Deleted:
                     audit.ActionType = "DELETE";
-                    audit.EntityId = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?.CurrentValue?.ToString();
-                    audit.OldValues = JsonSerializer.Serialize(entry.OriginalValues.ToObject());
+                    var deletedObj = SanitizeSensitiveData(entry.OriginalValues.ToObject());
+                    audit.OldValues = JsonSerializer.Serialize(deletedObj);
                     break;
             }
 
@@ -1264,6 +1314,49 @@ public partial class MedixContext : DbContext
         if (auditEntries.Any())
             AuditLogs.AddRange(auditEntries);
     }
+    private object SanitizeSensitiveData(object obj)
+    {
+        if (obj == null)
+            return null;
+
+        // Nếu là dictionary
+        if (obj is IDictionary<string, object> dict)
+        {
+            var sanitized = new Dictionary<string, object>();
+            foreach (var kvp in dict)
+            {
+                // Nếu key chứa từ khóa nhạy cảm
+                if (kvp.Key.Contains("Token", StringComparison.OrdinalIgnoreCase))
+                    sanitized[kvp.Key] = "***";
+                else
+                    sanitized[kvp.Key] = kvp.Value;
+            }
+            return sanitized;
+        }
+
+        // Nếu là object bình thường → convert sang dict
+        var result = new Dictionary<string, object>();
+        var props = obj.GetType().GetProperties();
+        foreach (var prop in props)
+        {
+            try
+            {
+                var value = prop.GetValue(obj);
+                if (prop.Name.Contains("Token", StringComparison.OrdinalIgnoreCase))
+                    result[prop.Name] = "***";
+                else
+                    result[prop.Name] = value;
+            }
+            catch
+            {
+                // tránh lỗi reflection
+                result[prop.Name] = null;
+            }
+        }
+
+        return result;
+    }
+
 
     private Dictionary<string, object?> GetOriginalValues(EntityEntry entry)
     {

@@ -445,14 +445,14 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                     </div>
                     <div className={styles.inputGroup}>
                       <label className={styles.label}>Ngày tạo tài khoản</label>
-                      <input value={createdAt ? new Date(createdAt).toLocaleString('vi-VN') : ''} disabled className={styles.input} />
+                      <input value={createdAt ? new Date(`${createdAt}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''} disabled className={styles.input} style={{ display: isEditMode ? 'block' : 'none' }} />
                     </div>
                     <div className={styles.inputGroup}>
                       <label className={styles.label}>Cập nhật lần cuối</label>
-                      <input value={updatedAt ? new Date(updatedAt).toLocaleString('vi-VN') : ''} disabled className={styles.input} />
+                      <input value={updatedAt ? new Date(`${updatedAt}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''} disabled className={styles.input} style={{ display: isEditMode ? 'block' : 'none' }} />
                     </div>
                   </div>
-                </div>
+                </div>                
               </div>
 
               <div className={styles.section}>

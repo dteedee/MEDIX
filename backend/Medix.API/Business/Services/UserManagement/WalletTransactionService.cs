@@ -96,19 +96,32 @@ namespace Medix.API.Business.Services.UserManagement
                 return null;
             }
 
-            // ********** PHẦN SỬA ĐỔI QUAN TRỌNG **********
-            // THAY VÌ TẠO ENTITY MỚI, CHÚNG TA CẦN LẤY ENTITY HIỆN CÓ TỪ DB.
-            // Vì không có GetById, ta giả sử có GetById, hoặc tìm cách khác để lấy entity cần update.
+            if (walletTransactionDto.id == null && walletTransactionDto.orderCode == null)
+            {
+                return null; // Cần có ít nhất 1 trong 2: id hoặc orderCode
+            }
 
-            // Nếu bạn dùng OrderCode để tìm Entity gốc
-            if (walletTransactionDto.orderCode == null) return null; // Không có orderCode để tìm
+            // 2. Tìm Entity theo thứ tự ưu tiên: Id trước, OrderCode sau
+            WalletTransaction? transToUpdate = null;
 
-            var transToUpdate = await walletTransactionRepository.GetWalletTransactionByOrderCodeAsync(walletTransactionDto.orderCode.Value);
+            if (walletTransactionDto.id.HasValue)
+            {
+                // Ưu tiên tìm theo Id nếu có
+                transToUpdate = await walletTransactionRepository.GetWalletTransactionByIdAsync(walletTransactionDto.id.Value);
+            }
+            else if (walletTransactionDto.orderCode.HasValue)
+            {
+                // Nếu không có Id, tìm theo OrderCode
+                transToUpdate = await walletTransactionRepository.GetWalletTransactionByOrderCodeAsync(walletTransactionDto.orderCode.Value);
+            }
 
-            if (transToUpdate == null) return null;
+            // Kiểm tra xem có tìm thấy entity không
+            if (transToUpdate == null)
+            {
+                return null; // Không tìm thấy transaction
+            }
 
-            // 2. ÁP DỤNG CÁC THAY ĐỔI TỪ DTO LÊN ENTITY ĐANG ĐƯỢC THEO DÕI
-            // Chỉ cập nhật các trường được truyền từ DTO và cho phép thay đổi.
+
             transToUpdate.WalletId = walletTransactionDto.walletId ?? transToUpdate.WalletId;
             transToUpdate.TransactionTypeCode = walletTransactionDto.TransactionTypeCode ?? transToUpdate.TransactionTypeCode;
             transToUpdate.Amount = walletTransactionDto.Amount ?? transToUpdate.Amount;
@@ -117,20 +130,15 @@ namespace Medix.API.Business.Services.UserManagement
             transToUpdate.Status = walletTransactionDto.Status ?? "Pending";
             transToUpdate.RelatedAppointmentId = walletTransactionDto.RelatedAppointmentId;
             transToUpdate.Description = walletTransactionDto.Description;
-            // Bỏ qua TransactionDate và CreatedAt nếu không muốn chúng bị ghi đè.
-
-            // ********** KẾT THÚC PHẦN SỬA ĐỔI QUAN TRỌNG **********
-
-            // 3. Gọi repository để update (truyền Entity đã được theo dõi)
+           
             var updated = await walletTransactionRepository.UpdateWalletTransactionAsync(transToUpdate);
 
-            // 4. Kiểm tra kết quả update (Giữ nguyên)
             if (updated == null)
             {
                 return null;
             }
 
-            // 5. Ánh xạ từ Entity về DTO (Giữ nguyên)
+           
             return new WalletTransactionDto
             {
                 id = updated.Id,
@@ -217,6 +225,32 @@ namespace Medix.API.Business.Services.UserManagement
                 Console.WriteLine($"Error getting transactions for wallet {walletId}: {ex.Message}");
                 return new List<WalletTransactionDto>();
             }
+        }
+
+        public async Task<WalletTransactionDto> GetWalletTransactionByIdAsync(Guid id)
+        {
+            var transaction = await walletTransactionRepository.GetWalletTransactionByIdAsync(id);
+
+            if (transaction == null)
+            {
+                throw new InvalidOperationException($"WalletTransaction with ID {id} not found.");
+            }
+
+            return new WalletTransactionDto
+            {
+                id = transaction.Id,
+                walletId = transaction.WalletId,
+                orderCode = transaction.OrderCode,
+                TransactionTypeCode = transaction.TransactionTypeCode,
+                Amount = transaction.Amount,
+                BalanceBefore = transaction.BalanceBefore,
+                BalanceAfter = transaction.BalanceAfter,
+                Status = transaction.Status,
+                RelatedAppointmentId = transaction.RelatedAppointmentId,
+                Description = transaction.Description,
+                TransactionDate = transaction.TransactionDate,
+                CreatedAt = transaction.CreatedAt
+            };
         }
     }
 }

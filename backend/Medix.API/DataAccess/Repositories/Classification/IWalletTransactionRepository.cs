@@ -9,5 +9,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
         public Task<WalletTransaction?> UpdateWalletTransactionAsync(WalletTransaction walletTransaction);
 
         public Task<List<WalletTransaction>> GetTransactionsByWalletIdAsync(Guid walletId);
+
+        public Task<WalletTransaction> GetWalletTransactionByIdAsync(Guid id);
     }
 }

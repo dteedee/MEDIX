@@ -89,6 +89,8 @@ public partial class MedixContext : DbContext
 
     public virtual DbSet<RefWalletTransactionType> RefWalletTransactionTypes { get; set; }
 
+    public virtual DbSet<TransferTransaction> TransferTransactions { get; set; }
+
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public virtual DbSet<Review> Reviews { get; set; }
@@ -1146,6 +1148,44 @@ public partial class MedixContext : DbContext
                 .HasForeignKey(d => d.WalletId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_WalletTransactions_Wallet");
+
+            entity.HasOne(d => d.TransferTransaction) // WalletTransaction có MỘT TransferTransaction
+        .WithOne(p => p.WalletTransaction)    // TransferTransaction trỏ về MỘT WalletTransaction
+        .HasForeignKey<TransferTransaction>(d => d.WalletTransactionID) // Sử dụng FK trong TransferTransaction
+        .HasConstraintName("FK_TransferTransaction_WalletTransaction");
+        });
+
+        modelBuilder.Entity<TransferTransaction>(entity =>
+        {
+            entity.HasKey(e => e.Id); // Đã có sẵn trong class
+            entity.ToTable("TransferTransaction"); // Tùy chọn, đặt tên bảng
+
+            // 1. Mối quan hệ N-1 với User (User 1-N TransferTransaction)
+            entity.HasOne(d => d.User)
+                .WithMany(p => p.TransferTransactions)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull) // Giả định là bắt buộc (ClientSetNull/Restrict)
+                .HasConstraintName("FK_TransferTransaction_User");
+
+          
+            entity.HasOne(d => d.WalletTransaction)
+                .WithOne(p => p.TransferTransaction)
+              
+                .HasForeignKey<TransferTransaction>(d => d.WalletTransactionID)
+        
+                .HasConstraintName("FK_TransferTransaction_WalletTransaction");
+
+            // Bạn có thể thêm các cấu hình khác (Index, MaxLength, DefaultValue) tại đây nếu cần
+            // Ví dụ:
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Amount).HasColumnType("bigint");
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.ToBin).HasMaxLength(50);
+            entity.Property(e => e.ToAccountNumber).HasMaxLength(100);
+            entity.Property(e => e.FromBin).HasMaxLength(50);
+            entity.Property(e => e.FromAccountNumber).HasMaxLength(100);
+            entity.Property(e => e.Status).HasMaxLength(20).HasDefaultValue("Pending");
+            entity.Property(e => e.ReferenceCode).HasMaxLength(255);
         });
 
         OnModelCreatingPartial(modelBuilder);

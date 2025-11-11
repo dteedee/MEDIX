@@ -231,7 +231,20 @@ namespace Medix.API.Presentation.Controller.Money
             }
         }
 
+        [HttpGet("payment-failed")]
+        public async Task<IActionResult> paymentfailed([FromQuery] PaymentReturnDto paymentReturnDto)
+        {
+            var order = OrderService.GetOrderByOrderCode(paymentReturnDto.OrderCode);
 
+            var frontendBaseUrl = order.baseURLFE ?? "http://localhost:5173";
+            var walletTransaction = await transactionService.GetWalletTransactionByOrderCodeAsync(paymentReturnDto.OrderCode);
+
+            walletTransaction.Status = "Failed";
+
+            await transactionService.UppdateWalletTrasactionAsync(walletTransaction);
+
+            return Redirect($"{frontendBaseUrl}/app/patient/finance");
+        }
 
         private static DateTimeOffset ParseWebhookDateTime(string dateTimeString)
         {
@@ -253,6 +266,7 @@ namespace Medix.API.Presentation.Controller.Money
 
 
         [HttpGet("payment-success")]
+        [Authorize]
         public async Task<IActionResult> paymentSuccess([FromQuery] PaymentReturnDto paymentReturnDto)
         {
          

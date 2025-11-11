@@ -1,11 +1,15 @@
-﻿using Medix.API.Business.Interfaces.UserManagement;
+﻿using Humanizer;
+using Medix.API.Business.Interfaces.Classification;
+using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.NewFolder;
 using Medix.API.Models.DTOs.PayOSDto;
+using Medix.API.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PayOS;
 using PayOS.Models.V1.Payouts;
+using System.Security.Claims;
 using System.Security.Cryptography.Xml;
 
 namespace Medix.API.Presentation.Controller.Money
@@ -18,15 +22,17 @@ namespace Medix.API.Presentation.Controller.Money
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IUserService _userService;
         private readonly IWalletTransactionService _walletTransactionService;
+        private readonly ITransferTransactionService _transferTransactionService; 
         private readonly PayOSClient _client;
 
-        public WithDrawController(IWalletService walletService, IHttpContextAccessor httpContextAccessor, IUserService userService, IWalletTransactionService walletTransactionService, [FromKeyedServices("TransferClient")] PayOSClient client)
+        public WithDrawController(IWalletService walletService, IHttpContextAccessor httpContextAccessor, IUserService userService, IWalletTransactionService walletTransactionService, [FromKeyedServices("TransferClient")] PayOSClient client, ITransferTransactionService transferTransactionService)
         {
             _walletService = walletService;
             _httpContextAccessor = httpContextAccessor;
             _userService = userService;
             _walletTransactionService = walletTransactionService;
             _client = client;
+            _transferTransactionService = transferTransactionService;
         }
 
 
@@ -85,14 +91,59 @@ namespace Medix.API.Presentation.Controller.Money
                 return BadRequest(ModelState);
             }
 
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null)
+                return Unauthorized(new { message = "User ID not found in token" });
+
+            if (!Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized(new { message = "Invalid user ID in token" });
+           
+           var transferTransaction = await _transferTransactionService.GetTransferTransactionByIdAsync(request.TransferTransactionID);
+
+            if (transferTransaction.Status == "Rejected")
+            {
+                return BadRequest(new
+                {
+                    message = $"Cannot reject transfer with status: {transferTransaction.Status}",
+                    currentStatus = transferTransaction.Status
+                });
+            }
+
+            if (transferTransaction.Status == "Accepted")
+            {
+                return BadRequest(new
+                {
+                    message = $"Cannot Accepted transfer with status: {transferTransaction.Status}",
+                    currentStatus = transferTransaction.Status
+                });
+            }
+            if (transferTransaction == null)
+            {
+                return NotFound(new { message = "Transfer transaction not found" });
+            } 
+
+                var wallettransaction = await _walletTransactionService.GetWalletTransactionByIdAsync(transferTransaction.WalletTransactionID);
+
+            if (wallettransaction == null)
+            {
+                return NotFound(new { message = "Wallet transaction not found" });
+            }
+
+            var wallet = await _walletService.GetWalletByIdAsync((Guid)wallettransaction.walletId);
+
+            if (wallet == null)
+            {
+                return NotFound(new { message = "Wallet not found" });
+            }
+
             var payoutRequest = new PayoutRequest
             {
                 ReferenceId = Guid.NewGuid().ToString(),
-                Amount = request.Amount,
-                Description = request.Description,
-                ToBin = request.ToBin,
-                ToAccountNumber = request.ToAccountNumber,
-                Category = request.Category
+                Amount = transferTransaction.Amount,
+                Description = transferTransaction.Description,
+                ToBin = transferTransaction.ToBin,
+                ToAccountNumber = transferTransaction.ToAccountNumber,
+                Category = new List<string> { "bank_transfer"}
             };
 
             try
@@ -102,6 +153,18 @@ namespace Medix.API.Presentation.Controller.Money
                 var transfer = MapPayoutToTransfer(payoutResponse);
 
                 TransferService.CreateTransfer(transfer);
+                wallettransaction.Status = "Completed";
+
+                await _walletTransactionService.UppdateWalletTrasactionAsync(wallettransaction);
+
+
+                await _walletService.DecreaseWalletBalanceAsync(wallet.UserId, transferTransaction.Amount);
+
+
+                transferTransaction.Status = "Accepted";
+                await _transferTransactionService.UpdateTransferTransactionAsync(transferTransaction);
+
+
 
                 return CreatedAtAction(nameof(Get), new { id = transfer.Id }, transfer);
             }
@@ -111,6 +174,94 @@ namespace Medix.API.Presentation.Controller.Money
                     new { message = "Failed to create payout", error = ex.Message });
             }
         }
+
+     [HttpPost("transfer-Reject")]
+[Authorize]
+public async Task<ActionResult> RejectedTransfer([FromBody] TransferCreateRequest request)
+{
+    if (request == null)
+    {
+        return BadRequest("Transfer data is required");
+    }
+    if (!ModelState.IsValid)
+    {
+        return BadRequest(ModelState);
+    }
+
+    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+    if (userIdClaim == null)
+        return Unauthorized(new { message = "User ID not found in token" });
+
+    if (!Guid.TryParse(userIdClaim.Value, out var userId))
+        return Unauthorized(new { message = "Invalid user ID in token" });
+
+    var transferTransaction = await _transferTransactionService.GetTransferTransactionByIdAsync(request.TransferTransactionID);
+
+    if (transferTransaction == null)
+    {
+        return NotFound(new { message = "Transfer transaction not found" });
+    }
+
+    // ✅ Kiểm tra quyền sở hữu
+    if (transferTransaction.UserId != userId)
+    {
+        return Forbid(); // Hoặc return Unauthorized(new { message = "You don't have permission to reject this transfer" });
+    }
+
+    // ✅ Kiểm tra status - chỉ có thể reject khi đang Pending
+    if (transferTransaction.Status != "Pending")
+    {
+        return BadRequest(new 
+        { 
+            message = $"Cannot reject transfer with status: {transferTransaction.Status}",
+            currentStatus = transferTransaction.Status
+        });
+    }
+
+    var wallettransaction = await _walletTransactionService.GetWalletTransactionByIdAsync(transferTransaction.WalletTransactionID);
+
+    if (wallettransaction == null)
+    {
+        return NotFound(new { message = "Wallet transaction not found" });
+    }
+
+    var wallet = await _walletService.GetWalletByIdAsync((Guid)wallettransaction.walletId);
+
+    if (wallet == null)
+    {
+        return NotFound(new { message = "Wallet not found" });
+    }
+
+    try
+    {
+        // ✅ Sửa: WalletTransaction status thành "Failed" thay vì "Completed"
+        wallettransaction.Status = "Failed";
+        wallettransaction.Description += "Bị từ chối";
+        
+        await _walletTransactionService.UppdateWalletTrasactionAsync(wallettransaction);
+
+        // ✅ Cập nhật TransferTransaction status thành "Rejected"
+        transferTransaction.Status = "Rejected";
+        transferTransaction.Description += "Bị từ chối";
+        
+        await _transferTransactionService.UpdateTransferTransactionAsync(transferTransaction);
+
+        // ✅ Sửa: Thêm dấu chấm phẩy và trả về thông tin chi tiết
+        return Ok(new 
+        { 
+            message = "Transfer rejected successfully",
+            transferTransactionId = transferTransaction.Id,
+            status = transferTransaction.Status,
+            rejectedAt = DateTime.UtcNow
+        }); // ✅ Đã thêm dấu ;
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(StatusCodes.Status500InternalServerError,
+            new { message = "Failed to reject transfer", error = ex.Message });
+    }
+}
+
 
         private static Transfer MapPayoutToTransfer(Payout payout)
         {

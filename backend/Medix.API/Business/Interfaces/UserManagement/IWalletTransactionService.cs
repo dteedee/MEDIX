@@ -9,6 +9,10 @@ namespace Medix.API.Business.Interfaces.UserManagement
         public Task<WalletTransactionDto?> UppdateWalletTrasactionAsync(WalletTransactionDto walletTransactionDto);
         public Task<List<WalletTransactionDto>> GetTransactionsByWalletIdAsync(Guid walletId);
 
+        public Task<WalletTransactionDto> GetWalletTransactionByIdAsync(Guid id);
+
+
+
         public Task<bool> UpdateTransactionStatusByOrderCodeAsync(long orderCode, string status, decimal? balanceBefore = null, decimal? balanceAfter = null, string? additionalDescription = null);
 
     }

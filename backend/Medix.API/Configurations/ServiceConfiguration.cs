@@ -61,6 +61,7 @@ namespace Medix.API.Configurations
 
             services.AddScoped<IPromotionRepository, PromotionRepository>();
             services.AddScoped<INoticeSetupRepository, NoticeSetupRepository>();
+            services.AddScoped<ITransferTransactionRepository, TransferTransactionRepository>();
         }
 
         private static void RegisterServices(IServiceCollection services)
@@ -100,6 +101,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IDoctorDashboardService, DoctorDashboardService>();
             services.AddScoped<IPromotionService, PromotionService>();
             services.AddScoped<INoticeSetupService, NoticeSetupService>();
+            services.AddScoped<ITransferTransactionService, TransferTransactionService>();
 
         }
 

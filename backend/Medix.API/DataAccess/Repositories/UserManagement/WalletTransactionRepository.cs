@@ -28,6 +28,13 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
                 .ToListAsync();
         }
 
+        public async Task<WalletTransaction> GetWalletTransactionByIdAsync(Guid id)
+        {
+         return await  _context.WalletTransactions
+                .Where(x => x.Id == id)
+                .FirstOrDefaultAsync() ?? throw new Exception("Wallet transaction not found");
+        }
+
         public async Task<WalletTransaction?> GetWalletTransactionByOrderCodeAsync(long orderCode)
         {
             return await _context.WalletTransactions

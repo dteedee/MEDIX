@@ -473,6 +473,15 @@ export const DoctorWallet: React.FC = () => {
     }
   };
 
+  const formatSalaryDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
   const allTransactions = useMemo(() => {
     const salaryTransactions: WalletTransactionDto[] = salaries.map(salary => ({
       id: salary.id,
@@ -494,15 +503,6 @@ export const DoctorWallet: React.FC = () => {
       return new Date(dateB).getTime() - new Date(dateA).getTime();
     });
   }, [salaries, transactions]);
-
-  const formatSalaryDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
 
   const filteredTransactions = useMemo(() => {
     if (activeTab === 'all') {

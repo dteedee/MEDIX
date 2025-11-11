@@ -162,6 +162,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return await _context.Doctors
                 .Include(d => d.User)
                 .Include(d => d.Specialization)
+                .Include(d => d.ServiceTier)
                 .Include(d => d.Appointments)
                     .ThenInclude(a => a.Review)
                 .FirstOrDefaultAsync(d => d.Id == doctorId);

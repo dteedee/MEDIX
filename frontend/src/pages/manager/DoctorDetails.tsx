@@ -33,7 +33,7 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
   useEffect(() => {
     const loadStatistics = async () => {
       if (!doctor?.id || isPending) return;
-      
+
       setLoadingStats(true);
       try {
         // Thử lấy thống kê từ API theo doctor ID
@@ -50,7 +50,7 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
         } catch (apiError: any) {
           // Nếu API không tồn tại hoặc lỗi, thử lấy từ doctor object
           console.log("Statistics API không khả dụng, sử dụng dữ liệu từ doctor object");
-          
+
           // Kiểm tra xem doctor object có chứa thống kê không
           if (doctor.totalAppointments !== undefined || doctor.appointmentCount !== undefined) {
             setStatistics({
@@ -94,7 +94,7 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
   if (!doctor) return null;
 
   const fmtDate = (d?: string | null) => d ? new Date(d).toLocaleString('vi-VN') : 'Chưa có';
-  
+
   const getGender = (code?: string) => {
     if (code === 'Male') return 'Nam';
     if (code === 'Female') return 'Nữ';
@@ -108,13 +108,13 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
 
   const getEducationLabel = (educationCode?: string): string => {
     if (!educationCode) return 'Chưa có';
-    
+
     // Try to find matching degree description
     const degree = degrees.find(d => d.code === educationCode);
     if (degree) {
       return degree.description;
     }
-    
+
     // If not found, return the code as is (might be already a description)
     return educationCode;
   };
@@ -132,9 +132,9 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
             <div className={styles.headerContent}>
               <div className={styles.headerLeft}>
                 <div className={styles.doctorAvatar}>
-                  <img 
+                  <img
                     src={doctor.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.fullName)}&background=667eea&color=fff`}
-                    alt="Avatar" 
+                    alt="Avatar"
                   />
                 </div>
                 <div className={styles.doctorInfo}>
@@ -153,7 +153,7 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
               </button>
             </div>
           </div>
-          
+
           {isLoading ? (
             <div className={styles.loading}>
               <div className={styles.loadingSpinner}></div>
@@ -242,7 +242,7 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
                                 <i className="bi bi-image"></i>
                                 Ảnh CMND/CCCD
                               </label>
-                              <button 
+                              <button
                                 className={styles.btnImage}
                                 onClick={() => handleShowImage(doctor.identityCardImageUrl)}
                               >
@@ -297,14 +297,14 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
                           <span className={styles.serviceTierBadge}>{doctor.serviceTier}</span>
                         </div>
                       )}
-                      {doctor.price && (
+                      {(doctor.price != null || doctor.consultationFee != null) && (
                         <div className={styles.infoItem}>
                           <label>
                             <i className="bi bi-currency-dollar"></i>
                             Giá khám
                           </label>
                           <span className={styles.priceText}>
-                            {Number(doctor.price || doctor.consultationFee || 0).toLocaleString('vi-VN')} VNĐ
+                            {Number(doctor.price ?? doctor.consultationFee ?? 0).toLocaleString('vi-VN')} VNĐ
                           </span>
                         </div>
                       )}
@@ -323,7 +323,7 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
                             <i className="bi bi-image"></i>
                             Ảnh chứng chỉ hành nghề
                           </label>
-                          <button 
+                          <button
                             className={styles.btnImage}
                             onClick={() => handleShowImage(doctor.licenseImageUrl)}
                           >
@@ -338,9 +338,9 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
                             <i className="bi bi-file-earmark-pdf"></i>
                             Tệp bằng cấp / Chứng chỉ
                           </label>
-                          <a 
-                            href={doctor.degreeFilesUrl} 
-                            download 
+                          <a
+                            href={doctor.degreeFilesUrl}
+                            download
                             className={styles.btnDownload}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -567,7 +567,7 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
       {showImageModal && (
         <div className={styles.imageModalOverlay} onClick={() => setShowImageModal(false)}>
           <div className={styles.imageModal} onClick={(e) => e.stopPropagation()}>
-            <button 
+            <button
               className={styles.imageModalClose}
               onClick={() => setShowImageModal(false)}
             >

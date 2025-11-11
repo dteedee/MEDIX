@@ -256,6 +256,11 @@ export interface DoctorDto {
   statusCode: number;
   createdAt: string;
   serviceTier: string;
+  price: string;
+  licenseNumber: string;
+  licenseImageUrl: string;
+  degreeFilesUrl: string;
+  bio: string;
 }
 
 export interface DoctorList {

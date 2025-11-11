@@ -306,6 +306,12 @@ namespace Medix.API.Presentation.Controller.Classification
                         .Count(a => a.Review != null),
                     StatusCode = doctor.User.Status,
                     doctor.CreatedAt,
+                    ServiceTier = doctor.ServiceTier?.Name,
+                    Price = doctor.ConsultationFee,
+                    doctor.LicenseNumber,
+                    doctor.LicenseImageUrl,
+                    doctor.DegreeFilesUrl,
+                    doctor.Bio,
                 };
                 return Ok(doctorDto);
             }

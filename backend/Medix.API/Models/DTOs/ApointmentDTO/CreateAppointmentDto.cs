@@ -6,6 +6,7 @@ namespace Medix.API.Models.DTOs.ApointmentDTO
     {
         public Guid? PatientId { get; set; }
         public Guid? DoctorId { get; set; }
+        public string? DoctorName { get; set; }
 
         public Guid? AISymptomAnalysisId { get; set; }
 

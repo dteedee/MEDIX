@@ -157,10 +157,8 @@ namespace Medix.API.Business.Services.Classification
         public async Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query)
             => await _medicalRecordRepo.GetRecordsByUserIdAsync(userId, query);
 
-        public Task<MedicalRecord?> GetRecordDetailsByIdAsync(Guid id)
-        {
-            throw new NotImplementedException();
-        }
+        public async Task<MedicalRecord?> GetRecordDetailsByIdAsync(Guid id)
+            => await _medicalRecordRepo.GetRecordDetailsByIdAsync(id);
 
         //public async Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query)
         //    => await _medicalRecordRepo.GetRecordsByUserIdAsync(userId, query);

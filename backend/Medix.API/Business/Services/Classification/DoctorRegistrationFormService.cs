@@ -161,7 +161,7 @@ namespace Medix.API.Business.Services.Classification
                         Bio = form.Bio,
                         Education = request.Education,
                         YearsOfExperience = form.YearsOfExperience,
-                        ConsultationFee = 0,
+                        ConsultationFee = request.ConsultationFee,
                         AverageRating = 0,
                         TotalReviews = 0,
                         IsVerified = true,

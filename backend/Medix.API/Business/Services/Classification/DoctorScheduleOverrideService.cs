@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using AutoMapper;
+﻿﻿﻿﻿﻿﻿using AutoMapper;
 ﻿using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
@@ -209,6 +209,7 @@ namespace Medix.API.Business.Services.Classification
                         OverrideType = dto.OverrideType
                     };
                     await _repo.AddAsync(newEntity);
+                        
                 }
                 else
                 {
@@ -222,9 +223,19 @@ namespace Medix.API.Business.Services.Classification
                             throw new InvalidOperationException(
                                 $"Không thể cập nhật lịch ghi đè này vì đã có cuộc hẹn được đặt trong khoảng thời gian từ {match.StartTime:HH\\:mm} đến {match.EndTime:HH\\:mm} vào ngày {match.OverrideDate:dd/MM/yyyy}.");
                         }
-
+                        
+                        if (!dto.IsAvailable)
+                        {
+                            // Nếu IsAvailable = false, thực hiện xóa override
+                            await _repo.DeleteAsync(match);
+                        }
+                        else
+                        {
                         // Validate overlap with fixed schedules before updating
                         await ValidateFixedScheduleOverlap(doctorId.Value, dto.OverrideDate, dto.StartTime, dto.EndTime, dto.OverrideType);
+
+
+
 
                         _mapper.Map(dto, match);
                         match.IsAvailable = true; // IsAvailable luôn mặc định là true khi cập nhật
@@ -340,4 +351,5 @@ namespace Medix.API.Business.Services.Classification
         }
 
     }
+
 }

@@ -11,7 +11,7 @@ interface Props {
 export default function UserDetails({ user, onClose, isLoading }: Props) {
   if (!user) return null;
 
-  const fmtDate = (d?: string | null) => d ? new Date(d).toLocaleString('vi-VN') : 'Chưa có';
+  const fmtDate = (d?: string | null) => d ? new Date(`${d}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Chưa có';
   const getGender = (code?: string) => {
     if (code === 'MALE') return 'Nam';
     if (code === 'FEMALE') return 'Nữ';

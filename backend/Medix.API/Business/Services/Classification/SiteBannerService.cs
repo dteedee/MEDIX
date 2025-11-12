@@ -194,7 +194,7 @@ namespace Medix.API.Business.Services.Classification
             var banners = await _siteBannerRepository.GetRunningBannersAsync(); // Lấy các banner đang hoạt động
             return banners.OrderBy(b => b.DisplayOrder) // Sắp xếp theo thứ tự hiển thị tăng dần
                           .ThenByDescending(b => b.CreatedAt) // Nếu trùng, sắp xếp theo ngày tạo giảm dần
-                          .Take(7).ToList(); // Lấy 7 banner hàng đầu
+                          .ToList(); // Lấy tất cả banner đang hoạt động
         }
         public async Task<(int total, IEnumerable<SiteBannerDto> data)> SearchByNameAsync(string name, int page = 1, int pageSize = 10)
         {

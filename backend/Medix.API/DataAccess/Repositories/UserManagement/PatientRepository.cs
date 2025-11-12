@@ -18,7 +18,7 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
         public Task<Patient?> GetPatientByUserIdAsync(Guid userId)
         {
             return _context.Patients
-                 .AsNoTracking()
+
                  .Include(p => p.User)
                  .FirstOrDefaultAsync(p => p.UserId == userId);
         }
@@ -31,14 +31,11 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
             return patient;
         }
 
-        public Task<Patient> UpdatePatientAsync(Patient patient)
+        public async Task<Patient> UpdatePatientAsync(Patient patient)
         {
-            return Task.Run(async () =>
-               {
-                   _context.Patients.Update(patient);
-                   await _context.SaveChangesAsync();
-                   return patient;
-               });
+            _context.Patients.Update(patient);
+            await _context.SaveChangesAsync();
+            return patient;
         }
     }
 }

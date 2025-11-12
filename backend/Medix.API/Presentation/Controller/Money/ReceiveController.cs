@@ -231,7 +231,20 @@ namespace Medix.API.Presentation.Controller.Money
             }
         }
 
+        [HttpGet("payment-failed")]
+        public async Task<IActionResult> paymentfailed([FromQuery] PaymentReturnDto paymentReturnDto)
+        {
+            var order = OrderService.GetOrderByOrderCode(paymentReturnDto.OrderCode);
 
+            var frontendBaseUrl = order.baseURLFE ?? "http://localhost:5173";
+            var walletTransaction = await transactionService.GetWalletTransactionByOrderCodeAsync(paymentReturnDto.OrderCode);
+
+            walletTransaction.Status = "Failed";
+
+            await transactionService.UppdateWalletTrasactionAsync(walletTransaction);
+
+            return Redirect($"{frontendBaseUrl}/app/patient/finance");
+        }
 
         private static DateTimeOffset ParseWebhookDateTime(string dateTimeString)
         {
@@ -250,50 +263,40 @@ namespace Medix.API.Presentation.Controller.Money
             // Fallback to current time if parsing fails    
             return DateTimeOffset.Now;
         }
-   
+
 
         [HttpGet("payment-success")]
-        public Task<IActionResult> paymentSuccess([FromQuery]PaymentReturnDto paymentReturnDto)
+        [Authorize]
+        public async Task<IActionResult> paymentSuccess([FromQuery] PaymentReturnDto paymentReturnDto)
         {
-            //var reusultPayOS = _client.PaymentRequests.GetAsync(paymentReturnDto.OrderCode.ToString());
-
-
-            //if (reusultPayOS == null)
-            //{
-            //    return Task.FromResult<IActionResult>(BadRequest(new { message = "Payment was not found" }));
-            //}
-
-            //if (!reusultPayOS.Status.Equals("PAID"))
-            //{
-            //    return Task.FromResult<IActionResult>(BadRequest(new { message = "Payment was not successful" }));
-            //}
+         
 
             if (paymentReturnDto.Status != "PAID")
             {
 
-                return Task.FromResult<IActionResult>(BadRequest(new { message = "Payment was not successfull" }));
+                return BadRequest(new { message = "Payment was not successfull" });
             }
             var order = OrderService.GetOrderByOrderCode(paymentReturnDto.OrderCode);
 
             var frontendBaseUrl = order.baseURLFE ?? "http://localhost:5173";
-            var walletTransaction = transactionService.GetWalletTransactionByOrderCodeAsync(paymentReturnDto.OrderCode).Result;
+            var walletTransaction = await transactionService.GetWalletTransactionByOrderCodeAsync(paymentReturnDto.OrderCode);
 
             if (walletTransaction == null)
             {
-                return Task.FromResult<IActionResult>(BadRequest(new { message = "Wallet transaction not found for the given order code" }));
+                return BadRequest(new { message = "Wallet transaction not found for the given order code" });
             }
             walletTransaction.Status = "Completed";
-             
-            transactionService.UppdateWalletTrasactionAsync(walletTransaction);
+
+          await  transactionService.UppdateWalletTrasactionAsync(walletTransaction);
 
             var wallet = walletService.GetWalletByIdAsync((Guid)walletTransaction.walletId).Result;
             if (wallet == null)
             {
-                return Task.FromResult<IActionResult>(BadRequest(new { message = "Wallet not found for the transaction" }));
+                return BadRequest(new { message = "Wallet not found for the transaction" });
             }
             wallet.Balance += walletTransaction.Amount ?? 0;
-            walletService.IncreaseWalletBalanceAsync(wallet.UserId, walletTransaction.Amount ?? 0);
-            return Task.FromResult<IActionResult>(Redirect($"{frontendBaseUrl}/app/patient/finance"));
+            await walletService.IncreaseWalletBalanceAsync(wallet.UserId, walletTransaction.Amount ?? 0);
+            return Redirect($"{frontendBaseUrl}/app/patient/finance");
 
 
 
@@ -370,8 +373,5 @@ namespace Medix.API.Presentation.Controller.Money
 }
 
 
-
-
-    
 
 

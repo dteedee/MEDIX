@@ -1,29 +1,116 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { walletService } from '../../services/walletService';
-import { WalletDto, OrderCreateRequest, WalletTransactionDto } from '../../types/wallet.types';
-import styles from '../../styles/patient/PatientDashboard.module.css';
+import { appointmentService } from '../../services/appointmentService';
+import { WalletDto, OrderCreateRequest, WalletTransactionDto, BankInfo, WithdrawalRequest } from '../../types/wallet.types';
+import { Appointment } from '../../types/appointment.types';
+import styles from '../../styles/patient/PatientFinance.module.css';
+
+type TabType = 'all' | 'deposit' | 'withdrawal' | 'payment' | 'refund';
+
+const BANKS: BankInfo[] = [
+  { name: 'Ngân hàng TMCP Ngoại thương Việt Nam', bin: '970436', shortName: 'Vietcombank', code: 'VCB', logo: 'https://api.vietqr.io/img/VCB.png' },
+  { name: 'Ngân hàng Nông nghiệp và Phát triển Nông thôn Việt Nam', bin: '970405', shortName: 'Agribank', code: 'VBA', logo: 'https://api.vietqr.io/img/VBA.png' },
+  { name: 'Ngân hàng TMCP Công Thương Việt Nam', bin: '970415', shortName: 'VietinBank', code: 'CTG', logo: 'https://api.vietqr.io/img/CTG.png' },
+  { name: 'Ngân hàng Đầu tư và Phát triển Việt Nam', bin: '970418', shortName: 'BIDV', code: 'BID', logo: 'https://api.vietqr.io/img/BIDV.png' },
+  { name: 'Ngân hàng TMCP Á Châu', bin: '970416', shortName: 'ACB', code: 'ACB', logo: 'https://api.vietqr.io/img/ACB.png' },
+  { name: 'Ngân hàng TMCP Kỹ Thương Việt Nam', bin: '970407', shortName: 'Techcombank', code: 'TCB', logo: 'https://api.vietqr.io/img/TCB.png' },
+  { name: 'Ngân hàng TMCP Việt Nam Thịnh Vượng', bin: '970432', shortName: 'VPBank', code: 'VPB', logo: 'https://api.vietqr.io/img/VPB.png' },
+  { name: 'Ngân hàng TMCP Phương Đông', bin: '970448', shortName: 'OCB', code: 'OCB', logo: 'https://api.vietqr.io/img/OCB.png' },
+  { name: 'Ngân hàng TMCP Bưu Điện Liên Việt', bin: '970449', shortName: 'LienVietPostBank', code: 'LPB', logo: 'https://api.vietqr.io/img/LPB.png' },
+  { name: 'Ngân hàng TMCP Sài Gòn - Hà Nội', bin: '970443', shortName: 'SHB', code: 'SHB', logo: 'https://api.vietqr.io/img/SHB.png' },
+  { name: 'Ngân hàng TMCP Tiên Phong', bin: '970423', shortName: 'TPBank', code: 'TPB', logo: 'https://api.vietqr.io/img/TPB.png' },
+  { name: 'Ngân hàng TMCP Đông Nam Á', bin: '970440', shortName: 'SeABank', code: 'SEA', logo: 'https://api.vietqr.io/img/SEAB.png' },
+  { name: 'Ngân hàng TMCP Quân Đội', bin: '970422', shortName: 'MB', code: 'MBB', logo: 'https://api.vietqr.io/img/MB.png' },
+  { name: 'Ngân hàng TMCP Hàng Hải', bin: '970426', shortName: 'MSB', code: 'MSB', logo: 'https://api.vietqr.io/img/MSB.png' },
+  { name: 'Ngân hàng TMCP Quốc tế Việt Nam', bin: '970441', shortName: 'VIB', code: 'VIB', logo: 'https://api.vietqr.io/img/VIB.png' },
+  { name: 'Ngân hàng TMCP Quốc Dân', bin: '970419', shortName: 'NCB', code: 'NCB', logo: 'https://api.vietqr.io/img/NCB.png' },
+  { name: 'Ngân hàng TMCP Xăng dầu Petrolimex', bin: '970430', shortName: 'PGBank', code: 'PGB', logo: 'https://api.vietqr.io/img/PGB.png' },
+  { name: 'Ngân hàng TNHH Một Thành Viên Xây Dựng Việt Nam', bin: '970444', shortName: 'CB', code: 'CBB', logo: 'https://api.vietqr.io/img/CBB.png' },
+  { name: 'Ngân hàng TMCP Sài Gòn', bin: '970429', shortName: 'SCB', code: 'SCB', logo: 'https://api.vietqr.io/img/SCB.png' },
+  { name: 'Ngân hàng TMCP Xuất Nhập khẩu Việt Nam', bin: '970431', shortName: 'Eximbank', code: 'EIB', logo: 'https://api.vietqr.io/img/EIB.png' },
+  { name: 'Ngân hàng TMCP An Bình', bin: '970425', shortName: 'ABBANK', code: 'ABB', logo: 'https://api.vietqr.io/img/ABB.png' },
+  { name: 'Ngân hàng TMCP Bản Việt', bin: '970427', shortName: 'VietCapitalBank', code: 'VCB', logo: 'https://api.vietqr.io/img/VCB.png' },
+  { name: 'Ngân hàng TMCP Việt Á', bin: '970433', shortName: 'VietABank', code: 'VAB', logo: 'https://api.vietqr.io/img/VAB.png' },
+  { name: 'Ngân hàng TMCP Việt Nam Thương Tín', bin: '970434', shortName: 'VietBank', code: 'VTB', logo: 'https://api.vietqr.io/img/VTB.png' },
+  { name: 'Ngân hàng TMCP Phát triển Thành phố Hồ Chí Minh', bin: '970437', shortName: 'HDBank', code: 'HDB', logo: 'https://api.vietqr.io/img/HDB.png' },
+  { name: 'Ngân hàng TMCP Sài Gòn Thương Tín', bin: '970439', shortName: 'Sacombank', code: 'STB', logo: 'https://api.vietqr.io/img/STB.png' },
+  { name: 'Ngân hàng TMCP Bắc Á', bin: '970409', shortName: 'BacABank', code: 'BAB', logo: 'https://api.vietqr.io/img/BAB.png' },
+  { name: 'Ngân hàng TMCP Kiên Long', bin: '970452', shortName: 'KienLongBank', code: 'KLB', logo: 'https://api.vietqr.io/img/KLB.png' },
+  { name: 'Ngân hàng TMCP Đại Dương', bin: '970414', shortName: 'OceanBank', code: 'OCE', logo: 'https://api.vietqr.io/img/OCEANBANK.png' },
+  { name: 'Ngân hàng TMCP Dầu Khí Toàn Cầu', bin: '970438', shortName: 'GPBank', code: 'GPB', logo: 'https://api.vietqr.io/img/GPB.png' },
+  { name: 'Ngân hàng TMCP Đông Á', bin: '970406', shortName: 'DongABank', code: 'DAB', logo: 'https://api.vietqr.io/img/DAB.png' },
+  { name: 'Ngân hàng TNHH Một Thành Viên Standard Chartered', bin: '970410', shortName: 'Standard Chartered', code: 'SCB', logo: 'https://api.vietqr.io/img/SCB.png' },
+  { name: 'Ngân hàng TNHH Một Thành Viên Shinhan Việt Nam', bin: '970424', shortName: 'Shinhan Bank', code: 'SHB', logo: 'https://api.vietqr.io/img/SHB.png' },
+  { name: 'Ngân hàng TMCP Nam Á', bin: '970428', shortName: 'NamABank', code: 'NAB', logo: 'https://api.vietqr.io/img/NAB.png' },
+  { name: 'Ngân hàng KEB HANA - Chi nhánh TP.HCM', bin: '970466', shortName: 'KEB Hana Bank', code: 'KEB', logo: 'https://api.vietqr.io/img/KEBHANABANK.png' },
+  { name: 'Ngân hàng Industrial Bank of Korea - Chi nhánh TP.HCM', bin: '970456', shortName: 'IBK', code: 'IBK', logo: 'https://api.vietqr.io/img/IBK.png' }
+];
 
 export const PatientFinance: React.FC = () => {
   const { user } = useAuth();
   const [wallet, setWallet] = useState<WalletDto | null>(null);
   const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingTransactions, setLoadingTransactions] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState<string>('');
+  const [withdrawalAmount, setWithdrawalAmount] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [showAllTransactions, setShowAllTransactions] = useState<boolean>(false);
+  const [isProcessingWithdrawal, setIsProcessingWithdrawal] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<TabType>('all');
+  const [showWithdrawalModal, setShowWithdrawalModal] = useState<boolean>(false);
+  const [selectedBank, setSelectedBank] = useState<BankInfo | null>(null);
+  const [accountNumber, setAccountNumber] = useState<string>('');
+  const [accountName, setAccountName] = useState<string>('');
+  const [showWithdrawalConfirm, setShowWithdrawalConfirm] = useState<boolean>(false);
+  const [bankSearchTerm, setBankSearchTerm] = useState<string>('');
+  const [banksWithLogos, setBanksWithLogos] = useState<BankInfo[]>(BANKS);
+  const accountNumberInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const fetchBanksFromAPI = async () => {
+      try {
+        const response = await fetch('https://api.vietqr.io/v2/banks');
+        const data = await response.json();
+        if (data.code === '00' && data.data) {
+          const bankMap = new Map<string, string>();
+          data.data.forEach((bank: any) => {
+            if (bank.bin && bank.logo) {
+              bankMap.set(bank.bin, bank.logo);
+            }
+          });
+          
+          const updatedBanks = BANKS.map(bank => {
+            const logoFromAPI = bankMap.get(bank.bin);
+            return {
+              ...bank,
+              logo: logoFromAPI || bank.logo
+            };
+          });
+          setBanksWithLogos(updatedBanks);
+        }
+      } catch (err) {
+        console.error('Error fetching banks from API:', err);
+        setBanksWithLogos(BANKS);
+      }
+    };
+
+    fetchBanksFromAPI();
+  }, []);
 
   useEffect(() => {
     const fetchWallet = async () => {
       try {
         setLoading(true);
         setError(null);
-        const walletData = await walletService.getWalletByUserId();
+        const [walletData, appointmentsData] = await Promise.all([
+          walletService.getWalletByUserId(),
+          appointmentService.getPatientAppointments().catch(() => [])
+        ]);
         setWallet(walletData);
-        
-        // Fetch transactions - không cần walletId nữa
+        setAppointments(appointmentsData);
         await fetchTransactions();
       } catch (err: any) {
         console.error('Error fetching wallet:', err);
@@ -34,6 +121,16 @@ export const PatientFinance: React.FC = () => {
     };
 
     fetchWallet();
+
+    // Check if returning from payment success
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentSuccess = urlParams.get('payment_success');
+    if (paymentSuccess === 'true') {
+      // Refresh transactions after a short delay to ensure backend has processed
+      setTimeout(() => {
+        fetchTransactions();
+      }, 1000);
+    }
   }, []);
 
   const fetchTransactions = async () => {
@@ -43,7 +140,6 @@ export const PatientFinance: React.FC = () => {
       setTransactions(transactionData);
     } catch (err: any) {
       console.error('Error fetching transactions:', err);
-      // Không set error ở đây để không ảnh hưởng UI chính
     } finally {
       setLoadingTransactions(false);
     }
@@ -52,6 +148,175 @@ export const PatientFinance: React.FC = () => {
   const formatBalance = (balance: number, currency: string): string => {
     const formatted = new Intl.NumberFormat('vi-VN').format(balance);
     return `${formatted} ${currency}`;
+  };
+
+  const formatNumberInput = (value: string): string => {
+    const numericValue = value.replace(/\./g, '');
+    if (numericValue === '') return '';
+    const number = parseFloat(numericValue);
+    if (isNaN(number)) return '';
+    return number.toLocaleString('vi-VN');
+  };
+
+  const parseFormattedNumber = (value: string): number => {
+    const numericValue = value.replace(/\./g, '');
+    return parseFloat(numericValue) || 0;
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const formatted = formatNumberInput(inputValue);
+    setDepositAmount(formatted);
+  };
+
+  const handleWithdrawalAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const formatted = formatNumberInput(inputValue);
+    setWithdrawalAmount(formatted);
+  };
+
+  const handleOpenWithdrawalModal = () => {
+    const amount = withdrawalAmount ? parseFormattedNumber(withdrawalAmount) : parseFormattedNumber(depositAmount);
+    if (!amount || amount <= 0) {
+      alert('Vui lòng nhập số tiền hợp lệ');
+      return;
+    }
+    if (!wallet || amount > wallet.balance) {
+      alert('Số tiền rút không được vượt quá số dư ví');
+      return;
+    }
+    if (!withdrawalAmount && depositAmount) {
+      setWithdrawalAmount(depositAmount);
+    }
+    setShowWithdrawalModal(true);
+    setShowWithdrawalConfirm(false);
+    setSelectedBank(null);
+    setAccountNumber('');
+    setAccountName('');
+    setBankSearchTerm('');
+  };
+
+  const handleBankSelect = (bank: BankInfo) => {
+    setSelectedBank(bank);
+    // Scroll to account number input after a short delay to ensure DOM is updated
+    setTimeout(() => {
+      accountNumberInputRef.current?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+      // Focus the input after scrolling
+      setTimeout(() => {
+        accountNumberInputRef.current?.focus();
+      }, 300);
+    }, 100);
+  };
+
+  const handleAccountNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Only allow numbers, remove all non-numeric characters
+    const numericValue = value.replace(/\D/g, '');
+    setAccountNumber(numericValue);
+  };
+
+  const handleAccountNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Only allow English letters and spaces, remove numbers and special characters
+    const englishOnly = value.replace(/[^A-Za-z\s]/g, '');
+    // Convert to uppercase
+    setAccountName(englishOnly.toUpperCase());
+  };
+
+  const handleConfirmWithdrawal = () => {
+    if (!selectedBank) {
+      alert('Vui lòng chọn ngân hàng');
+      return;
+    }
+    if (!accountNumber || accountNumber.trim() === '') {
+      alert('Vui lòng nhập số tài khoản');
+      return;
+    }
+    // Validate account number is numeric only
+    if (!/^\d+$/.test(accountNumber)) {
+      alert('Số tài khoản chỉ được chứa số');
+      return;
+    }
+    if (!accountName || accountName.trim() === '') {
+      alert('Vui lòng nhập tên chủ tài khoản');
+      return;
+    }
+    // Validate account name is English letters and spaces only
+    if (!/^[A-Za-z\s]+$/.test(accountName)) {
+      alert('Tên chủ tài khoản chỉ được chứa chữ cái tiếng Anh và khoảng trắng');
+      return;
+    }
+    setShowWithdrawalConfirm(true);
+  };
+
+  const handleSubmitWithdrawal = async () => {
+    if (!selectedBank || !accountNumber || !accountName) return;
+    
+    // Validate account number is numeric only
+    if (!/^\d+$/.test(accountNumber)) {
+      alert('Số tài khoản chỉ được chứa số');
+      return;
+    }
+    
+    // Validate account name is English letters and spaces only
+    if (!/^[A-Za-z\s]+$/.test(accountName)) {
+      alert('Tên chủ tài khoản chỉ được chứa chữ cái tiếng Anh và khoảng trắng');
+      return;
+    }
+
+    const amount = parseFormattedNumber(withdrawalAmount || depositAmount);
+    if (!amount || amount <= 0) {
+      alert('Vui lòng nhập số tiền hợp lệ');
+      return;
+    }
+
+    setIsProcessingWithdrawal(true);
+    try {
+      const withdrawalRequest: WithdrawalRequest = {
+        amount: Math.round(amount),
+        bankBin: selectedBank.bin,
+        bankName: selectedBank.name,
+        accountNumber: accountNumber.trim(),
+        accountName: accountName.trim(),
+        description: `Rút tiền về ${selectedBank.name} - Số tài khoản: ${accountNumber.trim()}`
+      };
+
+      await walletService.createWithdrawal(withdrawalRequest);
+      
+      alert('Yêu cầu rút tiền đã được gửi thành công!');
+      
+      // Reset form
+      setWithdrawalAmount('');
+      setDepositAmount('');
+      setShowWithdrawalModal(false);
+      setShowWithdrawalConfirm(false);
+      setSelectedBank(null);
+      setAccountNumber('');
+      setAccountName('');
+      setBankSearchTerm('');
+      
+      // Refresh wallet and transactions
+      const walletData = await walletService.getWalletByUserId();
+      setWallet(walletData);
+      await fetchTransactions();
+    } catch (err: any) {
+      console.error('Error processing withdrawal:', err);
+      
+      let errorMessage = 'Có lỗi xảy ra khi rút tiền. Vui lòng thử lại.';
+      
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setIsProcessingWithdrawal(false);
+    }
   };
 
   const getTransactionTypeName = (typeCode: string | undefined): string => {
@@ -84,33 +349,215 @@ export const PatientFinance: React.FC = () => {
     return iconMap[typeCode] || 'bi-arrow-left-right';
   };
 
-  // Check if transaction is debit (money out) or credit (money in)
   const isDebitTransaction = (typeCode: string | undefined): boolean => {
     if (!typeCode) return false;
-    
-    // AppointmentPayment and Withdrawal are debit transactions (money out, negative)
     const debitTypes = ['AppointmentPayment', 'Withdrawal'];
     return debitTypes.includes(typeCode);
   };
 
-  // Format amount with proper sign based on transaction type
   const formatTransactionAmount = (amount: number | undefined, typeCode: string | undefined): string => {
     if (!amount) return 'N/A';
-    
     const isDebit = isDebitTransaction(typeCode);
     const sign = isDebit ? '-' : '+';
     const absAmount = Math.abs(amount);
-    
     return `${sign}${formatBalance(absAmount, 'VND')}`;
   };
 
-  // Get color for transaction amount
   const getTransactionColor = (typeCode: string | undefined): string => {
     return isDebitTransaction(typeCode) ? '#e53e3e' : '#38a169';
   };
 
+  const getStatusLabel = (status?: string): string => {
+    if (!status) return 'Không xác định';
+    
+    const statusMap: { [key: string]: string } = {
+      'Completed': 'Hoàn thành',
+      'Compeleted': 'Hoàn thành', // Typo from backend
+      'Pending': 'Đang chờ',
+      'Failed': 'Thất bại',
+      'Cancelled': 'Đã hủy',
+      'Processing': 'Đang xử lý'
+    };
+    
+    return statusMap[status] || status;
+  };
+
+  const formatTransactionDescription = (transaction: WalletTransactionDto): string => {
+    const appointment = transaction.relatedAppointmentId 
+      ? appointments.find(apt => apt.id === transaction.relatedAppointmentId)
+      : null;
+
+    const transactionDate = transaction.transactionDate 
+      ? new Date(transaction.transactionDate)
+      : null;
+
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    };
+
+    switch (transaction.transactionTypeCode) {
+      case 'AppointmentPayment':
+        if (appointment) {
+          return `Thanh toán đặt lịch thành công cho bác sĩ ${appointment.doctorName} ngày ${formatDate(new Date(appointment.appointmentStartTime))}`;
+        }
+        return transaction.description || `Thanh toán cuộc hẹn${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
+      
+      case 'AppointmentRefund':
+        if (appointment) {
+          const refundPercent = transaction.description?.match(/(\d+)%/)?.[1] || '80';
+          const cancelFee = transaction.description?.match(/Phí hủy: ([\d.,]+)/)?.[1] || '';
+          let desc = `Hoàn tiền hủy lịch hẹn cho bác sĩ ${appointment.doctorName} ngày ${formatDate(new Date(appointment.appointmentStartTime))}`;
+          if (refundPercent) {
+            desc += ` (${refundPercent}%`;
+            if (cancelFee) {
+              desc += ` - Phí hủy: ${cancelFee}`;
+            }
+            desc += ')';
+          }
+          return desc;
+        }
+        return transaction.description || `Hoàn tiền cuộc hẹn${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
+      
+      case 'Deposit':
+        if (transaction.description) {
+          // Handle English descriptions like "Payment for order 123456"
+          if (transaction.description.toLowerCase().includes('payment for order')) {
+            const orderMatch = transaction.description.match(/order\s+(\d+)/i);
+            if (orderMatch) {
+              return `Nạp tiền vào ví - Mã đơn: ${orderMatch[1]}`;
+            }
+            return `Nạp tiền vào ví`;
+          }
+          // If description is already in Vietnamese or doesn't match pattern, use it
+          return transaction.description;
+        }
+        return `Nạp tiền vào ví${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
+      
+      case 'Withdrawal':
+        return transaction.description || `Rút tiền từ ví${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
+      
+      default:
+        return transaction.description || 'Giao dịch';
+    }
+  };
+
+  const filteredTransactions = useMemo(() => {
+    if (activeTab === 'all') {
+      return transactions;
+    }
+    
+    const typeMap: { [key in TabType]: string[] } = {
+      'all': [],
+      'deposit': ['Deposit'],
+      'withdrawal': ['Withdrawal'],
+      'payment': ['AppointmentPayment'],
+      'refund': ['AppointmentRefund']
+    };
+    
+    const allowedTypes = typeMap[activeTab];
+    return transactions.filter(t => 
+      t.transactionTypeCode && allowedTypes.includes(t.transactionTypeCode)
+    );
+  }, [transactions, activeTab]);
+
+  // Calculate all-time spending and deposit, and weekly change percentage
+  const weeklyReport = useMemo(() => {
+    const now = new Date();
+    
+    // Current week (this week)
+    const startOfCurrentWeek = new Date(now);
+    startOfCurrentWeek.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+    startOfCurrentWeek.setHours(0, 0, 0, 0);
+    
+    const endOfCurrentWeek = new Date(startOfCurrentWeek);
+    endOfCurrentWeek.setDate(startOfCurrentWeek.getDate() + 6);
+    endOfCurrentWeek.setHours(23, 59, 59, 999);
+
+    // Last week
+    const startOfLastWeek = new Date(startOfCurrentWeek);
+    startOfLastWeek.setDate(startOfCurrentWeek.getDate() - 7);
+    startOfLastWeek.setHours(0, 0, 0, 0);
+    
+    const endOfLastWeek = new Date(startOfLastWeek);
+    endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
+    endOfLastWeek.setHours(23, 59, 59, 999);
+
+    // All-time totals
+    let totalSpent = 0;
+    let totalDeposited = 0;
+    
+    // Current week totals
+    let currentWeekSpent = 0;
+    let currentWeekDeposited = 0;
+    
+    // Last week totals
+    let lastWeekSpent = 0;
+    let lastWeekDeposited = 0;
+
+    transactions.forEach(transaction => {
+      const transactionDate = transaction.transactionDate 
+        ? new Date(transaction.transactionDate)
+        : null;
+      
+      if (!transactionDate) return;
+      
+      const amount = Math.abs(transaction.amount || 0);
+      const typeCode = transaction.transactionTypeCode;
+
+      // All-time totals
+      if (typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') {
+        totalSpent += amount;
+      }
+      if (typeCode === 'Deposit') {
+        totalDeposited += amount;
+      }
+
+      // Current week totals
+      if (transactionDate >= startOfCurrentWeek && transactionDate <= endOfCurrentWeek) {
+        if (typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') {
+          currentWeekSpent += amount;
+        }
+        if (typeCode === 'Deposit') {
+          currentWeekDeposited += amount;
+        }
+      }
+
+      // Last week totals
+      if (transactionDate >= startOfLastWeek && transactionDate <= endOfLastWeek) {
+        if (typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') {
+          lastWeekSpent += amount;
+        }
+        if (typeCode === 'Deposit') {
+          lastWeekDeposited += amount;
+        }
+      }
+    });
+
+    // Calculate percentage change for this week compared to last week
+    const calculatePercentageChange = (current: number, last: number): number => {
+      if (last === 0) {
+        return current > 0 ? 100 : 0;
+      }
+      return Math.round(((current - last) / last) * 100);
+    };
+
+    const spentChangePercentage = calculatePercentageChange(currentWeekSpent, lastWeekSpent);
+    const depositChangePercentage = calculatePercentageChange(currentWeekDeposited, lastWeekDeposited);
+
+    return {
+      totalSpent,
+      totalDeposited,
+      spentChangePercentage,
+      depositChangePercentage
+    };
+  }, [transactions]);
+
   const handleDeposit = async () => {
-    const amount = parseFloat(depositAmount);
+    const amount = parseFormattedNumber(depositAmount);
     if (!amount || amount <= 0) {
       alert('Vui lòng nhập số tiền hợp lệ');
       return;
@@ -146,11 +593,7 @@ export const PatientFinance: React.FC = () => {
         baseURLFE: window.location.origin
       };
 
-      console.log('Sending payment request:', paymentRequest);
-
       const order = await walletService.createPayment(paymentRequest);
-      
-      console.log('Received order response:', order);
       
       if (order && order.checkoutUrl) {
         try {
@@ -159,12 +602,10 @@ export const PatientFinance: React.FC = () => {
             requestedAmount: amount,
             timestamp: new Date().toISOString()
           }));
-          console.log('Payment order saved to localStorage');
         } catch (storageError) {
           console.warn('Failed to save order to localStorage:', storageError);
         }
         
-        console.log('Redirecting to checkout URL:', order.checkoutUrl);
         window.location.href = order.checkoutUrl;
       } else {
         throw new Error('Không nhận được link thanh toán từ server');
@@ -186,426 +627,485 @@ export const PatientFinance: React.FC = () => {
   };
 
   const quickAmounts = [100000, 200000, 500000, 1000000, 2000000, 5000000];
+
+  const tabs = [
+    { id: 'all' as TabType, label: 'Tất cả', icon: 'bi-list-ul' },
+    { id: 'deposit' as TabType, label: 'Nạp tiền', icon: 'bi-cash-coin' },
+    { id: 'withdrawal' as TabType, label: 'Rút tiền', icon: 'bi-cash-stack' },
+    { id: 'payment' as TabType, label: 'Trả tiền', icon: 'bi-calendar-check' },
+    { id: 'refund' as TabType, label: 'Hoàn tiền', icon: 'bi-arrow-counterclockwise' }
+  ];
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <h1>Tài chính</h1>
-          <p>Quản lý thanh toán và hóa đơn</p>
+          <p>Quản lý thanh toán và giao dịch</p>
         </div>
-        <div className={styles.headerRight}>
-          <div className={styles.dateTime}>
-            <i className="bi bi-calendar3"></i>
-            <span>{new Date().toLocaleDateString('vi-VN')}</span>
+        <div className={styles.dateTime}>
+          <i className="bi bi-calendar3"></i>
+          <span>{new Date().toLocaleDateString('vi-VN')}</span>
+        </div>
+      </div>
+
+      <div className={styles.mainGrid}>
+        <div className={styles.walletCard}>
+          <div className={styles.walletHeader}>
+            <div className={styles.walletIcon}>
+              <i className="bi bi-wallet2"></i>
+            </div>
+            <div className={styles.walletStatus}>
+              {wallet?.isActive ? 'Đang hoạt động' : 'Đã khóa'}
+            </div>
+          </div>
+          <div className={styles.walletBalance}>
+            <div className={styles.walletLabel}>Số dư ví</div>
+            {loading ? (
+              <div className={styles.walletAmount}>Đang tải...</div>
+            ) : error ? (
+              <div className={styles.walletAmount}>Lỗi</div>
+            ) : wallet ? (
+              <div className={styles.walletAmount}>
+                {formatBalance(wallet.balance, wallet.currency)}
+              </div>
+            ) : (
+              <div className={styles.walletAmount}>N/A</div>
+            )}
+          </div>
+          
+          <div className={styles.walletReport}>
+            <div className={styles.reportHeader}>
+              <div className={styles.reportIcon}>
+                <i className="bi bi-graph-up-arrow"></i>
+              </div>
+              <h3 className={styles.reportTitle}>Báo cáo chi tiêu</h3>
+            </div>
+            <div className={styles.reportContent}>
+              <div className={styles.reportItem}>
+                <div className={styles.reportItemHeader}>
+                  <i className={`bi bi-arrow-down-circle ${styles.reportIconDown}`}></i>
+                  <div className={styles.reportItemInfo}>
+                    <div className={styles.reportLabel}>Đã chi</div>
+                    <div className={styles.reportAmountRow}>
+                      <div className={styles.reportAmount}>
+                        {formatBalance(weeklyReport.totalSpent, wallet?.currency || 'VND')}
+                      </div>
+                      <div className={`${styles.reportPercentage} ${weeklyReport.spentChangePercentage >= 0 ? styles.percentageIncrease : styles.percentageDecrease}`}>
+                        {weeklyReport.spentChangePercentage >= 0 ? '+' : ''}{weeklyReport.spentChangePercentage}% so với tuần trước
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.reportItem}>
+                <div className={styles.reportItemHeader}>
+                  <i className={`bi bi-arrow-up-circle ${styles.reportIconUp}`}></i>
+                  <div className={styles.reportItemInfo}>
+                    <div className={styles.reportLabel}>Đã nạp</div>
+                    <div className={styles.reportAmountRow}>
+                      <div className={styles.reportAmount}>
+                        {formatBalance(weeklyReport.totalDeposited, wallet?.currency || 'VND')}
+                      </div>
+                      <div className={`${styles.reportPercentage} ${weeklyReport.depositChangePercentage >= 0 ? styles.percentageIncrease : styles.percentageDecrease}`}>
+                        {weeklyReport.depositChangePercentage >= 0 ? '+' : ''}{weeklyReport.depositChangePercentage}% so với tuần trước
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.depositCard}>
+          <div className={styles.depositHeader}>
+            <div className={styles.depositIcon}>
+              <i className="bi bi-wallet2"></i>
+            </div>
+            <h3 className={styles.depositTitle}>Giao dịch ví</h3>
+          </div>
+          <div>
+            <input
+              type="text"
+              value={depositAmount}
+              onChange={handleAmountChange}
+              placeholder="Nhập số tiền"
+              className={styles.depositInput}
+              inputMode="numeric"
+            />
+
+            <div className={styles.quickAmountLabel}>Chọn nhanh số tiền:</div>
+            <div className={styles.quickAmounts}>
+              {quickAmounts.map((amount) => {
+                const formattedAmount = amount.toLocaleString('vi-VN');
+                return (
+                  <button
+                    key={amount}
+                    onClick={() => setDepositAmount(formattedAmount)}
+                    className={`${styles.quickAmountBtn} ${depositAmount === formattedAmount ? styles.active : ''}`}
+                  >
+                    {formattedAmount} đ
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className={styles.actionButtons}>
+              <button
+                onClick={handleDeposit}
+                disabled={isProcessing || !depositAmount || parseFormattedNumber(depositAmount) <= 0}
+                className={`${styles.depositButton} ${styles.depositActionBtn}`}
+              >
+                {isProcessing ? (
+                  <>
+                    <i className="bi bi-hourglass-split" style={{ marginRight: '8px' }}></i>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-plus-circle" style={{ marginRight: '8px' }}></i>
+                    Nạp tiền
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  const amount = parseFormattedNumber(depositAmount);
+                  if (!amount || amount <= 0) {
+                    alert('Vui lòng nhập số tiền hợp lệ');
+                    return;
+                  }
+                  if (!wallet || amount > wallet.balance) {
+                    alert('Số tiền rút không được vượt quá số dư ví');
+                    return;
+                  }
+                  setWithdrawalAmount(depositAmount);
+                  handleOpenWithdrawalModal();
+                }}
+                disabled={isProcessingWithdrawal || !depositAmount || parseFormattedNumber(depositAmount) <= 0 || !wallet || parseFormattedNumber(depositAmount) > wallet.balance}
+                className={`${styles.depositButton} ${styles.withdrawalActionBtn}`}
+              >
+                {isProcessingWithdrawal ? (
+                  <>
+                    <i className="bi bi-hourglass-split" style={{ marginRight: '8px' }}></i>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-arrow-down-circle" style={{ marginRight: '8px' }}></i>
+                    Rút tiền
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Wallet Balance Card */} 
-      <div className={styles.card} style={{ marginBottom: '24px' }}>
-        <div className={styles.cardHeader}>
-          <div className={styles.cardIcon}>
-            <i className="bi bi-wallet2"></i>
+      <div className={styles.transactionsCard}>
+        <div className={styles.transactionsHeader}>
+          <div className={styles.transactionsIcon}>
+            <i className="bi bi-credit-card"></i>
           </div>
-          <h3 className={styles.cardTitle}>Số dư ví</h3>
+          <h3 className={styles.transactionsTitle}>Giao dịch gần đây</h3>
         </div>
-        <div style={{ padding: '24px' }}>
-          {loading ? (
-            <div style={{ textAlign: 'center', color: '#718096' }}>Đang tải...</div>
-          ) : error ? (
-            <div style={{ textAlign: 'center', color: '#ef4444' }}>Lỗi: {error}</div>
-          ) : wallet ? (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#667eea', marginBottom: '8px' }}>
-                {formatBalance(wallet.balance, wallet.currency)}
-              </div>
-              <div style={{ fontSize: '14px', color: '#718096' }}>
-                {wallet.isActive ? 'Ví đang hoạt động' : 'Ví đã bị khóa'}
-              </div>
+
+        <div className={styles.tabsContainer}>
+          <div className={styles.tabsList}>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`${styles.tab} ${activeTab === tab.id ? styles.active : ''}`}
+              >
+                <i className={`bi ${tab.icon}`} style={{ marginRight: '6px' }}></i>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.transactionsList}>
+          {loadingTransactions ? (
+            <div className={styles.loadingState}>
+              <i className={`bi bi-arrow-clockwise ${styles.loadingIcon}`}></i>
+              <p>Đang tải lịch sử giao dịch...</p>
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className={styles.emptyState}>
+              <i className={`bi bi-receipt ${styles.emptyStateIcon}`}></i>
+              <p className={styles.emptyStateText}>Chưa có giao dịch nào</p>
             </div>
           ) : (
-            <div style={{ textAlign: 'center', color: '#718096' }}>Không có thông tin ví</div>
+            filteredTransactions.map((transaction) => (
+              <div key={transaction.id} className={styles.transactionItem}>
+                <div className={styles.transactionLeft}>
+                  <div className={styles.transactionIconWrapper}>
+                    <i className={getTransactionTypeIcon(transaction.transactionTypeCode)}></i>
+                  </div>
+                  <div className={styles.transactionInfo}>
+                    <div className={styles.transactionHeader}>
+                      <div className={styles.transactionName}>
+                        {getTransactionTypeName(transaction.transactionTypeCode)}
+                        <span className={styles.transactionDateInline}>
+                          {' '}
+                          {(() => {
+                            // Use transactionDate if available, otherwise fall back to createdAt
+                            const dateStr = transaction.transactionDate || transaction.createdAt;
+                            if (dateStr) {
+                              try {
+                                const date = new Date(dateStr);
+                                // Check if date is valid
+                                if (!isNaN(date.getTime())) {
+                                  return date.toLocaleString('vi-VN', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  });
+                                }
+                              } catch (e) {
+                                console.error('Error parsing date:', e);
+                              }
+                            }
+                            return 'N/A';
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className={styles.transactionDescription}>
+                      {formatTransactionDescription(transaction)}
+                      {transaction.orderCode && transaction.orderCode !== 0 && !formatTransactionDescription(transaction).includes('Mã đơn:') && (
+                        <span className={styles.orderCode}> • Mã đơn: {transaction.orderCode}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.transactionRight}>
+                  <div 
+                    className={styles.transactionAmount}
+                    style={{ color: getTransactionColor(transaction.transactionTypeCode) }}
+                  >
+                    {formatTransactionAmount(transaction.amount, transaction.transactionTypeCode)}
+                  </div>
+                  <div className={`${styles.transactionStatus} ${
+                    (transaction.status === 'Completed' || transaction.status === 'Compeleted') 
+                      ? styles.statusCompleted 
+                      : transaction.status === 'Pending' 
+                      ? styles.statusPending 
+                      : styles.statusFailed
+                  }`}>
+                    {getStatusLabel(transaction.status)}
+                  </div>
+                </div>
+              </div>
+            ))
           )}
         </div>
       </div>
 
-      {/* Payment and Deposit Container */}
-      <div className={styles.card} style={{ marginBottom: '24px' }}>
-        <div className={styles.cardHeader}>
-          <div className={styles.cardIcon}>
-            <i className="bi bi-cash-stack"></i>
-          </div>
-          <h3 className={styles.cardTitle}>Nạp tiền vào ví</h3>
-        </div>
-        <div style={{ padding: '24px' }}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#4a5568', fontWeight: '500' }}>
-              Nhập số tiền (VND)
-            </label>
-            <input
-              type="number"
-              value={depositAmount}
-              onChange={(e) => setDepositAmount(e.target.value)}
-              placeholder="Nhập số tiền muốn nạp"
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                fontSize: '16px',
-                outline: 'none',
-                transition: 'border-color 0.2s',
+      {/* Withdrawal Modal */}
+      {showWithdrawalModal && (
+        <div className={styles.modalOverlay} onClick={() => !showWithdrawalConfirm && setShowWithdrawalModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <button 
+              className={styles.modalCloseBtn} 
+              onClick={() => {
+                setShowWithdrawalModal(false);
+                setShowWithdrawalConfirm(false);
+                setBankSearchTerm('');
               }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
-              onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
-              min="0"
-              step="1000"
-            />
-          </div>
+            >
+              <i className="bi bi-x-lg"></i>
+            </button>
 
-          {/* Quick Amount Buttons */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontSize: '14px', color: '#718096', marginBottom: '12px' }}>
-              Chọn nhanh số tiền:
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {quickAmounts.map((amount) => (
-                <button
-                  key={amount}
-                  onClick={() => setDepositAmount(amount.toString())}
-                  style={{
-                    padding: '8px 16px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    backgroundColor: depositAmount === amount.toString() ? '#667eea' : 'white',
-                    color: depositAmount === amount.toString() ? 'white' : '#4a5568',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (depositAmount !== amount.toString()) {
-                      e.currentTarget.style.backgroundColor = '#f7fafc';
-                      e.currentTarget.style.borderColor = '#667eea';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (depositAmount !== amount.toString()) {
-                      e.currentTarget.style.backgroundColor = 'white';
-                      e.currentTarget.style.borderColor = '#e2e8f0';
-                    }
-                  }}
-                >
-                  {amount.toLocaleString('vi-VN')} đ
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button
-            onClick={handleDeposit}
-            disabled={isProcessing || !depositAmount || parseFloat(depositAmount) <= 0}
-            style={{
-              width: '100%',
-              padding: '14px',
-              backgroundColor: isProcessing || !depositAmount || parseFloat(depositAmount) <= 0 ? '#cbd5e0' : '#667eea',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: isProcessing || !depositAmount || parseFloat(depositAmount) <= 0 ? 'not-allowed' : 'pointer',
-              transition: 'background-color 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              if (!isProcessing && depositAmount && parseFloat(depositAmount) > 0) {
-                e.currentTarget.style.backgroundColor = '#5568d3';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isProcessing && depositAmount && parseFloat(depositAmount) > 0) {
-                e.currentTarget.style.backgroundColor = '#667eea';
-              }
-            }}
-          >
-            {isProcessing ? (
+            {!showWithdrawalConfirm ? (
               <>
-                <i className="bi bi-hourglass-split" style={{ marginRight: '8px' }}></i>
-                Đang xử lý...
+                <div className={styles.modalHeader}>
+                  <h2>Rút tiền về tài khoản ngân hàng</h2>
+                  <p>Số tiền: <strong>{(withdrawalAmount || depositAmount) || '0'} đ</strong></p>
+                </div>
+
+                <div className={styles.modalBody}>
+                  <div className={styles.formGroup}>
+                    <label>Chọn ngân hàng *</label>
+                    <div className={styles.bankSearchContainer}>
+                      <i className="bi bi-search"></i>
+                      <input
+                        type="text"
+                        value={bankSearchTerm}
+                        onChange={(e) => setBankSearchTerm(e.target.value)}
+                        placeholder="Tìm kiếm ngân hàng..."
+                        className={styles.bankSearchInput}
+                      />
+                      {bankSearchTerm && (
+                        <button
+                          className={styles.bankSearchClear}
+                          onClick={() => setBankSearchTerm('')}
+                        >
+                          <i className="bi bi-x"></i>
+                        </button>
+                      )}
+                    </div>
+                    <div className={styles.bankList}>
+                      {banksWithLogos.filter(bank => {
+                        if (!bankSearchTerm) return true;
+                        const searchLower = bankSearchTerm.toLowerCase();
+                        return (
+                          bank.name.toLowerCase().includes(searchLower) ||
+                          bank.shortName?.toLowerCase().includes(searchLower) ||
+                          bank.bin.includes(searchLower)
+                        );
+                      }).map((bank) => (
+                        <div
+                          key={bank.bin}
+                          className={`${styles.bankItem} ${selectedBank?.bin === bank.bin ? styles.bankItemSelected : ''}`}
+                          onClick={() => handleBankSelect(bank)}
+                        >
+                          {bank.logo ? (
+                            <div className={styles.bankLogo}>
+                              <img 
+                                src={bank.logo} 
+                                alt={bank.shortName || bank.name}
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  const fallback = target.nextElementSibling as HTMLElement;
+                                  if (fallback) {
+                                    target.style.display = 'none';
+                                    fallback.style.display = 'flex';
+                                  }
+                                }}
+                              />
+                              <div className={styles.bankLogoFallback} style={{ display: 'none' }}>
+                                <span>{bank.shortName || bank.name.substring(0, 2)}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className={styles.bankLogoFallback}>
+                              <span>{bank.shortName || bank.name.substring(0, 2)}</span>
+                            </div>
+                          )}
+                          <div className={styles.bankInfo}>
+                            <div className={styles.bankName}>{bank.shortName || bank.name}</div>
+                          </div>
+                          {selectedBank?.bin === bank.bin && (
+                            <i className="bi bi-check-circle-fill"></i>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {selectedBank && (
+                    <>
+                      <div className={styles.formGroup}>
+                        <label>Số tài khoản *</label>
+                        <input
+                          ref={accountNumberInputRef}
+                          type="text"
+                          value={accountNumber}
+                          onChange={handleAccountNumberChange}
+                          placeholder="Nhập số tài khoản ngân hàng"
+                          className={styles.formInput}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                        />
+                      </div>
+
+                      <div className={styles.formGroup}>
+                        <label>Tên chủ tài khoản *</label>
+                        <input
+                          type="text"
+                          value={accountName}
+                          onChange={handleAccountNameChange}
+                          placeholder="Nhập tên chủ tài khoản"
+                          className={styles.formInput}
+                          style={{ textTransform: 'uppercase' }}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className={styles.modalFooter}>
+                  <button
+                    className={styles.modalCancelBtn}
+                    onClick={() => {
+                      setShowWithdrawalModal(false);
+                      setSelectedBank(null);
+                      setAccountNumber('');
+                      setAccountName('');
+                      setBankSearchTerm('');
+                    }}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    className={styles.modalConfirmBtn}
+                    onClick={handleConfirmWithdrawal}
+                    disabled={!selectedBank || !accountNumber || accountNumber.trim() === '' || !accountName || accountName.trim() === ''}
+                  >
+                    Tiếp tục
+                  </button>
+                </div>
               </>
             ) : (
               <>
-                <i className="bi bi-plus-circle" style={{ marginRight: '8px' }}></i>
-                Nạp tiền
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+                <div className={styles.modalHeader}>
+                  <h2>Xác nhận thông tin rút tiền</h2>
+                </div>
 
-      {/* Recent Bills Card */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <div className={styles.cardIcon}>
-            <i className="bi bi-credit-card"></i>
-          </div>
-          <h3 className={styles.cardTitle}>Hóa đơn gần đây</h3>
-        </div>
-        <div style={{ padding: '20px' }}>
-          {loadingTransactions ? (
-            <div style={{ textAlign: 'center', color: '#718096' }}>
-              <i className="bi bi-arrow-clockwise" style={{ fontSize: '24px', marginBottom: '8px', display: 'block' }}></i>
-              <p>Đang tải lịch sử giao dịch...</p>
-            </div>
-          ) : transactions.length === 0 ? (
-            <div style={{ textAlign: 'center', color: '#718096' }}>
-              <i className="bi bi-receipt" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
-              <p>Chưa có giao dịch nào</p>
-            </div>
-          ) : (
-            <div>
-              {transactions.slice(0, 5).map((transaction, index) => (
-                <div key={transaction.id || index} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '16px 0',
-                  borderBottom: index < Math.min(transactions.length, 5) - 1 ? '1px solid #e2e8f0' : 'none'
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px',
-                      marginBottom: '6px'
-                    }}>
-                      <i className={getTransactionTypeIcon(transaction.transactionTypeCode)} style={{
-                        fontSize: '18px',
-                        color: '#667eea'
-                      }}></i>
-                      <span style={{ 
-                        fontSize: '15px', 
-                        fontWeight: '600', 
-                        color: '#2d3748' 
-                      }}>
-                        {getTransactionTypeName(transaction.transactionTypeCode)}
-                      </span>
+                <div className={styles.modalBody}>
+                  <div className={styles.confirmInfo}>
+                    <div className={styles.confirmRow}>
+                      <span className={styles.confirmLabel}>Số tiền rút:</span>
+                      <span className={styles.confirmValue}>{(withdrawalAmount || depositAmount) || '0'} đ</span>
                     </div>
-                    <div style={{ fontSize: '13px', color: '#718096', marginLeft: '26px' }}>
-                      {transaction.transactionDate ? 
-                        new Date(transaction.transactionDate).toLocaleDateString('vi-VN', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }) : 
-                        'N/A'
-                      }
+                    <div className={styles.confirmRow}>
+                      <span className={styles.confirmLabel}>Ngân hàng:</span>
+                      <span className={styles.confirmValue}>{selectedBank?.shortName || selectedBank?.name}</span>
                     </div>
-                    {transaction.description && (
-                      <div style={{ 
-                        fontSize: '12px', 
-                        color: '#a0aec0',
-                        marginLeft: '26px',
-                        marginTop: '2px'
-                      }}>
-                        {transaction.description}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{
-                      fontWeight: '600',
-                      color: getTransactionColor(transaction.transactionTypeCode),
-                      marginBottom: '8px',
-                      fontSize: '16px'
-                    }}>
-                      {formatTransactionAmount(transaction.amount, transaction.transactionTypeCode)}
+                    <div className={styles.confirmRow}>
+                      <span className={styles.confirmLabel}>Số tài khoản:</span>
+                      <span className={styles.confirmValue}>{accountNumber}</span>
                     </div>
-                    <div style={{
-                      fontSize: '12px',
-                      padding: '4px 8px',
-                      borderRadius: '12px',
-                      backgroundColor: (transaction.status === 'Completed' || transaction.status === 'Compeleted') ? '#c6f6d5' : 
-                                     transaction.status === 'Pending' ? '#fef5e7' : '#e2e8f0',
-                      color: (transaction.status === 'Completed' || transaction.status === 'Compeleted') ? '#22543d' : 
-                             transaction.status === 'Pending' ? '#744210' : '#2d3748',
-                      fontWeight: '500'
-                    }}>
-                      {transaction.status === 'Compeleted' ? 'Completed' : transaction.status || 'N/A'}
+                    <div className={styles.confirmRow}>
+                      <span className={styles.confirmLabel}>Tên chủ tài khoản:</span>
+                      <span className={styles.confirmValue}>{accountName}</span>
                     </div>
                   </div>
                 </div>
-              ))}
-              {transactions.length > 5 && (
-                <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                  <button onClick={() => setShowAllTransactions(true)} style={{
-                    background: 'none',
-                    border: '1px solid #cbd5e0',
-                    borderRadius: '6px',
-                    padding: '8px 16px',
-                    color: '#4a5568',
-                    fontSize: '14px',
-                    cursor: 'pointer'
-                  }}>
-                    Xem tất cả ({transactions.length} giao dịch)
+
+                <div className={styles.modalFooter}>
+                  <button
+                    className={styles.modalCancelBtn}
+                    onClick={() => setShowWithdrawalConfirm(false)}
+                  >
+                    Quay lại
+                  </button>
+                  <button
+                    className={styles.modalConfirmBtn}
+                    onClick={handleSubmitWithdrawal}
+                    disabled={isProcessingWithdrawal}
+                  >
+                    {isProcessingWithdrawal ? (
+                      <>
+                        <i className="bi bi-hourglass-split" style={{ marginRight: '8px' }}></i>
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-check-circle" style={{ marginRight: '8px' }}></i>
+                        Xác nhận rút tiền
+                      </>
+                    )}
                   </button>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Modal hiển thị toàn bộ giao dịch */}
-      {showAllTransactions && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '24px',
-            width: '90%',
-            maxWidth: '800px',
-            maxHeight: '80vh',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            {/* Header */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px',
-              paddingBottom: '16px',
-              borderBottom: '1px solid #e2e8f0'
-            }}>
-              <h2 style={{ margin: 0, color: '#2d3748', fontSize: '20px', fontWeight: '600' }}>
-                Lịch sử giao dịch ({transactions.length})
-              </h2>
-              <button 
-                onClick={() => setShowAllTransactions(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  cursor: 'pointer',
-                  color: '#718096',
-                  padding: '0',
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Content */}
-            <div style={{ 
-              flex: 1, 
-              overflowY: 'auto',
-              paddingRight: '8px'
-            }}>
-              {transactions.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#718096' }}>
-                  <i className="bi bi-receipt" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
-                  <p>Chưa có giao dịch nào</p>
-                </div>
-              ) : (
-                <div>
-                  {transactions.map((transaction, index) => (
-                    <div key={transaction.id || index} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '16px 0',
-                      borderBottom: index < transactions.length - 1 ? '1px solid #e2e8f0' : 'none'
-                    }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '10px',
-                          marginBottom: '8px'
-                        }}>
-                          <i className={getTransactionTypeIcon(transaction.transactionTypeCode)} style={{
-                            fontSize: '20px',
-                            color: '#667eea'
-                          }}></i>
-                          <span style={{ 
-                            fontSize: '16px', 
-                            fontWeight: '600', 
-                            color: '#2d3748' 
-                          }}>
-                            {getTransactionTypeName(transaction.transactionTypeCode)}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '13px', color: '#718096', marginLeft: '30px', marginBottom: '4px' }}>
-                          {transaction.transactionDate ? 
-                            new Date(transaction.transactionDate).toLocaleDateString('vi-VN', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            }) : 
-                            'N/A'
-                          }
-                        </div>
-                        {transaction.description && (
-                          <div style={{ fontSize: '13px', color: '#a0aec0', marginLeft: '30px', marginBottom: '4px' }}>
-                            {transaction.description}
-                          </div>
-                        )}
-                        {transaction.orderCode && transaction.orderCode !== 0 && (
-                          <div style={{ fontSize: '12px', color: '#a0aec0', marginLeft: '30px' }}>
-                            Mã đơn: {transaction.orderCode}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{
-                          fontWeight: '600',
-                          color: getTransactionColor(transaction.transactionTypeCode),
-                          marginBottom: '8px',
-                          fontSize: '16px'
-                        }}>
-                          {formatTransactionAmount(transaction.amount, transaction.transactionTypeCode)}
-                        </div>
-                        <div style={{
-                          fontSize: '12px',
-                          padding: '4px 8px',
-                          borderRadius: '12px',
-                          backgroundColor: (transaction.status === 'Completed' || transaction.status === 'Compeleted') ? '#c6f6d5' : 
-                                         transaction.status === 'Pending' ? '#fef5e7' : '#e2e8f0',
-                          color: (transaction.status === 'Completed' || transaction.status === 'Compeleted') ? '#22543d' : 
-                                 transaction.status === 'Pending' ? '#744210' : '#2d3748',
-                          fontWeight: '500'
-                        }}>
-                          {transaction.status === 'Compeleted' ? 'Completed' : transaction.status || 'N/A'}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -1,4 +1,6 @@
-﻿﻿using Medix.API.Business.Interfaces.Classification;
+﻿using Medix.API.Application.Util;
+using Medix.API.Business.Interfaces.Classification;
+using Medix.API.Business.Interfaces.Community;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.UserManagement;
 using Medix.API.Models.DTOs.ApointmentDTO;
@@ -20,14 +22,20 @@ namespace Medix.API.Presentation.Controllers
         private readonly IWalletTransactionService walletTransactionService;
         private readonly IPatientService _patientService;
         private readonly IUserService _userService;
+        private readonly INoticeSetupService noticeSetupService;
+        private readonly IEmailService _emailService;
+        private readonly IDoctorService _doctorService;
 
-        public AppointmentController(IAppointmentService service, IWalletService walletService, IWalletTransactionService walletTransactionService, IPatientService patientService, IUserService userService)
+        public AppointmentController(IAppointmentService service, IWalletService walletService, IWalletTransactionService walletTransactionService, IPatientService patientService, IUserService userService, INoticeSetupService noticeSetupService, IEmailService emailService, IDoctorService doctorService)
         {
             _service = service;
             _walletService = walletService;
             this.walletTransactionService = walletTransactionService;
             _patientService = patientService;
             _userService = userService;
+            this.noticeSetupService = noticeSetupService;
+            _emailService = emailService;
+            _doctorService = doctorService;
         }
 
         [HttpGet]
@@ -79,6 +87,8 @@ namespace Medix.API.Presentation.Controllers
                 }
             }
 
+            var user = await _userService.GetByIdAsync(userId);
+            var doctor = await _doctorService.GetDoctorByIdAsync((Guid)dto.DoctorId);
 
             // 2️⃣ Kiểm tra số dư ví
             var patient = await _patientService.GetByUserIdAsync(userId);
@@ -113,6 +123,16 @@ namespace Medix.API.Presentation.Controllers
 
             // 3️⃣ Tạo lịch hẹn
             var created = await _service.CreateAsync(dto);
+           var noticeSetup = await noticeSetupService.GetNoticeSetupByCodeAsync("AppointmentBookingSuccess");
+            if (noticeSetup != null) {
+                dto.DoctorName = doctor.User.FullName;
+
+                string body=    NoticeUtil.getNoticeBookingAppoinemnt(dto, noticeSetup);
+                string header = noticeSetup.TemplateEmailHeader;
+             var x=   await _emailService.SendEmailAsync(user.Email, header, body);
+
+            }
+
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 

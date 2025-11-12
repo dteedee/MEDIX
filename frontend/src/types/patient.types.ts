@@ -11,4 +11,5 @@ export interface BasicEMRInfo{
   genderCode: string;
   bloodTypeCode: string;
   allergies: string;
+  emrNumber?: string;
 }

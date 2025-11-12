@@ -1,5 +1,5 @@
 import { apiClient } from '../lib/apiClient';
-import { WalletDto, OrderCreateRequest, Order, WalletTransactionDto } from '../types/wallet.types';
+import { WalletDto, OrderCreateRequest, Order, WalletTransactionDto, WithdrawalRequest, WithdrawalResponse } from '../types/wallet.types';
 
 class WalletService {
   /**
@@ -51,6 +51,25 @@ class WalletService {
       throw new Error(
         error.response?.data?.message || 
         'Không thể lấy lịch sử giao dịch. Vui lòng thử lại.'
+      );
+    }
+  }
+
+  /**
+   * Rút tiền từ ví về tài khoản ngân hàng
+   * @param request - Thông tin rút tiền
+   * @returns Promise<WithdrawalResponse>
+   */
+  async createWithdrawal(request: WithdrawalRequest): Promise<WithdrawalResponse> {
+    try {
+      const response = await apiClient.post<WithdrawalResponse>('/wallet/withdraw', request);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error creating withdrawal:', error);
+      throw new Error(
+        error.response?.data?.message || 
+        error.response?.data?.error ||
+        'Không thể thực hiện rút tiền. Vui lòng thử lại.'
       );
     }
   }

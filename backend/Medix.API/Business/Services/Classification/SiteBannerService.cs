@@ -24,6 +24,12 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<(int total, IEnumerable<SiteBannerDto> data)> GetPagedAsync(int page = 1, int pageSize = 10)
         {
+            // Nếu pageSize lớn (ví dụ: > 1000), coi như yêu cầu lấy tất cả
+            if (pageSize > 1000)
+            {
+                pageSize = int.MaxValue; // Lấy tất cả bản ghi
+            }
+
             var (banners, total) = await _siteBannerRepository.GetPagedAsync(page, pageSize);
 
             var data = banners.Select(b => new SiteBannerDto
@@ -185,8 +191,10 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<List<SiteBanner>> GetHomePageBanners()
         {
-            var banners = await _siteBannerRepository.GetRunningBannersAsync();
-            return banners.Take(5).ToList();
+            var banners = await _siteBannerRepository.GetRunningBannersAsync(); // Lấy các banner đang hoạt động
+            return banners.OrderBy(b => b.DisplayOrder) // Sắp xếp theo thứ tự hiển thị tăng dần
+                          .ThenByDescending(b => b.CreatedAt) // Nếu trùng, sắp xếp theo ngày tạo giảm dần
+                          .ToList(); // Lấy tất cả banner đang hoạt động
         }
         public async Task<(int total, IEnumerable<SiteBannerDto> data)> SearchByNameAsync(string name, int page = 1, int pageSize = 10)
         {

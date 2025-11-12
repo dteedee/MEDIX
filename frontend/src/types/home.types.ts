@@ -16,7 +16,19 @@ export interface HomeArticle{
 }
 
 export interface HomeMetadata {
-    bannerUrls: string[];
+    banners: Banner[];
     displayedDoctors: HomePageDoctor[];
     articles: HomeArticle[];
+}
+export interface Banner {
+    id: string;
+    bannerTitle: string;
+    bannerImageUrl?: string; // Đã thay đổi thành optional
+    bannerUrl?: string;      // Đã thay đổi thành optional
+    displayOrder?: number;
+    isActive: boolean;
+    isLocked?: boolean;
+    createdAt?: string;      // Đã thay đổi thành optional
+    startDate?: string | null;
+    endDate?: string | null;
 }

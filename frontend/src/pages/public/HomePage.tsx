@@ -5,6 +5,8 @@ import { HomeMetadata } from '../../types/home.types';
 import HomeService from '../../services/homeService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ArticleDTO } from '../../types/article.types';
+import { Banner } from '../../types/home.types';
+import { bannerService } from '../../services/bannerService';
 import { articleService } from '../../services/articleService';
 import doctorService from '../../services/doctorService';
 
@@ -14,6 +16,7 @@ function HomePage() {
 
     //get home page details
     const [homeMetadata, setHomeMetadata] = useState<HomeMetadata>();
+    const [banners, setBanners] = useState<Banner[]>([]);
     const [featuredArticles, setFeaturedArticles] = useState<ArticleDTO[]>([]);
     const [doctorEducationMap, setDoctorEducationMap] = useState<Record<string, string>>({});
     const [doctorIdMap, setDoctorIdMap] = useState<Record<string, string>>({});
@@ -23,6 +26,7 @@ function HomePage() {
             try {
                 const data = await HomeService.getHomeMetadata();
                 setHomeMetadata(data);
+                console.log('Banners received from API:', data?.banners.length); // Thêm dòng này để kiểm tra
             } catch (error) {
                 console.error('Failed to fetch home metadata:', error);
             }
@@ -30,15 +34,40 @@ function HomePage() {
 
         fetchMetadata();
 
+        const fetchBanners = async () => {
+            try {
+                // Lấy tất cả banner, sau đó sắp xếp và giới hạn ở frontend
+                const allBanners = await bannerService.getAll({ page: 1, pageSize: 9999 });
+                
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); // Chuẩn hóa về đầu ngày để so sánh
+
+                const validBanners = (allBanners || []).filter(banner => {
+                    if (!banner.endDate) return false; // Không hiển thị nếu không có ngày kết thúc
+                    const endDate = new Date(banner.endDate);
+                    return endDate >= today; // Chỉ hiển thị banner có ngày kết thúc >= hôm nay
+                });
+
+                const sortedBanners = validBanners
+                    .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+                    .slice(0, 7); // Giới hạn 7 banner
+
+                setBanners(sortedBanners);
+            } catch (error) {
+                console.error('Failed to fetch banners:', error);
+            }
+        };
+
         const fetchArticles = async () => {
             try {
-                const articles = await articleService.getHomepageArticles(9); // Lấy 9 bài viết để có thể carousel
+                const articles = await articleService.getHomepageArticles(5); // Lấy 5 bài viết ưu tiên nhất
                 setFeaturedArticles(articles);
             } catch (error) {
                 console.error('Failed to fetch homepage articles:', error);
             }
         };
         fetchArticles();
+        fetchBanners();
     }, []);
 
     // Prefetch extra doctor info (education) for cards to show "học vị - chuyên ngành"
@@ -252,14 +281,16 @@ function HomePage() {
                     </div>
                     <div id="carouselBanner" className={`carousel slide ${styles["modern-carousel"]}`} data-bs-ride="carousel" data-bs-interval="6000">
                         <div className={`carousel-inner ${styles["carousel-inner-custom"]}`}>
-                            {homeMetadata?.bannerUrls.map((bannerUrl, index) => (
+                            {banners.map((banner, index) => (
                                 <div className={`carousel-item${index === 0 ? ' active' : ''}`} key={index}>
                                     <div className={styles["banner-container"]}>
-                                        <img
-                                            src={bannerUrl}
-                                            className={styles["banner-image"]}
-                                            alt={`Banner ${index + 1}`}
-                                        />
+                                        <a href={banner.bannerUrl || '#'} target="_blank" rel="noopener noreferrer">
+                                            <img
+                                                src={banner.bannerImageUrl}
+                                                className={styles["banner-image"]}
+                                                alt={`Banner ${index + 1}`}
+                                            />
+                                        </a>
                                         <div className={styles["banner-overlay"]}></div>
                                     </div>
                                 </div>
@@ -274,7 +305,7 @@ function HomePage() {
                             <span className="visually-hidden">Next</span>
                         </button>
                         <div className={`carousel-indicators ${styles["carousel-indicators-custom"]}`}>
-                            {homeMetadata?.bannerUrls.map((_, index) => (
+                            {banners.map((_, index) => (
                                 <button
                                     key={index}
                                     type="button"

@@ -1,20 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
+﻿
+using System.Text.Json;
+using Medix.API.Infrastructure;
 using Medix.API.Models.Entities;
 using Medix.API.Models.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Medix.API.DataAccess;
 
 public partial class MedixContext : DbContext
 {
+    private readonly UserContext _userContext;
+
+
     public MedixContext()
     {
     }
 
-    public MedixContext(DbContextOptions<MedixContext> options)
+    public MedixContext(DbContextOptions<MedixContext> options, UserContext userContext)
         : base(options)
     {
+        _userContext = userContext;
+
     }
 
     public virtual DbSet<AISymptomAnalysis> AISymptomAnalyses { get; set; }
@@ -1192,4 +1199,132 @@ public partial class MedixContext : DbContext
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+
+
+
+    public override int SaveChanges()
+    {
+        AddAuditLogs();
+        return base.SaveChanges();
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        AddAuditLogs();
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void AddAuditLogs()
+    {
+        var auditEntries = new List<AuditLog>();
+
+        var entries = ChangeTracker.Entries()
+            .Where(e => e.State == EntityState.Added
+                     || e.State == EntityState.Modified
+                     || e.State == EntityState.Deleted)
+            .ToList();
+
+        foreach (var entry in entries)
+        {
+            var entityName = entry.Entity.GetType().Name;
+
+            // Skip tất cả bảng nhiều-nhiều
+            if (entityName == "ArticleCategories"
+                || entityName == "HealthArticleContentCategory"
+                || entityName.EndsWith("CategoryMapping"))
+            {
+                continue;
+            }
+
+            if (entry.Entity is AuditLog)
+                continue; // tránh vòng lặp
+
+            var audit = new AuditLog
+            {
+                Timestamp = DateTime.UtcNow,
+                EntityType = entityName,
+                UserId = _userContext?.UserId,
+                IpAddress = _userContext?.IpAddress ?? "System",
+                EntityId = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?.CurrentValue?.ToString()
+            };
+
+            object oldValues = null;
+            object newValues = null;
+
+            try
+            {
+                switch (entry.State)
+                {
+                    case EntityState.Added:
+                        audit.ActionType = "CREATE";
+                        newValues = GetSafeProperties(entry.CurrentValues.ToObject());
+                        audit.NewValues = JsonSerializer.Serialize(newValues);
+                        break;
+
+                    case EntityState.Modified:
+                        audit.ActionType = "UPDATE";
+                        oldValues = GetSafeProperties(entry.OriginalValues.ToObject());
+                        newValues = GetSafeProperties(entry.CurrentValues.ToObject());
+                        audit.OldValues = JsonSerializer.Serialize(oldValues);
+                        audit.NewValues = JsonSerializer.Serialize(newValues);
+                        break;
+
+                    case EntityState.Deleted:
+                        audit.ActionType = "DELETE";
+                        oldValues = GetSafeProperties(entry.OriginalValues.ToObject());
+                        audit.OldValues = JsonSerializer.Serialize(oldValues);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Nếu serialize bị lỗi, ghi tên entity để debug
+                Console.WriteLine($"[AuditLog Error] Cannot serialize {entityName}: {ex.Message}");
+                continue;
+            }
+
+            auditEntries.Add(audit);
+        }
+
+        if (auditEntries.Any())
+        {
+            AuditLogs.AddRange(auditEntries);
+        }
+    }
+
+    // Chỉ lấy các field an toàn: primitive / string / Guid / enum / decimal
+    private Dictionary<string, object?> GetSafeProperties(object entity)
+    {
+        var dict = new Dictionary<string, object?>();
+        var props = entity.GetType().GetProperties();
+
+        foreach (var prop in props)
+        {
+            var value = prop.GetValue(entity);
+            if (value == null) continue;
+
+            var type = value.GetType();
+
+            // Skip collection hoặc navigation property
+            if (!(type.IsPrimitive || type == typeof(string) || type == typeof(Guid) || type.IsEnum || type == typeof(decimal)))
+                continue;
+
+            dict[prop.Name] = MaskIfSensitive(prop.Name, value);
+        }
+
+        return dict;
+    }
+
+    // Mask field nhạy cảm
+    private object MaskIfSensitive(string propertyName, object value)
+    {
+        if (value == null) return null;
+
+        var lower = propertyName.ToLower();
+        if (lower.Contains("token") || lower.Contains("password") || lower.Contains("secret") || lower.Contains("refresh"))
+            return "****";
+
+        return value;
+    }
+
 }

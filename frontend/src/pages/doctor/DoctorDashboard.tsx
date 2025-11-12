@@ -128,7 +128,11 @@ const DoctorDashboard: React.FC = () => {
   const now = new Date()
 
   const upcomingAppointments = useMemo(() => {
-    return appointments.filter(apt => {
+    // Lọc các cuộc hẹn chưa bị hủy
+    const nonCancelledAppointments = appointments.filter(apt => 
+      apt.statusCode !== 'CancelledByPatient' && apt.statusCode !== 'CancelledByDoctor' && apt.statusCode !== 'NoShow'
+    );
+    return nonCancelledAppointments.filter(apt => {
       const aptDate = new Date(apt.appointmentStartTime)
       const isUpcoming = apt.statusCode === 'Confirmed' || apt.statusCode === 'OnProgressing'
       return aptDate >= now && isUpcoming
@@ -136,7 +140,7 @@ const DoctorDashboard: React.FC = () => {
       new Date(a.appointmentStartTime).getTime() - new Date(b.appointmentStartTime).getTime()
     )
   }, [appointments, now])
-
+  
   const todayAppointments = useMemo(() => {
     return upcomingAppointments.filter(apt => {
       const aptDate = new Date(apt.appointmentStartTime)
@@ -145,7 +149,12 @@ const DoctorDashboard: React.FC = () => {
   }, [upcomingAppointments, now])
 
   const completedAppointments = useMemo(() => {
-    return appointments.filter(apt => apt.statusCode === 'Completed')
+    const now = new Date();
+    return appointments.filter(apt => 
+      apt.statusCode === 'Completed' || 
+      (new Date(apt.appointmentStartTime) < now && 
+       apt.statusCode !== 'CancelledByPatient' && apt.statusCode !== 'CancelledByDoctor' && apt.statusCode !== 'NoShow')
+    );
   }, [appointments])
 
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -176,8 +185,11 @@ const DoctorDashboard: React.FC = () => {
   }
 
   const formatTime = (dateString: string): string => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    // Chỉ lấy phần HH:mm từ chuỗi "HH:mm:ss"
+    if (typeof dateString === 'string' && dateString.includes(':')) {
+      return dateString.substring(0, 5);
+    }
+    return 'Invalid Time';
   }
 
   const formatTimeRange = (startTime?: string, endTime?: string) => {
@@ -200,10 +212,12 @@ const DoctorDashboard: React.FC = () => {
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(hours / 24)
     
-    if (days > 0) return `${days} ngày nữa`
-    if (hours > 0) return `${hours} giờ nữa`
-    return 'Sắp diễn ra'
-  }
+    if (diff > 0) { // Kiểm tra nếu thời gian hẹn lớn hơn thời gian hiện tại
+      if (days > 0) return `${days} ngày nữa`;
+      if (hours > 0) return `${hours} giờ nữa`;
+      return 'Sắp diễn ra';
+    } else return ''; // Trả về chuỗi trống nếu không còn "Sắp diễn ra" nữa
+  };
 
   const getAppointmentStatus = (apt: Appointment): 'upcoming' | 'completed' | 'cancelled' => {
     if (apt.statusCode === 'Completed') {

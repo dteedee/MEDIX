@@ -60,11 +60,14 @@ const DoctorAppointments: React.FC = () => {
         const endDateStr = endDate.toISOString().split('T')[0];
         
         const data = await appointmentService.getMyAppointmentsByDateRange(startDateStr, endDateStr);
+
         
         const transformedData: AppointmentDisplay[] = data.map(apt => {
           const startDate = new Date(apt.appointmentStartTime);
           
+          const now = new Date();
           let status: 'upcoming' | 'completed' | 'cancelled' = 'upcoming';
+
           if (apt.statusCode === 'Completed') {
             status = 'completed';
           } else if (
@@ -73,6 +76,9 @@ const DoctorAppointments: React.FC = () => {
             apt.statusCode === 'NoShow'
           ) {
             status = 'cancelled';
+          } else if (startDate <= now) {
+            // Nếu lịch hẹn đã qua mà chưa hoàn thành/hủy, coi như đã hoàn thành
+            status = 'completed';
           }
           
           return {
@@ -131,11 +137,18 @@ const DoctorAppointments: React.FC = () => {
 
     if (filters.timeRange !== 'all') {
       const now = new Date();
+
+      // Ensure that only future appointments are displayed
+      filtered = filtered.filter(apt => apt.appointmentStartTime && new Date(apt.appointmentStartTime) >= now);
+
+
       filtered = filtered.filter(apt => {
         const aptDate = new Date(apt.date);
         if (filters.timeRange === 'today') {
-          return aptDate.toDateString() === now.toDateString();
+          return aptDate.setHours(0, 0, 0, 0) === new Date().setHours(0, 0, 0, 0);
         } else if (filters.timeRange === 'week') {
+          // Set 'now' to the beginning of today for a consistent comparison
+          now.setHours(0, 0, 0, 0);
           const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
           return aptDate >= now && aptDate <= weekFromNow;
         } else if (filters.timeRange === 'month') {
@@ -196,49 +209,59 @@ const DoctorAppointments: React.FC = () => {
   };
 
   const getStatusConfig = (status: string, startTime?: string, endTime?: string) => {
-    const currentTime = new Date();
-    const appointmentStartTime = startTime ? new Date(startTime) : null;
-    const appointmentEndTime = endTime ? new Date(endTime) : null;
+  const currentTime = new Date();
+  const appointmentStartTime = startTime ? new Date(startTime) : null;
+  const appointmentEndTime = endTime ? new Date(endTime) : null;
 
-    if (status === 'completed') {
+  // ✅ 1. Trạng thái cố định
+  if (status === 'completed') {
+    return { 
+      label: 'Hoàn thành', 
+      icon: 'bi-check-circle-fill',
+      color: '#10b981'
+    };
+  }
+  
+  if (status === 'cancelled') {
+    return { 
+      label: 'Đã hủy', 
+      icon: 'bi-x-circle-fill',
+      color: '#ef4444'
+    };
+  }
+
+  // ✅ 2. Xác định trạng thái theo thời gian
+  if (appointmentStartTime && appointmentEndTime) {
+    if (currentTime >= appointmentStartTime && currentTime <= appointmentEndTime) {
+      return { 
+        label: 'Đang diễn ra', 
+        icon: 'bi-clock-history',
+        color: '#3b82f6'
+      };
+    } else if (currentTime < appointmentStartTime) {
+      return { 
+        label: 'Sắp diễn ra', 
+        icon: 'bi-clock-history',
+        color: '#f59e0b'
+      };
+    } else if (currentTime > appointmentEndTime) {
+      // ✅ Lịch đã qua => coi như "Hoàn thành"
       return { 
         label: 'Hoàn thành', 
         icon: 'bi-check-circle-fill',
         color: '#10b981'
       };
     }
-    
-    if (status === 'cancelled') {
-      return { 
-        label: 'Đã hủy', 
-        icon: 'bi-x-circle-fill',
-        color: '#ef4444'
-      };
-    }
+  }
 
-    // Upcoming status
-    if (appointmentStartTime && appointmentEndTime) {
-      if (currentTime >= appointmentStartTime && currentTime <= appointmentEndTime) {
-        return { 
-          label: 'Đang diễn ra', 
-          icon: 'bi-clock-history',
-          color: '#3b82f6'
-        };
-      } else if (currentTime < appointmentStartTime) {
-        return { 
-          label: 'Sắp diễn ra', 
-          icon: 'bi-clock-history',
-          color: '#f59e0b'
-        };
-      }
-    }
-    
-    return { 
-      label: 'Sắp diễn ra', 
-      icon: 'bi-clock-history',
-      color: '#f59e0b'
-    };
+  // ✅ 3. Mặc định nếu không rõ
+  return { 
+    label: 'Hoàn thành', 
+    icon: 'bi-check-circle-fill',
+    color: '#10b981'
   };
+};
+
 
   const getPaymentStatusLabel = (statusCode?: string): string => {
     if (!statusCode) return 'Chưa thanh toán';

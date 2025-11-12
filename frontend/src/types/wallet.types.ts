@@ -90,3 +90,27 @@ export interface Order {
   items: OrderItem[];
 }
 
+export interface BankInfo {
+  name: string;
+  bin: string;
+  shortName?: string;
+  code?: string;
+  logo?: string;
+}
+
+export interface WithdrawalRequest {
+  amount: number;
+  bankBin: string;
+  bankName: string;
+  accountNumber: string;
+  accountName?: string;
+  description?: string;
+}
+
+export interface WithdrawalResponse {
+  id?: string;
+  transactionId?: string;
+  status: string;
+  message?: string;
+}
+

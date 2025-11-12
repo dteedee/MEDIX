@@ -1,5 +1,5 @@
-import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useParams, useSearchParams, useNavigate, useLocation, Link } from "react-router-dom";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import doctorService from "../../services/doctorService";
 import { DoctorProfileDto, ServiceTierWithPaginatedDoctorsDto, DoctorTypeDegreeDto, DoctorInTier, PaginationParams, DoctorQueryParameters } from "../../types/doctor.types";
 import { Header } from "../../components/layout/Header";
@@ -11,9 +11,13 @@ import { PromotionDto } from "../../types/promotion.types";
 import { CreateAppointmentDto } from "../../types/appointment.types";
 import styles from '../../styles/doctor/doctor-details.module.css';
 import bookingStyles from '../../styles/patient/DoctorBookingList.module.css';
+import homeStyles from '../../styles/public/home.module.css';
 import DoctorRegistrationFormService from "../../services/doctorRegistrationFormService";
+import { useLanguage } from "../../contexts/LanguageContext";
+import { useToast } from "../../contexts/ToastContext";
 
 function DoctorDetails() {
+    const { showToast } = useToast();
     const [profileData, setProfileData] = useState<DoctorProfileDto>();
     const [activeTabIndex, setActiveTabIndex] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -36,16 +40,98 @@ function DoctorDetails() {
         startTime: string;
         endTime: string;
     }>>([]);
-    const [currentMonth, setCurrentMonth] = useState(() => {
-        const now = new Date();
-        return new Date(now.getFullYear(), now.getMonth(), 1);
-    });
+    
+    // Refs for scrolling
+    const calendarSectionRef = useRef<HTMLDivElement>(null);
+    const timeslotsSectionRef = useRef<HTMLDivElement>(null);
+    const bookingConfirmationRef = useRef<HTMLDivElement>(null);
+    // Helper function to get available dates (only today and future dates)
+    // In Vietnam, week starts on Monday (1) and ends on Sunday (7)
+    // Rules:
+    // - If today is Sunday: show today + next week (Monday to Sunday) = 8 days
+    // - If today is Friday: show today + Saturday + Sunday + next week (Monday to Sunday) = 9 days
+    // - If today is Saturday: show today + Sunday + next week (Monday to Sunday) = 8 days
+    // - Other days: show from today to Sunday of this week
+    const getAvailableDates = (): Date[] => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Convert to Monday-based week (Monday = 1, Sunday = 7)
+        const dayOfWeek = convertDayOfWeek(today.getDay());
+        const isSunday = dayOfWeek === 7;
+        const isFriday = dayOfWeek === 5;
+        const isSaturday = dayOfWeek === 6;
+        
+        const dates: Date[] = [];
+        
+        if (isSunday) {
+            // If today is Sunday: show today + next week (Monday to Sunday) = 8 days
+            // Add today (Sunday)
+            dates.push(new Date(today));
+            
+            // Add next week (Monday to Sunday)
+            const nextMonday = new Date(today);
+            nextMonday.setDate(today.getDate() + 1); // Next Monday
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(nextMonday);
+                date.setDate(nextMonday.getDate() + i);
+                dates.push(date);
+            }
+        } else if (isFriday) {
+            // If today is Friday: today + Saturday + Sunday + next week (Monday to Sunday) = 9 days
+            // Add today (Friday) and remaining days of this week (Saturday, Sunday)
+            for (let i = 0; i < 3; i++) { // Friday, Saturday, Sunday
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                dates.push(date);
+            }
+            
+            // Add next week (Monday to Sunday)
+            const nextMonday = new Date(today);
+            nextMonday.setDate(today.getDate() + 3); // Skip to next Monday
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(nextMonday);
+                date.setDate(nextMonday.getDate() + i);
+                dates.push(date);
+            }
+        } else if (isSaturday) {
+            // If today is Saturday: show today + Sunday + next week (Monday to Sunday) = 8 days
+            // Add today (Saturday) and Sunday
+            for (let i = 0; i < 2; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                dates.push(date);
+            }
+            
+            // Add next week (Monday to Sunday)
+            const nextMonday = new Date(today);
+            nextMonday.setDate(today.getDate() + 2); // Skip to next Monday
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(nextMonday);
+                date.setDate(nextMonday.getDate() + i);
+                dates.push(date);
+            }
+        } else {
+            // Other days (Monday to Thursday): show from today to Sunday of this week
+            const daysUntilSunday = 8 - dayOfWeek; // Days until Sunday (inclusive)
+            for (let i = 0; i < daysUntilSunday; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                dates.push(date);
+            }
+        }
+        
+        return dates;
+    };
     const [showPaymentButton, setShowPaymentButton] = useState(false);
     const [isCreatingPayment, setIsCreatingPayment] = useState(false);
     const [promotionCode, setPromotionCode] = useState<string>('');
     const [appliedPromotion, setAppliedPromotion] = useState<PromotionDto | null>(null);
     const [promotionError, setPromotionError] = useState<string>('');
     const [isCheckingPromotion, setIsCheckingPromotion] = useState(false);
+    const [showPromotionModal, setShowPromotionModal] = useState(false);
+    const [availablePromotions, setAvailablePromotions] = useState<PromotionDto[]>([]);
+    const [isLoadingPromotions, setIsLoadingPromotions] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -53,6 +139,7 @@ function DoctorDetails() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useLanguage();
     const routeState = (location && (location as any).state) as { doctorId?: string; fullName?: string; userName?: string } | null;
 
     // Sidebar filter states (reuse logic from DoctorBookingList)
@@ -99,7 +186,7 @@ function DoctorDetails() {
         if (!profileData || !selectedDate || !selectedTimeSlot) return;
         
         if (!checkUserLogin()) {
-            alert("Bạn cần đăng nhập để đặt lịch hẹn với bác sĩ. Vui lòng đăng nhập để tiếp tục.");
+            showToast("Bạn cần đăng nhập để đặt lịch hẹn với bác sĩ. Vui lòng đăng nhập để tiếp tục.", 'warning');
             navigate('/login');
             return;
         }
@@ -109,12 +196,12 @@ function DoctorDetails() {
             try {
                 const user = JSON.parse(userData);
                 if (user.role !== 'Patient') {
-                    alert("Chỉ có bệnh nhân mới có thể đặt lịch hẹn với bác sĩ.");
+                    showToast("Chỉ có bệnh nhân mới có thể đặt lịch hẹn với bác sĩ.", 'error');
                     return;
                 }
             } catch (error) {
                 console.error("Error parsing user data:", error);
-                alert("Có lỗi xảy ra khi xác thực thông tin người dùng.");
+                showToast("Có lỗi xảy ra khi xác thực thông tin người dùng.", 'error');
                 return;
             }
         }
@@ -139,7 +226,7 @@ function DoctorDetails() {
             const timeParts = displayTime.split(' - ');
             
             if (timeParts.length !== 2) {
-                alert('Định dạng giờ không hợp lệ');
+                showToast('Định dạng giờ không hợp lệ', 'error');
                 setIsCreatingPayment(false);
                 return;
             }
@@ -217,7 +304,7 @@ function DoctorDetails() {
                 navigate('/login');
             }
             
-            alert(errorMessage);
+            showToast(errorMessage, 'error');
         } finally {
             setIsCreatingPayment(false);
         }
@@ -279,6 +366,41 @@ function DoctorDetails() {
         }
     };
 
+    // Function to open promotion modal and fetch available promotions
+    const handleOpenPromotionModal = async () => {
+        setShowPromotionModal(true);
+        setIsLoadingPromotions(true);
+        setAvailablePromotions([]);
+
+        try {
+            const promotions = await promotionService.getAvailablePromotions();
+            // Filter only active promotions
+            const now = new Date();
+            const activePromotions = promotions.filter(promo => {
+                if (!promo.isActive) return false;
+                const startDate = new Date(promo.startDate);
+                const endDate = new Date(promo.endDate);
+                if (now < startDate || now > endDate) return false;
+                if (promo.maxUsage && promo.usedCount >= promo.maxUsage) return false;
+                return true;
+            });
+            setAvailablePromotions(activePromotions);
+        } catch (error) {
+            console.error('Error fetching promotions:', error);
+            setAvailablePromotions([]);
+        } finally {
+            setIsLoadingPromotions(false);
+        }
+    };
+
+    // Function to select a promotion from the modal
+    const handleSelectPromotion = (promotion: PromotionDto) => {
+        setAppliedPromotion(promotion);
+        setPromotionCode(promotion.code);
+        setPromotionError('');
+        setShowPromotionModal(false);
+    };
+
     // Function to calculate final price with promotion
     const calculateFinalPrice = (): number => {
         if (!profileData?.consulationFee) return 0;
@@ -318,7 +440,7 @@ function DoctorDetails() {
             // Parse display string
             const timeParts = displayTime.split(' - ');
             if (timeParts.length !== 2) {
-                alert('Định dạng giờ không hợp lệ');
+                showToast('Định dạng giờ không hợp lệ', 'error');
                 setIsCreatingPayment(false);
                 return;
             }
@@ -339,7 +461,7 @@ function DoctorDetails() {
             console.log('📊 Creating Start DateTime - Year:', year, 'Month:', month + 1, 'Day:', day, 'Hour:', startHour, 'Minute:', startMinute);
             
             if (isNaN(startHour) || isNaN(startMinute)) {
-                alert(`Lỗi parse giờ bắt đầu: "${startTime}"`);
+                showToast(`Lỗi parse giờ bắt đầu: "${startTime}"`, 'error');
                 setIsCreatingPayment(false);
                 return;
             }
@@ -354,7 +476,7 @@ function DoctorDetails() {
             console.log('📊 Creating End DateTime - Year:', year, 'Month:', month + 1, 'Day:', day, 'Hour:', endHour, 'Minute:', endMinute);
             
             if (isNaN(endHour) || isNaN(endMinute)) {
-                alert(`Lỗi parse giờ kết thúc: "${endTime}"`);
+                showToast(`Lỗi parse giờ kết thúc: "${endTime}"`, 'error');
                 setIsCreatingPayment(false);
                 return;
             }
@@ -400,11 +522,11 @@ function DoctorDetails() {
             if (result.success && result.checkoutUrl) {
                 paymentService.redirectToPayment(result.checkoutUrl);
             } else {
-                alert(result.error || 'Có lỗi xảy ra khi tạo link thanh toán.');
+                showToast(result.error || 'Có lỗi xảy ra khi tạo link thanh toán.', 'error');
             }
         } catch (error) {
             console.error('Error creating payment link:', error);
-            alert('Có lỗi xảy ra khi tạo link thanh toán. Vui lòng thử lại.');
+            showToast('Có lỗi xảy ra khi tạo link thanh toán. Vui lòng thử lại.', 'error');
         }
         
         setIsCreatingPayment(false);
@@ -697,50 +819,15 @@ function DoctorDetails() {
         
         if (!profileData?.schedules) return false;
         
-        const dateString = formatDateString(date);
-        const backendDayOfWeek = convertDayOfWeek(date.getDay());
+        // Use getAvailableTimeSlots to check if there are any available (unbooked) time slots
+        // This function already filters out:
+        // - Past time slots (if today)
+        // - Booked appointments
+        // - Non-working overrides
+        const availableSlots = getAvailableTimeSlots(date);
         
-        // Check if there are any overrides for this specific date
-        const overridesForDate = profileData.scheduleOverride?.filter(override => {
-            const normalizedOverrideDate = normalizeDateString(override.overrideDate);
-            return normalizedOverrideDate === dateString;
-        }) || [];
-        
-        // Separate overrides by type
-        const workingOverrides = overridesForDate.filter(override => {
-            const overrideTypeValue = override.overrideType === true || (override.overrideType as any) === 'true';
-            return overrideTypeValue && override.isAvailable;
-        });
-        const nonWorkingOverrides = overridesForDate.filter(override => {
-            const overrideTypeValue = override.overrideType === false || (override.overrideType as any) === 'false' || !override.overrideType;
-            return overrideTypeValue;
-        });
-        
-        // Check for working overrides (overrideType = true and isAvailable = true)
-        const availableWorkingOverrides = workingOverrides;
-        
-        // Check if there are regular schedules for this day
-        const regularSchedules = profileData.schedules.filter(schedule => 
-            schedule.dayOfWeek === backendDayOfWeek && schedule.isAvailable
-        );
-        
-        // Check if any regular schedule is available (not blocked by non-working overrides)
-        const hasAvailableRegularSchedule = regularSchedules.some(schedule => {
-            const startTime = schedule.startTime.slice(0, 5);
-            const endTime = schedule.endTime.slice(0, 5);
-            
-            // Check if this regular schedule is blocked by any non-working override
-            const isBlockedByNonWorking = nonWorkingOverrides.some(override => {
-                const overrideStart = override.startTime.slice(0, 5);
-                const overrideEnd = override.endTime.slice(0, 5);
-                return isTimeSlotOverlap(startTime, endTime, overrideStart, overrideEnd);
-            });
-            
-            return !isBlockedByNonWorking;
-        });
-        
-        // Date is available if there are working overrides OR available regular schedules
-        return availableWorkingOverrides.length > 0 || hasAvailableRegularSchedule;
+        // Date is only available if there are available (unbooked) time slots
+        return availableSlots.length > 0;
     };
 
     const handleDateSelect = (date: Date | null) => {
@@ -751,6 +838,16 @@ function DoctorDetails() {
         if (date) {
             const slots = getAvailableTimeSlots(date);
             setAvailableTimeSlots(slots);
+            
+            // Scroll to time slots section after a short delay to allow DOM update
+            setTimeout(() => {
+                if (timeslotsSectionRef.current) {
+                    timeslotsSectionRef.current.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                    });
+                }
+            }, 100);
         } else {
             setAvailableTimeSlots([]);
         }
@@ -767,6 +864,16 @@ function DoctorDetails() {
         setSelectedTimeSlot(slot);
         setShowPaymentButton(false);
         setIsCreatingPayment(false);
+        
+        // Scroll to booking confirmation section after a short delay to allow DOM update
+        setTimeout(() => {
+            if (bookingConfirmationRef.current) {
+                bookingConfirmationRef.current.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+            }
+        }, 100);
     };
 
     // Calculate consultation duration from selected time slot
@@ -865,6 +972,15 @@ function DoctorDetails() {
         const tab = searchParams.get('tab');
         if (tab === 'booking') {
             setActiveTabIndex(1);
+            // Scroll to calendar section after a short delay to allow DOM update
+            setTimeout(() => {
+                if (calendarSectionRef.current) {
+                    calendarSectionRef.current.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                    });
+                }
+            }, 200);
         }
     }, [searchParams]);
 
@@ -1006,18 +1122,45 @@ function DoctorDetails() {
         <div className={styles.pageWrapper}>
             <Header />
             
-            <div className={styles.breadcrumb}>
-                <button onClick={() => navigate('/')} className={styles.breadcrumbLink}>
-                    <i className="bi bi-house-door"></i>
-                    Trang chủ
-                </button>
-                <i className="bi bi-chevron-right"></i>
-                <button onClick={() => navigate('/doctors')} className={styles.breadcrumbLink}>
-                    Bác sĩ
-                </button>
-                <i className="bi bi-chevron-right"></i>
-                <span className={styles.breadcrumbCurrent}>{profileData.fullName}</span>
-            </div>
+            <nav className={homeStyles["navbar"]}>
+                <ul className={homeStyles["nav-menu"]}>
+                    <li>
+                        <Link to="/" className={`${homeStyles["nav-link"]} ${location.pathname === '/' ? homeStyles["active"] : ''}`}>
+                            {t('nav.home')}
+                        </Link>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <Link to="/ai-chat" className={`${homeStyles["nav-link"]} ${location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}>
+                            {t('nav.ai-diagnosis')}
+                        </Link>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <Link to="/specialties" className={`${homeStyles["nav-link"]} ${location.pathname === '/specialties' ? homeStyles["active"] : ''}`}>
+                            {t('nav.specialties')}
+                        </Link>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <Link to="/doctors" className={`${homeStyles["nav-link"]} ${location.pathname === '/doctors' ? homeStyles["active"] : ''}`}>
+                            {t('nav.doctors')}
+                        </Link>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <Link to="/app/articles" className={`${homeStyles["nav-link"]} ${location.pathname === '/app/articles' ? homeStyles["active"] : ''}`}>
+                            {t('nav.health-articles')}
+                        </Link>
+                    </li>
+                    <li><span>|</span></li>
+                    <li>
+                        <Link to="/about" className={`${homeStyles["nav-link"]} ${location.pathname === '/about' ? homeStyles["active"] : ''}`}>
+                            {t('nav.about')}
+                        </Link>
+                    </li>
+                </ul>
+            </nav>
 
             <div className={styles.container}>
                 {/* Two-column layout is rendered below (sidebar + main content) */}
@@ -1272,9 +1415,20 @@ function DoctorDetails() {
                                         </div>
                                     </div>
 
-                                    <button 
+                                    <button
                                         className={styles.bookNowButton}
-                                        onClick={() => setActiveTabIndex(1)}
+                                        onClick={() => {
+                                            setActiveTabIndex(1);
+                                            // Scroll to calendar section after a short delay to allow DOM update
+                                            setTimeout(() => {
+                                                if (calendarSectionRef.current) {
+                                                    calendarSectionRef.current.scrollIntoView({ 
+                                                        behavior: 'smooth', 
+                                                        block: 'center' 
+                                                    });
+                                                }
+                                            }, 100);
+                                        }}
                                     >
                                         <i className="bi bi-calendar-check-fill"></i>
                                         Đặt lịch khám ngay
@@ -1295,7 +1449,18 @@ function DoctorDetails() {
                                 </button>
                                 <button
                                     className={`${styles.tabButton} ${activeTabIndex === 1 ? styles.active : ''}`}
-                                    onClick={() => setActiveTabIndex(1)}
+                                    onClick={() => {
+                                        setActiveTabIndex(1);
+                                        // Scroll to calendar section after a short delay to allow DOM update
+                                        setTimeout(() => {
+                                            if (calendarSectionRef.current) {
+                                                calendarSectionRef.current.scrollIntoView({ 
+                                                    behavior: 'smooth', 
+                                                    block: 'center' 
+                                                });
+                                            }
+                                        }, 100);
+                                    }}
                                 >
                                     <i className="bi bi-calendar-event"></i>
                                     Đặt lịch khám
@@ -1326,170 +1491,373 @@ function DoctorDetails() {
 
                                 {activeTabIndex === 1 && (
                                     <div className={styles.bookingTab}>
-                                        <div className={styles.bookingLayout}>
-                                            <div className={styles.calendarSection}>
-                                                <div className={styles.sectionHeader}>
-                                                    <h3>
+                                        {/* Step 1: Select Date */}
+                                        <div ref={calendarSectionRef} className={styles.calendarSection}>
+                                            <div className={styles.sectionHeader}>
+                                                <div className={styles.sectionHeaderContent}>
+                                                    <div className={styles.sectionIconWrapper}>
                                                         <i className="bi bi-calendar3"></i>
-                                                        Chọn ngày khám
-                                                    </h3>
-                                                </div>
-                                                <div className={styles.calendarContainer}>
-                                                    <div className={styles.calendarHeader}>
-                                                        <button 
-                                                            className={styles.calendarNav}
-                                                            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-                                                        >
-                                                            <i className="bi bi-chevron-left"></i>
-                                                        </button>
-                                                        <h4 className={styles.calendarMonth}>
-                                                            {currentMonth.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
-                                                        </h4>
-                                                        <button 
-                                                            className={styles.calendarNav}
-                                                            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-                                                        >
-                                                            <i className="bi bi-chevron-right"></i>
-                                                        </button>
                                                     </div>
-                                                    <div className={styles.calendarGrid}>
-                                                        <div className={styles.calendarWeekdays}>
-                                                            {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(day => (
-                                                                <div key={day} className={styles.weekday}>{day}</div>
-                                                            ))}
+                                                    <div>
+                                                        <h3>Chọn ngày khám</h3>
+                                                        <p className={styles.sectionSubtitle}>Chọn ngày phù hợp với lịch của bạn</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className={styles.calendarContainer}>
+                                                    {(() => {
+                                                        const availableDates = getAvailableDates();
+                                                        if (availableDates.length === 0) return null;
+                                                        
+                                                        // Get the month name from the first date
+                                                        const firstDate = availableDates[0];
+                                                        const monthName = firstDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+                                                        
+                                                        // Check if we have dates from two different months
+                                                        const lastDate = availableDates[availableDates.length - 1];
+                                                        const hasTwoMonths = firstDate.getMonth() !== lastDate.getMonth();
+                                                        
+                                                        return (
+                                                            <>
+                                                                {/* Month Header */}
+                                                                <div className={styles.calendarMonthHeader}>
+                                                                    <h4 className={styles.calendarMonthTitle}>
+                                                                        {hasTwoMonths 
+                                                                            ? `${firstDate.toLocaleDateString('vi-VN', { month: 'long' })} - ${lastDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}`
+                                                                            : monthName
+                                                                        }
+                                                                    </h4>
+                                                                </div>
+                                                                
+                                                                {/* Weekday Headers */}
+                                                                <div className={styles.calendarWeekdays}>
+                                                                    {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(day => (
+                                                                        <div key={day} className={styles.weekdayHeader}>{day}</div>
+                                                                    ))}
+                                                                </div>
+                                                                
+                                                                {/* Date Grid */}
+                                                                <div className={styles.calendarDatesGrid}>
+                                                                    {(() => {
+                                                                        // Group dates by week: each week gets one row
+                                                                        // Calculate which week each date belongs to (week number from a reference point)
+                                                                        const weekGroups: { [weekKey: string]: Date[] } = {};
+                                                                        
+                                                                        availableDates.forEach(date => {
+                                                                            // Calculate the Monday of the week this date belongs to
+                                                                            const dayOfWeek = convertDayOfWeek(date.getDay());
+                                                                            const mondayOfWeek = new Date(date);
+                                                                            mondayOfWeek.setDate(date.getDate() - (dayOfWeek - 1));
+                                                                            mondayOfWeek.setHours(0, 0, 0, 0);
+                                                                            
+                                                                            // Use Monday's date as the week key
+                                                                            const weekKey = mondayOfWeek.toISOString().split('T')[0];
+                                                                            
+                                                                            if (!weekGroups[weekKey]) {
+                                                                                weekGroups[weekKey] = [];
+                                                                            }
+                                                                            weekGroups[weekKey].push(date);
+                                                                        });
+                                                                        
+                                                                        // Sort weeks by their Monday date
+                                                                        const sortedWeekKeys = Object.keys(weekGroups).sort();
+                                                                        
+                                                                        // Create rows for each week
+                                                                        return sortedWeekKeys.map((weekKey, weekIndex) => {
+                                                                            const weekDates = weekGroups[weekKey];
+                                                                            const row: (Date | null)[] = new Array(7).fill(null);
+                                                                            
+                                                                            // Place each date in its correct column
+                                                                            weekDates.forEach(date => {
+                                                                                const dayOfWeek = convertDayOfWeek(date.getDay());
+                                                                                const columnIndex = dayOfWeek - 1; // 0 = Monday, 6 = Sunday
+                                                                                row[columnIndex] = date;
+                                                                            });
+                                                                            
+                                                                            return (
+                                                                                <React.Fragment key={weekKey}>
+                                                                                    {row.map((date, colIndex) => {
+                                                                                        if (!date) {
+                                                                                            return <div key={colIndex} className={styles.calendarDateCellEmpty}></div>;
+                                                                                        }
+                                                                                        
+                                                                                        const today = new Date();
+                                                                                        today.setHours(0, 0, 0, 0);
+                                                                                        const dateOnly = new Date(date);
+                                                                                        dateOnly.setHours(0, 0, 0, 0);
+                                                                                        
+                                                                                        const isToday = dateOnly.getTime() === today.getTime();
+                                                                                        const isAvailable = isDateAvailable(date);
+                                                                                        const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
+                                                                                        
+                                                                                        return (
+                                                                                            <button
+                                                                                                key={`${weekKey}-${colIndex}`}
+                                                                                                className={`${styles.calendarDateCell} ${!isAvailable ? styles.unavailable : ''} ${isSelected ? styles.selected : ''} ${isToday ? styles.today : ''}`}
+                                                                                                onClick={() => isAvailable && handleDateSelect(date)}
+                                                                                                disabled={!isAvailable}
+                                                                                                title={date.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                                                                            >
+                                                                                                {isToday && <div className={styles.todayRing}></div>}
+                                                                                                <span className={styles.dateNumber}>{date.getDate()}</span>
+                                                                                            </button>
+                                                                                        );
+                                                                                    })}
+                                                                                </React.Fragment>
+                                                                            );
+                                                                        });
+                                                                    })()}
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            </div>
+                                        
+                                        {/* Step 2: Select Time (only shown after date is selected) */}
+                                        {selectedDate && (
+                                            <div ref={timeslotsSectionRef} className={styles.timeslotsSection}>
+                                                <div className={styles.sectionHeader}>
+                                                    <div className={styles.sectionHeaderContent}>
+                                                        <div className={styles.sectionIconWrapper}>
+                                                            <i className="bi bi-clock"></i>
                                                         </div>
-                                                        <div className={styles.calendarDates}>
+                                                        <div>
+                                                            <h3>Chọn giờ khám</h3>
+                                                            <p className={styles.sectionSubtitle}>Chọn thời gian phù hợp với bạn</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className={styles.timeslotsContainer}>
+                                                    {availableTimeSlots.length > 0 ? (
+                                                        <>
                                                             {(() => {
-                                                                // Get first day of the month
-                                                                const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-                                                                
-                                                                // Convert Sunday (0) to 7 for Monday-based week
-                                                                const firstDayOfWeek = firstDay.getDay() === 0 ? 7 : firstDay.getDay();
-                                                                
-                                                                // Calculate start date (Monday of the week containing first day)
-                                                                const startDate = new Date(firstDay);
-                                                                startDate.setDate(firstDay.getDate() - (firstDayOfWeek - 1));
-                                                                
-                                                                // Generate 42 days (6 weeks) for calendar grid
-                                                                return Array.from({ length: 42 }, (_, i) => {
-                                                                    const date = new Date(startDate);
-                                                                    date.setDate(startDate.getDate() + i);
-                                                                    
-                                                                    const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
-                                                                    const isAvailable = isDateAvailable(date);
-                                                                    const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
-                                                                    const isToday = new Date().toDateString() === date.toDateString();
-                                                                    
-                                                                    return (
-                                                                        <button
-                                                                            key={i}
-                                                                            className={`${styles.calendarDate} ${!isCurrentMonth ? styles.otherMonth : ''} ${!isAvailable ? styles.unavailable : ''} ${isSelected ? styles.selected : ''} ${isToday ? styles.today : ''}`}
-                                                                            onClick={() => isAvailable && handleDateSelect(date)}
-                                                                            disabled={!isAvailable}
-                                                                        >
-                                                                            {date.getDate()}
-                                                                        </button>
-                                                                    );
+                                                                // 分组时段：上午（< 12:00）和下午（>= 12:00）
+                                                                const morningSlots = availableTimeSlots.filter(slot => {
+                                                                    let hour = 0;
+                                                                    if (slot.startTime) {
+                                                                        hour = parseInt(slot.startTime.split(':')[0], 10);
+                                                                    } else if (slot.display) {
+                                                                        // 从 display 字符串中提取时间，例如 "07:00 - 07:50"
+                                                                        const timeMatch = slot.display.match(/^(\d{1,2}):\d{2}/);
+                                                                        if (timeMatch) {
+                                                                            hour = parseInt(timeMatch[1], 10);
+                                                                        }
+                                                                    }
+                                                                    return hour < 12;
                                                                 });
+                                                                const afternoonSlots = availableTimeSlots.filter(slot => {
+                                                                    let hour = 0;
+                                                                    if (slot.startTime) {
+                                                                        hour = parseInt(slot.startTime.split(':')[0], 10);
+                                                                    } else if (slot.display) {
+                                                                        // 从 display 字符串中提取时间，例如 "07:00 - 07:50"
+                                                                        const timeMatch = slot.display.match(/^(\d{1,2}):\d{2}/);
+                                                                        if (timeMatch) {
+                                                                            hour = parseInt(timeMatch[1], 10);
+                                                                        }
+                                                                    }
+                                                                    return hour >= 12;
+                                                                });
+                                                                
+                                                                return (
+                                                                    <>
+                                                                        {/* 上午时段 */}
+                                                                        {morningSlots.length > 0 && (
+                                                                            <div className={styles.timeSlotGroup}>
+                                                                                <div className={styles.timeSlotGroupHeader}>
+                                                                                    <div className={styles.timeSlotGroupIcon}>
+                                                                                        <i className="bi bi-sunrise"></i>
+                                                                                    </div>
+                                                                                    <div className={styles.timeSlotGroupContent}>
+                                                                                        <h4 className={styles.timeSlotGroupTitle}>Buổi sáng</h4>
+                                                                                        <p className={styles.timeSlotGroupSubtitle}>{morningSlots.length} ca khám</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className={styles.timeslotsGrid}>
+                                                                                    {morningSlots.map((slot, index) => {
+                                                                                        const isSelected = selectedTimeSlot?.id === slot.id;
+                                                                                        
+                                                                                        return (
+                                                                                            <button
+                                                                                                key={index}
+                                                                                                className={`${styles.timeslot} ${isSelected ? styles.selected : ''}`}
+                                                                                                onClick={() => handleTimeSlotSelect(slot)}
+                                                                                            >
+                                                                                                <div className={styles.timeslotContent}>
+                                                                                                    <i className={`bi ${isSelected ? 'bi-check-circle-fill' : 'bi-clock-fill'}`}></i>
+                                                                                                    <span className={styles.timeText}>{slot.display}</span>
+                                                                                                </div>
+                                                                                                {slot.type === 'override' && slot.reason && (
+                                                                                                    <div className={styles.timeslotBadge}>
+                                                                                                        <i className="bi bi-info-circle"></i>
+                                                                                                        <span>{slot.reason}</span>
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </button>
+                                                                                        );
+                                                                                    })}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                        
+                                                                        {/* 下午时段 */}
+                                                                        {afternoonSlots.length > 0 && (
+                                                                            <div className={styles.timeSlotGroup}>
+                                                                                <div className={styles.timeSlotGroupHeader}>
+                                                                                    <div className={styles.timeSlotGroupIcon}>
+                                                                                        <i className="bi bi-sunset"></i>
+                                                                                    </div>
+                                                                                    <div className={styles.timeSlotGroupContent}>
+                                                                                        <h4 className={styles.timeSlotGroupTitle}>Buổi chiều</h4>
+                                                                                        <p className={styles.timeSlotGroupSubtitle}>{afternoonSlots.length} ca khám</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className={styles.timeslotsGrid}>
+                                                                                    {afternoonSlots.map((slot, index) => {
+                                                                                        const isSelected = selectedTimeSlot?.id === slot.id;
+                                                                                        
+                                                                                        return (
+                                                                                            <button
+                                                                                                key={index}
+                                                                                                className={`${styles.timeslot} ${isSelected ? styles.selected : ''}`}
+                                                                                                onClick={() => handleTimeSlotSelect(slot)}
+                                                                                            >
+                                                                                                <div className={styles.timeslotContent}>
+                                                                                                    <i className={`bi ${isSelected ? 'bi-check-circle-fill' : 'bi-clock-fill'}`}></i>
+                                                                                                    <span className={styles.timeText}>{slot.display}</span>
+                                                                                                </div>
+                                                                                                {slot.type === 'override' && slot.reason && (
+                                                                                                    <div className={styles.timeslotBadge}>
+                                                                                                        <i className="bi bi-info-circle"></i>
+                                                                                                        <span>{slot.reason}</span>
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </button>
+                                                                                        );
+                                                                                    })}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </>
+                                                                );
                                                             })()}
+                                                        </>
+                                                    ) : (
+                                                        <div className={styles.noSlotsMessage}>
+                                                            <div className={styles.noSlotsIcon}>
+                                                                <i className="bi bi-calendar-x"></i>
+                                                            </div>
+                                                            <h4>Không có ca khám</h4>
+                                                            <p>Bác sĩ không có ca khám nào trong ngày này. Vui lòng chọn ngày khác.</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Step 3: Booking Information (only shown after date and time are selected) */}
+                                        {selectedDate && selectedTimeSlot && (
+                                            <div ref={bookingConfirmationRef} className={styles.bookingConfirmation}>
+                                                <div className={styles.bookingSummary}>
+                                                    <div className={styles.summaryHeader}>
+                                                        <div className={styles.summaryHeaderContent}>
+                                                            <div className={styles.summaryIconWrapper}>
+                                                                <i className="bi bi-clipboard-check-fill"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h3>Thông tin đặt lịch</h3>
+                                                                <p className={styles.summarySubtitle}>Kiểm tra và xác nhận thông tin trước khi đặt lịch</p>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     
-                                                    {/* Calendar Legend */}
-                                                    <div className={styles.calendarLegend}>
-                                                        <div className={styles.legendItem}>
-                                                            <div className={`${styles.legendColor} ${styles.todayLegend}`}></div>
-                                                            <span>Hôm nay</span>
-                                                        </div>
-                                                        <div className={styles.legendItem}>
-                                                            <div className={`${styles.legendColor} ${styles.unavailableLegend}`}></div>
-                                                            <span>Không khả dụng</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className={styles.timeslotsSection}>
-                                                <div className={styles.sectionHeader}>
-                                                    <h3>
-                                                        <i className="bi bi-clock"></i>
-                                                        Chọn giờ khám
-                                                    </h3>
-                                                </div>
-                                                {selectedDate ? (
-                                                    <div className={styles.timeslotsContainer}>
-                                                        <div className={styles.selectedDateInfo}>
-                                                            <i className="bi bi-calendar-check"></i>
-                                                            <span>{selectedDate.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                                                        </div>
-                                                        
-                                                        {availableTimeSlots.length > 0 ? (
-                                                            <div className={styles.timeslotsGrid}>
-                                                                {availableTimeSlots.map((slot, index) => {
-                                                                    const isSelected = selectedTimeSlot?.id === slot.id;
-                                                                    
-                                                                    return (
-                                                                        <button
-                                                                            key={index}
-                                                                            className={`${styles.timeslot} ${isSelected ? styles.selected : ''}`}
-                                                                            onClick={() => handleTimeSlotSelect(slot)}
-                                                                        >
-                                                                            <i className="bi bi-clock-fill"></i>
-                                                                            <span className={styles.timeText}>{slot.display}</span>
-                                                                        </button>
-                                                                    );
-                                                                })}
+                                                    <div className={styles.summaryCards}>
+                                                        <div className={styles.summaryCard}>
+                                                            <div className={styles.summaryCardAvatar}>
+                                                                {profileData.avatarUrl ? (
+                                                                    <img src={profileData.avatarUrl} alt={profileData.fullName} />
+                                                                ) : (
+                                                                    <i className="bi bi-person-circle"></i>
+                                                                )}
                                                             </div>
-                                                        ) : (
-                                                            <div className={styles.noSlotsMessage}>
-                                                                <i className="bi bi-exclamation-circle"></i>
-                                                                <p>Không có ca khám nào trong ngày này</p>
+                                                            <div className={styles.summaryCardContent}>
+                                                                <span className={styles.summaryLabel}>Bác sĩ</span>
+                                                                <span className={styles.summaryValue}>{profileData.fullName}</span>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <div className={styles.noDateSelected}>
-                                                        <i className="bi bi-calendar-x"></i>
-                                                        <p>Vui lòng chọn ngày để xem các ca khám có sẵn</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {selectedDate && selectedTimeSlot && (
-                                            <div className={styles.bookingConfirmation}>
-                                                <div className={styles.bookingSummary}>
-                                                    <h3>
-                                                        <i className="bi bi-clipboard-check"></i>
-                                                        Thông tin đặt lịch
-                                                    </h3>
-                                                    <div className={styles.summaryGrid}>
-                                                        <div className={styles.summaryItem}>
-                                                            <span className={styles.summaryLabel}>Ngày khám</span>
-                                                            <span className={styles.summaryValue}>{selectedDate.toLocaleDateString('vi-VN')}</span>
                                                         </div>
-                                                        <div className={styles.summaryItem}>
-                                                            <span className={styles.summaryLabel}>Giờ khám</span>
-                                                            <span className={styles.summaryValue}>{selectedTimeSlot.display}</span>
+                                                        <div className={styles.summaryCard}>
+                                                            <div className={styles.summaryCardIcon}>
+                                                                <i className="bi bi-mortarboard-fill"></i>
+                                                            </div>
+                                                            <div className={styles.summaryCardContent}>
+                                                                <span className={styles.summaryLabel}>Trình độ</span>
+                                                                <span className={styles.summaryValue}>
+                                                                    {profileData.education || 'Chưa cập nhật'}
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                        <div className={styles.summaryItem}>
-                                                            <span className={styles.summaryLabel}>Thời gian khám</span>
-                                                            <span className={styles.summaryValue}>{getConsultationDuration(selectedTimeSlot.display, selectedDate)}</span>
+                                                        <div className={styles.summaryCard}>
+                                                            <div className={styles.summaryCardIcon}>
+                                                                <i className="bi bi-calendar-event"></i>
+                                                            </div>
+                                                            <div className={styles.summaryCardContent}>
+                                                                <span className={styles.summaryLabel}>Ngày khám</span>
+                                                                <span className={styles.summaryValue}>
+                                                                    {selectedDate.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                        <div className={styles.summaryItem}>
-                                                            <span className={styles.summaryLabel}>Phí khám</span>
-                                                            <span className={styles.summaryPrice}>
-                                                                {profileData.consulationFee != null && profileData.consulationFee !== undefined
-                                                                    ? `${Number(profileData.consulationFee).toLocaleString('vi-VN')}đ`
-                                                                    : 'Liên hệ'}
-                                                            </span>
+                                                        <div className={styles.summaryCard}>
+                                                            <div className={styles.summaryCardIcon}>
+                                                                <i className="bi bi-clock-history"></i>
+                                                            </div>
+                                                            <div className={styles.summaryCardContent}>
+                                                                <span className={styles.summaryLabel}>Giờ khám</span>
+                                                                <span className={styles.summaryValue}>{selectedTimeSlot.display}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className={styles.summaryCard}>
+                                                            <div className={styles.summaryCardIcon}>
+                                                                <i className="bi bi-hourglass-split"></i>
+                                                            </div>
+                                                            <div className={styles.summaryCardContent}>
+                                                                <span className={styles.summaryLabel}>Thời gian khám</span>
+                                                                <span className={styles.summaryValue}>{getConsultationDuration(selectedTimeSlot.display, selectedDate)}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className={styles.summaryCard}>
+                                                            <div className={styles.summaryCardIcon}>
+                                                                <i className="bi bi-currency-dollar"></i>
+                                                            </div>
+                                                            <div className={styles.summaryCardContent}>
+                                                                <span className={styles.summaryLabel}>Phí khám</span>
+                                                                <span className={styles.summaryPrice}>
+                                                                    {profileData.consulationFee != null && profileData.consulationFee !== undefined
+                                                                        ? `${Number(profileData.consulationFee).toLocaleString('vi-VN')}đ`
+                                                                        : 'Liên hệ'}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     
                                                     {/* Promotion Code Input */}
                                                     <div className={styles.promotionCodeSection}>
-                                                        <label htmlFor="promotionCode" className={styles.promotionLabel}>
-                                                            <i className="bi bi-tag-fill"></i>
-                                                            Mã khuyến mãi (nếu có)
-                                                        </label>
+                                                        <div className={styles.promotionLabelRow}>
+                                                            <label htmlFor="promotionCode" className={styles.promotionLabel}>
+                                                                <i className="bi bi-tag-fill"></i>
+                                                                Mã khuyến mãi (nếu có)
+                                                            </label>
+                                                            <button
+                                                                type="button"
+                                                                className={styles.selectPromoButton}
+                                                                onClick={handleOpenPromotionModal}
+                                                                title="Chọn mã khuyến mãi"
+                                                            >
+                                                                <i className="bi bi-list-ul"></i>
+                                                                Chọn mã
+                                                            </button>
+                                                        </div>
                                                         <div className={styles.promotionInputGroup}>
                                                             <input
                                                                 type="text"
@@ -1502,13 +1870,13 @@ function DoctorDetails() {
                                                                     setPromotionError('');
                                                                     setAppliedPromotion(null);
                                                                 }}
-                                                                disabled={isCheckingPromotion}
+                                                                disabled={isCheckingPromotion || !!appliedPromotion}
                                                             />
                                                             <button
                                                                 type="button"
                                                                 className={styles.applyPromoButton}
                                                                 onClick={handleApplyPromotion}
-                                                                disabled={isCheckingPromotion || !promotionCode.trim()}
+                                                                disabled={isCheckingPromotion || !promotionCode.trim() || !!appliedPromotion}
                                                             >
                                                                 {isCheckingPromotion ? (
                                                                     <div className={styles.buttonSpinner}></div>
@@ -1673,42 +2041,43 @@ function DoctorDetails() {
             {showConfirmModal && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.confirmModal}>
-                        <div className={styles.modalHeader}>
-                            <h3>
-                                <i className="bi bi-clipboard-check"></i>
-                                Xác nhận đặt lịch khám
-                            </h3>
+                        <div className={styles.confirmModalHeader}>
+                            <div className={styles.confirmModalIcon}>
+                                <i className="bi bi-clipboard-check-fill"></i>
+                            </div>
+                            <h3>Xác nhận đặt lịch khám</h3>
                             <button 
-                                className={styles.closeBtn}
+                                className={styles.confirmModalClose}
                                 onClick={() => setShowConfirmModal(false)}
                             >
                                 <i className="bi bi-x-lg"></i>
                             </button>
                         </div>
                         
-                        <div className={styles.modalBody}>
-                            <div className={styles.confirmInfo}>
-                                <h4>Thông tin lịch hẹn</h4>
-                                <div className={styles.infoRow}>
-                                    <div className={styles.infoLabel}>
+                        <div className={styles.confirmModalBody}>
+                            <div className={styles.confirmModalInfo}>
+                                <div className={styles.confirmInfoRow}>
+                                    <div className={styles.confirmInfoLabel}>
                                         <i className="bi bi-person-circle"></i>
                                         Bác sĩ
                                     </div>
-                                    <div className={styles.infoValue}>{profileData?.fullName}</div>
+                                    <div className={styles.confirmInfoValue}>{profileData?.fullName}</div>
                                 </div>
-                                <div className={styles.infoRow}>
-                                    <div className={styles.infoLabel}>
-                                        <i className="bi bi-hospital"></i>
-                                        Chuyên khoa
+                                <div className={styles.confirmInfoRow}>
+                                    <div className={styles.confirmInfoLabel}>
+                                        <i className="bi bi-mortarboard-fill"></i>
+                                        Trình độ
                                     </div>
-                                    <div className={styles.infoValue}>{profileData?.specialization}</div>
+                                    <div className={styles.confirmInfoValue}>
+                                        {profileData?.education || 'Chưa cập nhật'}
+                                    </div>
                                 </div>
-                                <div className={styles.infoRow}>
-                                    <div className={styles.infoLabel}>
+                                <div className={styles.confirmInfoRow}>
+                                    <div className={styles.confirmInfoLabel}>
                                         <i className="bi bi-calendar-check"></i>
                                         Ngày khám
                                     </div>
-                                    <div className={styles.infoValue}>
+                                    <div className={styles.confirmInfoValue}>
                                         {selectedDate?.toLocaleDateString('vi-VN', { 
                                             weekday: 'long', 
                                             year: 'numeric', 
@@ -1717,19 +2086,19 @@ function DoctorDetails() {
                                         })}
                                     </div>
                                 </div>
-                                <div className={styles.infoRow}>
-                                    <div className={styles.infoLabel}>
+                                <div className={styles.confirmInfoRow}>
+                                    <div className={styles.confirmInfoLabel}>
                                         <i className="bi bi-clock"></i>
                                         Giờ khám
                                     </div>
-                                    <div className={styles.infoValue}>{selectedTimeSlot?.display}</div>
+                                    <div className={styles.confirmInfoValue}>{selectedTimeSlot?.display}</div>
                                 </div>
-                                <div className={styles.infoRow}>
-                                    <div className={styles.infoLabel}>
+                                <div className={styles.confirmInfoRow}>
+                                    <div className={styles.confirmInfoLabel}>
                                         <i className="bi bi-currency-dollar"></i>
                                         Phí khám
                                     </div>
-                                    <div className={styles.infoValuePrice}>
+                                    <div className={styles.confirmInfoValuePrice}>
                                         {new Intl.NumberFormat('vi-VN', {
                                             style: 'currency',
                                             currency: 'VND'
@@ -1738,22 +2107,22 @@ function DoctorDetails() {
                                 </div>
                             </div>
                             
-                            <div className={styles.confirmNote}>
-                                <i className="bi bi-info-circle"></i>
+                            <div className={styles.confirmModalNote}>
+                                <i className="bi bi-info-circle-fill"></i>
                                 <p>Vui lòng kiểm tra kỹ thông tin trước khi xác nhận. Bạn có thể hủy lịch hẹn trong vòng 2 giờ trước giờ khám.</p>
                             </div>
                         </div>
                         
-                        <div className={styles.modalFooter}>
+                        <div className={styles.confirmModalFooter}>
                             <button 
-                                className={styles.btnCancel}
+                                className={styles.confirmModalCancel}
                                 onClick={() => setShowConfirmModal(false)}
                             >
                                 <i className="bi bi-x-circle"></i>
                                 Hủy
                             </button>
                             <button 
-                                className={styles.btnConfirm}
+                                className={styles.confirmModalConfirm}
                                 onClick={handleConfirmedBooking}
                                 disabled={isCreatingPayment}
                             >
@@ -1764,7 +2133,7 @@ function DoctorDetails() {
                                     </>
                                 ) : (
                                     <>
-                                        <i className="bi bi-check-circle"></i>
+                                        <i className="bi bi-check-circle-fill"></i>
                                         Xác nhận đặt lịch
                                     </>
                                 )}
@@ -1819,6 +2188,93 @@ function DoctorDetails() {
                             >
                                 <i className="bi bi-calendar2-check"></i>
                                 Xem lịch hẹn của tôi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Promotion Selection Modal */}
+            {showPromotionModal && (
+                <div className={styles.modalOverlay} onClick={() => setShowPromotionModal(false)}>
+                    <div className={styles.promotionModal} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.promotionModalHeader}>
+                            <h3>
+                                <i className="bi bi-tag-fill"></i>
+                                Chọn mã khuyến mãi
+                            </h3>
+                            <button 
+                                className={styles.modalCloseButton}
+                                onClick={() => setShowPromotionModal(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        
+                        <div className={styles.promotionModalContent}>
+                            {isLoadingPromotions ? (
+                                <div className={styles.promotionLoading}>
+                                    <div className={styles.buttonSpinner}></div>
+                                    <p>Đang tải danh sách mã khuyến mãi...</p>
+                                </div>
+                            ) : availablePromotions.length === 0 ? (
+                                <div className={styles.promotionEmpty}>
+                                    <i className="bi bi-inbox"></i>
+                                    <p>Hiện tại không có mã khuyến mãi nào khả dụng</p>
+                                </div>
+                            ) : (
+                                <div className={styles.promotionList}>
+                                    {availablePromotions.map((promotion) => (
+                                        <div
+                                            key={promotion.id}
+                                            className={`${styles.promotionItem} ${appliedPromotion?.id === promotion.id ? styles.promotionItemSelected : ''}`}
+                                            onClick={() => handleSelectPromotion(promotion)}
+                                        >
+                                            <div className={styles.promotionItemHeader}>
+                                                <div className={styles.promotionItemIcon}>
+                                                    <i className="bi bi-tag-fill"></i>
+                                                </div>
+                                                <div className={styles.promotionItemInfo}>
+                                                    <h4 className={styles.promotionItemName}>{promotion.name}</h4>
+                                                    <p className={styles.promotionItemCode}>{promotion.code}</p>
+                                                </div>
+                                                <div className={styles.promotionItemDiscount}>
+                                                    <span className={styles.discountBadge}>
+                                                        {promotion.discountType === 'Percentage' 
+                                                            ? `-${promotion.discountValue}%`
+                                                            : `-${promotion.discountValue.toLocaleString('vi-VN')}đ`}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {promotion.description && (
+                                                <p className={styles.promotionItemDescription}>{promotion.description}</p>
+                                            )}
+                                            <div className={styles.promotionItemFooter}>
+                                                <div className={styles.promotionItemDate}>
+                                                    <i className="bi bi-calendar3"></i>
+                                                    <span>
+                                                        {new Date(promotion.startDate).toLocaleDateString('vi-VN')} - {new Date(promotion.endDate).toLocaleDateString('vi-VN')}
+                                                    </span>
+                                                </div>
+                                                {appliedPromotion?.id === promotion.id && (
+                                                    <div className={styles.promotionItemSelectedBadge}>
+                                                        <i className="bi bi-check-circle-fill"></i>
+                                                        Đã chọn
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className={styles.promotionModalFooter}>
+                            <button 
+                                className={styles.btnCancel}
+                                onClick={() => setShowPromotionModal(false)}
+                            >
+                                Đóng
                             </button>
                         </div>
                     </div>

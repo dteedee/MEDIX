@@ -39,6 +39,7 @@ export interface Appointment {
   refundStatus?: string;
   refundProcessedAt?: string;
   medicalInfo?: string;
+  aiSymptomAnalysisId?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -167,6 +167,7 @@ const MedicalRecordDetails: React.FC = () => {
   };
 
   // Xác định xem hồ sơ có được phép chỉnh sửa hay không
+  // LOGIC: Chỉ cho phép bác sĩ chỉnh sửa hồ sơ bệnh án trong khoảng thời gian diễn ra cuộc hẹn (50 phút).
   const isEditable = useMemo(() => {
     if (!medicalRecord) return false;
     

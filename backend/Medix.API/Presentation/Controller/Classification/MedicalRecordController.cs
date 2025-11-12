@@ -31,16 +31,44 @@ namespace Medix.API.Presentation.Controllers.Classification
 
 
 
-        // 🔹 Lấy MedicalRecord theo AppointmentId
         [HttpGet("by-appointment/{appointmentId:guid}")]
         public async Task<IActionResult> GetByAppointment(Guid appointmentId)
         {
+            // 1️⃣ Thử lấy hồ sơ bệnh án hiện có
             var record = await _service.GetByAppointmentIdAsync(appointmentId);
-            if (record == null)
-                return NotFound(new { message = "Không tìm thấy hồ sơ bệnh án cho cuộc hẹn này." });
 
+            // 2️⃣ Nếu chưa có thì tạo mới
+            if (record == null)
+            {
+                try
+                {
+                    var newRecordDto = new CreateOrUpdateMedicalRecordDto
+                    {
+                        AppointmentId = appointmentId,
+                        ChiefComplaint = "",
+                        PhysicalExamination = "",
+                        Diagnosis = "", // có thể để rỗng hoặc "Chưa xác định"
+                        AssessmentNotes = "",
+                        TreatmentPlan = "",
+                        FollowUpInstructions = "",
+                        DoctorNotes = "",
+                        Prescriptions = new List<CreatePrescriptionDto>()
+                    };
+
+                    var createdRecord = await _service.CreateAsync(newRecordDto);
+                    return Ok(createdRecord);
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new { message = $"Không thể tạo hồ sơ mới: {ex.Message}" });
+                }
+            }
+
+            // 3️⃣ Nếu đã có thì trả về hồ sơ hiện có
             return Ok(record);
         }
+
+
 
         // 🔹 Tạo mới MedicalRecord (dành cho bệnh nhân chưa có hồ sơ)
         [HttpPost]

@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.Classification;
+using Medix.API.DataAccess;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.MedicalRecordDTO;
 using Medix.API.Models.Entities;
@@ -13,48 +14,39 @@ namespace Medix.API.Business.Services.Classification
         private readonly IMedicalRecordRepository _medicalRecordRepo;
         private readonly IAppointmentRepository _appointmentRepo;
         private readonly IMapper _mapper;
+        private readonly MedixContext _context; // 🩺 Thêm DbContext để update Patient
 
         public MedicalRecordService(
             IMedicalRecordRepository medicalRecordRepo,
             IAppointmentRepository appointmentRepo,
-            IMapper mapper)
+            IMapper mapper,
+            MedixContext context)
         {
             _medicalRecordRepo = medicalRecordRepo;
             _appointmentRepo = appointmentRepo;
             _mapper = mapper;
+            _context = context;
         }
 
         public async Task<MedicalRecordDto?> GetByAppointmentIdAsync(Guid appointmentId)
         {
-            var appointment = await _appointmentRepo.GetByIdAsync(appointmentId);
-            if (appointment == null)
-                throw new InvalidOperationException("Không tìm thấy cuộc hẹn này.");
-
-            var record = await _medicalRecordRepo.GetByPatientIdAsync(appointment.PatientId);
+            var record = await _medicalRecordRepo.GetByAppointmentIdAsync(appointmentId);
             if (record == null)
-                throw new InvalidOperationException("Không tìm thấy bệnh án cho bệnh nhân này.");
+                return null;
 
-            var dto = _mapper.Map<MedicalRecordDto>(record);
-
-            dto.AppointmentId = appointment.Id;
-            dto.AppointmentDate = appointment.AppointmentStartTime;
-            dto.DoctorName = appointment.Doctor?.User?.FullName ?? "Không rõ bác sĩ";
-
-            return dto;
+            return _mapper.Map<MedicalRecordDto>(record);
         }
 
-
-        // ✅ Tạo mới hồ sơ bệnh án
         public async Task<MedicalRecordDto> CreateAsync(CreateOrUpdateMedicalRecordDto dto)
         {
             var appointment = await _appointmentRepo.GetByIdAsync(dto.AppointmentId);
             if (appointment == null)
                 throw new InvalidOperationException("Appointment not found.");
 
-            // Kiểm tra bệnh nhân đã có hồ sơ chưa
-            var existingRecord = await _medicalRecordRepo.GetByPatientIdAsync(appointment.PatientId);
+            // 🔹 Kiểm tra hồ sơ đã tồn tại cho cuộc hẹn này chưa
+            var existingRecord = await _medicalRecordRepo.GetByAppointmentIdAsync(dto.AppointmentId);
             if (existingRecord != null)
-                throw new InvalidOperationException("Medical record already exists for this patient.");
+                throw new InvalidOperationException("Medical record already exists for this appointment.");
 
             var record = _mapper.Map<MedicalRecord>(dto);
             record.Id = Guid.NewGuid();
@@ -62,6 +54,7 @@ namespace Medix.API.Business.Services.Classification
             record.CreatedAt = DateTime.UtcNow;
             record.UpdatedAt = DateTime.UtcNow;
 
+            // 🔹 Thêm danh sách đơn thuốc nếu có
             if (dto.Prescriptions != null && dto.Prescriptions.Any())
             {
                 record.Prescriptions = dto.Prescriptions.Select(p => new Prescription
@@ -77,6 +70,10 @@ namespace Medix.API.Business.Services.Classification
             }
 
             await _medicalRecordRepo.AddAsync(record);
+
+            // 🩺 Cập nhật tiền sử bệnh hoặc dị ứng nếu được chọn
+            await UpdatePatientHistoryAndAllergiesAsync(appointment.PatientId, dto);
+
             return _mapper.Map<MedicalRecordDto>(record);
         }
 
@@ -86,11 +83,12 @@ namespace Medix.API.Business.Services.Classification
             if (appointment == null)
                 throw new InvalidOperationException("Appointment not found.");
 
-            var existingRecord = await _medicalRecordRepo.GetByPatientIdAsync(appointment.PatientId);
+            // 🔹 Tìm hồ sơ của chính cuộc hẹn này
+            var existingRecord = await _medicalRecordRepo.GetByAppointmentIdAsync(dto.AppointmentId);
             if (existingRecord == null)
-                throw new InvalidOperationException("Medical record not found for this patient.");
+                throw new InvalidOperationException("Medical record not found for this appointment.");
 
-            // --- Cập nhật thông tin chính ---
+            // --- Cập nhật nội dung ---
             existingRecord.ChiefComplaint = dto.ChiefComplaint;
             existingRecord.PhysicalExamination = dto.PhysicalExamination;
             existingRecord.Diagnosis = dto.Diagnosis;
@@ -116,43 +114,49 @@ namespace Medix.API.Business.Services.Classification
                 }).ToList();
             }
 
-            var patient = appointment.Patient;
-            if (patient != null)
-            {
-                // ✅ Cập nhật tiền sử bệnh nhân (MedicalHistory)
-                if (dto.UpdatePatientMedicalHistory && !string.IsNullOrWhiteSpace(dto.Diagnosis))
-                {
-                    var newEntry = dto.Diagnosis.Trim();
-                    if (string.IsNullOrWhiteSpace(patient.MedicalHistory))
-                        patient.MedicalHistory = newEntry;
-                    else if (!patient.MedicalHistory.Contains(newEntry, StringComparison.OrdinalIgnoreCase))
-                        patient.MedicalHistory += $"; {newEntry}";
-                }
-
-                // ✅ Cập nhật dị ứng mới (Allergies)
-                if (!string.IsNullOrWhiteSpace(dto.NewAllergy))
-                {
-                    var allergies = (patient.Allergies ?? "")
-                        .Split(';', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(a => a.Trim())
-                        .ToList();
-
-                    var newAllergy = dto.NewAllergy.Trim();
-                    if (!allergies.Contains(newAllergy, StringComparer.OrdinalIgnoreCase))
-                    {
-                        allergies.Add(newAllergy);
-                        patient.Allergies = string.Join("; ", allergies);
-                    }
-                }
-
-                patient.UpdatedAt = DateTime.UtcNow;
-            }
-
             await _medicalRecordRepo.UpdateAsync(existingRecord);
+
+            // 🩺 Cập nhật tiền sử bệnh hoặc dị ứng nếu có yêu cầu
+            await UpdatePatientHistoryAndAllergiesAsync(appointment.PatientId, dto);
+
             return _mapper.Map<MedicalRecordDto>(existingRecord);
         }
 
+        // 🔹 Hàm xử lý cập nhật tiền sử bệnh và dị ứng
+        private async Task UpdatePatientHistoryAndAllergiesAsync(Guid patientId, CreateOrUpdateMedicalRecordDto dto)
+        {
+            var patient = await _context.Patients.FirstOrDefaultAsync(p => p.Id == patientId);
+            if (patient == null) return;
 
+            bool updated = false;
+
+            if (dto.UpdatePatientMedicalHistory && !string.IsNullOrWhiteSpace(dto.Diagnosis))
+            {
+                // nối thêm nếu chưa có
+                if (string.IsNullOrWhiteSpace(patient.MedicalHistory))
+                    patient.MedicalHistory = dto.Diagnosis;
+                else if (!patient.MedicalHistory.Contains(dto.Diagnosis, StringComparison.OrdinalIgnoreCase))
+                    patient.MedicalHistory += $"; {dto.Diagnosis}";
+
+                updated = true;
+            }
+
+            if (dto.UpdatePatientAllergies && !string.IsNullOrWhiteSpace(dto.NewAllergy))
+            {
+                if (string.IsNullOrWhiteSpace(patient.Allergies))
+                    patient.Allergies = dto.NewAllergy;
+                else if (!patient.Allergies.Contains(dto.NewAllergy, StringComparison.OrdinalIgnoreCase))
+                    patient.Allergies += $"; {dto.NewAllergy}";
+
+                updated = true;
+            }
+
+            if (updated)
+            {
+                patient.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
+        }
 
         public async Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query)
             => await _medicalRecordRepo.GetRecordsByUserIdAsync(userId, query);
@@ -161,11 +165,5 @@ namespace Medix.API.Business.Services.Classification
         {
             throw new NotImplementedException();
         }
-
-        //public async Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query)
-        //    => await _medicalRecordRepo.GetRecordsByUserIdAsync(userId, query);
-
-        //public async Task<MedicalRecord?> GetRecordDetailsByIdAsync(Guid id)
-        //    => await _medicalRecordRepo.GetRecordDetailsByIdAsync(id);
     }
 }

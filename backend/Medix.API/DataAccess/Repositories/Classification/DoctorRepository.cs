@@ -207,5 +207,10 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 TotalPages = (int)Math.Ceiling((double)await doctorQueryable.CountAsync() / query.PageSize),
             };
         }
+
+        public async Task<List<Doctor>> GetAllAsync()
+            => await _context.Doctors
+                .Include(d => d.Appointments)
+                .ToListAsync();
     }
 }

@@ -370,30 +370,6 @@ export default function ArticleDetailPage() {
           </article>
         </main>
       </div>
-
-      <article className="article-detail">
-        <h1>{article.title}</h1>
-        <div className="article-meta-container">
-          <div className="article-meta">
-            Đăng ngày {new Date(article.publishedAt ?? article.createdAt!).toLocaleDateString()} bởi {article.authorName ?? 'MEDIX'}
-          </div>
-          <div className="article-stats">
-            <button onClick={handleLike} disabled={isLiking} className={`like-button ${isLiked ? 'liked' : ''}`}>
-              <LikeIcon filled={isLiked} />
-              <span className="like-count">{likeCount}</span>
-            </button>
-            <span className="stat-item"><ViewIcon /> {article.viewCount ?? 0}</span>
-          </div>
-        </div>
-        {(article.coverImageUrl || article.thumbnailUrl) && (
-          <img
-            src={article.coverImageUrl || article.thumbnailUrl}
-            alt={article.title}
-            className="article-cover-image"
-          />
-        )}
-        <div className="article-content" dangerouslySetInnerHTML={{ __html: article.content ?? '' }} />
-      </article>
     </div>
   )
 }

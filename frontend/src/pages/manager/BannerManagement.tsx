@@ -134,7 +134,7 @@ export default function BannerManagement() {
     setLoading(true);
     try {
       console.log('Loading banners...');
-      const banners = await bannerService.getAll();
+      const banners = await bannerService.getAll({ page: 1, pageSize: 9999 });
       console.log('Loaded banners:', banners);
       console.log('Banners with isLocked field:', banners.map(b => ({ id: b.id, title: b.bannerTitle, isLocked: b.isLocked })));
       setAllBanners(banners || []);
@@ -286,11 +286,21 @@ export default function BannerManagement() {
         (filters.statusFilter === 'active' ? b.isActive : 
          filters.statusFilter === 'inactive' ? !b.isActive : true);
 
-      let okDate = true;
-      if (from || to) {
-        const created = b.createdAt ? new Date(b.createdAt) : undefined;
-        okDate = !!created && (!from || created >= from) && (!to || created <= to);
-      }
+      // Sửa logic lọc ngày: kiểm tra sự giao thoa giữa khoảng thời gian của banner và bộ lọc
+      const okDate = (() => {
+        if (!from && !to) return true; // Không có bộ lọc ngày
+
+        const bannerStart = b.startDate ? new Date(b.startDate) : null;
+        const bannerEnd = b.endDate ? new Date(b.endDate) : null;
+
+        // Nếu banner không có ngày bắt đầu hoặc kết thúc, nó không thể khớp với bộ lọc có ngày
+        if (!bannerStart || !bannerEnd) return false;
+
+        // Điều kiện để hai khoảng thời gian giao nhau:
+        // (StartA <= EndB) and (EndA >= StartB)
+        const overlaps = (!from || bannerEnd >= from) && (!to || bannerStart <= to);
+        return overlaps;
+      })();
 
       return okSearch && okStatus && okDate;
     });
@@ -316,14 +326,9 @@ export default function BannerManagement() {
       if (valA > valB) return filters.sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-
-    const startIndex = (filters.page - 1) * filters.pageSize;
-    const endIndex = startIndex + filters.pageSize;
     
-    return sorted.slice(startIndex, endIndex);
+    return sorted;
   }, [allBanners, filters]);
-
-  const totalPages = Math.ceil((total ?? 0) / filters.pageSize);
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'Chưa có';
@@ -348,6 +353,9 @@ export default function BannerManagement() {
       </span>
     );
   };
+
+  const paginatedItems = useMemo(() => processedItems.slice((filters.page - 1) * filters.pageSize, filters.page * filters.pageSize), [processedItems, filters.page, filters.pageSize]);
+  const totalPages = Math.ceil(processedItems.length / filters.pageSize);
 
   return (
     <div className={styles.container}>
@@ -539,7 +547,7 @@ export default function BannerManagement() {
         ) : processedItems.length > 0 ? (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
-              <thead>
+              <thead className={styles.tableHeader}>
                 <tr>
                   <th style={{ width: '60px' }}>STT</th>
                   <th onClick={() => handleSort('bannerTitle')} className={styles.sortable}>
@@ -577,7 +585,7 @@ export default function BannerManagement() {
                 </tr>
               </thead>
               <tbody>
-                {processedItems.map((banner, index) => (
+                {paginatedItems.map((banner, index) => (
                   <tr key={banner.id} className={styles.tableRow}>
                     <td className={styles.indexCell}>
                       {(filters.page - 1) * filters.pageSize + index + 1}
@@ -642,9 +650,7 @@ export default function BannerManagement() {
         {/* Pagination */}
         {processedItems.length > 0 && (
           <div className={styles.pagination}>
-            <div className={styles.paginationInfo}>
-              Hiển thị {(filters.page - 1) * filters.pageSize + 1} - {Math.min(filters.page * filters.pageSize, total ?? 0)} trong tổng số {total ?? 0} kết quả
-            </div>
+            <div className={styles.paginationInfo}>Hiển thị {(filters.page - 1) * filters.pageSize + 1} – {Math.min(filters.page * filters.pageSize, processedItems.length)} trong tổng số {processedItems.length} kết quả</div>
 
             <div className={styles.paginationControls}>
               <select value={filters.pageSize} onChange={e => setFilters(prev => ({ ...prev, pageSize: Number(e.target.value), page: 1 }))}>

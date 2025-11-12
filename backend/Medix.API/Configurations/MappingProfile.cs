@@ -1,4 +1,4 @@
-﻿﻿using AutoMapper;
+﻿﻿﻿﻿using AutoMapper;
 using Medix.API.Application.DTOs.Doctor;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.ApointmentDTO;
@@ -89,6 +89,7 @@ namespace Medix.API.Configurations
       .ForMember(dest => dest.DoctorName, opt => opt.MapFrom(src => src.Appointment.Doctor.User.FullName))
       .ForMember(dest => dest.AppointmentDate, opt => opt.MapFrom(src => src.Appointment.AppointmentStartTime))
 
+      .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.Appointment.PatientId))
       // --- Thông tin bệnh nhân ---
       .ForMember(dest => dest.MedicalRecordNumber, opt => opt.MapFrom(src => src.Appointment.Patient.MedicalRecordNumber))
       .ForMember(dest => dest.BloodTypeCode, opt => opt.MapFrom(src => src.Appointment.Patient.BloodTypeCode))

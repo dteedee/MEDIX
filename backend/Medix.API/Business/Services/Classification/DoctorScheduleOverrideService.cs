@@ -181,7 +181,8 @@ namespace Medix.API.Business.Services.Classification
             var updated = await _repo.GetByDoctorIdAsync(doctorId);
             return _mapper.Map<List<DoctorScheduleOverrideDto>>(updated);
         }
-        public async Task<List<DoctorScheduleOverrideDto>> UpdateByDoctorUserAsync(List<UpdateDoctorScheduleOverrideDto> dtos, Guid userId)
+        public async Task<List<DoctorScheduleOverrideDto>> UpdateByDoctorUserAsync(
+     List<UpdateDoctorScheduleOverrideDto> dtos, Guid userId)
         {
             var doctorId = await _repo.GetDoctorIdByUserIdAsync(userId);
             if (doctorId == null)
@@ -201,56 +202,67 @@ namespace Medix.API.Business.Services.Classification
                         OverrideDate = dto.OverrideDate,
                         StartTime = dto.StartTime,
                         EndTime = dto.EndTime,
-                        IsAvailable = true, // IsAvailable luôn mặc định là true khi thêm mới
-                        //IsAvailable = dto.OverrideType, // Đồng bộ
+                        IsAvailable = true,
                         Reason = dto.Reason,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow,
                         OverrideType = dto.OverrideType
                     };
+
                     await _repo.AddAsync(newEntity);
-                        
                 }
                 else
                 {
-                    var match = existing.FirstOrDefault(e => e.Id == dto.Id && e.DoctorId == doctorId.Value);
+                    var match = existing.FirstOrDefault(e =>
+                        e.Id == dto.Id && e.DoctorId == doctorId.Value);
+
                     if (match != null)
                     {
-                        // KIỂM TRA BUSINESS RULE: Không cho cập nhật nếu đã có lịch hẹn
-                        var hasAppointments = await _appointmentRepo.HasAppointmentsInTimeRangeAsync(match.DoctorId, match.OverrideDate.ToDateTime(TimeOnly.MinValue), match.StartTime, match.EndTime);
+                        var hasAppointments = await _appointmentRepo.HasAppointmentsInTimeRangeAsync(
+                            match.DoctorId,
+                            match.OverrideDate.ToDateTime(TimeOnly.MinValue),
+                            match.StartTime,
+                            match.EndTime
+                        );
+
                         if (hasAppointments)
                         {
                             throw new InvalidOperationException(
-                                $"Không thể cập nhật lịch ghi đè này vì đã có cuộc hẹn được đặt trong khoảng thời gian từ {match.StartTime:HH\\:mm} đến {match.EndTime:HH\\:mm} vào ngày {match.OverrideDate:dd/MM/yyyy}.");
+                                $"Không thể cập nhật lịch ghi đè này vì đã có cuộc hẹn..."
+                            );
                         }
-                        
+
                         if (!dto.IsAvailable)
                         {
-                            // Nếu IsAvailable = false, thực hiện xóa override
                             await _repo.DeleteAsync(match);
                         }
                         else
                         {
-                        // Validate overlap with fixed schedules before updating
-                        await ValidateFixedScheduleOverlap(doctorId.Value, dto.OverrideDate, dto.StartTime, dto.EndTime, dto.OverrideType);
+                            await ValidateFixedScheduleOverlap(
+                                doctorId.Value,
+                                dto.OverrideDate,
+                                dto.StartTime,
+                                dto.EndTime,
+                                dto.OverrideType
+                            );
 
+                            _mapper.Map(dto, match);
+                            match.IsAvailable = true;
+                            match.UpdatedAt = DateTime.UtcNow;
 
-
-
-                        _mapper.Map(dto, match);
-                        match.IsAvailable = true; // IsAvailable luôn mặc định là true khi cập nhật
-                        match.UpdatedAt = DateTime.UtcNow;
-                        await _repo.UpdateAsync(match);
+                            await _repo.UpdateAsync(match);
+                        }
                     }
                 }
             }
 
-
+            // Save sau khi xử lý hết vòng lặp
             await _repo.SaveChangesAsync();
 
             var updated = await _repo.GetByDoctorIdAsync(doctorId.Value);
             return _mapper.Map<List<DoctorScheduleOverrideDto>>(updated);
         }
+
 
         // 🗑️ 3. Bác sĩ tự xóa override của mình
         public async Task<bool> DeleteByDoctorUserAsync(Guid overrideId, Guid userId)

@@ -24,5 +24,6 @@
         public string? Frequency { get; set; }
         public string? Duration { get; set; }
         public string? Instructions { get; set; }
+        public DateTime? createdAt { get; set; }
     }
 }

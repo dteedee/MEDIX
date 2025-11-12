@@ -1,5 +1,5 @@
 import { apiClient } from '../lib/apiClient';
-import { WalletDto, OrderCreateRequest, Order, WalletTransactionDto, WithdrawalRequest, WithdrawalResponse } from '../types/wallet.types';
+import { WalletDto, OrderCreateRequest, Order, WalletTransactionDto, WithdrawalRequest, WithdrawalResponse, TransferTransactionCreateRequest, TransferTransactionDto } from '../types/wallet.types';
 
 class WalletService {
   /**
@@ -70,6 +70,43 @@ class WalletService {
         error.response?.data?.message || 
         error.response?.data?.error ||
         'Không thể thực hiện rút tiền. Vui lòng thử lại.'
+      );
+    }
+  }
+
+  /**
+   * Tạo giao dịch chuyển tiền (Transfer Transaction)
+   * @param request - Thông tin chuyển tiền
+   * @returns Promise<TransferTransactionDto>
+   */
+  async createTransferTransaction(request: TransferTransactionCreateRequest): Promise<TransferTransactionDto> {
+    try {
+      const response = await apiClient.post<TransferTransactionDto>('/transfertransaction/create', request);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error creating transfer transaction:', error);
+      throw new Error(
+        error.response?.data?.message || 
+        error.response?.data?.error ||
+        'Không thể thực hiện giao dịch chuyển tiền. Vui lòng thử lại.'
+      );
+    }
+  }
+
+  /**
+   * Lấy thông tin giao dịch chuyển tiền theo ID
+   * @param id - ID của giao dịch
+   * @returns Promise<TransferTransactionDto>
+   */
+  async getTransferTransactionById(id: string): Promise<TransferTransactionDto> {
+    try {
+      const response = await apiClient.get<TransferTransactionDto>(`/transfertransaction/${id}`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching transfer transaction:', error);
+      throw new Error(
+        error.response?.data?.message || 
+        'Không thể lấy thông tin giao dịch. Vui lòng thử lại.'
       );
     }
   }

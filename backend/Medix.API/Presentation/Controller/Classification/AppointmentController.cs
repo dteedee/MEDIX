@@ -25,8 +25,9 @@ namespace Medix.API.Presentation.Controllers
         private readonly INoticeSetupService noticeSetupService;
         private readonly IEmailService _emailService;
         private readonly IDoctorService _doctorService;
+        private readonly IPatientHealthReminderService _patientHealthReminderService;
 
-        public AppointmentController(IAppointmentService service, IWalletService walletService, IWalletTransactionService walletTransactionService, IPatientService patientService, IUserService userService, INoticeSetupService noticeSetupService, IEmailService emailService, IDoctorService doctorService)
+        public AppointmentController(IAppointmentService service, IWalletService walletService, IWalletTransactionService walletTransactionService, IPatientService patientService, IUserService userService, INoticeSetupService noticeSetupService, IEmailService emailService, IDoctorService doctorService, IPatientHealthReminderService patientHealthReminderService)
         {
             _service = service;
             _walletService = walletService;
@@ -36,6 +37,7 @@ namespace Medix.API.Presentation.Controllers
             this.noticeSetupService = noticeSetupService;
             _emailService = emailService;
             _doctorService = doctorService;
+            _patientHealthReminderService = patientHealthReminderService;
         }
 
         [HttpGet]
@@ -132,7 +134,7 @@ namespace Medix.API.Presentation.Controllers
              var x=   await _emailService.SendEmailAsync(user.Email, header, body);
 
             }
-
+            await _patientHealthReminderService.SendHealthReminderAppointmentAsync(dto);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 

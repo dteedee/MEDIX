@@ -114,3 +114,25 @@ export interface WithdrawalResponse {
   message?: string;
 }
 
+export interface TransferTransactionCreateRequest {
+  amount: number;
+  description: string;
+  toBin: string;
+  toAccountNumber: string;
+  userId?: string;
+  walletTransactionID?: string;
+}
+
+export interface TransferTransactionDto {
+  id: string;
+  amount: number;
+  description: string;
+  toBin: string;
+  toAccountNumber: string;
+  userId?: string;
+  walletTransactionID?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+

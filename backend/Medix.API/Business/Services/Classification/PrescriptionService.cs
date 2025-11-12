@@ -10,11 +10,13 @@ namespace Medix.API.Business.Services.Classification
     {
         private readonly IPrescriptionRepository _repository;
         private readonly IMapper _mapper;
+        private readonly IPatientHealthReminderService patientHealthReminderService;
 
-        public PrescriptionService(IPrescriptionRepository repository, IMapper mapper)
+        public PrescriptionService(IPrescriptionRepository repository, IMapper mapper, IPatientHealthReminderService patientHealthReminderService)
         {
             _repository = repository;
             _mapper = mapper;
+            this.patientHealthReminderService = patientHealthReminderService;
         }
 
         public async Task<IEnumerable<PrescriptionDto>> GetByMedicalRecordIdAsync(Guid medicalRecordId)
@@ -37,6 +39,8 @@ namespace Medix.API.Business.Services.Classification
             entity.CreatedAt = DateTime.UtcNow;
 
             await _repository.AddAsync(entity);
+
+            await patientHealthReminderService.sendHealthReminderPrescription(entity);
             return _mapper.Map<PrescriptionDto>(entity);
         }
 

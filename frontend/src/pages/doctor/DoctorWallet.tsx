@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import doctorSalaryService from '../../services/doctorSalaryService';
 import { DoctorSalary } from '../../types/doctor.types';
 import { walletService } from '../../services/walletService';
-import { WalletDto, OrderCreateRequest, WalletTransactionDto, BankInfo, WithdrawalRequest } from '../../types/wallet.types';
+import { WalletDto, OrderCreateRequest, WalletTransactionDto, BankInfo, WithdrawalRequest, TransferTransactionCreateRequest } from '../../types/wallet.types';
 import styles from '../../styles/doctor/DoctorWallet.module.css';
 
 type TabType = 'all' | 'deposit' | 'withdrawal' | 'salary';
@@ -261,19 +261,20 @@ export const DoctorWallet: React.FC = () => {
 
     setIsProcessingWithdrawal(true);
     try {
-      const withdrawalRequest: WithdrawalRequest = {
+      // Tạo transfer transaction request
+      const transferRequest: TransferTransactionCreateRequest = {
         amount: Math.round(amount),
-        bankBin: selectedBank.bin,
-        bankName: selectedBank.name,
-        accountNumber: accountNumber.trim(),
-        accountName: accountName.trim(),
-        description: `Rút tiền về ${selectedBank.name} - Số tài khoản: ${accountNumber.trim()}`
+        description: `Rút tiền về ${selectedBank.shortName || selectedBank.name} - STK: ${accountNumber.trim()} - Chủ TK: ${accountName.trim()}`,
+        toBin: selectedBank.bin,
+        toAccountNumber: accountNumber.trim()
       };
 
-      await walletService.createWithdrawal(withdrawalRequest);
+      // Gọi API tạo transfer transaction
+      const result = await walletService.createTransferTransaction(transferRequest);
       
       alert('Yêu cầu rút tiền đã được gửi thành công!');
       
+      // Reset form
       setWithdrawalAmount('');
       setDepositAmount('');
       setShowWithdrawalModal(false);
@@ -283,6 +284,7 @@ export const DoctorWallet: React.FC = () => {
       setAccountName('');
       setBankSearchTerm('');
       
+      // Refresh wallet và transactions
       const walletData = await walletService.getWalletByUserId();
       setWallet(walletData);
       await fetchTransactions();

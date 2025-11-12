@@ -140,7 +140,7 @@ namespace Medix.API.Presentation.Controller.Money
             {
                 ReferenceId = Guid.NewGuid().ToString(),
                 Amount = transferTransaction.Amount,
-                Description = transferTransaction.Description,
+                Description = "Rút tiền về TK",
                 ToBin = transferTransaction.ToBin,
                 ToAccountNumber = transferTransaction.ToAccountNumber,
                 Category = new List<string> { "bank_transfer"}

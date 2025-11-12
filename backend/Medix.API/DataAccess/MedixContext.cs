@@ -1,7 +1,6 @@
 ﻿
 using System.Text.Json;
 using Medix.API.Infrastructure;
-using Medix.API.Infrastructure.Audit;
 using Medix.API.Models.Entities;
 using Medix.API.Models.Enums;
 using Microsoft.EntityFrameworkCore;

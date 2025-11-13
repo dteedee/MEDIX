@@ -1,4 +1,5 @@
-﻿using Medix.API.Models.DTOs.ApointmentDTO;
+﻿using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.ApointmentDTO;
 using Medix.API.Models.Entities;
 
 namespace Medix.API.Business.Interfaces.Classification
@@ -33,5 +34,9 @@ namespace Medix.API.Business.Interfaces.Classification
         /// <param name="healthReminder">Đối tượng nhắc nhở cần tạo.</param>
         /// <returns>Đối tượng PatientHealthReminder đã được tạo.</returns>
         Task<PatientHealthReminder> CreateHealthReminder(PatientHealthReminder healthReminder);
+        Task<List<PatientHealthReminderDto>> getReminderswithPatientID(Guid patientId, string Code);
+
+        Task<PatientHealthReminderDto> updateReminder(PatientHealthReminderDto reminder);
+
     }
 }

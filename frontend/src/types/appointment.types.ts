@@ -13,6 +13,8 @@ export interface CreateAppointmentDto {
   paymentStatusCode?: string;
   paymentMethodCode?: string;
   medicalInfo?: string;
+  chiefComplaint?: string;
+  historyOfPresentIllness?: string;
 }
 
 export interface Appointment {

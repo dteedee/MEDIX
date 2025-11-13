@@ -44,10 +44,10 @@ namespace Medix.API.Presentation.Controller.Classification
                     Money = money,
                     Description = description,
                     IpAddress = ipAddress,
-                    BankCode = BankCode.ANY, // Tùy chọn. Mặc định là tất cả phương thức giao dịch
-                    CreatedDate = DateTime.Now, // Tùy chọn. Mặc định là thời điểm hiện tại
-                    Currency = Currency.VND, // Tùy chọn. Mặc định là VND (Việt Nam đồng)
-                    Language = DisplayLanguage.Vietnamese // Tùy chọn. Mặc định là tiếng Việt
+                    BankCode = BankCode.ANY,
+                    CreatedDate = DateTime.Now, 
+                    Currency = Currency.VND, 
+                    Language = DisplayLanguage.Vietnamese
                 };
 
                 var paymentUrl = _vnpay.GetPaymentUrl(request);

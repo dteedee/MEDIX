@@ -26,6 +26,10 @@ namespace Medix.API.Models.DTOs.ApointmentDTO
         public string? PaymentMethodCode { get; set; }
 
         public string? MedicalInfo { get; set; }
+
+        public string? chiefComplaint { get; set; }
+        public string? historyOfPresentIllness { get; set; }
+
     }
 }
 

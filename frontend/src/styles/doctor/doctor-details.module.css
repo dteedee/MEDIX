@@ -4867,3 +4867,85 @@
 .successModal {
   position: relative;
 }
+
+/* Medical Info Section */
+.medicalInfoSection {
+  margin-top: 32px;
+  padding: 24px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 16px;
+  border: 2px solid #bae6fd;
+}
+
+.medicalInfoTitle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0369a1;
+  margin: 0 0 20px 0;
+}
+
+.medicalInfoTitle i {
+  font-size: 24px;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.formGroup:last-child {
+  margin-bottom: 0;
+}
+
+.formLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.formLabel i {
+  font-size: 16px;
+  color: #0ea5e9;
+}
+
+.required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.formTextarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1e293b;
+  background: white;
+  resize: vertical;
+  transition: all 0.3s ease;
+  line-height: 1.6;
+}
+
+.formTextarea:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
+.formTextarea::placeholder {
+  color: #94a3b8;
+}
+
+.formHint {
+  margin: 6px 0 0 0;
+  font-size: 13px;
+  color: #64748b;
+  font-style: italic;
+}

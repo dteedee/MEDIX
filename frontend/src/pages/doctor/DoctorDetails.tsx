@@ -40,6 +40,8 @@ function DoctorDetails() {
         startTime: string;
         endTime: string;
     }>>([]);
+    const [chiefComplaint, setChiefComplaint] = useState<string>('');
+    const [historyOfPresentIllness, setHistoryOfPresentIllness] = useState<string>('');
     
     // Refs for scrolling
     const calendarSectionRef = useRef<HTMLDivElement>(null);
@@ -172,7 +174,6 @@ function DoctorDetails() {
                         const user = JSON.parse(userData);
                         return user && user.role;
                     } catch (error) {
-                        console.error("Error parsing user data:", error);
                         return false;
                     }
                 }
@@ -200,7 +201,6 @@ function DoctorDetails() {
                     return;
                 }
             } catch (error) {
-                console.error("Error parsing user data:", error);
                 showToast("Có lỗi xảy ra khi xác thực thông tin người dùng.", 'error');
                 return;
             }
@@ -277,21 +277,18 @@ function DoctorDetails() {
                 platformFee: platformFee,
                 discountAmount: discountAmount,
                 totalAmount: totalAmount,
+                chiefComplaint: chiefComplaint.trim(),
+                historyOfPresentIllness: historyOfPresentIllness.trim() ? historyOfPresentIllness.trim() : undefined,
                 // Các field khác sẽ được set ở backend
             };
-           
-            console.log('Creating appointment:', appointmentDto);
             
             // Call API
             const createdAppointment = await appointmentService.createAppointment(appointmentDto);
-            
-            console.log('Appointment created:', createdAppointment);
             
             // Success - show success modal instead of alert
             setShowSuccessModal(true);
             
         } catch (error: any) {
-            console.error('Error creating appointment:', error);
             
             let errorMessage = 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
             
@@ -358,7 +355,6 @@ function DoctorDetails() {
             setAppliedPromotion(promotion);
             setPromotionError('');
         } catch (error) {
-            console.error('Error applying promotion:', error);
             setPromotionError('Có lỗi xảy ra khi kiểm tra mã khuyến mãi');
             setAppliedPromotion(null);
         } finally {
@@ -386,7 +382,6 @@ function DoctorDetails() {
             });
             setAvailablePromotions(activePromotions);
         } catch (error) {
-            console.error('Error fetching promotions:', error);
             setAvailablePromotions([]);
         } finally {
             setIsLoadingPromotions(false);
@@ -428,14 +423,9 @@ function DoctorDetails() {
         try {
             const finalPrice = calculateFinalPrice();
             
-            console.log('Selected Date:', selectedDate);
-            console.log('Selected Date Details - Year:', selectedDate.getFullYear(), 'Month:', selectedDate.getMonth() + 1, 'Date:', selectedDate.getDate());
-            console.log('Selected Time Slot Object:', selectedTimeSlot);
-            
             // LẤY GIỜ TỪ DISPLAY STRING (hiển thị trên UI) thay vì từ doctor schedule
             // Display format: "14:00 - 14:50"
             const displayTime = selectedTimeSlot.display;
-            console.log('🕐 Display Time String:', displayTime);
             
             // Parse display string
             const timeParts = displayTime.split(' - ');
@@ -446,7 +436,6 @@ function DoctorDetails() {
             }
             
             const [startTime, endTime] = timeParts;
-            console.log('🕐 Parsed from Display - Start Time:', startTime, 'End Time:', endTime);
             
             // Create DateTime from selected date and time
             const year = selectedDate.getFullYear();
@@ -457,8 +446,6 @@ function DoctorDetails() {
             const startTimeParts = startTime.trim().split(':');
             const startHour = parseInt(startTimeParts[0], 10);
             const startMinute = parseInt(startTimeParts[1], 10);
-            
-            console.log('📊 Creating Start DateTime - Year:', year, 'Month:', month + 1, 'Day:', day, 'Hour:', startHour, 'Minute:', startMinute);
             
             if (isNaN(startHour) || isNaN(startMinute)) {
                 showToast(`Lỗi parse giờ bắt đầu: "${startTime}"`, 'error');
@@ -473,8 +460,6 @@ function DoctorDetails() {
             const endHour = parseInt(endTimeParts[0], 10);
             const endMinute = parseInt(endTimeParts[1], 10);
             
-            console.log('📊 Creating End DateTime - Year:', year, 'Month:', month + 1, 'Day:', day, 'Hour:', endHour, 'Minute:', endMinute);
-            
             if (isNaN(endHour) || isNaN(endMinute)) {
                 showToast(`Lỗi parse giờ kết thúc: "${endTime}"`, 'error');
                 setIsCreatingPayment(false);
@@ -482,9 +467,6 @@ function DoctorDetails() {
             }
             
             appointmentEnd.setHours(endHour, endMinute, 0, 0);
-            
-            console.log('✅ Appointment Start (local):', appointmentStart.toString());
-            console.log('✅ Appointment End (local):', appointmentEnd.toString());
             
             // Format datetime theo local timezone thay vì UTC
             // Backend cần parse datetime này và hiểu đây là giờ địa phương (GMT+7)
@@ -502,9 +484,6 @@ function DoctorDetails() {
             
             const appointmentStartStr = formatLocalDateTime(appointmentStart);
             const appointmentEndStr = formatLocalDateTime(appointmentEnd);
-            
-            console.log('📤 Appointment Start (Local Format):', appointmentStartStr);
-            console.log('📤 Appointment End (Local Format):', appointmentEndStr);
 
             const itemData = paymentService.createDoctorConsultationItem(
                 profileData.fullName,
@@ -514,8 +493,6 @@ function DoctorDetails() {
                 appointmentEndStr, // Gửi local datetime
                 appliedPromotion?.code // Truyền mã khuyến mãi nếu có
             );
-            
-            console.log('Payment Item Data:', itemData);
 
             const result = await paymentService.createPaymentLink(itemData);
 
@@ -525,7 +502,6 @@ function DoctorDetails() {
                 showToast(result.error || 'Có lỗi xảy ra khi tạo link thanh toán.', 'error');
             }
         } catch (error) {
-            console.error('Error creating payment link:', error);
             showToast('Có lỗi xảy ra khi tạo link thanh toán. Vui lòng thử lại.', 'error');
         }
         
@@ -598,18 +574,6 @@ function DoctorDetails() {
         // - Override: 08:00-08:50 (overrideType: false, reason: "Nghỉ phép")
         // - Result: Show only [14:00-14:50, 16:00-16:50] for this specific day
         
-        // DEBUG: Log all overrides for this date
-        console.log('🔍 DEBUG - Date:', dateString);
-        console.log('🔍 DEBUG - All overrides for date:', overridesForDate);
-        console.log('🔍 DEBUG - Override types check:', overridesForDate.map(o => ({
-            startTime: o.startTime,
-            endTime: o.endTime,
-            overrideType: o.overrideType,
-            overrideTypeType: typeof o.overrideType,
-            isAvailable: o.isAvailable,
-            reason: o.reason
-        })));
-        
         // IMPORTANT: overrideType determines the behavior
         // - overrideType = true: Doctor WORKS (add new slots or replace existing ones)
         //   → Must also check isAvailable = true
@@ -620,12 +584,6 @@ function DoctorDetails() {
             // Only add as working override if overrideType = true AND isAvailable = true
             const overrideTypeValue = override.overrideType === true || (override.overrideType as any) === 'true';
             const result = overrideTypeValue && override.isAvailable;
-            console.log('🔍 Checking if working override:', { 
-                overrideType: override.overrideType, 
-                isAvailable: override.isAvailable,
-                result,
-                time: `${override.startTime} - ${override.endTime}`
-            });
             return result;
         });
         
@@ -637,21 +595,8 @@ function DoctorDetails() {
                                      override.overrideType === null ||
                                      override.overrideType === undefined ||
                                      (override.overrideType as any) === 0;
-            console.log('🔍 Checking if non-working override:', { 
-                overrideType: override.overrideType, 
-                overrideTypeType: typeof override.overrideType,
-                isAvailable: override.isAvailable,
-                overrideTypeValue,
-                time: `${override.startTime} - ${override.endTime}`,
-                reason: override.reason
-            });
             return overrideTypeValue;
         });
-        
-        console.log('✅ Working overrides (overrideType=true):', workingOverrides);
-        console.log('❌ Non-working overrides (overrideType=false):', nonWorkingOverrides);
-        console.log('❌ Non-working overrides COUNT:', nonWorkingOverrides.length);
-        console.log('📊 Total regular schedules for this day:', profileData.schedules.filter(s => s.dayOfWeek === backendDayOfWeek && s.isAvailable).length);
          
         // Get regular schedules for this day of week
         const regularSchedules = profileData.schedules.filter(schedule => 
@@ -1916,6 +1861,51 @@ function DoctorDetails() {
                                                         )}
                                                     </div>
                                                     
+                                                    {/* Chief Complaint and History */}
+                                                    <div className={styles.medicalInfoSection}>
+                                                        <h4 className={styles.medicalInfoTitle}>
+                                                            <i className="bi bi-file-medical-fill"></i>
+                                                            Thông tin y tế
+                                                        </h4>
+                                                        
+                                                        <div className={styles.formGroup}>
+                                                            <label htmlFor="chiefComplaint" className={styles.formLabel}>
+                                                                <i className="bi bi-clipboard-pulse"></i>
+                                                                Lý do khám <span className={styles.required}>*</span>
+                                                            </label>
+                                                            <textarea
+                                                                id="chiefComplaint"
+                                                                className={styles.formTextarea}
+                                                                placeholder="Mô tả triệu chứng hoặc lý do bạn muốn khám bệnh..."
+                                                                value={chiefComplaint}
+                                                                onChange={(e) => setChiefComplaint(e.target.value)}
+                                                                rows={3}
+                                                                required
+                                                            />
+                                                            <p className={styles.formHint}>
+                                                                Ví dụ: Đau đầu, sốt cao, ho khan, đau bụng...
+                                                            </p>
+                                                        </div>
+                                                        
+                                                        <div className={styles.formGroup}>
+                                                            <label htmlFor="historyOfPresentIllness" className={styles.formLabel}>
+                                                                <i className="bi bi-clock-history"></i>
+                                                                Quá trình bệnh lý diễn biến
+                                                            </label>
+                                                            <textarea
+                                                                id="historyOfPresentIllness"
+                                                                className={styles.formTextarea}
+                                                                placeholder="Mô tả quá trình bệnh diễn biến, khi nào bắt đầu, có dấu hiệu gì..."
+                                                                value={historyOfPresentIllness}
+                                                                onChange={(e) => setHistoryOfPresentIllness(e.target.value)}
+                                                                rows={4}
+                                                            />
+                                                            <p className={styles.formHint}>
+                                                                Ví dụ: Bắt đầu đau đầu từ 3 ngày trước, ban đầu nhẹ nhưng ngày càng tăng...
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    
                                                     {/* Final Price Display */}
                                                     {appliedPromotion && profileData.consulationFee && (
                                                         <div className={styles.finalPriceSection}>
@@ -1945,7 +1935,7 @@ function DoctorDetails() {
                                                     <button 
                                                         className={styles.confirmButton} 
                                                         onClick={handleBookingConfirm}
-                                                        disabled={isCreatingPayment}
+                                                        disabled={isCreatingPayment || !chiefComplaint.trim()}
                                                     >
                                                         {isCreatingPayment ? (
                                                             <>

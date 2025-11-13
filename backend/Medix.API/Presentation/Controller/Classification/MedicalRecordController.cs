@@ -56,6 +56,7 @@ namespace Medix.API.Presentation.Controllers.Classification
                     };
 
                     var createdRecord = await _service.CreateAsync(newRecordDto);
+
                     return Ok(createdRecord);
                 }
                 catch (Exception ex)

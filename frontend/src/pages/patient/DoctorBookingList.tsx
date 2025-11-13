@@ -258,7 +258,6 @@ const DoctorBookingList: React.FC = () => {
           setEducationLoading(false);
         }
       } catch (err: any) {
-        console.error('Error loading initial data:', err);
         if (mountedRef.current) {
           setMetadataLoading(false);
           setEducationLoading(false);
@@ -399,7 +398,6 @@ const DoctorBookingList: React.FC = () => {
                     return { doctorId: doctor.doctorId, avatarUrl: profile.avatarUrl };
                   }
                 } catch (error) {
-                  console.log(`Could not fetch avatar for doctor ${doctor.doctorId}:`, error);
                 }
                 return null;
               })
@@ -438,7 +436,6 @@ const DoctorBookingList: React.FC = () => {
                     responseTime
                   };
                 } catch (error) {
-                  console.log(`Could not fetch statistics for doctor ${doctor.doctorId}:`, error);
                   return null;
                 }
               })
@@ -465,7 +462,6 @@ const DoctorBookingList: React.FC = () => {
         }
       } catch (err: any) {
         if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
-          console.error('Error loading tiers data:', err);
           setError(err.message || 'Lỗi khi tải dữ liệu bác sĩ');
           setLoading(false);
           isLoadingRef.current = false;
@@ -538,7 +534,6 @@ const DoctorBookingList: React.FC = () => {
                     return { doctorId: doctor.doctorId, avatarUrl: profile.avatarUrl };
                   }
                 } catch (error) {
-                  console.log(`Could not fetch avatar for doctor ${doctor.doctorId}:`, error);
                 }
                 return null;
               })
@@ -577,7 +572,6 @@ const DoctorBookingList: React.FC = () => {
                     responseTime
                   };
                 } catch (error) {
-                  console.log(`Could not fetch statistics for doctor ${doctor.doctorId}:`, error);
                   return null;
                 }
               })
@@ -604,7 +598,6 @@ const DoctorBookingList: React.FC = () => {
         }
       } catch (err: any) {
         if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
-          console.error('Error loading tiers data:', err);
           setError(err.message || 'Lỗi khi tải dữ liệu bác sĩ');
           setLoading(false);
           isLoadingRef.current = false;

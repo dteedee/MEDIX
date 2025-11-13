@@ -6,9 +6,11 @@ import { WalletDto } from '../../types/wallet.types';
 import { appointmentService } from '../../services/appointmentService';
 import { medicalRecordService } from '../../services/medicalRecordService';
 import doctorService from '../../services/doctorService';
+import patientService from '../../services/patientService';
 import { Appointment } from '../../types/appointment.types';
 import { MedicalRecordDto } from '../../types/medicalRecord.types';
 import { DoctorProfileDto } from '../../types/doctor.types';
+import { PatientHealthReminderDto } from '../../types/patient.types';
 import styles from '../../styles/patient/PatientDashboard.module.css';
 import modalStyles from '../../styles/patient/PatientAppointments.module.css';
 
@@ -18,6 +20,7 @@ export const PatientDashboard: React.FC = () => {
   const [wallet, setWallet] = useState<WalletDto | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [reminders, setReminders] = useState<PatientHealthReminderDto[]>([]);
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecordDto[]>([]);
   const [doctorProfiles, setDoctorProfiles] = useState<Map<string, DoctorProfileDto>>(new Map());
   const [loadingDoctors, setLoadingDoctors] = useState<Set<string>>(new Set());
@@ -29,18 +32,20 @@ export const PatientDashboard: React.FC = () => {
       try {
         setLoading(true);
         
-        const [walletData, appointmentsData, medicalRecordsData] = await Promise.all([
+        const [walletData, appointmentsData, medicalRecordsData, remindersData] = await Promise.all([
           walletService.getWalletByUserId().catch(() => null),
           appointmentService.getPatientAppointments().catch(() => []),
           medicalRecordService.getMedicalRecordsOfPatient({
             dateFrom: null,
             dateTo: null
-          }).catch(() => [])
+          }).catch(() => []),
+          patientService.getReminders('Medication').catch(() => [])
         ]);
         
         setWallet(walletData);
         setAppointments(appointmentsData);
         setMedicalRecords(medicalRecordsData);
+        setReminders(remindersData);
       } catch (err: any) {
         console.error('Error fetching data:', err);
       } finally {
@@ -544,6 +549,90 @@ export const PatientDashboard: React.FC = () => {
 
         {/* Right Column */}
         <div className={styles.rightColumn}>
+          {/* Reminder Widget */}
+          <div className={styles.sectionCard} style={{ background: 'linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%)', border: '2px solid #ff6b6b' }}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionTitle} style={{ color: '#ff6b6b' }}>
+                <i className="bi bi-bell-fill"></i>
+                <h2>Nhắc nhở</h2>
+                {reminders.length > 0 && (
+                  <span className={styles.notificationBadge}>{reminders.length}</span>
+                )}
+              </div>
+            </div>
+            
+            {reminders.length > 0 ? (
+              <>
+                <div className={styles.reminderList}>
+                  {reminders.slice(0, 2).map((reminder, index) => {
+                    const now = new Date();
+                    const scheduledDate = reminder.scheduledDate ? new Date(reminder.scheduledDate) : now;
+                    const hoursUntil = Math.floor((scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+                    
+                    return (
+                      <div 
+                        key={reminder.id || index} 
+                        className={styles.reminderItem}
+                        style={{ animationDelay: `${index * 0.1}s` }}
+                        onClick={() => {
+                          if (reminder.relatedAppointmentId) {
+                            navigate('/app/patient/appointments');
+                          }
+                        }}
+                      >
+                        <div className={styles.reminderContent}>
+                          <div className={styles.reminderHeader}>
+                            <div className={styles.reminderIconSmall}>
+                              <i className="bi bi-calendar-check"></i>
+                            </div>
+                            <div className={styles.reminderInfo}>
+                              <h5>{reminder.title || 'Nhắc nhở khám bệnh'}</h5>
+                              <p className={styles.reminderTime}>
+                                <i className="bi bi-clock"></i>
+                                {reminder.scheduledDate ? formatDate(reminder.scheduledDate) : 'Chưa xác định'}
+                              </p>
+                            </div>
+                          </div>
+                          {reminder.description && (
+                            <p className={styles.reminderDescription}>{reminder.description}</p>
+                          )}
+                          <div className={styles.reminderUrgency}>
+                            <i className={`bi ${hoursUntil <= 24 ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'}`}></i>
+                            <span style={{ color: hoursUntil <= 24 ? '#ff6b6b' : '#f59e0b' }}>
+                              {hoursUntil <= 0 
+                                ? 'Đã đến hạn' 
+                                : hoursUntil <= 24 
+                                ? `Còn ${hoursUntil} giờ` 
+                                : `Còn ${Math.floor(hoursUntil / 24)} ngày`
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {reminders.length > 2 && (
+                  <button 
+                    className={styles.viewAllRemindersBtn}
+                    onClick={() => navigate('/app/patient/appointments')}
+                  >
+                    Xem thêm {reminders.length - 2} nhắc nhở
+                    <i className="bi bi-arrow-right"></i>
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className={styles.emptyState}>
+                <div className={styles.emptyIcon}>
+                  <i className="bi bi-bell-slash"></i>
+                </div>
+                <p>Chưa có nhắc nhở nào</p>
+              </div>
+            )}
+          </div>
+
           {/* Quick Actions */}
           <div className={styles.sectionCard}>
             <div className={styles.sectionHeader}>

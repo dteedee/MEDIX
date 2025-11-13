@@ -13,3 +13,17 @@ export interface BasicEMRInfo{
   allergies: string;
   emrNumber?: string;
 }
+export interface PatientHealthReminderDto {
+  id?: string;
+  patientId?: string;
+  reminderTypeCode?: string;
+  title?: string;
+  description?: string;
+  scheduledDate?: string;
+  isRecurring?: boolean;
+  recurrencePattern?: string;
+  isCompleted?: boolean;
+  completedAt?: string;
+  relatedAppointmentId?: string;
+  createdAt?: string;
+}

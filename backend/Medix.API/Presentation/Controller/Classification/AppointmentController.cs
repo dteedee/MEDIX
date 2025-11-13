@@ -5,6 +5,7 @@ using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.UserManagement;
 using Medix.API.Models.DTOs.ApointmentDTO;
 using Medix.API.Models.DTOs.ApointmentDTO;
+using Medix.API.Models.DTOs.MedicalRecordDTO;
 using Medix.API.Models.DTOs.Wallet;
 using Medix.API.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -123,9 +124,12 @@ namespace Medix.API.Presentation.Controllers
             dto.StatusCode = "OnProgressing";
             dto.TransactionID = transaction.id;
 
+
             // 3️⃣ Tạo lịch hẹn
             var created = await _service.CreateAsync(dto);
-           var noticeSetup = await noticeSetupService.GetNoticeSetupByCodeAsync("AppointmentBookingSuccess");
+          
+
+            var noticeSetup = await noticeSetupService.GetNoticeSetupByCodeAsync("AppointmentBookingSuccess");
             if (noticeSetup != null) {
                 dto.DoctorName = doctor.User.FullName;
 
@@ -134,15 +138,17 @@ namespace Medix.API.Presentation.Controllers
              var x=   await _emailService.SendEmailAsync(user.Email, header, body);
 
             }
-            await _patientHealthReminderService.SendHealthReminderAppointmentAsync(dto);
+            //await _patientHealthReminderService.SendHealthReminderAppointmentAsync(dto);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateAppointmentDto dto)
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateAppointmentDto? dto)
         {
             if (id != dto.Id)
                 return BadRequest("Mismatched appointment ID");
+            dto.AppointmentStartTime = DateTime.Now;
+            dto.AppointmentEndTime = DateTime.Now.AddHours(1);
 
             var updated = await _service.UpdateAsync(dto);
             if (updated == null)

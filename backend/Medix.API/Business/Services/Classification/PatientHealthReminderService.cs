@@ -2,6 +2,7 @@
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models;
+using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.ApointmentDTO;
 using Medix.API.Models.Entities;
 using System.Text.RegularExpressions;
@@ -22,7 +23,7 @@ namespace Medix.API.Business.Services.Classification
         public async Task<PatientHealthReminder> SendHealthReminderAppointmentAsync(CreateAppointmentDto createAppointment)
         {
             var appointmentTime = createAppointment.AppointmentStartTime ?? DateTime.MinValue;
-            var description = $"Bạn có một cuộc hẹn với bác sĩ vào ngày **{appointmentTime:dd/MM/yyyy}** lúc **{appointmentTime:HH:mm}**. Vui lòng đến đúng giờ.";
+            var description = $"Bạn có một cuộc hẹn với bác sĩ vào ngày {appointmentTime:dd/MM/yyyy} lúc {appointmentTime:HH:mm}. Vui lòng đến đúng giờ.";
 
             var healthReminder = new PatientHealthReminder
             {
@@ -37,13 +38,16 @@ namespace Medix.API.Business.Services.Classification
             var scheduledTime = appointmentTime.AddDays(-1);
             if (scheduledTime > DateTime.Now)
             {
-                BackgroundJob.Schedule(
-                    () => ExecuteSendReminderAsync(healthReminder),
-                    scheduledTime);
-            }
+                BackgroundJob.Schedule<IPatientHealthReminderService>(
+                    service=>service.ExecuteSendReminderAsync(healthReminder)
+                    ,DateTime.Now.AddMinutes(1));
 
+                }
             return healthReminder;
         }
+
+          
+        
 
         public async Task ExecuteSendReminderAsync(PatientHealthReminder healthReminder)
         {
@@ -105,9 +109,9 @@ namespace Medix.API.Business.Services.Classification
                 // Chỉ lên lịch nếu thời gian chưa qua
                 if (scheduledTime > DateTime.Now)
                 {
-                    BackgroundJob.Schedule(
-                        () => ExecuteSendReminderAsync(healthReminder),
-                        scheduledTime);
+                    BackgroundJob.Schedule<IPatientHealthReminderService>(
+                        service => service.ExecuteSendReminderAsync(healthReminder)
+                        , scheduledTime);
                 }
             }
 
@@ -154,6 +158,75 @@ namespace Medix.API.Business.Services.Classification
             }
 
             return 0;
+        }
+
+        public async Task<List<PatientHealthReminderDto>> getReminderswithPatientID(Guid patientId, string Code)
+        {
+            var reminders = await patientHealthReminderRepository.getReminderswithPatientID(patientId, Code);
+
+
+            var reminderDtos = reminders.Where(x=>x.ReminderTypeCode== Code).Select(r => new PatientHealthReminderDto
+            {
+                Id = r.Id,
+                PatientId = r.PatientId,
+                ReminderTypeCode = r.ReminderTypeCode,
+                Title = r.Title,
+                Description = r.Description,
+                ScheduledDate = r.ScheduledDate,
+                IsRecurring = r.IsRecurring,
+                RecurrencePattern = r.RecurrencePattern,
+                IsCompleted = r.IsCompleted,
+                CompletedAt = r.CompletedAt,
+                RelatedAppointmentId = r.RelatedAppointmentId,
+                CreatedAt = r.CreatedAt
+            }).ToList();
+            return reminderDtos;
+        }
+
+        public async Task<PatientHealthReminderDto> updateReminder(PatientHealthReminderDto reminderDto)
+        {
+            // Validate input
+            if (reminderDto.Id == null || reminderDto.Id == Guid.Empty)
+            {
+                throw new ArgumentException("Reminder ID là bắt buộc");
+            }
+
+            // Map DTO sang Entity
+            var reminder = new PatientHealthReminder
+            {
+                Id = reminderDto.Id.Value,
+                PatientId = reminderDto.PatientId ?? throw new ArgumentException("PatientId là bắt buộc"),
+                ReminderTypeCode = reminderDto.ReminderTypeCode ?? throw new ArgumentException("ReminderTypeCode là bắt buộc"),
+                Title = reminderDto.Title ?? throw new ArgumentException("Title là bắt buộc"),
+                Description = reminderDto.Description,
+                ScheduledDate = reminderDto.ScheduledDate ?? throw new ArgumentException("ScheduledDate là bắt buộc"),
+                IsRecurring = reminderDto.IsRecurring ?? false,
+                RecurrencePattern = reminderDto.RecurrencePattern,
+                IsCompleted = reminderDto.IsCompleted ?? false,
+                CompletedAt = reminderDto.CompletedAt,
+                RelatedAppointmentId = reminderDto.RelatedAppointmentId,
+                CreatedAt = reminderDto.CreatedAt ?? DateTime.Now
+            };
+
+            // Cập nhật thông qua repository
+            await patientHealthReminderRepository.updateReminder(reminder);
+
+            // Trả về DTO đã cập nhật
+            return new PatientHealthReminderDto
+            {
+                Id = reminder.Id,
+                PatientId = reminder.PatientId,
+                ReminderTypeCode = reminder.ReminderTypeCode,
+                Title = reminder.Title,
+                Description = reminder.Description,
+                ScheduledDate = reminder.ScheduledDate,
+                IsRecurring = reminder.IsRecurring,
+                RecurrencePattern = reminder.RecurrencePattern,
+                IsCompleted = reminder.IsCompleted,
+                CompletedAt = reminder.CompletedAt,
+                RelatedAppointmentId = reminder.RelatedAppointmentId,
+                CreatedAt = reminder.CreatedAt
+            };
         }
     }
 }

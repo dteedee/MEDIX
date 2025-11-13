@@ -2,6 +2,7 @@
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.ApointmentDTO;
+using Medix.API.Models.DTOs.MedicalRecordDTO;
 using Medix.API.Models.Entities;
 
 namespace Medix.API.Business.Services.Classification
@@ -11,10 +12,13 @@ namespace Medix.API.Business.Services.Classification
         private readonly IAppointmentRepository _repository;
         private readonly IMapper _mapper;
 
-        public AppointmentService(IAppointmentRepository repository, IMapper mapper)
+        private readonly IMedicalRecordService medicalRecordService;
+
+        public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService)
         {
             _repository = repository;
             _mapper = mapper;
+            this.medicalRecordService = medicalRecordService;
         }
 
         public async Task<IEnumerable<AppointmentDto>> GetAllAsync()
@@ -38,6 +42,24 @@ namespace Medix.API.Business.Services.Classification
         
 
             await _repository.CreateApppointmentAsync(entity);
+
+            var newRecordDto = new CreateOrUpdateMedicalRecordDto
+            {
+                AppointmentId = entity.Id,
+                ChiefComplaint = dto.chiefComplaint,
+                PhysicalExamination = dto.historyOfPresentIllness,
+                Diagnosis = "", // có thể để rỗng hoặc "Chưa xác định"
+                AssessmentNotes = "",
+                TreatmentPlan = "",
+                FollowUpInstructions = "",
+                DoctorNotes = "",
+                Prescriptions = new List<CreatePrescriptionDto>()
+            };
+        var medical=    await medicalRecordService.CreateAsync(newRecordDto);
+            entity.MedicalInfo = medical.Id.ToString();
+
+            await _repository.UpdateAsync(entity);  
+
             return _mapper.Map<AppointmentDto>(entity);
         }
 

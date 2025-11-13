@@ -103,7 +103,6 @@ const DoctorAppointments: React.FC = () => {
         setAppointments(transformedData);
         setFilteredAppointments(transformedData);
       } catch (err: any) {
-        console.error('Error loading appointments:', err);
         setError(err.response?.data?.message || 'Không thể tải danh sách lịch hẹn');
       } finally {
         setLoading(false);

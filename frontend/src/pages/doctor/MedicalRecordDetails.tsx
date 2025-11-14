@@ -181,21 +181,23 @@ const MedicalRecordDetails: React.FC = () => {
 
   // Xác định xem hồ sơ có được phép chỉnh sửa hay không
   // LOGIC: Chỉ cho phép bác sĩ chỉnh sửa hồ sơ bệnh án trong khoảng thời gian diễn ra cuộc hẹn (50 phút).
-  const isEditable = useMemo(() => {
-    if (!medicalRecord) return false;
+ const isEditable = useMemo(() => {
+  if (!medicalRecord || !medicalRecord.appointmentDate) return false;
 
-    // Sử dụng appointmentDate để xác định khoảng thời gian chỉnh sửa
-    if (medicalRecord.appointmentDate) {
-      const now = new Date();
-      const startTime = new Date(medicalRecord.appointmentDate);
-      // Giả sử một ca khám kéo dài 50 phút
-      const endTime = new Date(startTime.getTime() + 50 * 60000);
-      // Chỉ cho phép chỉnh sửa trong 15 phút cuối của ca khám
-      const editableStartTime = new Date(endTime.getTime() - 20 * 60000);
-      return now >= editableStartTime && now <= endTime;
-    }
-    return false;
-  }, [medicalRecord]);
+  const now = new Date();
+
+  // Thêm "+07:00" để parse đúng timezone VN
+  const startTime = new Date(medicalRecord.appointmentDate.replace(" ", "T") + "+07:00");
+
+  // Ca khám kéo dài 30 phút (có thể thay 50 phút nếu bạn muốn)
+  const endTime = new Date(startTime.getTime() + 30 * 60000);
+
+  // Chỉ cho phép chỉnh sửa trong 20 phút cuối ca khám
+  const editableStartTime = new Date(endTime.getTime() - 20 * 60000);
+
+  return now >= editableStartTime && now <= endTime;
+}, [medicalRecord]);
+
 
   if (isLoading) {
     return <PageLoader />;
@@ -266,7 +268,7 @@ const MedicalRecordDetails: React.FC = () => {
               value={medicalRecord.chiefComplaint}
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
-              disabled={true} // Vô hiệu hóa nếu không được phép chỉnh sửa
+              disabled={!isEditable} // Vô hiệu hóa nếu không được phép chỉnh sửa
               rows={3} ></textarea>
             {fieldErrors.chiefComplaint && <p className="error-message">{fieldErrors.chiefComplaint}</p>}
           </div>
@@ -279,7 +281,7 @@ const MedicalRecordDetails: React.FC = () => {
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
               rows={5}
-              disabled={true} />
+              disabled={!isEditable} />
             {fieldErrors.physicalExamination && <p className="error-message">{fieldErrors.physicalExamination}</p>}
           </div>
         </div>

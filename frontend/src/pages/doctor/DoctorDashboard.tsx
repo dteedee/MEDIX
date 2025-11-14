@@ -906,7 +906,7 @@ const DoctorDashboard: React.FC = () => {
               </div>
 
               <div className={modalStyles.modalFooter}>
-                {selectedAppointment.statusCode === 'Completed' && (
+                {selectedAppointment.statusCode !== 'CancelledByPatient' && selectedAppointment.statusCode !== 'CancelledByDoctor' && selectedAppointment.statusCode !== 'NoShow' && (
                   <button 
                     className={modalStyles.modalEmrBtn}
                     onClick={() => {

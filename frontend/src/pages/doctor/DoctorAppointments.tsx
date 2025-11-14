@@ -522,21 +522,7 @@ const DoctorAppointments: React.FC = () => {
                 </div>
 
                 <div className={styles.cardFooter} onClick={(e) => e.stopPropagation()}>
-                  {appointment.status === 'upcoming' && (
-                    <div className={styles.footerActions}>
-                      <button 
-                        className={styles.viewInfoBtn}
-                        onClick={() => {
-                          setSelectedAppointment(appointment);
-                          setShowDetailModal(true);
-                        }}
-                      >
-                        <i className="bi bi-info-circle"></i>
-                        Thông tin
-                      </button>
-                    </div>
-                  )}
-                  {appointment.status === 'completed' && (
+                  {appointment.status !== 'cancelled' && (
                     <div className={styles.footerActions}>
                       <button 
                         className={styles.emrBtn}
@@ -551,6 +537,7 @@ const DoctorAppointments: React.FC = () => {
                   )}
                 </div>
               </div>
+              
             );
           })}
         </div>
@@ -670,7 +657,7 @@ const DoctorAppointments: React.FC = () => {
               </div>
             
               <div className={styles.modalFooter}>
-                {selectedAppointment.status === 'completed' && (
+                {selectedAppointment.status !== 'cancelled' && (
                   <button 
                     className={styles.modalEmrBtn}
                     onClick={() => {
@@ -679,7 +666,7 @@ const DoctorAppointments: React.FC = () => {
                     }}
                   >
                     <i className="bi bi-file-text"></i>
-                    Xem hồ sơ bệnh án
+                    Xem EMR
                   </button>
                 )}
               </div>

@@ -1355,9 +1355,7 @@
   border: 1px solid rgba(180, 83, 9, 0.2);
 }
 
-/* Recent Reviews */
-.recentReviewsCard {
-}
+
 
 .reviewsList {
   display: flex;
@@ -1428,9 +1426,7 @@
   line-height: 1.6;
 }
 
-/* Today's Schedule */
-.todayScheduleCard {
-}
+
 
 .scheduleList {
   display: flex;

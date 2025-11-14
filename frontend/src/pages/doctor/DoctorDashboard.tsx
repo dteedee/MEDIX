@@ -1,11 +1,13 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from "react"
+import serviceTierService from "../../services/serviceTierService"
 import { useAuth } from "../../contexts/AuthContext"
 import { useNavigate } from "react-router-dom"
 import doctorDashboardService from "../../services/doctorDashboardService"
 import { appointmentService } from "../../services/appointmentService"
 import { Appointment } from "../../types/appointment.types"
+import { TierListPresenter } from "../../types/serviceTier.types"
 import styles from "../../styles/doctor/DoctorDashboard.module.css"
 import modalStyles from "../../styles/patient/PatientAppointments.module.css"
 import { Link } from "react-router-dom"
@@ -96,6 +98,7 @@ const DoctorDashboard: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [dashboardData, setDashboardData] = useState<DoctorDashboardData | null>(null)
+  const [tiersData, setTiersData] = useState<TierListPresenter | null>(null)
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
@@ -317,8 +320,10 @@ const DoctorDashboard: React.FC = () => {
 
       // Fetch new dashboard data and upcoming appointments concurrently
       try {
-        const [dashboardResult, appointmentsResult] = await Promise.allSettled([
+        const [dashboardResult, appointmentsResult, tiersResult] = await Promise.allSettled([
           doctorDashboardService.getDashboard(),
+          appointmentService.getMyAppointmentsByDateRange("2020-01-01", "2030-12-31"),
+          serviceTierService.getDisplayedList(),
           appointmentService.getMyAppointmentsByDateRange("2020-01-01", "2030-12-31"),
         ])
 
@@ -332,12 +337,27 @@ const DoctorDashboard: React.FC = () => {
         setIsDashboardLoading(false)
 
         // Handle Appointments API result
+        if (tiersResult.status === "fulfilled") {
+          setTiersData(tiersResult.value)
+        } else {
+          console.error("Error fetching tiers data:", tiersResult.reason)
+        }
+
+        // Handle Appointments API result
         if (appointmentsResult.status === "fulfilled") {
           const allAppointments = appointmentsResult.value
           setAppointments(allAppointments)
+          setAppointments(appointmentsResult.value)
         } else {
           console.error("Error fetching appointments:", appointmentsResult.reason)
           setAppointmentsError("Không tải được lịch hẹn.")
+        }
+
+        // Handle Tiers API result
+        if (tiersResult.status === "fulfilled") {
+          setTiersData(tiersResult.value)
+        } else {
+          console.error("Error fetching tiers data:", tiersResult.reason)
         }
         setIsAppointmentsLoading(false)
       } catch (err) {
@@ -691,6 +711,90 @@ const DoctorDashboard: React.FC = () => {
 
         {/* Right Column */}
         <div className={styles.rightColumn}>
+          {/* Subscription Widget */}
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionTitle}>
+                <i className="bi bi-gem"></i>
+                <h2>Gói dịch vụ</h2>
+              </div>
+              <button
+                className={styles.viewAllLink}
+                onClick={() => navigate('/app/doctor/packages')}
+              >
+                {dashboardData?.subscription ? 'Quản lý gói' : 'Nâng cấp'}
+                <i className="bi bi-arrow-right"></i>
+              </button>
+            </div>
+            {isDashboardLoading ? (
+              <div className={styles.loadingState}>
+                <div className={styles.loadingSpinner}></div>
+              </div>
+            ) : tiersData?.currentTierId && tiersData.list.find(tier => tier.id === tiersData.currentTierId) ? (
+              (() => {
+                const currentTier = tiersData.list.find(tier => tier.id === tiersData.currentTierId);
+                if (!currentTier) return null; // Should not happen due to the check above
+
+                const currentTierIndex = tiersData.list.findIndex(tier => tier.id === tiersData.currentTierId);
+
+                const getPackageTheme = (idx: number) => {
+                  if (idx < 0) return 'themeBlue'; // Default theme
+                  if (idx === 0) return 'themeBlue'
+                  if (idx === 1) return 'themeGreen'
+                  return 'themeGold'
+                }
+
+                const themeClass = currentTierIndex !== -1 ? getPackageTheme(currentTierIndex) : 'themeBlue'
+
+                return (
+              <div className={`${styles.subscriptionInfo} ${styles[themeClass]}`}>
+                <div className={styles.subscriptionHeader}>
+                  <div className={`${styles.subscriptionIcon} ${styles[`${themeClass}Icon`]}`}>
+                    <i className="bi bi-star-fill"></i>
+                  </div>
+                  <div className={styles.subscriptionDetails}>
+                    <h4 className={`${styles.subscriptionName} ${styles[`${themeClass}Name`]}`}>Gói {currentTier.name}</h4>
+                    <span className={styles.subscriptionStatus}/>
+                      {tiersData.currentSubscriptionActive ? 'Đang hoạt động' : 'Đã hủy'}
+                    <h4 className={`${styles.subscriptionName} ${styles[`${themeClass}Name`]}`}>
+                      Gói {currentTier.name}
+                    </h4>
+                      <span className={styles.subscriptionStatus}>
+                        {tiersData.currentSubscriptionActive ? 'Đang hoạt động' : 'Đã hủy'}
+                      </span>
+                    <span className={styles.subscriptionStatus}>{tiersData.currentSubscriptionActive ? "Đang hoạt động" : "Đã hủy"}</span>
+                  </div>
+                </div>
+                <ul className={styles.featuresList}>
+                  {((): string[] => {
+                    try {
+                      if (!currentTier.features) return [];
+                      const features = JSON.parse(currentTier.features || '[]');
+                      return Array.isArray(features) ? features.slice(0, 3) : []; // Chỉ hiển thị 3 tính năng đầu
+                    } catch {
+                      return [];
+                    }
+                  })().map((feature, index) => (
+                    <li key={index}>
+                      <i className="bi bi-check-circle-fill"></i>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+                )
+              })()
+            ) : (
+              <div className={styles.emptyState}>
+                <div className={styles.emptyIcon}>
+                  <i className="bi bi-box-seam"></i>
+                </div>
+                <h3>Chưa đăng ký gói</h3>
+                <p>Nâng cấp để nhận nhiều quyền lợi hơn.</p>
+              </div>
+            )}
+          </div>
+
           {/* Quick Actions */}
           <div className={styles.sectionCard}>
             <div className={styles.sectionHeader}>

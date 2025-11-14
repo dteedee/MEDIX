@@ -190,7 +190,7 @@ const MedicalRecordDetails: React.FC = () => {
   const startTime = new Date(medicalRecord.appointmentDate.replace(" ", "T") + "+07:00");
 
   // Ca khám kéo dài 30 phút (có thể thay 50 phút nếu bạn muốn)
-  const endTime = new Date(startTime.getTime() + 30 * 60000);
+  const endTime = new Date(startTime.getTime() + 50 * 60000);
 
   // Chỉ cho phép chỉnh sửa trong 20 phút cuối ca khám
   const editableStartTime = new Date(endTime.getTime() - 20 * 60000);

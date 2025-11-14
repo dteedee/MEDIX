@@ -1,6 +1,7 @@
 import styles from '../../styles/public/header.module.css'
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { apiClient } from '../../lib/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { NotificationMetadata } from '../../types/notification.types';
@@ -10,11 +11,14 @@ import { vi, enUS } from 'date-fns/locale';
 
 export const Header: React.FC = () => {
     const [notificationMetadata, setNotificationMetadata] = useState<NotificationMetadata>();
+    const [siteName, setSiteName] = useState('MEDIX');
+    const [siteDescription, setSiteDescription] = useState('Hệ thống y tế thông minh ứng dụng AI');
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const { user, logout } = useAuth();
     const { language, setLanguage, t } = useLanguage();
     const navigate = useNavigate();
     const userDropdownRef = useRef<HTMLDivElement>(null);
+    const [loadingSettings, setLoadingSettings] = useState(true);
 
     useEffect(() => {
         // Only fetch if user is logged in
@@ -31,7 +35,27 @@ export const Header: React.FC = () => {
             }
         }
         fetchMetadata();
-    }, [user?.id]); // Use user.id instead of entire user object to prevent unnecessary re-renders
+    }, [user?.id]);
+
+    // Fetch site settings
+    useEffect(() => {
+        const fetchSiteSettings = async () => {
+            setLoadingSettings(true);
+            try {
+                const [nameRes, descRes] = await Promise.all([
+                    apiClient.get('/SystemConfiguration/SiteName').catch(() => ({ data: { configValue: 'MEDIX' } })),
+                    apiClient.get('/SystemConfiguration/SystemDescription').catch(() => ({ data: { configValue: 'Hệ thống y tế thông minh ứng dụng AI' } }))
+                ]);
+                setSiteName(nameRes.data.configValue);
+                setSiteDescription(descRes.data.configValue);
+            } catch (error) {
+                console.error('❌ Header - Failed to fetch site settings:', error);
+            } finally {
+                setLoadingSettings(false);
+            }
+        };
+        fetchSiteSettings();
+    }, []);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -105,8 +129,8 @@ export const Header: React.FC = () => {
             <div className={styles["top-bar"]}>
                 <div className={styles["logo"]}>
                     <a href='/' className={styles["logo"]}>
-                        MEDIX
-                        <small style={{ textTransform: 'uppercase' }}>Hệ thống y tế thông minh ứng dụng AI</small>
+                        {loadingSettings ? '...' : siteName}
+                        <small style={{ textTransform: 'uppercase' }}>{loadingSettings ? '...' : siteDescription}</small>
                     </a>
                 </div>
                 <div className={styles["search-bar"]}>

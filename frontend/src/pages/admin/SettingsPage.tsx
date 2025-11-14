@@ -1,7 +1,79 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiClient } from '../../lib/apiClient';
+import { useToast } from '../../contexts/ToastContext';
 import styles from '../../styles/admin/SettingsPage.module.css';
 
+interface SystemSettings {
+  siteName: string;
+  systemDescription: string;
+  contactEmail: string;
+  contactPhone: string;
+  contactAddress: string;
+}
+
 export default function SettingsPage() {
+  const { showToast } = useToast();
+  const [settings, setSettings] = useState<Partial<SystemSettings>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+  const fetchSettings = async () => {
+    setLoading(true);
+    try {
+      const [siteNameRes, descriptionRes, emailRes, phoneRes, addressRes] = await Promise.all([
+        apiClient.get('/SystemConfiguration/SiteName'),
+        apiClient.get('/SystemConfiguration/SystemDescription'),
+        apiClient.get('/SystemConfiguration/ContactEmail'),
+        apiClient.get('/SystemConfiguration/ContactPhone'),
+        apiClient.get('/SystemConfiguration/ContactAddress'),
+      ]);
+
+      setSettings({
+        siteName: siteNameRes.data.configValue,
+        systemDescription: descriptionRes.data.configValue,
+        contactEmail: emailRes.data.configValue,
+        contactPhone: phoneRes.data.configValue,
+        contactAddress: addressRes.data.configValue,
+      });
+
+    } catch (error) {
+      console.error("Failed to fetch settings", error);
+      showToast('Không thể tải cài đặt hệ thống.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchSettings();
+}, [showToast]);
+
+
+  const handleInputChange = (key: keyof SystemSettings, value: string) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveChanges = async () => {
+    setSaving(true);
+    showToast('Đang lưu thay đổi...', 'info');
+    try {
+      await Promise.all([
+        apiClient.put('/SystemConfiguration/SiteName', { value: settings.siteName }),
+        apiClient.put('/SystemConfiguration/SystemDescription', { value: settings.systemDescription }),
+        apiClient.put('/SystemConfiguration/ContactEmail', { value: settings.contactEmail }),
+        apiClient.put('/SystemConfiguration/ContactPhone', { value: settings.contactPhone }),
+        apiClient.put('/SystemConfiguration/ContactAddress', { value: settings.contactAddress }),
+      ]);
+      showToast('Lưu thay đổi thành công!', 'success');
+    } catch (error) {
+      console.error("Failed to save settings", error);
+      showToast('Lưu thay đổi thất bại. Vui lòng thử lại.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+
   return (
     <div className={styles.container}>
           {/* Header */}
@@ -11,9 +83,9 @@ export default function SettingsPage() {
               <p className={styles.subtitle}>Quản lý cài đặt và cấu hình hệ thống</p>
             </div>
             <div className={styles.headerRight}>
-              <button className={styles.saveBtn}>
-                <i className="bi bi-check-lg"></i>
-                Lưu thay đổi
+              <button onClick={handleSaveChanges} className={styles.saveBtn} disabled={saving || loading}>
+                <i className={`bi ${saving ? 'bi-arrow-repeat' : 'bi-check-lg'}`}></i>
+                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
               </button>
             </div>
           </div>
@@ -28,24 +100,55 @@ export default function SettingsPage() {
                   Cài đặt chung
                 </h3>
               </div>
-              <div className={styles.cardContent}>
-                <div className={styles.settingItem}>
-                  <label>Tên hệ thống</label>
-                  <input type="text" defaultValue="MEDIX Healthcare System" />
+              {loading ? (
+                <div className={styles.loadingState}>Đang tải cài đặt...</div>
+              ) : (
+                <div className={styles.cardContent}>
+                  <div className={styles.settingItem}>
+                    <label>Tên hệ thống</label>
+                    <input
+                      type="text"
+                      value={settings.siteName || ''}
+                      onChange={(e) => handleInputChange('siteName', e.target.value)}
+                      placeholder="Nhập tên hệ thống"
+                    />
+                  </div>
+                  <div className={styles.settingItem}>
+                    <label>Mô tả hệ thống</label>
+                    <textarea
+                      value={settings.systemDescription || ''}
+                      onChange={(e) => handleInputChange('systemDescription', e.target.value)}
+                      placeholder="Nhập mô tả hệ thống"
+                    ></textarea>
+                  </div>
+                  <div className={styles.settingItem}>
+                    <label>Email liên hệ</label>
+                    <input
+                      type="email"
+                      value={settings.contactEmail || ''}
+                      onChange={(e) => handleInputChange('contactEmail', e.target.value)}
+                      placeholder="Nhập email liên hệ"
+                    />
+                  </div>
+                  <div className={styles.settingItem}>
+                    <label>Số điện thoại</label>
+                    <input
+                      type="tel"
+                      value={settings.contactPhone || ''}
+                      onChange={(e) => handleInputChange('contactPhone', e.target.value)}
+                      placeholder="Nhập số điện thoại liên hệ"
+                    />
+                  </div>
+                  <div className={styles.settingItem}>
+                    <label>Địa chỉ liên hệ</label>
+                    <textarea
+                      value={settings.contactAddress || ''}
+                      onChange={(e) => handleInputChange('contactAddress', e.target.value)}
+                      placeholder="Nhập địa chỉ liên hệ"
+                    ></textarea>
+                  </div>
                 </div>
-                <div className={styles.settingItem}>
-                  <label>Mô tả hệ thống</label>
-                  <textarea defaultValue="Hệ thống quản lý y tế toàn diện"></textarea>
-                </div>
-                <div className={styles.settingItem}>
-                  <label>Email liên hệ</label>
-                  <input type="email" defaultValue="admin@medix.com" />
-                </div>
-                <div className={styles.settingItem}>
-                  <label>Số điện thoại</label>
-                  <input type="tel" defaultValue="+84 123 456 789" />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Security Settings */}

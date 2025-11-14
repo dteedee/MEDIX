@@ -1,26 +1,36 @@
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Models.Entities;
+using Medix.API.Business.Interfaces;
+using Medix.API.Business.Interfaces.Classification;
 
 namespace Medix.API.Business.Services.UserManagement
 {
     public class JwtService : IJwtService
     {
         private readonly IConfiguration _configuration;
+        private readonly ISystemConfigurationService _systemConfig;
 
-        public JwtService(IConfiguration configuration)
+        public JwtService(
+            IConfiguration configuration,
+            ISystemConfigurationService systemConfig)
         {
             _configuration = configuration;
+            _systemConfig = systemConfig;
         }
 
         public string GenerateAccessToken(User user, IList<string> roles)
         {
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+            // 1. Lấy key
+            var key = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)
+            );
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            // 2. Claims
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -28,19 +38,28 @@ namespace Medix.API.Business.Services.UserManagement
                 new Claim(ClaimTypes.Name, user.FullName),
                 new Claim("fullName", user.FullName)
             };
+
             foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
+            // 3. Lấy expiry từ database
+            var expiryMinutes = _systemConfig
+                .GetIntValueAsync("JWT_EXPIRY_MINUTES")
+                .GetAwaiter()
+                .GetResult() ?? 30; 
+
+            // 4. Tạo token
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["Jwt:ExpiryMinutes"])),
+                expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
                 signingCredentials: credentials
             );
 
+            // 5. Xuất chuỗi token
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
@@ -59,10 +78,9 @@ namespace Medix.API.Business.Services.UserManagement
             var tokenHandler = new JwtSecurityTokenHandler();
             var jwt = tokenHandler.ReadJwtToken(token);
             var userIdClaim = jwt.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
+
             if (Guid.TryParse(userIdClaim?.Value, out var userIdAsGuid))
             {
-                // Return a stable hashcode-like int if an int is required, but better to change signature.
-                // Keeping signature to avoid breaking callers.
                 return BitConverter.ToInt32(userIdAsGuid.ToByteArray(), 0);
             }
             return 0;
@@ -70,7 +88,6 @@ namespace Medix.API.Business.Services.UserManagement
 
         public string GeneratePasswordResetToken(string email)
         {
-            // Stateless reset token with HMAC of email + timestamp
             var secret = _configuration["Jwt:Key"]!;
             var issuedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var payload = $"{email}|{issuedAt}";

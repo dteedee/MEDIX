@@ -23,4 +23,10 @@
         public string? UpdatedBy { get; set; }
 
     }
+
+    public class UpdateConfigurationValueRequest
+    {
+        public string Value { get; set; } = null!;
+    }
+
 }

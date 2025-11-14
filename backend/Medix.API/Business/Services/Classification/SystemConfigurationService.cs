@@ -80,6 +80,17 @@ namespace Medix.API.Business.Services.Classification
             var entity = await _repo.GetByKeyAsync(key);
             if (entity == null)
                 throw new KeyNotFoundException($"Configuration '{key}' not found.");
+            if (entity.MinValue.HasValue || entity.MaxValue.HasValue)
+            {
+                if (decimal.TryParse(value.ToString(), out var numericValue))
+                {
+                    if (entity.MinValue.HasValue && numericValue < entity.MinValue)
+                        throw new InvalidOperationException("Value is below allowed minimum.");
+
+                    if (entity.MaxValue.HasValue && numericValue > entity.MaxValue)
+                        throw new InvalidOperationException("Value exceeds allowed maximum.");
+                }
+            }
 
             entity.ConfigValue = value.ToString()!;
             entity.UpdatedBy = updatedBy;
@@ -100,5 +111,28 @@ namespace Medix.API.Business.Services.Classification
             _cache.Remove("SystemConfigs_All");
             _cache.Remove($"SystemConfig_{key}");
         }
+
+        public async Task<int?> GetIntValueAsync(string key)
+        {
+            var config = await GetByKeyAsync(key);
+            if (config == null) return null;
+
+            if (int.TryParse(config.ConfigValue, out int val))
+                return val;
+
+            return null;
+        }
+
+        public async Task<bool?> GetBoolValueAsync(string key)
+        {
+            var config = await GetByKeyAsync(key);
+            if (config == null) return null;
+
+            if (bool.TryParse(config.ConfigValue, out bool val))
+                return val;
+
+            return null;
+        }
+
     }
 }

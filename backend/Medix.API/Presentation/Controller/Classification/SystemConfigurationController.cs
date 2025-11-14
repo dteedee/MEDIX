@@ -36,13 +36,13 @@ namespace Medix.API.Presentation.Controller.Classification
             await _service.AddAsync(request, "admin");
             return Ok("Configuration added successfully.");
         }
-
         [HttpPut("{key}")]
-        public async Task<IActionResult> Update(string key, [FromBody] object value)
+        public async Task<IActionResult> Update(string key, [FromBody] UpdateConfigurationValueRequest req)
         {
-            await _service.UpdateAsync(key, value, "admin");
+            await _service.UpdateAsync(key, req.Value, "admin");
             return Ok("Configuration updated successfully.");
         }
+
 
         [HttpDelete("{key}")]
         public async Task<IActionResult> Delete(string key)

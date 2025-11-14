@@ -1,16 +1,51 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { apiClient } from '../../lib/apiClient';
 import styles from '../../styles/public/about.module.css';
 import homeStyles from '../../styles/public/home.module.css';
+
+interface SystemSettings {
+  siteName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  contactAddress?: string;
+}
 
 const AboutUs: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
+  const [settings, setSettings] = useState<SystemSettings>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      setLoading(true);
+      try {
+        const [nameRes, emailRes, phoneRes, addressRes] = await Promise.all([
+          apiClient.get('/SystemConfiguration/SiteName').catch(() => ({ data: { configValue: 'MEDIX' } })),
+          apiClient.get('/SystemConfiguration/ContactEmail').catch(() => ({ data: { configValue: 'medix.sp@gmail.com' } })),
+          apiClient.get('/SystemConfiguration/ContactPhone').catch(() => ({ data: { configValue: '0969.995.633' } })),
+          apiClient.get('/SystemConfiguration/ContactAddress').catch(() => ({ data: { configValue: 'FPT University' } })),
+        ]);
+        setSettings({
+          siteName: nameRes.data.configValue,
+          contactEmail: emailRes.data.configValue,
+          contactPhone: phoneRes.data.configValue,
+          contactAddress: addressRes.data.configValue,
+        });
+      } catch (error) {
+        console.error("Failed to fetch settings for About Us page:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
   }, []);
 
   return (
@@ -78,14 +113,14 @@ const AboutUs: React.FC = () => {
         <div className={styles["about-content"]}>
           <div className={styles["aboutContentInner"]}>
             <div className={styles["about-header"]}>
-              <h1>GIỚI THIỆU VỀ MEDIX</h1>
+            <h1>GIỚI THIỆU VỀ {loading ? '...' : (settings.siteName || 'MEDIX')}</h1>
             </div>
 
             <div className={styles["about-body"]}>
           <section className={styles["intro-section"]}>
             <h2>Giới thiệu chung</h2>
             <p>
-              MEDIX là hệ thống y tế thông minh ứng dụng AI do đội ngũ chuyên gia công nghệ và y tế 
+              {loading ? '...' : (settings.siteName || 'MEDIX')} là hệ thống y tế thông minh ứng dụng AI do đội ngũ chuyên gia công nghệ và y tế 
               phát triển, với tầm nhìn trở thành một nền tảng y tế số hàng đầu Việt Nam thông qua 
               những đột phá công nghệ AI, nhằm mang lại chất lượng chẩn đoán xuất sắc và dịch vụ 
               chăm sóc sức khỏe cá nhân hóa hoàn hảo.
@@ -95,7 +130,7 @@ const AboutUs: React.FC = () => {
           <section className={styles["vision-section"]}>
             <h2>Tầm nhìn</h2>
             <p>
-              MEDIX hướng đến mô hình y học thông minh, phục vụ người dân Việt Nam và khu vực Đông Nam Á, 
+              {loading ? '...' : (settings.siteName || 'MEDIX')} hướng đến mô hình y học thông minh, phục vụ người dân Việt Nam và khu vực Đông Nam Á, 
               thông qua nghiên cứu và phát triển công nghệ AI tiên tiến, nhằm mang lại chất lượng chẩn đoán 
               xuất sắc và giải pháp chăm sóc sức khỏe dựa trên dữ liệu và trí tuệ nhân tạo.
             </p>
@@ -283,7 +318,7 @@ const AboutUs: React.FC = () => {
                 <div className={styles["contact-icon"]}>📧</div>
                 <div>
                   <h4>Email</h4>
-                  <p>medix.sp@gmail.com</p>
+                  <p>{loading ? '...' : (settings.contactEmail || 'medix.sp@gmail.com')}</p>
                 </div>
               </div>
 
@@ -291,7 +326,7 @@ const AboutUs: React.FC = () => {
                 <div className={styles["contact-icon"]}>📞</div>
                 <div>
                   <h4>Hotline</h4>
-                  <p>0969.995.633</p>
+                  <p>{loading ? '...' : (settings.contactPhone || '0969.995.633')}</p>
                 </div>
               </div>
 
@@ -299,7 +334,7 @@ const AboutUs: React.FC = () => {
                 <div className={styles["contact-icon"]}>🌐</div>
                 <div>
                   <h4>Website</h4>
-                  <p>www.medix.com</p>
+                  <p>{loading ? '...' : (settings.siteName ? `www.${settings.siteName.toLowerCase()}.com` : 'www.medix.com')}</p>
                 </div>
               </div>
 
@@ -307,7 +342,7 @@ const AboutUs: React.FC = () => {
                 <div className={styles["contact-icon"]}>📍</div>
                 <div>
                   <h4>Địa chỉ</h4>
-                  <p>FPT University</p>
+                  <p>{loading ? '...' : (settings.contactAddress || 'FPT University')}</p>
                 </div>
               </div>
             </div>

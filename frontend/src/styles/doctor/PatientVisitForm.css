@@ -191,6 +191,32 @@
   background: #1d4ed8;
 }
 
+/* Styles for button container */
+.button-group {
+  display: flex;
+  gap: 1rem; /* Space between buttons */
+  justify-content: flex-end; /* Align buttons to the right */
+  align-items: center;
+}
+
+/* Secondary button style */
+.btn-secondary {
+  padding: 12px 24px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db; /* Gray border */
+  background-color: #ffffff; /* White background */
+  color: #374151; /* Dark gray text */
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #f9fafb; /* Slightly grayer on hover */
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
 @media (max-width: 768px) {
   .patient-visit-form {
     padding: 16px;

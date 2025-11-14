@@ -67,6 +67,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IPatientHealthReminderRepository, PatientHealthReminderRepository>();
 
             services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+            services.AddScoped<ISystemConfigurationRepository, SystemConfigurationRepository>();
 
 
 
@@ -115,6 +116,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IPatientHealthReminderService, PatientHealthReminderService>();
 
             services.AddScoped<IAuditLogService, AuditLogService>();
+            services.AddScoped<ISystemConfigurationService, SystemConfigurationService>();
 
         }
 

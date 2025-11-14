@@ -55,6 +55,7 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache();
 
 // ================= CONTROLLERS & JSON OPTIONS =================
 builder.Services.AddControllers()

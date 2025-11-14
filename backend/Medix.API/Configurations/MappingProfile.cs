@@ -172,6 +172,12 @@ namespace Medix.API.Configurations
             CreateMap<DoctorProfileUpdatePresenter, DoctorProfileUpdateRequest>();
 
             CreateMap<Promotion, PromotionDto>().ReverseMap();
+
+
+            CreateMap<SystemConfiguration, SystemConfigurationResponse>();
+            CreateMap<SystemConfigurationRequest, SystemConfiguration>();
+
+
         }
     }
 }

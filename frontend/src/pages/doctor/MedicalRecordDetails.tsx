@@ -139,46 +139,60 @@ const MedicalRecordDetails: React.FC = () => {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      
-      const payload = {
-        ...medicalRecord,
-        updatePatientMedicalHistory: true, // Luôn cập nhật tiền sử bệnh khi có chẩn đoán
-        newAllergy: newAllergy.trim(), // Gửi dị ứng mới nếu có
-      };
+    // Thêm bước xác nhận trước khi kết thúc ca khám
+    Swal.fire({
+      title: 'Xác nhận kết thúc ca khám',
+      text: "Bạn có chắc chắn muốn hoàn tất và lưu hồ sơ không? Hành động này sẽ kết thúc ca khám.",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Đồng ý',
+      cancelButtonText: 'Hủy bỏ'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        setIsSubmitting(true);
+        try {
+          const payload = {
+            ...medicalRecord,
+            updatePatientMedicalHistory: true, // Luôn cập nhật tiền sử bệnh khi có chẩn đoán
+            newAllergy: newAllergy.trim(), // Gửi dị ứng mới nếu có
+          };
 
-      await medicalRecordService.updateMedicalRecord(medicalRecord.id, payload);
+          await medicalRecordService.updateMedicalRecord(medicalRecord.id, payload);
 
-      Swal.fire({
-        title: 'Thành công!',
-        text: 'Hồ sơ bệnh án đã được cập nhật.',
-        icon: 'success',
-        confirmButtonText: 'OK'
-      }).then(() => {
-        navigate(-1); // Quay lại trang trước
-      });
-    } catch (err) {
-      console.error("Failed to update medical record:", err);
-      Swal.fire('Thất bại!', 'Không thể cập nhật hồ sơ. Vui lòng thử lại.', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
+          Swal.fire({
+            title: 'Thành công!',
+            text: 'Hồ sơ bệnh án đã được cập nhật.',
+            icon: 'success',
+            confirmButtonText: 'OK'
+          }).then(() => {
+            navigate(-1); // Quay lại trang trước
+          });
+        } catch (err) {
+          console.error("Failed to update medical record:", err);
+          Swal.fire('Thất bại!', 'Không thể cập nhật hồ sơ. Vui lòng thử lại.', 'error');
+        } finally {
+          setIsSubmitting(false);
+        }
+      }
+    });
   };
 
   // Xác định xem hồ sơ có được phép chỉnh sửa hay không
   // LOGIC: Chỉ cho phép bác sĩ chỉnh sửa hồ sơ bệnh án trong khoảng thời gian diễn ra cuộc hẹn (50 phút).
   const isEditable = useMemo(() => {
     if (!medicalRecord) return false;
-    
+
     // Sử dụng appointmentDate để xác định khoảng thời gian chỉnh sửa
     if (medicalRecord.appointmentDate) {
       const now = new Date();
       const startTime = new Date(medicalRecord.appointmentDate);
       // Giả sử một ca khám kéo dài 50 phút
       const endTime = new Date(startTime.getTime() + 50 * 60000);
-      // Cho phép chỉnh sửa nếu thời gian hiện tại nằm trong khoảng thời gian của cuộc hẹn
-      return now >= startTime && now <= endTime;
+      // Chỉ cho phép chỉnh sửa trong 15 phút cuối của ca khám
+      const editableStartTime = new Date(endTime.getTime() - 20 * 60000);
+      return now >= editableStartTime && now <= endTime;
     }
     return false;
   }, [medicalRecord]);
@@ -252,7 +266,7 @@ const MedicalRecordDetails: React.FC = () => {
               value={medicalRecord.chiefComplaint}
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
-              disabled={!isEditable} // Vô hiệu hóa nếu không được phép chỉnh sửa
+              disabled={true} // Vô hiệu hóa nếu không được phép chỉnh sửa
               rows={3} ></textarea>
             {fieldErrors.chiefComplaint && <p className="error-message">{fieldErrors.chiefComplaint}</p>}
           </div>
@@ -265,7 +279,7 @@ const MedicalRecordDetails: React.FC = () => {
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
               rows={5}
-              disabled={!isEditable} />
+              disabled={true} />
             {fieldErrors.physicalExamination && <p className="error-message">{fieldErrors.physicalExamination}</p>}
           </div>
         </div>
@@ -385,9 +399,14 @@ const MedicalRecordDetails: React.FC = () => {
           <p>{user?.fullName}</p>
         </div>
         {isEditable ? (
-          <button type="submit" className="btn-submit" disabled={isSubmitting} >
-            {isSubmitting ? 'Đang lưu...' : 'Hoàn tất & Lưu hồ sơ'}
-          </button>
+          <div className="button-group">
+            <button type="submit" className="btn-submit" disabled={isSubmitting} >
+              {isSubmitting ? 'Đang lưu...' : 'Hoàn tất & Lưu hồ sơ'}
+            </button>
+            <button type="button" className="btn-secondary">
+              Xác nhận kết thúc ca khám
+            </button>
+          </div>
         ) : (
           <button type="button" className="btn-submit" onClick={() => navigate(-1)}>
             Quay lại

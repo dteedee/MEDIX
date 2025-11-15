@@ -143,6 +143,7 @@
   .statCard1 .statIcon { background: linear-gradient(135deg, #667eea, #764ba2); }
   .statCard2 .statIcon { background: linear-gradient(135deg, #f093fb, #f5576c); }
   .statCard3 .statIcon { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+  .statCardLocked .statIcon { background: linear-gradient(135deg, #fd6585, #ff8d8d); }
   .statCard4 .statIcon { background: linear-gradient(135deg, #fa709a, #fee140); }
   
   .statIcon {

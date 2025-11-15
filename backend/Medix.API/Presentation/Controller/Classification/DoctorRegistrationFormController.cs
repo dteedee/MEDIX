@@ -195,7 +195,8 @@ namespace Medix.API.Presentation.Controller.Classification
                     d.FullName,
                     Email = d.EmailNormalized.ToLower(),
                     Specialization = d.Specialization.Name,
-                    CreatedAt = d.CreatedAt.ToString("dd/MM/yyyy"),
+                    d.AvatarUrl,
+                    d.CreatedAt
                 }).ToList();
 
                 return Ok(new { totalPages = list.TotalPages, doctors });
@@ -226,7 +227,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     registerForm.AvatarUrl,
                     registerForm.FullName,
                     UserName = registerForm.UserNameNormalized.ToLower(),
-                    Dob = registerForm.DateOfBirth.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
+                    Dob = registerForm.DateOfBirth.ToDateTime(TimeOnly.MinValue),
                     Gender = registerForm.GenderCode,
                     registerForm.IdentificationNumber,
                     registerForm.IdentityCardImageUrl,
@@ -239,7 +240,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     registerForm.Bio,
                     registerForm.Education,
                     registerForm.YearsOfExperience,
-                    CreatedAt = registerForm.CreatedAt.ToString("dd/MM/yyyy"),
+                    registerForm.CreatedAt,
                 };
 
                 return Ok(doctor);

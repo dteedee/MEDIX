@@ -23,10 +23,10 @@ namespace Medix.API.Business.Services.Classification
         private readonly IServiceTierRepository _serviceTierRepository;
 
         public DoctorRegistrationFormService(
-            IDoctorRegistrationFormRepository doctorRegistrationFormRepository, 
-            CloudinaryService cloudinaryService, MedixContext context, 
-            IEmailService emailService, IUserRepository userRepository, 
-            IDoctorRepository doctorRepository, 
+            IDoctorRegistrationFormRepository doctorRegistrationFormRepository,
+            CloudinaryService cloudinaryService, MedixContext context,
+            IEmailService emailService, IUserRepository userRepository,
+            IDoctorRepository doctorRepository,
             IWalletRepository walletRepository,
             IServiceTierRepository serviceTierRepository)
         {
@@ -60,15 +60,15 @@ namespace Medix.API.Business.Services.Classification
             var avatarUrl = await _cloudinaryService.UploadImageAsync(request.Avatar);
             var licenseImageUrl = await _cloudinaryService.UploadImageAsync(request.LicenseImage);
             var degreeFilesUrl = await _cloudinaryService.UploadArchiveAsync(request.DegreeFiles);
-            var identityCardUrl = await _cloudinaryService.UploadImageAsync(request.IdentityCardImage);
+            var identityCardUrl = await _cloudinaryService.UploadMultipleFilesAsync(request.IdentityCardImages);
 
             var form = new DoctorRegistrationForm
             {
                 AvatarUrl = avatarUrl,
                 FullName = request.FullName,
                 UserNameNormalized = request.UserName.ToUpper(),
-                DateOfBirth = DateOnly.Parse(request.Dob),
-                GenderCode = request.GenderCode,
+                DateOfBirth = request.Dob == null ? DateOnly.FromDateTime(DateTime.UtcNow) : DateOnly.Parse(request.Dob),
+                GenderCode = request.GenderCode == null ? "Male" : request.GenderCode,
                 IdentificationNumber = request.IdentificationNumber,
                 IdentityCardImageUrl = identityCardUrl,
                 EmailNormalized = request.Email.ToUpper(),
@@ -79,7 +79,7 @@ namespace Medix.API.Business.Services.Classification
                 DegreeFilesUrl = degreeFilesUrl,
                 Bio = request.Bio,
                 Education = request.Education,
-                YearsOfExperience = (int)request.YearsOfExperience,
+                YearsOfExperience = request.YearsOfExperience == null ? 1 : (int)request.YearsOfExperience,
             };
 
             await _doctorRegistrationFormRepository.AddAsync(form);
@@ -161,7 +161,7 @@ namespace Medix.API.Business.Services.Classification
                         Bio = form.Bio,
                         Education = request.Education,
                         YearsOfExperience = form.YearsOfExperience,
-                        ConsultationFee = 0,
+                        ConsultationFee = request.ConsultationFee,
                         AverageRating = 0,
                         TotalReviews = 0,
                         IsVerified = true,

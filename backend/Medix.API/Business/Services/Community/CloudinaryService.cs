@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using System.Net;
+using System.IO.Compression;
 
 namespace Medix.API.Business.Services.Community
 {
@@ -73,7 +74,7 @@ namespace Medix.API.Business.Services.Community
 
                 var uploadResult = await _cloudinary.UploadAsync(uploadParams);
 
-                if (uploadResult.StatusCode == System.Net.HttpStatusCode.OK)
+                if (uploadResult.StatusCode == HttpStatusCode.OK)
                 {
                     return uploadResult.SecureUrl.ToString();
                 }
@@ -189,41 +190,36 @@ namespace Medix.API.Business.Services.Community
             return await UploadArchiveAsync(file, null);
         }
 
-        //public async Task<string> UploadImageAsyncFile(Stream imageStream, string fileName)
-        //{
-        //    return await UploadImageAsync(imageStream, fileName);
-        //}
+        public async Task<string> UploadMultipleFilesAsync(List<IFormFile?>? files, string? fileName = null)
+        {
+            if (files == null || files.Count == 0)
+                throw new ArgumentException("No files provided");
 
-        //public async Task<bool> DeleteImageAsync(string publicId)
-        //{
-        //    try
-        //    {
-        //        if (_cloudinary == null)
-        //        {
-        //            _logger.LogWarning("Cloudinary chưa cấu hình. Giả lập xoá ảnh thành công.");
-        //            await Task.Delay(100);
-        //            return true;
-        //        }
+            var validFiles = files.Where(f => f != null).ToList();
+            if (validFiles.Count == 0)
+                throw new ArgumentException("All files were null");
 
-        //        var deletionParams = new DeletionParams(publicId)
-        //        {
-        //            Invalidate = true
-        //        };
+            using var memoryStream = new MemoryStream();
+            using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+            {
+                foreach (var file in validFiles)
+                {
+                    var entry = archive.CreateEntry(file!.FileName, CompressionLevel.Fastest);
+                    using var entryStream = entry.Open();
+                    using var fileStream = file.OpenReadStream();
+                    await fileStream.CopyToAsync(entryStream);
+                }
+            }
 
-        //        var result = await _cloudinary.DestroyAsync(deletionParams);
-        //        return result.Result == "ok";
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Exception when deleting image from Cloudinary");
-        //        return false;
-        //    }
-        //}
+            memoryStream.Position = 0;
 
-        //public async Task<string> GenerateImageUrlAsync(string publicId, int width = 0, int height = 0)
-        //{
-        //    await Task.Delay(50);
-        //    return $"https://res.cloudinary.com/demo/image/upload/w_{width},h_{height}/{publicId}.jpg";
-        //}
+            // Wrap into IFormFile-like object
+            var zipFile = new FormFile(memoryStream, 0, memoryStream.Length, "archive", fileName ?? "archive.zip");
+
+            return await UploadArchiveAsync(zipFile, "IdentityCardImages");
+        }
+
+        public async Task<string> UploadMultipleFilesAsync(List<IFormFile?>? files)
+            => await UploadMultipleFilesAsync(files, null);
     }
 }

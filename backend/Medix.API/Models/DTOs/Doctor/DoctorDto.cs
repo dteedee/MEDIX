@@ -14,5 +14,6 @@
         public int ReviewCount { get; set; }
         public int StatusCode { get; set; }
         public string CreatedAt { get; set; } = string.Empty;
+        public string? ServiceTier { get; set; }
     }
 }

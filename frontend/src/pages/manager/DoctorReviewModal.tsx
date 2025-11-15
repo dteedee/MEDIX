@@ -181,13 +181,14 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
                         </div>
                         <div className={styles.infoItem}>
                           <label>Ảnh CCCD</label>
-                          <button
-                            className={styles.btnImage}
-                            onClick={() => handleShowImage(doctor.identityCardImageUrl)}
+                          <a
+                            className={styles.btnDownload}
+                            href={doctor.identityCardImageUrl}
+                            download
                           >
-                            <i className="bi bi-image"></i>
-                            Xem ảnh
-                          </button>
+                            <i className="bi bi-download"></i>
+                            Tải về
+                          </a>
                         </div>
                       </div>
                     </div>

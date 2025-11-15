@@ -20,7 +20,7 @@ function DoctorRegister() {
         licenseImage?: boolean,
         avatar?: boolean,
         degreeFiles?: boolean,
-        identityCardImage?: boolean,
+        identityCardImages?: boolean,
     }>({});
 
     const navigate = useNavigate();
@@ -223,9 +223,6 @@ function DoctorRegister() {
             case 'degreeFiles':
                 validateFile('DegreeFiles', file, 'archive');
                 break;
-            case 'identityCardImage':
-                validateFile('IdentityCardImage', file, 'image');
-                break;
         }
     };
 
@@ -282,6 +279,68 @@ function DoctorRegister() {
                 break;
         }
     }
+
+    const handleIdentityCardImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        const name = "IdentityCardImages";
+
+        setFormData((prev: any) => ({ ...prev, 'identityCardImages': files }));
+
+        validateIdentityCardImages(files, name);
+    }
+
+    const validateIdentityCardImages = (
+        files: FileList | null,
+        name: string,
+    ) => {
+        // ✅ Must have exactly 2 files
+        if (!files || files.length !== 2) {
+            setErrors((prev: any) => ({
+                ...prev,
+                [name]: ["Bạn phải chọn đúng 2 ảnh (mặt trước và mặt sau)."],
+            }));
+            return;
+        }
+
+        const validImageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+        const maxSizeInMB = 1;
+        const maxSize = maxSizeInMB * 1024 * 1024;
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fileExtension = file.name
+                .slice(file.name.lastIndexOf("."))
+                .toLowerCase();
+
+            // ✅ Check extension
+            if (!validImageExtensions.includes(fileExtension)) {
+                setErrors((prev: any) => ({
+                    ...prev,
+                    [name]: [`File ${file.name} không phải là ảnh hợp lệ.`],
+                }));
+                return;
+            }
+
+            // ✅ Check size
+            if (file.size > maxSize) {
+                setErrors((prev: any) => ({
+                    ...prev,
+                    [name]: [
+                        `File ${file.name} vượt quá dung lượng cho phép (≤ ${maxSizeInMB}MB).`,
+                    ],
+                }));
+                return;
+            }
+        }
+
+        // ✅ Passed validation
+        setErrors((prev: any) => ({
+            ...prev,
+            [name]: [""],
+        }));
+        return;
+    };
+
 
     const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -465,24 +524,24 @@ function DoctorRegister() {
                                     )}
                                 </div>
                                 <div className={styles["form-group"]}>
-                                    <label htmlFor="identityCardImage" className={styles["form-label"]}>
-                                        Ảnh chứng chỉ <span className={styles["required"]}>*</span>
+                                    <label htmlFor="identityCardImages" className={styles["form-label"]}>
+                                        Ảnh CCCD <span className={styles["required"]}>*</span>
                                     </label>
 
                                     <div className="d-flex align-items-center gap-2">
                                         <input
                                             type="file"
-                                            id="identityCardImage"
-                                            name="identityCardImage"
+                                            id="identityCardImages"
+                                            name="identityCardImages"
                                             accept=".jpg,.png,.gif,.webp,.jpeg"
-                                            onChange={handleFileChange}
-                                            className={`d-none`} />
-
+                                            onChange={handleIdentityCardImagesChange}
+                                            className={`d-none`}
+                                            multiple />
                                         <label
-                                            htmlFor="identityCardImage"
-                                            className={`btn btn-outline-primary ${errors.IdentityCardImage?.[0]
+                                            htmlFor="identityCardImages"
+                                            className={`btn btn-outline-primary ${errors.IdentityCardImages?.[0]
                                                 ? 'is-invalid'
-                                                : touched.identityCardImage && formData.identityCardImage
+                                                : touched.identityCardImages && formData.identityCardImages
                                                     ? 'is-valid'
                                                     : ''
                                                 }`}>
@@ -490,13 +549,15 @@ function DoctorRegister() {
                                         </label>
 
                                         <span className="ms-2">
-                                            {formData.identityCardImage?.name || 'Chưa có file nào được chọn'}
+                                            {formData.identityCardImages && formData.identityCardImages.length > 0
+                                                ? Array.from(formData.identityCardImages as File[]).map((file) => file.name).join(", ")
+                                                : "Chưa có file nào được chọn"}
                                         </span>
                                     </div>
 
-                                    {errors.IdentityCardImage?.[0] && (
+                                    {errors.IdentityCardImages?.[0] && (
                                         <div className="text-danger">
-                                            {errors.IdentityCardImage[0]}
+                                            {errors.IdentityCardImages[0]}
                                         </div>
                                     )}
                                 </div>

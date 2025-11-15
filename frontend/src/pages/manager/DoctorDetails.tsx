@@ -242,13 +242,14 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
                                 <i className="bi bi-image"></i>
                                 Ảnh CMND/CCCD
                               </label>
-                              <button
-                                className={styles.btnImage}
-                                onClick={() => handleShowImage(doctor.identityCardImageUrl)}
+                              <a
+                                className={styles.btnDownload}
+                                href={doctor.identityCardImageUrl}
+                                download
                               >
-                                <i className="bi bi-eye"></i>
-                                Xem ảnh
-                              </button>
+                                <i className="bi bi-download"></i>
+                                Tải về
+                              </a>
                             </div>
                           )}
                         </>

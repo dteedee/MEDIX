@@ -1,5 +1,4 @@
-﻿using Medix.API.Business.Validators;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Medix.API.Models.DTOs.Doctor
 {
@@ -7,7 +6,7 @@ namespace Medix.API.Models.DTOs.Doctor
     {
         public string? CurrentPassword { get; set; }
 
-        [PasswordComplexity]
+        [Required(ErrorMessage = "New password is required")]
         public string? NewPassword { get; set; }
 
         public string? ConfirmPassword { get; set; }

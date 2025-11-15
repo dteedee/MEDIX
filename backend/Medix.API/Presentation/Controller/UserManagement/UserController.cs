@@ -19,6 +19,7 @@ using Medix.API.Business.Services.UserManagement;
 using Medix.API.Models.DTOs.Doctor;
 using System.ComponentModel.DataAnnotations;
 using AutoMapper;
+using Medix.API.Business.Interfaces.Classification;
 
 namespace Medix.API.Presentation.Controller.UserManagement
 {
@@ -32,9 +33,10 @@ namespace Medix.API.Presentation.Controller.UserManagement
         private readonly ILogger<UserController> _logger;
         private readonly IPatientService _patientService;
         private readonly IMapper _mapper;
+        private readonly ISystemConfigurationService _configService;
 
         public UserController(ILogger<UserController> logger, IUserService userService, MedixContext context, IEmailService emailService, IPatientService patientService
-            ,IMapper mapper)
+            ,IMapper mapper, ISystemConfigurationService configService)
         {
             _logger = logger;
             _userService = userService;
@@ -42,6 +44,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
             _emailService = emailService;
             _patientService = patientService;
             _mapper = mapper;
+            _configService = configService;
         }
 
         // ========================= USER SELF MANAGEMENT =========================
@@ -376,6 +379,17 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 ValidateNewPassword(validationResults, req, user.PasswordHash);
                 if (validationResults.Any())
                 {
+                    return BadRequest(validationResults);
+                }
+
+                // Validate new password against system configuration policy
+                try
+                {
+                    await _configService.ValidatePasswordAsync(req.NewPassword);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    validationResults.Add(new ValidationResult(ex.Message, new string[] { "NewPassword" }));
                     return BadRequest(validationResults);
                 }
 

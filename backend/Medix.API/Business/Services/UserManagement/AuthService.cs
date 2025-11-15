@@ -155,13 +155,16 @@ namespace Medix.API.Business.Services.UserManagement
         // =====================
         public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto registerRequest)
         {
+            // Validate password theo cấu hình
+            await _configService.ValidatePasswordAsync(registerRequest.Password);
+
             var existingUser = await _userRepository.GetByEmailAsync(registerRequest.Email);
             if (existingUser != null)
             {
                 throw new ValidationException(new Dictionary<string, string[]>
-                {
-                    { "Email", new[] { "Email đã được sử dụng" } }
-                });
+        {
+            { "Email", new[] { "Email đã được sử dụng" } }
+        });
             }
 
             var user = new User
@@ -179,22 +182,20 @@ namespace Medix.API.Business.Services.UserManagement
 
             await _userRepository.CreateAsync(user);
 
-            // Mặc định gán vai trò Patient
             await _userRoleRepository.AssignRole("Patient", user.Id);
 
             var accessToken = _jwtService.GenerateAccessToken(user, new List<string> { "Patient" });
             var refreshToken = _jwtService.GenerateRefreshToken();
 
-            // Lưu refresh token
-            var refreshEntity = new RefreshToken
+            _context.RefreshTokens.Add(new RefreshToken
             {
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 Token = refreshToken,
                 CreatedAt = DateTime.UtcNow,
                 ExpiresAt = DateTime.UtcNow.AddDays(7)
-            };
-            _context.RefreshTokens.Add(refreshEntity);
+            });
+
             await _context.SaveChangesAsync();
 
             return new AuthResponseDto
@@ -208,10 +209,8 @@ namespace Medix.API.Business.Services.UserManagement
                     Email = user.Email,
                     FullName = user.FullName,
                     Role = "Patient",
-                    EmailConfirmed = user.EmailConfirmed,
                     CreatedAt = user.CreatedAt,
-                    UserName = user.UserName,
-                    IsTemporaryUsername = user.UserName.StartsWith("temp_")
+                    UserName = user.UserName
                 }
             };
         }
@@ -455,6 +454,8 @@ namespace Medix.API.Business.Services.UserManagement
             }
 
             // Update password
+            await _configService.ValidatePasswordAsync(request.Password);
+
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
             user.UpdatedAt = DateTime.UtcNow;
             await _userRepository.UpdateAsync(user);
@@ -479,17 +480,22 @@ namespace Medix.API.Business.Services.UserManagement
 
             if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
             {
-                throw new ValidationException(new Dictionary<string, string[]>
-                {
-                    { "CurrentPassword", new[] { "Mật khẩu hiện tại không đúng" } }
-                });
+                throw new ValidationException(
+                    new Dictionary<string, string[]>
+                    {
+                { "CurrentPassword", new[] { "Mật khẩu hiện tại không đúng" } }
+                    });
             }
+
+            await _configService.ValidatePasswordAsync(request.NewPassword);
 
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
             user.UpdatedAt = DateTime.UtcNow;
+
             await _userRepository.UpdateAsync(user);
             return true;
         }
+
 
         // =====================
         // 🔹 LOGOUT
@@ -501,5 +507,7 @@ namespace Medix.API.Business.Services.UserManagement
             await _context.SaveChangesAsync();
             return true;
         }
+
+        
     }
 }

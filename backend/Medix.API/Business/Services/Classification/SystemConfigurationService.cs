@@ -133,6 +133,41 @@ namespace Medix.API.Business.Services.Classification
 
             return null;
         }
+        public async Task<PasswordPolicyDto> GetPasswordPolicyAsync()
+        {
+            return new PasswordPolicyDto
+            {
+                MinLength = await GetIntValueAsync("PASSWORD_MIN_LENGTH") ?? 8,
+                MaxLength = await GetIntValueAsync("PASSWORD_MAX_LENGTH"),
+                RequireUppercase = await GetBoolValueAsync("REQUIRE_UPPERCASE") ?? false,
+                RequireLowercase = await GetBoolValueAsync("REQUIRE_LOWERCASE") ?? false,
+                RequireDigit = await GetBoolValueAsync("REQUIRE_DIGIT") ?? false,
+                RequireSpecial = await GetBoolValueAsync("REQUIRE_SPECIAL") ?? false,
+            };
+        }
+        public async Task ValidatePasswordAsync(string password)
+        {
+            var policy = await GetPasswordPolicyAsync();
+
+            // Only check minLength if it's greater than 0 (enabled)
+            if (policy.MinLength > 0 && password.Length < policy.MinLength)
+                throw new InvalidOperationException($"Mật khẩu phải dài ít nhất {policy.MinLength} ký tự.");
+
+            if (policy.MaxLength.HasValue && password.Length > policy.MaxLength.Value)
+                throw new InvalidOperationException($"Mật khẩu không được vượt quá {policy.MaxLength} ký tự.");
+
+            if (policy.RequireUppercase && !password.Any(char.IsUpper))
+                throw new InvalidOperationException("Mật khẩu phải chứa ít nhất 1 chữ hoa (A-Z).");
+
+            if (policy.RequireLowercase && !password.Any(char.IsLower))
+                throw new InvalidOperationException("Mật khẩu phải chứa ít nhất 1 chữ thường (a-z).");
+
+            if (policy.RequireDigit && !password.Any(char.IsDigit))
+                throw new InvalidOperationException("Mật khẩu phải chứa ít nhất 1 chữ số (0-9).");
+
+            if (policy.RequireSpecial && !password.Any(c => "!@#$%^&*()_+-=[]{}|;:,.<>/?".Contains(c)))
+                throw new InvalidOperationException("Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt.");
+        }
 
     }
 }

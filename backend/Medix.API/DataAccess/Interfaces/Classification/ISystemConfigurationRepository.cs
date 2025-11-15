@@ -10,6 +10,8 @@ namespace Medix.API.DataAccess.Interfaces.Classification
             Task AddAsync(SystemConfiguration config);
             Task UpdateAsync(SystemConfiguration config);
             Task DeleteAsync(string key);
+
         }
+
     
 }

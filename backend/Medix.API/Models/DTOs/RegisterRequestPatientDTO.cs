@@ -10,7 +10,6 @@ namespace Medix.API.Models.DTOs
         public string Email { get; set; } = null!;
 
         [Required(ErrorMessage = "Mật khẩu là bắt buộc")]
-        [MinLength(6, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự")]
         [PasswordComplexityAttribute]
         public string Password { get; set; } = null!;
 

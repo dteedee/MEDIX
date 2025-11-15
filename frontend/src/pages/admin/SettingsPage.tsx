@@ -12,6 +12,12 @@ interface SystemSettings {
   jwtExpiryMinutes: number;
   maxFailedLoginAttempts: number;
   accountLockoutDurationMinutes: number;
+  passwordMinLength: number;
+  passwordMaxLength: number;
+  requireDigit: boolean;
+  requireLowercase: boolean;
+  requireUppercase: boolean;
+  requireSpecial: boolean;
 }
 
 export default function SettingsPage() {
@@ -24,7 +30,7 @@ export default function SettingsPage() {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const [siteNameRes, descriptionRes, emailRes, phoneRes, addressRes, jwtExpiryRes, maxFailedLoginRes, lockoutDurationRes] = await Promise.all([
+      const [siteNameRes, descriptionRes, emailRes, phoneRes, addressRes, jwtExpiryRes, maxFailedLoginRes, lockoutDurationRes, passwordMinLengthRes, passwordMaxLengthRes, requireDigitRes, requireLowercaseRes, requireUppercaseRes, requireSpecialRes] = await Promise.all([
         apiClient.get('/SystemConfiguration/SiteName'),
         apiClient.get('/SystemConfiguration/SystemDescription'),
         apiClient.get('/SystemConfiguration/ContactEmail'),
@@ -34,6 +40,13 @@ export default function SettingsPage() {
         apiClient.get('/SystemConfiguration/JWT_EXPIRY_MINUTES'),
         apiClient.get('/SystemConfiguration/MaxFailedLoginAttempts'),
         apiClient.get('/SystemConfiguration/AccountLockoutDurationMinutes'),
+        // Password policy settings
+        apiClient.get('/SystemConfiguration/PASSWORD_MIN_LENGTH'),
+        apiClient.get('/SystemConfiguration/PASSWORD_MAX_LENGTH'),
+        apiClient.get('/SystemConfiguration/REQUIRE_DIGIT'),
+        apiClient.get('/SystemConfiguration/REQUIRE_LOWERCASE'),
+        apiClient.get('/SystemConfiguration/REQUIRE_UPPERCASE'),
+        apiClient.get('/SystemConfiguration/REQUIRE_SPECIAL'),
       ]);
 
       setSettings({
@@ -46,6 +59,13 @@ export default function SettingsPage() {
         jwtExpiryMinutes: parseInt(jwtExpiryRes.data.configValue, 10),
         maxFailedLoginAttempts: parseInt(maxFailedLoginRes.data.configValue, 10),
         accountLockoutDurationMinutes: parseInt(lockoutDurationRes.data.configValue, 10),
+        // Password policy settings
+        passwordMinLength: parseInt(passwordMinLengthRes.data.configValue, 10),
+        passwordMaxLength: parseInt(passwordMaxLengthRes.data.configValue, 10),
+        requireDigit: requireDigitRes.data.configValue.toLowerCase() === 'true',
+        requireLowercase: requireLowercaseRes.data.configValue.toLowerCase() === 'true',
+        requireUppercase: requireUppercaseRes.data.configValue.toLowerCase() === 'true',
+        requireSpecial: requireSpecialRes.data.configValue.toLowerCase() === 'true',
       });
 
     } catch (error) {
@@ -60,8 +80,12 @@ export default function SettingsPage() {
 }, [showToast]);
 
 
-  const handleInputChange = (key: keyof SystemSettings, value: string) => {
+  const handleInputChange = (key: keyof SystemSettings, value: string | boolean) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleCheckboxChange = (key: keyof SystemSettings, checked: boolean) => {
+    setSettings(prev => ({ ...prev, [key]: checked }));
   };
 
   const handleSaveChanges = async () => {
@@ -78,6 +102,13 @@ export default function SettingsPage() {
         apiClient.put('/SystemConfiguration/JWT_EXPIRY_MINUTES', { value: settings.jwtExpiryMinutes?.toString() }),
         apiClient.put('/SystemConfiguration/MaxFailedLoginAttempts', { value: settings.maxFailedLoginAttempts?.toString() }),
         apiClient.put('/SystemConfiguration/AccountLockoutDurationMinutes', { value: settings.accountLockoutDurationMinutes?.toString() }),
+        // Password policy settings
+        apiClient.put('/SystemConfiguration/PASSWORD_MIN_LENGTH', { value: settings.passwordMinLength?.toString() }),
+        apiClient.put('/SystemConfiguration/PASSWORD_MAX_LENGTH', { value: settings.passwordMaxLength?.toString() }),
+        apiClient.put('/SystemConfiguration/REQUIRE_DIGIT', { value: settings.requireDigit?.toString() }),
+        apiClient.put('/SystemConfiguration/REQUIRE_LOWERCASE', { value: settings.requireLowercase?.toString() }),
+        apiClient.put('/SystemConfiguration/REQUIRE_UPPERCASE', { value: settings.requireUppercase?.toString() }),
+        apiClient.put('/SystemConfiguration/REQUIRE_SPECIAL', { value: settings.requireSpecial?.toString() }),
       ]);
       showToast('Lưu thay đổi thành công!', 'success');
     } catch (error) {
@@ -205,8 +236,50 @@ export default function SettingsPage() {
                       placeholder="Ví dụ: 15"
                     />
                   </div>
-                  {/* Phần này có thể cần logic phức tạp hơn nếu bạn muốn bật/tắt 2FA */}
-                  {/* <div className={styles.settingItem}>...</div> */}
+                  <div className={styles.settingItem}>
+                    <label>Độ dài mật khẩu tối thiểu</label>
+                    <input
+                      type="number"
+                      value={settings.passwordMinLength || ''}
+                      onChange={(e) => handleInputChange('passwordMinLength', e.target.value)}
+                      placeholder="Ví dụ: 6"
+                    />
+                  </div>
+                  <div className={styles.settingItem}>
+                    <label>Độ dài mật khẩu tối đa</label>
+                    <input
+                      type="number"
+                      value={settings.passwordMaxLength || ''}
+                      onChange={(e) => handleInputChange('passwordMaxLength', e.target.value)}
+                      placeholder="Ví dụ: 128"
+                    />
+                  </div>
+                  <div className={styles.settingItem}>
+                    <label>
+                      <input type="checkbox" checked={settings.requireDigit || false} onChange={(e) => handleCheckboxChange('requireDigit', e.target.checked)} />
+                      Yêu cầu có chữ số
+                    </label>
+                  </div>
+                  <div className={styles.settingItem}>
+                    <label>
+                      <input type="checkbox" checked={settings.requireLowercase || false} onChange={(e) => handleCheckboxChange('requireLowercase', e.target.checked)} />
+                      Yêu cầu có chữ thường
+                    </label>
+                  </div>
+                  <div className={styles.settingItem}>
+                    <label>
+                      <input type="checkbox" checked={settings.requireUppercase || false} onChange={(e) => handleCheckboxChange('requireUppercase', e.target.checked)} />
+                      Yêu cầu có chữ hoa
+                    </label>
+                  </div>
+                  <div className={styles.settingItem}>
+                    <label>
+                      <input type="checkbox" checked={settings.requireSpecial || false} onChange={(e) => handleCheckboxChange('requireSpecial', e.target.checked)} />
+                      Yêu cầu có ký tự đặc biệt
+                    </label>
+                  </div>
+
+
                 </div>
               )}
             </div>

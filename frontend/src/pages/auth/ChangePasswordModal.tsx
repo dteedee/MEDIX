@@ -1,12 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import styles from '../../styles/auth/ChangePasswordModal.module.css';
 import { userService } from '../../services/userService';
+import { apiClient } from '../../lib/apiClient';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+}
+
+interface PasswordPolicy {
+  minLength: number;
+  maxLength?: number;
+  requireUppercase: boolean;
+  requireLowercase: boolean;
+  requireDigit: boolean;
+  requireSpecial: boolean;
 }
 
 export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
@@ -29,15 +39,59 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [policy, setPolicy] = useState<PasswordPolicy | null>(null);
+  const [policyLoading, setPolicyLoading] = useState(true);
+
+  useEffect(() => {
+    const loadPolicy = async () => {
+      if (!isOpen) return;
+      setPolicyLoading(true);
+      try {
+        const [
+          minLengthRes,
+          requireUppercaseRes,
+          requireLowercaseRes,
+          requireDigitRes,
+          requireSpecialRes,
+        ] = await Promise.all([
+          apiClient.get('/SystemConfiguration/PASSWORD_MIN_LENGTH'),
+          apiClient.get('/SystemConfiguration/REQUIRE_UPPERCASE'),
+          apiClient.get('/SystemConfiguration/REQUIRE_LOWERCASE'),
+          apiClient.get('/SystemConfiguration/REQUIRE_DIGIT'),
+          apiClient.get('/SystemConfiguration/REQUIRE_SPECIAL'),
+        ]);
+
+        setPolicy({
+          minLength: parseInt(minLengthRes.data.configValue, 10) || 8,
+          requireUppercase: requireUppercaseRes.data.configValue.toLowerCase() === 'true',
+          requireLowercase: requireLowercaseRes.data.configValue.toLowerCase() === 'true',
+          requireDigit: requireDigitRes.data.configValue.toLowerCase() === 'true',
+          requireSpecial: requireSpecialRes.data.configValue.toLowerCase() === 'true',
+        });
+      } catch (err) {
+        console.error("Cannot load password policy", err);
+        showToast("Không tải được chính sách mật khẩu, sẽ dùng chính sách mặc định.", "warning");
+        // Fallback to default policy
+        setPolicy({ minLength: 8, requireUppercase: true, requireLowercase: true, requireDigit: true, requireSpecial: true });
+      } finally {
+        setPolicyLoading(false);
+      }
+    };
+
+    loadPolicy();
+  }, [isOpen, showToast]);
 
   // Password validation functions
-  const validatePassword = (password: string): string | null => {
+  const validatePassword = (password: string, currentPolicy: PasswordPolicy): string | null => {
     if (!password) return 'Mật khẩu không được để trống';
-    if (password.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự';
-    if (!/(?=.*[a-z])/.test(password)) return 'Mật khẩu phải có ít nhất 1 chữ thường';
-    if (!/(?=.*[A-Z])/.test(password)) return 'Mật khẩu phải có ít nhất 1 chữ hoa';
-    if (!/(?=.*\d)/.test(password)) return 'Mật khẩu phải có ít nhất 1 chữ số';
-    if (!/(?=.*[@$!%*?&])/.test(password)) return 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt';
+    // Only check minLength if it's greater than 0 (enabled)
+    if (currentPolicy.minLength > 0 && password.length < currentPolicy.minLength) {
+      return `Mật khẩu phải có ít nhất ${currentPolicy.minLength} ký tự`;
+    }
+    if (currentPolicy.requireLowercase && !/(?=.*[a-z])/.test(password)) return 'Mật khẩu phải có ít nhất 1 chữ thường';
+    if (currentPolicy.requireUppercase && !/(?=.*[A-Z])/.test(password)) return 'Mật khẩu phải có ít nhất 1 chữ hoa';
+    if (currentPolicy.requireDigit && !/(?=.*\d)/.test(password)) return 'Mật khẩu phải có ít nhất 1 chữ số';
+    if (currentPolicy.requireSpecial && !/(?=.*[@$!%*?&])/.test(password)) return 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt';
     return null;
   };
 
@@ -50,10 +104,13 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   const handlePasswordChange = (field: string, value: string) => {
     setPasswordData(prev => ({ ...prev, [field]: value }));
 
-    // Clear error when user starts typing
-    if (passwordErrors[field]) {
-      setPasswordErrors(prev => ({ ...prev, [field]: '' }));
-    }
+    // Chỉ xóa lỗi của trường đang được nhập.
+    // Ví dụ: khi nhập 'currentPassword', sẽ xóa lỗi 'CurrentPassword'.
+    const fieldKey = field.charAt(0).toUpperCase() + field.slice(1);
+    if (passwordErrors[fieldKey]) {
+      setPasswordErrors(prev => ({ ...prev, [fieldKey]: '' }));
+    }    
+
   };
 
   const handlePasswordBlur = (field: string, value: string) => {
@@ -68,14 +125,16 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   };
 
   const handleChangePassword = async () => {
+    if (!policy) return; // Don't submit if policy is not loaded
+
     const errors: Record<string, string> = {};
 
     if (!passwordData.currentPassword) {
       errors.CurrentPassword = 'Mật khẩu hiện tại không được để trống';
     }
 
-    // Check if new password meets requirements (but don't show error message)
-    const newPasswordError = validatePassword(passwordData.newPassword);
+    // Check if new password meets requirements
+    const newPasswordError = validatePassword(passwordData.newPassword, policy);
     if (newPasswordError) {
       // Don't add to errors, just return early
       setError('Mật khẩu mới chưa đáp ứng yêu cầu. Vui lòng kiểm tra danh sách yêu cầu bên dưới.');
@@ -98,11 +157,14 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('currentPassword', passwordData.currentPassword);
-      formData.append('newPassword', passwordData.confirmPassword);
-      formData.append('confirmPassword', passwordData.confirmPassword);
-      await userService.updatePassword(formData);
+      // Tạo payload với key viết hoa chữ cái đầu để khớp với DTO của backend
+      const payload = {
+        CurrentPassword: passwordData.currentPassword,
+        NewPassword: passwordData.newPassword,
+        ConfirmPassword: passwordData.confirmPassword,
+      };
+
+      await userService.updatePassword(payload as any);
 
       showToast('Đổi mật khẩu thành công!', 'success');
       setTimeout(() => {
@@ -110,16 +172,25 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         if (onSuccess) onSuccess();
       }, 1500);
     } catch (error: any) {
-      if (error.response?.status === 400 && Array.isArray(error.response.data)) {
-        const errors: Record<string, string> = {};
-        error.response.data.forEach((item: any) => {
-          const field = item.memberNames?.[0];
-          const message = item.errorMessage;
-          if (field && message) {
-            errors[field] = message;
+      const status = error.response?.status;
+      const errorData = error.response?.data;
+
+      if (status === 400) {
+        // Xử lý lỗi validation từ backend (thường là một object với key là tên trường)
+        if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
+          const serverErrors: Record<string, string> = {};
+          // Ví dụ: { CurrentPassword: ["Mật khẩu hiện tại không đúng"] }
+          if (errorData.errors) {
+             for (const key in errorData.errors) {
+                serverErrors[key] = errorData.errors[key][0];
+             }
+          } else if (errorData.CurrentPassword) { // Fallback cho cấu trúc lỗi khác
+             serverErrors.CurrentPassword = errorData.CurrentPassword[0];
           }
-        });
-        setPasswordErrors(errors);
+          setPasswordErrors(serverErrors);
+        } else {
+           setError(errorData?.message || 'Mật khẩu hiện tại không đúng.');
+        }
       } else {
         console.error('Password update error: ', error);
         showToast('Không thể đổi mật khẩu', 'error');
@@ -136,6 +207,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setShowPasswords({ currentPassword: false, newPassword: false, confirmPassword: false });
     setError(null);
     setSuccess(null);
+    setPolicy(null);
+    setPolicyLoading(true);
   };
 
   const togglePasswordVisibility = (field: string) => {
@@ -248,31 +321,45 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             )}
           </div>
 
-          <div className={styles.passwordRequirements}>
-            <h4>Yêu cầu mật khẩu:</h4>
-            <ul>
-              <li className={passwordData.newPassword.length >= 8 ? styles.requirementMet : ''}>
-                <i className="bi bi-check-circle"></i>
-                Ít nhất 8 ký tự
-              </li>
-              <li className={/(?=.*[a-z])/.test(passwordData.newPassword) ? styles.requirementMet : ''}>
-                <i className="bi bi-check-circle"></i>
-                Có chữ thường
-              </li>
-              <li className={/(?=.*[A-Z])/.test(passwordData.newPassword) ? styles.requirementMet : ''}>
-                <i className="bi bi-check-circle"></i>
-                Có chữ hoa
-              </li>
-              <li className={/(?=.*\d)/.test(passwordData.newPassword) ? styles.requirementMet : ''}>
-                <i className="bi bi-check-circle"></i>
-                Có chữ số
-              </li>
-              <li className={/(?=.*[@$!%*?&])/.test(passwordData.newPassword) ? styles.requirementMet : ''}>
-                <i className="bi bi-check-circle"></i>
-                Có ký tự đặc biệt
-              </li>
-            </ul>
-          </div>
+          {policyLoading ? (
+            <div className={styles.policyLoading}>Đang tải yêu cầu mật khẩu...</div>
+          ) : policy && (
+            <div className={styles.passwordRequirements}>
+              <h4>Yêu cầu mật khẩu:</h4>
+              <ul>
+                {policy.minLength > 0 && (
+                  <li className={passwordData.newPassword.length >= policy.minLength ? styles.requirementMet : ''}>
+                    <i className="bi bi-check-circle"></i>
+                    Ít nhất {policy.minLength} ký tự
+                  </li>
+                )}
+                {policy.requireLowercase && (
+                  <li className={/(?=.*[a-z])/.test(passwordData.newPassword) ? styles.requirementMet : ''}>
+                    <i className="bi bi-check-circle"></i>
+                    Có chữ thường
+                  </li>
+                )}
+                {policy.requireUppercase && (
+                  <li className={/(?=.*[A-Z])/.test(passwordData.newPassword) ? styles.requirementMet : ''}>
+                    <i className="bi bi-check-circle"></i>
+                    Có chữ hoa
+                  </li>
+                )}
+                {policy.requireDigit && (
+                  <li className={/(?=.*\d)/.test(passwordData.newPassword) ? styles.requirementMet : ''}>
+                    <i className="bi bi-check-circle"></i>
+                    Có chữ số
+                  </li>
+                )}
+                {policy.requireSpecial && (
+                  <li className={/(?=.*[@$!%*?&])/.test(passwordData.newPassword) ? styles.requirementMet : ''}>
+                    <i className="bi bi-check-circle"></i>
+                    Có ký tự đặc biệt
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className={styles.modalFooter}>

@@ -50,5 +50,11 @@ namespace Medix.API.Presentation.Controller.Classification
             await _service.DeleteAsync(key);
             return Ok("Configuration deleted successfully.");
         }
+        [HttpGet("password-policy")]
+        public async Task<IActionResult> GetPasswordPolicy()
+        {
+            var policy = await _service.GetPasswordPolicyAsync();
+            return Ok(policy);
+        }
     }
 }

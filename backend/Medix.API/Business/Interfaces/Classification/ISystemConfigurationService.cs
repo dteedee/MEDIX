@@ -12,6 +12,8 @@ namespace Medix.API.Business.Interfaces.Classification
         Task AddAsync(SystemConfigurationRequest request, string updatedBy);
         Task UpdateAsync(string key, object value, string updatedBy);
         Task DeleteAsync(string key);
+        Task<PasswordPolicyDto> GetPasswordPolicyAsync();
+        Task ValidatePasswordAsync(string password);
 
     }
 }

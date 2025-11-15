@@ -9,6 +9,9 @@ interface SystemSettings {
   contactEmail: string;
   contactPhone: string;
   contactAddress: string;
+  jwtExpiryMinutes: number;
+  maxFailedLoginAttempts: number;
+  accountLockoutDurationMinutes: number;
 }
 
 export default function SettingsPage() {
@@ -21,12 +24,16 @@ export default function SettingsPage() {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const [siteNameRes, descriptionRes, emailRes, phoneRes, addressRes] = await Promise.all([
+      const [siteNameRes, descriptionRes, emailRes, phoneRes, addressRes, jwtExpiryRes, maxFailedLoginRes, lockoutDurationRes] = await Promise.all([
         apiClient.get('/SystemConfiguration/SiteName'),
         apiClient.get('/SystemConfiguration/SystemDescription'),
         apiClient.get('/SystemConfiguration/ContactEmail'),
         apiClient.get('/SystemConfiguration/ContactPhone'),
         apiClient.get('/SystemConfiguration/ContactAddress'),
+        // Security settings
+        apiClient.get('/SystemConfiguration/JWT_EXPIRY_MINUTES'),
+        apiClient.get('/SystemConfiguration/MaxFailedLoginAttempts'),
+        apiClient.get('/SystemConfiguration/AccountLockoutDurationMinutes'),
       ]);
 
       setSettings({
@@ -35,6 +42,10 @@ export default function SettingsPage() {
         contactEmail: emailRes.data.configValue,
         contactPhone: phoneRes.data.configValue,
         contactAddress: addressRes.data.configValue,
+        // Security settings
+        jwtExpiryMinutes: parseInt(jwtExpiryRes.data.configValue, 10),
+        maxFailedLoginAttempts: parseInt(maxFailedLoginRes.data.configValue, 10),
+        accountLockoutDurationMinutes: parseInt(lockoutDurationRes.data.configValue, 10),
       });
 
     } catch (error) {
@@ -63,6 +74,10 @@ export default function SettingsPage() {
         apiClient.put('/SystemConfiguration/ContactEmail', { value: settings.contactEmail }),
         apiClient.put('/SystemConfiguration/ContactPhone', { value: settings.contactPhone }),
         apiClient.put('/SystemConfiguration/ContactAddress', { value: settings.contactAddress }),
+        // Security settings
+        apiClient.put('/SystemConfiguration/JWT_EXPIRY_MINUTES', { value: settings.jwtExpiryMinutes?.toString() }),
+        apiClient.put('/SystemConfiguration/MaxFailedLoginAttempts', { value: settings.maxFailedLoginAttempts?.toString() }),
+        apiClient.put('/SystemConfiguration/AccountLockoutDurationMinutes', { value: settings.accountLockoutDurationMinutes?.toString() }),
       ]);
       showToast('Lưu thay đổi thành công!', 'success');
     } catch (error) {
@@ -159,26 +174,41 @@ export default function SettingsPage() {
                   Bảo mật
                 </h3>
               </div>
-              <div className={styles.cardContent}>
-                <div className={styles.settingItem}>
-                  <label>Thời gian hết hạn phiên đăng nhập (phút)</label>
-                  <input type="number" defaultValue="30" />
+              {loading ? (
+                <div className={styles.loadingState}>Đang tải cài đặt...</div>
+              ) : (
+                <div className={styles.cardContent}>
+                  <div className={styles.settingItem}>
+                    <label>Thời gian hết hạn phiên đăng nhập (phút)</label>
+                    <input
+                      type="number"
+                      value={settings.jwtExpiryMinutes || ''}
+                      onChange={(e) => handleInputChange('jwtExpiryMinutes', e.target.value)}
+                      placeholder="Ví dụ: 30"
+                    />
+                  </div>
+                  <div className={styles.settingItem}>
+                    <label>Số lần đăng nhập sai tối đa</label>
+                    <input
+                      type="number"
+                      value={settings.maxFailedLoginAttempts || ''}
+                      onChange={(e) => handleInputChange('maxFailedLoginAttempts', e.target.value)}
+                      placeholder="Ví dụ: 5"
+                    />
+                  </div>
+                  <div className={styles.settingItem}>
+                    <label>Thời gian khóa tài khoản (phút)</label>
+                    <input
+                      type="number"
+                      value={settings.accountLockoutDurationMinutes || ''}
+                      onChange={(e) => handleInputChange('accountLockoutDurationMinutes', e.target.value)}
+                      placeholder="Ví dụ: 15"
+                    />
+                  </div>
+                  {/* Phần này có thể cần logic phức tạp hơn nếu bạn muốn bật/tắt 2FA */}
+                  {/* <div className={styles.settingItem}>...</div> */}
                 </div>
-                <div className={styles.settingItem}>
-                  <label>Số lần đăng nhập sai tối đa</label>
-                  <input type="number" defaultValue="5" />
-                </div>
-                <div className={styles.settingItem}>
-                  <label>Thời gian khóa tài khoản (phút)</label>
-                  <input type="number" defaultValue="15" />
-                </div>
-                <div className={styles.settingItem}>
-                  <label>
-                    <input type="checkbox" defaultChecked />
-                    Yêu cầu xác thực 2 bước
-                  </label>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Notification Settings */}

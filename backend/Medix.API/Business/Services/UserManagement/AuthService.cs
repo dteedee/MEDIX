@@ -1,4 +1,5 @@
 using Google.Apis.Auth;
+using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.Community;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess.Interfaces.UserManagement;
@@ -18,6 +19,8 @@ namespace Medix.API.Business.Services.UserManagement
         private readonly IUserRoleRepository _userRoleRepository;
         private readonly IPatientRepository _patientRepository;
         private readonly DataAccess.MedixContext _context;
+        private readonly ISystemConfigurationService _configService;
+
 
         private readonly IWalletService _walletService;
 
@@ -28,7 +31,8 @@ namespace Medix.API.Business.Services.UserManagement
             IUserRoleRepository userRoleRepository,
             IPatientRepository patientRepository,
             DataAccess.MedixContext context,
-            IWalletService walletService)
+            IWalletService walletService,
+            ISystemConfigurationService configurationService)
         {
             _userRepository = userRepository;
             _jwtService = jwtService;
@@ -37,6 +41,7 @@ namespace Medix.API.Business.Services.UserManagement
             _patientRepository = patientRepository;
             _context = context;
             _walletService = walletService;
+            _configService = configurationService;
         }
 
         // =====================
@@ -44,70 +49,106 @@ namespace Medix.API.Business.Services.UserManagement
         // =====================
         public async Task<AuthResponseDto> LoginAsync(LoginRequestDto loginRequest)
         {
-            // Allow login by email or username
             var identifier = loginRequest.Identifier?.Trim();
             User? user = null;
+
             if (!string.IsNullOrEmpty(identifier))
             {
                 if (identifier.Contains("@"))
-                {
                     user = await _userRepository.GetByEmailAsync(identifier);
-                }
                 else
-                {
                     user = await _userRepository.GetByUserNameAsync(identifier);
-                }
             }
 
-            if (user != null && BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash))
+            // 1️⃣ User không tồn tại
+            if (user == null)
+                throw new UnauthorizedException("Tên đăng nhập/Email hoặc mật khẩu không đúng");
+
+            // 2️⃣ Admin tự khóa → khóa vĩnh viễn
+            if (user.LockoutEnabled)
+                throw new UnauthorizedException("Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ");
+
+            // 3️⃣ Kiểm tra khóa tạm thời (do nhập sai nhiều lần)
+            if (user.LockoutEnd != null && user.LockoutEnd > DateTime.UtcNow)
             {
-                // Kiểm tra tài khoản có bị khóa không
-                if (user.LockoutEnabled)
-                {
-                    throw new UnauthorizedException("Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ");
-                }
+                var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                DateTime lockoutEndVN = TimeZoneInfo.ConvertTimeFromUtc(user.LockoutEnd.Value, vnTimeZone);
 
-                // Lấy role từ bảng UserRoles (ưu tiên DB)
-                var roleEntity = await _userRoleRepository.GetByIdAsync(user.Id);
-                var roleCode = roleEntity?.RoleCode ?? user.Role ?? "Patient";
-
-                var accessToken = _jwtService.GenerateAccessToken(user, new List<string> { roleCode });
-                var refreshToken = _jwtService.GenerateRefreshToken();
-
-                // Lưu refresh token vào DB
-                var refreshEntity = new RefreshToken
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user.Id,
-                    Token = refreshToken,
-                    CreatedAt = DateTime.UtcNow,
-                    ExpiresAt = DateTime.UtcNow.AddDays(7)
-                };
-                _context.RefreshTokens.Add(refreshEntity);
-                await _context.SaveChangesAsync();
-
-                return new AuthResponseDto
-                {
-                    AccessToken = accessToken,
-                    RefreshToken = refreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddHours(1),
-                    User = new UserDto
-                    {
-                        Id = user.Id,
-                        Email = user.Email,
-                        FullName = user.FullName,
-                        Role = roleCode,
-                        EmailConfirmed = user.EmailConfirmed,
-                        CreatedAt = user.CreatedAt,
-                        AvatarUrl = user.AvatarUrl,
-                        UserName = user.UserName,
-                        IsTemporaryUsername = user.UserName.StartsWith("temp_")
-                    }
-                };
+                throw new UnauthorizedException(
+                    $"Tài khoản bị khóa đến {lockoutEndVN:HH:mm dd/MM/yyyy}"
+                );
             }
 
-            throw new UnauthorizedException("Tên đăng nhập/Email hoặc mật khẩu không đúng");
+
+            // 4️⃣ Lấy cấu hình
+            int? maxAttempts = await _configService.GetIntValueAsync("MaxFailedLoginAttempts");
+            int? lockMinutes = await _configService.GetIntValueAsync("AccountLockoutDurationMinutes");
+
+            int maxFailedAttempts = maxAttempts ?? 5;
+            int lockDuration = lockMinutes ?? 15;
+
+            // 5️⃣ Mật khẩu sai → tăng đếm
+            if (!BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash))
+            {
+                user.AccessFailedCount++;
+
+                // Nếu vượt mức cho phép → khóa tạm thời
+                if (user.AccessFailedCount >= maxFailedAttempts)
+                {
+                    user.LockoutEnd = DateTime.UtcNow.AddMinutes(lockDuration);
+                    await _userRepository.UpdateAsync(user);
+
+                    throw new UnauthorizedException(
+                        $"Nhập sai quá {maxFailedAttempts} lần. Tài khoản bị khóa trong {lockDuration} phút."
+                    );
+                }
+
+                await _userRepository.UpdateAsync(user);
+                throw new UnauthorizedException("Tên đăng nhập/Email hoặc mật khẩu không đúng");
+            }
+
+            // 6️⃣ Đăng nhập thành công → reset trạng thái khóa
+            user.AccessFailedCount = 0;
+            user.LockoutEnd = null;
+            await _userRepository.UpdateAsync(user);
+
+            // ======= Generate token như cũ =======
+            var roleEntity = await _userRoleRepository.GetByIdAsync(user.Id);
+            var roleCode = roleEntity?.RoleCode ?? user.Role ?? "Patient";
+
+            var accessToken = _jwtService.GenerateAccessToken(user, new List<string> { roleCode });
+            var refreshToken = _jwtService.GenerateRefreshToken();
+
+            var refreshEntity = new RefreshToken
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Token = refreshToken,
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddDays(7)
+            };
+
+            _context.RefreshTokens.Add(refreshEntity);
+            await _context.SaveChangesAsync();
+
+            return new AuthResponseDto
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                ExpiresAt = DateTime.UtcNow.AddHours(1),
+                User = new UserDto
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    FullName = user.FullName,
+                    Role = roleCode,
+                    CreatedAt = user.CreatedAt,
+                    AvatarUrl = user.AvatarUrl,
+                    UserName = user.UserName
+                }
+            };
         }
+
 
         // =====================
         // 🔹 REGISTER

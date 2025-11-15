@@ -402,6 +402,8 @@ namespace Medix.API.Business.Services.Classification
             return result;
         }
 
+        public async Task<List<Doctor>> GetAllAsync()
+            => await _doctorRepository.GetAllAsync();
 
         public async Task<Doctor?> GetDoctorByIdAsync(Guid id) => await _doctorRepository.GetDoctorByIdAsync(id);
 

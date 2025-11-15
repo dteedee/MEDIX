@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
+﻿﻿using Microsoft.AspNetCore.Mvc;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Services.Community;
 using Microsoft.Extensions.Logging;
@@ -74,8 +74,9 @@ namespace Medix.API.Presentation.Controller.Classification
             return Ok(article);
         }
 
-        [HttpGet("homepage")]
 
+        [HttpGet("homepage")]
+        [AllowAnonymous]
         public async Task<ActionResult> GetHomepage([FromQuery] int limit = 5)
         {
             var articles = await _healthArticleService.GetHomepageArticlesAsync(limit);
@@ -203,7 +204,7 @@ namespace Medix.API.Presentation.Controller.Classification
             return Ok();
         }
         [HttpPost("{id}/like")]
-        [Authorize] 
+        [Authorize]
         public async Task<ActionResult> Like(Guid id)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
@@ -248,7 +249,7 @@ namespace Medix.API.Presentation.Controller.Classification
             // This endpoint now exists and will handle the view increment request
             // It has a single responsibility: increment the view count.
             await _healthArticleService.IncrementViewCountOnlyAsync(id);
-            
+
             // Return 200 OK to confirm the action was received.
             return Ok();
         }

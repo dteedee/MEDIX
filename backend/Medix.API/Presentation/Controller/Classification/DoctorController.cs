@@ -59,6 +59,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpGet("profile/{doctorID}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetDoctorProfile(string doctorID)
         {
             try
@@ -356,6 +357,28 @@ namespace Medix.API.Presentation.Controller.Classification
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"An error occurred while fetching doctor statistic with Id = {id}.");
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        [HttpGet("all")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetAll()
+        {
+            try
+            {
+                var query = new DoctorQuery
+                {
+                    Page = 1,
+                    PageSize = 0,
+                    SearchTerm = ""
+                };
+                var doctors = await _doctorService.GetDoctorsAsync(query);
+                return Ok(doctors.Items);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while fetching all doctors");
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
         }

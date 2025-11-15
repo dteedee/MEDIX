@@ -57,7 +57,7 @@ class DoctorService {
     }
 
     async getAll(query: DoctorQuery): Promise<DoctorList> {
-        const response = await apiClient.get<DoctorList>('/doctor', {
+        const response = await apiClient.get<DoctorList>('/doctor/all', {
             params: {
                 page: query.page,
                 searchTerm: query.searchTerm,

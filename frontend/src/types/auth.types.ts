@@ -66,6 +66,8 @@ export interface User {
   isProfileCompleted: boolean;
   isTemporaryUsername?: boolean;
   createdAt: string;
+  startDateBanner?: string;
+  endDateBanner?: string;
 }
 
 export interface ApiError {

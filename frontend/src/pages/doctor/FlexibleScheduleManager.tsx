@@ -5,6 +5,7 @@ import { ScheduleOverride, CreateScheduleOverridePayload, DoctorSchedule } from 
 import { scheduleService } from '../../services/scheduleService';
 import { X, Plus, Edit, Trash2 } from 'lucide-react';
 import '../../styles/doctor/FlexibleScheduleManager.css';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Props {
   schedules: DoctorSchedule[];
@@ -32,6 +33,7 @@ const timeSlots = [
 ];
 
 const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClose, onRefresh, initialDate }) => {
+  const { isBanned } = useAuth();
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingOverride, setEditingOverride] = useState<ScheduleOverride | null>(null);
 
@@ -253,8 +255,8 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
                         </span>
                       </div>
                       <div className="override-actions">
-                        <button onClick={() => handleEdit(override)} className="action-btn edit"><Edit size={16} /></button>
-                        <button onClick={() => handleDelete(override.id)} className="action-btn delete"><Trash2 size={16} /></button>
+                        <button onClick={() => handleEdit(override)} className="action-btn edit" disabled={isBanned}><Edit size={16} /></button>
+                        <button onClick={() => handleDelete(override.id)} className="action-btn delete" disabled={isBanned}><Trash2 size={16} /></button>
                       </div>
                     </div>
                   ))
@@ -297,7 +299,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
             </div>
             <div className="form-actions">
               <button type="button" onClick={() => setIsFormVisible(false)} className="cancel-btn">Hủy</button>
-              <button type="submit" className="save-btn">{editingOverride ? 'Cập nhật' : 'Lưu'}</button>
+              <button type="submit" className="save-btn" disabled={isBanned}>{editingOverride ? 'Cập nhật' : 'Lưu'}</button>
             </div>
           </form>
         )}

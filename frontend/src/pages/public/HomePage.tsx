@@ -75,20 +75,20 @@ function HomePage() {
         const loadEducation = async () => {
             const list = homeMetadata?.displayedDoctors || [];
             if (!list.length) return;
-            const usernames = Array.from(new Set(list.map(d => d.userName))).slice(0, 20);
+            const ids = Array.from(new Set(list.map(d => d.id))).slice(0, 20);
             try {
                 const results = await Promise.all(
-                    usernames.map(async (u) => {
+                    ids.map(async (id) => {
                         try {
-                            const profile = await doctorService.getDoctorProfile(u);
-                            return { u, education: profile.education || '' };
+                            const profile = await doctorService.getDoctorProfile(id);
+                            return { id, education: profile.education || '' };
                         } catch {
-                            return { u, education: '' };
+                            return { id, education: '' };
                         }
                     })
                 );
                 const map: Record<string, string> = {};
-                results.forEach(r => { if (r.education) map[r.u] = r.education; });
+                results.forEach(r => { if (r.education) map[r.id] = r.education; });
                 setDoctorEducationMap(prev => ({ ...prev, ...map }));
             } catch (e) {
                 console.error('Load doctor education failed', e);
@@ -430,7 +430,7 @@ function HomePage() {
                                 <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'center'}}>
                                     <h3 style={{margin:0}}>{doctor.fullName}</h3>
                                     <p className={styles["specialty"]} style={{margin:0}}>
-                                        {(doctorEducationMap[doctor.userName] || '—')} - {doctor.specializationName}
+                                        {(doctorEducationMap[doctor.id] || '—')} - {doctor.specializationName}
                                     </p>
                                     <p className={styles["specialty"]} style={{margin:0}}>
                                         {doctor.yearsOfExperience} {t('common.years-experience')}

@@ -182,14 +182,14 @@ namespace Medix.API.Business.Services.Classification
                     ? Math.Round((decimal)reviews.Average(r => r.Rating), 1)
                     : 0,
                 Specialization = doctor.Specialization.Name,
-                
+
                 Biography = doctor.Bio,
                 Education = DoctorDegree.GetDescription(doctor.Education),
                 AvatarUrl = doctor.User.AvatarUrl,
                 NumberOfReviews = reviews.Count,
                 RatingByStar = ratingByStar,
 
-        Experiece = doctor.YearsOfExperience
+                Experiece = doctor.YearsOfExperience
             };
 
             profileDto.Reviews = reviews.OrderByDescending(r => r.CreatedAt)
@@ -223,13 +223,14 @@ namespace Medix.API.Business.Services.Classification
                 IsAvailable = o.IsAvailable,
                 Reason = o.Reason,
                 CreatedAt = o.CreatedAt,
-                UpdatedAt = o.UpdatedAt,OverrideType = o.OverrideType
+                UpdatedAt = o.UpdatedAt,
+                OverrideType = o.OverrideType
 
             }).ToList();
 
-            profileDto.appointmentBookedDtos = appoint.Where(x=>x.StatusCode== "OnProgressing" || x.StatusCode== "Completed"||x.StatusCode== "NoShow" || x.StatusCode == "Confirmed").Select(a => new AppointmentBookedDto
+            profileDto.appointmentBookedDtos = appoint.Where(x => x.StatusCode == "OnProgressing" || x.StatusCode == "Completed" || x.StatusCode == "NoShow" || x.StatusCode == "Confirmed").Select(a => new AppointmentBookedDto
             {
-           
+
                 StartTime = a.AppointmentStartTime,
                 EndTime = a.AppointmentEndTime,
             }).ToList();
@@ -299,6 +300,7 @@ namespace Medix.API.Business.Services.Classification
                 Specialization = doctor.Specialization.Name,
                 Education = doctor.Education == null ? null : DoctorDegree.GetDescription(doctor.Education),
                 Rating = doctor.Appointments
+                    .Where(a => a.Review != null)
                     .Select(a => a.Review.Rating)
                     .DefaultIfEmpty(0)
                     .Average(),
@@ -306,6 +308,8 @@ namespace Medix.API.Business.Services.Classification
                     .Count(a => a.Review != null),
                 StatusCode = doctor.User.Status,
                 CreatedAt = doctor.CreatedAt.ToString("dd/MM/yyyy"),
+                YearsOfExperience = doctor.YearsOfExperience,
+                ServiceTier = doctor.ServiceTier?.Name
             }).ToList();
 
             return new PagedList<DoctorDto>
@@ -370,8 +374,8 @@ namespace Medix.API.Business.Services.Classification
                         price = d.ConsultationFee,
                         bio = d.Bio,
                         rating = d.AverageRating,
-                        TotalDone = _context.Appointments.Count(a => a.DoctorId == d.Id && a.StatusCode == "Completed" && a.PaymentStatusCode== "Paid"),
-TotalAppointments = _context.Appointments.Count(a => a.DoctorId == d.Id),
+                        TotalDone = _context.Appointments.Count(a => a.DoctorId == d.Id && a.StatusCode == "Completed" && a.PaymentStatusCode == "Paid"),
+                        TotalAppointments = _context.Appointments.Count(a => a.DoctorId == d.Id),
 
                         TotalReviews = _context.Reviews.Count(r => r.Appointment.DoctorId == d.Id)
                     })
@@ -398,6 +402,8 @@ TotalAppointments = _context.Appointments.Count(a => a.DoctorId == d.Id),
             return result;
         }
 
+        public async Task<List<Doctor>> GetAllAsync()
+            => await _doctorRepository.GetAllAsync();
 
         public async Task<Doctor?> GetDoctorByIdAsync(Guid id) => await _doctorRepository.GetDoctorByIdAsync(id);
 

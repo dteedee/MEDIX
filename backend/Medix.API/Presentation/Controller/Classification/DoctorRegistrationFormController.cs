@@ -105,7 +105,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     || await _doctorRegistrationFormService.IsUserNameExistAsync(request.UserName)
                 ))
             {
-                prev.Add(new ValidationResult("Tên đăng nhập đã được sử dụng", new[] { "UserName" }));
+                prev.Add(new ValidationResult("Tên đăng nhập đã được sử dụng", ["UserName"]));
             }
 
             if (request.Email != null && (
@@ -113,7 +113,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     || await _doctorRegistrationFormService.IsEmailExistAsync(request.Email)
                 ))
             {
-                prev.Add(new ValidationResult("Email đã được sử dụng", new[] { "Email" }));
+                prev.Add(new ValidationResult("Email đã được sử dụng", ["Email"]));
             }
 
             if (request.PhoneNumber != null && (
@@ -121,7 +121,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     || await _doctorRegistrationFormService.IsPhoneNumberExistAsync(request.PhoneNumber)
                 ))
             {
-                prev.Add(new ValidationResult("Số điện thoại đã được sử dụng", new[] { "PhoneNumber" }));
+                prev.Add(new ValidationResult("Số điện thoại đã được sử dụng", ["PhoneNumber"]));
             }
 
             if (request.IdentificationNumber != null && (
@@ -129,7 +129,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     || await _doctorRegistrationFormService.IsIdentificationNumberExistAsync(request.IdentificationNumber)
                 ))
             {
-                prev.Add(new ValidationResult("Số CCCD đã được sử dụng", new[] { "IdentificationNumber" }));
+                prev.Add(new ValidationResult("Số CCCD đã được sử dụng", ["IdentificationNumber"]));
             }
 
             if (request.LicenseNumber != null && (
@@ -137,7 +137,46 @@ namespace Medix.API.Presentation.Controller.Classification
                 await _doctorRegistrationFormService.IsLicenseNumberExistAsync(request.LicenseNumber)
                 ))
             {
-                prev.Add(new ValidationResult("Số giấy phép hành nghề đã được sử dụng", new[] { "LicenseNumber" }));
+                prev.Add(new ValidationResult("Số giấy phép hành nghề đã được sử dụng", ["LicenseNumber"]));
+            }
+
+            if (request.IdentityCardImages == null || request.IdentityCardImages.Count != 2)
+            {
+                prev.Add(new ValidationResult("Bạn phải tải lên đúng 2 ảnh CMND/CCCD (mặt trước và mặt sau).",
+                    ["IdentityCardImage"]));
+            }
+            else
+            {
+                var validFiles = request.IdentityCardImages.Where(f => f != null && f.Length > 0).ToList();
+
+                if (validFiles.Count != 2)
+                {
+                    prev.Add(new ValidationResult("Cả hai ảnh CMND/CCCD phải hợp lệ.", ["IdentityCardImage"]));
+                }
+                else
+                {
+                    var allowedTypes = new[] { "image/jpeg", "image/png", "image/gif", "image/webp" };
+
+                    foreach (var file in validFiles)
+                    {
+                        // Check type
+                        if (!allowedTypes.Contains(file!.ContentType.ToLower()))
+                        {
+                            prev.Add(new ValidationResult(
+                                $"File {file.FileName} không phải là ảnh hợp lệ.",
+                                ["IdentityCardImage"]));
+                        }
+
+                        // ✅ Check size (≤ 1 MB)
+                        const long maxSize = 1 * 1024 * 1024; // 1 MB in bytes
+                        if (file.Length > maxSize)
+                        {
+                            prev.Add(new ValidationResult(
+                                $"File {file.FileName} vượt quá dung lượng cho phép (≤ 1MB).",
+                                ["IdentityCardImage"]));
+                        }
+                    }
+                }
             }
 
             return prev;
@@ -156,7 +195,8 @@ namespace Medix.API.Presentation.Controller.Classification
                     d.FullName,
                     Email = d.EmailNormalized.ToLower(),
                     Specialization = d.Specialization.Name,
-                    CreatedAt = d.CreatedAt.ToString("dd/MM/yyyy"),
+                    d.AvatarUrl,
+                    d.CreatedAt
                 }).ToList();
 
                 return Ok(new { totalPages = list.TotalPages, doctors });
@@ -187,7 +227,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     registerForm.AvatarUrl,
                     registerForm.FullName,
                     UserName = registerForm.UserNameNormalized.ToLower(),
-                    Dob = registerForm.DateOfBirth.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
+                    Dob = registerForm.DateOfBirth.ToDateTime(TimeOnly.MinValue),
                     Gender = registerForm.GenderCode,
                     registerForm.IdentificationNumber,
                     registerForm.IdentityCardImageUrl,
@@ -200,7 +240,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     registerForm.Bio,
                     registerForm.Education,
                     registerForm.YearsOfExperience,
-                    CreatedAt = registerForm.CreatedAt.ToString("dd/MM/yyyy"),
+                    registerForm.CreatedAt,
                 };
 
                 return Ok(doctor);
@@ -237,7 +277,7 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
 
                 await _doctorRegistrationFormService.ReviewDoctorAsync(request, registerForm);
-
+                
                 return Ok();
             }
             catch (Exception ex)

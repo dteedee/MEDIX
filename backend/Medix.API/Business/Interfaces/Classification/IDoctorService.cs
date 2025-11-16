@@ -20,7 +20,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<PagedList<DoctorDto>> GetDoctorsAsync(DoctorQuery query);
 
         Task<IEnumerable<EducationWithPaginatedDoctorsDto>> GetDoctorsByEducationAsync(DoctorQueryParameters queryParams);
-
+        Task<List<Doctor>> GetAllAsync();
 
     }
 }

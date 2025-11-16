@@ -2,6 +2,7 @@ import React, { useState, FormEvent, useMemo } from 'react';
 import { DoctorSchedule, CreateSchedulePayload } from '../../types/schedule';
 import { scheduleService } from '../../services/scheduleService';
 import Swal from 'sweetalert2';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface FixedScheduleManagerProps {
   schedules: DoctorSchedule[];
@@ -30,6 +31,7 @@ const timeSlots = [
 const getDayLabel = (dayValue: number) => daysOfWeek.find(d => d.value === dayValue)?.label || 'Không xác định';
 
 const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, onClose, onRefresh }) => {
+  const { isBanned } = useAuth();
   const [isAdding, setIsAdding] = useState(false);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(1); // Mặc định chọn Thứ Hai
@@ -262,8 +264,8 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => startEditing(schedule)} className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600">Sửa</button>
-                      <button onClick={() => handleDelete(schedule.id)} className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">Xóa</button>
+                      <button onClick={() => startEditing(schedule)} className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600" disabled={isBanned}>Sửa</button>
+                      <button onClick={() => handleDelete(schedule.id)} className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700" disabled={isBanned}>Xóa</button>
                     </div>
                   </li>
                 )
@@ -279,7 +281,7 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
               setIsAdding(true);
               setFormState({ dayOfWeek: selectedDay, startTime: timeSlots[0].startTime, endTime: timeSlots[0].endTime, isAvailable: true });
             }} className="w-full mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-              Thêm ca làm việc cho {getDayLabel(selectedDay)}
+              Thêm ca làm việc cho {getDayLabel(selectedDay)} disabled={isBanned}
             </button>
           )}
         </div>

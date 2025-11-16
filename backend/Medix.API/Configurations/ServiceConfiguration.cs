@@ -1,5 +1,7 @@
 using AutoMapper;
+using Hangfire;
 using Medix.API.BackgroundServices;
+using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.Community;
 using Medix.API.Business.Interfaces.UserManagement;
@@ -117,16 +119,27 @@ namespace Medix.API.Configurations
 
             services.AddScoped<IAuditLogService, AuditLogService>();
             services.AddScoped<ISystemConfigurationService, SystemConfigurationService>();
+            services.AddScoped<ISalaryService, SalaryService>();
 
         }
 
 
         private static void RegisterBackgroundJobs(IServiceCollection services)
         {
-            
+
             services.AddHostedService<JobDoctorScheduleOveride>();
 
 
+        }
+
+        public static void RegisterHangfireJobs()
+        {
+            //calculate salary
+            RecurringJob.AddOrUpdate<ISalaryService>(
+                "salary-calculation",
+                service => service.CalculateSalary(Helpers.GetLastDayOfCurrentMonth()),
+                "59 23 L * *"
+            );
         }
     }
 }

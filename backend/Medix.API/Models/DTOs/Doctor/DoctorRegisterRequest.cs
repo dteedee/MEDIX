@@ -21,18 +21,16 @@ namespace Medix.API.Application.DTOs.Doctor
 
         [Dob]
         [Required(ErrorMessage = "Vui lòng nhập ngày sinh")]
-        public string Dob { get; set; }
+        public string? Dob { get; set; }
 
         [Required(ErrorMessage = "Vui lòng chọn giới tính")]
-        public string GenderCode { get; set; }
+        public string? GenderCode { get; set; }
 
         [Required(ErrorMessage = "Vui lòng nhập số CCCD")]
         [RegularExpression(@"^\d{12}$", ErrorMessage = "Số CCCD phải gồm đúng 12 chữ số")]
         public string IdentificationNumber { get; set; } = null!;
 
-        [Required(ErrorMessage = "Vui lòng chọn một tệp hình ảnh.")]
-        [RequiredImage(MaxSizeInMB = 1)]
-        public IFormFile? IdentityCardImage { get; set; }
+        public List<IFormFile?>? IdentityCardImages { get; set; }
 
         [Required(ErrorMessage = "Vui lòng nhập email")]
         [EmailAddress(ErrorMessage = "Email không hợp lệ")]

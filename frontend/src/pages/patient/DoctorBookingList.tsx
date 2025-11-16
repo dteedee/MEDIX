@@ -359,15 +359,19 @@ const DoctorBookingList: React.FC = () => {
       return;
     }
     
-    initialLoadDoneRef.current = true;
+    // Mark as loading immediately to prevent double execution in StrictMode
+    isLoadingRef.current = true;
     const currentRequestId = `${Date.now()}-${Math.random()}`;
     loadRequestIdRef.current = currentRequestId;
-    isLoadingRef.current = true;
 
     const loadData = async () => {
       if (!mountedRef.current || loadRequestIdRef.current !== currentRequestId) {
+        isLoadingRef.current = false;
         return;
       }
+      
+      // Mark initial load as done after confirming we should proceed
+      initialLoadDoneRef.current = true;
       
       try {
         setLoading(true);

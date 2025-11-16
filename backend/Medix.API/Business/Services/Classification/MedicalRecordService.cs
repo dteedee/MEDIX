@@ -162,10 +162,7 @@ namespace Medix.API.Business.Services.Classification
             => await _medicalRecordRepo.GetRecordsByUserIdAsync(userId, query);
 
         public async Task<MedicalRecord?> GetRecordDetailsByIdAsync(Guid id)
-        {
-            return await _medicalRecordRepo.GetRecordDetailsByIdAsync(id);
-        }
-
+            => await _medicalRecordRepo.GetRecordDetailsByIdAsync(id);
 
     }
 }

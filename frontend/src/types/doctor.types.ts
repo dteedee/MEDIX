@@ -119,6 +119,8 @@ export interface DoctorProfileDetails {
   bio: string;
   licenseImageUrl: string;
   degreeFilesUrl: string;
+  startDateBanned?: string;
+  endDateBanned?: string;
 }
 
 // Types for Service Tier API with Pagination
@@ -255,6 +257,12 @@ export interface DoctorDto {
   reviewCount: number;
   statusCode: number;
   createdAt: string;
+  serviceTier: string;
+  price: string;
+  licenseNumber: string;
+  licenseImageUrl: string;
+  degreeFilesUrl: string;
+  bio: string;
 }
 
 export interface DoctorList {

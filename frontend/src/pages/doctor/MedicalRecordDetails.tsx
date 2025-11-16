@@ -14,13 +14,27 @@ import "../../styles/doctor/PatientVisitForm.css";
 const MedicalRecordDetails: React.FC = () => {
   const { appointmentId } = useParams<{ appointmentId: string }>();
   const navigate = useNavigate();
-  const [medicalRecord, setMedicalRecord] = useState<MedicalRecord | null>(null);
-  const { user } = useAuth();
+  const [medicalRecord, setMedicalRecord] = useState<MedicalRecord | null>(null); 
+  const { user, isBanned } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [newAllergy, setNewAllergy] = useState('');
+
+  const showBannedPopup = () => {
+    if (user) {
+      const startDate = (user as any)?.startDateBanned ? new Date((user as any).startDateBanned).toLocaleDateString('vi-VN') : '';
+      const endDate = (user as any)?.endDateBanned ? new Date((user as any).endDateBanned).toLocaleDateString('vi-VN') : '';
+      
+      Swal.fire({
+        title: 'Tài khoản bị tạm khóa',
+        html: `Chức năng chỉnh sửa hồ sơ bệnh án của bạn đã bị tạm khóa từ <b>${startDate}</b> đến <b>${endDate}</b>.<br/>Mọi thắc mắc vui lòng liên hệ quản trị viên.`,
+        icon: 'warning',
+        confirmButtonText: 'Đã hiểu'
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchMedicalRecord = async () => {
@@ -182,7 +196,7 @@ const MedicalRecordDetails: React.FC = () => {
   // Xác định xem hồ sơ có được phép chỉnh sửa hay không
   // LOGIC: Chỉ cho phép bác sĩ chỉnh sửa hồ sơ bệnh án trong khoảng thời gian diễn ra cuộc hẹn (50 phút).
  const isEditable = useMemo(() => {
-  if (!medicalRecord || !medicalRecord.appointmentDate) return false;
+  if (isBanned || !medicalRecord || !medicalRecord.appointmentDate) return false;
 
   const now = new Date();
 
@@ -196,7 +210,7 @@ const MedicalRecordDetails: React.FC = () => {
   const editableStartTime = new Date(endTime.getTime() - 20 * 60000);
 
   return now >= editableStartTime && now <= endTime;
-}, [medicalRecord]);
+}, [medicalRecord, isBanned]);
 
 
   if (isLoading) {
@@ -265,7 +279,10 @@ const MedicalRecordDetails: React.FC = () => {
             <textarea
               name="chiefComplaint"
               className={`form-textarea ${fieldErrors.chiefComplaint ? 'input-error' : ''}`}
-              value={medicalRecord.chiefComplaint}
+              value={medicalRecord.chiefComplaint || ''}
+              onClick={() => {
+                if (isBanned) showBannedPopup();
+              }}
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
               disabled={!isEditable} // Vô hiệu hóa nếu không được phép chỉnh sửa
@@ -277,7 +294,10 @@ const MedicalRecordDetails: React.FC = () => {
             <textarea
               name="physicalExamination"
               className={`form-textarea ${fieldErrors.physicalExamination ? 'input-error' : ''}`}
-              value={medicalRecord.physicalExamination}
+              value={medicalRecord.physicalExamination || ''}
+              onClick={() => {
+                if (isBanned) showBannedPopup();
+              }}
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
               rows={5}
@@ -323,7 +343,10 @@ const MedicalRecordDetails: React.FC = () => {
             <textarea
               name="diagnosis"
               className={`form-textarea ${fieldErrors.diagnosis ? 'input-error' : ''}`}
-              value={medicalRecord.diagnosis}
+              value={medicalRecord.diagnosis || ''}
+              onClick={() => {
+                if (isBanned) showBannedPopup();
+              }}
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
               rows={3}
@@ -335,7 +358,10 @@ const MedicalRecordDetails: React.FC = () => {
             <textarea
               name="assessmentNotes"
               className="form-textarea"
-              value={medicalRecord.assessmentNotes}
+              value={medicalRecord.assessmentNotes || ''}
+              onClick={() => {
+                if (isBanned) showBannedPopup();
+              }}
               disabled={!isEditable}
               onChange={handleFieldChange}
               rows={3} />
@@ -345,7 +371,10 @@ const MedicalRecordDetails: React.FC = () => {
             <textarea
               name="treatmentPlan"
               className={`form-textarea ${fieldErrors.treatmentPlan ? 'input-error' : ''}`}
-              value={medicalRecord.treatmentPlan}
+              value={medicalRecord.treatmentPlan || ''}
+              onClick={() => {
+                if (isBanned) showBannedPopup();
+              }}
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
               rows={4}
@@ -357,7 +386,10 @@ const MedicalRecordDetails: React.FC = () => {
             <textarea
               name="doctorNotes"
               className="form-textarea"
-              value={medicalRecord.doctorNotes}
+              value={medicalRecord.doctorNotes || ''}
+              onClick={() => {
+                if (isBanned) showBannedPopup();
+              }}
               disabled={!isEditable}
               onChange={handleFieldChange}
               rows={4} />
@@ -367,7 +399,10 @@ const MedicalRecordDetails: React.FC = () => {
             <textarea
               name="followUpInstructions"
               className="form-textarea"
-              value={medicalRecord.followUpInstructions}
+              value={medicalRecord.followUpInstructions || ''}
+              onClick={() => {
+                if (isBanned) showBannedPopup();
+              }}
               onChange={handleFieldChange}
               rows={4}
               disabled={!isEditable} />

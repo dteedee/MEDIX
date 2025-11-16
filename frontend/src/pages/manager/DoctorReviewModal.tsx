@@ -13,7 +13,8 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
   const [reviewMode, setReviewMode] = useState<'view' | 'approve' | 'reject'>('view');
   const [formData, setFormData] = useState({
     education: '',
-    rejectReason: ''
+    rejectReason: '',
+    consultationFee: 0,
   });
   const [errors, setErrors] = useState<any>({});
   const [showImageModal, setShowImageModal] = useState(false);
@@ -33,8 +34,26 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
   };
 
   const handleApprove = async () => {
+    let error = false;
+    let newErrors = {
+      education: '',
+      consultationFee: '',
+    };
+
     if (!formData.education) {
-      setErrors({ education: 'Vui lòng chọn trình độ học vấn' });
+      newErrors.education = 'Vui lòng chọn trình độ học vấn';
+      //setErrors({ ...errors, education: 'Vui lòng chọn trình độ học vấn' });
+      error = true;
+    }
+
+    if (!formData.consultationFee || formData.consultationFee <= 0) {
+      newErrors.consultationFee = 'Vui lòng nhập giá khám là số dương';
+      //setErrors({ ...errors, consultationFee: 'Vui lòng nhập giá khám là số dương' });
+      error = true;
+    }
+
+    if (error) {
+      setErrors({ ...errors, ...newErrors });
       return;
     }
 
@@ -42,7 +61,8 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
     try {
       await onSubmit(true, {
         isApproved: true,
-        education: formData.education
+        education: formData.education,
+        consultationFee: formData.consultationFee,
       });
     } finally {
       setSubmitting(false);
@@ -90,7 +110,7 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
               <div className={styles.content}>
                 {/* Doctor Info */}
                 <div className={styles.doctorCard}>
-                  <img 
+                  <img
                     src={doctor.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.fullName)}&background=667eea&color=fff`}
                     alt={doctor.fullName}
                     className={styles.doctorAvatar}
@@ -107,21 +127,21 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
 
                 {/* Tabs */}
                 <div className={styles.tabs}>
-                  <button 
+                  <button
                     className={`${styles.tab} ${reviewMode === 'view' ? styles.tabActive : ''}`}
                     onClick={() => setReviewMode('view')}
                   >
                     <i className="bi bi-info-circle"></i>
                     Thông tin
                   </button>
-                  <button 
+                  <button
                     className={`${styles.tab} ${reviewMode === 'approve' ? styles.tabActive : ''}`}
                     onClick={() => setReviewMode('approve')}
                   >
                     <i className="bi bi-check-circle"></i>
                     Chấp nhận
                   </button>
-                  <button 
+                  <button
                     className={`${styles.tab} ${reviewMode === 'reject' ? styles.tabActive : ''}`}
                     onClick={() => setReviewMode('reject')}
                   >
@@ -161,13 +181,14 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
                         </div>
                         <div className={styles.infoItem}>
                           <label>Ảnh CCCD</label>
-                          <button 
-                            className={styles.btnImage}
-                            onClick={() => handleShowImage(doctor.identityCardImageUrl)}
+                          <a
+                            className={styles.btnDownload}
+                            href={doctor.identityCardImageUrl}
+                            download
                           >
-                            <i className="bi bi-image"></i>
-                            Xem ảnh
-                          </button>
+                            <i className="bi bi-download"></i>
+                            Tải về
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -192,7 +213,7 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
                         </div>
                         <div className={styles.infoItem}>
                           <label>Ảnh chứng chỉ hành nghề</label>
-                          <button 
+                          <button
                             className={styles.btnImage}
                             onClick={() => handleShowImage(doctor.licenseImageUrl)}
                           >
@@ -202,9 +223,9 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
                         </div>
                         <div className={styles.infoItem}>
                           <label>Tệp bằng cấp</label>
-                          <a 
-                            href={doctor.degreeFilesUrl} 
-                            download 
+                          <a
+                            href={doctor.degreeFilesUrl}
+                            download
                             className={styles.btnDownload}
                           >
                             <i className="bi bi-download"></i>
@@ -251,6 +272,26 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
                       )}
                     </div>
 
+                    <div className={styles.formGroup}>
+                      <label>
+                        Giá khám <span className={styles.required}>*</span>
+                      </label>
+                      <input
+                        type='number'
+                        className={styles.textarea}
+                        placeholder="Giá khám..."
+                        value={formData.consultationFee}
+                        onChange={(e) => {
+                          const fee = parseFloat(e.target.value); // or Number(e.target.value)
+                          setFormData({ ...formData, consultationFee: isNaN(fee) ? 0 : fee });
+                          setErrors({ ...errors, consultationFee: '' });
+                        }}
+                      />
+                      {errors.consultationFee && (
+                        <div className={styles.error}>{errors.consultationFee}</div>
+                      )}
+                    </div>
+
                     <div className={styles.infoBox}>
                       <i className="bi bi-info-circle"></i>
                       <p>Sau khi chấp nhận, hồ sơ bác sĩ sẽ được kích hoạt và bác sĩ có thể bắt đầu sử dụng hệ thống.</p>
@@ -289,7 +330,7 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
               </div>
 
               <div className={styles.footer}>
-                <button 
+                <button
                   className={styles.btnCancel}
                   onClick={onClose}
                   disabled={submitting}
@@ -299,7 +340,7 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
                 </button>
 
                 {reviewMode === 'approve' && (
-                  <button 
+                  <button
                     className={styles.btnApprove}
                     onClick={handleApprove}
                     disabled={submitting}
@@ -319,7 +360,7 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
                 )}
 
                 {reviewMode === 'reject' && (
-                  <button 
+                  <button
                     className={styles.btnReject}
                     onClick={handleReject}
                     disabled={submitting}
@@ -347,7 +388,7 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
       {showImageModal && (
         <div className={styles.imageModalOverlay} onClick={() => setShowImageModal(false)}>
           <div className={styles.imageModal} onClick={(e) => e.stopPropagation()}>
-            <button 
+            <button
               className={styles.imageModalClose}
               onClick={() => setShowImageModal(false)}
             >

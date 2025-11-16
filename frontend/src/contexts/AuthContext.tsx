@@ -3,9 +3,11 @@ import { User, AuthResponse, LoginRequest, RegisterRequest, PatientRegistration 
 import { UserRole } from '../types/common.types';
 import { authService } from '../services/authService';
 import { apiClient } from '../lib/apiClient';
+import doctorService from '../services/doctorService';
 
 interface AuthContextType {
   user: User | null;
+  isBanned: boolean;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
@@ -26,8 +28,21 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isBanned, setIsBanned] = useState(false);
 
   const isAuthenticated = !!user;
+
+  useEffect(() => {
+    if (user && (user as any).startDateBanned && (user as any).endDateBanned) {
+      const now = new Date();
+      const startDate = new Date((user as any).startDateBanned);
+      const endDate = new Date((user as any).endDateBanned);
+      const banned = now >= startDate && now <= endDate;
+      setIsBanned(banned);
+    } else {
+      setIsBanned(false);
+    }
+  }, [user]);
 
   // Initialize auth state on app start
   useEffect(() => {
@@ -116,15 +131,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const authResponse: AuthResponse = await authService.login(credentials);
       
-      // Store tokens
+      let finalUser = authResponse.user;
+
+      // Store tokens immediately so subsequent API calls are authenticated
       apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken);
-      
+
+      // If the user is a doctor, fetch additional profile details
+      if (finalUser.role === UserRole.DOCTOR) {
+        try {
+          console.log('🩺 Doctor logged in, fetching profile details...');
+          const doctorDetails = await doctorService.getDoctorProfileDetails();
+          // Merge the details into the user object
+          finalUser = { ...finalUser, ...doctorDetails };
+          console.log('✅ Doctor details fetched and merged:', finalUser);
+        } catch (detailsError) {
+          console.error('⚠️ Could not fetch doctor details, continuing with basic user info:', detailsError);
+        }
+      }
+
       // Store user data
-      localStorage.setItem('userData', JSON.stringify(authResponse.user));
-      localStorage.setItem('currentUser', JSON.stringify(authResponse.user));
-      setUser(authResponse.user);
-      
-      console.log('✅ AuthContext - Login successful, user set:', authResponse.user.fullName);
+      updateUserInStorageAndState(finalUser);
+      console.log('✅ AuthContext - Login successful, user set:', finalUser.fullName);
       
       // Dispatch auth changed event for Header component
       window.dispatchEvent(new Event('authChanged'));
@@ -139,6 +166,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const updateUserInStorageAndState = (userToUpdate: User) => {
+    setUser(userToUpdate);
+    localStorage.setItem('userData', JSON.stringify(userToUpdate));
+    localStorage.setItem('currentUser', JSON.stringify(userToUpdate));
+    // Dispatch event to notify other components of the update
+    window.dispatchEvent(new Event('authChanged'));
   };
 
   const register = async (userData: RegisterRequest) => {
@@ -270,6 +305,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const value: AuthContextType = {
     user,
+    isBanned,
     isLoading,
     isAuthenticated,
     login,

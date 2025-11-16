@@ -81,25 +81,20 @@ namespace Medix.API.Business.Services.UserManagement
             };
         }
 
-        public Task<WalletDTo?> GetWalletByUserIdAsync(Guid userId)
+        public async Task<WalletDTo?> GetWalletByUserIdAsync(Guid userId)
         {
-           var result =  _walletRepository.GetWalletByUserIdAsync(userId);
-            var walletDto = result.ContinueWith(task =>
-            {
-                var wallet = task.Result;
-                if (wallet == null)
-                    return null;
-                return new WalletDTo
-                {
-                    Id = wallet.Id,
-                    UserId = wallet.UserId,
-                    Balance = wallet.Balance,
-                    Currency = wallet.Currency,
-                    IsActive = wallet.IsActive,
-                    CreatedAt = wallet.CreatedAt,
-                    UpdatedAt = wallet.UpdatedAt
-                };
-            });
+           var result =  await _walletRepository.GetWalletByUserIdAsync(userId);
+            var walletDto =
+                 new WalletDTo
+                 {
+                     Id = result.Id,
+                     UserId = result.UserId,
+                     Balance = result.Balance,
+                     Currency = result.Currency,
+                     IsActive = result.IsActive,
+                     CreatedAt = result.CreatedAt,
+                     UpdatedAt = result.UpdatedAt
+                 };
 
             return walletDto;
         }

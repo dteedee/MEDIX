@@ -1,7 +1,9 @@
 ﻿using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.NewFolder;
+using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.PayOSDto;
 using Medix.API.Models.DTOs.Wallet;
+using Medix.API.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -23,9 +25,10 @@ namespace Medix.API.Presentation.Controller.Money
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IWalletTransactionService transactionService;
         private readonly IWalletService walletService;
+        private readonly IUserRoleRepository userRoleRepository;
 
         private readonly IConfiguration _configuration;
-        public ReceiveController([FromKeyedServices("OrderClient")] PayOSClient client, IWalletService walletService, IWalletTransactionService transactionService, IHttpContextAccessor httpContextAccessor, IUserService userService, IConfiguration configuration)
+        public ReceiveController([FromKeyedServices("OrderClient")] PayOSClient client, IWalletService walletService, IWalletTransactionService transactionService, IHttpContextAccessor httpContextAccessor, IUserService userService, IConfiguration configuration, IUserRoleRepository userRoleRepository)
         {
             _client = client;
             this.walletService = walletService;
@@ -33,6 +36,7 @@ namespace Medix.API.Presentation.Controller.Money
             _httpContextAccessor = httpContextAccessor;
             _userService = userService;
             _configuration = configuration;
+            this.userRoleRepository = userRoleRepository;
         }
 
         [HttpGet("{id}")]
@@ -232,8 +236,10 @@ namespace Medix.API.Presentation.Controller.Money
         }
 
         [HttpGet("payment-failed")]
+
         public async Task<IActionResult> paymentfailed([FromQuery] PaymentReturnDto paymentReturnDto)
         {
+        
             var order = OrderService.GetOrderByOrderCode(paymentReturnDto.OrderCode);
 
             var frontendBaseUrl = order.baseURLFE ?? "http://localhost:5173";
@@ -242,6 +248,12 @@ namespace Medix.API.Presentation.Controller.Money
             walletTransaction.Status = "Failed";
 
             await transactionService.UppdateWalletTrasactionAsync(walletTransaction);
+
+            var userInfo = await userRoleRepository.GetByIdAsync(walletService.GetWalletByIdAsync((Guid)walletTransaction.walletId).Result.UserId);
+            if (userInfo.RoleCode == "Doctor")
+            {
+                return Redirect($"{frontendBaseUrl}/app/doctor/wallet");
+            }
 
             return Redirect($"{frontendBaseUrl}/app/patient/finance");
         }
@@ -266,10 +278,10 @@ namespace Medix.API.Presentation.Controller.Money
 
 
         [HttpGet("payment-success")]
-        [Authorize]
+     
         public async Task<IActionResult> paymentSuccess([FromQuery] PaymentReturnDto paymentReturnDto)
         {
-         
+     
 
             if (paymentReturnDto.Status != "PAID")
             {
@@ -296,14 +308,23 @@ namespace Medix.API.Presentation.Controller.Money
             }
             wallet.Balance += walletTransaction.Amount ?? 0;
             await walletService.IncreaseWalletBalanceAsync(wallet.UserId, walletTransaction.Amount ?? 0);
-            return Redirect($"{frontendBaseUrl}/app/patient/finance");
 
+
+            var userInfo = await userRoleRepository.GetByIdAsync(wallet.UserId);
+
+            if (userInfo.RoleCode == "Doctor")
+            {
+                return Redirect($"{frontendBaseUrl}/app/doctor/wallet");
+            }
+
+            return Redirect($"{frontendBaseUrl}/app/patient/finance");
 
 
         }
 
 
         [HttpPost("payment-webhook")]
+
         public async Task<ActionResult> VerifyPayment(Webhook webhook)
         {
             if (webhook == null)

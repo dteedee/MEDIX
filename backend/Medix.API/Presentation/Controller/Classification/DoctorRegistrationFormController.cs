@@ -277,7 +277,7 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
 
                 await _doctorRegistrationFormService.ReviewDoctorAsync(request, registerForm);
-
+                
                 return Ok();
             }
             catch (Exception ex)

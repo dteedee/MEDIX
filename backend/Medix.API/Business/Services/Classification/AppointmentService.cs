@@ -1,8 +1,12 @@
 ﻿﻿using AutoMapper;
+using Hangfire;
+using Humanizer;
 using Medix.API.Business.Interfaces.Classification;
+using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.ApointmentDTO;
 using Medix.API.Models.DTOs.MedicalRecordDTO;
+using Medix.API.Models.DTOs.Wallet;
 using Medix.API.Models.Entities;
 
 namespace Medix.API.Business.Services.Classification
@@ -12,13 +16,23 @@ namespace Medix.API.Business.Services.Classification
         private readonly IAppointmentRepository _repository;
         private readonly IMapper _mapper;
 
+  
+
         private readonly IMedicalRecordService medicalRecordService;
 
-        public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService)
+        private readonly IWalletService walletService;
+        private readonly IWalletTransactionService walletTransactionService;
+        private readonly IDoctorRepository doctorRepository;
+
+        public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService, IWalletTransactionService walletTransactionService, IWalletService walletService, IDoctorRepository doctorRepository)
         {
             _repository = repository;
             _mapper = mapper;
             this.medicalRecordService = medicalRecordService;
+           
+            this.walletTransactionService = walletTransactionService;
+            this.walletService = walletService;
+            this.doctorRepository = doctorRepository;
         }
 
         public async Task<IEnumerable<AppointmentDto>> GetAllAsync()
@@ -58,8 +72,13 @@ namespace Medix.API.Business.Services.Classification
         var medical=    await medicalRecordService.CreateAsync(newRecordDto);
             entity.MedicalInfo = medical.Id.ToString();
 
-            await _repository.UpdateAsync(entity);  
+           
+            await _repository.UpdateAsync(entity);
 
+          
+            BackgroundJob.Schedule<IAppointmentService>(
+                     service => service.CheckisAppointmentCompleted(entity.Id)
+                     , entity.AppointmentEndTime.AddMinutes(1));
             return _mapper.Map<AppointmentDto>(entity);
         }
 
@@ -154,7 +173,7 @@ namespace Medix.API.Business.Services.Classification
 
        var conflictingAppointments = allAppointments.Where(a =>
     // ✅ Chỉ kiểm tra các lịch hẹn CHƯA bị hủy hoặc hoàn thành
-    a.StatusCode == "OnProgressing" &&
+             a.StatusCode == "OnProgressing" &&
   // ✅ Kiểm tra trùng thời gian (overlap)
   appointmentStartTime < a.AppointmentEndTime &&
         appointmentEndTime > a.AppointmentStartTime
@@ -162,5 +181,58 @@ namespace Medix.API.Business.Services.Classification
 
             return _mapper.Map<List<AppointmentDto>>(conflictingAppointments);
         }
+
+        public async Task CheckisAppointmentCompleted(Guid id)
+        {
+            var appoiment = await _repository.GetByIdAsync(id);
+            var doctor = await doctorRepository.GetDoctorByIdAsync(appoiment.DoctorId);
+            var wallet = await walletService.GetWalletByUserIdAsync(doctor.UserId);
+
+
+            if (DateTime.Now > appoiment.AppointmentEndTime && appoiment.StatusCode != "Completed")
+            {
+                var updateDto = new UpdateAppointmentDto
+                {
+                    Id =appoiment.Id,
+                    StatusCode = "MissedByDoctor",
+                    UpdatedAt = DateTime.UtcNow,
+                    DiscountAmount =appoiment.DiscountAmount,
+                    ConsultationFee = appoiment.ConsultationFee,
+                    DurationMinutes = appoiment.DurationMinutes,
+                    MedicalInfo = appoiment.MedicalInfo,
+                    PaymentMethodCode = appoiment.PaymentMethodCode,
+                    PaymentStatusCode = "Refunded",
+                    AppointmentEndTime = appoiment.AppointmentEndTime,
+                    AppointmentStartTime = appoiment.AppointmentStartTime,
+                    PlatformFee = appoiment.PlatformFee,
+                    RefundAmount = appoiment.RefundAmount,
+                    TotalAmount = appoiment.TotalAmount
+                   
+                };
+
+                await UpdateAsync(updateDto);
+                    
+                var WalletTransaction = new WalletTransactionDto
+                {
+                    Amount = appoiment.TotalAmount,
+                    TransactionTypeCode = "AppointmentRefund",
+                    Description = "Hoàn lại tiền hủy lịch ",
+                    CreatedAt = DateTime.UtcNow,
+                    orderCode = 0,
+                    Status = "Completed",
+                    BalanceAfter = wallet.Balance,
+                    BalanceBefore = wallet.Balance + Decimal.Parse(appoiment.TotalAmount.ToString()),
+                    walletId = wallet.Id
+                };
+                await walletTransactionService.createWalletTransactionAsync(WalletTransaction);
+
+                await walletService.IncreaseWalletBalanceAsync(doctor.UserId, appoiment.TotalAmount);
+
+                doctor.TotalCaseMissPerWeek= doctor.TotalCaseMissPerWeek + 1;
+
+                await doctorRepository.UpdateDoctorAsync(doctor);
+            }
+        }
+           
+        }
     }
-}

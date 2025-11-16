@@ -324,7 +324,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpGet("{id}/statistics")]
-        [Authorize(Roles = "Manager")]
+     
         public async Task<IActionResult> GetStatistic(Guid id)
         {
             try

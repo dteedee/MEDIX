@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Medix.API.Migrations
 {
     /// <inheritdoc />
-    public partial class newdb123 : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -519,6 +519,12 @@ namespace Medix.API.Migrations
                     ConsultationFee = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     AverageRating = table.Column<decimal>(type: "decimal(3,2)", nullable: false),
                     TotalReviews = table.Column<int>(type: "int", nullable: false),
+                    TotalCaseMissPerWeek = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    isSalaryDeduction = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    NextWeekMiss = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    StartDateBanned = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(getutcdate())"),
+                    EndDateBanned = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(getutcdate())"),
+                    TotalBanned = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
                     IsVerified = table.Column<bool>(type: "bit", nullable: false),
                     IsAcceptingAppointments = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(getutcdate())"),
@@ -1272,35 +1278,36 @@ namespace Medix.API.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "TransferTransactions",
+                name: "TransferTransaction",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "(newid())"),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Amount = table.Column<long>(type: "bigint", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    ToBin = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    ToAccountNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    FromBin = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
-                    FromAccountNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    ToBin = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    ToAccountNumber = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    FromBin = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    FromAccountNumber = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(getutcdate())"),
                     Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
-                    ReferenceCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    WalletTransactionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ReferenceCode = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    WalletTransactionID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Transfer__3214EC07XXXXXXXX", x => x.Id);
+                    table.PrimaryKey("PK_TransferTransaction", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TransferTransactions_User",
+                        name: "FK_TransferTransaction_User",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_TransferTransactions_WalletTransaction",
-                        column: x => x.WalletTransactionId,
+                        name: "FK_TransferTransaction_WalletTransaction",
+                        column: x => x.WalletTransactionID,
                         principalTable: "WalletTransactions",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -1736,27 +1743,15 @@ namespace Medix.API.Migrations
                 columns: new[] { "MetricDate", "MetricType" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_TransferTransactions_ReferenceCode",
-                table: "TransferTransactions",
-                column: "ReferenceCode",
-                filter: "([ReferenceCode] IS NOT NULL)");
+                name: "IX_TransferTransaction_UserId",
+                table: "TransferTransaction",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TransferTransactions_Status_Date",
-                table: "TransferTransactions",
-                columns: new[] { "Status", "CreatedAt" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TransferTransactions_User_Date",
-                table: "TransferTransactions",
-                columns: new[] { "UserId", "CreatedAt" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TransferTransactions_WalletTransactionId",
-                table: "TransferTransactions",
-                column: "WalletTransactionId",
-                unique: true,
-                filter: "[WalletTransactionId] IS NOT NULL");
+                name: "IX_TransferTransaction_WalletTransactionID",
+                table: "TransferTransaction",
+                column: "WalletTransactionID",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserRoles_Role",
@@ -1911,7 +1906,7 @@ namespace Medix.API.Migrations
                 name: "SystemConfigurations");
 
             migrationBuilder.DropTable(
-                name: "TransferTransactions");
+                name: "TransferTransaction");
 
             migrationBuilder.DropTable(
                 name: "UserRoles");

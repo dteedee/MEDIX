@@ -6,7 +6,9 @@ using Medix.API.Business.Services.Community;
 using Medix.API.DataAccess;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
+using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.Doctor;
+using Medix.API.Models.DTOs.Wallet;
 using Medix.API.Models.Entities;
 
 namespace Medix.API.Business.Services.Classification
@@ -168,10 +170,14 @@ namespace Medix.API.Business.Services.Classification
                         IsAcceptingAppointments = false
                     };
                     await _doctorRepository.CreateDoctorAsync(doctor);
-
                     var wallet = new Wallet
                     {
-                        UserId = userId,
+                        UserId = doctor.UserId,
+                        Balance = 0,
+                        Currency = "VND",
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
                     };
                     await _walletRepository.CreateWalletAsync(wallet);
 

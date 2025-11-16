@@ -77,7 +77,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
         public async Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query)
         {
             var queryable = _context.MedicalRecords
-                .Where(mr => mr.Appointment.Patient.UserId == userId)
+                .Where(mr => mr.Appointment.Patient.UserId == userId && mr.Appointment.StatusCode == "Completed")
                 .OrderByDescending(mr => mr.Appointment.AppointmentEndTime)
                 .AsQueryable();
             if (queryable.Count() == 0)

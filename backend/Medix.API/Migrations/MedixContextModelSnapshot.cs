@@ -461,7 +461,7 @@ namespace Medix.API.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<DateTime>("EndDateBanned")
+                    b.Property<DateTime?>("EndDateBanned")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("(getutcdate())");
@@ -484,7 +484,7 @@ namespace Medix.API.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int>("NextWeekMiss")
+                    b.Property<int?>("NextWeekMiss")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(0);
@@ -495,17 +495,17 @@ namespace Medix.API.Migrations
                     b.Property<Guid>("SpecializationId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("StartDateBanned")
+                    b.Property<DateTime?>("StartDateBanned")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("(getutcdate())");
 
-                    b.Property<int>("TotalBanned")
+                    b.Property<int?>("TotalBanned")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(0);
 
-                    b.Property<int>("TotalCaseMissPerWeek")
+                    b.Property<int?>("TotalCaseMissPerWeek")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(0);
@@ -524,7 +524,7 @@ namespace Medix.API.Migrations
                     b.Property<int>("YearsOfExperience")
                         .HasColumnType("int");
 
-                    b.Property<bool>("isSalaryDeduction")
+                    b.Property<bool?>("isSalaryDeduction")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
@@ -2183,6 +2183,77 @@ namespace Medix.API.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Medix.API.Models.Entities.UserPromotion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("(newid())");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getutcdate())");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal?>("DiscountPercentage")
+                        .HasColumnType("decimal(5, 2)");
+
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<decimal?>("MaxDiscountAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal?>("MinOrderAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("PromotionCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UsageLimit")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsedCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id")
+                        .HasName("PK__UserProm__3214EC07XXXXXXXX");
+
+                    b.HasIndex(new[] { "IsActive", "ExpiryDate" }, "IX_UserPromotions_Active_Expiry")
+                        .HasFilter("([IsActive]=(1))");
+
+                    b.HasIndex(new[] { "PromotionCode" }, "IX_UserPromotions_Code");
+
+                    b.HasIndex(new[] { "UserId", "PromotionCode" }, "IX_UserPromotions_User_Code");
+
+                    b.ToTable("UserPromotions", (string)null);
+                });
+
             modelBuilder.Entity("Medix.API.Models.Entities.UserRole", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -3124,6 +3195,27 @@ namespace Medix.API.Migrations
                     b.Navigation("GenderCodeNavigation");
                 });
 
+            modelBuilder.Entity("Medix.API.Models.Entities.UserPromotion", b =>
+                {
+                    b.HasOne("Medix.API.Models.Entities.Promotion", "Promotion")
+                        .WithMany("UserPromotions")
+                        .HasForeignKey("PromotionCode")
+                        .HasPrincipalKey("Code")
+                        .IsRequired()
+                        .HasConstraintName("FK_UserPromotions_Promotion");
+
+                    b.HasOne("Medix.API.Models.Entities.User", "User")
+                        .WithMany("UserPromotions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_UserPromotions_User");
+
+                    b.Navigation("Promotion");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Medix.API.Models.Entities.UserRole", b =>
                 {
                     b.HasOne("Medix.API.Models.Enums.RefRole", "RoleCodeNavigation")
@@ -3251,6 +3343,11 @@ namespace Medix.API.Migrations
                     b.Navigation("PatientHealthReminders");
                 });
 
+            modelBuilder.Entity("Medix.API.Models.Entities.Promotion", b =>
+                {
+                    b.Navigation("UserPromotions");
+                });
+
             modelBuilder.Entity("Medix.API.Models.Entities.ServicePackage", b =>
                 {
                     b.Navigation("DoctorSubscriptions");
@@ -3286,6 +3383,8 @@ namespace Medix.API.Migrations
                     b.Navigation("RefreshTokens");
 
                     b.Navigation("TransferTransactions");
+
+                    b.Navigation("UserPromotions");
 
                     b.Navigation("UserRoles");
 

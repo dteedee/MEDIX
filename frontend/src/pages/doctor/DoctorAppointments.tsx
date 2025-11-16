@@ -5,19 +5,19 @@ import Swal from 'sweetalert2';
 import { appointmentService } from '../../services/appointmentService';
 import { Appointment } from '../../types/appointment.types';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 
 interface AppointmentDisplay {
   id: string;
   patientName: string;
   date: string;
   time: string;
-  status: 'upcoming' | 'completed' | 'cancelled';
   fee: number;
   avatar?: string;
   patientID?: string;
   appointmentStartTime?: string;
   appointmentEndTime?: string;
-  statusCode?: string;
+  statusCode: string;
   statusDisplayName?: string;
   paymentStatusCode?: string;
   totalAmount?: number;
@@ -33,6 +33,7 @@ interface FilterOptions {
 const DoctorAppointments: React.FC = () => {
   const navigate = useNavigate();
   const { user, isBanned } = useAuth();
+  const { showToast } = useToast();
   const [appointments, setAppointments] = useState<AppointmentDisplay[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<AppointmentDisplay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +41,8 @@ const DoctorAppointments: React.FC = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentDisplay | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEMRModal, setShowEMRModal] = useState(false);
+  const [showConfirmCompleteModal, setShowConfirmCompleteModal] = useState(false);
+  const [isCompletingAppointment, setIsCompletingAppointment] = useState(false);
   const [activeView, setActiveView] = useState<'grid' | 'list'>('grid');
   const [filters, setFilters] = useState<FilterOptions>({
     status: 'all',
@@ -58,6 +61,55 @@ const DoctorAppointments: React.FC = () => {
         icon: 'warning',
         confirmButtonText: 'Đã hiểu'
       });
+    }
+  };
+
+  // Handle complete appointment
+  const handleCompleteAppointment = async () => {
+    if (!selectedAppointment) return;
+
+    setIsCompletingAppointment(true);
+    try {
+      await appointmentService.completeAppointment(selectedAppointment.id);
+      showToast('Hoàn thành ca khám thành công!', 'success');
+      setShowConfirmCompleteModal(false);
+      setShowDetailModal(false);
+      
+      // Reload appointments
+      const now = new Date();
+      const startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+      const endDate = new Date(now.getFullYear(), now.getMonth() + 3, 0);
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+      const data = await appointmentService.getMyAppointmentsByDateRange(startDateStr, endDateStr);
+      
+      const transformedData: AppointmentDisplay[] = data.map(apt => {
+        const startDate = new Date(apt.appointmentStartTime);
+        return {
+          id: apt.id,
+          patientName: apt.patientName,
+          date: startDate.toISOString().split('T')[0],
+          time: `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`,
+          fee: apt.consultationFee,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.patientName)}&background=667eea&color=fff`,
+          patientID: apt.patientID,
+          appointmentStartTime: apt.appointmentStartTime,
+          appointmentEndTime: apt.appointmentEndTime,
+          statusCode: apt.statusCode,
+          statusDisplayName: apt.statusDisplayName,
+          paymentStatusCode: apt.paymentStatusCode,
+          totalAmount: apt.totalAmount,
+          medicalInfo: apt.medicalInfo,
+        };
+      });
+      
+      setAppointments(transformedData);
+      setFilteredAppointments(transformedData);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.response?.data || 'Không thể hoàn thành ca khám';
+      showToast(errorMessage, 'error');
+    } finally {
+      setIsCompletingAppointment(false);
     }
   };
 
@@ -82,28 +134,11 @@ const DoctorAppointments: React.FC = () => {
         const transformedData: AppointmentDisplay[] = data.map(apt => {
           const startDate = new Date(apt.appointmentStartTime);
           
-          const now = new Date();
-          let status: 'upcoming' | 'completed' | 'cancelled' = 'upcoming';
-
-          if (apt.statusCode === 'Completed') {
-            status = 'completed';
-          } else if (
-            apt.statusCode === 'CancelledByPatient' || 
-            apt.statusCode === 'CancelledByDoctor' || 
-            apt.statusCode === 'NoShow'
-          ) {
-            status = 'cancelled';
-          } else if (startDate <= now) {
-            // Nếu lịch hẹn đã qua mà chưa hoàn thành/hủy, coi như đã hoàn thành
-            status = 'completed';
-          }
-          
           return {
             id: apt.id,
             patientName: apt.patientName,
             date: startDate.toISOString().split('T')[0],
             time: `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`,
-            status,
             fee: apt.consultationFee,
             avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.patientName)}&background=667eea&color=fff`,
             patientID: apt.patientID,
@@ -132,9 +167,18 @@ const DoctorAppointments: React.FC = () => {
   // Statistics
   const stats = {
     total: appointments.length,
-    upcoming: appointments.filter(apt => apt.status === 'upcoming').length,
-    completed: appointments.filter(apt => apt.status === 'completed').length,
-    cancelled: appointments.filter(apt => apt.status === 'cancelled').length
+    upcoming: appointments.filter(apt => 
+      apt.statusCode !== 'Completed' && 
+      apt.statusCode !== 'CancelledByPatient' && 
+      apt.statusCode !== 'CancelledByDoctor' && 
+      apt.statusCode !== 'NoShow'
+    ).length,
+    completed: appointments.filter(apt => apt.statusCode === 'Completed').length,
+    cancelled: appointments.filter(apt => 
+      apt.statusCode === 'CancelledByPatient' || 
+      apt.statusCode === 'CancelledByDoctor' || 
+      apt.statusCode === 'NoShow'
+    ).length
   };
 
   // Filter appointments
@@ -142,7 +186,22 @@ const DoctorAppointments: React.FC = () => {
     let filtered = [...appointments];
 
     if (filters.status !== 'all') {
-      filtered = filtered.filter(apt => apt.status === filters.status);
+      if (filters.status === 'upcoming') {
+        filtered = filtered.filter(apt => 
+          apt.statusCode !== 'Completed' && 
+          apt.statusCode !== 'CancelledByPatient' && 
+          apt.statusCode !== 'CancelledByDoctor' && 
+          apt.statusCode !== 'NoShow'
+        );
+      } else if (filters.status === 'completed') {
+        filtered = filtered.filter(apt => apt.statusCode === 'Completed');
+      } else if (filters.status === 'cancelled') {
+        filtered = filtered.filter(apt => 
+          apt.statusCode === 'CancelledByPatient' || 
+          apt.statusCode === 'CancelledByDoctor' || 
+          apt.statusCode === 'NoShow'
+        );
+      }
     }
 
     if (filters.search) {
@@ -182,7 +241,12 @@ const DoctorAppointments: React.FC = () => {
         const startTime = apt.appointmentStartTime ? new Date(apt.appointmentStartTime) : null;
         const endTime = apt.appointmentEndTime ? new Date(apt.appointmentEndTime) : null;
     
-        if (apt.status === 'cancelled') return 4; // Cancelled last
+        // Cancelled appointments last
+        if (apt.statusCode === 'CancelledByPatient' || 
+            apt.statusCode === 'CancelledByDoctor' || 
+            apt.statusCode === 'NoShow') {
+          return 4;
+        }
     
         if (startTime && endTime && now >= startTime && now <= endTime) {
           return 1; // On-going first
@@ -247,26 +311,13 @@ const DoctorAppointments: React.FC = () => {
     }).format(amount);
   };
 
-  const getAppointmentStatus = (apt: AppointmentDisplay): 'upcoming' | 'completed' | 'cancelled' => {
-    if (apt.statusCode === 'Completed') {
-      return 'completed';
-    } else if (
-      apt.statusCode === 'CancelledByPatient' || 
-      apt.statusCode === 'CancelledByDoctor' || 
-      apt.statusCode === 'NoShow'
-    ) {
-      return 'cancelled';
-    }
-    return 'upcoming';
-  };
-
-  const getStatusConfig = (status: string, startTime?: string, endTime?: string) => {
+  const getStatusConfig = (statusCode: string, startTime?: string, endTime?: string) => {
   const currentTime = new Date();
   const appointmentStartTime = startTime ? new Date(startTime) : null;
   const appointmentEndTime = endTime ? new Date(endTime) : null;
 
-  // ✅ 1. Trạng thái cố định
-  if (status === 'completed') {
+  // ✅ 1. Trạng thái cố định - Completed
+  if (statusCode === 'Completed') {
     return { 
       label: 'Hoàn thành', 
       icon: 'bi-check-circle-fill',
@@ -274,7 +325,10 @@ const DoctorAppointments: React.FC = () => {
     };
   }
   
-  if (status === 'cancelled') {
+  // ✅ 2. Trạng thái hủy
+  if (statusCode === 'CancelledByPatient' || 
+      statusCode === 'CancelledByDoctor' || 
+      statusCode === 'NoShow') {
     return { 
       label: 'Đã hủy', 
       icon: 'bi-x-circle-fill',
@@ -499,9 +553,8 @@ const DoctorAppointments: React.FC = () => {
       ) : (
         <div className={activeView === 'grid' ? styles.appointmentsGrid : styles.appointmentsList}>
           {filteredAppointments.map((appointment) => {
-            const appointmentStatus = getAppointmentStatus(appointment);
             const statusConfig = getStatusConfig(
-              appointmentStatus,
+              appointment.statusCode,
               appointment.appointmentStartTime,
               appointment.appointmentEndTime
             );
@@ -575,7 +628,9 @@ const DoctorAppointments: React.FC = () => {
                 </div>
 
                 <div className={styles.cardFooter} onClick={(e) => e.stopPropagation()}>
-                  {appointment.status !== 'cancelled' && (
+                  {appointment.statusCode !== 'CancelledByPatient' && 
+                   appointment.statusCode !== 'CancelledByDoctor' && 
+                   appointment.statusCode !== 'NoShow' && (
                     <div className={styles.footerActions}>
                       <button 
                         className={styles.emrBtn}
@@ -590,6 +645,18 @@ const DoctorAppointments: React.FC = () => {
                         <i className="bi bi-file-text"></i>
                         Xem EMR
                       </button>
+                      {appointment.statusCode === 'OnProgressing' && (
+                        <button 
+                          className={styles.completeBtn}
+                          onClick={() => {
+                            setSelectedAppointment(appointment);
+                            setShowConfirmCompleteModal(true);
+                          }}
+                        >
+                          <i className="bi bi-check-circle"></i>
+                          Kết thúc ca khám
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -602,9 +669,8 @@ const DoctorAppointments: React.FC = () => {
 
       {/* Detail Modal */}
       {showDetailModal && selectedAppointment && (() => {
-        const appointmentStatus = getAppointmentStatus(selectedAppointment);
         const statusConfig = getStatusConfig(
-          appointmentStatus,
+          selectedAppointment.statusCode,
           selectedAppointment.appointmentStartTime,
           selectedAppointment.appointmentEndTime
         );
@@ -714,27 +780,96 @@ const DoctorAppointments: React.FC = () => {
               </div>
             
               <div className={styles.modalFooter}>
-                {selectedAppointment.status !== 'cancelled' && (
-                  <button 
-                    className={styles.modalEmrBtn}
-                    onClick={() => {
-                      if (isBanned) {
-                        showBannedPopup();
-                      } else {
-                        setShowDetailModal(false);
-                        navigate(`/app/doctor/medical-records/${selectedAppointment.id}`);
-                      }
-                    }}
-                  >
-                    <i className="bi bi-file-text"></i>
-                    Xem EMR
-                  </button>
+                {selectedAppointment.statusCode !== 'CancelledByPatient' && 
+                 selectedAppointment.statusCode !== 'CancelledByDoctor' && 
+                 selectedAppointment.statusCode !== 'NoShow' && (
+                  <>
+                    <button 
+                      className={styles.modalEmrBtn}
+                      onClick={() => {
+                        if (isBanned) {
+                          showBannedPopup();
+                        } else {
+                          setShowDetailModal(false);
+                          navigate(`/app/doctor/medical-records/${selectedAppointment.id}`);
+                        }
+                      }}
+                    >
+                      <i className="bi bi-file-text"></i>
+                      Xem EMR
+                    </button>
+                    {selectedAppointment.statusCode === 'OnProgressing' && (
+                      <button 
+                        className={styles.modalCompleteBtn}
+                        onClick={() => {
+                          setShowDetailModal(false);
+                          setShowConfirmCompleteModal(true);
+                        }}
+                      >
+                        <i className="bi bi-check-circle"></i>
+                        Kết thúc ca khám
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
           </div>
         );
       })()}
+
+      {/* Confirm Complete Modal */}
+      {showConfirmCompleteModal && selectedAppointment && (
+        <div className={styles.modalOverlay} onClick={() => !isCompletingAppointment && setShowConfirmCompleteModal(false)}>
+          <div className={styles.confirmModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.confirmIcon}>
+              <i className="bi bi-check-circle"></i>
+            </div>
+            <h3>Xác nhận hoàn thành ca khám</h3>
+            <p>Bạn có chắc chắn muốn kết thúc ca khám cho bệnh nhân <strong>{selectedAppointment.patientName}</strong>?</p>
+            <div className={styles.confirmInfo}>
+              <div className={styles.infoRow}>
+                <i className="bi bi-calendar3"></i>
+                <span>{formatDate(selectedAppointment.date)}</span>
+              </div>
+              <div className={styles.infoRow}>
+                <i className="bi bi-clock"></i>
+                <span>
+                  {selectedAppointment.appointmentStartTime && selectedAppointment.appointmentEndTime
+                    ? formatTimeRange(selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime)
+                    : selectedAppointment.time}
+                </span>
+              </div>
+            </div>
+            <div className={styles.confirmActions}>
+              <button 
+                className={styles.cancelBtn}
+                onClick={() => setShowConfirmCompleteModal(false)}
+                disabled={isCompletingAppointment}
+              >
+                Hủy
+              </button>
+              <button 
+                className={styles.confirmCompleteBtn}
+                onClick={handleCompleteAppointment}
+                disabled={isCompletingAppointment}
+              >
+                {isCompletingAppointment ? (
+                  <>
+                    <span className={styles.buttonSpinner}></span>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-check-circle"></i>
+                    Xác nhận
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

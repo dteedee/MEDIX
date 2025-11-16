@@ -123,6 +123,7 @@ public partial class MedixContext : DbContext
     public virtual DbSet<WalletTransaction> WalletTransactions { get; set; }
 
     public virtual DbSet<NoticeSetup> NoticeSetups { get; set; }
+    public virtual DbSet<UserPromotion> UserPromotions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -1202,7 +1203,55 @@ public partial class MedixContext : DbContext
             entity.Property(e => e.Status).HasMaxLength(20).HasDefaultValue("Pending");
             entity.Property(e => e.ReferenceCode).HasMaxLength(255);
         });
+        // Thêm vào phương thức OnModelCreating
+        modelBuilder.Entity<UserPromotion>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__UserProm__3214EC07XXXXXXXX");
 
+            entity.ToTable("UserPromotions");
+
+            // Indexes
+            entity.HasIndex(e => e.UserId, "IX_UserPromotions_UserId");
+
+            entity.HasIndex(e => e.PromotionId, "IX_UserPromotions_PromotionId");
+
+            entity.HasIndex(e => new { e.UserId, e.PromotionId }, "UQ_UserPromotions_User_Promotion")
+                .IsUnique();
+
+            entity.HasIndex(e => new { e.IsActive, e.UserId }, "IX_UserPromotions_Active")
+                .HasFilter("([IsActive]=(1))");
+
+            entity.HasIndex(e => new { e.ExpiryDate, e.IsActive }, "IX_UserPromotions_Expiry_Active")
+                .HasFilter("([IsActive]=(1))");
+
+            // Properties
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+
+            entity.Property(e => e.UsedCount).HasDefaultValue(0);
+
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            entity.Property(e => e.AssignedAt).HasDefaultValueSql("(getutcdate())");
+
+            entity.Property(e => e.ExpiryDate)
+                .IsRequired()
+                .HasColumnType("datetime2(7)");
+
+            entity.Property(e => e.LastUsedAt).HasColumnType("datetime2(7)");
+
+            // Relationships
+            entity.HasOne(d => d.User)
+                .WithMany(p => p.UserPromotions)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_UserPromotions_User");
+
+            entity.HasOne(d => d.Promotion)
+                .WithMany(p => p.UserPromotions)
+                .HasForeignKey(d => d.PromotionId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_UserPromotions_Promotion");
+        });
         OnModelCreatingPartial(modelBuilder);
     }
 

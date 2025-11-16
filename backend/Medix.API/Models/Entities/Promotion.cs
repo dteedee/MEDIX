@@ -28,4 +28,6 @@ public partial class Promotion
     public bool IsActive { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    public virtual ICollection<UserPromotion> UserPromotions { get; set; } = new List<UserPromotion>();
 }

@@ -129,6 +129,7 @@ namespace Medix.API.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Promotio__3214EC078B240364", x => x.Id);
+                    table.UniqueConstraint("AK_Promotions_Code", x => x.Code);
                 });
 
             migrationBuilder.CreateTable(
@@ -519,12 +520,12 @@ namespace Medix.API.Migrations
                     ConsultationFee = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     AverageRating = table.Column<decimal>(type: "decimal(3,2)", nullable: false),
                     TotalReviews = table.Column<int>(type: "int", nullable: false),
-                    TotalCaseMissPerWeek = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
-                    isSalaryDeduction = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
-                    NextWeekMiss = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
-                    StartDateBanned = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(getutcdate())"),
-                    EndDateBanned = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(getutcdate())"),
-                    TotalBanned = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    TotalCaseMissPerWeek = table.Column<int>(type: "int", nullable: true, defaultValue: 0),
+                    isSalaryDeduction = table.Column<bool>(type: "bit", nullable: true, defaultValue: false),
+                    NextWeekMiss = table.Column<int>(type: "int", nullable: true, defaultValue: 0),
+                    StartDateBanned = table.Column<DateTime>(type: "datetime2", nullable: true, defaultValueSql: "(getutcdate())"),
+                    EndDateBanned = table.Column<DateTime>(type: "datetime2", nullable: true, defaultValueSql: "(getutcdate())"),
+                    TotalBanned = table.Column<int>(type: "int", nullable: true, defaultValue: 0),
                     IsVerified = table.Column<bool>(type: "bit", nullable: false),
                     IsAcceptingAppointments = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(getutcdate())"),
@@ -663,6 +664,42 @@ namespace Medix.API.Migrations
                     table.PrimaryKey("PK__RefreshT__3214EC077F541F45", x => x.Id);
                     table.ForeignKey(
                         name: "FK_RefreshTokens_User",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserPromotions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "(newid())"),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PromotionCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    DiscountAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    DiscountPercentage = table.Column<decimal>(type: "decimal(5,2)", nullable: true),
+                    MaxDiscountAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    MinOrderAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    StartDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UsageLimit = table.Column<int>(type: "int", nullable: true),
+                    UsedCount = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(getutcdate())"),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__UserProm__3214EC07XXXXXXXX", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserPromotions_Promotion",
+                        column: x => x.PromotionCode,
+                        principalTable: "Promotions",
+                        principalColumn: "Code");
+                    table.ForeignKey(
+                        name: "FK_UserPromotions_User",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -1754,6 +1791,22 @@ namespace Medix.API.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserPromotions_Active_Expiry",
+                table: "UserPromotions",
+                columns: new[] { "IsActive", "ExpiryDate" },
+                filter: "([IsActive]=(1))");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserPromotions_Code",
+                table: "UserPromotions",
+                column: "PromotionCode");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserPromotions_User_Code",
+                table: "UserPromotions",
+                columns: new[] { "UserId", "PromotionCode" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserRoles_Role",
                 table: "UserRoles",
                 column: "RoleCode");
@@ -1885,9 +1938,6 @@ namespace Medix.API.Migrations
                 name: "Prescriptions");
 
             migrationBuilder.DropTable(
-                name: "Promotions");
-
-            migrationBuilder.DropTable(
                 name: "RefreshTokens");
 
             migrationBuilder.DropTable(
@@ -1907,6 +1957,9 @@ namespace Medix.API.Migrations
 
             migrationBuilder.DropTable(
                 name: "TransferTransaction");
+
+            migrationBuilder.DropTable(
+                name: "UserPromotions");
 
             migrationBuilder.DropTable(
                 name: "UserRoles");
@@ -1934,6 +1987,9 @@ namespace Medix.API.Migrations
 
             migrationBuilder.DropTable(
                 name: "WalletTransactions");
+
+            migrationBuilder.DropTable(
+                name: "Promotions");
 
             migrationBuilder.DropTable(
                 name: "RefRoles");

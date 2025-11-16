@@ -80,6 +80,7 @@ public partial class User
     public virtual ICollection<TransferTransaction> TransferTransactions { get; set; } = new List<TransferTransaction>();
 
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+    public virtual ICollection<UserPromotion> UserPromotions { get; set; } = new List<UserPromotion>();
 
     public virtual Wallet? Wallet { get; set; }
 }

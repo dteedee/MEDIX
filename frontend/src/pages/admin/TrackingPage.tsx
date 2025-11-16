@@ -118,8 +118,7 @@ export default function TrackingPage() {
 
       const searchTerm = filters.search.toLowerCase();
       const okSearch = !searchTerm ||
-        log.userName?.toLowerCase().includes(searchTerm) ||
-        log.ipAddress?.toLowerCase().includes(searchTerm) ||
+        log.userName?.toLowerCase().includes(searchTerm) ||        
         log.entityType?.toLowerCase().includes(searchTerm) ||
         displayActionType?.toLowerCase().includes(searchTerm); // Use displayActionType for search
 
@@ -154,7 +153,6 @@ export default function TrackingPage() {
 
   // Các phép tính thống kê nên sử dụng allRawLogs
   const totalLogins = useMemo(() => allRawLogs.filter(log => log.entityType === 'RefreshToken' && log.actionType === 'CREATE').length, [allRawLogs]);
-  const totalLogouts = useMemo(() => allRawLogs.filter(log => log.entityType === 'RefreshToken' && log.actionType === 'DELETE').length, [allRawLogs]);
   const totalCreates = useMemo(() => allRawLogs.filter(log => log.actionType === 'CREATE' && log.entityType !== 'RefreshToken').length, [allRawLogs]);
   const totalUpdates = useMemo(() => allRawLogs.filter(log => log.actionType === 'UPDATE').length, [allRawLogs]);
   const totalDeletes = useMemo(() => allRawLogs.filter(log => log.actionType === 'DELETE' && log.entityType !== 'RefreshToken').length, [allRawLogs]);
@@ -281,13 +279,6 @@ export default function TrackingPage() {
             <div className={styles.statValue}>{totalLogins}</div>
           </div>
         </div>
-        <div className={`${styles.statCard} ${styles.statCardLogout}`}>
-          <div className={styles.statIcon}><i className="bi bi-box-arrow-right"></i></div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Đăng xuất</div>
-            <div className={styles.statValue}>{totalLogouts}</div>
-          </div>
-        </div>
         <div className={`${styles.statCard} ${styles.statCard2}`}>
           <div className={styles.statIcon}><i className="bi bi-plus-circle"></i></div>
           <div className={styles.statContent}>
@@ -327,7 +318,7 @@ export default function TrackingPage() {
             <i className="bi bi-search"></i>
             <input
               type="text"
-              placeholder="Tìm theo Tên, IP, Loại đối tượng..."
+              placeholder="Tìm theo Tên, Loại đối tượng..."
               value={filters.search}
               onChange={e => handleFilterChange('search', e.target.value)}
               className={styles.searchInput}
@@ -360,7 +351,6 @@ export default function TrackingPage() {
                   <th>Người dùng</th>
                   <th>Hành động</th>
                   <th>Loại đối tượng</th>
-                  <th>IP Address</th>
                   <th>Chi tiết</th>
                 </tr>
               </thead>
@@ -381,7 +371,6 @@ export default function TrackingPage() {
                     <td>{log.userName || 'Unknown'}</td>
                     <td><span className={`${styles.actionBadge} ${getActionBadgeStyle(log.displayActionType)}`}>{log.displayActionType}</span></td>
                     <td>{log.entityType || 'N/A'}</td>
-                    <td>{log.ipAddress}</td>
                     <td>
                       <button onClick={() => setViewingLog(log)} className={styles.detailBtn} title="Xem chi tiết">
                         <i className="bi bi-eye"></i>
@@ -479,7 +468,6 @@ export default function TrackingPage() {
               <div className={styles.detailItem}><strong>Đối tượng:</strong> {viewingLog.entityType}</div>
               <div className={styles.detailItem}><strong>Người dùng:</strong> {viewingLog.userName}</div>
               <div className={styles.detailItem}><strong>Thời gian:</strong> {new Date(`${viewingLog.timestamp}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</div>
-              <div className={styles.detailItem}><strong>Địa chỉ IP:</strong> {viewingLog.ipAddress}</div>
               <div className={styles.jsonContainer}> 
                 <div className={styles.jsonBox}> 
                   <h4>Giá trị cũ (Old Values)</h4>

@@ -347,6 +347,14 @@ public partial class MedixContext : DbContext
             entity.Property(e => e.LicenseNumber).HasMaxLength(100);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(getutcdate())");
 
+            // ✅ Cấu hình cho các trường ban, miss và salary deduction
+            entity.Property(e => e.TotalCaseMissPerWeek).HasDefaultValue(0);
+            entity.Property(e => e.NextWeekMiss).HasDefaultValue(0);
+            entity.Property(e => e.isSalaryDeduction).HasDefaultValue(false); // ✅ Trường mới
+            entity.Property(e => e.StartDateBanned).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.EndDateBanned).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.TotalBanned).HasDefaultValue(0);
+
             entity.HasOne(d => d.ServiceTier).WithMany(p => p.Doctors)
                 .HasForeignKey(d => d.ServiceTierId)
                 .HasConstraintName("FK_Doctors_ServiceTier");

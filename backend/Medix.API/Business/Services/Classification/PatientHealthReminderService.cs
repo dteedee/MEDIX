@@ -31,7 +31,7 @@ namespace Medix.API.Business.Services.Classification
                 Description = description,
                 PatientId = (Guid)createAppointment.PatientId,
                 ReminderTypeCode = "FollowUp",
-                ScheduledDate = appointmentTime.AddDays(-1), // Nhắc nhở trước 1 ngày
+                ScheduledDate = appointmentTime.AddDays(-1), 
 
             };
 
@@ -86,8 +86,8 @@ namespace Medix.API.Business.Services.Classification
                 // Đặt giờ nhắc nhở vào 8:00 sáng mỗi ngày
                 var scheduledTime = currentDate.AddHours(8);
 
-                var description = $"🔔 **Nhắc nhở uống thuốc**\n\n" +
-                                $"- Thuốc: **{medicationName}**\n" +
+                var description = $"🔔 Nhắc nhở uống thuốc\n\n" +
+                                $"- Thuốc: {medicationName}\n" +
                                 $"- Liều lượng: {dosage}\n" +
                                 $"- Tần suất: {frequency}\n" +
                                 $"- Ngày: {currentDate:dd/MM/yyyy}\n\n" +

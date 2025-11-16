@@ -461,6 +461,11 @@ namespace Medix.API.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<DateTime>("EndDateBanned")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getutcdate())");
+
                     b.Property<bool>("IsAcceptingAppointments")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -479,11 +484,31 @@ namespace Medix.API.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("NextWeekMiss")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<Guid?>("ServiceTierId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("SpecializationId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("StartDateBanned")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getutcdate())");
+
+                    b.Property<int>("TotalBanned")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("TotalCaseMissPerWeek")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("TotalReviews")
                         .HasColumnType("int");
@@ -498,6 +523,11 @@ namespace Medix.API.Migrations
 
                     b.Property<int>("YearsOfExperience")
                         .HasColumnType("int");
+
+                    b.Property<bool>("isSalaryDeduction")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.HasKey("Id")
                         .HasName("PK__Doctors__3214EC07BF69D8B0");
@@ -1979,8 +2009,7 @@ namespace Medix.API.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newid())");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<long>("Amount")
                         .HasColumnType("bigint");
@@ -1992,20 +2021,20 @@ namespace Medix.API.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<string>("FromAccountNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("FromBin")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("ReferenceCode")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ReferenceCode")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -2016,35 +2045,28 @@ namespace Medix.API.Migrations
 
                     b.Property<string>("ToAccountNumber")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("ToBin")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("WalletTransactionId")
+                    b.Property<Guid>("WalletTransactionID")
                         .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id")
-                        .HasName("PK__Transfer__3214EC07XXXXXXXX");
+                    b.HasKey("Id");
 
-                    b.HasIndex("WalletTransactionId")
-                        .IsUnique()
-                        .HasFilter("[WalletTransactionId] IS NOT NULL");
+                    b.HasIndex("UserId");
 
-                    b.HasIndex(new[] { "ReferenceCode" }, "IX_TransferTransactions_ReferenceCode")
-                        .HasFilter("([ReferenceCode] IS NOT NULL)");
+                    b.HasIndex("WalletTransactionID")
+                        .IsUnique();
 
-                    b.HasIndex(new[] { "Status", "CreatedAt" }, "IX_TransferTransactions_Status_Date");
-
-                    b.HasIndex(new[] { "UserId", "CreatedAt" }, "IX_TransferTransactions_User_Date");
-
-                    b.ToTable("TransferTransactions");
+                    b.ToTable("TransferTransaction", (string)null);
                 });
 
             modelBuilder.Entity("Medix.API.Models.Entities.User", b =>
@@ -3078,12 +3100,14 @@ namespace Medix.API.Migrations
                         .WithMany("TransferTransactions")
                         .HasForeignKey("UserId")
                         .IsRequired()
-                        .HasConstraintName("FK_TransferTransactions_User");
+                        .HasConstraintName("FK_TransferTransaction_User");
 
                     b.HasOne("Medix.API.Models.Entities.WalletTransaction", "WalletTransaction")
                         .WithOne("TransferTransaction")
-                        .HasForeignKey("Medix.API.Models.Entities.TransferTransaction", "WalletTransactionId")
-                        .HasConstraintName("FK_TransferTransactions_WalletTransaction");
+                        .HasForeignKey("Medix.API.Models.Entities.TransferTransaction", "WalletTransactionID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_TransferTransaction_WalletTransaction");
 
                     b.Navigation("User");
 

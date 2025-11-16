@@ -161,6 +161,9 @@ app.UseMiddleware<Medix.API.Presentation.Middleware.ExceptionHandlingMiddleware>
 // Hangfire dashboard
 app.UseHangfireDashboard();
 
+//register hangfire jobs
+ServiceConfiguration.RegisterHangfireJobs();
+
 // Authentication + Authorization
 app.UseAuthentication();
 app.UseAuthorization();

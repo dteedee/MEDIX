@@ -59,6 +59,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpGet("profile/{doctorID}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetDoctorProfile(string doctorID)
         {
             try
@@ -67,7 +68,7 @@ namespace Medix.API.Presentation.Controller.Classification
 
                 if (profileDto == null)
                 {
-                    return NotFound(new { Message = "Doctor not found" });  
+                    return NotFound(new { Message = "Doctor not found" });
                 }
 
                 return Ok(profileDto);
@@ -296,20 +297,88 @@ namespace Medix.API.Presentation.Controller.Classification
                     doctor.User.PhoneNumber,
                     Specialization = doctor.Specialization.Name,
                     doctor.Education,
+                    doctor.YearsOfExperience,
                     Rating = doctor.Appointments
+                        .Where(a => a.Review != null)
                         .Select(a => a.Review.Rating)
                         .DefaultIfEmpty(0)
                         .Average(),
                     ReviewCount = doctor.Appointments
                         .Count(a => a.Review != null),
                     StatusCode = doctor.User.Status,
-                    CreatedAt = doctor.CreatedAt.ToString("dd/MM/yyyy"),
+                    doctor.CreatedAt,
+                    ServiceTier = doctor.ServiceTier?.Name,
+                    Price = doctor.ConsultationFee,
+                    doctor.LicenseNumber,
+                    doctor.LicenseImageUrl,
+                    doctor.DegreeFilesUrl,
+                    doctor.Bio,
                 };
                 return Ok(doctorDto);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while fetching doctor by ID.");
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        [HttpGet("{id}/statistics")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> GetStatistic(Guid id)
+        {
+            try
+            {
+                var doctor = await _doctorService.GetDoctorByIdAsync(id);
+                if (doctor == null)
+                {
+                    return NotFound(new { Message = "Doctor not found" });
+                }
+                var statistic = new
+                {
+                    doctor.Id,
+                    TotalBookings = doctor.Appointments
+                        .Select(a => a.PatientId)
+                        .Distinct()
+                        .Count(),
+                    SuccessfulAppointments = doctor.Appointments
+                        .Where(a => Constants.SuccessfulAppointmentStatusCode.Contains(a.StatusCode))
+                        .Count(),
+                    TotalCases = doctor.Appointments.Count,
+                    SuccessfulCases = doctor.Appointments
+                        .Where(a => a.StatusCode == Constants.CompletedAppointmentStatusCode)
+                        .Count(),
+                    Revenue = doctor.Appointments
+                        .Select(a => a.TotalAmount)
+                        .Sum(),
+                };
+                return Ok(statistic);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while fetching doctor statistic with Id = {id}.");
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        [HttpGet("all")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetAll()
+        {
+            try
+            {
+                var query = new DoctorQuery
+                {
+                    Page = 1,
+                    PageSize = 0,
+                    SearchTerm = ""
+                };
+                var doctors = await _doctorService.GetDoctorsAsync(query);
+                return Ok(doctors.Items);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while fetching all doctors");
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
         }

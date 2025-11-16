@@ -1,4 +1,5 @@
 ﻿﻿using Medix.API.Business.Interfaces.Classification;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Medix.API.Presentation.Controller.Community
@@ -22,6 +23,7 @@ namespace Medix.API.Presentation.Controller.Community
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetHomeMetadata()
         {
             try

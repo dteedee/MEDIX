@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../../styles/doctor/DoctorAppointments.module.css';
+import Swal from 'sweetalert2';
 import { appointmentService } from '../../services/appointmentService';
 import { Appointment } from '../../types/appointment.types';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface AppointmentDisplay {
   id: string;
@@ -30,6 +32,7 @@ interface FilterOptions {
 
 const DoctorAppointments: React.FC = () => {
   const navigate = useNavigate();
+  const { user, isBanned } = useAuth();
   const [appointments, setAppointments] = useState<AppointmentDisplay[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<AppointmentDisplay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +46,20 @@ const DoctorAppointments: React.FC = () => {
     timeRange: 'all',
     search: ''
   });
+
+  const showBannedPopup = () => {
+    if (user) {
+      const startDate = (user as any)?.startDateBanned ? new Date((user as any).startDateBanned).toLocaleDateString('vi-VN') : '';
+      const endDate = (user as any)?.endDateBanned ? new Date((user as any).endDateBanned).toLocaleDateString('vi-VN') : '';
+      
+      Swal.fire({
+        title: 'Tài khoản bị tạm khóa',
+        html: `Chức năng xem chi tiết hồ sơ bệnh án của bạn đã bị tạm khóa từ <b>${startDate}</b> đến <b>${endDate}</b>.<br/>Mọi thắc mắc vui lòng liên hệ quản trị viên.`,
+        icon: 'warning',
+        confirmButtonText: 'Đã hiểu'
+      });
+    }
+  };
 
   // Load appointments from API
   useEffect(() => {
@@ -158,8 +175,44 @@ const DoctorAppointments: React.FC = () => {
     }
 
     // Sort by date (upcoming first)
-    filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
+    filtered.sort((a, b) => {
+      const now = new Date();
+    
+      const getSortPriority = (apt: AppointmentDisplay) => {
+        const startTime = apt.appointmentStartTime ? new Date(apt.appointmentStartTime) : null;
+        const endTime = apt.appointmentEndTime ? new Date(apt.appointmentEndTime) : null;
+    
+        if (apt.status === 'cancelled') return 4; // Cancelled last
+    
+        if (startTime && endTime && now >= startTime && now <= endTime) {
+          return 1; // On-going first
+        }
+    
+        if (startTime && now < startTime) {
+          return 2; // Upcoming second
+        }
+    
+        return 3; // Completed third
+      };
+    
+      const priorityA = getSortPriority(a);
+      const priorityB = getSortPriority(b);
+    
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+    
+      // Within the same priority group, sort by start time (newest upcoming first, oldest completed first)
+      const timeA = a.appointmentStartTime ? new Date(a.appointmentStartTime).getTime() : 0;
+      const timeB = b.appointmentStartTime ? new Date(b.appointmentStartTime).getTime() : 0;
+      
+      if (priorityA === 2) { // Upcoming: sort ascending (soonest first)
+        return timeA - timeB;
+      }
+      
+      return timeB - timeA; // Completed/Cancelled: sort descending (most recent first)
+    });
+    
     setFilteredAppointments(filtered);
   }, [filters, appointments]);
 
@@ -527,7 +580,11 @@ const DoctorAppointments: React.FC = () => {
                       <button 
                         className={styles.emrBtn}
                         onClick={() => {
-                          navigate(`/app/doctor/medical-records/${appointment.id}`);
+                          if (isBanned) {
+                            showBannedPopup();
+                          } else {
+                            navigate(`/app/doctor/medical-records/${appointment.id}`);
+                          }
                         }}
                       >
                         <i className="bi bi-file-text"></i>
@@ -661,8 +718,12 @@ const DoctorAppointments: React.FC = () => {
                   <button 
                     className={styles.modalEmrBtn}
                     onClick={() => {
-                      setShowDetailModal(false);
-                      navigate(`/app/doctor/medical-records/${selectedAppointment.id}`);
+                      if (isBanned) {
+                        showBannedPopup();
+                      } else {
+                        setShowDetailModal(false);
+                        navigate(`/app/doctor/medical-records/${selectedAppointment.id}`);
+                      }
                     }}
                   >
                     <i className="bi bi-file-text"></i>

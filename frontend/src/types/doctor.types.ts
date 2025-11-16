@@ -119,6 +119,8 @@ export interface DoctorProfileDetails {
   bio: string;
   licenseImageUrl: string;
   degreeFilesUrl: string;
+  startDateBanned?: string;
+  endDateBanned?: string;
 }
 
 // Types for Service Tier API with Pagination

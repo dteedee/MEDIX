@@ -180,7 +180,7 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
 
 // --- Component chính ---
 const ScheduleManagement: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isBanned } = useAuth();
 
   const [viewData, setViewData] = useState({
     schedules: [] as DoctorSchedule[],
@@ -197,6 +197,20 @@ const ScheduleManagement: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [initialOverrideDate, setInitialOverrideDate] = useState<string | null>(null);
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
+
+  const showBannedPopup = () => {
+    if (user) {
+      const startDate = (user as any)?.startDateBanned ? new Date((user as any).startDateBanned).toLocaleDateString('vi-VN') : '';
+      const endDate = (user as any)?.endDateBanned ? new Date((user as any).endDateBanned).toLocaleDateString('vi-VN') : '';
+      
+      Swal.fire({
+        title: 'Tài khoản bị tạm khóa',
+        html: `Chức năng chỉnh sửa lịch làm việc của bạn đã bị tạm khóa từ <b>${startDate}</b> đến <b>${endDate}</b>.<br/>Mọi thắc mắc vui lòng liên hệ quản trị viên.`,
+        icon: 'warning',
+        confirmButtonText: 'Đã hiểu'
+      });
+    }
+  };
 
   // --- Fetch dữ liệu ---
   const refreshAllData = async () => {
@@ -427,13 +441,20 @@ const ScheduleManagement: React.FC = () => {
           </div>
 
           <div className="management-buttons">
-            <button onClick={() => setIsModalOpen(true)} className="manage-button primary">
+            <button 
+              onClick={() => isBanned ? showBannedPopup() : setIsModalOpen(true)} 
+              className="manage-button primary"
+            >
               Quản lý lịch cố định
             </button>
             <button
               onClick={() => {
-                setInitialOverrideDate(null); // Không truyền ngày ban đầu để hiển thị danh sách
-                setIsOverrideModalOpen(true);
+                if (isBanned) {
+                  showBannedPopup();
+                } else {
+                  setInitialOverrideDate(null); // Không truyền ngày ban đầu để hiển thị danh sách
+                  setIsOverrideModalOpen(true);
+                }
               }}
               className="manage-button primary"
             >

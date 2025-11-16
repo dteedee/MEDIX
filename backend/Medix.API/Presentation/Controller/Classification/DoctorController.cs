@@ -119,6 +119,12 @@ namespace Medix.API.Presentation.Controller.Classification
                     doctor.Bio,
                     doctor.LicenseImageUrl,
                     doctor.DegreeFilesUrl,
+                    doctor.StartDateBanned,
+                    doctor.EndDateBanned,
+                    doctor.TotalBanned,
+                    doctor.TotalCaseMissPerWeek,
+                    doctor.isSalaryDeduction,
+                    doctor.NextWeekMiss,
                 });
             }
             catch (Exception ex)

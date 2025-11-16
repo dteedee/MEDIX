@@ -24,6 +24,7 @@ interface Filters {
   pageSize: number;
   search: string;
   actionType: 'all' | AuditLog['actionType'];
+  userFilter: string; // Thêm bộ lọc người dùng
   dateFrom: string;
   dateTo: string;
 }
@@ -43,6 +44,7 @@ export default function TrackingPage() {
     pageSize: 15,
     search: '',
     actionType: 'all',
+    userFilter: 'all', // Giá trị mặc định
     dateFrom: '',
     dateTo: '',
   });
@@ -92,6 +94,7 @@ export default function TrackingPage() {
       pageSize: 15,
       search: '',
       actionType: 'all',
+      userFilter: 'all',
       dateFrom: '',
       dateTo: '',
     });
@@ -104,9 +107,8 @@ export default function TrackingPage() {
     const to = filters.dateTo ? new Date(filters.dateTo) : null;
     if (to) to.setHours(23, 59, 59, 999);
 
-    // 1. Áp dụng bộ lọc phía client cho tất cả logs thô
-    const filtered = allRawLogs.filter(log => {
-      // Determine the display action type for filtering purposes
+    // 1. First, map over all logs to patch user names and determine display action type
+    const patchedLogs = allRawLogs.map(log => {
       let displayActionType = log.actionType;
       if (log.entityType === 'RefreshToken') {
         if (log.actionType === 'CREATE') {
@@ -116,39 +118,58 @@ export default function TrackingPage() {
         }
       }
 
+      let patchedUserName = log.userName;
+      if ((!log.userName || log.userName === 'Unknown') && (log.newValues || log.oldValues)) {
+        try {
+          const valuesString = log.newValues || log.oldValues;
+          if (valuesString) {
+            const parsedValues = JSON.parse(valuesString);
+            const userId = parsedValues.UserId || parsedValues.userId;
+            if (userId) {
+              const knownLog = allRawLogs.find(l => (l.newValues?.includes(userId) || l.oldValues?.includes(userId)) && l.userName && l.userName !== 'Unknown');
+              if (knownLog) {
+                patchedUserName = knownLog.userName;
+              }
+            }
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      }
+      return { ...log, userName: patchedUserName, displayActionType };
+    });
+
+    // 2. Now, filter the patched logs
+    const finalFiltered = patchedLogs.filter(log => {
+      // Always hide LOGOUT actions from the table
+      if (log.displayActionType === 'LOGOUT') {
+        return false;
+      }
+
       const searchTerm = filters.search.toLowerCase();
       const okSearch = !searchTerm ||
-        log.userName?.toLowerCase().includes(searchTerm) ||        
+        log.userName?.toLowerCase().includes(searchTerm) ||
         log.entityType?.toLowerCase().includes(searchTerm) ||
-        displayActionType?.toLowerCase().includes(searchTerm); // Use displayActionType for search
+        log.displayActionType?.toLowerCase().includes(searchTerm);
 
-      const okAction = filters.actionType === 'all' || displayActionType === filters.actionType; // Filter by displayActionType
+      const okAction = filters.actionType === 'all' || log.displayActionType === filters.actionType;
+
+      const okUser = filters.userFilter === 'all' || log.userName === filters.userFilter;
 
       const logDate = new Date(log.timestamp);
       const okDate = (!from || logDate >= from) && (!to || logDate <= to);
 
-      return okSearch && okAction && okDate;
-    }).map(log => {
-      // Map to include displayActionType for rendering
-      let displayActionTypeForRender: string = log.actionType;
-      if (log.entityType === 'RefreshToken') {
-        if (log.actionType === 'CREATE') {
-          displayActionTypeForRender = 'LOGIN';
-        } else if (log.actionType === 'DELETE') {
-          displayActionTypeForRender = 'LOGOUT';
-        }
-      }
-      return { ...log, displayActionType: displayActionTypeForRender };
+      return okSearch && okAction && okDate && okUser;
     });
-
-    // 2. Áp dụng phân trang phía client cho các logs đã lọc
+    
+    // 3. Apply client-side pagination to the filtered logs
     const startIndex = (filters.page - 1) * filters.pageSize;
     const endIndex = startIndex + filters.pageSize;
-    const paginated = filtered.slice(startIndex, endIndex);
+    const paginated = finalFiltered.slice(startIndex, endIndex);
 
-    return { paginatedLogs: paginated, totalFilteredItems: filtered.length };
-  }, [allRawLogs, filters.search, filters.actionType, filters.dateFrom, filters.dateTo, filters.page, filters.pageSize]);
-
+    return { paginatedLogs: paginated, totalFilteredItems: finalFiltered.length };
+  }, [allRawLogs, filters]);
+  
   const totalPages = Math.ceil(totalFilteredItems / filters.pageSize);
 
   // Các phép tính thống kê nên sử dụng allRawLogs
@@ -156,6 +177,115 @@ export default function TrackingPage() {
   const totalCreates = useMemo(() => allRawLogs.filter(log => log.actionType === 'CREATE' && log.entityType !== 'RefreshToken').length, [allRawLogs]);
   const totalUpdates = useMemo(() => allRawLogs.filter(log => log.actionType === 'UPDATE').length, [allRawLogs]);
   const totalDeletes = useMemo(() => allRawLogs.filter(log => log.actionType === 'DELETE' && log.entityType !== 'RefreshToken').length, [allRawLogs]);
+
+  // Lấy danh sách người dùng duy nhất để hiển thị trong bộ lọc
+  const uniqueUsers = useMemo(() => {
+    const userNames = new Set<string>();
+    // Use patchedLogs to get the correct user names
+    allRawLogs.forEach(log => {
+      let patchedUserName = log.userName;
+      if ((!log.userName || log.userName === 'Unknown') && (log.newValues || log.oldValues)) {
+        try {
+          const valuesString = log.newValues || log.oldValues;
+          if (valuesString) {
+            const parsedValues = JSON.parse(valuesString);
+            const userId = parsedValues.UserId || parsedValues.userId;
+            if (userId) {
+              const knownLog = allRawLogs.find(l => (l.newValues?.includes(userId) || l.oldValues?.includes(userId)) && l.userName && l.userName !== 'Unknown');
+              if (knownLog) {
+                patchedUserName = knownLog.userName;
+              }
+            }
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      if (patchedUserName && patchedUserName !== 'Unknown') {
+        userNames.add(patchedUserName);
+      }
+    });
+    return Array.from(userNames).sort();
+  }, [allRawLogs]);
+
+  // --- Friendly Display Functions ---
+  // Chuyển đổi tên trường từ PascalCase/camelCase sang tiếng Việt
+  const friendlyFieldNames: Record<string, string> = {
+    DayOfWeek: 'Ngày trong tuần',
+    StartTime: 'Giờ bắt đầu',
+    EndTime: 'Giờ kết thúc',
+    IsAvailable: 'Trạng thái sẵn sàng',
+    OverrideDate: 'Ngày ghi đè',
+    OverrideType: 'Loại lịch linh hoạt',
+    Reason: 'Lý do',
+    FullName: 'Họ và tên',
+    PhoneNumber: 'Số điện thoại',
+    Address: 'Địa chỉ',
+    DateOfBirth: 'Ngày sinh',
+    IdentificationNumber: 'Số CCCD',
+    GenderCode: 'Giới tính',
+    LockoutEnabled: 'Trạng thái khóa',
+    Title: 'Tiêu đề',
+    Summary: 'Tóm tắt',
+    Content: 'Nội dung',
+    StatusCode: 'Trạng thái',
+    // Thêm các trường khác nếu cần
+    Slug: 'Đường dẫn (Slug)',
+    DisplayType: 'Kiểu hiển thị',
+    ThumbnailUrl: 'URL ảnh thu nhỏ',
+    IsHomepageVisible: 'Hiển thị ở trang chủ',
+    DisplayOrder: 'Thứ tự hiển thị',
+    ViewCount: 'Lượt xem',
+    LikeCount: 'Lượt thích',
+    CoverImageUrl: 'URL ảnh bìa',
+    MetaTitle: 'Tiêu đề SEO',
+  };
+
+  const getFriendlyFieldName = (key: string) => friendlyFieldNames[key] || key;
+
+  // Chuyển đổi giá trị sang dạng dễ hiểu
+  const getFriendlyValue = (key: string, value: any): string => {
+    if (value === null || value === undefined) return 'Không có';
+    
+    const keyForCheck = key; // Sử dụng key gốc (PascalCase) để kiểm tra
+
+    if (typeof value === 'boolean') {
+      if (keyForCheck === 'IsAvailable') return value ? 'Sẵn sàng' : 'Không sẵn sàng';
+      if (keyForCheck === 'LockoutEnabled') return value ? 'Đang khóa' : 'Hoạt động';
+      if (keyForCheck === 'OverrideType') return value ? 'Tăng ca' : 'Nghỉ';
+      if (keyForCheck === 'IsHomepageVisible') return value ? 'Có' : 'Không';
+      return value ? 'Có' : 'Không';
+    }
+
+    if (keyForCheck === 'OverrideType' && typeof value === 'number') {
+      return value === 1 ? 'Tăng ca' : 'Nghỉ';
+    }
+
+    if (keyForCheck === 'DayOfWeek' && typeof value === 'number') {
+      const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+      return days[value] || 'Không xác định';
+    }
+
+    if (keyForCheck === 'StatusCode' && typeof value === 'string') {
+      const statusMap: Record<string, string> = {
+        'PUBLISHED': 'Đã xuất bản',
+        'DRAFT': 'Bản nháp',
+        'ARCHIVED': 'Lưu trữ',
+      };
+      return statusMap[value.toUpperCase()] || value;
+    }
+
+    if (key.toLowerCase().includes('date') && typeof value === 'string' && !isNaN(Date.parse(value))) {
+      return new Date(value).toLocaleDateString('vi-VN');
+    }
+
+    const stringValue = String(value);
+    if (stringValue.length > 50) {
+      return stringValue.substring(0, 50) + '...';
+    }
+
+    return stringValue;
+  };
+  // --- End Friendly Display Functions ---
 
   const renderJson = (jsonString: string | null) => {
     if (!jsonString || jsonString.trim() === 'null' || jsonString.trim() === '{}') {
@@ -201,26 +331,36 @@ export default function TrackingPage() {
       return (
         <div className={styles.jsonDetailList}>
           {Object.entries(obj).map(([key, value]) => {
-            // Ẩn tất cả các trường có tên kết thúc bằng "Id" (không phân biệt chữ hoa chữ thường)
-            if (key.toLowerCase().endsWith('id')) {
+            const lowerKey = key.toLowerCase();
+            // Danh sách các trường kỹ thuật cần ẩn
+            const fieldsToHide = [
+              'id', 'userid', 'doctorid', 'patientid', 'appointmentid', 'medicalrecordid',
+              'createdat', 'updatedat', 'normalizedemail', 'normalizedusername',
+              'Id', 'UserId', 'DoctorId', 'PatientId', 'AppointmentId', 'MedicalRecordId',
+              'passwordhash', 'securitystamp', 'concurrencystamp', 'walletid',
+              'emailconfirmed', 'isprofilecompleted', 'accessfailedcount', 'istemporaryusername'
+            ];
+
+            // Ẩn các trường kỹ thuật không cần thiết
+            if (fieldsToHide.some(field => lowerKey.endsWith(field))) {
               return null;
             }
 
-            let displayValue = JSON.stringify(value, null, 2);
-
-            // Rút gọn giá trị dài và giải mã HTML cho trường Content
+            // Xử lý đặc biệt cho trường Content để hiển thị HTML
             if (key === 'Content' && typeof value === 'string') {
-                const decodedContent = value.replace(/\\u003c/g, '<').replace(/\\u003e/g, '>');
-                return (
-                    <div key={key} className={styles.jsonDetailItem}>
-                        <strong className={styles.jsonKey}>{key}:</strong>
-                        <div className={styles.htmlContent} dangerouslySetInnerHTML={{ __html: decodedContent }} />
-                    </div>
-                );
-            }
+              // Giải mã các ký tự HTML
+              const decodedContent = value.replace(/\\u003c/g, '<').replace(/\\u003e/g, '>');
+              // Chuyển HTML thành văn bản thuần túy để rút gọn
+              const plainText = decodedContent.replace(/<[^>]*>/g, '');
+              const displayValue = plainText.length > 50 ? plainText.substring(0, 50) + '...' : plainText;
 
-            if (typeof value === 'string' && value.length > 70) {
-              displayValue = `"${value.substring(0, 70)}..."`;
+              return (
+                  <div key={key} className={styles.jsonDetailItem}>
+                      <strong className={styles.jsonKey}>{getFriendlyFieldName(key)}:</strong>
+                      {/* Hiển thị văn bản đã được rút gọn */}
+                      <div className={styles.jsonValue} title={plainText}>{displayValue}</div>
+                  </div>
+              );
             }
 
             if (key === 'User' && value === null) {
@@ -229,8 +369,8 @@ export default function TrackingPage() {
 
             return (
               <div key={key} className={styles.jsonDetailItem}>
-                <strong className={styles.jsonKey}>{key}:</strong>
-                <span className={styles.jsonValue} title={JSON.stringify(value, null, 2)}>{displayValue}</span>
+                <strong className={styles.jsonKey}>{getFriendlyFieldName(key)}:</strong>
+                <div className={styles.jsonValue} title={String(value)}>{getFriendlyValue(key, value)}</div>
               </div>
             );
           })}
@@ -269,7 +409,7 @@ export default function TrackingPage() {
           <div className={styles.statIcon}><i className="bi bi-activity"></i></div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Tổng hoạt động</div> {/* Tổng số bản ghi từ backend */}
-            <div className={styles.statValue}>{overallTotalLogs}</div>
+            <div className={styles.statValue}>{totalFilteredItems}</div>
           </div>
         </div>
         <div className={`${styles.statCard} ${styles.statCardLogin}`}>
@@ -330,7 +470,12 @@ export default function TrackingPage() {
             <option value="UPDATE">Cập nhật (Update)</option>
             <option value="DELETE">Xóa (Delete)</option>
             <option value="LOGIN">Đăng nhập (Login)</option>
-            <option value="LOGOUT">Đăng xuất (Logout)</option>
+          </select>
+          <select value={filters.userFilter} onChange={e => handleFilterChange('userFilter', e.target.value)} className={styles.filterSelect}>
+            <option value="all">Tất cả người dùng</option>
+            {uniqueUsers.map(user => (
+              <option key={user} value={user}>{user}</option>
+            ))}
           </select>
           <input type="date" value={filters.dateFrom} onChange={e => handleFilterChange('dateFrom', e.target.value)} className={styles.dateInput} />
           <input type="date" value={filters.dateTo} onChange={e => handleFilterChange('dateTo', e.target.value)} className={styles.dateInput} />
@@ -370,7 +515,9 @@ export default function TrackingPage() {
                     </td>                    
                     <td>{log.userName || 'Unknown'}</td>
                     <td><span className={`${styles.actionBadge} ${getActionBadgeStyle(log.displayActionType)}`}>{log.displayActionType}</span></td>
-                    <td>{log.entityType || 'N/A'}</td>
+                    <td>
+                      {log.entityType === 'RefreshToken' ? 'Login' : (log.entityType || 'N/A')}
+                    </td>
                     <td>
                       <button onClick={() => setViewingLog(log)} className={styles.detailBtn} title="Xem chi tiết">
                         <i className="bi bi-eye"></i>
@@ -464,10 +611,12 @@ export default function TrackingPage() {
                 maxHeight: '70vh', // Giới hạn chiều cao tối đa của phần thân modal
                 overflowY: 'auto'  // Thêm thanh cuộn dọc khi nội dung vượt quá chiều cao
               }}>
-              <div className={styles.detailItem}><strong>Hành động:</strong> {viewingLog.actionType}</div>
-              <div className={styles.detailItem}><strong>Đối tượng:</strong> {viewingLog.entityType}</div>
-              <div className={styles.detailItem}><strong>Người dùng:</strong> {viewingLog.userName}</div>
-              <div className={styles.detailItem}><strong>Thời gian:</strong> {new Date(`${viewingLog.timestamp}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</div>
+              <div className={styles.detailGrid}>
+                <div className={styles.detailItem}><strong>Hành động:</strong> <span>{viewingLog.displayActionType}</span></div>
+                <div className={styles.detailItem}><strong>Đối tượng:</strong> <span>{viewingLog.entityType === 'RefreshToken' ? 'Login' : viewingLog.entityType}</span></div>
+                <div className={styles.detailItem}><strong>Người dùng:</strong> <span>{viewingLog.userName}</span></div>
+                <div className={styles.detailItem}><strong>Thời gian:</strong> <span>{new Date(`${viewingLog.timestamp}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span></div>
+              </div>
               <div className={styles.jsonContainer}> 
                 <div className={styles.jsonBox}> 
                   <h4>Giá trị cũ (Old Values)</h4>

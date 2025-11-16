@@ -351,8 +351,6 @@ public partial class MedixContext : DbContext
             entity.Property(e => e.TotalCaseMissPerWeek).HasDefaultValue(0);
             entity.Property(e => e.NextWeekMiss).HasDefaultValue(0);
             entity.Property(e => e.isSalaryDeduction).HasDefaultValue(false); // ✅ Trường mới
-            entity.Property(e => e.StartDateBanned).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.EndDateBanned).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.TotalBanned).HasDefaultValue(0);
 
             entity.HasOne(d => d.ServiceTier).WithMany(p => p.Doctors)
@@ -1232,6 +1230,9 @@ public partial class MedixContext : DbContext
                      || e.State == EntityState.Deleted)
             .ToList();
 
+        // Kiểm tra xem đây có phải là một hoạt động đăng nhập không (tạo mới RefreshToken)
+        bool isLoginOperation = entries.Any(e => e.Entity is RefreshToken && e.State == EntityState.Added);
+
         foreach (var entry in entries)
         {
             var entityName = entry.Entity.GetType().Name;
@@ -1240,6 +1241,12 @@ public partial class MedixContext : DbContext
             if (entityName == "ArticleCategories"
                 || entityName == "HealthArticleContentCategory"
                 || entityName.EndsWith("CategoryMapping"))
+            {
+                continue;
+            }
+
+            // Nếu là hoạt động đăng nhập, bỏ qua việc ghi log cho hành động UPDATE User không cần thiết
+            if (isLoginOperation && entry.Entity is User && entry.State == EntityState.Modified)
             {
                 continue;
             }
@@ -1271,10 +1278,22 @@ public partial class MedixContext : DbContext
 
                     case EntityState.Modified:
                         audit.ActionType = "UPDATE";
-                        oldValues = GetSafeProperties(entry.OriginalValues.ToObject());
-                        newValues = GetSafeProperties(entry.CurrentValues.ToObject());
-                        audit.OldValues = JsonSerializer.Serialize(oldValues);
-                        audit.NewValues = JsonSerializer.Serialize(newValues);
+                        var changedProperties = entry.Properties
+                            .Where(p => p.IsModified && p.OriginalValue?.ToString() != p.CurrentValue?.ToString())
+                            .ToList();
+
+                        if (!changedProperties.Any()) continue; // Bỏ qua nếu không có thay đổi thực sự
+
+                        var oldProps = new Dictionary<string, object?>();
+                        var newProps = new Dictionary<string, object?>();
+
+                        foreach (var prop in changedProperties)
+                        {
+                            oldProps[prop.Metadata.Name] = MaskIfSensitive(prop.Metadata.Name, prop.OriginalValue);
+                            newProps[prop.Metadata.Name] = MaskIfSensitive(prop.Metadata.Name, prop.CurrentValue);
+                        }
+                        audit.OldValues = JsonSerializer.Serialize(oldProps);
+                        audit.NewValues = JsonSerializer.Serialize(newProps);
                         break;
 
                     case EntityState.Deleted:

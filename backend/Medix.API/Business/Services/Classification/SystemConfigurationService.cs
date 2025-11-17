@@ -1,7 +1,12 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
+using Medix.API.Models.Constants;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 using Microsoft.AspNetCore.Hosting;
@@ -14,9 +19,14 @@ namespace Medix.API.Business.Services.Classification
 {
     public class SystemConfigurationService : ISystemConfigurationService
     {
+        private const string DefaultSmtpServer = "smtp.gmail.com";
+        private const int DefaultSmtpPort = 587;
+        private const string DefaultSecurityMode = "STARTTLS";
+
         private readonly ISystemConfigurationRepository _repo;
         private readonly IMapper _mapper;
         private readonly IMemoryCache _cache;
+        private readonly IConfiguration _configuration;
         private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(10);
         private readonly string _dbBackupFolder;
         private readonly string _connectionString;
@@ -33,6 +43,7 @@ namespace Medix.API.Business.Services.Classification
             _repo = repo;
             _mapper = mapper;
             _cache = cache;
+            _configuration = configuration;
             _logger = logger;
 
             _connectionString = configuration.GetConnectionString("MyCnn")
@@ -272,6 +283,186 @@ namespace Medix.API.Business.Services.Classification
 
             var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             return Task.FromResult<FileStream?>(stream);
+        }
+
+        public async Task<EmailServerSettingsDto> GetEmailServerSettingsAsync()
+        {
+            var emailSection = _configuration.GetSection("EmailSettings");
+            var username = await GetValueAsync<string>("EMAIL_USERNAME")
+                ?? emailSection["Username"]
+                ?? string.Empty;
+            var password = await GetValueAsync<string>("EMAIL_PASSWORD")
+                ?? emailSection["Password"]
+                ?? string.Empty;
+            var fromEmail = await GetValueAsync<string>("EMAIL_FROM_EMAIL")
+                ?? emailSection["FromEmail"]
+                ?? username;
+            var fromName = await GetValueAsync<string>("EMAIL_FROM_NAME")
+                ?? "Medix Notifications";
+
+            return new EmailServerSettingsDto
+            {
+                Enabled = await GetBoolValueAsync("EMAIL_ENABLED")
+                    ?? ParseBoolOrDefault(SystemConfigurationDefaults.Find("EMAIL_ENABLED")?.ConfigValue, true),
+                Username = username,
+                FromEmail = fromEmail ?? string.Empty,
+                FromName = fromName,
+                Password = password ?? string.Empty
+            };
+        }
+
+        public async Task UpdateEmailServerSettingsAsync(UpdateEmailServerSettingsRequest request, string updatedBy)
+        {
+            var username = request.Username?.Trim() ?? string.Empty;
+            var fromEmail = string.IsNullOrWhiteSpace(request.FromEmail) ? username : request.FromEmail!.Trim();
+            var fromName = string.IsNullOrWhiteSpace(request.FromName) ? "Medix Notifications" : request.FromName!.Trim();
+
+            var updates = new List<Func<Task>>
+            {
+                () => UpsertEmailConfigAsync("EMAIL_ENABLED", request.Enabled.ToString().ToLowerInvariant(), updatedBy),
+                () => UpsertEmailConfigAsync("EMAIL_USERNAME", username, updatedBy),
+                () => UpsertEmailConfigAsync("EMAIL_FROM_EMAIL", fromEmail, updatedBy),
+                () => UpsertEmailConfigAsync("EMAIL_FROM_NAME", fromName, updatedBy),
+                () => UpsertEmailConfigAsync("EMAIL_SMTP_SERVER", DefaultSmtpServer, updatedBy),
+                () => UpsertEmailConfigAsync("EMAIL_SMTP_PORT", DefaultSmtpPort.ToString(), updatedBy),
+                () => UpsertEmailConfigAsync("EMAIL_SECURITY", DefaultSecurityMode, updatedBy)
+            };
+
+            if (request.Password is not null)
+            {
+                updates.Add(() => UpsertEmailConfigAsync("EMAIL_PASSWORD", request.Password, updatedBy));
+            }
+
+            await RunSequentiallyAsync(updates);
+        }
+
+        public async Task<List<EmailTemplateDto>> GetEmailTemplatesAsync()
+        {
+            var result = new List<EmailTemplateDto>();
+            foreach (var metadata in SystemConfigurationDefaults.EmailTemplateMetadatas)
+            {
+                result.Add(await BuildTemplateDtoAsync(metadata));
+            }
+
+            return result;
+        }
+
+        public async Task<EmailTemplateDto?> GetEmailTemplateAsync(string templateKey)
+        {
+            var metadata = FindTemplateMetadata(templateKey);
+            if (metadata == null)
+            {
+                return null;
+            }
+
+            return await BuildTemplateDtoAsync(metadata);
+        }
+
+        public async Task UpdateEmailTemplateAsync(string templateKey, UpdateEmailTemplateRequest request, string updatedBy)
+        {
+            var metadata = FindTemplateMetadata(templateKey)
+                ?? throw new KeyNotFoundException($"Email template '{templateKey}' không tồn tại.");
+
+            await RunSequentiallyAsync(new[]
+            {
+                () => UpsertEmailConfigAsync(metadata.SubjectKey, request.Subject, updatedBy),
+                () => UpsertEmailConfigAsync(metadata.BodyKey, request.Body, updatedBy)
+            });
+        }
+
+        private async Task<EmailTemplateDto> BuildTemplateDtoAsync(SystemConfigurationDefaults.EmailTemplateMetadata metadata)
+        {
+            var subject = await GetValueAsync<string>(metadata.SubjectKey)
+                ?? SystemConfigurationDefaults.Find(metadata.SubjectKey)?.ConfigValue
+                ?? string.Empty;
+            var body = await GetValueAsync<string>(metadata.BodyKey)
+                ?? SystemConfigurationDefaults.Find(metadata.BodyKey)?.ConfigValue
+                ?? string.Empty;
+
+            return new EmailTemplateDto
+            {
+                TemplateKey = metadata.TemplateKey,
+                DisplayName = metadata.DisplayName,
+                Description = metadata.Description,
+                Subject = subject,
+                Body = body
+            };
+        }
+
+        private static SystemConfigurationDefaults.EmailTemplateMetadata? FindTemplateMetadata(string templateKey)
+        {
+            return SystemConfigurationDefaults.EmailTemplateMetadatas
+                .FirstOrDefault(t => t.TemplateKey.Equals(templateKey, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool ParseBoolOrDefault(string? value, bool fallback)
+        {
+            return bool.TryParse(value, out var parsed) ? parsed : fallback;
+        }
+
+        private static int ParseIntOrDefault(string? value, int fallback)
+        {
+            return int.TryParse(value, out var parsed) ? parsed : fallback;
+        }
+
+        private static string NormalizeSecurity(string? security)
+        {
+            return security?.Trim().ToUpperInvariant() switch
+            {
+                "SSL" or "SSL/TLS" or "SSLONCONNECT" => "SSL",
+                "NONE" => "NONE",
+                _ => "STARTTLS"
+            };
+        }
+
+        private async Task UpsertEmailConfigAsync(string key, string value, string updatedBy)
+        {
+            var template = SystemConfigurationDefaults.Find(key);
+            await UpsertConfigurationValueAsync(
+                key,
+                value,
+                template?.DataType ?? "string",
+                template?.Category ?? "EMAIL",
+                template?.Description,
+                updatedBy);
+        }
+
+        private async Task UpsertConfigurationValueAsync(string key, string value, string dataType, string category, string? description, string updatedBy)
+        {
+            var entity = await _repo.GetByKeyAsync(key);
+            if (entity == null)
+            {
+                entity = new SystemConfiguration
+                {
+                    ConfigKey = key,
+                    ConfigValue = value,
+                    DataType = dataType,
+                    Category = category,
+                    Description = description,
+                    IsActive = true,
+                    UpdatedBy = updatedBy,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                await _repo.AddAsync(entity);
+            }
+            else
+            {
+                entity.ConfigValue = value;
+                entity.UpdatedBy = updatedBy;
+                entity.UpdatedAt = DateTime.UtcNow;
+                await _repo.UpdateAsync(entity);
+            }
+
+            _cache.Remove("SystemConfigs_All");
+            _cache.Remove($"SystemConfig_{key}");
+        }
+
+        private async Task RunSequentiallyAsync(IEnumerable<Func<Task>> operations)
+        {
+            foreach (var operation in operations)
+            {
+                await operation();
+            }
         }
 
         private async Task CleanupOldDatabaseBackupsAsync()

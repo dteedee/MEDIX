@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { CKEditor } from '@ckeditor/ckeditor5-react';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import { apiClient } from '../../lib/apiClient';
 import { useToast } from '../../contexts/ToastContext';
 import styles from '../../styles/admin/SettingsPage.module.css';
@@ -33,6 +35,50 @@ interface DatabaseBackupInfo {
   createdAt: string;
 }
 
+interface EmailServerSettingsState {
+  enabled: boolean;
+  username: string;
+  fromEmail: string;
+  fromName: string;
+  password: string;
+  hasPassword: boolean;
+}
+
+interface EmailTemplateState {
+  templateKey: string;
+  displayName: string;
+  description?: string;
+  subject: string;
+  body: string;
+}
+
+interface TemplateTokenInfo {
+  token: string;
+  description: string;
+}
+
+const TEMPLATE_TOKEN_MAP: Record<string, TemplateTokenInfo[]> = {
+  PASSWORD_RESET_LINK: [
+    { token: '{{email}}', description: 'Email của người nhận' },
+    { token: '{{reset_link}}', description: 'Liên kết đặt lại mật khẩu' },
+  ],
+  FORGOT_PASSWORD_CODE: [
+    { token: '{{email}}', description: 'Email của người nhận' },
+    { token: '{{code}}', description: 'Mã OTP xác nhận' },
+    { token: '{{code_expire_minutes}}', description: 'Số phút mã còn hiệu lực' },
+  ],
+  NEW_USER_WELCOME: [
+    { token: '{{username}}', description: 'Tên đăng nhập của người dùng' },
+    { token: '{{email}}', description: 'Email của người dùng' },
+    { token: '{{temporary_password}}', description: 'Mật khẩu tạm thời được gửi' },
+    { token: '{{login_link}}', description: 'Liên kết đăng nhập hệ thống' },
+  ],
+  ACCOUNT_VERIFICATION: [
+    { token: '{{email}}', description: 'Email của người nhận' },
+    { token: '{{verification_link}}', description: 'Liên kết xác minh tài khoản' },
+  ],
+};
+
 export default function SettingsPage() {
   const { showToast } = useToast();
   const [settings, setSettings] = useState<Partial<SystemSettings>>({});
@@ -50,6 +96,21 @@ export default function SettingsPage() {
   const [backupSaving, setBackupSaving] = useState(false);
   const [backupRunning, setBackupRunning] = useState(false);
   const [maintenanceSaving, setMaintenanceSaving] = useState(false);
+  const [emailServerSettings, setEmailServerSettings] = useState<EmailServerSettingsState>({
+    enabled: true,
+    username: '',
+    fromEmail: '',
+    fromName: '',
+    password: '',
+    hasPassword: false,
+  });
+  const [passwordDirty, setPasswordDirty] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplateState[]>([]);
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>('');
+  const [emailSettingsLoading, setEmailSettingsLoading] = useState(false);
+  const [emailSettingsSaving, setEmailSettingsSaving] = useState(false);
+  const [emailTemplateSaving, setEmailTemplateSaving] = useState(false);
 
   useEffect(() => {
   const fetchSettings = async () => {
@@ -161,6 +222,117 @@ const fetchBackupSettings = useCallback(async () => {
 useEffect(() => {
   fetchBackupSettings();
 }, [fetchBackupSettings]);
+
+  const fetchEmailSettings = useCallback(async () => {
+    setEmailSettingsLoading(true);
+    try {
+      const [serverRes, templatesRes] = await Promise.all([
+        apiClient.get('/SystemConfiguration/email/server'),
+        apiClient.get('/SystemConfiguration/email/templates'),
+      ]);
+
+      const serverData = serverRes.data || {};
+      setEmailServerSettings({
+        enabled: serverData.enabled ?? true,
+        username: serverData.username || '',
+        fromEmail: serverData.fromEmail || '',
+        fromName: serverData.fromName || '',
+        password: serverData.password || '',
+        hasPassword: !!serverData.hasPassword,
+      });
+      setPasswordDirty(false);
+      setShowPassword(false);
+
+      const templates = (templatesRes.data || []) as EmailTemplateState[];
+      setEmailTemplates(templates);
+      if (templates.length > 0) {
+        setSelectedTemplateKey((current) =>
+          current && templates.some((t) => t.templateKey === current)
+            ? current
+            : templates[0].templateKey
+        );
+      } else {
+        setSelectedTemplateKey('');
+      }
+    } catch (error) {
+      console.error('Failed to fetch email settings', error);
+      showToast('Không thể tải cấu hình email.', 'error');
+    } finally {
+      setEmailSettingsLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchEmailSettings();
+  }, [fetchEmailSettings]);
+
+  const updateEmailServer = (patch: Partial<EmailServerSettingsState>) => {
+    setEmailServerSettings((prev) => ({ ...prev, ...patch }));
+    if (Object.prototype.hasOwnProperty.call(patch, 'password')) {
+      setPasswordDirty(true);
+    }
+  };
+
+  const handleSaveEmailServerSettings = async () => {
+    setEmailSettingsSaving(true);
+    showToast('Đang lưu cấu hình email...', 'info');
+    try {
+      await apiClient.put('/SystemConfiguration/email/server', {
+        enabled: emailServerSettings.enabled,
+        username: emailServerSettings.username,
+        fromEmail: emailServerSettings.fromEmail,
+        fromName: emailServerSettings.fromName,
+        password: passwordDirty ? emailServerSettings.password : undefined,
+      });
+      showToast('Đã lưu cấu hình máy chủ email.', 'success');
+      await fetchEmailSettings();
+    } catch (error) {
+      console.error('Failed to save email server settings', error);
+      showToast('Lưu cấu hình email thất bại.', 'error');
+    } finally {
+      setEmailSettingsSaving(false);
+    }
+  };
+
+  const selectedTemplate = emailTemplates.find((template) => template.templateKey === selectedTemplateKey);
+  const availableTokens = selectedTemplate ? TEMPLATE_TOKEN_MAP[selectedTemplate.templateKey] ?? [] : [];
+
+  const handleTemplateChange = (field: 'subject' | 'body', value: string) => {
+    setEmailTemplates((prev) =>
+      prev.map((template) =>
+        template.templateKey === selectedTemplateKey
+          ? { ...template, [field]: value }
+          : template
+      )
+    );
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!selectedTemplate) return;
+    setEmailTemplateSaving(true);
+    showToast('Đang lưu mẫu email...', 'info');
+    try {
+      await apiClient.put(`/SystemConfiguration/email/templates/${selectedTemplate.templateKey}`, {
+        subject: selectedTemplate.subject,
+        body: selectedTemplate.body,
+      });
+      showToast('Đã lưu mẫu email.', 'success');
+    } catch (error) {
+      console.error('Failed to save email template', error);
+      showToast('Lưu mẫu email thất bại.', 'error');
+    } finally {
+      setEmailTemplateSaving(false);
+    }
+  };
+
+  const copyTokenToClipboard = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(token);
+      showToast(`Đã sao chép ${token}`, 'success');
+    } catch {
+      showToast('Không thể sao chép tự động, vui lòng dùng Ctrl+C.', 'error');
+    }
+  };
 
 
   const handleInputChange = (key: keyof SystemSettings, value: string | boolean) => {
@@ -478,65 +650,211 @@ useEffect(() => {
               )}
             </div>
 
-            {/* Notification Settings */}
+            
+           
+            {/* Email Server Settings */}
             <div className={styles.settingsCard}>
               <div className={styles.cardHeader}>
                 <h3>
-                  <i className="bi bi-bell"></i>
-                  Thông báo
+                  <i className="bi bi-envelope"></i>
+                  Máy chủ email
                 </h3>
               </div>
               <div className={styles.cardContent}>
-                <div className={styles.settingItem}>
-                  <label>
-                    <input type="checkbox" defaultChecked />
-                    Thông báo email
-                  </label>
-                </div>
-                <div className={styles.settingItem}>
-                  <label>
-                    <input type="checkbox" defaultChecked />
-                    Thông báo SMS
-                  </label>
-                </div>
-                <div className={styles.settingItem}>
-                  <label>
-                    <input type="checkbox" defaultChecked />
-                    Thông báo đẩy
-                  </label>
-                </div>
-                <div className={styles.settingItem}>
-                  <label>Thời gian gửi thông báo (giờ)</label>
-                  <input type="time" defaultValue="09:00" />
-                </div>
+                {emailSettingsLoading ? (
+                  <div className={styles.loadingState}>Đang tải cấu hình email...</div>
+                ) : (
+                  <>
+                    <div className={styles.settingItem}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={emailServerSettings.enabled}
+                          onChange={(e) => updateEmailServer({ enabled: e.target.checked })}
+                        />
+                        Bật gửi email tự động
+                      </label>
+                    </div>
+                    <div className={styles.noticeBox}>
+                      <strong>Gmail SMTP:</strong> smtp.gmail.com:587 (STARTTLS) - Thiết lập cố định.
+                    </div>
+                    <div className={styles.settingItem}>
+                      <label>Tên đăng nhập SMTP</label>
+                      <input
+                        type="text"
+                        value={emailServerSettings.username}
+                        onChange={(e) => updateEmailServer({ username: e.target.value })}
+                        placeholder="user@example.com"
+                      />
+                    </div>
+                    <div className={styles.settingItem}>
+                      <label>Email người gửi</label>
+                      <input
+                        type="email"
+                        value={emailServerSettings.fromEmail}
+                        onChange={(e) => updateEmailServer({ fromEmail: e.target.value })}
+                        placeholder="noreply@example.com"
+                      />
+                    </div>
+                    <div className={styles.settingItem}>
+                      <label>Tên hiển thị</label>
+                      <input
+                        type="text"
+                        value={emailServerSettings.fromName}
+                        onChange={(e) => updateEmailServer({ fromName: e.target.value })}
+                        placeholder="Medix Notifications"
+                      />
+                    </div>
+                    <div className={styles.settingItem}>
+                      <label>
+                        Mật khẩu SMTP
+                        {emailServerSettings.hasPassword && !passwordDirty && (
+                          <span className={styles.hintText}> Đã thiết lập</span>
+                        )}
+                      </label>
+                      <div className={styles.passwordField}>
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={emailServerSettings.password}
+                          onChange={(e) => updateEmailServer({ password: e.target.value })}
+                          placeholder={emailServerSettings.hasPassword && !passwordDirty ? '********' : 'Nhập mật khẩu ứng dụng'}
+                        />
+                        <button
+                          type="button"
+                          className={styles.toggleBtn}
+                          onClick={() => setShowPassword((prev) => !prev)}
+                        >
+                          {showPassword ? 'Ẩn' : 'Hiện'}
+                        </button>
+                      </div>
+                      <p className={styles.hintText}>
+                        Sử dụng mật khẩu ứng dụng Gmail (App Password) để đảm bảo bảo mật.
+                      </p>
+                    </div>
+                    <div className={styles.settingItem}>
+                      <button
+                        className={styles.saveBtn}
+                        onClick={handleSaveEmailServerSettings}
+                        disabled={emailSettingsSaving}
+                      >
+                        <i className={`bi ${emailSettingsSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
+                        {emailSettingsSaving ? 'Đang lưu...' : 'Lưu cấu hình email'}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* System Settings */}
+            {/* Email Templates */}
             <div className={styles.settingsCard}>
               <div className={styles.cardHeader}>
                 <h3>
-                  <i className="bi bi-cpu"></i>
-                  Hệ thống
+                  <i className="bi bi-file-earmark-text"></i>
+                  Mẫu email tự động
                 </h3>
               </div>
               <div className={styles.cardContent}>
-                
-                <div className={styles.settingItem}>
-                  <label>Ngôn ngữ mặc định</label>
-                  <select
-                    value={settings.defaultLanguage || 'vi'}
-                    onChange={(e) => handleInputChange('defaultLanguage', e.target.value as Language)}
-                  >
-                    <option value="vi">Tiếng Việt</option>
-                    <option value="en">English</option>
-                  </select>
-                </div>
-                
-                
+                {emailSettingsLoading ? (
+                  <div className={styles.loadingState}>Đang tải mẫu email...</div>
+                ) : emailTemplates.length === 0 ? (
+                  <div className={styles.emptyState}>Chưa có mẫu email nào.</div>
+                ) : (
+                  <div className={styles.templateSection}>
+                    <div className={styles.templateList}>
+                      {emailTemplates.map((template) => (
+                        <button
+                          key={template.templateKey}
+                          type="button"
+                          className={`${styles.templateButton} ${template.templateKey === selectedTemplateKey ? styles.templateButtonActive : ''}`}
+                          onClick={() => setSelectedTemplateKey(template.templateKey)}
+                        >
+                          <span>{template.displayName}</span>
+                          {template.description && <small>{template.description}</small>}
+                        </button>
+                      ))}
+                    </div>
+                    {selectedTemplate && (
+                      <div className={styles.templateEditor}>
+                        <div className={styles.settingItem}>
+                          <label>Tiêu đề email</label>
+                          <input
+                            type="text"
+                            value={selectedTemplate.subject}
+                            onChange={(e) => handleTemplateChange('subject', e.target.value)}
+                          />
+                        </div>
+                        <div className={styles.settingItem}>
+                          <label>Nội dung email</label>
+                          <div className={styles.editorWrapper}>
+                            <CKEditor
+                              key={selectedTemplate.templateKey}
+                              editor={ClassicEditor}
+                              data={selectedTemplate.body}
+                              onChange={(_, editor) => {
+                                const data = editor.getData();
+                                handleTemplateChange('body', data);
+                              }}
+                              config={{
+                                toolbar: [
+                                  'heading',
+                                  '|',
+                                  'bold',
+                                  'italic',
+                                  'underline',
+                                  'link',
+                                  'bulletedList',
+                                  'numberedList',
+                                  'blockQuote',
+                                  '|',
+                                  'undo',
+                                  'redo',
+                                ],
+                                placeholder: 'Soạn nội dung email...'
+                              }}
+                            />
+                          </div>
+                          {availableTokens.length > 0 && (
+                            <div className={styles.tokenHelper}>
+                              <span>Biến động có thể dùng:</span>
+                              <div className={styles.tokenChips}>
+                                {availableTokens.map((token) => (
+                                  <button
+                                    type="button"
+                                    key={token.token}
+                                    className={styles.tokenChip}
+                                    onClick={() => copyTokenToClipboard(token.token)}
+                                    title={token.description}
+                                  >
+                                    {token.token}
+                                  </button>
+                                ))}
+                              </div>
+                              <p className={styles.hintText}>Nhấp để sao chép, sau đó dán vào vị trí mong muốn.</p>
+                            </div>
+                          )}
+                        </div>
+                        {selectedTemplate.description && (
+                          <p className={styles.hintText}>{selectedTemplate.description}</p>
+                        )}
+                        <div className={styles.settingItem}>
+                          <button
+                            className={styles.saveBtn}
+                            onClick={handleSaveTemplate}
+                            disabled={emailTemplateSaving}
+                          >
+                            <i className={`bi ${emailTemplateSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
+                            {emailTemplateSaving ? 'Đang lưu...' : 'Lưu mẫu email'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
+           
             {/* Backup Settings */}
             <div className={styles.settingsCard}>
               <div className={styles.cardHeader}>

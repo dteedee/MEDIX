@@ -34,13 +34,15 @@ namespace Medix.API.Presentation.Controller.Classification
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] SystemConfigurationRequest request)
         {
-            await _service.AddAsync(request, "admin");
+            var updatedBy = User?.Identity?.Name ?? "system";
+            await _service.AddAsync(request, updatedBy);
             return Ok("Configuration added successfully.");
         }
         [HttpPut("{key}")]
         public async Task<IActionResult> Update(string key, [FromBody] UpdateConfigurationValueRequest req)
         {
-            await _service.UpdateAsync(key, req.Value, "admin");
+            var updatedBy = User?.Identity?.Name ?? "system";
+            await _service.UpdateAsync(key, req.Value, updatedBy);
             return Ok("Configuration updated successfully.");
         }
 
@@ -85,6 +87,43 @@ namespace Medix.API.Presentation.Controller.Classification
         {
             var policy = await _service.GetPasswordPolicyAsync();
             return Ok(policy);
+        }
+
+        [HttpGet("email/server")]
+        public async Task<IActionResult> GetEmailServerSettings()
+        {
+            var settings = await _service.GetEmailServerSettingsAsync();
+            return Ok(settings);
+        }
+
+        [HttpPut("email/server")]
+        public async Task<IActionResult> UpdateEmailServerSettings([FromBody] UpdateEmailServerSettingsRequest request)
+        {
+            var updatedBy = User?.Identity?.Name ?? "system";
+            await _service.UpdateEmailServerSettingsAsync(request, updatedBy);
+            return Ok("Email server settings updated successfully.");
+        }
+
+        [HttpGet("email/templates")]
+        public async Task<IActionResult> GetEmailTemplates()
+        {
+            var templates = await _service.GetEmailTemplatesAsync();
+            return Ok(templates);
+        }
+
+        [HttpGet("email/templates/{templateKey}")]
+        public async Task<IActionResult> GetEmailTemplate(string templateKey)
+        {
+            var template = await _service.GetEmailTemplateAsync(templateKey);
+            return template == null ? NotFound() : Ok(template);
+        }
+
+        [HttpPut("email/templates/{templateKey}")]
+        public async Task<IActionResult> UpdateEmailTemplate(string templateKey, [FromBody] UpdateEmailTemplateRequest request)
+        {
+            var updatedBy = User?.Identity?.Name ?? "system";
+            await _service.UpdateEmailTemplateAsync(templateKey, request, updatedBy);
+            return Ok("Email template updated successfully.");
         }
     }
 }

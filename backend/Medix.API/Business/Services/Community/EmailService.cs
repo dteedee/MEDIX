@@ -1,86 +1,117 @@
-using Medix.API.Business.Interfaces.Community;
-using Microsoft.Extensions.Configuration;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using MailKit.Net.Smtp;
 using MailKit.Security;
-using MimeKit;
+using Medix.API.Business.Interfaces.Classification;
+using Medix.API.Business.Interfaces.Community;
+using Medix.API.Models.Constants;
+using Medix.API.Models.DTOs;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using MimeKit;
 
 namespace Medix.API.Business.Services.Community
 {
     public class EmailService : IEmailService
     {
+        private const string DefaultSmtpServer = "smtp.gmail.com";
+        private const int DefaultSmtpPort = 587;
+        private const string PasswordResetTemplateKey = "PASSWORD_RESET_LINK";
+        private const string ForgotPasswordTemplateKey = "FORGOT_PASSWORD_CODE";
+        private const string NewUserTemplateKey = "NEW_USER_WELCOME";
+        private const string AccountVerificationTemplateKey = "ACCOUNT_VERIFICATION";
+
         private readonly ILogger<EmailService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly ISystemConfigurationService _systemConfigurationService;
 
-        public EmailService(ILogger<EmailService> logger, IConfiguration configuration)
+        public EmailService(
+            ILogger<EmailService> logger,
+            IConfiguration configuration,
+            ISystemConfigurationService systemConfigurationService)
         {
             _logger = logger;
             _configuration = configuration;
+            _systemConfigurationService = systemConfigurationService;
         }
 
         public async Task SendPasswordResetEmailAsync(string email, string resetToken)
         {
             var frontendBaseUrl = _configuration["PasswordReset:FrontendBaseUrl"] ?? "https://localhost:3000";
-            var resetLink = $"{frontendBaseUrl.TrimEnd('/')}/reset-password?token={Uri.EscapeDataString(resetToken)}&email={Uri.EscapeDataString(email)}";
+            var resetLink =
+                $"{frontendBaseUrl.TrimEnd('/')}/reset-password?token={Uri.EscapeDataString(resetToken)}&email={Uri.EscapeDataString(email)}";
 
-            var subject = "Đặt lại mật khẩu Medix";
-            var body = $@"
-                <h2>Yêu cầu đặt lại mật khẩu</h2>
-                <p>Bạn hoặc ai đó đã yêu cầu đặt lại mật khẩu cho tài khoản: <strong>{System.Net.WebUtility.HtmlEncode(email)}</strong></p>
-                <p>Nhấp vào liên kết sau để đặt lại mật khẩu của bạn:</p>
-                <p><a href=""{resetLink}"">Đặt lại mật khẩu</a></p>
-                <p>Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>
-            ";
+            var tokens = new Dictionary<string, string>
+            {
+                ["email"] = WebUtility.HtmlEncode(email),
+                ["reset_link"] = resetLink
+            };
 
-            var sent = await SendEmailAsync(email, subject, body);
+            var sent = await SendTemplateEmailAsync(email, PasswordResetTemplateKey, tokens);
             if (!sent)
             {
-                _logger.LogWarning($"Failed to send password reset email to {email}. Reset link: {resetLink}");
+                _logger.LogWarning("Failed to send password reset email to {Email}. Reset link: {Link}", email, resetLink);
             }
             else
             {
-                _logger.LogInformation($"Password reset email sent to {email}.");
+                _logger.LogInformation("Password reset email sent to {Email}", email);
             }
         }
 
         public async Task SendEmailVerificationAsync(string email, string verificationToken)
         {
-            // In a real application, you would integrate with an email service
-            _logger.LogInformation($"Email verification would be sent to {email} with token: {verificationToken}");
+            var frontendBaseUrl = _configuration["PasswordReset:FrontendBaseUrl"] ?? "https://localhost:3000";
+            var verificationLink =
+                $"{frontendBaseUrl.TrimEnd('/')}/verify-email?token={Uri.EscapeDataString(verificationToken)}&email={Uri.EscapeDataString(email)}";
 
-            // For development purposes, we'll just log the verification link
-            var verificationLink = $"https://localhost:3000/verify-email?token={verificationToken}&email={email}";
-            _logger.LogInformation($"Verification link: {verificationLink}");
+            var tokens = new Dictionary<string, string>
+            {
+                ["email"] = WebUtility.HtmlEncode(email),
+                ["verification_link"] = verificationLink
+            };
 
-            await Task.CompletedTask;
+            var sent = await SendTemplateEmailAsync(email, AccountVerificationTemplateKey, tokens);
+            if (!sent)
+            {
+                _logger.LogWarning("Failed to send verification email to {Email}. Link: {Link}", email, verificationLink);
+            }
         }
 
         public async Task<bool> SendEmailAsync(string to, string subject, string body)
         {
             try
             {
-                var emailSettings = _configuration.GetSection("EmailSettings");
-                
-                // Check if email settings are configured
-                if (string.IsNullOrEmpty(emailSettings["SMTPServer"]) || 
-                    string.IsNullOrEmpty(emailSettings["Username"]) || 
-                    string.IsNullOrEmpty(emailSettings["Password"]))
+                var settings = await LoadEmailInfrastructureAsync();
+
+                if (!settings.Enabled)
                 {
-                    _logger.LogError("Email settings (SMTPServer, Username, Password) are not configured properly in appsettings.json.");
+                    _logger.LogWarning("Email sending is disabled in system configuration.");
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(settings.Username) ||
+                    string.IsNullOrWhiteSpace(settings.Password))
+                {
+                    _logger.LogError("Email settings are incomplete. Unable to send email to {Recipient}", to);
                     return false;
                 }
 
                 var message = new MimeMessage();
-                message.From.Add(new MailboxAddress("Medix", emailSettings["FromEmail"]));
-                message.To.Add(new MailboxAddress("", to));
+                var fromName = string.IsNullOrWhiteSpace(settings.FromName) ? "Medix" : settings.FromName;
+                var fromEmail = string.IsNullOrWhiteSpace(settings.FromEmail) ? settings.Username : settings.FromEmail;
+                message.From.Add(new MailboxAddress(fromName, fromEmail));
+                message.To.Add(MailboxAddress.Parse(to));
                 message.Subject = subject;
                 message.Body = new TextPart("html") { Text = body };
 
                 using var client = new SmtpClient();
-                _logger.LogInformation("Connecting to SMTP server {Server}:{Port}...", emailSettings["SMTPServer"], emailSettings["Port"]);
-                await client.ConnectAsync(emailSettings["SMTPServer"],
-                    int.Parse(emailSettings["Port"]), SecureSocketOptions.StartTls);
-                await client.AuthenticateAsync(emailSettings["Username"], emailSettings["Password"]);
+                _logger.LogInformation("Connecting to SMTP server {Server}:{Port} using STARTTLS...", DefaultSmtpServer, DefaultSmtpPort);
+                await client.ConnectAsync(DefaultSmtpServer, DefaultSmtpPort, SecureSocketOptions.StartTls);
+                await client.AuthenticateAsync(settings.Username, settings.Password);
                 await client.SendAsync(message);
                 await client.DisconnectAsync(true);
 
@@ -94,72 +125,100 @@ namespace Medix.API.Business.Services.Community
             }
         }
 
-        public async Task<bool> SendVerificationCodeAsync(string email, string code)
-        {
-            var subject = "Mã xác nhận đăng ký hệ thống Medix";
-            var body = $@"
-                <h2>Xác nhận đăng ký tài khoản</h2>
-                <p>Mã xác nhận của bạn là: <strong>{code}</strong></p>
-                <p>Mã này sẽ hết hạn sau 10 phút.</p>
-                <p>Cảm ơn bạn đã sử dụng dịch vụ của Medix!</p>
-            ";
+        public Task<bool> SendVerificationCodeAsync(string email, string code) => SendOtpEmailAsync(email, code);
 
-            return await SendEmailAsync(email, subject, body);
-        }
-
-        public async Task<bool> SendForgotPasswordCodeAsync(string email, string code)
-        {
-            var subject = "Mã xác nhận đặt lại mật khẩu - Medix";
-            var body = $@"
-                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
-                    <h2 style='color: #2c3e50;'>Đặt lại mật khẩu</h2>
-                    <p>Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản Medix của mình.</p>
-                    <p>Mã xác nhận của bạn là:</p>
-                    <div style='background-color: #f8f9fa; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;'>
-                        <h1 style='color: #3498db; font-size: 32px; margin: 0; letter-spacing: 4px;'>{code}</h1>
-                    </div>
-                    <p><strong>Lưu ý:</strong></p>
-                    <ul>
-                        <li>Mã này sẽ hết hạn sau 10 phút</li>
-                        <li>Chỉ sử dụng mã này một lần</li>
-                        <li>Không chia sẻ mã này với bất kỳ ai</li>
-                    </ul>
-                    <p>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.</p>
-                    <hr style='border: none; border-top: 1px solid #eee; margin: 20px 0;'>
-                    <p style='color: #7f8c8d; font-size: 12px;'>Email này được gửi tự động từ hệ thống Medix. Vui lòng không trả lời email này.</p>
-                </div>
-            ";
-
-            return await SendEmailAsync(email, subject, body);
-        }
+        public Task<bool> SendForgotPasswordCodeAsync(string email, string code) => SendOtpEmailAsync(email, code);
 
         public async Task<bool> SendNewUserPasswordAsync(string email, string username, string password)
         {
             var frontendBaseUrl = _configuration["PasswordReset:FrontendBaseUrl"] ?? "http://localhost:5173";
             var loginLink = $"{frontendBaseUrl.TrimEnd('/')}/login";
 
-            var subject = "Chào mừng đến với Medix - Thông tin tài khoản của bạn";
-            var body = $@"
-                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
-                    <h2 style='color: #2c3e50;'>Chào mừng bạn đến với Medix!</h2>
-                    <p>Tài khoản của bạn đã được tạo thành công.</p>
-                    <p>Dưới đây là thông tin đăng nhập của bạn:</p>
-                    <div style='background-color: #f8f9fa; padding: 20px; border-left: 4px solid #3498db; margin: 20px 0;'>
-                        <p><strong>Tên đăng nhập:</strong> {username}</p>
-                        <p><strong>Email:</strong> {email}</p>
-                        <p><strong>Mật khẩu tạm thời:</strong> <strong style='font-size: 18px; color: #e74c3c;'>{password}</strong></p>
-                    </div>
-                    <p><strong>Lưu ý quan trọng:</strong></p>
-                    <ul>
-                        <li>Đây là mật khẩu tạm thời. Bạn nên đổi mật khẩu ngay sau khi đăng nhập lần đầu tiên để đảm bảo an toàn.</li>
-                        <li>Không chia sẻ thông tin tài khoản này với bất kỳ ai.</li>
-                    </ul>
-                    <p>Bạn có thể đăng nhập vào tài khoản của mình tại đây:</p>
-                    <p style='text-align: center; margin: 20px 0;'><a href='{loginLink}' style='background-color: #3498db; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Đăng nhập ngay</a></p>
-                    <p>Cảm ơn bạn đã tham gia cộng đồng Medix!</p>
-                </div>
-            ";
-            return await SendEmailAsync(email, subject, body);
+            var tokens = new Dictionary<string, string>
+            {
+                ["username"] = WebUtility.HtmlEncode(username),
+                ["email"] = WebUtility.HtmlEncode(email),
+                ["temporary_password"] = WebUtility.HtmlEncode(password),
+                ["login_link"] = loginLink
+            };
+
+            return await SendTemplateEmailAsync(email, NewUserTemplateKey, tokens);
+        }
+
+        private Task<bool> SendOtpEmailAsync(string email, string code)
+        {
+            var tokens = new Dictionary<string, string>
+            {
+                ["email"] = WebUtility.HtmlEncode(email),
+                ["code"] = code,
+                ["code_expire_minutes"] = "10"
+            };
+
+            return SendTemplateEmailAsync(email, ForgotPasswordTemplateKey, tokens);
+        }
+
+        private async Task<bool> SendTemplateEmailAsync(string recipient, string templateKey, IDictionary<string, string> tokens)
+        {
+            var metadata = SystemConfigurationDefaults.EmailTemplateMetadatas
+                .FirstOrDefault(t => t.TemplateKey.Equals(templateKey, StringComparison.OrdinalIgnoreCase));
+
+            var fallbackSubject = metadata != null
+                ? SystemConfigurationDefaults.Find(metadata.SubjectKey)?.ConfigValue ?? "Thông báo từ Medix"
+                : "Thông báo từ Medix";
+            var fallbackBody = metadata != null
+                ? SystemConfigurationDefaults.Find(metadata.BodyKey)?.ConfigValue ?? "<p>Xin chào,</p>"
+                : "<p>Xin chào,</p>";
+
+            var template = metadata != null
+                ? await _systemConfigurationService.GetEmailTemplateAsync(metadata.TemplateKey)
+                : null;
+
+            var subject = MergeTemplate(template?.Subject ?? fallbackSubject, tokens);
+            var body = MergeTemplate(template?.Body ?? fallbackBody, tokens);
+
+            return await SendEmailAsync(recipient, subject, body);
+        }
+
+        private async Task<EmailServerSettingsDto> LoadEmailInfrastructureAsync()
+        {
+            var settings = await _systemConfigurationService.GetEmailServerSettingsAsync();
+            var emailSection = _configuration.GetSection("EmailSettings");
+
+            if (string.IsNullOrWhiteSpace(settings.Username))
+            {
+                settings.Username = emailSection["Username"] ?? settings.Username ?? string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.Password))
+            {
+                settings.Password = emailSection["Password"] ?? string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.FromEmail))
+            {
+                settings.FromEmail = emailSection["FromEmail"] ?? settings.Username;
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.FromName))
+            {
+                settings.FromName = "Medix";
+            }
+
+            return settings;
+        }
+
+        private static string MergeTemplate(string template, IDictionary<string, string> tokens)
+        {
+            if (string.IsNullOrEmpty(template)) return string.Empty;
+
+            var result = template;
+            foreach (var token in tokens)
+            {
+                var pattern = $"{{{{\\s*{Regex.Escape(token.Key)}\\s*}}}}";
+                result = Regex.Replace(result, pattern, token.Value, RegexOptions.IgnoreCase);
+            }
+
+            return result;
         }
     }
 }

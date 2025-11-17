@@ -29,4 +29,38 @@
         public string Value { get; set; } = null!;
     }
 
+    public class EmailServerSettingsDto
+    {
+        public bool Enabled { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string FromEmail { get; set; } = string.Empty;
+        public string FromName { get; set; } = "Medix Notifications";
+        public string Password { get; set; } = string.Empty;
+        public bool HasPassword => !string.IsNullOrEmpty(Password);
+    }
+
+    public class UpdateEmailServerSettingsRequest
+    {
+        public bool Enabled { get; set; }
+        public string? Username { get; set; }
+        public string? FromEmail { get; set; }
+        public string? FromName { get; set; }
+        public string? Password { get; set; }
+    }
+
+    public class EmailTemplateDto
+    {
+        public string TemplateKey { get; set; } = null!;
+        public string DisplayName { get; set; } = null!;
+        public string? Description { get; set; }
+        public string Subject { get; set; } = null!;
+        public string Body { get; set; } = null!;
+    }
+
+    public class UpdateEmailTemplateRequest
+    {
+        public string Subject { get; set; } = null!;
+        public string Body { get; set; } = null!;
+    }
+
 }

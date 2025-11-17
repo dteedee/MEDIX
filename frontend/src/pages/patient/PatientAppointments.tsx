@@ -3,6 +3,7 @@ import styles from '../../styles/patient/PatientAppointments.module.css';
 import { appointmentService } from '../../services/appointmentService';
 import doctorService from '../../services/doctorService';
 import { DoctorProfileDto } from '../../types/doctor.types';
+import { apiClient } from '../../lib/apiClient';
 
 interface Appointment {
   id: string;
@@ -48,13 +49,20 @@ export const PatientAppointments: React.FC = () => {
   const [cancelResult, setCancelResult] = useState<{ message: string; refundAmount?: number } | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [activeView, setActiveView] = useState<'grid' | 'list'>('grid');
-  const [doctorProfiles, setDoctorProfiles] = useState<Map<string, DoctorProfileDto>>(new Map());
-  const [loadingDoctors, setLoadingDoctors] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<FilterOptions>({
     status: 'all',
     timeRange: 'all',
     search: ''
   });
+  const [doctorProfiles, setDoctorProfiles] = useState<Map<string, DoctorProfileDto>>(new Map());
+  const [loadingDoctors, setLoadingDoctors] = useState<Set<string>>(new Set());
+  const [refundPercentage, setRefundPercentage] = useState(80);
+
+  const calculateRefundAmount = (appointment: Appointment | null) => {
+    if (!appointment) return 0;
+    const total = appointment.totalAmount ?? appointment.fee ?? 0;
+    return Math.round(total * (refundPercentage / 100));
+  };
 
   // Load appointments from API
   useEffect(() => {
@@ -114,6 +122,23 @@ export const PatientAppointments: React.FC = () => {
   }, []);
 
   // Load doctor profiles for appointments
+  useEffect(() => {
+    const fetchRefundSetting = async () => {
+      try {
+        const response = await apiClient.get('/SystemConfiguration/APPOINTMENT_PATIENT_CANCEL_REFUND_PERCENT');
+        const rawValue = parseFloat(response.data?.configValue ?? '0.8');
+        if (Number.isFinite(rawValue)) {
+          const normalized = rawValue <= 1 ? rawValue * 100 : rawValue;
+          setRefundPercentage(Math.min(100, Math.max(0, Math.round(normalized))));
+        }
+      } catch (error) {
+        console.error('Failed to fetch refund configuration', error);
+      }
+    };
+
+    fetchRefundSetting();
+  }, []);
+
   useEffect(() => {
     const loadDoctorProfiles = async () => {
       const uniqueDoctorIds = Array.from(
@@ -773,7 +798,10 @@ export const PatientAppointments: React.FC = () => {
                   <i className="bi bi-info-circle-fill"></i>
                   <div>
                     <strong>Hoàn tiền</strong>
-                    <p>Bạn sẽ được hoàn lại {formatCurrency(Math.round((selectedAppointment.totalAmount || selectedAppointment.fee) * 0.8))} (80% tổng phí)</p>
+                    <p>
+                      Bạn sẽ được hoàn lại {formatCurrency(calculateRefundAmount(selectedAppointment))}
+                      {` (${refundPercentage}% tổng phí)`} – Phí hủy: {100 - refundPercentage}%.
+                    </p>
                   </div>
                 </div>
               )}

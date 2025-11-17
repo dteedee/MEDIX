@@ -27,8 +27,20 @@ namespace Medix.API.Presentation.Controllers
         private readonly IEmailService _emailService;
         private readonly IDoctorService _doctorService;
         private readonly IPatientHealthReminderService _patientHealthReminderService;
+        private readonly ISystemConfigurationService _systemConfigurationService;
+        private const string PatientCancelRefundConfigKey = "APPOINTMENT_PATIENT_CANCEL_REFUND_PERCENT";
 
-        public AppointmentController(IAppointmentService service, IWalletService walletService, IWalletTransactionService walletTransactionService, IPatientService patientService, IUserService userService, INoticeSetupService noticeSetupService, IEmailService emailService, IDoctorService doctorService, IPatientHealthReminderService patientHealthReminderService)
+        public AppointmentController(
+            IAppointmentService service,
+            IWalletService walletService,
+            IWalletTransactionService walletTransactionService,
+            IPatientService patientService,
+            IUserService userService,
+            INoticeSetupService noticeSetupService,
+            IEmailService emailService,
+            IDoctorService doctorService,
+            IPatientHealthReminderService patientHealthReminderService,
+            ISystemConfigurationService systemConfigurationService)
         {
             _service = service;
             _walletService = walletService;
@@ -39,6 +51,7 @@ namespace Medix.API.Presentation.Controllers
             _emailService = emailService;
             _doctorService = doctorService;
             _patientHealthReminderService = patientHealthReminderService;
+            _systemConfigurationService = systemConfigurationService;
         }
 
         [HttpGet]
@@ -352,10 +365,22 @@ namespace Medix.API.Presentation.Controllers
                 return BadRequest(new { message = "Cannot cancel appointment less than 2 hours before scheduled time" });
             }
 
-            // 8️⃣ Calculate refund amount (80% of total)
-            const decimal REFUND_PERCENTAGE = 0.80m; // 80%
-            decimal refundAmount = Math.Round(appointment.TotalAmount * REFUND_PERCENTAGE, 2);
-            decimal cancellationFee = appointment.TotalAmount - refundAmount; // 20%
+            // 8️⃣ Calculate refund amount (configurable)
+            var refundPercentageConfig = await _systemConfigurationService.GetValueAsync<decimal?>(PatientCancelRefundConfigKey);
+            var refundPercentage = refundPercentageConfig ?? 0.80m;
+
+            // allow admins to store 0-100 or 0-1
+            if (refundPercentage > 1m && refundPercentage <= 100m)
+            {
+                refundPercentage /= 100m;
+            }
+
+            if (refundPercentage < 0m) refundPercentage = 0m;
+            if (refundPercentage > 1m) refundPercentage = 1m;
+
+            decimal refundAmount = Math.Round(appointment.TotalAmount * refundPercentage, 2);
+            decimal cancellationFee = appointment.TotalAmount - refundAmount;
+            string refundPercentageDisplay = $"{refundPercentage:P0}";
 
             // 9️⃣ Update appointment status
             var updateAppointment = new UpdateAppointmentDto
@@ -393,17 +418,17 @@ namespace Medix.API.Presentation.Controllers
 
                 try
                 {
-                    // Create refund transaction with 80% amount
+                    // Create refund transaction with configured amount
                     var walletTransaction = new WalletTransactionDto
                     {
-                        Amount = refundAmount, // ✅ 80% refund
+                        Amount = refundAmount,
                         TransactionTypeCode = "AppointmentRefund",
-                        Description = $"Hoàn tiền hủy lịch hẹn #{appointment.Id} (80% - Phí hủy: {cancellationFee:N0} VND)",
+                        Description = $"Hoàn tiền hủy lịch hẹn #{appointment.Id} ({refundPercentageDisplay} - Phí hủy: {cancellationFee:N0} VND)",
                         CreatedAt = DateTime.UtcNow,
                         orderCode = 0,
                         Status = "Completed",
                         BalanceBefore = wallet.Balance,
-                        BalanceAfter = wallet.Balance + refundAmount, // ✅ Add 80%
+                        BalanceAfter = wallet.Balance + refundAmount,
                         walletId = wallet.Id,
                         RelatedAppointmentId = appointment.Id
                     };
@@ -418,10 +443,10 @@ namespace Medix.API.Presentation.Controllers
                         message = "Appointment cancelled and refunded successfully",
                         appointmentId = appointment.Id,
                         totalAmount = appointment.TotalAmount,
-                        refundAmount = refundAmount, // ✅ 80%
-                        cancellationFee = cancellationFee, // ✅ 20%
-                        refundPercentage = "80%",
-                        note = "Phí hủy lịch 20% đã được trừ",
+                        refundAmount = refundAmount,
+                        cancellationFee = cancellationFee,
+                        refundPercentage = refundPercentageDisplay,
+                        note = $"Phí hủy lịch {(1 - refundPercentage):P0} đã được trừ",
                         transactionId = transaction.id
                     });
                 }

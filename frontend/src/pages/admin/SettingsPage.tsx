@@ -111,6 +111,8 @@ export default function SettingsPage() {
   const [emailSettingsLoading, setEmailSettingsLoading] = useState(false);
   const [emailSettingsSaving, setEmailSettingsSaving] = useState(false);
   const [emailTemplateSaving, setEmailTemplateSaving] = useState(false);
+  const [refundPercentage, setRefundPercentage] = useState(80);
+  const [refundSaving, setRefundSaving] = useState(false);
 
   useEffect(() => {
   const fetchSettings = async () => {
@@ -266,6 +268,24 @@ useEffect(() => {
     fetchEmailSettings();
   }, [fetchEmailSettings]);
 
+  const fetchRefundConfig = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/SystemConfiguration/APPOINTMENT_PATIENT_CANCEL_REFUND_PERCENT');
+      const rawValue = parseFloat(response.data?.configValue ?? '0.8');
+      const normalized = !Number.isNaN(rawValue)
+        ? (rawValue <= 1 ? rawValue * 100 : rawValue)
+        : 80;
+      setRefundPercentage(Math.min(100, Math.max(0, Math.round(normalized))));
+    } catch (error) {
+      console.error('Failed to fetch refund percentage', error);
+      showToast('Không thể tải cấu hình hoàn tiền hủy lịch.', 'error');
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchRefundConfig();
+  }, [fetchRefundConfig]);
+
   const updateEmailServer = (patch: Partial<EmailServerSettingsState>) => {
     setEmailServerSettings((prev) => ({ ...prev, ...patch }));
     if (Object.prototype.hasOwnProperty.call(patch, 'password')) {
@@ -291,6 +311,22 @@ useEffect(() => {
       showToast('Lưu cấu hình email thất bại.', 'error');
     } finally {
       setEmailSettingsSaving(false);
+    }
+  };
+
+  const handleSaveRefundPercentage = async () => {
+    setRefundSaving(true);
+    showToast('Đang lưu cấu hình hoàn tiền...', 'info');
+    try {
+      const value = (refundPercentage / 100).toString();
+      await apiClient.put('/SystemConfiguration/APPOINTMENT_PATIENT_CANCEL_REFUND_PERCENT', { value });
+      showToast('Đã lưu cấu hình hoàn tiền.', 'success');
+      await fetchRefundConfig();
+    } catch (error) {
+      console.error('Failed to save refund percentage', error);
+      showToast('Lưu cấu hình hoàn tiền thất bại.', 'error');
+    } finally {
+      setRefundSaving(false);
     }
   };
 
@@ -855,7 +891,57 @@ useEffect(() => {
               </div>
             </div>
 
-           
+            {/* Refund Policy Settings */}
+            <div className={styles.settingsCard}>
+              <div className={styles.cardHeader}>
+                <h3>
+                  <i className="bi bi-cash-coin"></i>
+                  Chính sách hoàn tiền hủy lịch
+                </h3>
+              </div>
+              <div className={styles.cardContent}>
+                <div className={styles.settingItem}>
+                  <label>Tỷ lệ hoàn tiền cho bệnh nhân (%)</label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={refundPercentage}
+                    onChange={(e) => setRefundPercentage(Number(e.target.value))}
+                  />
+                  <div className={styles.rangeValue}>
+                    <strong>{refundPercentage}%</strong>
+                    <span>Phí hủy lịch: {100 - refundPercentage}%</span>
+                  </div>
+                </div>
+                <div className={styles.settingItem}>
+                  <label>Nhập chính xác</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={refundPercentage}
+                    onChange={(e) =>
+                      setRefundPercentage(Math.min(100, Math.max(0, Number(e.target.value) || 0)))
+                    }
+                  />
+                </div>
+                <p className={styles.hintText}>
+                  Áp dụng khi bệnh nhân hủy lịch hợp lệ. Ví dụ: 80% nghĩa là hoàn lại 80% chi phí, thu phí hủy 20%.
+                </p>
+                <div className={styles.settingItem}>
+                  <button
+                    className={styles.saveBtn}
+                    onClick={handleSaveRefundPercentage}
+                    disabled={refundSaving}
+                  >
+                    <i className={`bi ${refundSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
+                    {refundSaving ? 'Đang lưu...' : 'Lưu chính sách hoàn tiền'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Backup Settings */}
             <div className={styles.settingsCard}>
               <div className={styles.cardHeader}>

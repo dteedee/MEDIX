@@ -324,6 +324,13 @@
   background: #dbe4ff;
 }
 
+.rangeValue {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #4a5568;
+}
+
 .noticeBox {
   padding: 12px 16px;
   border: 1px solid #cbd5f5;

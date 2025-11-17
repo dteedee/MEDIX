@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -92,7 +93,17 @@ namespace Medix.API.Business.Services.Classification
         {
             var config = await GetByKeyAsync(key);
             if (config == null) return default;
-            return (T)Convert.ChangeType(config.ConfigValue, typeof(T));
+            var targetType = typeof(T);
+            var isNullable = Nullable.GetUnderlyingType(targetType) != null;
+            var conversionType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+            if (string.IsNullOrWhiteSpace(config.ConfigValue))
+            {
+                return default;
+            }
+
+            var converted = Convert.ChangeType(config.ConfigValue, conversionType, CultureInfo.InvariantCulture);
+            return (T)(object)converted;
         }
 
         public async Task AddAsync(SystemConfigurationRequest request, string updatedBy)

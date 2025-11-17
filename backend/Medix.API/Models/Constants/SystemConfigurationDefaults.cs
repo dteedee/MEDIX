@@ -240,6 +240,19 @@ namespace Medix.API.Models.Constants
             }
         };
 
+        public static readonly IReadOnlyList<SystemConfiguration> AppointmentDefaults = new List<SystemConfiguration>
+        {
+            new()
+            {
+                ConfigKey = "APPOINTMENT_PATIENT_CANCEL_REFUND_PERCENT",
+                ConfigValue = "0.8",
+                DataType = "decimal",
+                Category = "APPOINTMENT",
+                Description = "Tỷ lệ hoàn tiền (0-1) khi bệnh nhân hủy lịch hợp lệ",
+                IsActive = true
+            }
+        };
+
         public static readonly IReadOnlyList<EmailTemplateMetadata> EmailTemplateMetadatas = new List<EmailTemplateMetadata>
         {
             new("PASSWORD_RESET_LINK", "Liên kết đặt lại mật khẩu", "EMAIL_TEMPLATE_PASSWORD_RESET_SUBJECT", "EMAIL_TEMPLATE_PASSWORD_RESET_BODY", "Gửi cho người dùng khi họ yêu cầu đặt lại mật khẩu bằng liên kết."),
@@ -248,7 +261,11 @@ namespace Medix.API.Models.Constants
             new("ACCOUNT_VERIFICATION", "Xác minh tài khoản", "EMAIL_TEMPLATE_VERIFICATION_SUBJECT", "EMAIL_TEMPLATE_VERIFICATION_BODY", "Gửi liên kết xác minh email.")
         };
 
-        public static IEnumerable<SystemConfiguration> All => Maintenance.Concat(EmailServer).Concat(EmailTemplates);
+        public static IEnumerable<SystemConfiguration> All =>
+            Maintenance
+                .Concat(EmailServer)
+                .Concat(EmailTemplates)
+                .Concat(AppointmentDefaults);
 
         public static SystemConfiguration? Find(string key) =>
             All.FirstOrDefault(x => x.ConfigKey.Equals(key, StringComparison.OrdinalIgnoreCase));

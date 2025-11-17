@@ -134,6 +134,7 @@ export interface DoctorInTier {
   price: number;
   bio: string;
   rating: number;
+  isAcceptingAppointments?: boolean; // Bác sĩ có nhận lịch hẹn không
   totalDone?: number; // Số ca đã thực hiện
   totalAppointments?: number; // Tổng số lịch hẹn
   successPercentage?: number; // Tỷ lệ thành công (%)
@@ -186,6 +187,7 @@ export interface DoctorInEducation {
   price: number;
   bio: string;
   rating: number;
+  isAcceptingAppointments?: boolean; // Bác sĩ có nhận lịch hẹn không
   totalDone?: number; // Số ca đã thực hiện
   totalAppointments?: number; // Tổng số lịch hẹn
   successPercentage?: number; // Tỷ lệ thành công (%)

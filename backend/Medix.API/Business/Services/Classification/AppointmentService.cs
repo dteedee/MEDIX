@@ -4,6 +4,7 @@ using Humanizer;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess.Interfaces.Classification;
+using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.ApointmentDTO;
 using Medix.API.Models.DTOs.MedicalRecordDTO;
 using Medix.API.Models.DTOs.Wallet;
@@ -24,15 +25,21 @@ namespace Medix.API.Business.Services.Classification
         private readonly IWalletTransactionService walletTransactionService;
         private readonly IDoctorRepository doctorRepository;
 
-        public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService, IWalletTransactionService walletTransactionService, IWalletService walletService, IDoctorRepository doctorRepository)
+        private readonly IUserPromotionService userPromotionService;
+
+        private readonly IPromotionService promotionService;
+
+        public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService, IWalletTransactionService walletTransactionService, IWalletService walletService, IDoctorRepository doctorRepository, IUserPromotionService userPromotionService, IPromotionService promotionService)
         {
             _repository = repository;
             _mapper = mapper;
             this.medicalRecordService = medicalRecordService;
-           
+
             this.walletTransactionService = walletTransactionService;
             this.walletService = walletService;
             this.doctorRepository = doctorRepository;
+            this.userPromotionService = userPromotionService;
+            this.promotionService = promotionService;
         }
 
         public async Task<IEnumerable<AppointmentDto>> GetAllAsync()
@@ -231,6 +238,11 @@ namespace Medix.API.Business.Services.Classification
                 doctor.TotalCaseMissPerWeek= doctor.TotalCaseMissPerWeek + 1;
 
                 await doctorRepository.UpdateDoctorAsync(doctor);
+
+                var promotionForPatient = await promotionService.GetPromotionByCodeAsync("WELCOME50K");
+
+        
+                await userPromotionService.AssignPromotionToUserAsync(appoiment.PatientId,promotionForPatient.Id);
             }
         }
            

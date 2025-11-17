@@ -253,7 +253,7 @@ namespace Medix.API.Presentation.Controllers
         }
 
         [HttpGet("my-appointments-by-range")]
-        //[Authorize(Roles = "Doctor")]
+        [Authorize(Roles = "Doctor")]
         public async Task<IActionResult> GetMyAppointmentsByRange([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
             try
@@ -342,7 +342,7 @@ namespace Medix.API.Presentation.Controllers
                 appointment.StatusCode == "CancelledByPatient" ||
                 appointment.StatusCode == "Completed")
             {
-                return BadRequest(new { message = $"Cannot cancel appointment with status: {appointment.StatusDisplayName}" });
+                return BadRequest(new { message = $"Cannot cancel appointment with status: {appointment.StatusCode}" });
             }
 
             // 7️⃣ Check if appointment is too close

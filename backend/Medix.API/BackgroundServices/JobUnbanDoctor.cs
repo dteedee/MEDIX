@@ -91,7 +91,7 @@ namespace Medix.API.BackgroundServices
                     // Cộng NextWeekMiss vào TotalCaseMissPerWeek KHI MỞ BAN
                     if (doctor.NextWeekMiss > 0)
                     {
-                        var carryOverMiss = Math.Min(doctor.NextWeekMiss, 1); // Giới hạn tối đa 2
+                        var carryOverMiss = 1; // Giới hạn tối đa 2
                         doctor.TotalCaseMissPerWeek = carryOverMiss;
 
                         _logger.LogWarning(

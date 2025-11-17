@@ -120,7 +120,7 @@ namespace Medix.API.Business.Services.Classification
                     queryParams); // <-- THAY ĐỔI Ở ĐÂY
 
                 // 4. Map sang DoctorBookinDto của bạn
-                var doctorDtos = doctors.Select(doc => new DoctorBookinDto
+                var doctorDtos = doctors.Where(x=>x.IsAcceptingAppointments==true).Select(doc => new DoctorBookinDto
                 {
                     userId = doc.User.Id,
                     DoctorId = doc.Id,
@@ -133,7 +133,9 @@ namespace Medix.API.Business.Services.Classification
                     price = doc.ConsultationFee,
                     bio = doc.Bio,
                     rating = doc.AverageRating,
-                    AvatarUrl = doc.User.AvatarUrl
+                    AvatarUrl = doc.User.AvatarUrl,
+                    IsAcceptingAppointments = doc.IsAcceptingAppointments
+
                 }).ToList();
 
                 // 5. Tạo DTO phân trang
@@ -359,7 +361,7 @@ namespace Medix.API.Business.Services.Classification
                 // Áp dụng pagination
                 var doctors = await doctorsQuery
                     .Skip((queryParams.PageNumber - 1) * queryParams.PageSize)
-                    .Take(queryParams.PageSize)
+                    .Take(queryParams.PageSize).Where(x=>x.IsAcceptingAppointments==true)
                     .Select(d => new DoctorBookinDto
                     {
                         userId = d.UserId,

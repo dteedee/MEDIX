@@ -70,7 +70,7 @@ namespace Medix.API.Configurations
 
             services.AddScoped<IAuditLogRepository, AuditLogRepository>();
             services.AddScoped<ISystemConfigurationRepository, SystemConfigurationRepository>();
-
+            services.AddScoped<IUserPromotionRepository, UserPromotionRepository>();
 
 
 
@@ -120,6 +120,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IAuditLogService, AuditLogService>();
             services.AddScoped<ISystemConfigurationService, SystemConfigurationService>();
             services.AddScoped<ISalaryService, SalaryService>();
+            services.AddScoped<IUserPromotionService, UserPromotionService>();
 
         }
 

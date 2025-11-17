@@ -59,10 +59,21 @@ const cancelPatientAppointment = async (appointmentId: string, cancellationReaso
   return response.data;
 };
 
+/**
+ * Hoàn thành appointment (dành cho bác sĩ).
+ * @param appointmentId - ID của appointment cần hoàn thành.
+ * @returns {Promise<Appointment>} Appointment đã được cập nhật.
+ */
+const completeAppointment = async (appointmentId: string): Promise<Appointment> => {
+  const response = await apiClient.put<Appointment>(`${API_ENDPOINT}/Complete/${appointmentId}/Completed`);
+  return response.data;
+};
+
 export const appointmentService = {
   getMyDayAppointments,
   getMyAppointmentsByDateRange,
   createAppointment,
   getPatientAppointments,
   cancelPatientAppointment,
+  completeAppointment,
 };

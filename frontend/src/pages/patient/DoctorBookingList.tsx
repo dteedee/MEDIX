@@ -21,6 +21,7 @@ interface Doctor {
   tier: 'Basic' | 'Professional' | 'Premium' | 'VIP';
   bio: string;
   imageUrl?: string;
+  isAcceptingAppointments?: boolean; // Bác sĩ có nhận lịch hẹn không
   totalDone?: number; // Số ca đã thực hiện
   totalAppointments?: number; // Tổng số lịch hẹn
   successPercentage?: number; // Tỷ lệ thành công (%)
@@ -82,6 +83,7 @@ const convertApiDoctorToDoctor = (
     tier: safeTier as 'Basic' | 'Professional' | 'Premium' | 'VIP',
     bio: apiDoctor.bio || 'Bác sĩ chuyên nghiệp với nhiều năm kinh nghiệm trong lĩnh vực y tế.',
     imageUrl,
+    isAcceptingAppointments: apiDoctor.isAcceptingAppointments ?? true,
     totalDone,
     totalAppointments,
     successPercentage,
@@ -126,6 +128,7 @@ const convertEducationDoctorToDoctor = (
     tier: 'Basic' as 'Basic' | 'Professional' | 'Premium' | 'VIP', // Default tier
     bio: apiDoctor.bio || 'Bác sĩ chuyên nghiệp với nhiều năm kinh nghiệm trong lĩnh vực y tế.',
     imageUrl,
+    isAcceptingAppointments: apiDoctor.isAcceptingAppointments ?? true,
     totalDone,
     totalAppointments,
     successPercentage,
@@ -633,6 +636,9 @@ const DoctorBookingList: React.FC = () => {
     const converted = allDoctors.map(d => convertApiDoctorToDoctor(d, 'Basic', doctorAvatars, doctorStatistics));
 
     const filtered = converted.filter(doctor => {
+          // Only show doctors accepting appointments
+          if (doctor.isAcceptingAppointments === false) return false;
+          
           const nameNormalized = normalizeSearchText(doctor.fullName);
           const specialtyNormalized = normalizeSearchText(doctor.specialty);
           const degreeNormalized = normalizeSearchText(doctor.degree);
@@ -670,7 +676,8 @@ const DoctorBookingList: React.FC = () => {
       convertEducationDoctorToDoctor(d, doctorAvatars, doctorStatistics)
     );
     
-    let doctors = allConverted;
+    // Filter out doctors not accepting appointments
+    let doctors = allConverted.filter(doctor => doctor.isAcceptingAppointments !== false);
     
     if (debouncedSearch && debouncedSearch.trim()) {
       const searchNormalized = normalizeSearchText(debouncedSearch);

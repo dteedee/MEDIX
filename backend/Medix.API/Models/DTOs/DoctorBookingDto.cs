@@ -58,9 +58,12 @@
         public string? bio { get; set; }
         public decimal? rating { get; set; }
 
+        public bool? IsAcceptingAppointments { get; set; }
         public int? TotalDone { get; set; }
 
-        public int TotalAppointments { get; set; } 
+        public int TotalAppointments { get; set; }  
+
+
         public double SuccessPercentage
         {
             get

@@ -143,6 +143,12 @@ builder.Services.ConfigureServices();
 // ================= BUILD APP =================
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = scope.ServiceProvider.GetRequiredService<SystemConfigurationSeeder>();
+    await seeder.SeedAsync();
+}
+
 // ================= MIDDLEWARE PIPELINE =================
 if (app.Environment.IsDevelopment())
 {
@@ -166,6 +172,7 @@ ServiceConfiguration.RegisterHangfireJobs();
 
 // Authentication + Authorization
 app.UseAuthentication();
+app.UseMiddleware<MaintenanceModeMiddleware>();
 app.UseAuthorization();
 app.UseMiddleware<AuditMiddleware>();
 

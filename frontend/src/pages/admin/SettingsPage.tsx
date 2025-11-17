@@ -18,6 +18,9 @@ interface SystemSettings {
   requireLowercase: boolean;
   requireUppercase: boolean;
   requireSpecial: boolean;
+  maintenanceMode: boolean;
+  maintenanceMessage: string;
+  maintenanceSchedule: string;
 }
 
 interface DatabaseBackupInfo {
@@ -44,6 +47,7 @@ export default function SettingsPage() {
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupSaving, setBackupSaving] = useState(false);
   const [backupRunning, setBackupRunning] = useState(false);
+  const [maintenanceSaving, setMaintenanceSaving] = useState(false);
 
   useEffect(() => {
   const fetchSettings = async () => {
@@ -64,6 +68,9 @@ export default function SettingsPage() {
         requireLowercaseRes,
         requireUppercaseRes,
         requireSpecialRes,
+        maintenanceModeRes,
+        maintenanceMessageRes,
+        maintenanceScheduleRes,
       ] = await Promise.all([
         apiClient.get('/SystemConfiguration/SiteName'),
         apiClient.get('/SystemConfiguration/SystemDescription'),
@@ -81,6 +88,9 @@ export default function SettingsPage() {
         apiClient.get('/SystemConfiguration/REQUIRE_LOWERCASE'),
         apiClient.get('/SystemConfiguration/REQUIRE_UPPERCASE'),
         apiClient.get('/SystemConfiguration/REQUIRE_SPECIAL'),
+        apiClient.get('/SystemConfiguration/MAINTENANCE_MODE'),
+        apiClient.get('/SystemConfiguration/MAINTENANCE_MESSAGE'),
+        apiClient.get('/SystemConfiguration/MAINTENANCE_SCHEDULE'),
       ]);
 
       setSettings({
@@ -100,6 +110,9 @@ export default function SettingsPage() {
         requireLowercase: requireLowercaseRes.data.configValue.toLowerCase() === 'true',
         requireUppercase: requireUppercaseRes.data.configValue.toLowerCase() === 'true',
         requireSpecial: requireSpecialRes.data.configValue.toLowerCase() === 'true',
+        maintenanceMode: maintenanceModeRes.data?.configValue?.toLowerCase() === 'true',
+        maintenanceMessage: maintenanceMessageRes.data?.configValue || '',
+        maintenanceSchedule: maintenanceScheduleRes.data?.configValue || '',
       });
 
     } catch (error) {
@@ -151,6 +164,10 @@ useEffect(() => {
 
   const handleCheckboxChange = (key: keyof SystemSettings, checked: boolean) => {
     setSettings(prev => ({ ...prev, [key]: checked }));
+  };
+
+  const handleMaintenanceModeChange = (enabled: boolean) => {
+    setSettings(prev => ({ ...prev, maintenanceMode: enabled }));
   };
 
   const handleSaveChanges = async () => {
@@ -268,6 +285,25 @@ useEffect(() => {
     } catch (error) {
       console.error('Download failed', error);
       showToast('Tải bản sao lưu thất bại.', 'error');
+    }
+  };
+
+  const handleSaveMaintenanceSettings = async (mode?: boolean) => {
+    setMaintenanceSaving(true);
+    try {
+      const maintenanceMode = mode !== undefined ? mode : settings.maintenanceMode;
+      await Promise.all([
+        apiClient.put('/SystemConfiguration/MAINTENANCE_MODE', { value: maintenanceMode ? 'true' : 'false' }),
+        apiClient.put('/SystemConfiguration/MAINTENANCE_MESSAGE', { value: settings.maintenanceMessage || '' }),
+        apiClient.put('/SystemConfiguration/MAINTENANCE_SCHEDULE', { value: settings.maintenanceSchedule || '' }),
+      ]);
+      setSettings((prev) => ({ ...prev, maintenanceMode }));
+      showToast('Đã cập nhật cấu hình bảo trì.', 'success');
+    } catch (error) {
+      console.error('Failed to save maintenance settings', error);
+      showToast('Lưu cấu hình bảo trì thất bại.', 'error');
+    } finally {
+      setMaintenanceSaving(false);
     }
   };
 
@@ -639,27 +675,54 @@ useEffect(() => {
                   <label>Chế độ bảo trì</label>
                   <div className={styles.toggleGroup}>
                     <label className={styles.toggle}>
-                      <input type="radio" name="maintenance" value="off" defaultChecked />
+                      <input
+                        type="radio"
+                        name="maintenance"
+                        value="off"
+                        checked={!settings.maintenanceMode}
+                        onChange={() => handleMaintenanceModeChange(false)}
+                      />
                       <span>Tắt</span>
                     </label>
                     <label className={styles.toggle}>
-                      <input type="radio" name="maintenance" value="on" />
+                      <input
+                        type="radio"
+                        name="maintenance"
+                        value="on"
+                        checked={!!settings.maintenanceMode}
+                        onChange={() => handleMaintenanceModeChange(true)}
+                      />
                       <span>Bật</span>
                     </label>
                   </div>
                 </div>
                 <div className={styles.settingItem}>
                   <label>Thông báo bảo trì</label>
-                  <textarea placeholder="Nhập thông báo bảo trì..."></textarea>
+                  <textarea
+                    value={settings.maintenanceMessage || ''}
+                    onChange={(e) => handleInputChange('maintenanceMessage', e.target.value)}
+                    placeholder="Nhập thông báo bảo trì..."
+                  ></textarea>
+                </div>
+                
+                <div className={styles.settingItem}>
+                  <button
+                    className={styles.maintenanceBtn}
+                    onClick={() => handleSaveMaintenanceSettings()}
+                    disabled={maintenanceSaving}
+                  >
+                    <i className={`bi ${maintenanceSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
+                    {maintenanceSaving ? 'Đang lưu...' : 'Lưu cấu hình bảo trì'}
+                  </button>
                 </div>
                 <div className={styles.settingItem}>
-                  <label>Thời gian bảo trì</label>
-                  <input type="datetime-local" />
-                </div>
-                <div className={styles.settingItem}>
-                  <button className={styles.maintenanceBtn}>
+                  <button
+                    className={styles.maintenanceBtn}
+                    onClick={() => handleSaveMaintenanceSettings(true)}
+                    disabled={maintenanceSaving}
+                  >
                     <i className="bi bi-gear"></i>
-                    Khởi động bảo trì
+                    Kích hoạt chế độ bảo trì
                   </button>
                 </div>
               </div>

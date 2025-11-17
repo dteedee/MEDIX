@@ -188,63 +188,105 @@ namespace Medix.API.Business.Services.Classification
 
             return _mapper.Map<List<AppointmentDto>>(conflictingAppointments);
         }
-
         public async Task CheckisAppointmentCompleted(Guid id)
         {
-            var appoiment = await _repository.GetByIdAsync(id);
-            var doctor = await doctorRepository.GetDoctorByIdAsync(appoiment.DoctorId);
-            var wallet = await walletService.GetWalletByUserIdAsync(doctor.UserId);
+            var appointment = await _repository.GetByIdAsync(id);
+            if (appointment == null) return;
 
+            var doctor = await doctorRepository.GetDoctorByIdAsync(appointment.DoctorId);
+            if (doctor == null) return;
 
-            if (DateTime.Now > appoiment.AppointmentEndTime && appoiment.StatusCode != "Completed")
+      
+
+            var medicalRecord = await medicalRecordService.GetByAppointmentIdAsync(appointment.Id);
+
+            bool hasEnoughMedicalRecord =
+                medicalRecord != null &&
+                !string.IsNullOrEmpty(medicalRecord.Diagnosis) &&
+                !string.IsNullOrEmpty(medicalRecord.AssessmentNotes) &&
+                !string.IsNullOrEmpty(medicalRecord.TreatmentPlan) &&
+                !string.IsNullOrEmpty(medicalRecord.FollowUpInstructions);
+
+     
+            if (hasEnoughMedicalRecord && appointment.StatusCode != "Completed")
             {
                 var updateDto = new UpdateAppointmentDto
                 {
-                    Id =appoiment.Id,
-                    StatusCode = "MissedByDoctor",
+                    Id = appointment.Id,
+                    StatusCode = "Completed",
                     UpdatedAt = DateTime.UtcNow,
-                    DiscountAmount =appoiment.DiscountAmount,
-                    ConsultationFee = appoiment.ConsultationFee,
-                    DurationMinutes = appoiment.DurationMinutes,
-                    MedicalInfo = appoiment.MedicalInfo,
-                    PaymentMethodCode = appoiment.PaymentMethodCode,
-                    PaymentStatusCode = "Refunded",
-                    AppointmentEndTime = appoiment.AppointmentEndTime,
-                    AppointmentStartTime = appoiment.AppointmentStartTime,
-                    PlatformFee = appoiment.PlatformFee,
-                    RefundAmount = appoiment.RefundAmount,
-                    TotalAmount = appoiment.TotalAmount
-                   
+                    DiscountAmount = appointment.DiscountAmount,
+                    ConsultationFee = appointment.ConsultationFee,
+                    DurationMinutes = appointment.DurationMinutes,
+                    MedicalInfo = appointment.MedicalInfo,
+                    PaymentMethodCode = appointment.PaymentMethodCode,
+                    PaymentStatusCode = "Completed",
+                    AppointmentEndTime = appointment.AppointmentEndTime,
+                    AppointmentStartTime = appointment.AppointmentStartTime,
+                    PlatformFee = appointment.PlatformFee,
+                    RefundAmount = appointment.RefundAmount,
+                    TotalAmount = appointment.TotalAmount
                 };
 
                 await UpdateAsync(updateDto);
-                    
-                var WalletTransaction = new WalletTransactionDto
+                return;
+            }
+
+
+            if (!hasEnoughMedicalRecord && appointment.StatusCode != "Completed")
+            {
+                var updateDto = new UpdateAppointmentDto
                 {
-                    Amount = appoiment.TotalAmount,
+                    Id = appointment.Id,
+                    StatusCode = "MissedByDoctor",
+                    UpdatedAt = DateTime.UtcNow,
+                    DiscountAmount = appointment.DiscountAmount,
+                    ConsultationFee = appointment.ConsultationFee,
+                    DurationMinutes = appointment.DurationMinutes,
+                    MedicalInfo = appointment.MedicalInfo,
+                    PaymentMethodCode = appointment.PaymentMethodCode,
+                    PaymentStatusCode = "Refunded",
+                    AppointmentEndTime = appointment.AppointmentEndTime,
+                    AppointmentStartTime = appointment.AppointmentStartTime,
+                    PlatformFee = appointment.PlatformFee,
+                    RefundAmount = appointment.RefundAmount,
+                    TotalAmount = appointment.TotalAmount
+                };
+
+                await UpdateAsync(updateDto);
+                var wallet = await walletService.GetWalletByUserIdAsync(appointment.Patient.User.Id);
+
+                if (wallet == null) return;
+
+                var walletTransaction = new WalletTransactionDto
+                {
+                    Amount = appointment.TotalAmount,
                     TransactionTypeCode = "AppointmentRefund",
-                    Description = "Hoàn lại tiền hủy lịch ",
+                    Description = "Hoàn lại tiền hủy lịch",
                     CreatedAt = DateTime.UtcNow,
                     orderCode = 0,
                     Status = "Completed",
-                    BalanceAfter = wallet.Balance,
-                    BalanceBefore = wallet.Balance + Decimal.Parse(appoiment.TotalAmount.ToString()),
+                    BalanceBefore = wallet.Balance,
+                    BalanceAfter = wallet.Balance + appointment.TotalAmount,
                     walletId = wallet.Id
                 };
-                await walletTransactionService.createWalletTransactionAsync(WalletTransaction);
 
-                await walletService.IncreaseWalletBalanceAsync(doctor.UserId, appoiment.TotalAmount);
+                await walletTransactionService.createWalletTransactionAsync(walletTransaction);
+                await walletService.IncreaseWalletBalanceAsync(appointment.Patient.User.Id, appointment.TotalAmount);
 
-                doctor.TotalCaseMissPerWeek= doctor.TotalCaseMissPerWeek + 1;
-
+                // Increase doctor missed case
+                doctor.TotalCaseMissPerWeek += 1;
                 await doctorRepository.UpdateDoctorAsync(doctor);
 
+                // Assign promotion to patient
                 var promotionForPatient = await promotionService.GetPromotionByCodeAsync("WELCOME50K");
-
-        
-                await userPromotionService.AssignPromotionToUserAsync(appoiment.PatientId,promotionForPatient.Id);
+                if (promotionForPatient != null)
+                {
+                    await userPromotionService.AssignPromotionToUserAsync(appointment.Patient.User.Id, promotionForPatient.Id);
+                }
             }
         }
-           
-        }
+
+
     }
+}

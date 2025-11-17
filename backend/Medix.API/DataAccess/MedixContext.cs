@@ -1215,9 +1215,7 @@ public partial class MedixContext : DbContext
 
             entity.HasIndex(e => e.PromotionId, "IX_UserPromotions_PromotionId");
 
-            entity.HasIndex(e => new { e.UserId, e.PromotionId }, "UQ_UserPromotions_User_Promotion")
-                .IsUnique();
-
+          
             entity.HasIndex(e => new { e.IsActive, e.UserId }, "IX_UserPromotions_Active")
                 .HasFilter("([IsActive]=(1))");
 

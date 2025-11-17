@@ -214,6 +214,58 @@
   transform: translateY(-2px);
 }
 
+.backupList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.backupRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  gap: 16px;
+}
+
+.backupRow strong {
+  font-size: 14px;
+  color: #1a202c;
+}
+
+.backupMeta {
+  font-size: 12px;
+  color: #718096;
+  margin-top: 4px;
+}
+
+.downloadBtn {
+  padding: 8px 16px;
+  background: #1d9bf0;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s ease;
+}
+
+.downloadBtn:hover {
+  background: #1a8cd8;
+}
+
+.emptyState {
+  font-size: 14px;
+  color: #a0aec0;
+  font-style: italic;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .settingsGrid {

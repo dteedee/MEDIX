@@ -1,4 +1,5 @@
-﻿using Medix.API.Business.Interfaces.Classification;
+﻿using System.IO;
+using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -50,6 +51,35 @@ namespace Medix.API.Presentation.Controller.Classification
             await _service.DeleteAsync(key);
             return Ok("Configuration deleted successfully.");
         }
+
+        [HttpPost("database-backup")]
+        public async Task<IActionResult> BackupDatabase([FromBody] CreateBackupRequest? request = null)
+        {
+            var filePath = await _service.BackupDatabaseAsync(request?.BackupName);
+            var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var fileName = Path.GetFileName(filePath);
+            return File(stream, "application/octet-stream", fileName);
+        }
+
+        [HttpGet("database-backup")]
+        public async Task<IActionResult> GetDatabaseBackups()
+        {
+            var backups = await _service.GetDatabaseBackupFilesAsync();
+            return Ok(backups);
+        }
+
+        [HttpGet("database-backup/download")]
+        public async Task<IActionResult> DownloadDatabaseBackup([FromQuery] string fileName)
+        {
+            var stream = await _service.GetDatabaseBackupFileAsync(fileName);
+            if (stream == null)
+            {
+                return NotFound();
+            }
+
+            return File(stream, "application/octet-stream", fileName);
+        }
+
         [HttpGet("password-policy")]
         public async Task<IActionResult> GetPasswordPolicy()
         {

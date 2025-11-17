@@ -1,4 +1,5 @@
-﻿using Medix.API.Models.DTOs;
+﻿using System.IO;
+using Medix.API.Models.DTOs;
 
 namespace Medix.API.Business.Interfaces.Classification
 {
@@ -14,6 +15,8 @@ namespace Medix.API.Business.Interfaces.Classification
         Task DeleteAsync(string key);
         Task<PasswordPolicyDto> GetPasswordPolicyAsync();
         Task ValidatePasswordAsync(string password);
-
+        Task<string> BackupDatabaseAsync(string? backupName = null);
+        Task<List<DatabaseBackupInfo>> GetDatabaseBackupFilesAsync();
+        Task<FileStream?> GetDatabaseBackupFileAsync(string fileName);
     }
 }

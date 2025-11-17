@@ -121,6 +121,7 @@ namespace Medix.API.Configurations
             services.AddScoped<ISystemConfigurationService, SystemConfigurationService>();
             services.AddScoped<ISalaryService, SalaryService>();
             services.AddScoped<IUserPromotionService, UserPromotionService>();
+            services.AddScoped<IBackupService, BackupService>();
 
         }
 
@@ -129,6 +130,7 @@ namespace Medix.API.Configurations
         {
 
             services.AddHostedService<JobDoctorScheduleOveride>();
+            services.AddHostedService<AutoBackupJob>();
 
 
         }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../lib/apiClient';
 import { useToast } from '../../contexts/ToastContext';
 import styles from '../../styles/admin/SettingsPage.module.css';
@@ -20,17 +20,51 @@ interface SystemSettings {
   requireSpecial: boolean;
 }
 
+interface DatabaseBackupInfo {
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  fileSizeFormatted: string;
+  createdAt: string;
+}
+
 export default function SettingsPage() {
   const { showToast } = useToast();
   const [settings, setSettings] = useState<Partial<SystemSettings>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [backupSettings, setBackupSettings] = useState({
+    enabled: false,
+    frequency: 'daily',
+    time: '02:00',
+    retentionDays: 30,
+  });
+  const [backupList, setBackupList] = useState<DatabaseBackupInfo[]>([]);
+  const [backupName, setBackupName] = useState('');
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupSaving, setBackupSaving] = useState(false);
+  const [backupRunning, setBackupRunning] = useState(false);
 
   useEffect(() => {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const [siteNameRes, descriptionRes, emailRes, phoneRes, addressRes, jwtExpiryRes, maxFailedLoginRes, lockoutDurationRes, passwordMinLengthRes, passwordMaxLengthRes, requireDigitRes, requireLowercaseRes, requireUppercaseRes, requireSpecialRes] = await Promise.all([
+      const [
+        siteNameRes,
+        descriptionRes,
+        emailRes,
+        phoneRes,
+        addressRes,
+        jwtExpiryRes,
+        maxFailedLoginRes,
+        lockoutDurationRes,
+        passwordMinLengthRes,
+        passwordMaxLengthRes,
+        requireDigitRes,
+        requireLowercaseRes,
+        requireUppercaseRes,
+        requireSpecialRes,
+      ] = await Promise.all([
         apiClient.get('/SystemConfiguration/SiteName'),
         apiClient.get('/SystemConfiguration/SystemDescription'),
         apiClient.get('/SystemConfiguration/ContactEmail'),
@@ -79,6 +113,37 @@ export default function SettingsPage() {
   fetchSettings();
 }, [showToast]);
 
+const fetchBackupSettings = useCallback(async () => {
+  setBackupLoading(true);
+  try {
+    const [enabledRes, frequencyRes, timeRes, retentionRes, backupFilesRes] = await Promise.all([
+      apiClient.get('/SystemConfiguration/AUTO_BACKUP_ENABLED'),
+      apiClient.get('/SystemConfiguration/AUTO_BACKUP_FREQUENCY'),
+      apiClient.get('/SystemConfiguration/AUTO_BACKUP_TIME'),
+      apiClient.get('/SystemConfiguration/BACKUP_RETENTION_DAYS'),
+      apiClient.get('/SystemConfiguration/database-backup'),
+    ]);
+
+    setBackupSettings({
+      enabled: enabledRes.data?.configValue?.toLowerCase() === 'true',
+      frequency: frequencyRes.data?.configValue || 'daily',
+      time: timeRes.data?.configValue || '02:00',
+      retentionDays: parseInt(retentionRes.data?.configValue || '30', 10),
+    });
+
+    setBackupList(backupFilesRes.data || []);
+  } catch (error) {
+    console.error('Failed to fetch backup settings', error);
+    showToast('Không thể tải cấu hình sao lưu.', 'error');
+  } finally {
+    setBackupLoading(false);
+  }
+}, [showToast]);
+
+useEffect(() => {
+  fetchBackupSettings();
+}, [fetchBackupSettings]);
+
 
   const handleInputChange = (key: keyof SystemSettings, value: string | boolean) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -116,6 +181,93 @@ export default function SettingsPage() {
       showToast('Lưu thay đổi thất bại. Vui lòng thử lại.', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleBackupSettingChange = (key: 'enabled' | 'frequency' | 'time' | 'retentionDays', value: string | boolean) => {
+    setBackupSettings((prev) => ({
+      ...prev,
+      [key]:
+        key === 'retentionDays'
+          ? Math.max(1, Number(value) || 1)
+          : value,
+    }));
+  };
+
+  const handleSaveBackupSettings = async () => {
+    setBackupSaving(true);
+    showToast('Đang lưu cấu hình sao lưu...', 'info');
+    try {
+      await Promise.all([
+        apiClient.put('/SystemConfiguration/AUTO_BACKUP_ENABLED', { value: backupSettings.enabled.toString() }),
+        apiClient.put('/SystemConfiguration/AUTO_BACKUP_FREQUENCY', { value: backupSettings.frequency }),
+        apiClient.put('/SystemConfiguration/AUTO_BACKUP_TIME', { value: backupSettings.time }),
+        apiClient.put('/SystemConfiguration/BACKUP_RETENTION_DAYS', { value: backupSettings.retentionDays.toString() }),
+      ]);
+      showToast('Đã lưu cấu hình sao lưu.', 'success');
+      await fetchBackupSettings();
+    } catch (error) {
+      console.error('Failed to save backup settings', error);
+      showToast('Lưu cấu hình sao lưu thất bại.', 'error');
+    } finally {
+      setBackupSaving(false);
+    }
+  };
+
+  const downloadBlobFile = (blob: Blob, fileName: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const extractFileName = (contentDisposition?: string): string | null => {
+    if (!contentDisposition) return null;
+    const match = contentDisposition.match(/filename="?([^";]+)"?/i);
+    return match ? match[1] : null;
+  };
+
+  const handleBackupNow = async () => {
+    setBackupRunning(true);
+    showToast('Đang tạo bản sao lưu...', 'info');
+    try {
+      const response = await apiClient.post<Blob>(
+        '/SystemConfiguration/database-backup',
+        backupName ? { backupName } : {},
+        { responseType: 'blob' }
+      );
+
+      const suggestedName =
+        extractFileName(response.headers['content-disposition']) ||
+        `${backupName || 'db-backup'}_${new Date().toISOString().replace(/[:.]/g, '-')}.bak`;
+
+      downloadBlobFile(response.data, suggestedName);
+      showToast('Đã tạo và tải xuống bản sao lưu.', 'success');
+      setBackupName('');
+      await fetchBackupSettings();
+    } catch (error) {
+      console.error('Backup failed', error);
+      showToast('Sao lưu thất bại. Vui lòng thử lại.', 'error');
+    } finally {
+      setBackupRunning(false);
+    }
+  };
+
+  const handleDownloadBackup = async (fileName: string) => {
+    try {
+      const response = await apiClient.get<Blob>('/SystemConfiguration/database-backup/download', {
+        params: { fileName },
+        responseType: 'blob',
+      });
+      const suggestedName = extractFileName(response.headers['content-disposition']) || fileName;
+      downloadBlobFile(response.data, suggestedName);
+    } catch (error) {
+      console.error('Download failed', error);
+      showToast('Tải bản sao lưu thất bại.', 'error');
     }
   };
 
@@ -370,29 +522,107 @@ export default function SettingsPage() {
                 </h3>
               </div>
               <div className={styles.cardContent}>
-                <div className={styles.settingItem}>
-                  <label>Tần suất sao lưu</label>
-                  <select defaultValue="daily">
-                    <option value="hourly">Hàng giờ</option>
-                    <option value="daily">Hàng ngày</option>
-                    <option value="weekly">Hàng tuần</option>
-                    <option value="monthly">Hàng tháng</option>
-                  </select>
-                </div>
-                <div className={styles.settingItem}>
-                  <label>Thời gian sao lưu</label>
-                  <input type="time" defaultValue="02:00" />
-                </div>
-                <div className={styles.settingItem}>
-                  <label>Số bản sao lưu giữ lại</label>
-                  <input type="number" defaultValue="30" />
-                </div>
-                <div className={styles.settingItem}>
-                  <button className={styles.backupBtn}>
-                    <i className="bi bi-download"></i>
-                    Sao lưu ngay
-                  </button>
-                </div>
+                {backupLoading ? (
+                  <div className={styles.loadingState}>Đang tải cấu hình sao lưu...</div>
+                ) : (
+                  <>
+                    <div className={styles.settingItem}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={backupSettings.enabled}
+                          onChange={(e) => handleBackupSettingChange('enabled', e.target.checked)}
+                        />
+                        Bật sao lưu tự động
+                      </label>
+                    </div>
+                    <div className={styles.settingItem}>
+                      <label>Tần suất sao lưu</label>
+                      <select
+                        value={backupSettings.frequency}
+                        onChange={(e) => handleBackupSettingChange('frequency', e.target.value)}
+                      >
+                        <option value="daily">Hàng ngày</option>
+                        <option value="weekly">Hàng tuần</option>
+                        <option value="monthly">Hàng tháng</option>
+                      </select>
+                    </div>
+                    <div className={styles.settingItem}>
+                      <label>Thời gian sao lưu</label>
+                      <input
+                        type="time"
+                        value={backupSettings.time}
+                        onChange={(e) => handleBackupSettingChange('time', e.target.value)}
+                      />
+                    </div>
+                    <div className={styles.settingItem}>
+                      <label>Số bản sao lưu giữ lại</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={backupSettings.retentionDays}
+                        onChange={(e) => handleBackupSettingChange('retentionDays', e.target.value)}
+                      />
+                    </div>
+                    <div className={styles.settingItem}>
+                      <button
+                        className={styles.saveBtn}
+                        onClick={handleSaveBackupSettings}
+                        disabled={backupSaving}
+                      >
+                        <i className={`bi ${backupSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
+                        {backupSaving ? 'Đang lưu...' : 'Lưu cấu hình sao lưu'}
+                      </button>
+                    </div>
+                    <hr />
+                    <div className={styles.settingItem}>
+                      <label>Đặt tên bản sao lưu (tùy chọn)</label>
+                      <input
+                        type="text"
+                        value={backupName}
+                        onChange={(e) => setBackupName(e.target.value)}
+                        placeholder="Ví dụ: BackUp"
+                      />
+                    </div>
+                    <div className={styles.settingItem}>
+                      <button
+                        className={styles.backupBtn}
+                        onClick={handleBackupNow}
+                        disabled={backupRunning}
+                      >
+                        <i className={`bi ${backupRunning ? 'bi-arrow-repeat' : 'bi-download'}`}></i>
+                        {backupRunning ? 'Đang sao lưu...' : 'Sao lưu ngay'}
+                      </button>
+                    </div>
+                    <div className={styles.settingItem}>
+                      <label>Danh sách bản sao lưu gần đây</label>
+                      {backupList.length === 0 ? (
+                        <p className={styles.emptyState}>Chưa có bản sao lưu nào.</p>
+                      ) : (
+                        <div className={styles.backupList}>
+                          {backupList.map((backup) => (
+                            <div key={backup.fileName} className={styles.backupRow}>
+                              <div>
+                                <strong>{backup.fileName}</strong>
+                                <div className={styles.backupMeta}>
+                                  {backup.fileSizeFormatted} •{' '}
+                                  {new Date(backup.createdAt).toLocaleString()}
+                                </div>
+                              </div>
+                              <button
+                                className={styles.downloadBtn}
+                                onClick={() => handleDownloadBackup(backup.fileName)}
+                              >
+                                <i className="bi bi-cloud-download"></i>
+                                Tải xuống
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

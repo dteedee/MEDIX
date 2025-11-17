@@ -19,6 +19,7 @@ namespace Medix.API.BackgroundServices
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("AutoBackupJob Background Service đang khởi động...");
+            var runImmediately = true;
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -37,52 +38,35 @@ namespace Medix.API.BackgroundServices
                         var backupTime = await configService.GetValueAsync<string>("AUTO_BACKUP_TIME") ?? "02:00";
                         var retentionDays = await configService.GetIntValueAsync("BACKUP_RETENTION_DAYS") ?? 30;
 
-                        // Tính thời gian chạy backup tiếp theo
-                        var nextRun = CalculateNextRunTime(frequency, backupTime);
-                        var delay = nextRun - DateTime.UtcNow;
-
-                        if (delay.TotalMilliseconds < 0)
+                        if (runImmediately)
                         {
-                            // Nếu đã qua thời gian, chạy ngay
-                            delay = TimeSpan.Zero;
-                        }
-
-                        _logger.LogInformation(
-                            "AutoBackupJob sẽ chạy vào: {nextRun} (UTC). Đợi {hours} giờ {minutes} phút",
-                            nextRun, delay.Hours, delay.Minutes);
-
-                        // Đợi đến thời gian backup
-                        if (delay.TotalMilliseconds > 0)
-                        {
-                            await Task.Delay(delay, stoppingToken);
-                        }
-
-                        // Thực hiện backup
-                        _logger.LogInformation("Bắt đầu tạo backup tự động...");
-                        var success = await backupService.CreateAutomaticBackupAsync();
-
-                        if (success)
-                        {
-                            _logger.LogInformation("Backup tự động đã được tạo thành công");
-
-                            // Cleanup old backups
-                            try
-                            {
-                                var deletedCount = await backupService.CleanupOldBackupsAsync(retentionDays);
-                                if (deletedCount > 0)
-                                {
-                                    _logger.LogInformation($"Đã xóa {deletedCount} bản backup cũ");
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogWarning(ex, "Lỗi khi cleanup old backups");
-                            }
+                            _logger.LogInformation("Thực hiện backup ngay khi khởi động ứng dụng trước khi vào lịch.");
                         }
                         else
                         {
-                            _logger.LogWarning("Không thể tạo backup tự động (có thể đã bị tắt)");
+                            // Tính thời gian chạy backup tiếp theo
+                            var nextRun = CalculateNextRunTime(frequency, backupTime);
+                            var delay = nextRun - DateTime.UtcNow;
+
+                            if (delay.TotalMilliseconds < 0)
+                            {
+                                // Nếu đã qua thời gian, chạy ngay
+                                delay = TimeSpan.Zero;
+                            }
+
+                            _logger.LogInformation(
+                                "AutoBackupJob sẽ chạy vào: {nextRun} (UTC). Đợi {hours} giờ {minutes} phút",
+                                nextRun, delay.Hours, delay.Minutes);
+
+                            // Đợi đến thời gian backup
+                            if (delay.TotalMilliseconds > 0)
+                            {
+                                await Task.Delay(delay, stoppingToken);
+                            }
                         }
+
+                        await RunBackupPipelineAsync(configService, backupService, retentionDays);
+                        runImmediately = false;
                     }
                     else
                     {
@@ -159,6 +143,46 @@ namespace Medix.API.BackgroundServices
                         return todayBackupTime;
                     }
                     return todayBackupTime.AddDays(1);
+            }
+        }
+
+        private async Task RunBackupPipelineAsync(
+            ISystemConfigurationService configService,
+            IBackupService backupService,
+            int retentionDays)
+        {
+            try
+            {
+                _logger.LogInformation("Bắt đầu tạo backup toàn bộ database (.bak)...");
+                var backupLabel = $"auto-backup-{DateTime.UtcNow:yyyyMMdd_HHmmss}";
+                var dbBackupPath = await configService.BackupDatabaseAsync(backupLabel);
+                _logger.LogInformation("Đã tạo backup database tại: {Path}", dbBackupPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Không thể tạo backup database");
+            }
+
+            var configBackupSuccess = await backupService.CreateAutomaticBackupAsync();
+            if (configBackupSuccess)
+            {
+                _logger.LogInformation("Đã lưu backup cấu hình hệ thống (JSON).");
+                try
+                {
+                    var deletedCount = await backupService.CleanupOldBackupsAsync(retentionDays);
+                    if (deletedCount > 0)
+                    {
+                        _logger.LogInformation("Đã xóa {DeletedCount} bản backup cấu hình cũ", deletedCount);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Lỗi khi dọn dẹp backup cấu hình cũ");
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Không thể tạo backup cấu hình tự động (có thể đã bị tắt).");
             }
         }
     }

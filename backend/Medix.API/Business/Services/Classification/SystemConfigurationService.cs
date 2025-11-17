@@ -288,17 +288,27 @@ namespace Medix.API.Business.Services.Classification
         public async Task<EmailServerSettingsDto> GetEmailServerSettingsAsync()
         {
             var emailSection = _configuration.GetSection("EmailSettings");
-            var username = await GetValueAsync<string>("EMAIL_USERNAME")
-                ?? emailSection["Username"]
-                ?? string.Empty;
-            var password = await GetValueAsync<string>("EMAIL_PASSWORD")
-                ?? emailSection["Password"]
-                ?? string.Empty;
-            var fromEmail = await GetValueAsync<string>("EMAIL_FROM_EMAIL")
-                ?? emailSection["FromEmail"]
-                ?? username;
-            var fromName = await GetValueAsync<string>("EMAIL_FROM_NAME")
-                ?? "Medix Notifications";
+
+            var usernameDb = await GetValueAsync<string>("EMAIL_USERNAME");
+            var passwordDb = await GetValueAsync<string>("EMAIL_PASSWORD");
+            var fromEmailDb = await GetValueAsync<string>("EMAIL_FROM_EMAIL");
+            var fromNameDb = await GetValueAsync<string>("EMAIL_FROM_NAME");
+
+            var username = !string.IsNullOrWhiteSpace(usernameDb)
+                ? usernameDb
+                : emailSection["Username"] ?? string.Empty;
+
+            var password = !string.IsNullOrWhiteSpace(passwordDb)
+                ? passwordDb
+                : emailSection["Password"] ?? string.Empty;
+
+            var fromEmail = !string.IsNullOrWhiteSpace(fromEmailDb)
+                ? fromEmailDb
+                : emailSection["FromEmail"] ?? username;
+
+            var fromName = !string.IsNullOrWhiteSpace(fromNameDb)
+                ? fromNameDb
+                : "Medix Notifications";
 
             return new EmailServerSettingsDto
             {

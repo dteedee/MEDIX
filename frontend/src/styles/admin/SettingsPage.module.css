@@ -333,6 +333,18 @@
   font-size: 14px;
 }
 
+.currentConfig {
+  border: 1px dashed #cbd5f5;
+  border-radius: 10px;
+  padding: 12px 16px;
+  background: #f8fbff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: #2d3748;
+}
+
 .passwordField {
   display: flex;
   align-items: center;

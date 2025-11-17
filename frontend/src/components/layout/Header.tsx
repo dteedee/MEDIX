@@ -8,6 +8,7 @@ import { NotificationMetadata } from '../../types/notification.types';
 import NotificationService from '../../services/notificationService';
 import { formatDistanceToNow } from 'date-fns';
 import { vi, enUS } from 'date-fns/locale';
+import { LanguageSwitcher } from '../LanguageSwitcher';
 
 export const Header: React.FC = () => {
     const [notificationMetadata, setNotificationMetadata] = useState<NotificationMetadata>();
@@ -15,7 +16,7 @@ export const Header: React.FC = () => {
     const [siteDescription, setSiteDescription] = useState('Hệ thống y tế thông minh ứng dụng AI');
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const { user, logout } = useAuth();
-    const { language, setLanguage, t } = useLanguage();
+    const { language, t } = useLanguage();
     const navigate = useNavigate();
     const userDropdownRef = useRef<HTMLDivElement>(null);
     const [loadingSettings, setLoadingSettings] = useState(true);
@@ -140,21 +141,8 @@ export const Header: React.FC = () => {
                 <div className={styles["header-links"]}>
                     {user ? (
                         <>
-                            {/* Language Selector */}
                             <div className={styles['language-selector']}>
-                                <button
-                                    className={styles['language-button']}
-                                    onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
-                                    title={language === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'}
-                                >
-                                    <img
-                                        src={language === 'vi'
-                                            ? '/images/vn-flag.jpg'
-                                            : '/images/us-flag.jpg'}
-                                        alt={language === 'vi' ? 'Vietnamese' : 'English'}
-                                        className={styles['flag-icon']}
-                                    />
-                                </button>
+                                <LanguageSwitcher />
                             </div>
 
                             {/* Notifications */}
@@ -266,21 +254,8 @@ export const Header: React.FC = () => {
                                 </div>
                             </div>
                             
-                            {/* Language Selector */}
                             <div className={styles['language-selector']}>
-                                <button
-                                    className={styles['language-button']}
-                                    onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
-                                    title={language === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'}
-                                >
-                                    <img
-                                        src={language === 'vi'
-                                            ? '/images/vn-flag.jpg'
-                                            : '/images/us-flag.jpg'}
-                                        alt={language === 'vi' ? 'Vietnamese' : 'English'}
-                                        className={styles['flag-icon']}
-                                    />
-                                </button>
+                                <LanguageSwitcher />
                             </div>
                         </>
                     )}

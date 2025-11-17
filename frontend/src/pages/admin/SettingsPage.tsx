@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../lib/apiClient';
 import { useToast } from '../../contexts/ToastContext';
 import styles from '../../styles/admin/SettingsPage.module.css';
+import { Language } from '../../contexts/LanguageContext';
 
 interface SystemSettings {
   siteName: string;
@@ -21,6 +22,7 @@ interface SystemSettings {
   maintenanceMode: boolean;
   maintenanceMessage: string;
   maintenanceSchedule: string;
+  defaultLanguage: Language;
 }
 
 interface DatabaseBackupInfo {
@@ -71,6 +73,7 @@ export default function SettingsPage() {
         maintenanceModeRes,
         maintenanceMessageRes,
         maintenanceScheduleRes,
+        defaultLanguageRes,
       ] = await Promise.all([
         apiClient.get('/SystemConfiguration/SiteName'),
         apiClient.get('/SystemConfiguration/SystemDescription'),
@@ -91,6 +94,7 @@ export default function SettingsPage() {
         apiClient.get('/SystemConfiguration/MAINTENANCE_MODE'),
         apiClient.get('/SystemConfiguration/MAINTENANCE_MESSAGE'),
         apiClient.get('/SystemConfiguration/MAINTENANCE_SCHEDULE'),
+        apiClient.get('/SystemConfiguration/DEFAULT_LANGUAGE'),
       ]);
 
       setSettings({
@@ -113,6 +117,7 @@ export default function SettingsPage() {
         maintenanceMode: maintenanceModeRes.data?.configValue?.toLowerCase() === 'true',
         maintenanceMessage: maintenanceMessageRes.data?.configValue || '',
         maintenanceSchedule: maintenanceScheduleRes.data?.configValue || '',
+        defaultLanguage: (defaultLanguageRes.data?.configValue as Language) || 'vi',
       });
 
     } catch (error) {
@@ -191,6 +196,7 @@ useEffect(() => {
         apiClient.put('/SystemConfiguration/REQUIRE_LOWERCASE', { value: settings.requireLowercase?.toString() }),
         apiClient.put('/SystemConfiguration/REQUIRE_UPPERCASE', { value: settings.requireUppercase?.toString() }),
         apiClient.put('/SystemConfiguration/REQUIRE_SPECIAL', { value: settings.requireSpecial?.toString() }),
+        apiClient.put('/SystemConfiguration/DEFAULT_LANGUAGE', { value: settings.defaultLanguage || 'vi' }),
       ]);
       showToast('Lưu thay đổi thành công!', 'success');
     } catch (error) {
@@ -515,37 +521,19 @@ useEffect(() => {
                 </h3>
               </div>
               <div className={styles.cardContent}>
-                <div className={styles.settingItem}>
-                  <label>Múi giờ</label>
-                  <select defaultValue="Asia/Ho_Chi_Minh">
-                    <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh</option>
-                    <option value="UTC">UTC</option>
-                    <option value="America/New_York">America/New_York</option>
-                  </select>
-                </div>
+                
                 <div className={styles.settingItem}>
                   <label>Ngôn ngữ mặc định</label>
-                  <select defaultValue="vi">
+                  <select
+                    value={settings.defaultLanguage || 'vi'}
+                    onChange={(e) => handleInputChange('defaultLanguage', e.target.value as Language)}
+                  >
                     <option value="vi">Tiếng Việt</option>
                     <option value="en">English</option>
                   </select>
                 </div>
-                <div className={styles.settingItem}>
-                  <label>Định dạng ngày tháng</label>
-                  <select defaultValue="dd/mm/yyyy">
-                    <option value="dd/mm/yyyy">dd/mm/yyyy</option>
-                    <option value="mm/dd/yyyy">mm/dd/yyyy</option>
-                    <option value="yyyy-mm-dd">yyyy-mm-dd</option>
-                  </select>
-                </div>
-                <div className={styles.settingItem}>
-                  <label>Định dạng tiền tệ</label>
-                  <select defaultValue="VND">
-                    <option value="VND">VND (₫)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                  </select>
-                </div>
+                
+                
               </div>
             </div>
 

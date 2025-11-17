@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../../styles/public/ArticleReaderPage.css';
 import homeStyles from '../../styles/public/home.module.css';
@@ -7,27 +7,7 @@ import { categoryService } from '../../services/categoryService';
 import type { ArticleDTO } from '../../types/article.types';
 import type { CategoryDTO } from '../../types/category.types';
 import Pagination from '../../components/layout/Pagination';
-
-// Utility: format date in Vietnamese
-function formatViDate(input?: string | null): string {
-  if (!input) return '';
-  const d = new Date(input);
-  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-// Utility: Get reading time estimate
-function getReadingTime(content?: string | null): string {
-  if (!content) return '1 phút đọc';
-  const WORDS_PER_MINUTE = 200;
-  const plainText = content
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;|&amp;|&lt;|&gt;|&quot;|&#39;/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  const words = plainText ? plainText.split(' ').length : 0;
-  const minutes = Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
-  return `${minutes} phút đọc`;
-}
+import { useLanguage } from '../../contexts/LanguageContext';
 
 function scrollToTop() {
   window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
@@ -35,6 +15,7 @@ function scrollToTop() {
 
 export default function ArticleReaderPage() {
   const navigate = useNavigate();
+  const { t, language } = useLanguage();
 
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
@@ -43,8 +24,6 @@ export default function ArticleReaderPage() {
 
   const [page, setPage] = useState(1);
   const [pageSize] = useState(12);
-  const [total, setTotal] = useState(0);
-  const [articles, setArticles] = useState<ArticleDTO[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -82,7 +61,7 @@ export default function ArticleReaderPage() {
     })();
   }, []);
 
-  // Fetch, filter bài hợp lệ và đếm badge sidebar
+  // Fetch, filter bài hợp lệ và đếm badge sidebar + dữ liệu phân trang (client-side)
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -107,39 +86,7 @@ export default function ArticleReaderPage() {
       }
       setLoading(false);
     })();
-  }, [/* có thể thêm categories khi cần */]);
-
-  // Fetch articles
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const { items, total } = await articleService.list(page, pageSize, {
-          keyword: debounced || undefined,
-        });
-
-        // LỌC CHỈ BÀI VIẾT ĐƯỢC PUBLIC
-        let published = items.filter(a => String(a.statusCode).toLowerCase() === 'published');
-        let filtered = selectedCategoryId === 'all'
-          ? published
-          : published.filter(a => (a.categoryIds || []).includes(String(selectedCategoryId)));
-
-        // Sort by date: newest first
-        filtered = filtered.sort((a, b) => {
-          const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-          const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-          return tb - ta;
-        });
-
-        setArticles(filtered);
-        setTotal(filtered.length);
-      } catch (err) {
-        console.error('Failed to load articles', err);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [page, pageSize, debounced, selectedCategoryId]);
+  }, []);
 
   const filteredArticles = useMemo(() => {
     let arr = validArticles;
@@ -154,7 +101,12 @@ export default function ArticleReaderPage() {
     if (selectedCategoryId !== 'all') {
       arr = arr.filter(a => (a.categoryIds || []).includes(String(selectedCategoryId)));
     }
-    return arr;
+    // Sort by date: newest first
+    return arr.slice().sort((a, b) => {
+      const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return tb - ta;
+    });
   }, [validArticles, debounced, selectedCategoryId]);
 
   const pagedArticles = useMemo(() => {
@@ -162,7 +114,10 @@ export default function ArticleReaderPage() {
     return filteredArticles.slice(start, start + pageSize);
   }, [filteredArticles, page, pageSize]);
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredArticles.length / pageSize)),
+    [filteredArticles.length, pageSize]
+  );
 
   const activeCategory = selectedCategoryId !== 'all'
     ? categories.find(c => c.id === selectedCategoryId)
@@ -194,6 +149,34 @@ export default function ArticleReaderPage() {
     setPage(1);
   };
 
+  const formatDate = useCallback(
+    (input?: string | null) => {
+      if (!input) return '';
+      const locale = language === 'vi' ? 'vi-VN' : 'en-US';
+      const d = new Date(input);
+      return d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
+    },
+    [language]
+  );
+
+  const getReadingTimeText = useCallback(
+    (content?: string | null) => {
+      const WORDS_PER_MINUTE = 200;
+      if (!content) {
+        return t('articleReader.readingTime', { minutes: '1' });
+      }
+      const plainText = content
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;|&amp;|&lt;|&gt;|&quot;|&#39;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const words = plainText ? plainText.split(' ').length : 0;
+      const minutes = Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
+      return t('articleReader.readingTime', { minutes: String(minutes) });
+    },
+    [t]
+  );
+
   return (
     <div className="article-reader-page">
       {/* Navigation */}
@@ -204,7 +187,7 @@ export default function ArticleReaderPage() {
               onClick={() => { scrollToTop(); navigate('/'); }}
               className={`${homeStyles["nav-link"]} ${window.location.pathname === '/' ? homeStyles["active"] : ''}`}
             >
-              Trang chủ
+              {t('nav.home')}
             </a>
           </li>
           <li><span>|</span></li>
@@ -213,7 +196,7 @@ export default function ArticleReaderPage() {
               onClick={() => { scrollToTop(); navigate('/ai-chat'); }}
               className={`${homeStyles["nav-link"]} ${window.location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}
             >
-              AI chẩn đoán
+              {t('nav.ai-diagnosis')}
             </a>
           </li>
           <li><span>|</span></li>
@@ -222,7 +205,7 @@ export default function ArticleReaderPage() {
               onClick={() => { scrollToTop(); navigate('/specialties'); }}
               className={`${homeStyles["nav-link"]} ${window.location.pathname === '/specialties' ? homeStyles["active"] : ''}`}
             >
-              Chuyên khoa
+              {t('nav.specialties')}
             </a>
           </li>
           <li><span>|</span></li>
@@ -231,7 +214,7 @@ export default function ArticleReaderPage() {
               onClick={() => { scrollToTop(); navigate('/doctors'); }}
               className={`${homeStyles["nav-link"]} ${window.location.pathname === '/doctors' ? homeStyles["active"] : ''}`}
             >
-              Bác sĩ
+              {t('nav.doctors')}
             </a>
           </li>
           <li><span>|</span></li>
@@ -240,7 +223,7 @@ export default function ArticleReaderPage() {
               onClick={() => { scrollToTop(); navigate('/articles'); }}
               className={`${homeStyles["nav-link"]} ${window.location.pathname === '/articles' ? homeStyles["active"] : ''}`}
             >
-              Bài viết sức khỏe
+              {t('nav.health-articles')}
             </a>
           </li>
           <li><span>|</span></li>
@@ -249,7 +232,7 @@ export default function ArticleReaderPage() {
               onClick={() => { scrollToTop(); navigate('/about'); }}
               className={`${homeStyles["nav-link"]} ${window.location.pathname === '/about' ? homeStyles["active"] : ''}`}
             >
-              Về chúng tôi
+              {t('nav.about')}
             </a>
           </li>
         </ul>
@@ -261,13 +244,13 @@ export default function ArticleReaderPage() {
           <div className="sidebar-card category-card">
             <div className="sidebar-title">
               <i className="bi bi-folder2-open"></i>
-              Danh mục
+              {t('articleReader.sidebar.categories')}
             </div>
             <ul className="category-list">
               <li>
                 <button className={`category-item ${selectedCategoryId === 'all' ? 'active' : ''}`} onClick={() => { scrollToTop(); handleSelectCategory('all'); }}>
                   <span className="category-icon"><i className="bi bi-grid-3x3-gap-fill"></i></span>
-                  <span>Tất cả</span>
+                  <span>{t('articleReader.sidebar.all')}</span>
                   <span className="category-badge">{validArticles.length}</span>
                 </button>
               </li>
@@ -290,7 +273,7 @@ export default function ArticleReaderPage() {
           <div className="sidebar-card view-mode-card">
             <div className="sidebar-title">
               <i className="bi bi-layout-three-columns"></i>
-              Chế độ xem
+              {t('articleReader.sidebar.viewMode')}
             </div>
             <div className="view-mode-toggle">
               <button
@@ -299,7 +282,7 @@ export default function ArticleReaderPage() {
                 aria-label="Grid view"
               >
                 <i className="bi bi-grid-3x3-gap-fill"></i>
-                Lưới
+                {t('articleReader.sidebar.view.grid')}
               </button>
               <button
                 className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
@@ -307,7 +290,7 @@ export default function ArticleReaderPage() {
                 aria-label="List view"
               >
                 <i className="bi bi-list-ul"></i>
-                Danh sách
+                {t('articleReader.sidebar.view.list')}
               </button>
             </div>
           </div>
@@ -323,10 +306,10 @@ export default function ArticleReaderPage() {
                 <input
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Tìm bài viết sức khỏe..."
+                  placeholder={t('articleReader.search.placeholder')}
                 />
                 {search && (
-                  <button className="clear-btn" onClick={() => setSearch('')} aria-label="Xoá tìm kiếm">
+                  <button className="clear-btn" onClick={() => setSearch('')} aria-label={t('articleReader.search.clearAria')}>
                     <i className="bi bi-x-circle-fill"></i>
                   </button>
                 )}
@@ -335,12 +318,12 @@ export default function ArticleReaderPage() {
             <div className="stats-bar">
               <div className="stat-item">
                 <i className="bi bi-file-earmark-text-fill"></i>
-                <span>{totalValid} bài viết</span>
+                <span>{t('articleReader.stats.total', { count: String(totalValid) })}</span>
               </div>
               {selectedCategoryId !== 'all' && (
                 <div className="stat-item active-filter">
                   <i className="bi bi-funnel-fill"></i>
-                  <span>Đang lọc</span>
+                  <span>{t('articleReader.stats.filter')}</span>
                 </div>
               )}
             </div>
@@ -351,7 +334,7 @@ export default function ArticleReaderPage() {
             <Link to={`/articles/${featured.slug}`} className="featured-card">
               <div className="featured-badge">
                 <i className="bi bi-star-fill"></i>
-                Nổi bật
+                {t('articleReader.featured.badge')}
               </div>
               <div className="featured-image">
                 <img src={featured.coverImageUrl || featured.thumbnailUrl || '/images/medix-logo.png'} alt={featured.title} />
@@ -369,14 +352,14 @@ export default function ArticleReaderPage() {
                 <div className="featured-meta">
                   <div className="meta-item">
                     <i className="bi bi-calendar3"></i>
-                    <span>{formatViDate(featured.publishedAt)}</span>
+                    <span>{formatDate(featured.publishedAt)}</span>
                   </div>
                   <div className="meta-item">
                     <i className="bi bi-clock"></i>
-                    <span>{getReadingTime(featured.content)}</span>
+                    <span>{getReadingTimeText(featured.content)}</span>
                   </div>
                   <span className="read-more">
-                    Đọc ngay
+                    {t('articleReader.featured.readNow')}
                     <i className="bi bi-arrow-right"></i>
                   </span>
                 </div>
@@ -386,22 +369,22 @@ export default function ArticleReaderPage() {
 
           {/* Articles section */}
           <div className="section-header">
-            <h3 className="section-title">Bài viết mới nhất</h3>
-            <div className="section-count">{rest.length} bài viết</div>
+            <h3 className="section-title">{t('articleReader.section.latest')}</h3>
+            <div className="section-count">{t('articleReader.section.count', { count: String(rest.length) })}</div>
           </div>
 
           <section className={`card-container ${viewMode}`}>
             {loading && (
               <div className="loading-state">
                 <div className="spinner"></div>
-                <p>Đang tải bài viết...</p>
+                <p>{t('articleReader.loading')}</p>
               </div>
             )}
             {!loading && rest.length === 0 && (
               <div className="empty-state">
                 <i className="bi bi-inbox"></i>
-                <h3>Không tìm thấy bài viết</h3>
-                <p>Thử thay đổi từ khóa hoặc danh mục khác</p>
+                <h3>{t('articleReader.empty.title')}</h3>
+                <p>{t('articleReader.empty.description')}</p>
               </div>
             )}
             {!loading && rest.map((a, idx) => (
@@ -415,7 +398,7 @@ export default function ArticleReaderPage() {
                   <img src={a.thumbnailUrl || a.coverImageUrl || '/images/medix-logo.png'} alt={a.title} />
                   <div className="thumb-overlay">
                     <i className="bi bi-eye-fill"></i>
-                    Xem chi tiết
+                    {t('articleReader.card.preview')}
                   </div>
                 </div>
                 <div className="card-body">
@@ -426,15 +409,15 @@ export default function ArticleReaderPage() {
                   <div className="card-meta">
                     <span className="meta-date">
                       <i className="bi bi-calendar-event"></i>
-                      {formatViDate(a.publishedAt)}
+                      {formatDate(a.publishedAt)}
                     </span>
                     <span className="meta-reading">
                       <i className="bi bi-book"></i>
-                      {getReadingTime(a.content)}
+                      {getReadingTimeText(a.content)}
                     </span>
                   </div>
                   <span className="cta-link">
-                    Đọc thêm
+                    {t('articleReader.card.readMore')}
                     <i className="bi bi-arrow-right-short"></i>
                   </span>
                 </div>
@@ -443,7 +426,7 @@ export default function ArticleReaderPage() {
           </section>
 
           {/* Pagination */}
-          {!loading && rest.length > 0 && (
+          {!loading && filteredArticles.length > 0 && (
             <div className="pagination-wrapper">
               <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
             </div>

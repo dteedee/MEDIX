@@ -37,6 +37,15 @@ namespace Medix.API.Configurations
                 Category = "SYSTEM",
                 Description = "Thời gian dự kiến kết thúc bảo trì (ISO 8601)",
                 IsActive = true
+            },
+            new SystemConfiguration
+            {
+                ConfigKey = "DEFAULT_LANGUAGE",
+                ConfigValue = "vi",
+                DataType = "string",
+                Category = "SYSTEM",
+                Description = "Ngôn ngữ mặc định của giao diện người dùng",
+                IsActive = true
             }
         };
 

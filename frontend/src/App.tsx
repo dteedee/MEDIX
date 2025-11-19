@@ -76,6 +76,7 @@ import PrivacyPolicy from './pages/public/PrivacyPolicy';
 import TermsOfService from './pages/public/TermsOfService';
 import AboutUs from './pages/public/AboutUs';
 import EMRTimeline from './pages/patient/EMRTimeline';
+import CategoryList from './pages/manager/CategoryManagement';
 
 export function App() {
   return (
@@ -155,6 +156,8 @@ export function App() {
                     <Route path="services" element={<ServicePackageManagement />} />
                     <Route path="commissions" element={<CommissionManagement />} />
                     <Route path="feedback" element={<FeedbackManagement />} />
+                    <Route path="categories" element={<CategoryList />} />
+                    
                   </Route>
 
                   {/* ---------- Patient routes ---------- */}

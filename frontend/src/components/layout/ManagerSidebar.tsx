@@ -108,6 +108,14 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
           <i className="bi bi-image"></i>
           {sidebarOpen && <span>Banner</span>}
         </Link>
+         <Link
+          to="/app/manager/categories"
+          className={`${styles.navItem} ${currentPage === 'reports' ? styles.active : ''}`}
+          onClick={() => setShowUserMenu(false)}
+        >
+          <i className="bi bi-graph-up"></i>
+          {sidebarOpen && <span>Danh mục</span>}
+        </Link>
         <Link
           to="/app/manager/packages"
           className={`${styles.navItem} ${currentPage === 'packages' ? styles.active : ''}`}

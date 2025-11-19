@@ -1075,3 +1075,7 @@
       font-size: 18px;
     }
   }
+
+  .scrollableModalBody {
+    overflow-y: auto;
+  }

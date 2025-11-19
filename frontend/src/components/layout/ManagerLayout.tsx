@@ -28,9 +28,11 @@ const ManagerLayout: React.FC = () => {
     if (location.pathname.includes('/reports')) return 'reports';
     if (location.pathname.includes('/articles')) return 'articles';
     if (location.pathname.includes('/banners')) return 'banners';
+    if (location.pathname.includes('/categories')) return 'categories';
     if (location.pathname.includes('/packages')) return 'packages';
     if (location.pathname.includes('/commissions')) return 'commissions';
     if (location.pathname.includes('/feedback')) return 'feedback';
+
     return 'dashboard';
   };
 

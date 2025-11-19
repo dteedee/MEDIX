@@ -4,13 +4,17 @@ import { apiClient } from '../lib/apiClient'
 const BASE = '/ContentCategory'
 
 export const categoryService = {
-  list: async (page = 1, pageSize = 10, keyword?: string): Promise<{ items: CategoryDTO[]; total?: number }> => {
+  list: async (page = 1, pageSize = 10, keyword?: string, sortBy?: string): Promise<{ items: CategoryDTO[]; total?: number }> => {
     const params: any = { page, pageSize };
     let url = BASE;
 
     if (keyword && keyword.trim()) {
       url = `${BASE}/search`;
       params.keyword = keyword;
+    }
+
+    if (sortBy) {
+      params.sortBy = sortBy;
     }
 
     const r = await apiClient.get(url, { params });

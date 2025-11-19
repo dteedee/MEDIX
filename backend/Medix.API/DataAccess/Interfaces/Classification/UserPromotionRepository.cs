@@ -56,7 +56,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
                 .Include(up => up.Promotion)
                 .Where(up => up.UserId == userId
                     && up.IsActive
-                    && up.ExpiryDate > now  // ✅ Kiểm tra ExpiryDate của UserPromotion
+                    && up.ExpiryDate > now  
                     && up.Promotion.IsActive
                     && up.Promotion.StartDate <= now
                     && up.Promotion.EndDate >= now

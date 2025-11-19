@@ -11,5 +11,6 @@ namespace Medix.API.Business.Interfaces.Classification
         public Task<PromotionDto> CreatePromotionAsync(PromotionDto promotionDto);
         public Task<PromotionDto> UpdatePromotionAsync(PromotionDto promotionDto);
 
+
     }
 }

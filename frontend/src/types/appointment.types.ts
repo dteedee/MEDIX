@@ -15,6 +15,8 @@ export interface CreateAppointmentDto {
   medicalInfo?: string;
   chiefComplaint?: string;
   historyOfPresentIllness?: string;
+  userPromotionID?: string; // For promotions from UserPromotion
+  promotionCode?: string; // For general promotions not in UserPromotion
 }
 
 export interface Appointment {

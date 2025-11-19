@@ -23,6 +23,14 @@ namespace Medix.API.Presentation.Controller.Classification
             {
                 return NotFound();
             }
+            if (promotion.EndDate < DateTime.UtcNow || !promotion.IsActive)
+            {
+                return BadRequest("Mã đã hết hạn sử dụng");
+            }
+            if (promotion.MaxUsage.HasValue && promotion.UsedCount >= promotion.MaxUsage.Value)
+            {
+                return BadRequest("Mã đã đạt giới hạn sử dụng");
+            }
             return Ok(promotion);
         }
         

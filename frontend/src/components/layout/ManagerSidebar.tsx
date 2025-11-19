@@ -125,6 +125,14 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
           {sidebarOpen && <span>Hoa hồng</span>}
         </Link>
         <Link
+          to="/app/manager/transfer-transactions"
+          className={`${styles.navItem} ${currentPage === 'transfer-transactions' ? styles.active : ''}`}
+          onClick={() => setShowUserMenu(false)}
+        >
+          <i className="bi bi-arrow-left-right"></i>
+          {sidebarOpen && <span>Yêu cầu chuyển tiền</span>}
+        </Link>
+        <Link
           to="/app/manager/feedback"
           className={`${styles.navItem} ${currentPage === 'feedback' ? styles.active : ''}`}
           onClick={() => setShowUserMenu(false)}

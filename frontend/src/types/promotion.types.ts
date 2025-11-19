@@ -12,3 +12,18 @@ export interface PromotionDto {
     isActive: boolean;
     createdAt: string;
 }
+
+export interface UserPromotionDto {
+    id: string;
+    userId: string;
+    promotionId: string;
+    usedCount: number;
+    expiryDate: string;
+    isActive: boolean;
+    assignedAt: string;
+    lastUsedAt?: string | null;
+    promotion?: PromotionDto | null;
+    // Computed properties
+    isExpired: boolean;
+    isValidNow: boolean;
+}

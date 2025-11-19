@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { PromotionDto } from "../types/promotion.types";
+import { PromotionDto, UserPromotionDto } from "../types/promotion.types";
 
 class PromotionService {
     async getPromotionByCode(code: string): Promise<PromotionDto | null> {
@@ -21,6 +21,28 @@ class PromotionService {
             return response.data || [];
         } catch (error: any) {
             console.error('Get available promotions error:', error);
+            return [];
+        }
+    }
+
+    async getUserActivePromotions(): Promise<UserPromotionDto[]> {
+        try {
+            const response = await apiClient.get<UserPromotionDto[]>('/UserPromotion/my-active-promotions');
+            console.log('📦 Response.data:', response.data);
+            console.log('📦 Is array?', Array.isArray(response.data));
+            console.log('📦 Length?', response.data?.length);
+            
+            // Backend returns array directly: return Ok(result);
+            if (Array.isArray(response.data)) {
+                console.log('✅ Returning promotions array:', response.data);
+                return response.data;
+            }
+            
+            console.warn('⚠️ Unexpected response structure, expected array but got:', typeof response.data);
+            return [];
+        } catch (error: any) {
+            console.error('❌ Get user active promotions error:', error);
+            console.error('❌ Error response:', error.response?.data);
             return [];
         }
     }

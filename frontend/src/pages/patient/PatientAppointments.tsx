@@ -11,7 +11,6 @@ interface Appointment {
   specialty?: string;
   date: string;
   time: string;
-  status: 'upcoming' | 'completed' | 'cancelled';
   room?: string;
   fee: number;
   avatar?: string;
@@ -21,7 +20,7 @@ interface Appointment {
   doctorID?: string;
   appointmentStartTime?: string;
   appointmentEndTime?: string;
-  statusCode?: string;
+  statusCode: string;
   statusDisplayName?: string;
   paymentStatusCode?: string;
   totalAmount?: number;
@@ -67,17 +66,6 @@ export const PatientAppointments: React.FC = () => {
         const transformedData: Appointment[] = data.map(apt => {
           const startDate = new Date(apt.appointmentStartTime);
           
-          let status: 'upcoming' | 'completed' | 'cancelled' = 'upcoming';
-          if (apt.statusCode === 'Completed') {
-            status = 'completed';
-          } else if (
-            apt.statusCode === 'CancelledByPatient' || 
-            apt.statusCode === 'CancelledByDoctor' || 
-            apt.statusCode === 'NoShow'
-          ) {
-            status = 'cancelled';
-          }
-          
           return {
             id: apt.id,
             doctorName: apt.doctorName,
@@ -85,7 +73,6 @@ export const PatientAppointments: React.FC = () => {
             specialty: '',
             date: startDate.toISOString().split('T')[0],
             time: `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`,
-            status,
             room: '',
             fee: apt.consultationFee,
             avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.doctorName)}&background=667eea&color=fff`,
@@ -172,9 +159,20 @@ export const PatientAppointments: React.FC = () => {
   // Statistics
   const stats = {
     total: appointmentsWithDoctorInfo.length,
-    upcoming: appointmentsWithDoctorInfo.filter(apt => apt.status === 'upcoming').length,
-    completed: appointmentsWithDoctorInfo.filter(apt => apt.status === 'completed').length,
-    cancelled: appointmentsWithDoctorInfo.filter(apt => apt.status === 'cancelled').length
+    upcoming: appointmentsWithDoctorInfo.filter(apt => 
+      apt.statusCode !== 'Completed' && 
+      apt.statusCode !== 'CancelledByPatient' && 
+      apt.statusCode !== 'CancelledByDoctor' && 
+      apt.statusCode !== 'MissedByDoctor' && 
+      apt.statusCode !== 'NoShow'
+    ).length,
+    completed: appointmentsWithDoctorInfo.filter(apt => apt.statusCode === 'Completed').length,
+    cancelled: appointmentsWithDoctorInfo.filter(apt => 
+      apt.statusCode === 'CancelledByPatient' || 
+      apt.statusCode === 'CancelledByDoctor' || 
+      apt.statusCode === 'MissedByDoctor' || 
+      apt.statusCode === 'NoShow'
+    ).length
   };
 
   // Filter appointments
@@ -182,7 +180,24 @@ export const PatientAppointments: React.FC = () => {
     let filtered = [...appointmentsWithDoctorInfo];
 
     if (filters.status !== 'all') {
-      filtered = filtered.filter(apt => apt.status === filters.status);
+      if (filters.status === 'upcoming') {
+        filtered = filtered.filter(apt => 
+          apt.statusCode !== 'Completed' && 
+          apt.statusCode !== 'CancelledByPatient' && 
+          apt.statusCode !== 'CancelledByDoctor' && 
+          apt.statusCode !== 'MissedByDoctor' && 
+          apt.statusCode !== 'NoShow'
+        );
+      } else if (filters.status === 'completed') {
+        filtered = filtered.filter(apt => apt.statusCode === 'Completed');
+      } else if (filters.status === 'cancelled') {
+        filtered = filtered.filter(apt => 
+          apt.statusCode === 'CancelledByPatient' || 
+          apt.statusCode === 'CancelledByDoctor' || 
+          apt.statusCode === 'MissedByDoctor' || 
+          apt.statusCode === 'NoShow'
+        );
+      }
     }
 
     if (filters.search) {
@@ -224,7 +239,7 @@ export const PatientAppointments: React.FC = () => {
       setAppointments(prevAppointments =>
         prevAppointments.map(apt =>
           apt.id === selectedAppointment.id
-            ? { ...apt, status: 'cancelled' as const, statusCode: 'CancelledByPatient' }
+            ? { ...apt, statusCode: 'CancelledByPatient' }
             : apt
         )
       );
@@ -275,25 +290,62 @@ export const PatientAppointments: React.FC = () => {
     }).format(amount);
   };
 
-  const getStatusConfig = (status: string) => {
-    const configs = {
-      upcoming: { 
-        label: 'Sắp diễn ra', 
-        icon: 'bi-clock-history',
-        color: '#f59e0b'
-      },
-      completed: { 
+  const getStatusConfig = (statusCode: string, startTime?: string, endTime?: string) => {
+    const currentTime = new Date();
+    const appointmentStartTime = startTime ? new Date(startTime) : null;
+    const appointmentEndTime = endTime ? new Date(endTime) : null;
+
+    // ✅ 1. Trạng thái cố định - Completed
+    if (statusCode === 'Completed') {
+      return { 
         label: 'Hoàn thành', 
         icon: 'bi-check-circle-fill',
         color: '#10b981'
-      },
-      cancelled: { 
+      };
+    }
+    
+    // ✅ 2. Trạng thái hủy
+    if (statusCode === 'CancelledByPatient' || 
+        statusCode === 'CancelledByDoctor' || 
+        statusCode === 'MissedByDoctor' || 
+        statusCode === 'NoShow') {
+      return { 
         label: 'Đã hủy', 
         icon: 'bi-x-circle-fill',
         color: '#ef4444'
+      };
+    }
+
+    // ✅ 3. Xác định trạng thái theo thời gian
+    if (appointmentStartTime && appointmentEndTime) {
+      if (currentTime >= appointmentStartTime && currentTime <= appointmentEndTime) {
+        return { 
+          label: 'Đang diễn ra', 
+          icon: 'bi-clock-history',
+          color: '#3b82f6'
+        };
+      } else if (currentTime < appointmentStartTime) {
+        return { 
+          label: 'Sắp diễn ra', 
+          icon: 'bi-clock-history',
+          color: '#f59e0b'
+        };
+      } else if (currentTime > appointmentEndTime) {
+        // ✅ Lịch đã qua => coi như "Hoàn thành"
+        return { 
+          label: 'Hoàn thành', 
+          icon: 'bi-check-circle-fill',
+          color: '#10b981'
+        };
       }
+    }
+
+    // ✅ 4. Mặc định
+    return { 
+      label: 'Sắp diễn ra', 
+      icon: 'bi-clock-history',
+      color: '#f59e0b'
     };
-    return configs[status as keyof typeof configs];
   };
 
   const getPaymentStatusLabel = (statusCode?: string): string => {
@@ -482,7 +534,11 @@ export const PatientAppointments: React.FC = () => {
           {filteredAppointments.map((appointment) => {
             // Get the appointment with doctor info
             const appointmentWithInfo = appointmentsWithDoctorInfo.find(apt => apt.id === appointment.id) || appointment;
-            const statusConfig = getStatusConfig(appointmentWithInfo.status);
+            const statusConfig = getStatusConfig(
+              appointmentWithInfo.statusCode || '',
+              appointmentWithInfo.appointmentStartTime,
+              appointmentWithInfo.appointmentEndTime
+            );
             
             return (
             <div 
@@ -554,7 +610,11 @@ export const PatientAppointments: React.FC = () => {
             </div>
 
                 <div className={styles.cardFooter} onClick={(e) => e.stopPropagation()}>
-                  {appointmentWithInfo.status === 'upcoming' && (
+                  {appointmentWithInfo.statusCode !== 'Completed' && 
+                   appointmentWithInfo.statusCode !== 'CancelledByPatient' && 
+                   appointmentWithInfo.statusCode !== 'CancelledByDoctor' && 
+                   appointmentWithInfo.statusCode !== 'MissedByDoctor' && 
+                   appointmentWithInfo.statusCode !== 'NoShow' && (
                     <div className={styles.footerActions}>
               <button 
                         className={styles.viewInfoBtn}
@@ -578,7 +638,7 @@ export const PatientAppointments: React.FC = () => {
               </button>
         </div>
       )}
-                  {appointmentWithInfo.status === 'completed' && (
+                  {appointmentWithInfo.statusCode === 'Completed' && (
                     <div className={styles.footerActions}>
               <button 
                         className={styles.emrBtn}
@@ -643,9 +703,9 @@ export const PatientAppointments: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className={styles.modalStatus} style={{ background: getStatusConfig(selectedAppointment.status).color }}>
-                <i className={getStatusConfig(selectedAppointment.status).icon}></i>
-                {getStatusConfig(selectedAppointment.status).label}
+              <div className={styles.modalStatus} style={{ background: getStatusConfig(selectedAppointment.statusCode || '', selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime).color }}>
+                <i className={getStatusConfig(selectedAppointment.statusCode || '', selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime).icon}></i>
+                {getStatusConfig(selectedAppointment.statusCode || '', selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime).label}
                 </div>
               </div>
 
@@ -711,7 +771,11 @@ export const PatientAppointments: React.FC = () => {
             </div>
             
             <div className={styles.modalFooter}>
-              {selectedAppointment.status === 'upcoming' && (
+              {selectedAppointment.statusCode !== 'Completed' && 
+               selectedAppointment.statusCode !== 'CancelledByPatient' && 
+               selectedAppointment.statusCode !== 'CancelledByDoctor' && 
+               selectedAppointment.statusCode !== 'MissedByDoctor' && 
+               selectedAppointment.statusCode !== 'NoShow' && (
                 <button 
                   className={styles.modalCancelBtn}
                   onClick={() => {
@@ -723,7 +787,7 @@ export const PatientAppointments: React.FC = () => {
                   Hủy lịch hẹn
                 </button>
               )}
-              {selectedAppointment.status === 'completed' && (
+              {selectedAppointment.statusCode === 'Completed' && (
                 <button 
                   className={styles.modalEmrBtn}
                   onClick={() => {

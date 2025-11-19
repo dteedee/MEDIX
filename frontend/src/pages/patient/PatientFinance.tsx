@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { walletService } from '../../services/walletService';
 import { appointmentService } from '../../services/appointmentService';
+import { transferTransactionService, TransferTransactionCreateRequest } from '../../services/transferTransactionService';
 import { WalletDto, OrderCreateRequest, WalletTransactionDto, BankInfo, WithdrawalRequest } from '../../types/wallet.types';
 import { Appointment } from '../../types/appointment.types';
 import styles from '../../styles/patient/PatientFinance.module.css';
@@ -275,18 +276,16 @@ export const PatientFinance: React.FC = () => {
 
     setIsProcessingWithdrawal(true);
     try {
-      const withdrawalRequest: WithdrawalRequest = {
+      const transferRequest: TransferTransactionCreateRequest = {
         amount: Math.round(amount),
-        bankBin: selectedBank.bin,
-        bankName: selectedBank.name,
-        accountNumber: accountNumber.trim(),
-        accountName: accountName.trim(),
-        description: `Rút tiền về ${selectedBank.name} - Số tài khoản: ${accountNumber.trim()}`
+        description: `Rút tiền về ${selectedBank.shortName} - ${accountName}`,
+        toBin: selectedBank.bin,
+        toAccountNumber: accountNumber.trim()
       };
 
-      await walletService.createWithdrawal(withdrawalRequest);
+      await transferTransactionService.createTransferTransaction(transferRequest);
       
-      alert('Yêu cầu rút tiền đã được gửi thành công!');
+      alert('Yêu cầu rút tiền đã được gửi thành công! Vui lòng chờ quản trị viên xét duyệt.');
       
       // Reset form
       setWithdrawalAmount('');

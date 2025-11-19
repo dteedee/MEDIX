@@ -4047,6 +4047,8 @@
     margin-top: 16px;
     padding-top: 16px;
     border-top: 1px solid #f3f4f6;
+    flex-wrap: wrap;
+    gap: 12px;
   }
 
   .promotionItemDate {
@@ -4071,6 +4073,30 @@
   .promotionItem:hover .promotionItemDate i {
     color: #667eea;
     transform: scale(1.1);
+  }
+
+  .promotionItemUsage {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #2563eb;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .promotionItem:hover .promotionItemUsage {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%);
+    border-color: rgba(59, 130, 246, 0.5);
+    transform: scale(1.02);
+  }
+
+  .promotionItemUsage i {
+    font-size: 14px;
   }
 
   .promotionItemSelectedBadge {

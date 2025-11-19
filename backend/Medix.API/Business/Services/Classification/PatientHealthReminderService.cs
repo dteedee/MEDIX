@@ -40,7 +40,7 @@ namespace Medix.API.Business.Services.Classification
             {
                 BackgroundJob.Schedule<IPatientHealthReminderService>(
                     service=>service.ExecuteSendReminderAsync(healthReminder)
-                    ,DateTime.Now.AddMinutes(1));
+                    , scheduledTime);
 
                 }
             return healthReminder;

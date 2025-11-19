@@ -129,6 +129,8 @@ namespace Medix.API.Configurations
         {
 
             services.AddHostedService<JobDoctorScheduleOveride>();
+            services.AddHostedService<JobBannedDoctor>();
+            services.AddHostedService<JobUnbanDoctor>();
 
 
         }

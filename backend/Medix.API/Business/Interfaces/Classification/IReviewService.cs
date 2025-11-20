@@ -11,6 +11,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<List<ReviewDoctorDto>> GetByDoctorIdAsync(Guid doctorId);
         Task<List<ReviewDoctorDto>> GetByDoctorUserIdAsync(Guid userId);
         Task<List<ReviewDoctorDto>> GetAllAsync();
+        Task<ReviewDoctorDto> UpdateStatusAsync(UpdateReviewStatusDto dto);
 
 
     }

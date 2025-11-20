@@ -36,6 +36,18 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .FirstOrDefaultAsync(r => r.AppointmentId == appointmentId);
         }
 
+        public async Task<Review?> GetByIdAsync(Guid reviewId)
+        {
+            return await _context.Reviews
+                .Include(r => r.Appointment)
+                    .ThenInclude(a => a.Doctor)
+                        .ThenInclude(d => d.User)
+                .Include(r => r.Appointment)
+                    .ThenInclude(a => a.Patient)
+                        .ThenInclude(p => p.User)
+                .FirstOrDefaultAsync(r => r.Id == reviewId);
+        }
+
         public async Task AddAsync(Review review)
         {
             await _context.Reviews.AddAsync(review);

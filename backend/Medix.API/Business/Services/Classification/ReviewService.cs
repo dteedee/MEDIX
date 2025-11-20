@@ -161,5 +161,25 @@ namespace Medix.API.Business.Services.Classification
             return result;
         }
 
+        public async Task<ReviewDoctorDto> UpdateStatusAsync(UpdateReviewStatusDto dto)
+        {
+            var review = await _reviewRepo.GetByIdAsync(dto.ReviewId);
+            if (review == null)
+                throw new Exception("Không tìm thấy đánh giá để cập nhật trạng thái.");
+
+            review.Status = dto.Status;
+
+            await _reviewRepo.UpdateAsync(review);
+            await _reviewRepo.SaveChangesAsync();
+
+            var result = _mapper.Map<ReviewDoctorDto>(review);
+            result.DoctorId = review.Appointment.DoctorId;
+            result.DoctorName = review.Appointment.Doctor.User.FullName;
+            result.PatientName = review.Appointment.Patient.User.FullName;
+            result.AppointmentStartTime = review.Appointment.AppointmentStartTime;
+            result.AppointmentEndTime = review.Appointment.AppointmentEndTime;
+            return result;
+        }
+
     }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext'
 import styles from '../../styles/manager/FeedbackManagement.module.css'
 
@@ -8,14 +8,20 @@ interface Feedback {
   doctorName: string;
   rating: number;
   comment: string;
+  appointmentId: string;
+  appointmentStartTime: string;
+  appointmentEndTime: string;
   date: string;
-  status: 'pending' | 'approved' | 'rejected';
-  category: 'appointment' | 'service' | 'general';
+  createdAt: string;
+  status: 'Public' | 'Private' | 'pending';
+  adminResponse: string | null;
 }
 
 export default function FeedbackManagement() {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
   const [filter, setFilter] = useState('all');
   const { showToast } = useToast();
 
@@ -24,31 +30,21 @@ export default function FeedbackManagement() {
   }, [filter]);
 
   const loadFeedbacks = async () => {
+    const API_URL = 'http://localhost:5123/api/Review';
     setLoading(true);
     try {
-      // Mock data
-      const mockFeedbacks: Feedback[] = [
-        {
-          id: '1',
-          patientName: 'Nguyễn Văn A',
-          doctorName: 'Phạm Quỳnh Anh',
-          rating: 5,
-          comment: 'Bác sĩ rất tận tâm và chuyên nghiệp. Tôi rất hài lòng với dịch vụ.',
-          date: '2024-01-15T10:30:00Z',
-          status: 'approved',
-          category: 'appointment'
-        },
-        {
-          id: '2',
-          patientName: 'Trần Thị B',
-          doctorName: 'Lê Thu Hằng',
-          rating: 4,
-          comment: 'Dịch vụ tốt nhưng cần cải thiện thời gian chờ đợi.',
-          date: '2024-01-14T14:20:00Z',
-          status: 'pending',
-          category: 'service'
-        }
-      ];
+      const response = await fetch(API_URL);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      const mockFeedbacks: Feedback[] = data.map((item: any) => ({
+        ...item,
+        date: item.createdAt, // Using createdAt for the date field
+      }));
 
       setTimeout(() => {
         setFeedbacks(mockFeedbacks);
@@ -61,8 +57,44 @@ export default function FeedbackManagement() {
     }
   };
 
+  const handleToggleStatus = async (feedback: Feedback) => {
+    // API để đổi trạng thái là http://localhost:5123/api/Review/status
+    // Sửa logic: Nếu là 'Public' thì chuyển thành 'Private', ngược lại chuyển thành 'Public'
+    const newStatus = feedback.status === 'Public' ? 'Private' : 'Public';
+    const API_URL = `http://localhost:5123/api/Review/status`;
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Sửa payload: Gửi đúng `reviewId` và status viết hoa chữ cái đầu theo yêu cầu.
+        body: JSON.stringify({
+          reviewId: feedback.id,
+          status: newStatus,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      showToast('Cập nhật trạng thái thành công!', 'success');
+      loadFeedbacks(); // Tải lại danh sách phản hồi để cập nhật UI
+    } catch (error) {
+      console.error('Error updating feedback status:', error);
+      showToast('Không thể cập nhật trạng thái', 'error');
+    }
+  };
+
+  const handleViewDetails = (feedback: Feedback) => {
+    setSelectedFeedback(feedback);
+    setIsDetailModalOpen(true);
+  };
+
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -73,24 +105,24 @@ export default function FeedbackManagement() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { text: 'Chờ duyệt', class: styles.statusPending },
-      approved: { text: 'Đã duyệt', class: styles.statusApproved },
-      rejected: { text: 'Đã từ chối', class: styles.statusRejected }
+      Public: { text: 'Public', class: styles.statusApproved },
+      Private: { text: 'Private', class: styles.statusRejected },
+      pending: { text: 'Pending', class: styles.statusPending },
     };
     
     const config = statusConfig[status as keyof typeof statusConfig];
-    return <span className={`${styles.statusBadge} ${config.class}`}>{config.text}</span>;
+    return <span className={`${styles.statusBadge} ${config?.class}`}>{config?.text}</span>;
   };
 
   const getCategoryBadge = (category: string) => {
     const categoryConfig = {
-      appointment: { text: 'Lịch hẹn', class: styles.categoryAppointment },
-      service: { text: 'Dịch vụ', class: styles.categoryService },
-      general: { text: 'Chung', class: styles.categoryGeneral }
+      appointment: { text: 'Appointment', class: styles.categoryAppointment },
+      service: { text: 'Service', class: styles.categoryService },
+      general: { text: 'General', class: styles.categoryGeneral }
     };
     
     const config = categoryConfig[category as keyof typeof categoryConfig];
-    return <span className={`${styles.categoryBadge} ${config.class}`}>{config.text}</span>;
+    return <span className={`${styles.categoryBadge} ${config?.class}`}>{config?.text || 'General'}</span>;
   };
 
   const getRatingStars = (rating: number) => {
@@ -130,9 +162,8 @@ export default function FeedbackManagement() {
               className={styles.filterSelect}
             >
               <option value="all">Tất cả</option>
-              <option value="pending">Chờ duyệt</option>
-              <option value="approved">Đã duyệt</option>
-              <option value="rejected">Đã từ chối</option>
+              <option value="Public">Public</option>
+              <option value="Private">Private</option>
             </select>
           </div>
         </div>
@@ -155,30 +186,16 @@ export default function FeedbackManagement() {
         <div className={`${styles.summaryCard} ${styles.summaryCard2}`}>
           <div className={styles.summaryIcon}>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-          </div>
-          <div className={styles.summaryContent}>
-            <div className={styles.summaryLabel}>Chờ duyệt</div>
-            <div className={styles.summaryValue}>{feedbacks.filter(f => f.status === 'pending').length}</div>
-          </div>
-        </div>
-
-        <div className={`${styles.summaryCard} ${styles.summaryCard3}`}>
-          <div className={styles.summaryIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20,6 9,17 4,12"></polyline>
             </svg>
           </div>
           <div className={styles.summaryContent}>
-            <div className={styles.summaryLabel}>Đã duyệt</div>
-            <div className={styles.summaryValue}>{feedbacks.filter(f => f.status === 'approved').length}</div>
+            <div className={styles.summaryLabel}>Trạng thái Public</div>
+            <div className={styles.summaryValue}>{feedbacks.filter(f => f.status === 'Public').length}</div>
           </div>
         </div>
 
-        <div className={`${styles.summaryCard} ${styles.summaryCard4}`}>
+        <div className={`${styles.summaryCard} ${styles.summaryCard3}`}>
           <div className={styles.summaryIcon}>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"></circle>
@@ -187,14 +204,15 @@ export default function FeedbackManagement() {
             </svg>
           </div>
           <div className={styles.summaryContent}>
-            <div className={styles.summaryLabel}>Đã từ chối</div>
-            <div className={styles.summaryValue}>{feedbacks.filter(f => f.status === 'rejected').length}</div>
+            <div className={styles.summaryLabel}>Trạng thái Private</div>
+            <div className={styles.summaryValue}>{feedbacks.filter(f => f.status === 'Private').length}</div>
           </div>
         </div>
       </div>
 
       {/* Feedbacks Table */}
       <div className={styles.tableCard}>
+
         <div className={styles.tableHeader}>
           <h3>Danh sách Phản hồi</h3>
         </div>
@@ -206,7 +224,6 @@ export default function FeedbackManagement() {
                 <th>Bệnh nhân</th>
                 <th>Bác sĩ</th>
                 <th>Đánh giá</th>
-                <th>Loại</th>
                 <th>Bình luận</th>
                 <th>Ngày</th>
                 <th>Trạng thái</th>
@@ -230,7 +247,6 @@ export default function FeedbackManagement() {
                       <span className={styles.ratingValue}>{feedback.rating}/5</span>
                     </div>
                   </td>
-                  <td>{getCategoryBadge(feedback.category)}</td>
                   <td>
                     <div className={styles.commentCell}>
                       <span className={styles.commentText}>
@@ -255,8 +271,17 @@ export default function FeedbackManagement() {
                           </button>
                         </>
                       )}
-                      <button className={styles.viewButton}>
+                      <button 
+                        onClick={() => handleViewDetails(feedback)}
+                        className={styles.viewButton}
+                      >
                         Xem chi tiết
+                      </button>
+                      <button 
+                        onClick={() => handleToggleStatus(feedback)}
+                        className={feedback.status === 'Public' ? styles.rejectButton : styles.approveButton}
+                      >
+                        {feedback.status === 'Public' ? 'Chuyển sang Private' : 'Chuyển sang Public'}
                       </button>
                     </div>
                   </td>
@@ -266,6 +291,48 @@ export default function FeedbackManagement() {
           </table>
         </div>
       </div>
+
+      {isDetailModalOpen && selectedFeedback && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h3>Chi tiết Phản hồi</h3>
+              <button onClick={() => setIsDetailModalOpen(false)} className={styles.closeButton}>×</button>
+            </div>
+            <div className={styles.modalBody}>
+              {/* Thông tin chung */}
+              <div className={styles.detailItem}>
+                <strong>Bệnh nhân:</strong> {selectedFeedback.patientName}
+              </div>
+              <div className={styles.detailItem}>
+                <strong>Bác sĩ:</strong> {selectedFeedback.doctorName}
+              </div>
+              <div className={styles.detailItem}>
+                <strong>Đánh giá:</strong>
+                <span className={styles.ratingStars}>{getRatingStars(selectedFeedback.rating)}</span>
+                ({selectedFeedback.rating}/5)
+              </div>
+              <div className={styles.detailItem}>
+                <strong>Bình luận:</strong> {selectedFeedback.comment}
+              </div>
+              <div className={styles.detailItem}>
+                <strong>Ngày viết review:</strong> {formatDate(selectedFeedback.createdAt)}
+              </div>
+              <hr className={styles.divider} />
+
+              {/* Thông tin cuộc hẹn */}
+              <h4>Thông tin cuộc hẹn</h4>
+              <div className={styles.detailItem}>
+                <strong>Thời gian bắt đầu:</strong> {formatDate(selectedFeedback.appointmentStartTime)}
+              </div>
+              <div className={styles.detailItem}>
+                <strong>Thời gian kết thúc:</strong> {formatDate(selectedFeedback.appointmentEndTime)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+
   );
 }

@@ -83,5 +83,22 @@ namespace Medix.API.Presentation.Controllers.Community
             return Ok(result);
         }
 
+        [HttpPatch("status")]
+        public async Task<IActionResult> UpdateStatus([FromBody] UpdateReviewStatusDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var result = await _service.UpdateStatusAsync(dto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
     }
 }

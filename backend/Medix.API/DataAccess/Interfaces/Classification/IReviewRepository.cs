@@ -6,6 +6,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
     {
         Task<List<Review>> GetReviewsByDoctorAsync(Guid id);
         Task<Review?> GetByAppointmentIdAsync(Guid appointmentId);
+        Task<Review?> GetByIdAsync(Guid reviewId);
         Task AddAsync(Review review);
         Task UpdateAsync(Review review);
         Task DeleteAsync(Review review);

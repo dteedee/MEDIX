@@ -140,5 +140,26 @@ namespace Medix.API.Business.Services.Classification
             return result;
         }
 
+        public async Task<List<ReviewDoctorDto>> GetAllAsync()
+        {
+            var reviews = await _reviewRepo.GetAllAsync();
+            if (reviews == null || !reviews.Any())
+                return new List<ReviewDoctorDto>();
+
+            var result = _mapper.Map<List<ReviewDoctorDto>>(reviews);
+
+            foreach (var r in result)
+            {
+                var entity = reviews.First(x => x.Id == r.Id);
+                r.DoctorId = entity.Appointment.DoctorId;
+                r.DoctorName = entity.Appointment.Doctor.User.FullName;
+                r.PatientName = entity.Appointment.Patient.User.FullName;
+                r.AppointmentStartTime = entity.Appointment.AppointmentStartTime;
+                r.AppointmentEndTime = entity.Appointment.AppointmentEndTime;
+            }
+
+            return result;
+        }
+
     }
 }

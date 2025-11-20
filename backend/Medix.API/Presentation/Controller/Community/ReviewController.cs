@@ -76,5 +76,12 @@ namespace Medix.API.Presentation.Controllers.Community
             return Ok(result);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetAllReview()
+        {
+            var result = await _service.GetAllAsync();
+            return Ok(result);
+        }
+
     }
 }

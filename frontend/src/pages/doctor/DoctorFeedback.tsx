@@ -65,8 +65,10 @@ const DoctorFeedback: React.FC = () => {
       try {
         setIsLoading(true);
         const data = await reviewService.getReviewsForCurrentDoctor();
+        // Lọc chỉ những review có status là 'Public'
+        const publicReviews = data.filter(review => review.status === 'Public');
         // Sắp xếp các đánh giá mới nhất lên đầu
-        setReviews(data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        setReviews(publicReviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
         setError(null);
       } catch (err) {
         console.error("Error fetching reviews:", err);

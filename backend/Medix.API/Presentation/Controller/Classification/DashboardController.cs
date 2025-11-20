@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Medix.API.Business.Interfaces.Classification;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,10 +11,12 @@ namespace Medix.API.Presentation.Controller.Classification
     public class DashboardController : ControllerBase
     {
         private readonly IDoctorDashboardService _service;
+        private readonly IAdminDashboardService _adminService;
 
-        public DashboardController(IDoctorDashboardService service)
+        public DashboardController(IDoctorDashboardService service, IAdminDashboardService adminService)
         {
             _service = service;
+            _adminService = adminService;
         }
 
         [HttpGet("doctor/{doctorId}")]
@@ -33,6 +36,14 @@ namespace Medix.API.Presentation.Controller.Classification
             if (result == null)
                 return NotFound("Không tìm thấy dashboard cho bác sĩ này.");
 
+            return Ok(result);
+        }
+
+        [HttpGet("admin")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAdminDashboard()
+        {
+            var result = await _adminService.GetDashboardAsync();
             return Ok(result);
         }
     }

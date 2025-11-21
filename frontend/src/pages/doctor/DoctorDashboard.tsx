@@ -187,9 +187,22 @@ const DoctorDashboard: React.FC = () => {
   const formatTime = (dateString: string): string => {
     // Chỉ lấy phần HH:mm từ chuỗi "HH:mm:ss"
     if (typeof dateString === 'string' && dateString.includes(':')) {
-      return dateString.substring(0, 5);
+      // Handle both "HH:mm:ss" and "HH:mm" formats
+      const timePart = dateString.split(' ')[0] || dateString
+      if (timePart.includes(':')) {
+        return timePart.substring(0, 5)
+      }
     }
-    return 'Invalid Time';
+    // Try to parse as Date if it's a full datetime string
+    try {
+      const date = new Date(dateString)
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+    return 'Invalid Time'
   }
 
   const formatTimeRange = (startTime?: string, endTime?: string) => {
@@ -317,9 +330,16 @@ const DoctorDashboard: React.FC = () => {
 
       // Fetch new dashboard data and upcoming appointments concurrently
       try {
+        const now = new Date()
+        // Get appointments for the last 3 months and next 3 months for better performance
+        const startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1)
+        const endDate = new Date(now.getFullYear(), now.getMonth() + 3, 0)
+        const startDateStr = startDate.toISOString().split('T')[0]
+        const endDateStr = endDate.toISOString().split('T')[0]
+
         const [dashboardResult, appointmentsResult] = await Promise.allSettled([
           doctorDashboardService.getDashboard(),
-          appointmentService.getMyAppointmentsByDateRange("2020-01-01", "2030-12-31"),
+          appointmentService.getMyAppointmentsByDateRange(startDateStr, endDateStr),
         ])
 
         // Handle Dashboard API result
@@ -349,18 +369,32 @@ const DoctorDashboard: React.FC = () => {
     }
 
     fetchDashboardData()
-  }, []) // ✅ Bỏ [user] để chỉ fetch data một lần khi component được mount
+  }, []) // ✅ Fetch data once when component mounts
 
-  // Combine and sort today's schedule
+  // Combine and sort today's schedule - filter for today only
   const todaySchedule: TodayScheduleSlot[] = React.useMemo(() => {
     if (!dashboardData) return []
 
     const { regular, overrides } = dashboardData.schedule
+    const today = new Date()
+    const todayDayOfWeek = today.getDay() // 0 = Sunday, 1 = Monday, etc.
+    
+    // Convert to match backend dayOfWeek (assuming 1 = Monday, 7 = Sunday)
+    const backendDayOfWeek = todayDayOfWeek === 0 ? 7 : todayDayOfWeek
 
-    const visibleFixedSlots: TodayScheduleSlot[] = regular
+    // Filter regular schedule for today
+    const todayRegularSlots = regular.filter(slot => slot.dayOfWeek === backendDayOfWeek)
+    
+    // Filter overrides for today
+    const todayOverrides = overrides.filter(override => {
+      const overrideDate = new Date(override.overrideDate)
+      return overrideDate.toDateString() === today.toDateString()
+    })
+
+    const visibleFixedSlots: TodayScheduleSlot[] = todayRegularSlots
       .filter(
         (fixedSlot) =>
-          !overrides.some(
+          !todayOverrides.some(
             (overrideSlot) =>
               !overrideSlot.overrideType && // It's a "Nghỉ" override
               overrideSlot.startTime < fixedSlot.endTime &&
@@ -369,10 +403,10 @@ const DoctorDashboard: React.FC = () => {
       )
       .map((s) => ({ ...s, type: "fixed" }))
 
-    const visibleOverrideSlots: TodayScheduleSlot[] = overrides.map((o) => ({ ...o, type: "override" }))
+    const visibleOverrideSlots: TodayScheduleSlot[] = todayOverrides.map((o) => ({ ...o, type: "override" }))
 
     return [...visibleFixedSlots, ...visibleOverrideSlots].sort((a, b) => a.startTime.localeCompare(b.startTime))
-  }, [dashboardData]) // ✅ Chỉ tính toán lại khi dashboardData thay đổi
+  }, [dashboardData])
 
   if (isDashboardLoading && isAppointmentsLoading) {
     return <PageLoader />
@@ -454,6 +488,11 @@ const DoctorDashboard: React.FC = () => {
                       </span>
                     )}
                   </div>
+                  {dashboardData.summary.todayAppointments > 0 && (
+                    <span className={styles.statSubtext}>
+                      {dashboardData.summary.todayAppointments} cuộc hẹn hôm nay
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -469,6 +508,12 @@ const DoctorDashboard: React.FC = () => {
                     <span className={styles.statValue}>{completedAppointments.length}</span>
                     <span className={styles.statSubtext}>lịch khám</span>
                   </div>
+                  {dashboardData.summary.averageRating > 0 && (
+                    <span className={styles.statSubtext}>
+                      <i className="bi bi-star-fill" style={{ color: '#fbbf24', marginRight: '4px' }}></i>
+                      {dashboardData.summary.averageRating.toFixed(1)}/5.0
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -768,11 +813,31 @@ const DoctorDashboard: React.FC = () => {
                     style={{ animationDelay: `${index * 0.1}s` }}
                     onClick={() => navigate('/app/doctor/feedback')}
                   >
-                    <div className={styles.recordIcon}>
+                    <div className={styles.recordIcon} style={{ 
+                      background: review.rating >= 4 
+                        ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                        : review.rating >= 3
+                        ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                        : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                    }}>
                       <i className="bi bi-star-fill"></i>
                     </div>
                     <div className={styles.recordInfo}>
-                      <h5>{review.patientName}</h5>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <h5>{review.patientName}</h5>
+                        <div className={styles.ratingStars}>
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <i 
+                              key={i} 
+                              className={`bi ${i < review.rating ? 'bi-star-fill' : 'bi-star'}`}
+                              style={{ 
+                                color: i < review.rating ? '#fbbf24' : '#e5e7eb',
+                                fontSize: '12px'
+                              }}
+                            ></i>
+                          ))}
+                        </div>
+                      </div>
                       <p>{review.comment || "Bệnh nhân không để lại bình luận."}</p>
                       <span className={styles.recordDate}>
                         <i className="bi bi-calendar3"></i>

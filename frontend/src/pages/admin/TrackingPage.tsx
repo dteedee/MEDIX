@@ -507,11 +507,11 @@ export default function TrackingPage() {
                     </td>
                     {/* Đảm bảo timestamp được xử lý như UTC trước khi chuyển đổi sang múi giờ Việt Nam */}
                     {/* Nếu log.timestamp là "YYYY-MM-DDTHH:mm:ss" (không có Z), new Date() sẽ hiểu là giờ địa phương. */}
-                    {/* Thêm 'Z' để buộc hiểu là UTC. */}
-                    <td title={new Date(`${log.timestamp}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}>
-                      {new Date(`${log.timestamp}Z`).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })}
+                    {/* Không cần thêm 'Z' vì new Date() có thể tự xử lý chuỗi ISO 8601 */}
+                    <td title={new Date(log.timestamp).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}>
+                      {new Date(log.timestamp).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })}
                       <br />
-                      <small>{new Date(`${log.timestamp}Z`).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</small>
+                      <small>{new Date(log.timestamp).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</small>
                     </td>                    
                     <td>{log.userName || 'Unknown'}</td>
                     <td><span className={`${styles.actionBadge} ${getActionBadgeStyle(log.displayActionType)}`}>{log.displayActionType}</span></td>
@@ -615,7 +615,7 @@ export default function TrackingPage() {
                 <div className={styles.detailItem}><strong>Hành động:</strong> <span>{viewingLog.displayActionType}</span></div>
                 <div className={styles.detailItem}><strong>Đối tượng:</strong> <span>{viewingLog.entityType === 'RefreshToken' ? 'Login' : viewingLog.entityType}</span></div>
                 <div className={styles.detailItem}><strong>Người dùng:</strong> <span>{viewingLog.userName}</span></div>
-                <div className={styles.detailItem}><strong>Thời gian:</strong> <span>{new Date(`${viewingLog.timestamp}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span></div>
+                <div className={styles.detailItem}><strong>Thời gian:</strong> <span>{new Date(viewingLog.timestamp).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span></div>
               </div>
               <div className={styles.jsonContainer}> 
                 <div className={styles.jsonBox}> 

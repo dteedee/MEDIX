@@ -1,4 +1,4 @@
-﻿using Medix.API.Application.Util;
+﻿﻿using Medix.API.Application.Util;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.Community;
 using Medix.API.Business.Interfaces.UserManagement;
@@ -28,6 +28,8 @@ namespace Medix.API.Presentation.Controllers
         private readonly IDoctorService _doctorService;
         private readonly IPatientHealthReminderService _patientHealthReminderService;
         private readonly ISystemConfigurationService _systemConfigurationService;
+        private readonly IUserPromotionService _userPromotionService;
+        private readonly IPromotionService _promotionService;
         private const string PatientCancelRefundConfigKey = "APPOINTMENT_PATIENT_CANCEL_REFUND_PERCENT";
 
         public AppointmentController(
@@ -40,15 +42,13 @@ namespace Medix.API.Presentation.Controllers
             IEmailService emailService,
             IDoctorService doctorService,
             IPatientHealthReminderService patientHealthReminderService,
-            ISystemConfigurationService systemConfigurationService)
-        private readonly IUserPromotionService userPromotionService;
-        private readonly IPromotionService promotionService;
-
-        public AppointmentController(IAppointmentService service, IWalletService walletService, IWalletTransactionService walletTransactionService, IPatientService patientService, IUserService userService, INoticeSetupService noticeSetupService, IEmailService emailService, IDoctorService doctorService, IPatientHealthReminderService patientHealthReminderService, IUserPromotionService userPromotionService, IPromotionService promotionService)
+            ISystemConfigurationService systemConfigurationService,
+            IUserPromotionService userPromotionService,
+            IPromotionService promotionService)
         {
             _service = service;
             _walletService = walletService;
-            this.walletTransactionService = walletTransactionService;
+            this.walletTransactionService = walletTransactionService; // 'this' is redundant here but acceptable
             _patientService = patientService;
             _userService = userService;
             this.noticeSetupService = noticeSetupService;
@@ -56,8 +56,8 @@ namespace Medix.API.Presentation.Controllers
             _doctorService = doctorService;
             _patientHealthReminderService = patientHealthReminderService;
             _systemConfigurationService = systemConfigurationService;
-            this.userPromotionService = userPromotionService;
-            this.promotionService = promotionService;
+            _userPromotionService = userPromotionService;
+            _promotionService = promotionService;
         }
 
         [HttpGet]
@@ -160,18 +160,18 @@ namespace Medix.API.Presentation.Controllers
 
             if (dto.PromotionCode != null)
             {
-                var promotion = await promotionService.GetPromotionByCodeAsync(dto.PromotionCode);
+                var promotion = await _promotionService.GetPromotionByCodeAsync(dto.PromotionCode);
 
                promotion.UsedCount += 1;
              
-                await promotionService.UpdatePromotionAsync(promotion);
+                await _promotionService.UpdatePromotionAsync(promotion);
             }
 
             if (dto.UserPromotionID != null)
             {
 
 
-                await userPromotionService.DeactivatePromotionAsync(Guid.Parse(dto.UserPromotionID));
+                await _userPromotionService.DeactivatePromotionAsync(Guid.Parse(dto.UserPromotionID));
             }   
             await _patientHealthReminderService.SendHealthReminderAppointmentAsync(dto);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);

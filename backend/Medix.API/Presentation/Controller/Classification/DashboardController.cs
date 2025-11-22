@@ -23,6 +23,7 @@ namespace Medix.API.Presentation.Controller.Classification
             _service = service;
             _adminService = adminService;
             _managerService = managerService;
+        }
         private readonly ISpecializationService _specializationService;
         private readonly IAppointmentService appointmentService;
         private readonly IUserService _userService;

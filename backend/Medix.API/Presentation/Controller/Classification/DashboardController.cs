@@ -17,19 +17,15 @@ namespace Medix.API.Presentation.Controller.Classification
         private readonly IDoctorDashboardService _service;
         private readonly IAdminDashboardService _adminService;
         private readonly IManagerDashboardService _managerService;
-
-        public DashboardController(IDoctorDashboardService service, IAdminDashboardService adminService, IManagerDashboardService managerService)
-        {
-            _service = service;
-            _adminService = adminService;
-            _managerService = managerService;
         private readonly ISpecializationService _specializationService;
         private readonly IAppointmentService appointmentService;
         private readonly IUserService _userService;
 
-        public DashboardController(IDoctorDashboardService service, ISpecializationService specializationService, IAppointmentService appointmentService, IUserService userService)
+        public DashboardController(IDoctorDashboardService service, IAdminDashboardService adminService, IManagerDashboardService managerService, ISpecializationService specializationService, IAppointmentService appointmentService, IUserService userService)
         {
             _service = service;
+            _adminService = adminService;
+            _managerService = managerService;
             _specializationService = specializationService;
             this.appointmentService = appointmentService;
             _userService = userService;

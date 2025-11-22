@@ -380,7 +380,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     SearchTerm = ""
                 };
                 var doctors = await _doctorService.GetDoctorsAsync(query);
-                return Ok(doctors.Items);
+                return Ok(doctors);
             }
             catch (Exception ex)
             {

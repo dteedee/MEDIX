@@ -12,11 +12,13 @@ namespace Medix.API.Presentation.Controller.Classification
     {
         private readonly IDoctorDashboardService _service;
         private readonly IAdminDashboardService _adminService;
+        private readonly IManagerDashboardService _managerService;
 
-        public DashboardController(IDoctorDashboardService service, IAdminDashboardService adminService)
+        public DashboardController(IDoctorDashboardService service, IAdminDashboardService adminService, IManagerDashboardService managerService)
         {
             _service = service;
             _adminService = adminService;
+            _managerService = managerService;
         }
 
         [HttpGet("doctor/{doctorId}")]
@@ -44,6 +46,14 @@ namespace Medix.API.Presentation.Controller.Classification
         public async Task<IActionResult> GetAdminDashboard()
         {
             var result = await _adminService.GetDashboardAsync();
+            return Ok(result);
+        }
+
+        [HttpGet("manager")]
+        [Authorize(Roles = "Manager,Admin")]
+        public async Task<IActionResult> GetManagerDashboard()
+        {
+            var result = await _managerService.GetDashboardAsync();
             return Ok(result);
         }
     }

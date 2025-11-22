@@ -15,7 +15,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
             _userService = userService;
             _logger = logger;
         }
-
+   
         // View all users (basic info) including seeded/temp users in DB
         [HttpGet]
         public async Task<IActionResult> GetAll()

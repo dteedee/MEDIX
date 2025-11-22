@@ -79,9 +79,33 @@ namespace Medix.API.Business.Services.UserManagement
             };
         }
 
-       // ... (các using và khai báo khác trong file UserService.cs)
+        // ... (các using và khai báo khác trong file UserService.cs)
 
-public async Task<UserDto> CreateUserAsync(CreateUserDTO createUserDto, string password)
+        public async Task<UserGrowthDto> GetUserGrowthAsync(int year)
+        {
+            try
+            {
+                var monthly = (await _userRepository.GetMonthlyUserAndDoctorCountsAsync(year))
+                    .OrderBy(m => m.Month)
+                    .ToList();
+
+                var result = new UserGrowthDto
+                {
+                    Year = year,
+                    Monthly = monthly,
+                    TotalNewUsers = monthly.Sum(m => m.NewUsers),
+                    TotalNewDoctors = monthly.Sum(m => m.NewDoctors)
+                };
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+             return null;
+            }
+        }
+
+        public async Task<UserDto> CreateUserAsync(CreateUserDTO createUserDto, string password)
 {
     // Validate input
     if (await _userRepository.GetByUserNameAsync(createUserDto.UserName) != null)

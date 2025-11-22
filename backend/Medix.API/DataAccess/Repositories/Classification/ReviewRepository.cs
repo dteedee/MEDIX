@@ -70,5 +70,23 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .ToListAsync();
         }
 
+        public async Task<List<Review>> GetByAppointmentIdsAsync(IEnumerable<Guid> appointmentIds)
+        {
+            if (appointmentIds == null) return new List<Review>();
+
+            var ids = appointmentIds.Distinct().ToList();
+            if (ids.Count == 0) return new List<Review>();
+
+            return await _context.Reviews
+                .Include(r => r.Appointment)
+                    .ThenInclude(a => a.Doctor)
+                        .ThenInclude(d => d.User)
+                .Include(r => r.Appointment)
+                    .ThenInclude(a => a.Patient)
+                        .ThenInclude(p => p.User)
+                .Where(r => ids.Contains(r.AppointmentId))
+                .ToListAsync();
+        }
+
     }
 }

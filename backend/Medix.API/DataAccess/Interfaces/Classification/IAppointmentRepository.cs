@@ -1,4 +1,5 @@
-﻿﻿﻿﻿using Medix.API.Models.Entities;
+﻿using Medix.API.Models.DTOs;
+using Medix.API.Models.Entities;
 
 namespace Medix.API.DataAccess.Interfaces.Classification
 {
@@ -19,5 +20,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
 
         Task<Appointment> CreateApppointmentAsync(Appointment entity);
         Task<int> CountStatus(Guid id, string Status);
+
+        Task<List<MonthlyAppointmentTrendDto>> GetMonthlyAppointmentAndRevenueAsync(Guid? doctorId, int year);
     }
 }

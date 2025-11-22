@@ -129,9 +129,12 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
           className={`${styles.navItem} ${currentPage === 'transfer-transactions' ? styles.active : ''}`}
           onClick={() => setShowUserMenu(false)}
         >
+          
           <i className="bi bi-arrow-left-right"></i>
           {sidebarOpen && <span>Yêu cầu chuyển tiền</span>}
         </Link>
+  
+        
         <Link
           to="/app/manager/feedback"
           className={`${styles.navItem} ${currentPage === 'feedback' ? styles.active : ''}`}
@@ -139,6 +142,15 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
         >
           <i className="bi bi-chat-dots"></i>
           {sidebarOpen && <span>Quản lý phản hồi</span>}
+        </Link>
+
+        <Link
+          to="/app/manager/promotions"
+          className={`${styles.navItem} ${currentPage === 'promotions' ? styles.active : ''}`}
+          onClick={() => setShowUserMenu(false)}
+        >
+          <i className="bi bi-tag-fill"></i>
+          {sidebarOpen && <span>Khuyến mãi</span>}
         </Link>
       </nav>
 

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useToast } from '../../contexts/ToastContext'
+import dashboardService from '../../services/dashboardService'
+import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto } from '../../types/dashboard.types'
 import styles from '../../styles/manager/ReportsAndAnalytics.module.css'
 
 interface ReportData {
@@ -32,14 +34,54 @@ interface ReportData {
 
 export default function ReportsAndAnalytics() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [specializations, setSpecializations] = useState<SpecializationDistributionDto[]>([]);
+  const [appointmentTrends, setAppointmentTrends] = useState<AppointmentTrendsDto | null>(null);
+  const [userGrowth, setUserGrowth] = useState<UserGrowthDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedPeriod, setSelectedPeriod] = useState('30days');
   const [selectedReport, setSelectedReport] = useState('overview');
   const { showToast } = useToast();
 
   useEffect(() => {
     loadReportData();
-  }, [selectedPeriod]);
+    loadSpecializations();
+    loadAppointmentTrends();
+    loadUserGrowth();
+  }, [selectedPeriod, selectedYear]);
+
+  const loadSpecializations = async () => {
+    try {
+      const data = await dashboardService.getPopularSpecializations();
+      console.log('📊 Chuyên khoa phổ biến:', data);
+      setSpecializations(data);
+    } catch (error) {
+      console.error('Error loading specializations:', error);
+      showToast('Không thể tải dữ liệu chuyên khoa', 'error');
+    }
+  };
+
+  const loadAppointmentTrends = async () => {
+    try {
+      const data = await dashboardService.getAppointmentTrends(undefined, selectedYear);
+      console.log('📈 Xu hướng lịch hẹn:', data);
+      setAppointmentTrends(data);
+    } catch (error) {
+      console.error('Error loading appointment trends:', error);
+      showToast('Không thể tải dữ liệu xu hướng lịch hẹn', 'error');
+    }
+  };
+
+  const loadUserGrowth = async () => {
+    try {
+      const data = await dashboardService.getUserGrowth(selectedYear);
+      console.log('👥 Tăng trưởng người dùng:', data);
+      setUserGrowth(data);
+    } catch (error) {
+      console.error('Error loading user growth:', error);
+      showToast('Không thể tải dữ liệu tăng trưởng người dùng', 'error');
+    }
+  };
 
   const loadReportData = async () => {
     setLoading(true);
@@ -166,17 +208,7 @@ export default function ReportsAndAnalytics() {
         </div>
         <div className={styles.headerRight}>
           <div className={styles.periodSelector}>
-            <label>Khoảng thời gian:</label>
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-              className={styles.periodSelect}
-            >
-              <option value="7days">7 ngày qua</option>
-              <option value="30days">30 ngày qua</option>
-              <option value="90days">90 ngày qua</option>
-              <option value="1year">1 năm qua</option>
-            </select>
+           
           </div>
           <button className={styles.exportButton} onClick={handleExportReport}>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -310,92 +342,173 @@ export default function ReportsAndAnalytics() {
                 <p>Phân bố số lượng bác sĩ theo chuyên khoa</p>
               </div>
               <div className={styles.chartContent}>
-                <div className={styles.specialtyList}>
-                  {reportData.topSpecialties.map((specialty, index) => (
-                    <div key={specialty.name} className={styles.specialtyItem}>
-                      <div className={styles.specialtyInfo}>
-                        <span className={styles.specialtyRank}>#{index + 1}</span>
-                        <span className={styles.specialtyName}>{specialty.name}</span>
-                        <span className={styles.specialtyCount}>{specialty.count} bác sĩ</span>
-                      </div>
-                      <div className={styles.specialtyBar}>
-                        <div 
-                          className={styles.specialtyBarFill}
-                          style={{ width: `${specialty.percentage}%` }}
-                        ></div>
-                      </div>
-                      <span className={styles.specialtyPercentage}>{specialty.percentage}%</span>
-                    </div>
-                  ))}
-                </div>
+                {specializations.length > 0 ? (
+                  <div className={styles.specialtyList}>
+                    {specializations
+                      .filter(spec => spec.doctorCount > 0)
+                      .sort((a, b) => b.doctorCount - a.doctorCount)
+                      .map((specialty, index) => (
+                        <div key={specialty.id} className={styles.specialtyItem}>
+                          <div className={styles.specialtyInfo}>
+                            <span className={styles.specialtyRank}>#{index + 1}</span>
+                            <span className={styles.specialtyName}>{specialty.name}</span>
+                            <span className={styles.specialtyCount}>{specialty.doctorCount} bác sĩ</span>
+                          </div>
+                          <div className={styles.specialtyBar}>
+                            <div 
+                              className={styles.specialtyBarFill}
+                              style={{ width: `${specialty.percentage}%` }}
+                            ></div>
+                          </div>
+                          <span className={styles.specialtyPercentage}>{specialty.percentage.toFixed(1)}%</span>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className={styles.emptyState}>
+                    <i className="bi bi-inbox"></i>
+                    <p>Không có dữ liệu chuyên khoa</p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Appointment Trends */}
             <div className={styles.chartCard}>
               <div className={styles.chartHeader}>
-                <h3>Xu hướng lịch hẹn</h3>
-                <p>Biểu đồ lịch hẹn và doanh thu theo tháng</p>
+                <div>
+                  <h3>Xu hướng lịch hẹn</h3>
+                  <p>Biểu đồ lịch hẹn và doanh thu theo tháng</p>
+                </div>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className={styles.yearSelect}
+                >
+                  <option value={2023}>2023</option>
+                  <option value={2024}>2024</option>
+                  <option value={2025}>2025</option>
+                </select>
               </div>
               <div className={styles.chartContent}>
-                <div className={styles.trendChart}>
-                  {reportData.appointmentTrends.map((trend, index) => (
-                    <div key={trend.month} className={styles.trendItem}>
-                      <div className={styles.trendBar}>
-                        <div 
-                          className={styles.trendBarFill}
-                          style={{ 
-                            height: `${(trend.appointments / Math.max(...reportData.appointmentTrends.map(t => t.appointments))) * 100}%` 
-                          }}
-                        ></div>
+                {appointmentTrends && appointmentTrends.monthly.length > 0 ? (
+                  <>
+                    <div className={styles.trendSummary}>
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>Tổng lịch hẹn:</span>
+                        <span className={styles.summaryValue}>{appointmentTrends.totalAppointments}</span>
                       </div>
-                      <div className={styles.trendInfo}>
-                        <span className={styles.trendMonth}>{trend.month}</span>
-                        <span className={styles.trendAppointments}>{trend.appointments} lịch hẹn</span>
-                        <span className={styles.trendRevenue}>{formatCurrency(trend.revenue)}</span>
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>Tổng doanh thu:</span>
+                        <span className={styles.summaryValue}>{formatCurrency(appointmentTrends.totalRevenue)}</span>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div className={styles.trendChart}>
+                      {appointmentTrends.monthly.map((trend) => {
+                        const monthName = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'][trend.month - 1];
+                        const maxAppointments = Math.max(...appointmentTrends.monthly.map(t => t.appointmentCount), 1);
+                        
+                        return (
+                          <div key={trend.month} className={styles.trendItem}>
+                            <div className={styles.trendBar}>
+                              <div 
+                                className={styles.trendBarFill}
+                                style={{ 
+                                  height: `${(trend.appointmentCount / maxAppointments) * 100}%` 
+                                }}
+                              ></div>
+                            </div>
+                            <div className={styles.trendInfo}>
+                              <span className={styles.trendMonth}>{monthName}</span>
+                              <span className={styles.trendAppointments}>{trend.appointmentCount} lịch hẹn</span>
+                              <span className={styles.trendRevenue}>{formatCurrency(trend.totalRevenue)}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <div className={styles.emptyState}>
+                    <i className="bi bi-inbox"></i>
+                    <p>Không có dữ liệu xu hướng lịch hẹn</p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* User Growth */}
             <div className={styles.chartCard}>
               <div className={styles.chartHeader}>
-                <h3>Tăng trưởng người dùng</h3>
-                <p>Số lượng người dùng và bác sĩ mới theo tháng</p>
+                <div>
+                  <h3>Tăng trưởng người dùng</h3>
+                  <p>Số lượng người dùng và bác sĩ mới theo tháng</p>
+                </div>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className={styles.yearSelect}
+                >
+                  <option value={2023}>2023</option>
+                  <option value={2024}>2024</option>
+                  <option value={2025}>2025</option>
+                </select>
               </div>
               <div className={styles.chartContent}>
-                <div className={styles.growthChart}>
-                  {reportData.userGrowth.map((growth, index) => (
-                    <div key={growth.month} className={styles.growthItem}>
-                      <div className={styles.growthBars}>
-                        <div className={styles.growthBar}>
-                          <div 
-                            className={styles.growthBarFill}
-                            style={{ 
-                              height: `${(growth.users / Math.max(...reportData.userGrowth.map(g => g.users))) * 100}%` 
-                            }}
-                          ></div>
-                        </div>
-                        <div className={styles.growthBar}>
-                          <div 
-                            className={styles.growthBarFill2}
-                            style={{ 
-                              height: `${(growth.doctors / Math.max(...reportData.userGrowth.map(g => g.doctors))) * 100}%` 
-                            }}
-                          ></div>
-                        </div>
+                {userGrowth && userGrowth.monthly.length > 0 ? (
+                  <>
+                    <div className={styles.trendSummary}>
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>Tổng người dùng mới:</span>
+                        <span className={styles.summaryValue}>{userGrowth.totalNewUsers}</span>
                       </div>
-                      <div className={styles.growthInfo}>
-                        <span className={styles.growthMonth}>{growth.month}</span>
-                        <span className={styles.growthUsers}>{growth.users} người dùng</span>
-                        <span className={styles.growthDoctors}>{growth.doctors} bác sĩ</span>
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>Tổng bác sĩ mới:</span>
+                        <span className={styles.summaryValue}>{userGrowth.totalNewDoctors}</span>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div className={styles.growthChart}>
+                      {userGrowth.monthly.map((growth) => {
+                        const monthName = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'][growth.month - 1];
+                        const maxUsers = Math.max(...userGrowth.monthly.map(g => g.newUsers), 1);
+                        const maxDoctors = Math.max(...userGrowth.monthly.map(g => g.newDoctors), 1);
+                        
+                        return (
+                          <div key={growth.month} className={styles.growthItem}>
+                            <div className={styles.growthBars}>
+                              <div className={styles.growthBar}>
+                                <div 
+                                  className={styles.growthBarFill}
+                                  style={{ 
+                                    height: `${(growth.newUsers / maxUsers) * 100}%` 
+                                  }}
+                                ></div>
+                              </div>
+                              <div className={styles.growthBar}>
+                                <div 
+                                  className={styles.growthBarFill2}
+                                  style={{ 
+                                    height: `${(growth.newDoctors / maxDoctors) * 100}%` 
+                                  }}
+                                ></div>
+                              </div>
+                            </div>
+                            <div className={styles.growthInfo}>
+                              <span className={styles.growthMonth}>{monthName}</span>
+                              <span className={styles.growthUsers}>{growth.newUsers} người dùng</span>
+                              <span className={styles.growthDoctors}>{growth.newDoctors} bác sĩ</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <div className={styles.emptyState}>
+                    <i className="bi bi-inbox"></i>
+                    <p>Không có dữ liệu tăng trưởng người dùng</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

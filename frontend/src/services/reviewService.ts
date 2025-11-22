@@ -1,6 +1,23 @@
 import { apiClient } from '../lib/apiClient';
 import { DoctorReview } from '../types/review.types';
 
+export interface CreateReviewDto {
+  appointmentId: string;
+  rating: number;
+  comment?: string;
+}
+
+export interface CreateReviewResponse {
+  id: string;
+  appointmentId: string;
+  patientId: string;
+  doctorId: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  message?: string;
+}
+
 const getReviewsForCurrentDoctor = async (): Promise<DoctorReview[]> => {
   try {
     // API sẽ tự xác định bác sĩ dựa trên token xác thực
@@ -12,6 +29,17 @@ const getReviewsForCurrentDoctor = async (): Promise<DoctorReview[]> => {
   }
 };
 
+const createReview = async (dto: CreateReviewDto): Promise<CreateReviewResponse> => {
+  try {
+    const response = await apiClient.post<CreateReviewResponse>('/Review', dto);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating review:', error);
+    throw error;
+  }
+};
+
 export const reviewService = {
   getReviewsForCurrentDoctor,
+  createReview,
 };

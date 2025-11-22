@@ -8,6 +8,7 @@ namespace Medix.API.Presentation.Controller.Classification
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles ="Manager")]
     public class PromotionController : ControllerBase
     {
         private readonly IPromotionService _promotionService;

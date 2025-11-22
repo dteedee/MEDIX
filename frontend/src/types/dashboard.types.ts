@@ -34,3 +34,15 @@ export interface UserGrowthDto {
     monthly: MonthlyUserGrowthDto[];
 }
 
+export interface StatDto {
+    total: number;
+    growth: number; // percentage, e.g. 12.5 or -86.2
+}
+
+export interface ManagerDashboardSummaryDto {
+    users: StatDto;
+    doctors: StatDto;
+    appointments: StatDto;
+    revenue: StatDto;
+}
+

@@ -65,6 +65,20 @@ namespace Medix.API.Presentation.Controller.Classification
             return Ok(trends);
         }
 
+        [HttpGet("summary")]
+        public async Task<IActionResult> GetSummary()
+        {
+            try
+            {
+                var dto = await _userService.GetSummaryAsync();
+                return Ok(dto);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Error generating dashboard summary." });
+            }
+        }
+
         [HttpGet("doctor")]
         public async Task<IActionResult> GetMyDashboard()
         {

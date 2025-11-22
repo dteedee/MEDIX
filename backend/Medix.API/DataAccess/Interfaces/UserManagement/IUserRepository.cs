@@ -1,4 +1,5 @@
 using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
 using System;
 using System.Collections.Generic;
@@ -26,5 +27,11 @@ namespace Medix.API.DataAccess.Interfaces.UserManagement
         Task<IEnumerable<User>> SearchByNameAsync(string keyword);
 
         Task<List<MonthlyUserGrowthDto>> GetMonthlyUserAndDoctorCountsAsync(int year);
+
+        Task<ManagerDashboardSummaryDto> GetSummaryAsync(
+         DateTime startCurrentPeriodUtc,
+         DateTime endCurrentPeriodUtc,
+         DateTime startPreviousPeriodUtc,
+         DateTime endPreviousPeriodUtc);
     }
 }

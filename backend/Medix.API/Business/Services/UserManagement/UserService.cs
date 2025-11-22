@@ -4,6 +4,7 @@ using Medix.API.Models.Entities;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Exceptions;
 using AutoMapper;
+using Medix.API.Models.DTOs.Doctor;
 // using Medix.API.Business.Util; // Removed for performance
 
 namespace Medix.API.Business.Services.UserManagement
@@ -22,6 +23,25 @@ namespace Medix.API.Business.Services.UserManagement
             _patientRepository = patientRepository;
             _userRoleRepository = userRoleRepository;
             _mapper = mapper;
+        }
+
+        public async Task<ManagerDashboardSummaryDto> GetSummaryAsync()
+        {
+            try
+            {
+                var now = DateTime.UtcNow;
+                var startCurrent = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                var startPrevious = startCurrent.AddMonths(-1);
+                var endCurrent = startCurrent.AddMonths(1).AddTicks(-1);
+                var endPrevious = startCurrent.AddTicks(-1);
+
+                var summary = await _userRepository.GetSummaryAsync(startCurrent, endCurrent, startPrevious, endPrevious);
+                return summary;
+            }
+            catch (Exception ex)
+            {
+              return null;
+            }
         }
 
         public async Task<UserDto> RegisterUserAsync(RegisterRequestPatientDTO registerDto)

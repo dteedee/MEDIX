@@ -63,50 +63,51 @@ export const PatientAppointments: React.FC = () => {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isViewingExistingReview, setIsViewingExistingReview] = useState(false);
 
-  // Load appointments from API
-  useEffect(() => {
-    const loadAppointments = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await appointmentService.getPatientAppointments();
+  // Load appointments function (moved outside useEffect to be reusable)
+  const loadAppointments = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await appointmentService.getPatientAppointments();
+      
+      const transformedData: Appointment[] = data.map(apt => {
+        const startDate = new Date(apt.appointmentStartTime);
         
-        const transformedData: Appointment[] = data.map(apt => {
-          const startDate = new Date(apt.appointmentStartTime);
-          
-          return {
-            id: apt.id,
-            doctorName: apt.doctorName,
-            doctorTitle: '',
-            specialty: '',
-            date: startDate.toISOString().split('T')[0],
-            time: `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`,
-            room: '',
-            fee: apt.consultationFee,
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.doctorName)}&background=667eea&color=fff`,
-            doctorID: apt.doctorID,
-            appointmentStartTime: apt.appointmentStartTime,
-            appointmentEndTime: apt.appointmentEndTime,
-            statusCode: apt.statusCode,
-            statusDisplayName: apt.statusDisplayName,
-            paymentStatusCode: apt.paymentStatusCode,
-            totalAmount: apt.totalAmount,
-            medicalInfo: apt.medicalInfo,
-            patientReview: apt.patientReview,
-            patientRating: apt.patientRating,
-          };
-        });
-        
-        setAppointments(transformedData);
-        setFilteredAppointments(transformedData);
-      } catch (err: any) {
-        console.error('Error loading appointments:', err);
-        setError(err.response?.data?.message || 'Không thể tải danh sách lịch hẹn');
-      } finally {
-        setLoading(false);
-      }
-    };
+        return {
+          id: apt.id,
+          doctorName: apt.doctorName,
+          doctorTitle: '',
+          specialty: '',
+          date: startDate.toISOString().split('T')[0],
+          time: `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`,
+          room: '',
+          fee: apt.consultationFee,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.doctorName)}&background=667eea&color=fff`,
+          doctorID: apt.doctorID,
+          appointmentStartTime: apt.appointmentStartTime,
+          appointmentEndTime: apt.appointmentEndTime,
+          statusCode: apt.statusCode,
+          statusDisplayName: apt.statusDisplayName,
+          paymentStatusCode: apt.paymentStatusCode,
+          totalAmount: apt.totalAmount,
+          medicalInfo: apt.medicalInfo,
+          patientReview: apt.patientReview,
+          patientRating: apt.patientRating,
+        };
+      });
+      
+      setAppointments(transformedData);
+      setFilteredAppointments(transformedData);
+    } catch (err: any) {
+      console.error('Error loading appointments:', err);
+      setError(err.response?.data?.message || 'Não thể tải danh sách lịch hẹn');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Load appointments from API on mount
+  useEffect(() => {
     loadAppointments();
   }, []);
 
@@ -291,6 +292,9 @@ export const PatientAppointments: React.FC = () => {
 
       // Mostrar mensagem de sucesso
       alert('Cảm ơn bạn đã đánh giá! Đánh giá của bạn đã được gửi thành công.');
+      
+      // Recarregar a lista de appointments para atualizar o status
+      await loadAppointments();
       
     } catch (error: any) {
       console.error('Error submitting review:', error);

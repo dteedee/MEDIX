@@ -1,4 +1,5 @@
 using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
 using System;
 using System.Collections.Generic;
@@ -30,5 +31,6 @@ namespace Medix.API.Business.Interfaces.UserManagement
         Task<User?> GetUserAsync(Guid userId);
 
         Task<UserGrowthDto> GetUserGrowthAsync(int year);
+        Task<ManagerDashboardSummaryDto> GetSummaryAsync();
     }
 }

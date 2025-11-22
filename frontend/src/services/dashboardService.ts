@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto } from "../types/dashboard.types";
+import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto, ManagerDashboardSummaryDto } from "../types/dashboard.types";
 
 class DashboardService {
     async getPopularSpecializations(): Promise<SpecializationDistributionDto[]> {
@@ -39,6 +39,16 @@ class DashboardService {
             return response.data;
         } catch (error: any) {
             console.error('Get user growth error:', error);
+            throw error;
+        }
+    }
+
+    async getSummary(): Promise<ManagerDashboardSummaryDto> {
+        try {
+            const response = await apiClient.get<ManagerDashboardSummaryDto>('/dashboard/summary');
+            return response.data;
+        } catch (error: any) {
+            console.error('Get dashboard summary error:', error);
             throw error;
         }
     }

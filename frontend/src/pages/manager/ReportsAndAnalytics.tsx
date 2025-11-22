@@ -1,39 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useToast } from '../../contexts/ToastContext'
 import dashboardService from '../../services/dashboardService'
-import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto } from '../../types/dashboard.types'
+import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto, ManagerDashboardSummaryDto } from '../../types/dashboard.types'
 import styles from '../../styles/manager/ReportsAndAnalytics.module.css'
 
-interface ReportData {
-  totalUsers: number;
-  totalDoctors: number;
-  totalAppointments: number;
-  totalRevenue: number;
-  monthlyGrowth: {
-    users: number;
-    doctors: number;
-    appointments: number;
-    revenue: number;
-  };
-  topSpecialties: Array<{
-    name: string;
-    count: number;
-    percentage: number;
-  }>;
-  appointmentTrends: Array<{
-    month: string;
-    appointments: number;
-    revenue: number;
-  }>;
-  userGrowth: Array<{
-    month: string;
-    users: number;
-    doctors: number;
-  }>;
-}
-
 export default function ReportsAndAnalytics() {
-  const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [summary, setSummary] = useState<ManagerDashboardSummaryDto | null>(null);
   const [specializations, setSpecializations] = useState<SpecializationDistributionDto[]>([]);
   const [appointmentTrends, setAppointmentTrends] = useState<AppointmentTrendsDto | null>(null);
   const [userGrowth, setUserGrowth] = useState<UserGrowthDto | null>(null);
@@ -44,9 +16,9 @@ export default function ReportsAndAnalytics() {
   const { showToast } = useToast();
 
   useEffect(() => {
-    loadReportData();
+    loadSummary();
     loadSpecializations();
-    loadAppointmentTrends();
+    loadAppointmentTrends();  
     loadUserGrowth();
   }, [selectedPeriod, selectedYear]);
 
@@ -83,54 +55,16 @@ export default function ReportsAndAnalytics() {
     }
   };
 
-  const loadReportData = async () => {
+  const loadSummary = async () => {
     setLoading(true);
     try {
-      // Mock data - replace with actual API calls
-      const mockData: ReportData = {
-        totalUsers: 1247,
-        totalDoctors: 89,
-        totalAppointments: 3456,
-        totalRevenue: 1250000000,
-        monthlyGrowth: {
-          users: 12.5,
-          doctors: 5.2,
-          appointments: 8.3,
-          revenue: 15.7
-        },
-        topSpecialties: [
-          { name: 'Nội khoa', count: 156, percentage: 25.3 },
-          { name: 'Nhi khoa', count: 134, percentage: 21.7 },
-          { name: 'Sản phụ khoa', count: 98, percentage: 15.9 },
-          { name: 'Tim mạch', count: 87, percentage: 14.1 },
-          { name: 'Xương khớp', count: 76, percentage: 12.3 },
-          { name: 'Thần kinh', count: 65, percentage: 10.5 }
-        ],
-        appointmentTrends: [
-          { month: 'Tháng 1', appointments: 280, revenue: 98000000 },
-          { month: 'Tháng 2', appointments: 320, revenue: 112000000 },
-          { month: 'Tháng 3', appointments: 290, revenue: 101500000 },
-          { month: 'Tháng 4', appointments: 350, revenue: 122500000 },
-          { month: 'Tháng 5', appointments: 380, revenue: 133000000 },
-          { month: 'Tháng 6', appointments: 420, revenue: 147000000 }
-        ],
-        userGrowth: [
-          { month: 'Tháng 1', users: 45, doctors: 3 },
-          { month: 'Tháng 2', users: 52, doctors: 4 },
-          { month: 'Tháng 3', users: 48, doctors: 2 },
-          { month: 'Tháng 4', users: 61, doctors: 5 },
-          { month: 'Tháng 5', users: 67, doctors: 3 },
-          { month: 'Tháng 6', users: 73, doctors: 4 }
-        ]
-      };
-
-      setTimeout(() => {
-        setReportData(mockData);
-        setLoading(false);
-      }, 1000);
+      const data = await dashboardService.getSummary();
+      console.log('📊 Resumo do Dashboard:', data);
+      setSummary(data);
+      setLoading(false);
     } catch (error) {
-      console.error('Error loading report data:', error);
-      showToast('Không thể tải dữ liệu báo cáo', 'error');
+      console.error('Error loading summary:', error);
+      showToast('Không thể tải dữ liệu tóm tắt', 'error');
       setLoading(false);
     }
   };
@@ -187,7 +121,7 @@ export default function ReportsAndAnalytics() {
     );
   }
 
-  if (!reportData) {
+  if (!summary) {
     return (
       <div className={styles.container}>
         <div className={styles.errorState}>
@@ -221,39 +155,7 @@ export default function ReportsAndAnalytics() {
         </div>
       </div>
 
-      {/* Report Type Selector */}
-      <div className={styles.reportTypeSelector}>
-        <button
-          className={`${styles.reportTypeButton} ${selectedReport === 'overview' ? styles.active : ''}`}
-          onClick={() => setSelectedReport('overview')}
-        >
-          Tổng quan
-        </button>
-        <button
-          className={`${styles.reportTypeButton} ${selectedReport === 'users' ? styles.active : ''}`}
-          onClick={() => setSelectedReport('users')}
-        >
-          Người dùng
-        </button>
-        <button
-          className={`${styles.reportTypeButton} ${selectedReport === 'doctors' ? styles.active : ''}`}
-          onClick={() => setSelectedReport('doctors')}
-        >
-          Bác sĩ
-        </button>
-        <button
-          className={`${styles.reportTypeButton} ${selectedReport === 'appointments' ? styles.active : ''}`}
-          onClick={() => setSelectedReport('appointments')}
-        >
-          Lịch hẹn
-        </button>
-        <button
-          className={`${styles.reportTypeButton} ${selectedReport === 'revenue' ? styles.active : ''}`}
-          onClick={() => setSelectedReport('revenue')}
-        >
-          Doanh thu
-        </button>
-      </div>
+      
 
       {/* Overview Report */}
       {selectedReport === 'overview' && (
@@ -269,10 +171,10 @@ export default function ReportsAndAnalytics() {
               </div>
               <div className={styles.metricContent}>
                 <div className={styles.metricLabel}>Tổng người dùng</div>
-                <div className={styles.metricValue}>{formatNumber(reportData.totalUsers)}</div>
-                <div className={styles.metricGrowth} style={{ color: getGrowthColor(reportData.monthlyGrowth.users) }}>
-                  {getGrowthIcon(reportData.monthlyGrowth.users)}
-                  <span>+{reportData.monthlyGrowth.users}%</span>
+                <div className={styles.metricValue}>{formatNumber(summary.users.total)}</div>
+                <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.users.growth) }}>
+                  {getGrowthIcon(summary.users.growth)}
+                  <span>{summary.users.growth > 0 ? '+' : ''}{summary.users.growth.toFixed(1)}%</span>
                 </div>
               </div>
             </div>
@@ -288,10 +190,10 @@ export default function ReportsAndAnalytics() {
               </div>
               <div className={styles.metricContent}>
                 <div className={styles.metricLabel}>Tổng bác sĩ</div>
-                <div className={styles.metricValue}>{formatNumber(reportData.totalDoctors)}</div>
-                <div className={styles.metricGrowth} style={{ color: getGrowthColor(reportData.monthlyGrowth.doctors) }}>
-                  {getGrowthIcon(reportData.monthlyGrowth.doctors)}
-                  <span>+{reportData.monthlyGrowth.doctors}%</span>
+                <div className={styles.metricValue}>{formatNumber(summary.doctors.total)}</div>
+                <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.doctors.growth) }}>
+                  {getGrowthIcon(summary.doctors.growth)}
+                  <span>{summary.doctors.growth > 0 ? '+' : ''}{summary.doctors.growth.toFixed(1)}%</span>
                 </div>
               </div>
             </div>
@@ -307,10 +209,10 @@ export default function ReportsAndAnalytics() {
               </div>
               <div className={styles.metricContent}>
                 <div className={styles.metricLabel}>Tổng lịch hẹn</div>
-                <div className={styles.metricValue}>{formatNumber(reportData.totalAppointments)}</div>
-                <div className={styles.metricGrowth} style={{ color: getGrowthColor(reportData.monthlyGrowth.appointments) }}>
-                  {getGrowthIcon(reportData.monthlyGrowth.appointments)}
-                  <span>+{reportData.monthlyGrowth.appointments}%</span>
+                <div className={styles.metricValue}>{formatNumber(summary.appointments.total)}</div>
+                <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.appointments.growth) }}>
+                  {getGrowthIcon(summary.appointments.growth)}
+                  <span>{summary.appointments.growth > 0 ? '+' : ''}{summary.appointments.growth.toFixed(1)}%</span>
                 </div>
               </div>
             </div>
@@ -324,10 +226,10 @@ export default function ReportsAndAnalytics() {
               </div>
               <div className={styles.metricContent}>
                 <div className={styles.metricLabel}>Tổng doanh thu</div>
-                <div className={styles.metricValue}>{formatCurrency(reportData.totalRevenue)}</div>
-                <div className={styles.metricGrowth} style={{ color: getGrowthColor(reportData.monthlyGrowth.revenue) }}>
-                  {getGrowthIcon(reportData.monthlyGrowth.revenue)}
-                  <span>+{reportData.monthlyGrowth.revenue}%</span>
+                <div className={styles.metricValue}>{formatCurrency(summary.revenue.total)}</div>
+                <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.revenue.growth) }}>
+                  {getGrowthIcon(summary.revenue.growth)}
+                  <span>{summary.revenue.growth > 0 ? '+' : ''}{summary.revenue.growth.toFixed(1)}%</span>
                 </div>
               </div>
             </div>

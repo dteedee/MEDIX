@@ -1,6 +1,8 @@
 using CloudinaryDotNet.Actions;
+using Medix.API.Application.Util;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -192,5 +194,80 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
         public async Task<bool> ExistsByIdentificationNumberAsync(string identificationNumber) => await _context.Users
             .AnyAsync(u => u.IdentificationNumber == identificationNumber);
 
+        public async Task<ManagerDashboardSummaryDto> GetSummaryAsync(
+        DateTime startCurrentPeriodUtc,
+        DateTime endCurrentPeriodUtc,
+        DateTime startPreviousPeriodUtc,
+        DateTime endPreviousPeriodUtc)
+        {
+            // NOTE: avoid running multiple EF queries concurrently on the same DbContext.
+            // Execute queries sequentially to prevent "second operation started" exceptions.
+
+            // Users
+            var totalUsers = await _context.Users.AsNoTracking().LongCountAsync();
+            var newUsersCurrent = await _context.Users.AsNoTracking()
+                .LongCountAsync(u => u.CreatedAt >= startCurrentPeriodUtc && u.CreatedAt <= endCurrentPeriodUtc);
+            var newUsersPrev = await _context.Users.AsNoTracking()
+                .LongCountAsync(u => u.CreatedAt >= startPreviousPeriodUtc && u.CreatedAt <= endPreviousPeriodUtc);
+
+            // Doctors
+            var totalDoctors = await _context.Doctors.AsNoTracking().LongCountAsync();
+            var newDoctorsCurrent = await _context.Doctors.AsNoTracking()
+                .LongCountAsync(d => d.CreatedAt >= startCurrentPeriodUtc && d.CreatedAt <= endCurrentPeriodUtc);
+            var newDoctorsPrev = await _context.Doctors.AsNoTracking()
+                .LongCountAsync(d => d.CreatedAt >= startPreviousPeriodUtc && d.CreatedAt <= endPreviousPeriodUtc);
+
+            // Appointments
+            var totalAppointments = await _context.Appointments.AsNoTracking().LongCountAsync();
+            var apptCurrent = await _context.Appointments.AsNoTracking()
+                .LongCountAsync(a => a.CreatedAt >= startCurrentPeriodUtc && a.CreatedAt <= endCurrentPeriodUtc);
+            var apptPrev = await _context.Appointments.AsNoTracking()
+                .LongCountAsync(a => a.CreatedAt >= startPreviousPeriodUtc && a.CreatedAt <= endPreviousPeriodUtc);
+
+            // Revenue: use WalletTransactions related to appointments and with Status == "Completed"
+            var revenueTotal = (await _context.WalletTransactions.AsNoTracking()
+                .Where(wt => wt.TransactionTypeCode== "AppointmentPayment" && wt.Status == "Completed")
+                .Select(wt => (decimal?)wt.Amount)
+                .SumAsync()) ?? 0m;
+
+            var revenueCurrent = (await _context.WalletTransactions.AsNoTracking()
+                .Where(wt => wt.TransactionTypeCode == "AppointmentPayment" && wt.Status == "Completed"
+                             && wt.TransactionDate >= startCurrentPeriodUtc && wt.TransactionDate <= endCurrentPeriodUtc)
+                .Select(wt => (decimal?)wt.Amount)
+                .SumAsync()) ?? 0m;
+
+            var revenuePrev = (await _context.WalletTransactions.AsNoTracking()
+                .Where(wt => wt.TransactionTypeCode == "AppointmentPayment" && wt.Status == "Completed"
+                             && wt.TransactionDate >= startPreviousPeriodUtc && wt.TransactionDate <= endPreviousPeriodUtc)
+                .Select(wt => (decimal?)wt.Amount)
+                .SumAsync()) ?? 0m;
+
+            var dto = new ManagerDashboardSummaryDto
+            {
+                Users = new StatDto
+                {
+                    Total = totalUsers,
+                    Growth = GrowthPercentage.CalculateGrowthPercentage(newUsersPrev, newUsersCurrent)
+                },
+                Doctors = new StatDto
+                {
+                    Total = totalDoctors,
+                    Growth = GrowthPercentage.CalculateGrowthPercentage(newDoctorsPrev, newDoctorsCurrent)
+                },
+                Appointments = new StatDto
+                {
+                    Total = totalAppointments,
+                    Growth = GrowthPercentage.CalculateGrowthPercentage(apptPrev, apptCurrent)
+                },
+                Revenue = new StatDto
+                {
+                    // keep choosing how to present revenue.total: here we return current period revenue
+                    Total = (long)revenueCurrent,
+                    Growth = GrowthPercentage.CalculateGrowthPercentage(revenuePrev, revenueCurrent)
+                }
+            };
+
+            return dto;
+        }
     }
 }

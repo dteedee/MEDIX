@@ -15,41 +15,89 @@ namespace Medix.API.DataAccess.Repositories.Classification
         }
         public async Task<List<MonthlyAppointmentTrendDto>> GetMonthlyAppointmentAndRevenueAsync(Guid? doctorId, int year)
         {
-            // Appointments query (restrict by year, optional doctor)
-            var apptQuery = _context.Appointments
+            const string appointmentStatus = "Completed";
+            const string appointmentPaymentStatus = "Paid";
+
+            const string walletTransactionType = "AppointmentPayment";
+            const string walletTransactionStatus = "Completed";
+
+            // base appointment query for the year (optionally scoped to doctor)
+            var baseAppts = _context.Appointments
                 .AsNoTracking()
                 .Where(a => a.AppointmentStartTime.Year == year
                             && (doctorId == null || a.DoctorId == doctorId));
 
-            var apptGrouped = await apptQuery
+            // 1) Appointment counts per month (all appointments in the year)
+            var apptCounts = await baseAppts
                 .GroupBy(a => a.AppointmentStartTime.Month)
-                .Select(g => new
-                {
-                    Month = g.Key,
-                    Count = g.Count(),
-                    AppointmentRevenue = g
-                        .Where(a => a.StatusCode == "Completed" && a.PaymentStatusCode == "Paid")
-                        .Sum(a => (decimal?)a.TotalAmount) ?? 0m
-                })
+                .Select(g => new { Month = g.Key, Count = g.Count() })
                 .ToListAsync();
 
-            // Wallet transactions related to appointments (use RelatedAppointmentId navigation)
+            // 2) Wallet transactions for the year (filtered by transaction type + status)
             var wtQuery = _context.WalletTransactions
                 .AsNoTracking()
-                .Where(wt => wt.RelatedAppointmentId != null
-                             && wt.TransactionDate.Year == year
-                             && (doctorId == null || wt.RelatedAppointment != null && wt.RelatedAppointment.DoctorId == doctorId));
+                .Where(wt =>
+                    wt.TransactionTypeCode == walletTransactionType &&
+                    wt.Status == walletTransactionStatus &&
+                    wt.TransactionDate.Year == year);
 
+            // If doctorId provided, join to appointments to ensure the wallet tx belongs to the doctor's appointment
+            if (doctorId != null)
+            {
+                wtQuery = wtQuery.Join(
+                        _context.Appointments.AsNoTracking(),
+                        wt => wt.RelatedAppointmentId,
+                        a => a.Id,
+                        (wt, a) => new { Wallet = wt, Appointment = a })
+                    .Where(x => x.Appointment.DoctorId == doctorId)
+                    .Select(x => x.Wallet);
+            }
+
+            // wallet revenue grouped by transaction month
             var wtGrouped = await wtQuery
                 .GroupBy(wt => wt.TransactionDate.Month)
-                .Select(g => new
-                {
-                    Month = g.Key,
-                    WalletRevenue = g.Sum(wt => (decimal?)wt.Amount) ?? 0m
-                })
+                .Select(g => new { Month = g.Key, WalletRevenue = g.Sum(wt => (decimal?)wt.Amount) ?? 0m })
                 .ToListAsync();
 
-            // Merge results into months 1..12
+            // 3) Determine appointment IDs that already have wallet transactions (to avoid double counting)
+            var relatedAppointmentIds = await _context.WalletTransactions
+                .AsNoTracking()
+                .Where(wt =>
+                    wt.TransactionTypeCode == walletTransactionType &&
+                    wt.Status == walletTransactionStatus &&
+                    wt.TransactionDate.Year == year &&
+                    wt.RelatedAppointmentId != null)
+                .Select(wt => wt.RelatedAppointmentId!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            // If doctorId provided ensure we only consider appointment ids for that doctor
+            if (doctorId != null && relatedAppointmentIds.Any())
+            {
+                relatedAppointmentIds = await _context.Appointments
+                    .AsNoTracking()
+                    .Where(a => relatedAppointmentIds.Contains(a.Id) && a.DoctorId == doctorId)
+                    .Select(a => a.Id)
+                    .Distinct()
+                    .ToListAsync();
+            }
+
+            // 4) Appointment revenue: sum appointment.TotalAmount for Completed+Paid appointments
+            //    but exclude appointments that already have wallet transactions (to avoid duplicate counting).
+            var apptRevenueQuery = baseAppts
+                .Where(a => a.StatusCode == appointmentStatus && a.PaymentStatusCode == appointmentPaymentStatus);
+
+            if (relatedAppointmentIds.Any())
+            {
+                apptRevenueQuery = apptRevenueQuery.Where(a => !relatedAppointmentIds.Contains(a.Id));
+            }
+
+            var apptRevenueGrouped = await apptRevenueQuery
+                .GroupBy(a => a.AppointmentStartTime.Month)
+                .Select(g => new { Month = g.Key, AppointmentRevenue = g.Sum(a => (decimal?)a.TotalAmount) ?? 0m })
+                .ToListAsync();
+
+            // 5) Merge results into months 1..12
             var months = Enumerable.Range(1, 12)
                 .Select(m => new MonthlyAppointmentTrendDto
                 {
@@ -60,23 +108,25 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 })
                 .ToDictionary(x => x.Month);
 
-            foreach (var a in apptGrouped)
+            foreach (var c in apptCounts)
             {
-                if (months.ContainsKey(a.Month))
-                {
-                    months[a.Month].AppointmentCount = a.Count;
-                    months[a.Month].AppointmentRevenue = a.AppointmentRevenue;
-                }
+                if (months.ContainsKey(c.Month))
+                    months[c.Month].AppointmentCount = c.Count;
+            }
+
+            foreach (var r in apptRevenueGrouped)
+            {
+                if (months.ContainsKey(r.Month))
+                    months[r.Month].AppointmentRevenue = r.AppointmentRevenue;
             }
 
             foreach (var w in wtGrouped)
             {
                 if (months.ContainsKey(w.Month))
-                {
                     months[w.Month].WalletRevenue = w.WalletRevenue;
-                }
             }
 
+            // Optional: set TotalRevenue property if DTO exposes it (here MonthlyAppointmentTrendDto has TotalRevenue getter)
             return months.Values.OrderBy(m => m.Month).ToList();
         }
         public async Task<IEnumerable<Appointment>> GetAllAsync()

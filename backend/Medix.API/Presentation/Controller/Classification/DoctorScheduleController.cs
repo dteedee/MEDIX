@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using Medix.API.Business.Interfaces.Classification;
+﻿﻿using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs.Doctor;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -11,13 +11,16 @@ namespace Medix.API.Presentation.Controller.Classification
     {
         private readonly IDoctorScheduleService _scheduleService;
         private readonly IDoctorService _doctorService;
+        private readonly INotificationService _notificationService;
 
         public DoctorScheduleController(
             IDoctorScheduleService scheduleService,
-            IDoctorService doctorService)
+            IDoctorService doctorService,
+            INotificationService notificationService)
         {
             _scheduleService = scheduleService;
             _doctorService = doctorService;
+            _notificationService = notificationService;
         }
 
         [HttpGet("me")]
@@ -68,11 +71,72 @@ namespace Medix.API.Presentation.Controller.Classification
             if (doctor == null)
                 return NotFound(new { Message = "Doctor not found for this user" });
 
-            var updated = await _scheduleService.UpdateSingleByDoctorIdAsync(doctor.Id, schedule);
-            if (updated == null)
-                return NotFound(new { Message = "Schedule not found." });
+            try
+            {
+                var updated = await _scheduleService.UpdateSingleByDoctorIdAsync(doctor.Id, schedule);
+                if (updated == null)
+                {
+                    // Tạo thông báo khi không tìm thấy lịch để cập nhật
+                    try
+                    {
+                        await _notificationService.CreateNotificationAsync(
+                            doctor.UserId,
+                            "Cập nhật lịch cố định thất bại",
+                            $"Không tìm thấy lịch cố định để cập nhật vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                            "ScheduleUpdateFailed",
+                            null
+                        );
+                    }
+                    catch
+                    {
+                        // Ignore notification creation errors
+                    }
+                    
+                    return NotFound(new { Message = "Schedule not found." });
+                }
 
-            return Ok(updated);
+                return Ok(updated);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Tạo thông báo khi cập nhật lịch cố định thất bại
+                try
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Cập nhật lịch cố định thất bại",
+                        $"Cập nhật lịch cố định thất bại: {ex.Message} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleUpdateFailed",
+                        null
+                    );
+                }
+                catch
+                {
+                    // Ignore notification creation errors
+                }
+                
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Tạo thông báo khi cập nhật lịch cố định thất bại
+                try
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Cập nhật lịch cố định thất bại",
+                        $"Cập nhật lịch cố định thất bại: {ex.Message} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleUpdateFailed",
+                        null
+                    );
+                }
+                catch
+                {
+                    // Ignore notification creation errors
+                }
+                
+                return StatusCode(500, new { Message = "Có lỗi xảy ra khi cập nhật lịch làm việc.", Details = ex.Message });
+            }
         }
 
         [HttpPost("me")]
@@ -86,10 +150,31 @@ namespace Medix.API.Presentation.Controller.Classification
             if (doctor == null)
                 return NotFound(new { Message = "Doctor not found for this user" });
 
-            var updated = await _scheduleService.CreateByDoctorIdAsync(doctor.Id, schedules);
-            return Ok(updated);
-
-
+            try
+            {
+                var updated = await _scheduleService.CreateByDoctorIdAsync(doctor.Id, schedules);
+                return Ok(updated);
+            }
+            catch (Exception ex)
+            {
+                // Tạo thông báo khi đăng ký lịch thất bại
+                try
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Đăng ký lịch làm việc thất bại",
+                        $"Đăng ký lịch làm việc thất bại: {ex.Message} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleRegistrationFailed",
+                        null
+                    );
+                }
+                catch
+                {
+                    // Ignore notification creation errors
+                }
+                
+                return BadRequest(new { Message = ex.Message });
+            }
         }
         [HttpDelete("me")]
         public async Task<IActionResult> DeleteMySchedules([FromBody] IEnumerable<Guid> scheduleIds)
@@ -102,8 +187,51 @@ namespace Medix.API.Presentation.Controller.Classification
             if (doctor == null)
                 return NotFound(new { Message = "Doctor not found for this user" });
 
-            var deleted = await _scheduleService.DeleteByDoctorIdAsync(doctor.Id, scheduleIds);
-            return Ok(new { Message = $"{deleted} schedule(s) deleted successfully" });
+            try
+            {
+                var deleted = await _scheduleService.DeleteByDoctorIdAsync(doctor.Id, scheduleIds);
+                return Ok(new { Message = $"{deleted} schedule(s) deleted successfully" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Tạo thông báo khi xóa lịch cố định thất bại
+                try
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Xóa lịch cố định thất bại",
+                        $"Xóa lịch cố định thất bại: {ex.Message} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleDeleteFailed",
+                        null
+                    );
+                }
+                catch
+                {
+                    // Ignore notification creation errors
+                }
+                
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Tạo thông báo khi xóa lịch cố định thất bại
+                try
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Xóa lịch cố định thất bại",
+                        $"Xóa lịch cố định thất bại: {ex.Message} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleDeleteFailed",
+                        null
+                    );
+                }
+                catch
+                {
+                    // Ignore notification creation errors
+                }
+                
+                return StatusCode(500, new { Message = "Có lỗi xảy ra khi xóa lịch làm việc.", Details = ex.Message });
+            }
         }
     }
 }

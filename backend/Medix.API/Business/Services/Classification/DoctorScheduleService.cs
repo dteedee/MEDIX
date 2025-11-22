@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using AutoMapper;
+﻿﻿using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.Doctor;
@@ -11,15 +11,21 @@ namespace Medix.API.Business.Services.Classification
         private readonly IDoctorScheduleRepository _repository;
         private readonly IAppointmentRepository _appointmentRepository;
         private readonly IMapper _mapper;
+        private readonly INotificationService _notificationService;
+        private readonly IDoctorRepository _doctorRepository;
 
         public DoctorScheduleService(
             IDoctorScheduleRepository repository,
             IAppointmentRepository appointmentRepository,
-            IMapper mapper)
+            IMapper mapper,
+            INotificationService notificationService,
+            IDoctorRepository doctorRepository)
         {
             _repository = repository;
             _appointmentRepository = appointmentRepository;
             _mapper = mapper;
+            _notificationService = notificationService;
+            _doctorRepository = doctorRepository;
         }
 
         // 🟢 Lấy tất cả
@@ -80,6 +86,32 @@ namespace Medix.API.Business.Services.Classification
             await _repository.AddAsync(entity);
 
             var reloaded = await _repository.GetByIdAsync(entity.Id);
+            
+            // Tạo thông báo khi đăng ký lịch thành công
+            try
+            {
+                var doctor = await _doctorRepository.GetDoctorByIdAsync(dto.DoctorId);
+                if (doctor != null)
+                {
+                    var dayNames = new[] { "Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy" };
+                    var dayName = dayNames[dto.DayOfWeek];
+                    var timeStr = $"{dto.StartTime:HH\\:mm} - {dto.EndTime:HH\\:mm}";
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Đăng ký lịch làm việc thành công",
+                        $"Bạn đã đăng ký lịch làm việc thành công vào {dayName} từ {timeStr} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleRegistration",
+                        entity.Id
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không throw để không ảnh hưởng đến việc tạo lịch
+                // Có thể thêm logging ở đây nếu cần
+            }
+            
             return _mapper.Map<DoctorScheduleWorkDto>(reloaded);
         }
 
@@ -121,6 +153,31 @@ namespace Medix.API.Business.Services.Classification
             existing.UpdatedAt = DateTime.UtcNow;
 
             await _repository.UpdateAsync(existing);
+
+            // Tạo thông báo khi cập nhật lịch cố định thành công
+            try
+            {
+                var doctor = await _doctorRepository.GetDoctorByIdAsync(existing.DoctorId);
+                if (doctor != null)
+                {
+                    var dayNames = new[] { "Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy" };
+                    var dayName = dayNames[dto.DayOfWeek];
+                    var timeStr = $"{dto.StartTime:HH\\:mm} - {dto.EndTime:HH\\:mm}";
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Cập nhật lịch cố định thành công",
+                        $"Bạn đã cập nhật lịch cố định vào {dayName} từ {timeStr} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleUpdated",
+                        existing.Id
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không throw để không ảnh hưởng đến việc cập nhật lịch
+            }
+
             return _mapper.Map<DoctorScheduleWorkDto>(existing);
         }
 
@@ -137,8 +194,38 @@ namespace Medix.API.Business.Services.Classification
                 throw new InvalidOperationException($"Không thể xóa lịch làm việc cho ngày này vì đã có lịch hẹn được đặt trong tương lai. Vui lòng hủy các lịch hẹn trước.");
             }
 
+            // Lưu thông tin trước khi xóa để tạo thông báo
+            var doctorId = existing.DoctorId;
+            var dayOfWeek = existing.DayOfWeek;
+            var startTime = existing.StartTime;
+            var endTime = existing.EndTime;
 
             await _repository.DeleteAsync(id);
+
+            // Tạo thông báo khi xóa lịch cố định thành công
+            try
+            {
+                var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId);
+                if (doctor != null)
+                {
+                    var dayNames = new[] { "Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy" };
+                    var dayName = dayNames[dayOfWeek];
+                    var timeStr = $"{startTime:HH\\:mm} - {endTime:HH\\:mm}";
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Xóa lịch cố định thành công",
+                        $"Bạn đã xóa lịch cố định vào {dayName} từ {timeStr} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleDeleted",
+                        null
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không throw để không ảnh hưởng đến việc xóa lịch
+            }
+
             return true;
         }
 
@@ -192,6 +279,31 @@ namespace Medix.API.Business.Services.Classification
             existing.DoctorId = doctorId; // Đảm bảo DoctorId luôn là của bác sĩ đang đăng nhập
 
             await _repository.UpdateAsync(existing);
+
+            // Tạo thông báo khi cập nhật lịch cố định thành công
+            try
+            {
+                var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId);
+                if (doctor != null)
+                {
+                    var dayNames = new[] { "Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy" };
+                    var dayName = dayNames[dto.DayOfWeek];
+                    var timeStr = $"{dto.StartTime:HH\\:mm} - {dto.EndTime:HH\\:mm}";
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Cập nhật lịch cố định thành công",
+                        $"Bạn đã cập nhật lịch cố định vào {dayName} từ {timeStr} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleUpdated",
+                        existing.Id
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không throw để không ảnh hưởng đến việc cập nhật lịch
+            }
+
             return _mapper.Map<DoctorScheduleWorkDto>(existing);
         }
 
@@ -236,6 +348,27 @@ namespace Medix.API.Business.Services.Classification
                     createdEntitiesForValidation.Add(reloaded); // Thêm entity vào danh sách validation
                 }
             }
+            
+            // Tạo thông báo khi đăng ký nhiều lịch thành công
+            try
+            {
+                var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId);
+                if (doctor != null && created.Any())
+                {
+                    var scheduleCount = created.Count();
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Đăng ký lịch làm việc thành công",
+                        $"Bạn đã đăng ký thành công {scheduleCount} ca làm việc vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleRegistration",
+                        null
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không throw để không ảnh hưởng đến việc tạo lịch
+            }
 
             // Sau khi thêm, kiểm tra lại toàn bộ lịch
             var finalSchedules = allExistingSchedules.Concat(createdEntitiesForValidation).ToList();
@@ -257,6 +390,8 @@ namespace Medix.API.Business.Services.Classification
         public async Task<int> DeleteByDoctorIdAsync(Guid doctorId, IEnumerable<Guid> scheduleIds)
         {
             int deleted = 0;
+            var deletedSchedules = new List<(int dayOfWeek, TimeOnly startTime, TimeOnly endTime)>();
+            
             foreach (var id in scheduleIds)
             {
                 var schedule = await _repository.GetByIdAsync(id);
@@ -269,10 +404,37 @@ namespace Medix.API.Business.Services.Classification
                         throw new InvalidOperationException($"Không thể xóa lịch làm việc (ID: {id}) vì đã có lịch hẹn được đặt trong tương lai cho ngày này.");
                     }
 
+                    // Lưu thông tin lịch đã xóa
+                    deletedSchedules.Add((schedule.DayOfWeek, schedule.StartTime, schedule.EndTime));
+
                     await _repository.DeleteAsync(id);
                     deleted++;
                 }
             }
+
+            // Tạo thông báo khi xóa nhiều lịch cố định thành công
+            if (deleted > 0)
+            {
+                try
+                {
+                    var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId);
+                    if (doctor != null)
+                    {
+                        await _notificationService.CreateNotificationAsync(
+                            doctor.UserId,
+                            "Xóa lịch cố định thành công",
+                            $"Bạn đã xóa thành công {deleted} ca làm việc cố định vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                            "ScheduleDeleted",
+                            null
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log lỗi nhưng không throw để không ảnh hưởng đến việc xóa lịch
+                }
+            }
+
             return deleted;
         }
     }

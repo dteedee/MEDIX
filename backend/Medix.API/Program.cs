@@ -59,7 +59,13 @@ builder.Services.AddMemoryCache();
 
 // ================= CONTROLLERS & JSON OPTIONS =================
 builder.Services.AddControllers()
-    .AddJsonOptions(o => o.JsonSerializerOptions.IncludeFields = true);
+    .AddJsonOptions(o =>
+    {
+        o.JsonSerializerOptions.IncludeFields = true;
+        // Convert tất cả DateTime sang giờ Việt Nam (UTC+7) khi serialize
+        o.JsonSerializerOptions.Converters.Add(new Medix.API.Infrastructure.VietnamTimeZoneJsonConverter());
+        o.JsonSerializerOptions.Converters.Add(new Medix.API.Infrastructure.VietnamTimeZoneNullableJsonConverter());
+    });
 
 // ================= JWT CONFIGURATION =================
 var jwtSection = builder.Configuration.GetSection("Jwt");

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using AutoMapper;
+﻿﻿using AutoMapper;
 ﻿using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
@@ -13,17 +13,23 @@ namespace Medix.API.Business.Services.Classification
         private readonly IAppointmentRepository _appointmentRepo;
         private readonly IDoctorScheduleRepository _doctorScheduleRepo; // Added
         private readonly IMapper _mapper;
+        private readonly INotificationService _notificationService;
+        private readonly IDoctorRepository _doctorRepository;
 
         public DoctorScheduleOverrideService(
             IDoctorScheduleOverrideRepository repo,
             IAppointmentRepository appointmentRepo,
             IDoctorScheduleRepository doctorScheduleRepo, // Added
-            IMapper mapper)
+            IMapper mapper,
+            INotificationService notificationService,
+            IDoctorRepository doctorRepository)
         {
             _repo = repo;
             _mapper = mapper;
             _appointmentRepo = appointmentRepo;
             _doctorScheduleRepo = doctorScheduleRepo; // Assigned
+            _notificationService = notificationService;
+            _doctorRepository = doctorRepository;
         }
 
         public async Task<List<DoctorScheduleOverrideDto>> GetByDoctorAsync(Guid doctorId)
@@ -52,6 +58,30 @@ namespace Medix.API.Business.Services.Classification
             await _repo.AddAsync(entity);
             await _repo.SaveChangesAsync();
 
+            // Tạo thông báo khi tạo lịch linh hoạt thành công
+            try
+            {
+                var doctor = await _doctorRepository.GetDoctorByIdAsync(dto.DoctorId);
+                if (doctor != null)
+                {
+                    var overrideTypeText = dto.OverrideType ? "Tăng ca" : "Nghỉ";
+                    var timeStr = $"{dto.StartTime:HH\\:mm} - {dto.EndTime:HH\\:mm}";
+                    var dateStr = dto.OverrideDate.ToString("dd/MM/yyyy");
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Đăng ký lịch linh hoạt thành công",
+                        $"Bạn đã đăng ký lịch linh hoạt ({overrideTypeText}) thành công vào ngày {dateStr} từ {timeStr} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleOverride",
+                        entity.Id
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không throw để không ảnh hưởng đến việc tạo lịch
+            }
+
             return _mapper.Map<DoctorScheduleOverrideDto>(entity);
         }
 
@@ -79,6 +109,30 @@ namespace Medix.API.Business.Services.Classification
             await _repo.UpdateAsync(entity);
             await _repo.SaveChangesAsync();
 
+            // Tạo thông báo khi cập nhật lịch linh hoạt thành công
+            try
+            {
+                var doctor = await _doctorRepository.GetDoctorByIdAsync(entity.DoctorId);
+                if (doctor != null)
+                {
+                    var overrideTypeText = dto.OverrideType ? "Tăng ca" : "Nghỉ";
+                    var timeStr = $"{dto.StartTime:HH\\:mm} - {dto.EndTime:HH\\:mm}";
+                    var dateStr = dto.OverrideDate.ToString("dd/MM/yyyy");
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Cập nhật lịch linh hoạt thành công",
+                        $"Bạn đã cập nhật lịch linh hoạt ({overrideTypeText}) vào ngày {dateStr} từ {timeStr} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleOverrideUpdated",
+                        entity.Id
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không throw để không ảnh hưởng đến việc cập nhật lịch
+            }
+
             return _mapper.Map<DoctorScheduleOverrideDto>(entity);
         }
 
@@ -96,8 +150,40 @@ namespace Medix.API.Business.Services.Classification
                     $"Không thể xóa lịch ghi đè này vì đã có cuộc hẹn được đặt trong khoảng thời gian từ {entity.StartTime:HH\\:mm} đến {entity.EndTime:HH\\:mm} vào ngày {entity.OverrideDate:dd/MM/yyyy}.");
             }
 
+            // Lưu thông tin trước khi xóa để tạo thông báo
+            var doctorId = entity.DoctorId;
+            var overrideDate = entity.OverrideDate;
+            var startTime = entity.StartTime;
+            var endTime = entity.EndTime;
+            var overrideType = entity.OverrideType;
+
             await _repo.DeleteAsync(entity);
             await _repo.SaveChangesAsync();
+
+            // Tạo thông báo khi xóa lịch linh hoạt thành công
+            try
+            {
+                var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId);
+                if (doctor != null)
+                {
+                    var overrideTypeText = overrideType ? "Tăng ca" : "Nghỉ";
+                    var timeStr = $"{startTime:HH\\:mm} - {endTime:HH\\:mm}";
+                    var dateStr = overrideDate.ToString("dd/MM/yyyy");
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Xóa lịch linh hoạt thành công",
+                        $"Bạn đã xóa lịch linh hoạt ({overrideTypeText}) vào ngày {dateStr} từ {timeStr} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleOverrideDeleted",
+                        null
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không throw để không ảnh hưởng đến việc xóa lịch
+            }
+
             return true;
         }
         public async Task<List<DoctorScheduleOverrideDto>> UpdateByDoctorAsync(Guid doctorId, List<UpdateDoctorScheduleOverrideDto> dtos)
@@ -283,8 +369,39 @@ namespace Medix.API.Business.Services.Classification
                     $"Không thể xóa lịch ghi đè này vì đã có cuộc hẹn được đặt trong khoảng thời gian từ {entity.StartTime:HH\\:mm} đến {entity.EndTime:HH\\:mm} vào ngày {entity.OverrideDate:dd/MM/yyyy}.");
             }
 
+            // Lưu thông tin trước khi xóa để tạo thông báo
+            var overrideDate = entity.OverrideDate;
+            var startTime = entity.StartTime;
+            var endTime = entity.EndTime;
+            var overrideType = entity.OverrideType;
+
             await _repo.DeleteAsync(entity);
             await _repo.SaveChangesAsync();
+
+            // Tạo thông báo khi xóa lịch linh hoạt thành công
+            try
+            {
+                var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId.Value);
+                if (doctor != null)
+                {
+                    var overrideTypeText = overrideType ? "Tăng ca" : "Nghỉ";
+                    var timeStr = $"{startTime:HH\\:mm} - {endTime:HH\\:mm}";
+                    var dateStr = overrideDate.ToString("dd/MM/yyyy");
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Xóa lịch linh hoạt thành công",
+                        $"Bạn đã xóa lịch linh hoạt ({overrideTypeText}) vào ngày {dateStr} từ {timeStr} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleOverrideDeleted",
+                        null
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không throw để không ảnh hưởng đến việc xóa lịch
+            }
+
             return true;
         }
         public async Task<DoctorScheduleOverrideDto> CreateByDoctorUserAsync(CreateDoctorScheduleOverrideDto dto, Guid userId)
@@ -323,6 +440,30 @@ namespace Medix.API.Business.Services.Classification
 
             await _repo.AddAsync(entity);
             await _repo.SaveChangesAsync();
+
+            // Tạo thông báo khi tạo lịch linh hoạt thành công
+            try
+            {
+                var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId.Value);
+                if (doctor != null)
+                {
+                    var overrideTypeText = dto.OverrideType ? "Tăng ca" : "Nghỉ";
+                    var timeStr = $"{dto.StartTime:HH\\:mm} - {dto.EndTime:HH\\:mm}";
+                    var dateStr = dto.OverrideDate.ToString("dd/MM/yyyy");
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        doctor.UserId,
+                        "Đăng ký lịch linh hoạt thành công",
+                        $"Bạn đã đăng ký lịch linh hoạt ({overrideTypeText}) thành công vào ngày {dateStr} từ {timeStr} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                        "ScheduleOverride",
+                        entity.Id
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không throw để không ảnh hưởng đến việc tạo lịch
+            }
 
             // 4️⃣ Trả về DTO
             return _mapper.Map<DoctorScheduleOverrideDto>(entity);

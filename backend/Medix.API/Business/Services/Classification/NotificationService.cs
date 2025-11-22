@@ -22,5 +22,20 @@ namespace Medix.API.Business.Services.Classification
         {
             return await _notificationRepository.IsAllNotificationsReadAsync(userId);
         }
+
+        public async Task<Notification> CreateNotificationAsync(Guid userId, string title, string message, string type, Guid? relatedEntityId = null)
+        {
+            var notification = new Notification
+            {
+                UserId = userId,
+                Title = title,
+                Message = message,
+                Type = type,
+                RelatedEntityId = relatedEntityId,
+                IsRead = false
+            };
+
+            return await _notificationRepository.CreateNotificationAsync(notification);
+        }
     }
 }

@@ -1008,6 +1008,112 @@
   flex: 1;
 }
 
+/* Notifications Widget */
+.notificationBadge {
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.notificationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.notificationsList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.notificationsList::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.notificationsList::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  opacity: 0.6;
+}
+
+.notificationItem {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid transparent;
+  animation: slideIn 0.4s ease-out both;
+  border-left: 3px solid transparent;
+}
+
+.notificationItem:hover {
+  background: white;
+  border-color: #e2e8f0;
+  transform: translateX(2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.notificationIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  background: rgba(102, 126, 234, 0.1);
+  transition: all 0.3s ease;
+}
+
+.notificationItem:hover .notificationIcon {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.notificationContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.notificationTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 6px 0;
+  line-height: 1.4;
+}
+
+.notificationMessage {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.notificationTime {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.notificationTime i {
+  font-size: 10px;
+}
+
 .recordInfo h5 {
   font-size: 16px;
   font-weight: 700;

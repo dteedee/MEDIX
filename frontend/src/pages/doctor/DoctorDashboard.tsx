@@ -12,6 +12,10 @@ import styles from "../../styles/doctor/DoctorDashboard.module.css"
 import modalStyles from "../../styles/patient/PatientAppointments.module.css"
 import { Link } from "react-router-dom"
 import { PageLoader } from "../../components/ui"
+import notificationService from "../../services/notificationService"
+import { NotificationMetadata, NotificationDto } from "../../types/notification.types"
+import { formatDistanceToNow } from "date-fns"
+import { vi, enUS } from "date-fns/locale"
 
 // --- NEW TYPE DEFINITIONS TO MATCH THE API RESPONSE ---
 
@@ -108,6 +112,10 @@ const DoctorDashboard: React.FC = () => {
   const [isAppointmentsLoading, setIsAppointmentsLoading] = useState(true)
   const [appointmentsError, setAppointmentsError] = useState<string | null>(null)
   const [dashboardError, setDashboardError] = useState<string | null>(null)
+  
+  // Notification state
+  const [notificationMetadata, setNotificationMetadata] = useState<NotificationMetadata | null>(null)
+  const [isNotificationsLoading, setIsNotificationsLoading] = useState(true)
 
   // Helper to format currency
   const formatCurrency = (amount: number) => {
@@ -193,6 +201,65 @@ const DoctorDashboard: React.FC = () => {
       return dateString.substring(0, 5);
     }
     return 'Invalid Time';
+  }
+
+  const formatNotificationTime = (dateString: string): string => {
+    const notificationDate = new Date(dateString);
+    const now = new Date();
+    
+    // Tính toán sự khác biệt
+    const diffInMs = now.getTime() - notificationDate.getTime();
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    
+    // Lấy thông tin ngày (theo múi giờ địa phương)
+    const notificationDay = notificationDate.getDate();
+    const notificationMonth = notificationDate.getMonth();
+    const notificationYear = notificationDate.getFullYear();
+    const notificationHour = notificationDate.getHours();
+    const notificationMinute = notificationDate.getMinutes();
+    
+    const todayDay = now.getDate();
+    const todayMonth = now.getMonth();
+    const todayYear = now.getFullYear();
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayDay = yesterday.getDate();
+    const yesterdayMonth = yesterday.getMonth();
+    const yesterdayYear = yesterday.getFullYear();
+    
+    // Format giờ:phút
+    const timeStr = `${String(notificationHour).padStart(2, '0')}:${String(notificationMinute).padStart(2, '0')}`;
+    
+    // Nếu là hôm nay
+    if (notificationDay === todayDay && notificationMonth === todayMonth && notificationYear === todayYear) {
+      if (diffInMinutes < 1) {
+        return `Vừa xong (${timeStr})`;
+      } else if (diffInMinutes < 60) {
+        return `${diffInMinutes} phút trước (${timeStr})`;
+      } else {
+        return `${diffInHours} giờ trước (${timeStr})`;
+      }
+    }
+    
+    // Nếu là hôm qua
+    if (notificationDay === yesterdayDay && notificationMonth === yesterdayMonth && notificationYear === yesterdayYear) {
+      return `Hôm qua, ${timeStr}`;
+    }
+    
+    // Nếu là trong tuần này (7 ngày gần nhất)
+    if (diffInDays < 7) {
+      const dayNames = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+      const dayName = dayNames[notificationDate.getDay()];
+      return `${dayName}, ${timeStr}`;
+    }
+    
+    // Nếu xa hơn, hiển thị đầy đủ ngày tháng năm
+    const dayStr = String(notificationDay).padStart(2, '0');
+    const monthStr = String(notificationMonth + 1).padStart(2, '0');
+    return `${dayStr}/${monthStr}/${notificationYear} ${timeStr}`;
   }
 
   const formatTimeRange = (startTime?: string, endTime?: string) => {
@@ -311,20 +378,65 @@ const DoctorDashboard: React.FC = () => {
     return iconMap[statusCode] || 'bi-info-circle'
   }
 
+  const getNotificationIconClass = (type: string): string => {
+    const iconMap: { [key: string]: string } = {
+      'ScheduleRegistration': 'bi-calendar-check-fill',
+      'ScheduleRegistrationFailed': 'bi-calendar-x-fill',
+      'ScheduleUpdated': 'bi-calendar-check-fill',
+      'ScheduleUpdateFailed': 'bi-calendar-x-fill',
+      'ScheduleDeleted': 'bi-calendar-minus-fill',
+      'ScheduleDeleteFailed': 'bi-calendar-x-fill',
+      'ScheduleOverride': 'bi-calendar-plus-fill',
+      'ScheduleOverrideFailed': 'bi-calendar-x-fill',
+      'ScheduleOverrideUpdated': 'bi-calendar-check-fill',
+      'ScheduleOverrideUpdateFailed': 'bi-calendar-x-fill',
+      'ScheduleOverrideDeleted': 'bi-calendar-minus-fill',
+      'ScheduleOverrideDeleteFailed': 'bi-calendar-x-fill',
+      'Appointment': 'bi-calendar-event-fill',
+      'Payment': 'bi-credit-card-fill',
+      'System': 'bi-bell-fill',
+      'default': 'bi-info-circle-fill'
+    }
+    return iconMap[type] || iconMap['default']
+  }
+
+  const getNotificationTypeColor = (type: string): string => {
+    const colorMap: { [key: string]: string } = {
+      'ScheduleRegistration': '#10b981',
+      'ScheduleRegistrationFailed': '#ef4444',
+      'ScheduleUpdated': '#10b981',
+      'ScheduleUpdateFailed': '#ef4444',
+      'ScheduleDeleted': '#3b82f6',
+      'ScheduleDeleteFailed': '#ef4444',
+      'ScheduleOverride': '#10b981',
+      'ScheduleOverrideFailed': '#ef4444',
+      'ScheduleOverrideUpdated': '#10b981',
+      'ScheduleOverrideUpdateFailed': '#ef4444',
+      'ScheduleOverrideDeleted': '#3b82f6',
+      'ScheduleOverrideDeleteFailed': '#ef4444',
+      'Appointment': '#3b82f6',
+      'Payment': '#f59e0b',
+      'System': '#667eea',
+      'default': '#64748b'
+    }
+    return colorMap[type] || colorMap['default']
+  }
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       setIsDashboardLoading(true)
       setIsAppointmentsLoading(true)
+      setIsNotificationsLoading(true)
       setDashboardError(null)
       setAppointmentsError(null)
 
       // Fetch new dashboard data and upcoming appointments concurrently
       try {
-        const [dashboardResult, appointmentsResult, tiersResult] = await Promise.allSettled([
+        const [dashboardResult, appointmentsResult, tiersResult, notificationsResult] = await Promise.allSettled([
           doctorDashboardService.getDashboard(),
           appointmentService.getMyAppointmentsByDateRange("2020-01-01", "2030-12-31"),
           serviceTierService.getDisplayedList(),
-          appointmentService.getMyAppointmentsByDateRange("2020-01-01", "2030-12-31"),
+          notificationService.getMetadata(),
         ])
 
         // Handle Dashboard API result
@@ -359,12 +471,21 @@ const DoctorDashboard: React.FC = () => {
         } else {
           console.error("Error fetching tiers data:", tiersResult.reason)
         }
+        
+        // Handle Notifications API result
+        if (notificationsResult.status === "fulfilled") {
+          setNotificationMetadata(notificationsResult.value)
+        } else {
+          console.error("Error fetching notifications:", notificationsResult.reason)
+        }
+        setIsNotificationsLoading(false)
         setIsAppointmentsLoading(false)
       } catch (err) {
         console.error("General error fetching data:", err)
         setDashboardError("Đã xảy ra lỗi không xác định.")
         setIsDashboardLoading(false)
         setIsAppointmentsLoading(false)
+        setIsNotificationsLoading(false)
       }
     }
 
@@ -711,6 +832,58 @@ const DoctorDashboard: React.FC = () => {
 
         {/* Right Column */}
         <div className={styles.rightColumn}>
+          {/* Notifications Widget */}
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionTitle}>
+                <i className="bi bi-bell"></i>
+                <h2>Thông báo</h2>
+              </div>
+              {notificationMetadata && !notificationMetadata.isAllRead && (
+                <span className={styles.notificationBadge}></span>
+              )}
+            </div>
+            
+            {isNotificationsLoading ? (
+              <div className={styles.loadingState}>
+                <div className={styles.loadingSpinner}></div>
+                <p>Đang tải...</p>
+              </div>
+            ) : notificationMetadata && notificationMetadata.notifications.length > 0 ? (
+              <div className={styles.notificationsList}>
+                {notificationMetadata.notifications.slice(0, 5).map((notification, index) => (
+                  <div 
+                    key={index} 
+                    className={styles.notificationItem}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <div 
+                      className={styles.notificationIcon}
+                      style={{ color: getNotificationTypeColor(notification.type) }}
+                    >
+                      <i className={`bi ${getNotificationIconClass(notification.type)}`}></i>
+                    </div>
+                    <div className={styles.notificationContent}>
+                      <h5 className={styles.notificationTitle}>{notification.title}</h5>
+                      <p className={styles.notificationMessage}>{notification.message}</p>
+                      <span className={styles.notificationTime}>
+                        <i className="bi bi-clock"></i>
+                        {formatNotificationTime(notification.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.emptyState}>
+                <div className={styles.emptyIcon}>
+                  <i className="bi bi-bell-slash"></i>
+                </div>
+                <p>Chưa có thông báo nào</p>
+              </div>
+            )}
+          </div>
+
           {/* Subscription Widget */}
           <div className={styles.sectionCard}>
             <div className={styles.sectionHeader}>

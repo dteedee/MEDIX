@@ -2,6 +2,7 @@
 using Medix.API.Models.DTOs.Doctor;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System;
 
 namespace Medix.API.Presentation.Controller.Classification
 {
@@ -10,10 +11,17 @@ namespace Medix.API.Presentation.Controller.Classification
     public class DoctorScheduleOverrideController : ControllerBase
     {
         private readonly IDoctorScheduleOverrideService _service;
+        private readonly INotificationService _notificationService;
+        private readonly IDoctorService _doctorService;
 
-        public DoctorScheduleOverrideController(IDoctorScheduleOverrideService service)
+        public DoctorScheduleOverrideController(
+            IDoctorScheduleOverrideService service,
+            INotificationService notificationService,
+            IDoctorService doctorService)
         {
             _service = service;
+            _notificationService = notificationService;
+            _doctorService = doctorService;
         }
 
         [HttpGet("doctor/{doctorId}")]
@@ -40,8 +48,73 @@ namespace Medix.API.Presentation.Controller.Classification
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateDoctorScheduleOverrideDto dto)
         {
-            var result = await _service.UpdateAsync(id, dto);
-            return Ok(result);
+            try
+            {
+                var result = await _service.UpdateAsync(id, dto);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Tạo thông báo khi cập nhật lịch linh hoạt thất bại
+                try
+                {
+                    // Lấy userId từ token để tạo thông báo
+                    var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                    ?? User.FindFirst("sub")?.Value;
+                    if (userIdStr != null)
+                    {
+                        var userId = Guid.Parse(userIdStr);
+                        var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
+                        if (doctor != null)
+                        {
+                            await _notificationService.CreateNotificationAsync(
+                                doctor.UserId,
+                                "Cập nhật lịch linh hoạt thất bại",
+                                $"Cập nhật lịch linh hoạt thất bại: {ex.Message} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                                "ScheduleOverrideUpdateFailed",
+                                null
+                            );
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore notification creation errors
+                }
+                
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Tạo thông báo khi cập nhật lịch linh hoạt thất bại
+                try
+                {
+                    // Lấy userId từ token để tạo thông báo
+                    var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                    ?? User.FindFirst("sub")?.Value;
+                    if (userIdStr != null)
+                    {
+                        var userId = Guid.Parse(userIdStr);
+                        var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
+                        if (doctor != null)
+                        {
+                            await _notificationService.CreateNotificationAsync(
+                                doctor.UserId,
+                                "Cập nhật lịch linh hoạt thất bại",
+                                $"Cập nhật lịch linh hoạt thất bại: {ex.Message} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                                "ScheduleOverrideUpdateFailed",
+                                null
+                            );
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore notification creation errors
+                }
+                
+                return StatusCode(500, new { Message = "Có lỗi xảy ra khi cập nhật ghi đè lịch.", Details = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]
@@ -83,10 +156,62 @@ namespace Medix.API.Presentation.Controller.Classification
             }
             catch (InvalidOperationException ex)
             {
+                // Tạo thông báo khi đăng ký lịch linh hoạt thất bại
+                try
+                {
+                    var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                    ?? User.FindFirst("sub")?.Value;
+                    if (userIdStr != null)
+                    {
+                        var userId = Guid.Parse(userIdStr);
+                        var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
+                        if (doctor != null)
+                        {
+                            await _notificationService.CreateNotificationAsync(
+                                doctor.UserId,
+                                "Đăng ký lịch linh hoạt thất bại",
+                                $"Đăng ký lịch linh hoạt thất bại: {ex.Message} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                                "ScheduleOverrideFailed",
+                                null
+                            );
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore notification creation errors
+                }
+                
                 return BadRequest(new { Message = ex.Message });
             }
             catch (Exception ex)
             {
+                // Tạo thông báo khi đăng ký lịch linh hoạt thất bại
+                try
+                {
+                    var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                    ?? User.FindFirst("sub")?.Value;
+                    if (userIdStr != null)
+                    {
+                        var userId = Guid.Parse(userIdStr);
+                        var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
+                        if (doctor != null)
+                        {
+                            await _notificationService.CreateNotificationAsync(
+                                doctor.UserId,
+                                "Đăng ký lịch linh hoạt thất bại",
+                                $"Đăng ký lịch linh hoạt thất bại: {ex.Message} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                                "ScheduleOverrideFailed",
+                                null
+                            );
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore notification creation errors
+                }
+                
                 return StatusCode(500, new { Message = "Có lỗi xảy ra khi tạo ghi đè lịch.", Details = ex.Message });
             }
         }
@@ -131,12 +256,90 @@ namespace Medix.API.Presentation.Controller.Classification
 
                 var success = await _service.DeleteByDoctorUserAsync(id, userId);
                 if (!success)
+                {
+                    // Tạo thông báo khi không tìm thấy lịch để xóa
+                    try
+                    {
+                        var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
+                        if (doctor != null)
+                        {
+                            await _notificationService.CreateNotificationAsync(
+                                doctor.UserId,
+                                "Xóa lịch linh hoạt thất bại",
+                                $"Không tìm thấy lịch linh hoạt để xóa hoặc không có quyền xóa vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                                "ScheduleOverrideDeleteFailed",
+                                null
+                            );
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore notification creation errors
+                    }
+                    
                     return NotFound(new { Message = "Không tìm thấy ghi đè hoặc không có quyền xóa." });
+                }
 
                 return NoContent();
             }
+            catch (InvalidOperationException ex)
+            {
+                // Tạo thông báo khi xóa lịch linh hoạt thất bại (do có lịch hẹn)
+                try
+                {
+                    var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                    ?? User.FindFirst("sub")?.Value;
+                    if (userIdStr != null)
+                    {
+                        var userId = Guid.Parse(userIdStr);
+                        var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
+                        if (doctor != null)
+                        {
+                            await _notificationService.CreateNotificationAsync(
+                                doctor.UserId,
+                                "Xóa lịch linh hoạt thất bại",
+                                $"Xóa lịch linh hoạt thất bại: {ex.Message} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                                "ScheduleOverrideDeleteFailed",
+                                null
+                            );
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore notification creation errors
+                }
+                
+                return BadRequest(new { Message = ex.Message });
+            }
             catch (Exception ex)
             {
+                // Tạo thông báo khi xóa lịch linh hoạt thất bại
+                try
+                {
+                    var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                    ?? User.FindFirst("sub")?.Value;
+                    if (userIdStr != null)
+                    {
+                        var userId = Guid.Parse(userIdStr);
+                        var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
+                        if (doctor != null)
+                        {
+                            await _notificationService.CreateNotificationAsync(
+                                doctor.UserId,
+                                "Xóa lịch linh hoạt thất bại",
+                                $"Xóa lịch linh hoạt thất bại: {ex.Message} vào lúc {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}",
+                                "ScheduleOverrideDeleteFailed",
+                                null
+                            );
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore notification creation errors
+                }
+                
                 return StatusCode(500, new { Message = "Có lỗi xảy ra khi xóa ghi đè lịch.", Details = ex.Message });
             }
         }

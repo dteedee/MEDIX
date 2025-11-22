@@ -27,5 +27,17 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return !await _context.Notifications
                 .AnyAsync(n => n.UserId == userId && !n.IsRead);
         }
+
+        public async Task<Notification> CreateNotificationAsync(Notification notification)
+        {
+            notification.Id = Guid.NewGuid();
+            notification.CreatedAt = DateTime.UtcNow;
+            notification.IsRead = false;
+            
+            await _context.Notifications.AddAsync(notification);
+            await _context.SaveChangesAsync();
+            
+            return notification;
+        }
     }
 }

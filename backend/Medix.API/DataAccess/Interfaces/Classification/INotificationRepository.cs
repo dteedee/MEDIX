@@ -6,5 +6,6 @@ namespace Medix.API.DataAccess.Interfaces.Classification
     {
         Task<List<Notification>> GetNotificationsByUserIdAsync(Guid userId);
         Task<bool> IsAllNotificationsReadAsync(Guid userId);
+        Task<Notification> CreateNotificationAsync(Notification notification);
     }
 }

@@ -44,6 +44,8 @@ export interface Appointment {
   refundProcessedAt?: string;
   medicalInfo?: string;
   aiSymptomAnalysisId?: string;
+  patientReview?: string;
+  patientRating?: string;
   createdAt: string;
   updatedAt: string;
 }

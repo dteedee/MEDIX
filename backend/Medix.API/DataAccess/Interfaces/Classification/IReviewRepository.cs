@@ -12,5 +12,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task SaveChangesAsync();
         Task<List<Review>> GetReviewsByDoctorUserIdAsync(Guid userId);
 
+        Task<List<Review>> GetByAppointmentIdsAsync(IEnumerable<Guid> appointmentIds);
+
     }
 }

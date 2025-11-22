@@ -729,6 +729,17 @@
   box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
   }
 
+.reviewDoctorBtn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  }
+  
+.reviewDoctorBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+  }
+
 .detailBtn {
   background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
   color: white;
@@ -1762,19 +1773,43 @@
   display: flex;
   justify-content: center;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .starsSection i {
   font-size: 36px;
-  color: #fbbf24;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .starsSection i:hover {
   transform: scale(1.2);
+}
+
+.ratingDisplay {
+  text-align: center;
+  margin-bottom: 20px;
+  min-height: 30px;
+}
+
+.ratingDisplay p {
+  font-size: 16px;
+  color: #1e293b;
+  font-weight: 600;
+  margin: 0;
+  animation: fadeIn 0.3s ease;
+}
+
+.ratingDisplay strong {
   color: #f59e0b;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.ratingHint {
+  color: #94a3b8 !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
 }
 
 .reviewTextarea {
@@ -1823,6 +1858,25 @@
 .submitRatingBtn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+}
+
+.viewOnlyNotice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  border-radius: 12px;
+  color: #4338ca;
+  font-size: 14px;
+  font-weight: 600;
+  width: 100%;
+  border: 1px solid #a5b4fc;
+}
+
+.viewOnlyNotice i {
+  font-size: 18px;
 }
 
 /* Responsive Design */

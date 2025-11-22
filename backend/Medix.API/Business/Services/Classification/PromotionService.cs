@@ -57,6 +57,28 @@ namespace Medix.API.Business.Services.Classification
             return null!;
         }
 
+        public async Task<IEnumerable<PromotionDto>> GetAllPromotion()
+        {
+            try
+            {
+                var promotions = await _promotionRepository.getAllPromotion();
+                if (promotions == null)
+                    return Enumerable.Empty<PromotionDto>();
+
+                var dtoList = _mapper.Map<IEnumerable<PromotionDto>>(promotions);
+
+             
+   
+
+                return dtoList;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching all promotions");
+                throw;
+            }
+        }
+
         /// <summary>
         /// Lấy promotion theo code
         /// </summary>
@@ -96,6 +118,26 @@ namespace Medix.API.Business.Services.Classification
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error checking promotion code existence: {Code}", code);
+                throw;
+            }
+        }
+
+        public async Task<bool> DeletePromotionAsync(Guid id)
+        {
+            try
+            {
+                var deleted = await _promotionRepository.DeletePromotionAync(id);
+                if (!deleted)
+                {
+                    _logger.LogWarning("Promotion not found for delete: {Id}", id);
+                    return false;
+                }
+                _logger.LogInformation("Promotion deleted: {Id}", id);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting promotion: {Id}", id);
                 throw;
             }
         }

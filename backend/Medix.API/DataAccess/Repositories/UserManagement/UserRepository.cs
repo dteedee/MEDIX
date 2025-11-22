@@ -1,5 +1,6 @@
 using CloudinaryDotNet.Actions;
 using Medix.API.DataAccess.Interfaces.UserManagement;
+using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -84,7 +85,35 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
                 .FirstOrDefaultAsync(u => u.Id == id);
         }
 
+        public async Task<List<MonthlyUserGrowthDto>> GetMonthlyUserAndDoctorCountsAsync(int year)
+        {
+            // Users grouped by month
+            var usersByMonth = await _context.Users
+                .AsNoTracking()
+                .Where(u => u.CreatedAt.Year == year)
+                .GroupBy(u => u.CreatedAt.Month)
+                .Select(g => new { Month = g.Key, Count = g.Count() })
+                .ToListAsync();
 
+            // Doctors grouped by month
+            var doctorsByMonth = await _context.Doctors
+                .AsNoTracking()
+                .Where(d => d.CreatedAt.Year == year)
+                .GroupBy(d => d.CreatedAt.Month)
+                .Select(g => new { Month = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var result = Enumerable.Range(1, 12)
+                .Select(m => new MonthlyUserGrowthDto
+                {
+                    Month = m,
+                    NewUsers = usersByMonth.FirstOrDefault(x => x.Month == m)?.Count ?? 0,
+                    NewDoctors = doctorsByMonth.FirstOrDefault(x => x.Month == m)?.Count ?? 0
+                })
+                .ToList();
+
+            return result;
+        }
 
         public async Task<(int total, IEnumerable<User> data)> GetPagedAsync(int page, int pageSize)
         {

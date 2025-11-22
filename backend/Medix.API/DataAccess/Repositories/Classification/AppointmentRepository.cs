@@ -1,4 +1,5 @@
 ﻿﻿﻿﻿using Medix.API.DataAccess.Interfaces.Classification;
+using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,72 @@ namespace Medix.API.DataAccess.Repositories.Classification
         {
             _context = context;
         }
+        public async Task<List<MonthlyAppointmentTrendDto>> GetMonthlyAppointmentAndRevenueAsync(Guid? doctorId, int year)
+        {
+            // Appointments query (restrict by year, optional doctor)
+            var apptQuery = _context.Appointments
+                .AsNoTracking()
+                .Where(a => a.AppointmentStartTime.Year == year
+                            && (doctorId == null || a.DoctorId == doctorId));
 
+            var apptGrouped = await apptQuery
+                .GroupBy(a => a.AppointmentStartTime.Month)
+                .Select(g => new
+                {
+                    Month = g.Key,
+                    Count = g.Count(),
+                    AppointmentRevenue = g
+                        .Where(a => a.StatusCode == "Completed" && a.PaymentStatusCode == "Paid")
+                        .Sum(a => (decimal?)a.TotalAmount) ?? 0m
+                })
+                .ToListAsync();
+
+            // Wallet transactions related to appointments (use RelatedAppointmentId navigation)
+            var wtQuery = _context.WalletTransactions
+                .AsNoTracking()
+                .Where(wt => wt.RelatedAppointmentId != null
+                             && wt.TransactionDate.Year == year
+                             && (doctorId == null || wt.RelatedAppointment != null && wt.RelatedAppointment.DoctorId == doctorId));
+
+            var wtGrouped = await wtQuery
+                .GroupBy(wt => wt.TransactionDate.Month)
+                .Select(g => new
+                {
+                    Month = g.Key,
+                    WalletRevenue = g.Sum(wt => (decimal?)wt.Amount) ?? 0m
+                })
+                .ToListAsync();
+
+            // Merge results into months 1..12
+            var months = Enumerable.Range(1, 12)
+                .Select(m => new MonthlyAppointmentTrendDto
+                {
+                    Month = m,
+                    AppointmentCount = 0,
+                    AppointmentRevenue = 0m,
+                    WalletRevenue = 0m
+                })
+                .ToDictionary(x => x.Month);
+
+            foreach (var a in apptGrouped)
+            {
+                if (months.ContainsKey(a.Month))
+                {
+                    months[a.Month].AppointmentCount = a.Count;
+                    months[a.Month].AppointmentRevenue = a.AppointmentRevenue;
+                }
+            }
+
+            foreach (var w in wtGrouped)
+            {
+                if (months.ContainsKey(w.Month))
+                {
+                    months[w.Month].WalletRevenue = w.WalletRevenue;
+                }
+            }
+
+            return months.Values.OrderBy(m => m.Month).ToList();
+        }
         public async Task<IEnumerable<Appointment>> GetAllAsync()
         {
             return await _context.Appointments

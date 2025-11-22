@@ -26,10 +26,11 @@ namespace Medix.API.Business.Services.Classification
         private readonly IDoctorRepository doctorRepository;
 
         private readonly IUserPromotionService userPromotionService;
+        private readonly IReviewRepository reviewRepository;
 
         private readonly IPromotionService promotionService;
 
-        public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService, IWalletTransactionService walletTransactionService, IWalletService walletService, IDoctorRepository doctorRepository, IUserPromotionService userPromotionService, IPromotionService promotionService)
+        public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService, IWalletTransactionService walletTransactionService, IWalletService walletService, IDoctorRepository doctorRepository, IUserPromotionService userPromotionService, IPromotionService promotionService, IReviewRepository reviewRepository)
         {
             _repository = repository;
             _mapper = mapper;
@@ -40,6 +41,7 @@ namespace Medix.API.Business.Services.Classification
             this.doctorRepository = doctorRepository;
             this.userPromotionService = userPromotionService;
             this.promotionService = promotionService;
+            this.reviewRepository = reviewRepository;
         }
 
         public async Task<IEnumerable<AppointmentDto>> GetAllAsync()
@@ -47,7 +49,30 @@ namespace Medix.API.Business.Services.Classification
             var entities = await _repository.GetAllAsync();
             return _mapper.Map<IEnumerable<AppointmentDto>>(entities);
         }
+        public async Task<AppointmentTrendsDto> GetAppointmentTrendsAsync(Guid? doctorId, int year)
+        {
+            try
+            {
+                var raw = await _repository.GetMonthlyAppointmentAndRevenueAsync(doctorId, year);
 
+                var monthly = raw.OrderBy(m => m.Month).ToList();
+
+                var result = new AppointmentTrendsDto
+                {
+                    Year = year,
+                    DoctorId = doctorId,
+                    Monthly = monthly,
+                    TotalAppointments = monthly.Sum(m => m.AppointmentCount),
+                    TotalRevenue = monthly.Sum(m => m.TotalRevenue)
+                };
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+               return null;
+            }
+        }
         public async Task<AppointmentDto?> GetByIdAsync(Guid id)
         {
             var entity = await _repository.GetByIdAsync(id);
@@ -119,7 +144,33 @@ namespace Medix.API.Business.Services.Classification
         public async Task<IEnumerable<AppointmentDto>> GetByPatientAsync(Guid patientId)
         {
             var list = await _repository.GetByPatientAsync(patientId);
-            return _mapper.Map<IEnumerable<AppointmentDto>>(list);
+            var dtos = _mapper.Map<List<AppointmentDto>>(list);
+
+            // Collect appointment IDs for completed appointments
+            var completedAppointmentIds = list
+                .Where(a => string.Equals(a.StatusCode, "Completed", StringComparison.OrdinalIgnoreCase))
+                .Select(a => a.Id)
+                .ToList();
+
+            if (completedAppointmentIds.Any())
+            {
+                // Single DB call to fetch all reviews for those appointments (avoids concurrent DbContext usage)
+                var reviews = await reviewRepository.GetByAppointmentIdsAsync(completedAppointmentIds);
+
+                var reviewByAppointment = reviews.ToDictionary(r => r.AppointmentId, r => r);
+
+                // Populate DTOs
+                foreach (var dto in dtos.Where(d => string.Equals(d.StatusCode, "Completed", StringComparison.OrdinalIgnoreCase)))
+                {
+                    if (reviewByAppointment.TryGetValue(dto.Id, out var review))
+                    {
+                        dto.PatientReview = review.Comment;
+                        dto.PatientRating = review.Rating.ToString();
+                    }
+                }
+            }
+
+            return dtos;
         }
 
         public async Task<IEnumerable<AppointmentDto>> GetByDateAsync(DateTime date)

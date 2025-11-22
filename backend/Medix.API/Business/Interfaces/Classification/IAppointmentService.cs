@@ -1,4 +1,5 @@
-﻿﻿using Medix.API.Models.DTOs.ApointmentDTO;
+﻿using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.ApointmentDTO;
 using Medix.API.Models.Entities;
 
 namespace Medix.API.Business.Interfaces.Classification
@@ -19,7 +20,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<bool> IsDoctorBusyAsync(Guid doctorId, DateTime appointmentStartTime, DateTime appointmentEndTime);
 
         Task CheckisAppointmentCompleted(Guid id);
+        Task<AppointmentTrendsDto> GetAppointmentTrendsAsync(Guid? doctorId, int year);
 
-       
     }
 }

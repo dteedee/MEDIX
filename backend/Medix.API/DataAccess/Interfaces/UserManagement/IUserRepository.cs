@@ -1,3 +1,4 @@
+using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 using System;
 using System.Collections.Generic;
@@ -23,5 +24,7 @@ namespace Medix.API.DataAccess.Interfaces.UserManagement
         Task<(int total, IEnumerable<User> data)> GetPagedAsync(int page, int pageSize);
         Task<(int total, IEnumerable<User> data)> SearchAsync(string keyword, int page, int pageSize);
         Task<IEnumerable<User>> SearchByNameAsync(string keyword);
+
+        Task<List<MonthlyUserGrowthDto>> GetMonthlyUserAndDoctorCountsAsync(int year);
     }
 }

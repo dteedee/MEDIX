@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import styles from '../../styles/patient/PatientAppointments.module.css';
 import { appointmentService } from '../../services/appointmentService';
 import doctorService from '../../services/doctorService';
+import { reviewService } from '../../services/reviewService';
 import { DoctorProfileDto } from '../../types/doctor.types';
 
 interface Appointment {
@@ -25,6 +26,8 @@ interface Appointment {
   paymentStatusCode?: string;
   totalAmount?: number;
   medicalInfo?: string;
+  patientReview?: string;
+  patientRating?: string;
 }
 
 interface FilterOptions {
@@ -54,6 +57,11 @@ export const PatientAppointments: React.FC = () => {
     timeRange: 'all',
     search: ''
   });
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isViewingExistingReview, setIsViewingExistingReview] = useState(false);
 
   // Load appointments from API
   useEffect(() => {
@@ -84,6 +92,8 @@ export const PatientAppointments: React.FC = () => {
             paymentStatusCode: apt.paymentStatusCode,
             totalAmount: apt.totalAmount,
             medicalInfo: apt.medicalInfo,
+            patientReview: apt.patientReview,
+            patientRating: apt.patientRating,
           };
         });
         
@@ -256,6 +266,40 @@ export const PatientAppointments: React.FC = () => {
       alert(error.response?.data?.message || 'Không thể hủy lịch hẹn. Vui lòng thử lại.');
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!selectedAppointment || rating === 0) return;
+
+    try {
+      setIsSubmittingReview(true);
+      
+      const reviewDto = {
+        appointmentId: selectedAppointment.id,
+        rating: rating,
+        comment: reviewComment.trim() || undefined
+      };
+
+      await reviewService.createReview(reviewDto);
+
+      // Fechar modal e resetar estados
+      setShowRatingModal(false);
+      setRating(0);
+      setHoverRating(0);
+      setReviewComment('');
+
+      // Mostrar mensagem de sucesso
+      alert('Cảm ơn bạn đã đánh giá! Đánh giá của bạn đã được gửi thành công.');
+      
+    } catch (error: any) {
+      console.error('Error submitting review:', error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.title ||
+                          'Không thể gửi đánh giá. Vui lòng thử lại.';
+      alert(errorMessage);
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -654,11 +698,23 @@ export const PatientAppointments: React.FC = () => {
                         className={styles.rateBtn}
                         onClick={() => {
                           setSelectedAppointment(appointmentWithInfo);
+                          // Check if review already exists
+                          if (appointmentWithInfo.patientRating && appointmentWithInfo.patientReview) {
+                            // View existing review
+                            setRating(parseInt(appointmentWithInfo.patientRating) || 0);
+                            setReviewComment(appointmentWithInfo.patientReview || '');
+                            setIsViewingExistingReview(true);
+                          } else {
+                            // Create new review
+                            setRating(0);
+                            setReviewComment('');
+                            setIsViewingExistingReview(false);
+                          }
                           setShowRatingModal(true);
                         }}
               >
-                        <i className="bi bi-star"></i>
-                        Đánh giá
+                        <i className={`bi ${appointmentWithInfo.patientRating && appointmentWithInfo.patientReview ? 'bi-eye' : 'bi-star'}`}></i>
+                        {appointmentWithInfo.patientRating && appointmentWithInfo.patientReview ? 'Xem đánh giá' : 'Đánh giá'}
               </button>
             </div>
                   )}
@@ -941,35 +997,112 @@ export const PatientAppointments: React.FC = () => {
 
       {/* Rating Modal */}
       {showRatingModal && selectedAppointment && (
-        <div className={styles.modalOverlay} onClick={() => setShowRatingModal(false)}>
+        <div className={styles.modalOverlay} onClick={() => {
+          setShowRatingModal(false);
+          setRating(0);
+          setHoverRating(0);
+          setReviewComment('');
+          setIsViewingExistingReview(false);
+        }}>
           <div className={styles.ratingModal} onClick={(e) => e.stopPropagation()}>
-            <button className={styles.closeModalBtn} onClick={() => setShowRatingModal(false)}>
+            <button className={styles.closeModalBtn} onClick={() => {
+              setShowRatingModal(false);
+              setRating(0);
+              setHoverRating(0);
+              setReviewComment('');
+              setIsViewingExistingReview(false);
+            }}>
               <i className="bi bi-x-lg"></i>
             </button>
             
             <div className={styles.ratingHeader}>
-              <h3>Đánh giá bác sĩ</h3>
-              <p>Chia sẻ trải nghiệm của bạn với {selectedAppointment.doctorName}</p>
+              <h3>{isViewingExistingReview ? 'Đánh giá của bạn' : 'Đánh giá bác sĩ'}</h3>
+              <p>
+                {isViewingExistingReview 
+                  ? `Đánh giá của bạn cho ${selectedAppointment.doctorName}`
+                  : `Chia sẻ trải nghiệm của bạn với ${selectedAppointment.doctorName}`
+                }
+              </p>
             </div>
 
             <div className={styles.ratingBody}>
               <div className={styles.starsSection}>
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <i key={star} className="bi bi-star-fill"></i>
+                  <i 
+                    key={star} 
+                    className={`bi ${star <= (hoverRating || rating) ? 'bi-star-fill' : 'bi-star'}`}
+                    onClick={() => !isViewingExistingReview && setRating(star)}
+                    onMouseEnter={() => !isViewingExistingReview && setHoverRating(star)}
+                    onMouseLeave={() => !isViewingExistingReview && setHoverRating(0)}
+                    style={{ 
+                      color: star <= (hoverRating || rating) ? '#f59e0b' : '#cbd5e0',
+                      cursor: isViewingExistingReview ? 'default' : 'pointer'
+                    }}
+                  ></i>
                 ))}
+              </div>
+              <div className={styles.ratingDisplay}>
+                {rating > 0 ? (
+                  <p>
+                    {isViewingExistingReview ? 'Bạn đã đánh giá: ' : 'Bạn đã chọn: '}
+                    <strong>{rating}</strong> {rating === 1 ? 'sao' : 'sao'}
+                    {rating === 5 && ' ⭐ Tuyệt vời!'}
+                    {rating === 4 && ' 👍 Rất tốt!'}
+                    {rating === 3 && ' 😊 Tốt'}
+                    {rating === 2 && ' 😐 Trung bình'}
+                    {rating === 1 && ' 😞 Cần cải thiện'}
+                  </p>
+                ) : (
+                  !isViewingExistingReview && <p className={styles.ratingHint}>Nhấp vào sao để đánh giá</p>
+                )}
               </div>
               <textarea 
                 placeholder="Nhận xét về bác sĩ..."
                 className={styles.reviewTextarea}
+                value={reviewComment}
+                onChange={(e) => !isViewingExistingReview && setReviewComment(e.target.value)}
+                readOnly={isViewingExistingReview}
+                style={{ 
+                  cursor: isViewingExistingReview ? 'default' : 'text',
+                  backgroundColor: isViewingExistingReview ? '#f8fafc' : 'white'
+                }}
               ></textarea>
             </div>
 
-            <div className={styles.ratingFooter}>
-              <button className={styles.submitRatingBtn}>
-                <i className="bi bi-send"></i>
-                Gửi đánh giá
-              </button>
-            </div>
+            {!isViewingExistingReview && (
+              <div className={styles.ratingFooter}>
+                <button 
+                  className={styles.submitRatingBtn}
+                  disabled={rating === 0 || isSubmittingReview}
+                  onClick={handleSubmitReview}
+                  style={{ 
+                    opacity: (rating === 0 || isSubmittingReview) ? 0.5 : 1, 
+                    cursor: (rating === 0 || isSubmittingReview) ? 'not-allowed' : 'pointer' 
+                  }}
+                >
+                  {isSubmittingReview ? (
+                    <>
+                      <span className={styles.btnSpinner}></span>
+                      Đang gửi...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-send"></i>
+                      Gửi đánh giá
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {isViewingExistingReview && (
+              <div className={styles.ratingFooter}>
+                <div className={styles.viewOnlyNotice}>
+                  <i className="bi bi-info-circle"></i>
+                  <span>Đánh giá đã được gửi và không thể chỉnh sửa</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

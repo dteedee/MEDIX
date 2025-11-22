@@ -31,6 +31,7 @@ const ManagerLayout: React.FC = () => {
     if (location.pathname.includes('/categories')) return 'categories';
     if (location.pathname.includes('/packages')) return 'packages';
     if (location.pathname.includes('/commissions')) return 'commissions';
+    if (location.pathname.includes('/promotions')) return 'promotions';
     if (location.pathname.includes('/feedback')) return 'feedback';
 
     return 'dashboard';

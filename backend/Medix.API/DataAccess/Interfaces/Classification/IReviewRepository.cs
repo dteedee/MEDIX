@@ -14,5 +14,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task<List<Review>> GetReviewsByDoctorUserIdAsync(Guid userId);
         Task<List<Review>> GetAllAsync();
 
+        Task<List<Review>> GetByAppointmentIdsAsync(IEnumerable<Guid> appointmentIds);
+
     }
 }

@@ -171,12 +171,14 @@ const DoctorAppointments: React.FC = () => {
       apt.statusCode !== 'Completed' && 
       apt.statusCode !== 'CancelledByPatient' && 
       apt.statusCode !== 'CancelledByDoctor' && 
+      apt.statusCode !== 'MissedByDoctor' && 
       apt.statusCode !== 'NoShow'
     ).length,
     completed: appointments.filter(apt => apt.statusCode === 'Completed').length,
     cancelled: appointments.filter(apt => 
       apt.statusCode === 'CancelledByPatient' || 
       apt.statusCode === 'CancelledByDoctor' || 
+      apt.statusCode === 'MissedByDoctor' || 
       apt.statusCode === 'NoShow'
     ).length
   };
@@ -191,6 +193,7 @@ const DoctorAppointments: React.FC = () => {
           apt.statusCode !== 'Completed' && 
           apt.statusCode !== 'CancelledByPatient' && 
           apt.statusCode !== 'CancelledByDoctor' && 
+          apt.statusCode !== 'MissedByDoctor' && 
           apt.statusCode !== 'NoShow'
         );
       } else if (filters.status === 'completed') {
@@ -199,6 +202,7 @@ const DoctorAppointments: React.FC = () => {
         filtered = filtered.filter(apt => 
           apt.statusCode === 'CancelledByPatient' || 
           apt.statusCode === 'CancelledByDoctor' || 
+          apt.statusCode === 'MissedByDoctor' || 
           apt.statusCode === 'NoShow'
         );
       }
@@ -244,6 +248,7 @@ const DoctorAppointments: React.FC = () => {
         // Cancelled appointments last
         if (apt.statusCode === 'CancelledByPatient' || 
             apt.statusCode === 'CancelledByDoctor' || 
+            apt.statusCode === 'MissedByDoctor' || 
             apt.statusCode === 'NoShow') {
           return 4;
         }
@@ -328,6 +333,7 @@ const DoctorAppointments: React.FC = () => {
   // ✅ 2. Trạng thái hủy
   if (statusCode === 'CancelledByPatient' || 
       statusCode === 'CancelledByDoctor' || 
+      statusCode === 'MissedByDoctor' || 
       statusCode === 'NoShow') {
     return { 
       label: 'Đã hủy', 
@@ -630,6 +636,7 @@ const DoctorAppointments: React.FC = () => {
                 <div className={styles.cardFooter} onClick={(e) => e.stopPropagation()}>
                   {appointment.statusCode !== 'CancelledByPatient' && 
                    appointment.statusCode !== 'CancelledByDoctor' && 
+                   appointment.statusCode !== 'MissedByDoctor' && 
                    appointment.statusCode !== 'NoShow' && (
                     <div className={styles.footerActions}>
                       <button 
@@ -782,6 +789,7 @@ const DoctorAppointments: React.FC = () => {
               <div className={styles.modalFooter}>
                 {selectedAppointment.statusCode !== 'CancelledByPatient' && 
                  selectedAppointment.statusCode !== 'CancelledByDoctor' && 
+                 selectedAppointment.statusCode !== 'MissedByDoctor' && 
                  selectedAppointment.statusCode !== 'NoShow' && (
                   <>
                     <button 

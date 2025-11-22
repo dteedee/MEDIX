@@ -19,11 +19,7 @@ namespace Medix.API.Business.Services.Classification
         public async Task<UserPromotionDto> AssignPromotionToUserAsync(Guid userId, Guid promotionId)
         {
             // Kiểm tra xem promotion đã được gán cho user chưa
-            var existing = await _userPromotionRepository.GetByUserIdAndPromotionIdAsync(userId, promotionId);
-            if (existing != null)
-            {
-                throw new InvalidOperationException("Promotion already assigned to this user.");
-            }
+      
 
       
 

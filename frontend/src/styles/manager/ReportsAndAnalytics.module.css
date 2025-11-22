@@ -85,6 +85,59 @@
   box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
 }
 
+/* Year Select */
+.yearSelect {
+  padding: 8px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  background: white;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.yearSelect:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+/* Trend Summary */
+.trendSummary {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem;
+  background: #f7fafc;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summaryLabel {
+  font-size: 0.875rem;
+  color: #718096;
+  font-weight: 500;
+}
+
+.summaryValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+/* Chart Header Enhancement */
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 /* Report Type Selector */
 .reportTypeSelector {
   display: flex;
@@ -317,10 +370,31 @@
   gap: 12px;
   height: 200px;
   padding: 16px 0;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.trendChart::-webkit-scrollbar {
+  height: 6px;
+}
+
+.trendChart::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.trendChart::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.trendChart::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 .trendItem {
   flex: 1;
+  min-width: 70px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -375,10 +449,31 @@
   gap: 12px;
   height: 200px;
   padding: 16px 0;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.growthChart::-webkit-scrollbar {
+  height: 6px;
+}
+
+.growthChart::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.growthChart::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.growthChart::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 .growthItem {
   flex: 1;
+  min-width: 70px;
   display: flex;
   flex-direction: column;
   align-items: center;

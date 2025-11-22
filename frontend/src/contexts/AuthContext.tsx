@@ -47,18 +47,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Initialize auth state on app start
   useEffect(() => {
     initializeAuth();
-    
-    // Listen for auth changes from external sources (like Google login)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Listen for auth changes from external sources (like Google login)
+  useEffect(() => {
     const handleAuthChange = () => {
-      console.log('🔄 AuthContext - Received authChanged event, re-checking auth state');
       const userData = localStorage.getItem('userData');
       if (userData && !user) {
         try {
           const parsedUser = JSON.parse(userData);
-          console.log('👤 AuthContext - Setting user from external auth change:', parsedUser.fullName);
           setUser(parsedUser);
         } catch (error) {
-          console.error('❌ AuthContext - Error parsing user data:', error);
+          console.error('Error parsing user data:', error);
         }
       }
     };
@@ -72,19 +73,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const initializeAuth = async () => {
     try {
-      console.log('🔄 AuthContext - Initializing auth...');
       // Check if user data exists in localStorage
       const userData = localStorage.getItem('userData');
       const accessToken = localStorage.getItem('accessToken');
       const refreshToken = localStorage.getItem('refreshToken');
       
-      console.log('🔄 AuthContext - userData exists:', !!userData);
-      console.log('🔄 AuthContext - accessToken exists:', !!accessToken);
-      console.log('🔄 AuthContext - refreshToken exists:', !!refreshToken);
-      
       // If we have user data but no tokens, clear everything (Google login error case)
       if (userData && !accessToken && !refreshToken) {
-        console.warn('⚠️ User data exists but no tokens - clearing invalid session');
         localStorage.removeItem('userData');
         localStorage.removeItem('currentUser');
         setIsLoading(false);
@@ -97,13 +92,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await loadUserProfile();
       }
     } catch (error) {
-      console.error('❌ Failed to initialize auth:', error);
+      console.error('Failed to initialize auth:', error);
       // Clear invalid tokens
       apiClient.clearTokens();
       localStorage.removeItem('userData');
       localStorage.removeItem('currentUser');
     } finally {
-      console.log('✅ AuthContext - Init complete, isLoading = false');
       setIsLoading(false);
     }
   };
@@ -115,13 +109,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userData = localStorage.getItem('userData');
       if (userData) {
         const parsedUser = JSON.parse(userData);
-        console.log('👤 AuthContext - Loading user:', parsedUser.fullName, 'Role:', parsedUser.role);
         setUser(parsedUser);
         // Dispatch auth changed event for Header component
         window.dispatchEvent(new Event('authChanged'));
       }
     } catch (error) {
-      console.error('❌ Failed to load user profile:', error);
+      console.error('Failed to load user profile:', error);
       throw error;
     }
   };
@@ -139,19 +132,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // If the user is a doctor, fetch additional profile details
       if (finalUser.role === UserRole.DOCTOR) {
         try {
-          console.log('🩺 Doctor logged in, fetching profile details...');
           const doctorDetails = await doctorService.getDoctorProfileDetails();
           // Merge the details into the user object
           finalUser = { ...finalUser, ...doctorDetails };
-          console.log('✅ Doctor details fetched and merged:', finalUser);
         } catch (detailsError) {
-          console.error('⚠️ Could not fetch doctor details, continuing with basic user info:', detailsError);
+          console.error('Could not fetch doctor details:', detailsError);
         }
       }
 
       // Store user data
       updateUserInStorageAndState(finalUser);
-      console.log('✅ AuthContext - Login successful, user set:', finalUser.fullName);
       
       // Dispatch auth changed event for Header component
       window.dispatchEvent(new Event('authChanged'));
@@ -240,7 +230,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       window.dispatchEvent(new Event('authChanged'));
       
       // Force reload to clear all state and prevent back navigation
-      console.log('🔄 Force reload after logout');
       window.location.href = '/login';
     }
   };
@@ -262,8 +251,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // Dispatch auth changed event for other components
     window.dispatchEvent(new Event('authChanged'));
-    
-    console.log('✅ AuthContext - User updated:', updatedUser.fullName);
   };
 
   const hasPermission = (permission: string): boolean => {

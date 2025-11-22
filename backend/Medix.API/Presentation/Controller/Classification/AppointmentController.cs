@@ -41,6 +41,10 @@ namespace Medix.API.Presentation.Controllers
             IDoctorService doctorService,
             IPatientHealthReminderService patientHealthReminderService,
             ISystemConfigurationService systemConfigurationService)
+        private readonly IUserPromotionService userPromotionService;
+        private readonly IPromotionService promotionService;
+
+        public AppointmentController(IAppointmentService service, IWalletService walletService, IWalletTransactionService walletTransactionService, IPatientService patientService, IUserService userService, INoticeSetupService noticeSetupService, IEmailService emailService, IDoctorService doctorService, IPatientHealthReminderService patientHealthReminderService, IUserPromotionService userPromotionService, IPromotionService promotionService)
         {
             _service = service;
             _walletService = walletService;
@@ -52,6 +56,8 @@ namespace Medix.API.Presentation.Controllers
             _doctorService = doctorService;
             _patientHealthReminderService = patientHealthReminderService;
             _systemConfigurationService = systemConfigurationService;
+            this.userPromotionService = userPromotionService;
+            this.promotionService = promotionService;
         }
 
         [HttpGet]
@@ -151,6 +157,22 @@ namespace Medix.API.Presentation.Controllers
              var x=   await _emailService.SendEmailAsync(user.Email, header, body);
 
             }
+
+            if (dto.PromotionCode != null)
+            {
+                var promotion = await promotionService.GetPromotionByCodeAsync(dto.PromotionCode);
+
+               promotion.UsedCount += 1;
+             
+                await promotionService.UpdatePromotionAsync(promotion);
+            }
+
+            if (dto.UserPromotionID != null)
+            {
+
+
+                await userPromotionService.DeactivatePromotionAsync(Guid.Parse(dto.UserPromotionID));
+            }   
             await _patientHealthReminderService.SendHealthReminderAppointmentAsync(dto);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }

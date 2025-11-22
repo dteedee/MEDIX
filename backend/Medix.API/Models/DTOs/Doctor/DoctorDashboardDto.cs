@@ -68,4 +68,20 @@
         public string PatientName { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
     }
+
+
+
+    public class StatDto
+    {
+        public long Total { get; set; }
+        public decimal Growth { get; set; } // percentage, e.g. 12.5
+    }
+
+    public class ManagerDashboardSummaryDto
+    {
+        public StatDto Users { get; set; } = new();
+        public StatDto Doctors { get; set; } = new();
+        public StatDto Appointments { get; set; } = new();
+        public StatDto Revenue { get; set; } = new(); // revenue in smallest currency unit / decimal
+    }
 }

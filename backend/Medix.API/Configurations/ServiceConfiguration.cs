@@ -30,7 +30,7 @@ namespace Medix.API.Configurations
             services.AddAutoMapper(typeof(MappingProfile));
         }
 
-        private static void RegisterRepositories(IServiceCollection services)
+        private static void RegisterRepositories(IServiceCollection services)   
         {
             services.AddScoped<ICmspageRepository, CmspageRepository>();
             services.AddScoped<IContentCategoryRepository, ContentCategoryRepository>();
@@ -136,6 +136,7 @@ namespace Medix.API.Configurations
 
             services.AddHostedService<JobDoctorScheduleOveride>();
             services.AddHostedService<AutoBackupJob>();
+         
 
 
         }
@@ -148,6 +149,14 @@ namespace Medix.API.Configurations
                 service => service.CalculateSalary(Helpers.GetLastDayOfCurrentMonth()),
                 "59 23 L * *"
             );
+
+            RecurringJob.AddOrUpdate<IDoctorService>("Banned-Doctor",service=>service.CheckAndBanDoctors(),
+                "0 12 * * 4"
+                );
+
+            RecurringJob.AddOrUpdate<IDoctorService>("Unban-Doctor", service => service.CheckAndUnbanDoctors(),
+             "0 14 * * 0"
+                );
         }
     }
 }

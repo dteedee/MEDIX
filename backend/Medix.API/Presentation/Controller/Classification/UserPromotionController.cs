@@ -163,11 +163,7 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
 
                 var result = await _userPromotionService.GetActiveUserPromotionsAsync(userId);
-                return Ok(new
-                {
-                    count = result.Count(),
-                    promotions = result
-                });
+                return Ok(result);
             }
             catch (Exception ex)
             {

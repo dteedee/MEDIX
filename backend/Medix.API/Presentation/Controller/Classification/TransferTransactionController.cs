@@ -5,6 +5,7 @@ using Medix.API.Models.DTOs.Wallet;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PayOS.Models.V1.Payouts;
 using System.Security.Claims;
 
 namespace Medix.API.Presentation.Controller.Classification
@@ -77,6 +78,17 @@ namespace Medix.API.Presentation.Controller.Classification
             var result = await _transferTransactionService.CreateTransferTransactionAsync(request);
             return CreatedAtAction(nameof(GetTransferTransactionById), new { id = result.Id }, result);
 
+        }
+
+
+   
+
+        [HttpGet("getAllTransaction")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> GetAllTransferTransactions()
+        {
+            var result = await _transferTransactionService.GetAllTransferTransactionsAsync();
+            return Ok(result);
         }
 
         [HttpGet("{id}")]

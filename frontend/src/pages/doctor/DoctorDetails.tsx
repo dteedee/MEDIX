@@ -7,7 +7,7 @@ import Footer from "../../components/layout/Footer";
 import paymentService from "../../services/paymentService";
 import promotionService from "../../services/promotionService";
 import { appointmentService } from "../../services/appointmentService";
-import { PromotionDto } from "../../types/promotion.types";
+import { PromotionDto, UserPromotionDto } from "../../types/promotion.types";
 import { CreateAppointmentDto } from "../../types/appointment.types";
 import styles from '../../styles/doctor/doctor-details.module.css';
 import bookingStyles from '../../styles/patient/DoctorBookingList.module.css';
@@ -129,10 +129,11 @@ function DoctorDetails() {
     const [isCreatingPayment, setIsCreatingPayment] = useState(false);
     const [promotionCode, setPromotionCode] = useState<string>('');
     const [appliedPromotion, setAppliedPromotion] = useState<PromotionDto | null>(null);
+    const [appliedUserPromotion, setAppliedUserPromotion] = useState<UserPromotionDto | null>(null);
     const [promotionError, setPromotionError] = useState<string>('');
     const [isCheckingPromotion, setIsCheckingPromotion] = useState(false);
     const [showPromotionModal, setShowPromotionModal] = useState(false);
-    const [availablePromotions, setAvailablePromotions] = useState<PromotionDto[]>([]);
+    const [availablePromotions, setAvailablePromotions] = useState<UserPromotionDto[]>([]);
     const [isLoadingPromotions, setIsLoadingPromotions] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -279,6 +280,10 @@ function DoctorDetails() {
                 totalAmount: totalAmount,
                 chiefComplaint: chiefComplaint.trim(),
                 historyOfPresentIllness: historyOfPresentIllness.trim() ? historyOfPresentIllness.trim() : undefined,
+                // If user selected from UserPromotion list, send UserPromotionID
+                // Otherwise, if they manually entered a code, send PromotionCode
+                userPromotionID: appliedUserPromotion?.id,
+                promotionCode: appliedUserPromotion ? undefined : (appliedPromotion ? promotionCode : undefined),
                 // Các field khác sẽ được set ở backend
             };
             
@@ -321,14 +326,18 @@ function DoctorDetails() {
             const promotion = await promotionService.getPromotionByCode(promotionCode.trim());
             
             if (!promotion) {
-                setPromotionError('Mã khuyến mãi không tồn tại');
+                const errorMessage = 'Mã khuyến mãi không tồn tại';
+                setPromotionError(errorMessage);
+                showToast(errorMessage, 'error');
                 setAppliedPromotion(null);
                 return;
             }
 
             // Check if promotion is active
             if (!promotion.isActive) {
-                setPromotionError('Mã khuyến mãi đã hết hạn hoặc không còn hiệu lực');
+                const errorMessage = 'Mã khuyến mãi đã hết hạn hoặc không còn hiệu lực';
+                setPromotionError(errorMessage);
+                showToast(errorMessage, 'error');
                 setAppliedPromotion(null);
                 return;
             }
@@ -339,14 +348,18 @@ function DoctorDetails() {
             const endDate = new Date(promotion.endDate);
 
             if (now < startDate || now > endDate) {
-                setPromotionError('Mã khuyến mãi không trong thời gian sử dụng');
+                const errorMessage = 'Mã khuyến mãi không trong thời gian sử dụng';
+                setPromotionError(errorMessage);
+                showToast(errorMessage, 'error');
                 setAppliedPromotion(null);
                 return;
             }
 
             // Check if promotion has reached max usage
             if (promotion.maxUsage && promotion.usedCount >= promotion.maxUsage) {
-                setPromotionError('Mã khuyến mãi đã hết lượt sử dụng');
+                const errorMessage = 'Mã khuyến mãi đã hết lượt sử dụng';
+                setPromotionError(errorMessage);
+                showToast(errorMessage, 'error');
                 setAppliedPromotion(null);
                 return;
             }
@@ -354,8 +367,19 @@ function DoctorDetails() {
             // Success - apply promotion
             setAppliedPromotion(promotion);
             setPromotionError('');
-        } catch (error) {
-            setPromotionError('Có lỗi xảy ra khi kiểm tra mã khuyến mãi');
+            showToast('Áp dụng mã khuyến mãi thành công!', 'success');
+        } catch (error: any) {
+            let errorMessage = 'Có lỗi xảy ra khi kiểm tra mã khuyến mãi';
+            
+            // Handle BadRequest (400) from backend
+            if (error.response?.status === 400) {
+                errorMessage = error.response.data?.message || error.response.data || 'Mã khuyến mãi không hợp lệ';
+            } else if (error.response?.status === 404) {
+                errorMessage = 'Mã khuyến mãi không tồn tại';
+            }
+            
+            setPromotionError(errorMessage);
+            showToast(errorMessage, 'error');
             setAppliedPromotion(null);
         } finally {
             setIsCheckingPromotion(false);
@@ -369,19 +393,29 @@ function DoctorDetails() {
         setAvailablePromotions([]);
 
         try {
-            const promotions = await promotionService.getAvailablePromotions();
-            // Filter only active promotions
-            const now = new Date();
-            const activePromotions = promotions.filter(promo => {
-                if (!promo.isActive) return false;
-                const startDate = new Date(promo.startDate);
-                const endDate = new Date(promo.endDate);
-                if (now < startDate || now > endDate) return false;
-                if (promo.maxUsage && promo.usedCount >= promo.maxUsage) return false;
+            const userPromotions = await promotionService.getUserActivePromotions();
+            console.log('🎫 User promotions received:', userPromotions);
+            console.log('🎫 Promotions count:', userPromotions.length);
+            
+            if (userPromotions.length > 0) {
+                console.log('🎫 First promotion sample:', userPromotions[0]);
+            }
+            
+            // Backend already returns only active promotions (isValidNow = true)
+            // Just filter out any promotions without the promotion object
+            const validPromotions = userPromotions.filter(up => {
+                if (!up.promotion) {
+                    console.warn('⚠️ UserPromotion without promotion object:', up);
+                    return false;
+                }
+                console.log('✅ Valid promotion:', up.promotion.name, 'Code:', up.promotion.code);
                 return true;
             });
-            setAvailablePromotions(activePromotions);
+            
+            console.log('✅ Valid promotions after filter:', validPromotions.length);
+            setAvailablePromotions(validPromotions);
         } catch (error) {
+            console.error('❌ Error in handleOpenPromotionModal:', error);
             setAvailablePromotions([]);
         } finally {
             setIsLoadingPromotions(false);
@@ -389,9 +423,14 @@ function DoctorDetails() {
     };
 
     // Function to select a promotion from the modal
-    const handleSelectPromotion = (promotion: PromotionDto) => {
-        setAppliedPromotion(promotion);
-        setPromotionCode(promotion.code);
+    const handleSelectPromotion = (userPromotion: UserPromotionDto) => {
+        if (!userPromotion.promotion) {
+            setPromotionError('Mã khuyến mãi không hợp lệ');
+            return;
+        }
+        setAppliedPromotion(userPromotion.promotion);
+        setAppliedUserPromotion(userPromotion); // Store the full UserPromotionDto
+        setPromotionCode(userPromotion.promotion.code);
         setPromotionError('');
         setShowPromotionModal(false);
     };
@@ -1814,6 +1853,7 @@ function DoctorDetails() {
                                                                     setPromotionCode(e.target.value.toUpperCase());
                                                                     setPromotionError('');
                                                                     setAppliedPromotion(null);
+                                                                    setAppliedUserPromotion(null);
                                                                 }}
                                                                 disabled={isCheckingPromotion || !!appliedPromotion}
                                                             />
@@ -2214,47 +2254,58 @@ function DoctorDetails() {
                                 </div>
                             ) : (
                                 <div className={styles.promotionList}>
-                                    {availablePromotions.map((promotion) => (
-                                        <div
-                                            key={promotion.id}
-                                            className={`${styles.promotionItem} ${appliedPromotion?.id === promotion.id ? styles.promotionItemSelected : ''}`}
-                                            onClick={() => handleSelectPromotion(promotion)}
-                                        >
-                                            <div className={styles.promotionItemHeader}>
-                                                <div className={styles.promotionItemIcon}>
-                                                    <i className="bi bi-tag-fill"></i>
-                                                </div>
-                                                <div className={styles.promotionItemInfo}>
-                                                    <h4 className={styles.promotionItemName}>{promotion.name}</h4>
-                                                    <p className={styles.promotionItemCode}>{promotion.code}</p>
-                                                </div>
-                                                <div className={styles.promotionItemDiscount}>
-                                                    <span className={styles.discountBadge}>
-                                                        {promotion.discountType === 'Percentage' 
-                                                            ? `-${promotion.discountValue}%`
-                                                            : `-${promotion.discountValue.toLocaleString('vi-VN')}đ`}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            {promotion.description && (
-                                                <p className={styles.promotionItemDescription}>{promotion.description}</p>
-                                            )}
-                                            <div className={styles.promotionItemFooter}>
-                                                <div className={styles.promotionItemDate}>
-                                                    <i className="bi bi-calendar3"></i>
-                                                    <span>
-                                                        {new Date(promotion.startDate).toLocaleDateString('vi-VN')} - {new Date(promotion.endDate).toLocaleDateString('vi-VN')}
-                                                    </span>
-                                                </div>
-                                                {appliedPromotion?.id === promotion.id && (
-                                                    <div className={styles.promotionItemSelectedBadge}>
-                                                        <i className="bi bi-check-circle-fill"></i>
-                                                        Đã chọn
+                                    {availablePromotions.map((userPromotion) => {
+                                        const promotion = userPromotion.promotion;
+                                        if (!promotion) return null;
+                                        
+                                        return (
+                                            <div
+                                                key={userPromotion.id}
+                                                className={`${styles.promotionItem} ${appliedPromotion?.id === promotion.id ? styles.promotionItemSelected : ''}`}
+                                                onClick={() => handleSelectPromotion(userPromotion)}
+                                            >
+                                                <div className={styles.promotionItemHeader}>
+                                                    <div className={styles.promotionItemIcon}>
+                                                        <i className="bi bi-tag-fill"></i>
                                                     </div>
+                                                    <div className={styles.promotionItemInfo}>
+                                                        <h4 className={styles.promotionItemName}>{promotion.name}</h4>
+                                                        <p className={styles.promotionItemCode}>{promotion.code}</p>
+                                                    </div>
+                                                    <div className={styles.promotionItemDiscount}>
+                                                        <span className={styles.discountBadge}>
+                                                            {promotion.discountType === 'Percentage' 
+                                                                ? `-${promotion.discountValue}%`
+                                                                : `-${promotion.discountValue.toLocaleString('vi-VN')}đ`}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {promotion.description && (
+                                                    <p className={styles.promotionItemDescription}>{promotion.description}</p>
                                                 )}
+                                                <div className={styles.promotionItemFooter}>
+                                                    <div className={styles.promotionItemDate}>
+                                                        <i className="bi bi-calendar3"></i>
+                                                        <span>
+                                                            {new Date(promotion.startDate).toLocaleDateString('vi-VN')} - {new Date(promotion.endDate).toLocaleDateString('vi-VN')}
+                                                        </span>
+                                                    </div>
+                                                    {userPromotion.usedCount > 0 && (
+                                                        <div className={styles.promotionItemUsage}>
+                                                            <i className="bi bi-info-circle"></i>
+                                                            <span>Đã dùng: {userPromotion.usedCount} lần</span>
+                                                        </div>
+                                                    )}
+                                                    {appliedPromotion?.id === promotion.id && (
+                                                        <div className={styles.promotionItemSelectedBadge}>
+                                                            <i className="bi bi-check-circle-fill"></i>
+                                                            Đã chọn
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

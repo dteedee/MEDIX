@@ -37,6 +37,9 @@
 
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+
+        public string? PatientReview { get; set; }
+        public string? PatientRating { get; set; }
     }
 
     public class CancelAppointmentRequest

@@ -10,6 +10,9 @@ namespace Medix.API.Business.Interfaces.Classification
 
         public Task<PromotionDto> CreatePromotionAsync(PromotionDto promotionDto);
         public Task<PromotionDto> UpdatePromotionAsync(PromotionDto promotionDto);
+        public Task<IEnumerable<PromotionDto>> GetAllPromotion();
+
+        public Task<bool> DeletePromotionAsync(Guid id);
 
     }
 }

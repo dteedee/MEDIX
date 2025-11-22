@@ -26,10 +26,11 @@ namespace Medix.API.Business.Services.Classification
         private readonly IDoctorRepository doctorRepository;
 
         private readonly IUserPromotionService userPromotionService;
+        private readonly IReviewRepository reviewRepository;
 
         private readonly IPromotionService promotionService;
 
-        public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService, IWalletTransactionService walletTransactionService, IWalletService walletService, IDoctorRepository doctorRepository, IUserPromotionService userPromotionService, IPromotionService promotionService)
+        public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService, IWalletTransactionService walletTransactionService, IWalletService walletService, IDoctorRepository doctorRepository, IUserPromotionService userPromotionService, IPromotionService promotionService, IReviewRepository reviewRepository)
         {
             _repository = repository;
             _mapper = mapper;
@@ -40,6 +41,7 @@ namespace Medix.API.Business.Services.Classification
             this.doctorRepository = doctorRepository;
             this.userPromotionService = userPromotionService;
             this.promotionService = promotionService;
+            this.reviewRepository = reviewRepository;
         }
 
         public async Task<IEnumerable<AppointmentDto>> GetAllAsync()
@@ -47,7 +49,30 @@ namespace Medix.API.Business.Services.Classification
             var entities = await _repository.GetAllAsync();
             return _mapper.Map<IEnumerable<AppointmentDto>>(entities);
         }
+        public async Task<AppointmentTrendsDto> GetAppointmentTrendsAsync(Guid? doctorId, int year)
+        {
+            try
+            {
+                var raw = await _repository.GetMonthlyAppointmentAndRevenueAsync(doctorId, year);
 
+                var monthly = raw.OrderBy(m => m.Month).ToList();
+
+                var result = new AppointmentTrendsDto
+                {
+                    Year = year,
+                    DoctorId = doctorId,
+                    Monthly = monthly,
+                    TotalAppointments = monthly.Sum(m => m.AppointmentCount),
+                    TotalRevenue = monthly.Sum(m => m.TotalRevenue)
+                };
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+               return null;
+            }
+        }
         public async Task<AppointmentDto?> GetByIdAsync(Guid id)
         {
             var entity = await _repository.GetByIdAsync(id);
@@ -119,7 +144,33 @@ namespace Medix.API.Business.Services.Classification
         public async Task<IEnumerable<AppointmentDto>> GetByPatientAsync(Guid patientId)
         {
             var list = await _repository.GetByPatientAsync(patientId);
-            return _mapper.Map<IEnumerable<AppointmentDto>>(list);
+            var dtos = _mapper.Map<List<AppointmentDto>>(list);
+
+            // Collect appointment IDs for completed appointments
+            var completedAppointmentIds = list
+                .Where(a => string.Equals(a.StatusCode, "Completed", StringComparison.OrdinalIgnoreCase))
+                .Select(a => a.Id)
+                .ToList();
+
+            if (completedAppointmentIds.Any())
+            {
+                // Single DB call to fetch all reviews for those appointments (avoids concurrent DbContext usage)
+                var reviews = await reviewRepository.GetByAppointmentIdsAsync(completedAppointmentIds);
+
+                var reviewByAppointment = reviews.ToDictionary(r => r.AppointmentId, r => r);
+
+                // Populate DTOs
+                foreach (var dto in dtos.Where(d => string.Equals(d.StatusCode, "Completed", StringComparison.OrdinalIgnoreCase)))
+                {
+                    if (reviewByAppointment.TryGetValue(dto.Id, out var review))
+                    {
+                        dto.PatientReview = review.Comment;
+                        dto.PatientRating = review.Rating.ToString();
+                    }
+                }
+            }
+
+            return dtos;
         }
 
         public async Task<IEnumerable<AppointmentDto>> GetByDateAsync(DateTime date)
@@ -188,63 +239,105 @@ namespace Medix.API.Business.Services.Classification
 
             return _mapper.Map<List<AppointmentDto>>(conflictingAppointments);
         }
-
         public async Task CheckisAppointmentCompleted(Guid id)
         {
-            var appoiment = await _repository.GetByIdAsync(id);
-            var doctor = await doctorRepository.GetDoctorByIdAsync(appoiment.DoctorId);
-            var wallet = await walletService.GetWalletByUserIdAsync(doctor.UserId);
+            var appointment = await _repository.GetByIdAsync(id);
+            if (appointment == null) return;
 
+            var doctor = await doctorRepository.GetDoctorByIdAsync(appointment.DoctorId);
+            if (doctor == null) return;
 
-            if (DateTime.Now > appoiment.AppointmentEndTime && appoiment.StatusCode != "Completed")
+      
+
+            var medicalRecord = await medicalRecordService.GetByAppointmentIdAsync(appointment.Id);
+
+            bool hasEnoughMedicalRecord =
+                medicalRecord != null &&
+                !string.IsNullOrEmpty(medicalRecord.Diagnosis) &&
+                !string.IsNullOrEmpty(medicalRecord.AssessmentNotes) &&
+                !string.IsNullOrEmpty(medicalRecord.TreatmentPlan) &&
+                !string.IsNullOrEmpty(medicalRecord.FollowUpInstructions);
+
+     
+            if (hasEnoughMedicalRecord && appointment.StatusCode != "Completed")
             {
                 var updateDto = new UpdateAppointmentDto
                 {
-                    Id =appoiment.Id,
-                    StatusCode = "MissedByDoctor",
+                    Id = appointment.Id,
+                    StatusCode = "Completed",
                     UpdatedAt = DateTime.UtcNow,
-                    DiscountAmount =appoiment.DiscountAmount,
-                    ConsultationFee = appoiment.ConsultationFee,
-                    DurationMinutes = appoiment.DurationMinutes,
-                    MedicalInfo = appoiment.MedicalInfo,
-                    PaymentMethodCode = appoiment.PaymentMethodCode,
-                    PaymentStatusCode = "Refunded",
-                    AppointmentEndTime = appoiment.AppointmentEndTime,
-                    AppointmentStartTime = appoiment.AppointmentStartTime,
-                    PlatformFee = appoiment.PlatformFee,
-                    RefundAmount = appoiment.RefundAmount,
-                    TotalAmount = appoiment.TotalAmount
-                   
+                    DiscountAmount = appointment.DiscountAmount,
+                    ConsultationFee = appointment.ConsultationFee,
+                    DurationMinutes = appointment.DurationMinutes,
+                    MedicalInfo = appointment.MedicalInfo,
+                    PaymentMethodCode = appointment.PaymentMethodCode,
+                    PaymentStatusCode = "Completed",
+                    AppointmentEndTime = appointment.AppointmentEndTime,
+                    AppointmentStartTime = appointment.AppointmentStartTime,
+                    PlatformFee = appointment.PlatformFee,
+                    RefundAmount = appointment.RefundAmount,
+                    TotalAmount = appointment.TotalAmount
                 };
 
                 await UpdateAsync(updateDto);
-                    
-                var WalletTransaction = new WalletTransactionDto
+                return;
+            }
+
+
+            if (!hasEnoughMedicalRecord && appointment.StatusCode != "Completed")
+            {
+                var updateDto = new UpdateAppointmentDto
                 {
-                    Amount = appoiment.TotalAmount,
+                    Id = appointment.Id,
+                    StatusCode = "MissedByDoctor",
+                    UpdatedAt = DateTime.UtcNow,
+                    DiscountAmount = appointment.DiscountAmount,
+                    ConsultationFee = appointment.ConsultationFee,
+                    DurationMinutes = appointment.DurationMinutes,
+                    MedicalInfo = appointment.MedicalInfo,
+                    PaymentMethodCode = appointment.PaymentMethodCode,
+                    PaymentStatusCode = "Refunded",
+                    AppointmentEndTime = appointment.AppointmentEndTime,
+                    AppointmentStartTime = appointment.AppointmentStartTime,
+                    PlatformFee = appointment.PlatformFee,
+                    RefundAmount = appointment.RefundAmount,
+                    TotalAmount = appointment.TotalAmount
+                };
+
+                await UpdateAsync(updateDto);
+                var wallet = await walletService.GetWalletByUserIdAsync(appointment.Patient.User.Id);
+
+                if (wallet == null) return;
+
+                var walletTransaction = new WalletTransactionDto
+                {
+                    Amount = appointment.TotalAmount,
                     TransactionTypeCode = "AppointmentRefund",
-                    Description = "Hoàn lại tiền hủy lịch ",
+                    Description = "Hoàn lại tiền hủy lịch",
                     CreatedAt = DateTime.UtcNow,
                     orderCode = 0,
                     Status = "Completed",
-                    BalanceAfter = wallet.Balance,
-                    BalanceBefore = wallet.Balance + Decimal.Parse(appoiment.TotalAmount.ToString()),
+                    BalanceBefore = wallet.Balance,
+                    BalanceAfter = wallet.Balance + appointment.TotalAmount,
                     walletId = wallet.Id
                 };
-                await walletTransactionService.createWalletTransactionAsync(WalletTransaction);
 
-                await walletService.IncreaseWalletBalanceAsync(doctor.UserId, appoiment.TotalAmount);
+                await walletTransactionService.createWalletTransactionAsync(walletTransaction);
+                await walletService.IncreaseWalletBalanceAsync(appointment.Patient.User.Id, appointment.TotalAmount);
 
-                doctor.TotalCaseMissPerWeek= doctor.TotalCaseMissPerWeek + 1;
-
+                // Increase doctor missed case
+                doctor.TotalCaseMissPerWeek += 1;
                 await doctorRepository.UpdateDoctorAsync(doctor);
 
+                // Assign promotion to patient
                 var promotionForPatient = await promotionService.GetPromotionByCodeAsync("WELCOME50K");
-
-        
-                await userPromotionService.AssignPromotionToUserAsync(appoiment.PatientId,promotionForPatient.Id);
+                if (promotionForPatient != null)
+                {
+                    await userPromotionService.AssignPromotionToUserAsync(appointment.Patient.User.Id, promotionForPatient.Id);
+                }
             }
         }
-           
-        }
+
+
     }
+}

@@ -84,6 +84,13 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
         public async Task<List<Review>> GetAllAsync()
         {
+        public async Task<List<Review>> GetByAppointmentIdsAsync(IEnumerable<Guid> appointmentIds)
+        {
+            if (appointmentIds == null) return new List<Review>();
+
+            var ids = appointmentIds.Distinct().ToList();
+            if (ids.Count == 0) return new List<Review>();
+
             return await _context.Reviews
                 .Include(r => r.Appointment)
                     .ThenInclude(a => a.Doctor)
@@ -91,6 +98,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Include(r => r.Appointment)
                     .ThenInclude(a => a.Patient)
                         .ThenInclude(p => p.User)
+                .Where(r => ids.Contains(r.AppointmentId))
                 .ToListAsync();
         }
 

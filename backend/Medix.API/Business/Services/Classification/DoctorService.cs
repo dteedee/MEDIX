@@ -409,6 +409,151 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<Doctor?> GetDoctorByIdAsync(Guid id) => await _doctorRepository.GetDoctorByIdAsync(id);
 
+        public async Task CheckAndBanDoctors()
+        {
+            var doctors = await _doctorRepository.GetAllAsync();
+            // Only operate on verified doctors
+            var verifiedDoctors = doctors.Where(d => d.IsVerified).ToList();
+
+            int salaryDeductionCount = 0;
+            int bannedCount = 0;
+            int permanentBannedCount = 0;
+
+            foreach (var doctor in verifiedDoctors)
+            {
+                // use one transaction per doctor so a failure for one doesn't affect others
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    bool updated = false;
+                    var misses = doctor.TotalCaseMissPerWeek.GetValueOrDefault(0);
+
+                
+                    if (misses == 3)
+                    {
+                        doctor.NextWeekMiss = 1;
+                        updated = true;
+                    }
+
+                  
+                    if (misses == 2 && !doctor.isSalaryDeduction.GetValueOrDefault(false))
+                    {
+                        doctor.isSalaryDeduction = true;
+                        salaryDeductionCount++;
+                        updated = true;
+                    }
+
+                    if (misses >= 3)
+                    {
+                        var nextMonday = GetNextMonday(DateTime.UtcNow);
+                   
+                        var nextSundayEnd = nextMonday.AddDays(6).Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+
+                        doctor.StartDateBanned = nextMonday;
+                        doctor.TotalBanned = (doctor.TotalBanned ?? 0) + 1;
+                        bannedCount++;
+                        updated = true;
+
+                       
+                        if (doctor.TotalBanned >= 2)
+                        {
+                            doctor.EndDateBanned = DateTime.UtcNow.AddYears(100);
+                            doctor.IsAcceptingAppointments = false;
+                            permanentBannedCount++;
+                        }
+                        else
+                        {
+                            doctor.EndDateBanned = nextSundayEnd;
+                            doctor.IsAcceptingAppointments = false;
+                        }
+                    }
+
+                    if (updated)
+                    {
+                        doctor.UpdatedAt = DateTime.UtcNow;
+                    }
+
+               
+                    doctor.TotalCaseMissPerWeek = 0;
+
+                 
+                    await _doctorRepository.UpdateDoctorAsync(doctor);
+               
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+                }
+                catch
+                {
+                
+                    await transaction.RollbackAsync();
+                   
+                }
+            }
+
+        }
+
+        private DateTime GetNextMonday(DateTime now)
+        {
+            var daysUntilNextMonday = ((int)DayOfWeek.Monday - (int)now.DayOfWeek + 7) % 7;
+
+            if (daysUntilNextMonday == 0)
+            {
+                daysUntilNextMonday = 7;
+            }
+
+            var nextMonday = now.Date.AddDays(daysUntilNextMonday);
+            return nextMonday;
+        }
+
+        public async Task CheckAndUnbanDoctors()
+        {
+            var doctors = await _doctorRepository.GetAllAsync();
+            var now = DateTime.UtcNow;
+
+            // Doctors whose ban has ended (exclude "never banned" and permanent bans)
+            var doctorsToUnban = doctors
+                .Where(d => d.EndDateBanned.HasValue
+                            && d.EndDateBanned.Value < now
+                            && d.EndDateBanned.Value > DateTime.MinValue
+                            && d.EndDateBanned.Value < DateTime.UtcNow.AddYears(50))
+                .ToList();
+
+            if (!doctorsToUnban.Any())
+                return;
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                foreach (var doctor in doctorsToUnban)
+                {
+                    var oldEndDate = doctor.EndDateBanned;
+
+                    if (doctor.NextWeekMiss.GetValueOrDefault() > 0)
+                    {
+                        doctor.TotalCaseMissPerWeek = 1; 
+                    }
+
+                    doctor.NextWeekMiss = 0;
+                    doctor.StartDateBanned = DateTime.MinValue;
+                    doctor.EndDateBanned = DateTime.MinValue;
+                    doctor.IsAcceptingAppointments = true;
+                    doctor.UpdatedAt = DateTime.UtcNow;
+
+                 
+                    await _doctorRepository.UpdateDoctorAsync(doctor);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
         //public static string GetAcceptEmailBody(string newPassword, string fullName)
         //{
         //    return $@"

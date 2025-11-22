@@ -1,3 +1,4 @@
+using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 
 namespace Medix.API.Business.Interfaces.Classification
@@ -10,5 +11,6 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<Specialization> CreateAsync(Specialization specialization);
         Task<Specialization> UpdateAsync(Specialization specialization);
         Task<bool> DeleteAsync(Guid id);
+        Task<IEnumerable<SpecializationDistributionDto>> GetDoctorCountBySpecializationAsync();
     }
 }

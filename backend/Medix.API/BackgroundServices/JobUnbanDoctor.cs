@@ -35,11 +35,13 @@ namespace Medix.API.BackgroundServices
                         "JobUnbanDoctor sẽ chạy vào: {nextRun}. Đợi {hours} giờ {minutes} phút",
                         nextSunday, delay.Hours, delay.Minutes);
 
+             
+                    // Thực thi logic mở ban cho doctor
+                    await CheckAndUnbanDoctors(stoppingToken);
+
                     // Đợi đến Chủ nhật 14:00
                     await Task.Delay(delay, stoppingToken);
 
-                    // Thực thi logic mở ban cho doctor
-                    await CheckAndUnbanDoctors(stoppingToken);
 
                     _logger.LogInformation("JobUnbanDoctor đã hoàn thành. Sẽ chạy lại vào Chủ nhật 14:00 tuần sau.");
                 }

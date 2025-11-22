@@ -1,4 +1,5 @@
 using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
 using System;
 using System.Collections.Generic;
@@ -28,5 +29,8 @@ namespace Medix.API.Business.Interfaces.UserManagement
         Task<string?> UpdateAvatarURL(string linkImage, Guid id);
         Task<UserDto> AdminResetPasswordAsync(Guid userId, string newPassword);
         Task<User?> GetUserAsync(Guid userId);
+
+        Task<UserGrowthDto> GetUserGrowthAsync(int year);
+        Task<ManagerDashboardSummaryDto> GetSummaryAsync();
     }
 }

@@ -30,6 +30,9 @@ namespace Medix.API.Models.DTOs.ApointmentDTO
         public string? chiefComplaint { get; set; }
         public string? historyOfPresentIllness { get; set; }
 
+        public string? UserPromotionID { get; set; }
+        public string? PromotionCode { get; set; }
+
     }
 }
 

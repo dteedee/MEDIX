@@ -1,4 +1,5 @@
-﻿using Humanizer;
+﻿using CloudinaryDotNet.Actions;
+using Humanizer;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.NewFolder;
@@ -79,7 +80,7 @@ namespace Medix.API.Presentation.Controller.Money
 
     
         [HttpPost("transfer")]
-        [Authorize]
+        [Authorize(Roles = "Manager")]
         public async Task<ActionResult<Transfer>> CreateTransfer([FromBody] TransferCreateRequest request)
         {
             if (request == null)
@@ -176,9 +177,9 @@ namespace Medix.API.Presentation.Controller.Money
         }
 
      [HttpPost("transfer-Reject")]
-[Authorize]
-public async Task<ActionResult> RejectedTransfer([FromBody] TransferCreateRequest request)
-{
+        [Authorize(Roles = "Manager")]
+        public async Task<ActionResult> RejectedTransfer([FromBody] TransferCreateRequest request)
+    {
     if (request == null)
     {
         return BadRequest("Transfer data is required");
@@ -202,13 +203,7 @@ public async Task<ActionResult> RejectedTransfer([FromBody] TransferCreateReques
         return NotFound(new { message = "Transfer transaction not found" });
     }
 
-    // ✅ Kiểm tra quyền sở hữu
-    if (transferTransaction.UserId != userId)
-    {
-        return Forbid(); // Hoặc return Unauthorized(new { message = "You don't have permission to reject this transfer" });
-    }
-
-    // ✅ Kiểm tra status - chỉ có thể reject khi đang Pending
+  
     if (transferTransaction.Status != "Pending")
     {
         return BadRequest(new 

@@ -19,7 +19,7 @@ namespace Medix.API.BackgroundServices
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("JobBannedDoctor Background Service đang khởi động...");
+                _logger.LogInformation("JobBannedDoctor Background Service đang khởi động...");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -29,17 +29,11 @@ namespace Medix.API.BackgroundServices
                     var nextThursday = GetNextThursday(now);
 
                     var delay = nextThursday - now;
-
-                    _logger.LogInformation(
-                        "JobBannedDoctor sẽ chạy vào: {nextRun}. Đợi {hours} giờ {minutes} phút",
-                        nextThursday, delay.Hours, delay.Minutes);
-
                     await Task.Delay(delay, stoppingToken);
-
-       
 
                     // ✅ SAU ĐÓ đánh giá và ban doctor
                     await CheckAndBanDoctors(stoppingToken);
+        
 
                     _logger.LogInformation("JobBannedDoctor đã hoàn thành. Sẽ chạy lại vào thứ 5 tuần sau.");
                 }

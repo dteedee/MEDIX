@@ -6,31 +6,68 @@ namespace Medix.API.DataAccess.Repositories.Classification
 {
     public class PromotionRepository : IPromotionRepository
     {
-        private readonly MedixContext _medixContext;
+        private readonly MedixContext _context;
 
-        public PromotionRepository(MedixContext medixContext)
+        public PromotionRepository(MedixContext context)
         {
-            _medixContext = medixContext;
+            _context = context;
         }
 
-        public Task<Promotion> createPromotionAsync(Promotion promotion)
+        public async Task<bool> PromotionCodeExistsAsync(string code)
         {
-           return Task.FromResult(_medixContext.Promotions.Add(promotion).Entity);
+            return await _context.Promotions
+                .AnyAsync(p => p.Code == code);
+        }
+        public async Task<Promotion?> GetPromotionByCodeAsync(string code)  
+        {
+            return await _context.Promotions
+                .FirstOrDefaultAsync(p => p.Code == code);
         }
 
-        public Task<Promotion?> GetPromotionByCodeAsync(string code)
+        public async Task<Promotion> createPromotionAsync(Promotion promotion)
         {
-            return _medixContext.Promotions.FirstOrDefaultAsync(p => p.Code == code);
+            await _context.Promotions.AddAsync(promotion);
+            await _context.SaveChangesAsync();
+            return promotion;
         }
 
-        public Task<bool> PromotionCodeExistsAsync(string code)
+
+
+        public async Task<Promotion> updatePromotionAsync(Promotion promotion)
         {
-            return _medixContext.Promotions.AnyAsync(p => p.Code == code);
+            _context.Promotions.Update(promotion);
+            await _context.SaveChangesAsync();
+            return promotion;
         }
 
-        public Task<Promotion> updatePromotionAsync(Promotion promotion)
+        public async Task<IEnumerable<Promotion>> getAllPromotion()
         {
-           return Task.FromResult(_medixContext.Promotions.Update(promotion).Entity);
+         
+            return await _context.Promotions
+                .Include(p => p.UserPromotions)
+                .ToListAsync();
+        }
+
+        public async Task<bool> DeletePromotionAync(Guid id)
+        {
+            // Load promotion with related user-promotions to avoid FK issues
+            var existing = await _context.Promotions
+                .Include(p => p.UserPromotions)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (existing == null)
+                return false;
+
+            // If there are related UserPromotions, remove them first (or consider soft-delete)
+            if (existing.UserPromotions != null && existing.UserPromotions.Any())
+            {
+                _context.UserPromotions.RemoveRange(existing.UserPromotions);
+            }
+
+            _context.Promotions.Remove(existing);
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
+
 }

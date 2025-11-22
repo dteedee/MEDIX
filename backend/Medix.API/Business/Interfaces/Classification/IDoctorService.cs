@@ -21,6 +21,9 @@ namespace Medix.API.Business.Interfaces.Classification
 
         Task<IEnumerable<EducationWithPaginatedDoctorsDto>> GetDoctorsByEducationAsync(DoctorQueryParameters queryParams);
         Task<List<Doctor>> GetAllAsync();
+        Task CheckAndBanDoctors();
+
+        Task CheckAndUnbanDoctors();
 
     }
 }

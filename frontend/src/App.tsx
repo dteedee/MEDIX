@@ -61,6 +61,8 @@ import ReportsAndAnalytics from './pages/manager/ReportsAndAnalytics';
 import ServicePackageManagement from './pages/manager/ServicePackageManagement';
 import CommissionManagement from './pages/manager/CommissionManagement';
 import FeedbackManagement from './pages/manager/FeedbackManagement';
+import TransferTransactions from './pages/manager/TransferTransactions';
+import PromotionManagement from './pages/manager/PromotionManagement';
 import UserList from './pages/admin/UserList';
 import UserEditPage from './pages/admin/UserEditPage';
 import TrackingPage from './pages/admin/TrackingPage';
@@ -158,6 +160,8 @@ export function App() {
                     <Route path="feedback" element={<FeedbackManagement />} />
                     <Route path="categories" element={<CategoryList />} />
                     
+                    <Route path="transfer-transactions" element={<TransferTransactions />} />
+                    <Route path="promotions" element={<PromotionManagement />} />
                   </Route>
 
                   {/* ---------- Patient routes ---------- */}

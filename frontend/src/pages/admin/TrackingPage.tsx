@@ -435,6 +435,12 @@ export default function TrackingPage() {
           <h1 className={userStyles.title}>Truy vết hoạt động</h1>
           <p className={userStyles.subtitle}>Theo dõi và phân tích các hoạt động trong hệ thống</p>
         </div>
+        <div className={styles.headerRight}>
+              <div className={styles.dateTime}>
+                <i className="bi bi-calendar3"></i>
+                <span>{new Date().toLocaleDateString('vi-VN')}</span>
+              </div>
+            </div>
       </div>
 
       <div className={styles.statsGrid}>

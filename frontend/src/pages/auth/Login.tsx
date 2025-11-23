@@ -72,6 +72,27 @@ const Login: React.FC = () => {
             shape: 'rectangular',
             logo_alignment: 'left',
           });
+          
+          // Override text to Vietnamese after button is rendered
+          const updateGoogleButtonText = () => {
+            const googleButton = container.querySelector('div[role="button"]');
+            if (googleButton) {
+              // Find all text spans
+              const spans = googleButton.querySelectorAll('span');
+              spans.forEach((span) => {
+                const text = span.textContent || '';
+                if (text.includes('Sign in with Google') || text.includes('Sign in')) {
+                  span.textContent = 'Đăng nhập với Google';
+                  span.style.fontFamily = "'Be Vietnam Pro', sans-serif";
+                }
+              });
+            }
+          };
+          
+          // Try multiple times as Google button loads asynchronously
+          setTimeout(updateGoogleButtonText, 100);
+          setTimeout(updateGoogleButtonText, 300);
+          setTimeout(updateGoogleButtonText, 500);
         }
       }
     };
@@ -365,18 +386,21 @@ const Login: React.FC = () => {
             </div>
 
             {/* Google Sign In */}
-            <div id="googleSignInDiv" className={styles["google-btn-wrapper"]}></div>
+            <div className={styles["google-signin-container"]}>
+              <div id="googleSignInDiv" className={styles["google-btn-wrapper"]}></div>
+            </div>
 
-            <div className={styles["signup-link"]}>
-              Chưa có tài khoản? 
-              <div className="dropdown">
-                <a href="#" className={styles["btn-register"]} data-bs-toggle="dropdown" aria-expanded="false">
-                  {t('header.register')}
+            <div className={styles["signup-section"]}>
+              <p className={styles["signup-text"]}>Chưa có tài khoản?</p>
+              <div className={styles["register-buttons"]}>
+                <a href="/doctor/register" className={styles["btn-register-doctor"]}>
+                  <i className="bi bi-heart-pulse-fill"></i>
+                  <span>Đăng ký bác sĩ</span>
                 </a>
-                <ul className={`dropdown-menu ${styles["register-dropdown"]}`}>
-                  <li><a className="dropdown-item" href="/patient-register">{t('header.register.patient')}</a></li>
-                  <li><a className="dropdown-item" href="/doctor/register">{t('header.register.doctor')}</a></li>
-                </ul>
+                <a href="/patient-register" className={styles["btn-register-patient"]}>
+                  <i className="bi bi-person-plus-fill"></i>
+                  <span>Đăng ký bệnh nhân</span>
+                </a>
               </div>
             </div>
           </div>

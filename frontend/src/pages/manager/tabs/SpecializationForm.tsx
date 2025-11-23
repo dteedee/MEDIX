@@ -335,103 +335,103 @@ const SpecializationForm: React.FC<SpecializationFormProps> = ({
             <i className="bi bi-info-circle-fill" style={{ color: '#667eea', fontSize: '20px' }}></i>
             Thông tin cơ bản
           </h3>
-          
-          {/* Code */}
+
+        {/* Code */}
           <div className={styles.formGroup} style={{ marginBottom: '24px' }}>
-            <label className={styles.label}>
-              <i className="bi bi-tag-fill"></i>
-              Mã chuyên khoa <span className={styles.required}>*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.code}
-              onChange={(e) => {
-                const value = e.target.value.toUpperCase().replace(/\s+/g, '_');
-                setFormData({ ...formData, code: value });
-                if (errors.code) {
-                  const newErrors = { ...errors };
-                  delete newErrors.code;
-                  setErrors(newErrors);
-                }
-              }}
-              className={`${styles.input} ${errors.code ? styles.inputError : ''}`}
-              required
-              disabled={isReadOnly}
-              placeholder="VD: CO_XUONG_KHOP"
-              maxLength={50}
-              style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
-            />
-            {errors.code && <span className={styles.errorText}>{errors.code}</span>}
-            {!isReadOnly && (
-              <span className={styles.helpText}>
+          <label className={styles.label}>
+            <i className="bi bi-tag-fill"></i>
+            Mã chuyên khoa <span className={styles.required}>*</span>
+          </label>
+          <input
+            type="text"
+            value={formData.code}
+            onChange={(e) => {
+              const value = e.target.value.toUpperCase().replace(/\s+/g, '_');
+              setFormData({ ...formData, code: value });
+              if (errors.code) {
+                const newErrors = { ...errors };
+                delete newErrors.code;
+                setErrors(newErrors);
+              }
+            }}
+            className={`${styles.input} ${errors.code ? styles.inputError : ''}`}
+            required
+            disabled={isReadOnly}
+            placeholder="VD: CO_XUONG_KHOP"
+            maxLength={50}
+            style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
+          />
+          {errors.code && <span className={styles.errorText}>{errors.code}</span>}
+          {!isReadOnly && (
+            <span className={styles.helpText}>
                 <i className="bi bi-lightbulb" style={{ marginRight: '6px' }}></i>
                 Mã sẽ tự động chuyển thành chữ hoa và thay khoảng trắng bằng dấu gạch dưới. Mã này dùng để định danh duy nhất cho chuyên khoa. {formData.code.length}/50 ký tự
-              </span>
-            )}
-          </div>
+            </span>
+          )}
+        </div>
 
-          {/* Name */}
+        {/* Name */}
           <div className={styles.formGroup} style={{ marginBottom: '24px' }}>
-            <label className={styles.label}>
-              <i className="bi bi-hospital-fill"></i>
-              Tên chuyên khoa <span className={styles.required}>*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => {
-                setFormData({ ...formData, name: e.target.value });
-                if (errors.name) {
-                  const newErrors = { ...errors };
-                  delete newErrors.name;
-                  setErrors(newErrors);
-                }
-              }}
-              className={`${styles.input} ${errors.name ? styles.inputError : ''}`}
-              required
-              disabled={isReadOnly}
+          <label className={styles.label}>
+            <i className="bi bi-hospital-fill"></i>
+            Tên chuyên khoa <span className={styles.required}>*</span>
+          </label>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => {
+              setFormData({ ...formData, name: e.target.value });
+              if (errors.name) {
+                const newErrors = { ...errors };
+                delete newErrors.name;
+                setErrors(newErrors);
+              }
+            }}
+            className={`${styles.input} ${errors.name ? styles.inputError : ''}`}
+            required
+            disabled={isReadOnly}
               placeholder="VD: Cơ xương khớp (Thấp khớp học)"
-              maxLength={200}
-            />
-            {errors.name && <span className={styles.errorText}>{errors.name}</span>}
-            {!isReadOnly && (
+            maxLength={200}
+          />
+          {errors.name && <span className={styles.errorText}>{errors.name}</span>}
+          {!isReadOnly && (
               <span className={styles.helpText}>
                 <i className="bi bi-lightbulb" style={{ marginRight: '6px' }}></i>
                 Tên hiển thị của chuyên khoa sẽ xuất hiện trên giao diện người dùng và bác sĩ. {formData.name.length}/200 ký tự
               </span>
-            )}
-          </div>
+          )}
+        </div>
 
-          {/* Description */}
-          <div className={styles.formGroup}>
-            <label className={styles.label}>
-              <i className="bi bi-file-text-fill"></i>
+        {/* Description */}
+        <div className={styles.formGroup}>
+          <label className={styles.label}>
+            <i className="bi bi-file-text-fill"></i>
               Mô tả chi tiết
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => {
-                setFormData({ ...formData, description: e.target.value });
-                if (errors.description) {
-                  const newErrors = { ...errors };
-                  delete newErrors.description;
-                  setErrors(newErrors);
-                }
-              }}
-              className={`${styles.textarea} ${errors.description ? styles.inputError : ''}`}
-              disabled={isReadOnly}
+          </label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => {
+              setFormData({ ...formData, description: e.target.value });
+              if (errors.description) {
+                const newErrors = { ...errors };
+                delete newErrors.description;
+                setErrors(newErrors);
+              }
+            }}
+            className={`${styles.textarea} ${errors.description ? styles.inputError : ''}`}
+            disabled={isReadOnly}
               rows={6}
               placeholder="Mô tả chi tiết về chuyên khoa, các dịch vụ, phương pháp điều trị và công nghệ sử dụng. Ví dụ: Điều trị các bệnh viêm khớp, lupus, gút và các rối loạn tự miễn..."
-              maxLength={1000}
-              style={{ resize: 'vertical' }}
-            />
-            {errors.description && <span className={styles.errorText}>{errors.description}</span>}
-            {!isReadOnly && (
-              <span className={styles.helpText}>
+            maxLength={1000}
+            style={{ resize: 'vertical' }}
+          />
+          {errors.description && <span className={styles.errorText}>{errors.description}</span>}
+          {!isReadOnly && (
+            <span className={styles.helpText}>
                 <i className="bi bi-lightbulb" style={{ marginRight: '6px' }}></i>
                 Mô tả chi tiết sẽ giúp người dùng hiểu rõ hơn về chuyên khoa này, các dịch vụ và phương pháp điều trị. {formData.description.length}/1000 ký tự
-              </span>
-            )}
+            </span>
+          )}
           </div>
         </div>
 
@@ -609,50 +609,50 @@ const SpecializationForm: React.FC<SpecializationFormProps> = ({
             Trạng thái hoạt động
           </h3>
           
-          {!isReadOnly && (
-            <div className={styles.formGroup}>
-              <div className={styles.toggleContainer}>
-                <label className={styles.toggleLabel}>
-                  <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={e => setFormData({ ...formData, isActive: e.target.checked })}
-                    className={styles.toggleInput}
-                  />
-                  <span className={`${styles.toggleSwitch} ${formData.isActive ? styles.active : ''}`}>
-                    <span className={styles.toggleSlider}></span>
-                  </span>
-                  <span className={styles.toggleText}>
-                    {formData.isActive ? 'Đang hoạt động' : 'Tạm dừng'}
-                  </span>
-                </label>
-                <p className={styles.helpText}>
+        {!isReadOnly && (
+          <div className={styles.formGroup}>
+            <div className={styles.toggleContainer}>
+              <label className={styles.toggleLabel}>
+                <input
+                  type="checkbox"
+                  checked={formData.isActive}
+                  onChange={e => setFormData({ ...formData, isActive: e.target.checked })}
+                  className={styles.toggleInput}
+                />
+                <span className={`${styles.toggleSwitch} ${formData.isActive ? styles.active : ''}`}>
+                  <span className={styles.toggleSlider}></span>
+                </span>
+                <span className={styles.toggleText}>
+                  {formData.isActive ? 'Đang hoạt động' : 'Tạm dừng'}
+                </span>
+              </label>
+              <p className={styles.helpText}>
                   <i className="bi bi-info-circle" style={{ marginRight: '6px' }}></i>
-                  {formData.isActive 
+                {formData.isActive 
                     ? 'Chuyên khoa sẽ hiển thị cho người dùng và bác sĩ có thể đăng ký. Người dùng có thể tìm kiếm và chọn chuyên khoa này khi đặt lịch hẹn.' 
                     : 'Chuyên khoa sẽ không hiển thị cho đến khi được kích hoạt. Bác sĩ không thể đăng ký chuyên khoa này.'}
-                </p>
-              </div>
+              </p>
             </div>
-          )}
+          </div>
+        )}
 
-          {isReadOnly && (
-            <div className={styles.formGroup}>
-              <div style={{ 
+        {isReadOnly && (
+          <div className={styles.formGroup}>
+            <div style={{ 
                 display: 'inline-flex', 
                 alignItems: 'center',
                 padding: '14px 20px', 
                 borderRadius: '12px',
-                fontWeight: '600',
+              fontWeight: '600',
                 fontSize: '16px',
-                background: specialization?.isActive 
-                  ? 'linear-gradient(135deg, #dcfce7 0%, #86efac 100%)' 
-                  : 'linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%)',
-                color: specialization?.isActive ? '#166534' : '#991b1b',
-                border: `2px solid ${specialization?.isActive ? '#4ade80' : '#f87171'}`,
+              background: specialization?.isActive 
+                ? 'linear-gradient(135deg, #dcfce7 0%, #86efac 100%)' 
+                : 'linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%)',
+              color: specialization?.isActive ? '#166534' : '#991b1b',
+              border: `2px solid ${specialization?.isActive ? '#4ade80' : '#f87171'}`,
                 boxShadow: `0 4px 12px rgba(${specialization?.isActive ? '34, 197, 94' : '239, 68, 68'}, 0.2)`,
                 gap: '10px'
-              }}>
+            }}>
                 <i className={`bi ${specialization?.isActive ? 'bi-check-circle-fill' : 'bi-x-circle-fill'}`} style={{ fontSize: '20px' }}></i>
                 <span>{specialization?.isActive ? 'Đang hoạt động' : 'Tạm dừng'}</span>
               </div>
@@ -664,7 +664,7 @@ const SpecializationForm: React.FC<SpecializationFormProps> = ({
               </p>
             </div>
           )}
-        </div>
+          </div>
 
         {/* Action Buttons */}
         {!isReadOnly && (

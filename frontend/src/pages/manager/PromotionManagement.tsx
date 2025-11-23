@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import promotionService from '../../services/promotionService';
-import { PromotionDto, normalizeIsActive } from '../../types/promotion.types';
+import { PromotionDto, normalizeIsActive, PromotionTargetDto } from '../../types/promotion.types';
 import { useToast } from '../../contexts/ToastContext';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 import styles from '../../styles/manager/PromotionManagement.module.css';
@@ -693,16 +693,60 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
     startDate: promotion?.startDate ? new Date(promotion.startDate).toISOString().split('T')[0] : '',
     endDate: promotion?.endDate ? new Date(promotion.endDate).toISOString().split('T')[0] : '',
     isActive: promotion ? normalizeIsActive(promotion.isActive) : true,
+    applicableTargets: promotion?.applicableTargets || '',
+  });
+  
+  // Estado para controlar os alvos selecionados como array
+  const [selectedTargets, setSelectedTargets] = useState<string[]>(() => {
+    if (promotion?.applicableTargets) {
+      return promotion.applicableTargets.split(',').map(t => t.trim()).filter(t => t);
+    }
+    return [];
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [targets, setTargets] = useState<PromotionTargetDto[]>([]);
+  const [loadingTargets, setLoadingTargets] = useState(false);
   const { showToast } = useToast();
+
+  // Buscar alvos de promoção quando o modal abrir
+  React.useEffect(() => {
+    const fetchTargets = async () => {
+      setLoadingTargets(true);
+      try {
+        const data = await promotionService.getPromotionTargets();
+        setTargets(data);
+      } catch (error) {
+        console.error('Erro ao buscar alvos de promoção:', error);
+        showToast('Não foi possível carregar os alvos de promoção', 'error');
+      } finally {
+        setLoadingTargets(false);
+      }
+    };
+
+    fetchTargets();
+  }, []);
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
+  };
+
+  // Função para gerenciar seleção de alvos
+  const handleTargetToggle = (targetValue: string) => {
+    setSelectedTargets(prev => {
+      const newTargets = prev.includes(targetValue)
+        ? prev.filter(t => t !== targetValue)
+        : [...prev, targetValue];
+      
+      // Atualizar formData com a string concatenada
+      const targetsString = newTargets.join(',');
+      setFormData(prevData => ({ ...prevData, applicableTargets: targetsString }));
+      
+      return newTargets;
+    });
   };
 
   const validate = async () => {
@@ -774,6 +818,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
         startDate: new Date(formData.startDate).toISOString(),
         endDate: new Date(formData.endDate).toISOString(),
         isActive: Boolean(formData.isActive), // Ensure it's a boolean
+        applicableTargets: formData.applicableTargets || undefined,
       };
       
       console.log('Submitting promotion data:', submitData);
@@ -937,6 +982,85 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
               </div>
 
               <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Público-alvo da Promoção</span>
+                  {!isViewMode && selectedTargets.length > 0 && (
+                    <span style={{ 
+                      fontSize: '0.875rem', 
+                      fontWeight: 500,
+                      color: '#3b82f6',
+                      backgroundColor: '#eff6ff',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '12px'
+                    }}>
+                      {selectedTargets.length} {selectedTargets.length === 1 ? 'selecionado' : 'selecionados'}
+                    </span>
+                  )}
+                </label>
+                {loadingTargets ? (
+                  <div style={{ padding: '1rem', textAlign: 'center', color: '#718096' }}>
+                    <i className="bi bi-hourglass-split"></i> Carregando alvos...
+                  </div>
+                ) : (
+                  <>
+                    {!isViewMode && targets.length > 0 && (
+                      <div style={{ 
+                        marginBottom: '0.75rem', 
+                        padding: '0.5rem',
+                        backgroundColor: '#f0f9ff',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        color: '#1e40af'
+                      }}>
+                        <i className="bi bi-info-circle-fill" style={{ marginRight: '0.5rem' }}></i>
+                        Selecione um ou mais públicos-alvo para esta promoção
+                      </div>
+                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '0.75rem', marginTop: '0.5rem' }}>
+                      {targets.map(target => (
+                        <label 
+                          key={target.id} 
+                          className={styles.checkboxLabel}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'flex-start', 
+                            padding: '0.75rem',
+                            border: selectedTargets.includes(target.target) ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            backgroundColor: selectedTargets.includes(target.target) ? '#f0f9ff' : '#fff',
+                            cursor: isViewMode ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.2s ease',
+                            boxShadow: selectedTargets.includes(target.target) ? '0 2px 8px rgba(59, 130, 246, 0.15)' : 'none'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedTargets.includes(target.target)}
+                            onChange={() => handleTargetToggle(target.target)}
+                            disabled={isViewMode}
+                            style={{ marginRight: '0.5rem', marginTop: '0.25rem' }}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, color: '#2d3748', marginBottom: '0.25rem' }}>
+                              {target.name}
+                            </div>
+                            <div style={{ fontSize: '0.875rem', color: '#718096' }}>
+                              {target.description}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {!loadingTargets && targets.length === 0 && (
+                  <div style={{ padding: '1rem', textAlign: 'center', color: '#718096', backgroundColor: '#f7fafc', borderRadius: '8px' }}>
+                    <i className="bi bi-info-circle"></i> Nenhum alvo disponível
+                  </div>
+                )}
+              </div>
+
+              <div className={`${styles.formGroup} ${styles.fullWidth}`}>
                 <label>Mô tả</label>
                 <textarea
                   value={formData.description}
@@ -948,6 +1072,46 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
 
               {mode === 'view' && promotion && (
                 <>
+                  <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                    <label>Público-alvo da Promoção</label>
+                    <div style={{ 
+                      padding: '0.75rem', 
+                      backgroundColor: '#f7fafc', 
+                      borderRadius: '8px',
+                      minHeight: '3rem'
+                    }}>
+                      {promotion.applicableTargets ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          {promotion.applicableTargets.split(',').map((targetValue, idx) => {
+                            const target = targets.find(t => t.target === targetValue.trim());
+                            return (
+                              <span 
+                                key={idx}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  padding: '0.375rem 0.75rem',
+                                  backgroundColor: '#3b82f6',
+                                  color: '#fff',
+                                  borderRadius: '6px',
+                                  fontSize: '0.875rem',
+                                  fontWeight: 500
+                                }}
+                              >
+                                <i className="bi bi-people-fill" style={{ marginRight: '0.375rem' }}></i>
+                                {target?.name || targetValue.trim()}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span style={{ color: '#718096', fontStyle: 'italic' }}>
+                          Nenhum público-alvo especificado
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
                   <div className={styles.formGroup}>
                     <label>Số lần đã sử dụng</label>
                     <input type="text" value={promotion.usedCount} disabled />

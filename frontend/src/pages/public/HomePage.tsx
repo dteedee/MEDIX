@@ -9,6 +9,8 @@ import { Banner } from '../../types/home.types';
 import { bannerService } from '../../services/bannerService';
 import { articleService } from '../../services/articleService';
 import doctorService from '../../services/doctorService';
+import ChatbotBubble from '../../components/ChatbotBubble';
+import BackToTopButton from '../../components/BackToTopButton';
 
 function HomePage() {
     const navigate = useNavigate();
@@ -149,15 +151,6 @@ function HomePage() {
         return () => clearInterval(interval);
     }, [homeMetadata?.displayedDoctors?.length]);
 
-    const [showButton, setShowButton] = useState(false);
-
-    useEffect(() => {
-      const handleScroll = () => {
-        setShowButton(window.scrollY > 300);
-      };
-      window.addEventListener('scroll', handleScroll);
-      return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
 
     // Knowledge carousel: cửa sổ trượt tròn, hiển thị columns bài, dịch 1 bài/lần
     const knowledgeTrackRef = useRef<HTMLDivElement>(null);
@@ -496,18 +489,9 @@ function HomePage() {
                 </div>
             </section >
 
-            <div className={styles["ai-bubble"]}>
-                <img src="/images/medix-logo-mirrored.jpg" alt="Chat" />
-                <div className={styles['status-indicator-sm']}></div>
-            </div>
 
-            <button
-                className={`${styles["back-to-top"]} ${!showButton ? styles["hidden"] : ""}`}
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                aria-label="Back to top"
-            >
-                <i className="fas fa-arrow-up"></i>
-            </button>
+            <BackToTopButton />
+            <ChatbotBubble />
     </div>
   );
 }

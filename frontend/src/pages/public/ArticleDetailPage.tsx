@@ -6,6 +6,8 @@ import { articleService } from '../../services/articleService';
 import { categoryService } from '../../services/categoryService';
 import type { ArticleDTO } from '../../types/article.types';
 import type { CategoryDTO } from '../../types/category.types';
+import ChatbotBubble from '../../components/ChatbotBubble';
+import BackToTopButton from '../../components/BackToTopButton';
 
 function formatViDate(input?: string | null): string {
   if (!input) return '';
@@ -370,6 +372,8 @@ export default function ArticleDetailPage() {
           </article>
         </main>
       </div>
+      <BackToTopButton />
+      <ChatbotBubble />
     </div>
   )
 }

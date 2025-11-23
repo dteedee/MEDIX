@@ -4,6 +4,8 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import specializationService, { SpecializationListDto } from '../../services/specializationService';
 import homeStyles from '../../styles/public/home.module.css';
 import styles from '../../styles/public/specialty.module.css';
+import ChatbotBubble from '../../components/ChatbotBubble';
+import BackToTopButton from '../../components/BackToTopButton';
 
 const SpecialtyListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -168,6 +170,8 @@ const SpecialtyListPage: React.FC = () => {
           )}
         </div>
       </div>
+      <BackToTopButton />
+      <ChatbotBubble />
     </div>
   );
 };

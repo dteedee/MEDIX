@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { apiClient } from '../../lib/apiClient';
 import styles from '../../styles/public/footer.module.css';
@@ -64,10 +65,11 @@ const Footer: React.FC = () => {
         <div className={styles["footer-section"]}>
           <h3>{t('footer.links.title')}</h3>
           <ul>
-            <li><a href="/">{t('footer.links.home')}</a></li>
-            <li><a href="/about">{t('footer.links.about')}</a></li>
-            <li><a href="#">{t('footer.links.doctors')}</a></li>
-            <li><a href="#">{t('footer.links.healthArticles')}</a></li>
+            <li><Link to="/">{t('footer.links.home')}</Link></li>
+            <li><Link to="/about">{t('footer.links.about')}</Link></li>
+            <li><Link to="/doctors">{t('footer.links.doctors')}</Link></li>
+            <li><Link to="/articles">{t('footer.links.healthArticles')}</Link></li>
+            <li><Link to="/specialties">Chuyên khoa</Link></li>
           </ul>
         </div>
 
@@ -75,9 +77,11 @@ const Footer: React.FC = () => {
         <div className={styles["footer-section"]}>
           <h3>{t('footer.services.title')}</h3>
           <ul>
-            <li><a href="#">{t('footer.services.packages')}</a></li>
-            <li><a href="#">{t('footer.services.aiDiagnosis')}</a></li>
-            <li><a href="#">{t('footer.services.booking')}</a></li>
+            <li><Link to="/doctors">{t('footer.services.packages')}</Link></li>
+            <li><Link to="/ai-chat">{t('footer.services.aiDiagnosis')}</Link></li>
+            <li><Link to="/doctors">{t('footer.services.booking')}</Link></li>
+            <li><Link to="/terms">Điều khoản dịch vụ</Link></li>
+            <li><Link to="/privacy">Chính sách bảo mật</Link></li>
           </ul>
         </div>
 

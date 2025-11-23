@@ -7,6 +7,8 @@ import { DoctorInTier, ServiceTierWithPaginatedDoctorsDto, DoctorQueryParameters
 import homeStyles from '../../styles/public/home.module.css';
 import styles from '../../styles/public/specialty.module.css';
 import doctorBookingStyles from '../../styles/patient/DoctorBookingList.module.css';
+import ChatbotBubble from '../../components/ChatbotBubble';
+import BackToTopButton from '../../components/BackToTopButton';
 
 interface Doctor {
   id: string;
@@ -764,6 +766,8 @@ const SpecialtyDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+      <BackToTopButton />
+      <ChatbotBubble />
     </div>
   );
 };

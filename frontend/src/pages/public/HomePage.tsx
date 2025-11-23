@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import styles from '../../styles/public/home.module.css'
 import { HomeMetadata } from '../../types/home.types';
 import HomeService from '../../services/homeService';
@@ -14,6 +14,7 @@ import BackToTopButton from '../../components/BackToTopButton';
 
 function HomePage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { t } = useLanguage();
 
     //get home page details

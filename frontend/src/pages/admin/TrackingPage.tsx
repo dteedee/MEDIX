@@ -556,125 +556,114 @@ export default function TrackingPage() {
             </div>
         )}
 
-        {loading ? (
-          <div className={styles.loadingContainer}><LoadingSpinner /></div>
-        ) : paginatedLogs.length > 0 ? (
-          <div className={userStyles.tableWrapper}>
-            <table className={userStyles.table}>
-              <thead>
-                <tr>
-                  <th>STT</th>
-                  <th onClick={() => requestSort('timestamp')} className={userStyles.sortableHeader}>
-                    Thời gian
-                    {sortConfig.key === 'timestamp' && (
-                      <i className={`bi ${sortConfig.direction === 'ascending' ? 'bi-sort-up' : 'bi-sort-down'} ${userStyles.sortIcon}`}></i>
-                    )}
-                  </th>
-                  <th onClick={() => requestSort('userName')} className={userStyles.sortableHeader}>
-                    Người dùng
-                    {sortConfig.key === 'userName' && (
-                      <i className={`bi ${sortConfig.direction === 'ascending' ? 'bi-sort-up' : 'bi-sort-down'} ${userStyles.sortIcon}`}></i>
-                    )}
-                  </th>
-                  <th>Hành động</th>
-                  <th>Loại đối tượng</th>
-                  <th>Chi tiết</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedLogs.map((log, index) => (
-                  <tr key={log.id}>
-                    <td>
-                      {(filters.page - 1) * filters.pageSize + index + 1}
-                    </td>
-                    {/* Đảm bảo timestamp được xử lý như UTC trước khi chuyển đổi sang múi giờ Việt Nam */}
-                    {/* Nếu log.timestamp là "YYYY-MM-DDTHH:mm:ss" (không có Z), new Date() sẽ hiểu là giờ địa phương. */}
-                    {/* Không cần thêm 'Z' vì new Date() có thể tự xử lý chuỗi ISO 8601 */}
-                    <td title={new Date(log.timestamp).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}>
-                      {new Date(log.timestamp).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })}
-                      <br />
-                      <small>{new Date(log.timestamp).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</small>
-                    </td>                    
-                    <td>{log.userName || 'Unknown'}</td>
-                    <td><span className={`${styles.actionBadge} ${getActionBadgeStyle(log.displayActionType)}`}>{log.displayActionType}</span></td>
-                    <td>
-                      {log.entityType === 'RefreshToken' ? 'Login' : (log.entityType || 'N/A')}
-                    </td>
-                    <td>
-                      <button onClick={() => setViewingLog(log)} className={userStyles.actionButton} title="Xem chi tiết">
-                        <i className="bi bi-eye"></i>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className={userStyles.emptyState}>
-            <i className="bi bi-inbox"></i>
-            <p>Không có dữ liệu truy vết nào</p>
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalFilteredItems > 0 && (
-          <div className={userStyles.paginationContainer}>
-            <div className={userStyles.paginationInfo}>
-              Hiển thị {(filters.page - 1) * filters.pageSize + 1} - {Math.min(filters.page * filters.pageSize, totalFilteredItems)} trong tổng số {totalFilteredItems} kết quả
+        <div className={userStyles.tableCard}>
+          {loading ? (
+            <div className={userStyles.loading}>
+              <div className={userStyles.loadingSpinner}></div>
+              <p>Đang tải dữ liệu...</p>
             </div>
+          ) : paginatedLogs.length > 0 ? (
+            <div className={userStyles.tableWrapper}>
+              <table className={userStyles.table}>
+                <thead>
+                  <tr>
+                    <th style={{ width: '60px' }}>STT</th>
+                    <th onClick={() => requestSort('timestamp')} className={userStyles.sortable}>
+                      Thời gian
+                      {sortConfig.key === 'timestamp' && (
+                        <i className={`bi bi-arrow-${sortConfig.direction === 'ascending' ? 'up' : 'down'}`}></i>
+                      )}
+                    </th>
+                    <th onClick={() => requestSort('userName')} className={userStyles.sortable}>
+                      Người dùng
+                      {sortConfig.key === 'userName' && (
+                        <i className={`bi bi-arrow-${sortConfig.direction === 'ascending' ? 'up' : 'down'}`}></i>
+                      )}
+                    </th>
+                    <th>Hành động</th>
+                    <th>Loại đối tượng</th>
+                    <th style={{ textAlign: 'right', width: '150px' }}>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedLogs.map((log, index) => (
+                    <tr key={log.id} className={userStyles.tableRow}>
+                      <td className={userStyles.indexCell}>
+                        {(filters.page - 1) * filters.pageSize + index + 1}
+                      </td>
+                      <td title={new Date(log.timestamp).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}>
+                        {new Date(log.timestamp).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })}
+                        <br />
+                        <small>{new Date(log.timestamp).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</small>
+                      </td>
+                      <td>
+                        <div className={userStyles.userCell}>
+                          <img
+                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(log.userName || 'Unknown')}&background=random&color=fff`}
+                            alt={log.userName || 'Unknown'}
+                            className={userStyles.avatar}
+                          />
+                          <span className={userStyles.userName}>{log.userName || 'Unknown'}</span>
+                        </div>
+                      </td>
+                      <td><span className={`${styles.actionBadge} ${getActionBadgeStyle(log.displayActionType)}`}>{log.displayActionType}</span></td>
+                      <td>
+                        {log.entityType === 'RefreshToken' ? 'Login' : (log.entityType || 'N/A')}
+                      </td>
+                      <td>
+                        <div className={userStyles.actions}>
+                          <button onClick={() => setViewingLog(log)} className={userStyles.actionBtn} title="Xem chi tiết">
+                            <i className="bi bi-eye"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className={userStyles.emptyState}>
+              <i className="bi bi-inbox"></i>
+              <p>Không có dữ liệu truy vết nào</p>
+            </div>
+          )}
 
-            <div className={userStyles.paginationControls}>
-              <select
-                value={filters.pageSize}
-                onChange={e => handleFilterChange('pageSize', Number(e.target.value))}
-                className={userStyles.pageSizeSelect}
-              >
-                <option value={5}>5 / trang</option>
-                <option value={10}>10 / trang</option>
-                <option value={15}>15 / trang</option>
-                <option value={20}>20 / trang</option>
-                <option value={50}>50 / trang</option>
-              </select>
+          {/* Pagination */}
+          {paginatedLogs.length > 0 && (
+            <div className={userStyles.pagination}>
+              <div className={userStyles.paginationInfo}>
+                Hiển thị {(filters.page - 1) * filters.pageSize + 1} - {Math.min(filters.page * filters.pageSize, totalFilteredItems)} trong tổng số {totalFilteredItems} kết quả
+              </div>
 
-              <div className={userStyles.paginationButtons}>
-                <button
-                  onClick={() => handleFilterChange('page', 1)}
-                  disabled={filters.page <= 1}
-                  title="Trang đầu"
-                >
-                  <i className="bi bi-chevron-double-left"></i>
-                </button>
-                <button
-                  onClick={() => handleFilterChange('page', filters.page - 1)}
-                  disabled={filters.page <= 1}
-                  title="Trang trước"
-                >
-                  <i className="bi bi-chevron-left"></i>
-                </button>
+              <div className={userStyles.paginationControls}>
+                <select value={filters.pageSize} onChange={e => handleFilterChange('pageSize', Number(e.target.value))}>
+                  <option value={5}>5 / trang</option>
+                  <option value={10}>10 / trang</option>
+                  <option value={15}>15 / trang</option>
+                  <option value={20}>20 / trang</option>
+                  <option value={50}>50 / trang</option>
+                </select>
 
-                <span className={userStyles.pageIndicator}>
-                  {filters.page} / {totalPages || 1}
-                </span>
-
-                <button
-                  onClick={() => handleFilterChange('page', filters.page + 1)}
-                  disabled={filters.page >= totalPages}
-                  title="Trang sau"
-                >
-                  <i className="bi bi-chevron-right"></i>
-                </button>
-                <button
-                  onClick={() => handleFilterChange('page', totalPages)}
-                  disabled={filters.page >= totalPages}
-                  title="Trang cuối"
-                >
-                  <i className="bi bi-chevron-double-right"></i>
-                </button>
+                <div className={userStyles.paginationButtons}>
+                  <button onClick={() => handleFilterChange('page', 1)} disabled={filters.page <= 1} title="Trang đầu">
+                    <i className="bi bi-chevron-double-left"></i>
+                  </button>
+                  <button onClick={() => handleFilterChange('page', filters.page - 1)} disabled={filters.page <= 1} title="Trang trước">
+                    <i className="bi bi-chevron-left"></i>
+                  </button>
+                  <span className={userStyles.pageIndicator}>{filters.page} / {totalPages || 1}</span>
+                  <button onClick={() => handleFilterChange('page', filters.page + 1)} disabled={filters.page >= totalPages} title="Trang sau">
+                    <i className="bi bi-chevron-right"></i>
+                  </button>
+                  <button onClick={() => handleFilterChange('page', totalPages)} disabled={filters.page >= totalPages} title="Trang cuối">
+                    <i className="bi bi-chevron-double-right"></i>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
       </div>
 

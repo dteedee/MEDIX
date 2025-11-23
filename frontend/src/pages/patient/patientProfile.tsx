@@ -403,13 +403,27 @@ export const PatientProfile: React.FC = () => {
       URL.revokeObjectURL(previewUrl);
       setPreviewImage(null);
     } catch (e: any) {
-      const errorMessage = e?.message || 'Không thể tải ảnh lên';
-      setError(`${errorMessage}. Ảnh preview sẽ được hiển thị tạm thời.`);
+      console.error('Upload error details:', e);
+      let errorMessage = e?.message || 'Không thể tải ảnh lên';
       
+      // Handle specific error cases
+      if (e?.message?.includes('405')) {
+        errorMessage = 'Lỗi 405: Không thể tải ảnh lên. Endpoint upload có thể chưa được kích hoạt trong backend. Ảnh preview sẽ được hiển thị tạm thời.';
+      } else if (e?.message?.includes('404')) {
+        errorMessage = 'Lỗi 404: Endpoint upload không tồn tại. Vui lòng liên hệ quản trị viên.';
+      } else if (e?.message?.includes('401')) {
+        errorMessage = 'Lỗi 401: Bạn cần đăng nhập lại để upload ảnh.';
+      } else if (e?.message?.includes('413')) {
+        errorMessage = 'File quá lớn. Vui lòng chọn ảnh nhỏ hơn 10MB.';
+      }
+      
+      setError(errorMessage);
+      
+      // Keep preview for 10 seconds, then clear
       setTimeout(() => {
         URL.revokeObjectURL(previewUrl);
         setPreviewImage(null);
-        setError(null);
+        // Don't clear error immediately - let user see it
       }, 10000);
     } finally {
       setUploading(false);

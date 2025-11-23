@@ -31,6 +31,7 @@ export interface UpdateUserInfo {
   emergencyContactPhone?: string;
   medicalHistory?: string;
   allergies?: string;
+  imageURL?: string; // Avatar URL
 }
 
 export const userService = {
@@ -86,6 +87,9 @@ export const userService = {
       if (data.allergies !== undefined) {
         updateDto.allergies = data.allergies;
       }
+      if (data.imageURL !== undefined) {
+        updateDto.imageURL = data.imageURL;
+      }
 
       const response = await apiClient.put<UserBasicInfo>('/user/updateUserInfor', updateDto);
       console.log('UpdateUserInfo - Request payload:', updateDto);
@@ -113,17 +117,46 @@ export const userService = {
       console.log('- File name:', imageFile.name);
       console.log('- File type:', imageFile.type);
       console.log('- File size:', imageFile.size);
-      const response = await apiClient.postMultipart<{ imageUrl: string }>('/user/uploadAvatar', formData);
-      console.log('Upload successful:', response.data);
-      return response.data;
+      
+      // Try using the File/upload endpoint first (available endpoint)
+      let imageUrl: string;
+      try {
+        const uploadResponse = await apiClient.postMultipart<{ url: string }>('/classification/File/upload', formData);
+        console.log('Upload successful:', uploadResponse.data);
+        imageUrl = uploadResponse.data.url;
+      } catch (uploadError: any) {
+        // If classification endpoint fails, try the user endpoint (might be uncommented)
+        if (uploadError.response?.status === 404 || uploadError.response?.status === 405) {
+          console.log('Classification endpoint not available, trying user endpoint...');
+          const userResponse = await apiClient.postMultipart<{ imageUrl: string }>('/user/uploadAvatar', formData);
+          imageUrl = userResponse.data.imageUrl;
+        } else {
+          throw uploadError;
+        }
+      }
+      
+      // After successful upload, update user info with the new image URL
+      if (imageUrl) {
+        try {
+          await this.updateUserInfo({ imageURL: imageUrl });
+          console.log('User avatar URL updated successfully');
+        } catch (updateError) {
+          console.warn('Failed to update user avatar URL, but image was uploaded:', updateError);
+          // Don't throw error here - image was uploaded successfully
+        }
+      }
+      
+      return { imageUrl };
     } catch (error: any) {
       console.error('Error uploading profile image:', error);
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
         throw new Error('Endpoint không tồn tại. Vui lòng kiểm tra backend API');
+      } else if (error.response?.status === 405) {
+        throw new Error('Lỗi 405: Phương thức không được phép. Endpoint upload ảnh có thể chưa được kích hoạt trong backend.');
       } else if (error.response?.status === 413) {
-        throw new Error('File quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB');
+        throw new Error('File quá lớn. Vui lòng chọn ảnh nhỏ hơn 10MB');
       } else if (error.response?.status === 400) {
         const responseData = error.response?.data;
         if (responseData?.errors) {

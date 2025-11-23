@@ -4,6 +4,7 @@ import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import { apiClient } from '../../lib/apiClient';
 import { useToast } from '../../contexts/ToastContext';
 import styles from '../../styles/admin/SettingsPage.module.css';
+import userStyles from '../../styles/admin/UserList.module.css'; // Import CSS từ UserList
 import { Language } from '../../contexts/LanguageContext';
 
 interface SystemSettings {
@@ -113,117 +114,120 @@ export default function SettingsPage() {
   const [emailTemplateSaving, setEmailTemplateSaving] = useState(false);
   const [refundPercentage, setRefundPercentage] = useState(80);
   const [refundSaving, setRefundSaving] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof SystemSettings, string>>>({});
+  const [templateErrors, setTemplateErrors] = useState<Partial<Record<string, { subject?: string; body?: string }>>>({});
+  const [emailServerErrors, setEmailServerErrors] = useState<Partial<Record<'username' | 'fromEmail' | 'fromName', string>>>({});
 
   useEffect(() => {
-  const fetchSettings = async () => {
-    setLoading(true);
+    const fetchSettings = async () => {
+      setLoading(true);
+      try {
+        const [
+          siteNameRes,
+          descriptionRes,
+          emailRes,
+          phoneRes,
+          addressRes,
+          jwtExpiryRes,
+          maxFailedLoginRes,
+          lockoutDurationRes,
+          passwordMinLengthRes,
+          passwordMaxLengthRes,
+          requireDigitRes,
+          requireLowercaseRes,
+          requireUppercaseRes,
+          requireSpecialRes,
+          maintenanceModeRes,
+          maintenanceMessageRes,
+          maintenanceScheduleRes,
+          defaultLanguageRes,
+        ] = await Promise.all([
+          apiClient.get('/SystemConfiguration/SiteName'),
+          apiClient.get('/SystemConfiguration/SystemDescription'),
+          apiClient.get('/SystemConfiguration/ContactEmail'),
+          apiClient.get('/SystemConfiguration/ContactPhone'),
+          apiClient.get('/SystemConfiguration/ContactAddress'),
+          // Security settings
+          apiClient.get('/SystemConfiguration/JWT_EXPIRY_MINUTES'),
+          apiClient.get('/SystemConfiguration/MaxFailedLoginAttempts'),
+          apiClient.get('/SystemConfiguration/AccountLockoutDurationMinutes'),
+          // Password policy settings
+          apiClient.get('/SystemConfiguration/PASSWORD_MIN_LENGTH'),
+          apiClient.get('/SystemConfiguration/PASSWORD_MAX_LENGTH'),
+          apiClient.get('/SystemConfiguration/REQUIRE_DIGIT'),
+          apiClient.get('/SystemConfiguration/REQUIRE_LOWERCASE'),
+          apiClient.get('/SystemConfiguration/REQUIRE_UPPERCASE'),
+          apiClient.get('/SystemConfiguration/REQUIRE_SPECIAL'),
+          apiClient.get('/SystemConfiguration/MAINTENANCE_MODE'),
+          apiClient.get('/SystemConfiguration/MAINTENANCE_MESSAGE'),
+          apiClient.get('/SystemConfiguration/MAINTENANCE_SCHEDULE'),
+          apiClient.get('/SystemConfiguration/DEFAULT_LANGUAGE'),
+        ]);
+
+        setSettings({
+          siteName: siteNameRes.data.configValue,
+          systemDescription: descriptionRes.data.configValue,
+          contactEmail: emailRes.data.configValue,
+          contactPhone: phoneRes.data.configValue,
+          contactAddress: addressRes.data.configValue,
+          // Security settings
+          jwtExpiryMinutes: parseInt(jwtExpiryRes.data.configValue, 10),
+          maxFailedLoginAttempts: parseInt(maxFailedLoginRes.data.configValue, 10),
+          accountLockoutDurationMinutes: parseInt(lockoutDurationRes.data.configValue, 10),
+          // Password policy settings
+          passwordMinLength: parseInt(passwordMinLengthRes.data.configValue, 10),
+          passwordMaxLength: parseInt(passwordMaxLengthRes.data.configValue, 10),
+          requireDigit: requireDigitRes.data.configValue.toLowerCase() === 'true',
+          requireLowercase: requireLowercaseRes.data.configValue.toLowerCase() === 'true',
+          requireUppercase: requireUppercaseRes.data.configValue.toLowerCase() === 'true',
+          requireSpecial: requireSpecialRes.data.configValue.toLowerCase() === 'true',
+          maintenanceMode: maintenanceModeRes.data?.configValue?.toLowerCase() === 'true',
+          maintenanceMessage: maintenanceMessageRes.data?.configValue || '',
+          maintenanceSchedule: maintenanceScheduleRes.data?.configValue || '',
+          defaultLanguage: (defaultLanguageRes.data?.configValue as Language) || 'vi',
+        });
+
+      } catch (error) {
+        console.error("Failed to fetch settings", error);
+        showToast('Không thể tải cài đặt hệ thống.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, [showToast]);
+
+  const fetchBackupSettings = useCallback(async () => {
+    setBackupLoading(true);
     try {
-      const [
-        siteNameRes,
-        descriptionRes,
-        emailRes,
-        phoneRes,
-        addressRes,
-        jwtExpiryRes,
-        maxFailedLoginRes,
-        lockoutDurationRes,
-        passwordMinLengthRes,
-        passwordMaxLengthRes,
-        requireDigitRes,
-        requireLowercaseRes,
-        requireUppercaseRes,
-        requireSpecialRes,
-        maintenanceModeRes,
-        maintenanceMessageRes,
-        maintenanceScheduleRes,
-        defaultLanguageRes,
-      ] = await Promise.all([
-        apiClient.get('/SystemConfiguration/SiteName'),
-        apiClient.get('/SystemConfiguration/SystemDescription'),
-        apiClient.get('/SystemConfiguration/ContactEmail'),
-        apiClient.get('/SystemConfiguration/ContactPhone'),
-        apiClient.get('/SystemConfiguration/ContactAddress'),
-        // Security settings
-        apiClient.get('/SystemConfiguration/JWT_EXPIRY_MINUTES'),
-        apiClient.get('/SystemConfiguration/MaxFailedLoginAttempts'),
-        apiClient.get('/SystemConfiguration/AccountLockoutDurationMinutes'),
-        // Password policy settings
-        apiClient.get('/SystemConfiguration/PASSWORD_MIN_LENGTH'),
-        apiClient.get('/SystemConfiguration/PASSWORD_MAX_LENGTH'),
-        apiClient.get('/SystemConfiguration/REQUIRE_DIGIT'),
-        apiClient.get('/SystemConfiguration/REQUIRE_LOWERCASE'),
-        apiClient.get('/SystemConfiguration/REQUIRE_UPPERCASE'),
-        apiClient.get('/SystemConfiguration/REQUIRE_SPECIAL'),
-        apiClient.get('/SystemConfiguration/MAINTENANCE_MODE'),
-        apiClient.get('/SystemConfiguration/MAINTENANCE_MESSAGE'),
-        apiClient.get('/SystemConfiguration/MAINTENANCE_SCHEDULE'),
-        apiClient.get('/SystemConfiguration/DEFAULT_LANGUAGE'),
+      const [enabledRes, frequencyRes, timeRes, retentionRes, backupFilesRes] = await Promise.all([
+        apiClient.get('/SystemConfiguration/AUTO_BACKUP_ENABLED'),
+        apiClient.get('/SystemConfiguration/AUTO_BACKUP_FREQUENCY'),
+        apiClient.get('/SystemConfiguration/AUTO_BACKUP_TIME'),
+        apiClient.get('/SystemConfiguration/BACKUP_RETENTION_DAYS'),
+        apiClient.get('/SystemConfiguration/database-backup'),
       ]);
 
-      setSettings({
-        siteName: siteNameRes.data.configValue,
-        systemDescription: descriptionRes.data.configValue,
-        contactEmail: emailRes.data.configValue,
-        contactPhone: phoneRes.data.configValue,
-        contactAddress: addressRes.data.configValue,
-        // Security settings
-        jwtExpiryMinutes: parseInt(jwtExpiryRes.data.configValue, 10),
-        maxFailedLoginAttempts: parseInt(maxFailedLoginRes.data.configValue, 10),
-        accountLockoutDurationMinutes: parseInt(lockoutDurationRes.data.configValue, 10),
-        // Password policy settings
-        passwordMinLength: parseInt(passwordMinLengthRes.data.configValue, 10),
-        passwordMaxLength: parseInt(passwordMaxLengthRes.data.configValue, 10),
-        requireDigit: requireDigitRes.data.configValue.toLowerCase() === 'true',
-        requireLowercase: requireLowercaseRes.data.configValue.toLowerCase() === 'true',
-        requireUppercase: requireUppercaseRes.data.configValue.toLowerCase() === 'true',
-        requireSpecial: requireSpecialRes.data.configValue.toLowerCase() === 'true',
-        maintenanceMode: maintenanceModeRes.data?.configValue?.toLowerCase() === 'true',
-        maintenanceMessage: maintenanceMessageRes.data?.configValue || '',
-        maintenanceSchedule: maintenanceScheduleRes.data?.configValue || '',
-        defaultLanguage: (defaultLanguageRes.data?.configValue as Language) || 'vi',
+      setBackupSettings({
+        enabled: enabledRes.data?.configValue?.toLowerCase() === 'true',
+        frequency: frequencyRes.data?.configValue || 'daily',
+        time: timeRes.data?.configValue || '02:00',
+        retentionDays: parseInt(retentionRes.data?.configValue || '30', 10),
       });
 
+      setBackupList(backupFilesRes.data || []);
     } catch (error) {
-      console.error("Failed to fetch settings", error);
-      showToast('Không thể tải cài đặt hệ thống.', 'error');
+      console.error('Failed to fetch backup settings', error);
+      showToast('Không thể tải cấu hình sao lưu.', 'error');
     } finally {
-      setLoading(false);
+      setBackupLoading(false);
     }
-  };
+  }, [showToast]);
 
-  fetchSettings();
-}, [showToast]);
-
-const fetchBackupSettings = useCallback(async () => {
-  setBackupLoading(true);
-  try {
-    const [enabledRes, frequencyRes, timeRes, retentionRes, backupFilesRes] = await Promise.all([
-      apiClient.get('/SystemConfiguration/AUTO_BACKUP_ENABLED'),
-      apiClient.get('/SystemConfiguration/AUTO_BACKUP_FREQUENCY'),
-      apiClient.get('/SystemConfiguration/AUTO_BACKUP_TIME'),
-      apiClient.get('/SystemConfiguration/BACKUP_RETENTION_DAYS'),
-      apiClient.get('/SystemConfiguration/database-backup'),
-    ]);
-
-    setBackupSettings({
-      enabled: enabledRes.data?.configValue?.toLowerCase() === 'true',
-      frequency: frequencyRes.data?.configValue || 'daily',
-      time: timeRes.data?.configValue || '02:00',
-      retentionDays: parseInt(retentionRes.data?.configValue || '30', 10),
-    });
-
-    setBackupList(backupFilesRes.data || []);
-  } catch (error) {
-    console.error('Failed to fetch backup settings', error);
-    showToast('Không thể tải cấu hình sao lưu.', 'error');
-  } finally {
-    setBackupLoading(false);
-  }
-}, [showToast]);
-
-useEffect(() => {
-  fetchBackupSettings();
-}, [fetchBackupSettings]);
+  useEffect(() => {
+    fetchBackupSettings();
+  }, [fetchBackupSettings]);
 
   const fetchEmailSettings = useCallback(async () => {
     setEmailSettingsLoading(true);
@@ -286,14 +290,65 @@ useEffect(() => {
     fetchRefundConfig();
   }, [fetchRefundConfig]);
 
+  const validateEmailServerFields = (
+    username: string,
+    fromEmail: string,
+    fromName: string
+  ): Partial<Record<'username' | 'fromEmail' | 'fromName', string>> => {
+    const newErrors: Partial<Record<'username' | 'fromEmail' | 'fromName', string>> = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // Username validation
+    if (!username) {
+      newErrors.username = 'Tên đăng nhập SMTP không được để trống.';
+    } else if (!emailRegex.test(username)) {
+      newErrors.username = 'Định dạng email không hợp lệ.';
+    }
+
+    // FromEmail validation
+    if (!fromEmail) {
+      newErrors.fromEmail = 'Email người gửi không được để trống.';
+    } else if (!emailRegex.test(fromEmail)) {
+      newErrors.fromEmail = 'Định dạng email không hợp lệ.';
+    }
+
+    // FromName validation
+    if (!fromName.trim()) {
+      newErrors.fromName = 'Tên hiển thị không được để trống.';
+    }
+
+    // Cross-field validation (only if both fields have a valid format individually and are not empty)
+    if (username && fromEmail && !newErrors.username && !newErrors.fromEmail && username !== fromEmail) {
+      newErrors.username = 'Tên đăng nhập SMTP phải giống Email người gửi.';
+      newErrors.fromEmail = 'Email người gửi phải giống Tên đăng nhập SMTP.';
+    }
+
+    return newErrors;
+  };
+
   const updateEmailServer = (patch: Partial<EmailServerSettingsState>) => {
-    setEmailServerSettings((prev) => ({ ...prev, ...patch }));
+    setEmailServerSettings((prev) => {
+      const newState = { ...prev, ...patch };
+      setEmailServerErrors(validateEmailServerFields(newState.username, newState.fromEmail, newState.fromName));
+      return newState;
+    });
     if (Object.prototype.hasOwnProperty.call(patch, 'password')) {
       setPasswordDirty(true);
     }
   };
 
+  const handleEmailServerBlur = () => {
+    const validationErrors = validateEmailServerFields(emailServerSettings.username, emailServerSettings.fromEmail, emailServerSettings.fromName);
+    setEmailServerErrors(validationErrors);
+  };
+
   const handleSaveEmailServerSettings = async () => {
+    const validationErrors = validateEmailServerFields(emailServerSettings.username, emailServerSettings.fromEmail, emailServerSettings.fromName);
+    if (Object.keys(validationErrors).length > 0) {
+      setEmailServerErrors(validationErrors);
+      showToast('Vui lòng sửa các lỗi trong cấu hình máy chủ email.', 'error');
+      return;
+    }
     setEmailSettingsSaving(true);
     showToast('Đang lưu cấu hình email...', 'info');
     try {
@@ -334,17 +389,41 @@ useEffect(() => {
   const availableTokens = selectedTemplate ? TEMPLATE_TOKEN_MAP[selectedTemplate.templateKey] ?? [] : [];
 
   const handleTemplateChange = (field: 'subject' | 'body', value: string) => {
+    let error: string | undefined = undefined;
+    let finalValue = value;
+
+    if (field === 'subject') {
+      if (!value.trim()) {
+        error = 'Tiêu đề không được để trống.';
+      }
+    } else if (field === 'body') {
+      if (!value.trim()) {
+        error = 'Nội dung email không được để trống.';
+      } else if (value.length > 7000) {
+        finalValue = value.substring(0, 7000); // Chặn không cho nhập quá
+        error = `Nội dung không được vượt quá 7000 ký tự.`;
+      }
+    }
+
+    setTemplateErrors(prev => ({
+      ...prev,
+      [selectedTemplateKey]: { ...prev[selectedTemplateKey], [field]: error }
+    }));
+
     setEmailTemplates((prev) =>
       prev.map((template) =>
         template.templateKey === selectedTemplateKey
-          ? { ...template, [field]: value }
+          ? { ...template, [field]: finalValue }
           : template
       )
     );
   };
 
   const handleSaveTemplate = async () => {
-    if (!selectedTemplate) return;
+    if (!selectedTemplate || templateErrors[selectedTemplateKey]?.subject || templateErrors[selectedTemplateKey]?.body) {
+      showToast('Vui lòng sửa lỗi trước khi lưu.', 'error');
+      return;
+    }
     setEmailTemplateSaving(true);
     showToast('Đang lưu mẫu email...', 'info');
     try {
@@ -372,7 +451,46 @@ useEffect(() => {
 
 
   const handleInputChange = (key: keyof SystemSettings, value: string | boolean) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    // Xóa lỗi cũ khi người dùng bắt đầu nhập
+    setErrors(prev => ({ ...prev, [key]: undefined }));
+
+    if (key === 'siteName' && typeof value === 'string') { // Cho phép ký tự đặc biệt
+      setSettings(prev => ({ ...prev, [key]: value }));
+    } else if (
+      (key === 'jwtExpiryMinutes' ||
+        key === 'maxFailedLoginAttempts' ||
+        key === 'accountLockoutDurationMinutes' ||
+        key === 'passwordMinLength' ||
+        key === 'passwordMaxLength') &&
+      typeof value === 'string'
+    ) {
+      const sanitizedValue = value.replace(/[^0-9]/g, ''); // Chỉ cho phép nhập số, không cho phép số âm
+      setSettings(prev => ({ ...prev, [key]: sanitizedValue }));
+    } else if (key === 'contactEmail' && typeof value === 'string') { // Validation cho Email liên hệ
+      setSettings(prev => ({ ...prev, [key]: value }));
+      // Kiểm tra định dạng email bằng Regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (value && !emailRegex.test(value)) {
+        setErrors(prev => ({ ...prev, contactEmail: 'Định dạng email không hợp lệ.' }));
+      } else {
+        setErrors(prev => ({ ...prev, contactEmail: undefined }));
+      }
+
+    } else if (key === 'systemDescription' && typeof value === 'string') { // Validation cho Mô tả hệ thống
+      setSettings(prev => ({ ...prev, [key]: value }));
+
+    } else if (key === 'contactPhone' && typeof value === 'string') { // Validation cho Số điện thoại
+      const sanitizedValue = value.replace(/\D/g, ''); // Chỉ giữ lại số
+      setSettings(prev => ({ ...prev, [key]: sanitizedValue }));
+
+      if (sanitizedValue && sanitizedValue.length !== 10) {
+        setErrors(prev => ({ ...prev, contactPhone: 'Số điện thoại phải có đúng 10 chữ số.' }));
+      } else {
+        setErrors(prev => ({ ...prev, contactPhone: undefined }));
+      }
+    } else {
+      setSettings(prev => ({ ...prev, [key]: value }));
+    }
   };
 
   const handleCheckboxChange = (key: keyof SystemSettings, checked: boolean) => {
@@ -381,6 +499,66 @@ useEffect(() => {
 
   const handleMaintenanceModeChange = (enabled: boolean) => {
     setSettings(prev => ({ ...prev, maintenanceMode: enabled }));
+  };
+
+  const handleBlur = (key: keyof SystemSettings, value: string) => {
+    if (!value || value.trim() === '') {
+      setErrors(prev => ({ ...prev, [key]: 'Trường này không được để trống.' }));
+      return; // Dừng lại nếu trường trống
+    }
+
+    // Nếu không trống, xóa lỗi "để trống" và thực hiện các validation khác
+    setErrors(prev => ({ ...prev, [key]: undefined }));
+
+    if (key === 'contactEmail') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        setErrors(prev => ({ ...prev, [key]: 'Định dạng email không hợp lệ.' }));
+      }
+    } else if (key === 'contactPhone') {
+      const digitsOnly = value.replace(/\D/g, '');
+      if (digitsOnly.length !== 10) {
+        setErrors(prev => ({ ...prev, [key]: 'Số điện thoại phải có đúng 10 chữ số.' }));
+      }
+    } else if (key === 'jwtExpiryMinutes') {
+      const numValue = parseInt(value, 10);
+      if (numValue < 30 || numValue > 60) {
+        setErrors(prev => ({ ...prev, [key]: 'Thời gian phải từ 30 đến 60 phút.' }));
+      }
+    } else if (key === 'maxFailedLoginAttempts') {
+      const numValue = parseInt(value, 10);
+      if (numValue >= 6) {
+        setErrors(prev => ({ ...prev, [key]: 'Số lần phải nhỏ hơn 6.' }));
+      }
+    } else if (key === 'passwordMinLength' || key === 'passwordMaxLength') {
+      // Cross-field validation for password lengths
+      const minLength = key === 'passwordMinLength' ? parseInt(value, 10) : settings.passwordMinLength;
+      const maxLength = key === 'passwordMaxLength' ? parseInt(value, 10) : settings.passwordMaxLength;
+
+      // Clear previous cross-field errors first
+      setErrors(prev => ({ ...prev, passwordMinLength: undefined, passwordMaxLength: undefined })); // Xóa lỗi cũ
+
+      // 1. Kiểm tra tương quan giữa min và max
+      if (minLength && maxLength && minLength >= maxLength - 5) {
+        const errorMessage = 'Độ dài tối thiểu phải nhỏ hơn độ dài tối đa ít nhất 6 ký tự.';
+        setErrors(prev => ({ ...prev, passwordMinLength: errorMessage, passwordMaxLength: errorMessage }));
+        return; // Dừng lại nếu có lỗi này
+      }
+
+      // 2. Kiểm tra giá trị cố định của passwordMaxLength
+
+    }
+  };
+
+  const validateBeforeSave = () => {
+    // Kiểm tra tất cả các lỗi hiện có
+    for (const key in errors) {
+      if (errors[key as keyof SystemSettings] || !settings[key as keyof SystemSettings]) {
+        showToast(`Vui lòng sửa các lỗi trong form trước khi lưu.`, 'error');
+        return false;
+      }
+    }
+
+    return true;
   };
 
   const handleSaveChanges = async () => {
@@ -523,468 +701,538 @@ useEffect(() => {
 
 
   return (
-    <div className={styles.container}>
-          {/* Header */}
-          <div className={styles.header}>
-            <div className={styles.headerLeft}>
-              <h1 className={styles.title}>Cấu hình hệ thống</h1>
-              <p className={styles.subtitle}>Quản lý cài đặt và cấu hình hệ thống</p>
-            </div>
-            <div className={styles.headerRight}>
-              <button onClick={handleSaveChanges} className={styles.saveBtn} disabled={saving || loading}>
-                <i className={`bi ${saving ? 'bi-arrow-repeat' : 'bi-check-lg'}`}></i>
-                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-              </button>
-            </div>
+    <div className={userStyles.container}>
+      {/* Header */}
+      <div className={userStyles.header}>
+        <div className={userStyles.headerLeft}>
+          <h1 className={userStyles.title}>Cấu hình hệ thống</h1>
+          <p className={userStyles.subtitle}>Quản lý cài đặt và cấu hình hệ thống</p>
+        </div>
+        <div className={userStyles.headerRight}>
+          <div className={styles.dateTime}>
+            <i className="bi bi-calendar3"></i>
+            <span>{new Date().toLocaleDateString('vi-VN')}</span>
           </div>
+        </div>
+      </div>
 
-          {/* Settings Grid */}
-          <div className={styles.settingsGrid}>
-            {/* General Settings */}
-            <div className={styles.settingsCard}>
-              <div className={styles.cardHeader}>
-                <h3>
-                  <i className="bi bi-gear"></i>
-                  Cài đặt chung
-                </h3>
-              </div>
-              {loading ? (
-                <div className={styles.loadingState}>Đang tải cài đặt...</div>
-              ) : (
-                <div className={styles.cardContent}>
-                  <div className={styles.settingItem}>
-                    <label>Tên hệ thống</label>
-                    <input
-                      type="text"
-                      value={settings.siteName || ''}
-                      onChange={(e) => handleInputChange('siteName', e.target.value)}
-                      placeholder="Nhập tên hệ thống"
-                    />
-                  </div>
-                  <div className={styles.settingItem}>
-                    <label>Mô tả hệ thống</label>
-                    <textarea
-                      value={settings.systemDescription || ''}
-                      onChange={(e) => handleInputChange('systemDescription', e.target.value)}
-                      placeholder="Nhập mô tả hệ thống"
-                    ></textarea>
-                  </div>
-                  <div className={styles.settingItem}>
-                    <label>Email liên hệ</label>
-                    <input
-                      type="email"
-                      value={settings.contactEmail || ''}
-                      onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-                      placeholder="Nhập email liên hệ"
-                    />
-                  </div>
-                  <div className={styles.settingItem}>
-                    <label>Số điện thoại</label>
-                    <input
-                      type="tel"
-                      value={settings.contactPhone || ''}
-                      onChange={(e) => handleInputChange('contactPhone', e.target.value)}
-                      placeholder="Nhập số điện thoại liên hệ"
-                    />
-                  </div>
-                  <div className={styles.settingItem}>
-                    <label>Địa chỉ liên hệ</label>
-                    <textarea
-                      value={settings.contactAddress || ''}
-                      onChange={(e) => handleInputChange('contactAddress', e.target.value)}
-                      placeholder="Nhập địa chỉ liên hệ"
-                    ></textarea>
-                  </div>
+      {/* System Overview Stats */}
+
+
+
+      {/* Settings Grid - Giữ lại grid layout của trang settings */}
+      <div className={styles.settingsGrid}>
+        {/* General Settings Card */}
+        <div className={styles.settingsCard}>
+          <div className={styles.cardHeader}>
+            <h3>
+              <i className="bi bi-gear"></i>
+              Cài đặt chung
+            </h3>
+          </div>
+          {loading ? (
+            <div className={styles.loadingState}>Đang tải cài đặt...</div>
+          ) : (
+            <div className={styles.cardContent}>
+              <div className={styles.settingItem}>
+                <label>Tên hệ thống</label>
+                <input
+                  type="text"
+                  maxLength={18}
+                  value={settings.siteName || ''}
+                  onChange={(e) => handleInputChange('siteName', e.target.value)}
+                  placeholder="Nhập tên hệ thống"
+                  className={errors.siteName ? styles.inputError : ''}
+                />
+                {errors.siteName && <div className={styles.errorText}>{errors.siteName}</div>}
+                <div className={styles.charCounter}>
+                  {(settings.siteName || '').length}/18
                 </div>
-              )}
-            </div>
-
-            {/* Security Settings */}
-            <div className={styles.settingsCard}>
-              <div className={styles.cardHeader}>
-                <h3>
-                  <i className="bi bi-shield-check"></i>
-                  Bảo mật
-                </h3>
               </div>
-              {loading ? (
-                <div className={styles.loadingState}>Đang tải cài đặt...</div>
-              ) : (
-                <div className={styles.cardContent}>
-                  <div className={styles.settingItem}>
-                    <label>Thời gian hết hạn phiên đăng nhập (phút)</label>
-                    <input
-                      type="number"
-                      value={settings.jwtExpiryMinutes || ''}
-                      onChange={(e) => handleInputChange('jwtExpiryMinutes', e.target.value)}
-                      placeholder="Ví dụ: 30"
-                    />
-                  </div>
-                  <div className={styles.settingItem}>
-                    <label>Số lần đăng nhập sai tối đa</label>
-                    <input
-                      type="number"
-                      value={settings.maxFailedLoginAttempts || ''}
-                      onChange={(e) => handleInputChange('maxFailedLoginAttempts', e.target.value)}
-                      placeholder="Ví dụ: 5"
-                    />
-                  </div>
-                  <div className={styles.settingItem}>
-                    <label>Thời gian khóa tài khoản (phút)</label>
-                    <input
-                      type="number"
-                      value={settings.accountLockoutDurationMinutes || ''}
-                      onChange={(e) => handleInputChange('accountLockoutDurationMinutes', e.target.value)}
-                      placeholder="Ví dụ: 15"
-                    />
-                  </div>
-                  <div className={styles.settingItem}>
-                    <label>Độ dài mật khẩu tối thiểu</label>
-                    <input
-                      type="number"
-                      value={settings.passwordMinLength || ''}
-                      onChange={(e) => handleInputChange('passwordMinLength', e.target.value)}
-                      placeholder="Ví dụ: 6"
-                    />
-                  </div>
-                  <div className={styles.settingItem}>
-                    <label>Độ dài mật khẩu tối đa</label>
-                    <input
-                      type="number"
-                      value={settings.passwordMaxLength || ''}
-                      onChange={(e) => handleInputChange('passwordMaxLength', e.target.value)}
-                      placeholder="Ví dụ: 128"
-                    />
-                  </div>
-                  <div className={styles.settingItem}>
-                    <label>
-                      <input type="checkbox" checked={settings.requireDigit || false} onChange={(e) => handleCheckboxChange('requireDigit', e.target.checked)} />
-                      Yêu cầu có chữ số
-                    </label>
-                  </div>
-                  <div className={styles.settingItem}>
-                    <label>
-                      <input type="checkbox" checked={settings.requireLowercase || false} onChange={(e) => handleCheckboxChange('requireLowercase', e.target.checked)} />
-                      Yêu cầu có chữ thường
-                    </label>
-                  </div>
-                  <div className={styles.settingItem}>
-                    <label>
-                      <input type="checkbox" checked={settings.requireUppercase || false} onChange={(e) => handleCheckboxChange('requireUppercase', e.target.checked)} />
-                      Yêu cầu có chữ hoa
-                    </label>
-                  </div>
-                  <div className={styles.settingItem}>
-                    <label>
-                      <input type="checkbox" checked={settings.requireSpecial || false} onChange={(e) => handleCheckboxChange('requireSpecial', e.target.checked)} />
-                      Yêu cầu có ký tự đặc biệt
-                    </label>
-                  </div>
-
-
+              <div className={styles.settingItem}>
+                <label>Mô tả hệ thống</label>
+                <textarea
+                  maxLength={50}
+                  value={settings.systemDescription || ''}
+                  onChange={(e) => handleInputChange('systemDescription', e.target.value)}
+                  placeholder="Nhập mô tả hệ thống"
+                  className={errors.systemDescription ? styles.inputError : ''}
+                ></textarea>
+                {errors.systemDescription && <div className={styles.errorText}>{errors.systemDescription}</div>}
+                <div className={styles.charCounter}>
+                  {(settings.systemDescription || '').length}/50
                 </div>
-              )}
-            </div>
-
-            
-           
-            {/* Email Server Settings */}
-            <div className={styles.settingsCard}>
-              <div className={styles.cardHeader}>
-                <h3>
-                  <i className="bi bi-envelope"></i>
-                  Máy chủ email
-                </h3>
               </div>
-              <div className={styles.cardContent}>
-                {emailSettingsLoading ? (
-                  <div className={styles.loadingState}>Đang tải cấu hình email...</div>
-                ) : (
-                  <>
-                   
-                    <div className={styles.settingItem}>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={emailServerSettings.enabled}
-                          onChange={(e) => updateEmailServer({ enabled: e.target.checked })}
-                        />
-                        Bật gửi email tự động
-                      </label>
-                    </div>
-                    <div className={styles.noticeBox}>
-                      <strong>Gmail SMTP:</strong> smtp.gmail.com:587 (STARTTLS) - Thiết lập cố định.
-                    </div>
-                    <div className={styles.settingItem}>
-                      <label>Tên đăng nhập SMTP</label>
-                      <input
-                        type="text"
-                        value={emailServerSettings.username}
-                        onChange={(e) => updateEmailServer({ username: e.target.value })}
-                        placeholder="user@example.com"
-                      />
-                    </div>
-                    <div className={styles.settingItem}>
-                      <label>Email người gửi</label>
-                      <input
-                        type="email"
-                        value={emailServerSettings.fromEmail}
-                        onChange={(e) => updateEmailServer({ fromEmail: e.target.value })}
-                        placeholder="noreply@example.com"
-                      />
-                    </div>
-                    <div className={styles.settingItem}>
-                      <label>Tên hiển thị</label>
-                      <input
-                        type="text"
-                        value={emailServerSettings.fromName}
-                        onChange={(e) => updateEmailServer({ fromName: e.target.value })}
-                        placeholder="Medix Notifications"
-                      />
-                    </div>
-                    <div className={styles.settingItem}>
-                      <label>
-                        Mật khẩu SMTP
-                        {emailServerSettings.hasPassword && !passwordDirty && (
-                          <span className={styles.hintText}> Đã thiết lập</span>
-                        )}
-                      </label>
-                      <div className={styles.passwordField}>
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          value={emailServerSettings.password}
-                          onChange={(e) => updateEmailServer({ password: e.target.value })}
-                          placeholder={emailServerSettings.hasPassword && !passwordDirty ? '********' : 'Nhập mật khẩu ứng dụng'}
-                        />
-                        <button
-                          type="button"
-                          className={styles.toggleBtn}
-                          onClick={() => setShowPassword((prev) => !prev)}
-                        >
-                          {showPassword ? 'Ẩn' : 'Hiện'}
-                        </button>
-                      </div>
-                      <p className={styles.hintText}>
-                        Sử dụng mật khẩu ứng dụng Gmail (App Password) để đảm bảo bảo mật.
-                      </p>
-                    </div>
-                    <div className={styles.settingItem}>
-                      <button
-                        className={styles.saveBtn}
-                        onClick={handleSaveEmailServerSettings}
-                        disabled={emailSettingsSaving}
-                      >
-                        <i className={`bi ${emailSettingsSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
-                        {emailSettingsSaving ? 'Đang lưu...' : 'Lưu cấu hình email'}
-                      </button>
-                    </div>
-                  </>
-                )}
+              <div className={styles.settingItem}>
+                <label>Email liên hệ</label>
+                <input
+                  type="email"
+                  maxLength={150}
+                  value={settings.contactEmail || ''}
+                  onChange={(e) => handleInputChange('contactEmail', e.target.value)}
+                  placeholder="Nhập email liên hệ"
+                  className={errors.contactEmail ? styles.inputError : ''}
+                />
+                {errors.contactEmail && <div className={styles.errorText}>{errors.contactEmail}</div>}
+                <div className={styles.charCounter}>
+                  {(settings.contactEmail || '').length}/150
+                </div>
+              </div>
+              <div className={styles.settingItem}>
+                <label>Số điện thoại</label>
+                <input
+                  type="text"
+                  inputMode="tel"
+                  value={settings.contactPhone || ''}
+                  onChange={(e) => handleInputChange('contactPhone', e.target.value)}
+                  placeholder="Nhập số điện thoại liên hệ"
+                  className={errors.contactPhone ? styles.inputError : ''}
+                />
+                {errors.contactPhone && <div className={styles.errorText}>{errors.contactPhone}</div>}
+                <div className={styles.charCounter}>
+                  {(settings.contactPhone || '').replace(/\D/g, '').length}/10 chữ số
+                </div>
+              </div>
+              <div className={styles.settingItem}>
+                <label>Địa chỉ liên hệ</label>
+                <textarea
+                  value={settings.contactAddress || ''}
+                  onChange={(e) => handleInputChange('contactAddress', e.target.value)}
+                  placeholder="Nhập địa chỉ liên hệ"
+                  className={errors.contactAddress ? styles.inputError : ''}
+                ></textarea>
+                {errors.contactAddress && <div className={styles.errorText}>{errors.contactAddress}</div>}
               </div>
             </div>
+          )}
+        </div>
 
-            {/* Email Templates */}
-            <div className={styles.settingsCard}>
-              <div className={styles.cardHeader}>
-                <h3>
-                  <i className="bi bi-file-earmark-text"></i>
-                  Mẫu email tự động
-                </h3>
+        {/* Security Settings Card */}
+        <div className={styles.settingsCard}>
+          <div className={styles.cardHeader}>
+            <h3>
+              <i className="bi bi-shield-check"></i>
+              Bảo mật
+            </h3>
+          </div>
+          {loading ? (
+            <div className={styles.loadingState}>Đang tải cài đặt...</div>
+          ) : (
+            <div className={styles.cardContent}>
+              <div className={styles.settingItem}>
+                <label>Thời gian hết hạn phiên đăng nhập (phút)</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={settings.jwtExpiryMinutes || ''}
+                  onChange={e => handleInputChange('jwtExpiryMinutes', e.target.value)}
+                  onBlur={e => handleBlur('jwtExpiryMinutes', e.target.value)}
+                  placeholder="Ví dụ: 30"
+                  className={errors.jwtExpiryMinutes ? styles.inputError : ''}
+                />
+                {errors.jwtExpiryMinutes && <div className={styles.errorText}>{errors.jwtExpiryMinutes}</div>}
               </div>
-              <div className={styles.cardContent}>
-                {emailSettingsLoading ? (
-                  <div className={styles.loadingState}>Đang tải mẫu email...</div>
-                ) : emailTemplates.length === 0 ? (
-                  <div className={styles.emptyState}>Chưa có mẫu email nào.</div>
-                ) : (
-                  <div className={styles.templateSection}>
-                    <div className={styles.templateList}>
-                      {emailTemplates.map((template) => (
-                        <button
-                          key={template.templateKey}
-                          type="button"
-                          className={`${styles.templateButton} ${template.templateKey === selectedTemplateKey ? styles.templateButtonActive : ''}`}
-                          onClick={() => setSelectedTemplateKey(template.templateKey)}
-                        >
-                          <span>{template.displayName}</span>
-                          {template.description && <small>{template.description}</small>}
-                        </button>
-                      ))}
-                    </div>
-                    {selectedTemplate && (
-                      <div className={styles.templateEditor}>
-                        <div className={styles.settingItem}>
-                          <label>Tiêu đề email</label>
-                          <input
-                            type="text"
-                            value={selectedTemplate.subject}
-                            onChange={(e) => handleTemplateChange('subject', e.target.value)}
-                          />
-                        </div>
-                        <div className={styles.settingItem}>
-                          <label>Nội dung email</label>
-                          <div className={styles.editorWrapper}>
-                            <CKEditor
-                              key={selectedTemplate.templateKey}
-                              editor={ClassicEditor}
-                              data={selectedTemplate.body}
-                              onChange={(_, editor) => {
-                                const data = editor.getData();
-                                handleTemplateChange('body', data);
-                              }}
-                              config={{
-                                toolbar: [
-                                  'heading',
-                                  '|',
-                                  'bold',
-                                  'italic',
-                                  'underline',
-                                  'link',
-                                  'bulletedList',
-                                  'numberedList',
-                                  'blockQuote',
-                                  '|',
-                                  'undo',
-                                  'redo',
-                                ],
-                                placeholder: 'Soạn nội dung email...'
-                              }}
-                            />
-                          </div>
-                          {availableTokens.length > 0 && (
-                            <div className={styles.tokenHelper}>
-                              <span>Biến động có thể dùng:</span>
-                              <div className={styles.tokenChips}>
-                                {availableTokens.map((token) => (
-                                  <button
-                                    type="button"
-                                    key={token.token}
-                                    className={styles.tokenChip}
-                                    onClick={() => copyTokenToClipboard(token.token)}
-                                    title={token.description}
-                                  >
-                                    {token.token}
-                                  </button>
-                                ))}
-                              </div>
-                              <p className={styles.hintText}>Nhấp để sao chép, sau đó dán vào vị trí mong muốn.</p>
-                            </div>
-                          )}
-                        </div>
-                        {selectedTemplate.description && (
-                          <p className={styles.hintText}>{selectedTemplate.description}</p>
-                        )}
-                        <div className={styles.settingItem}>
-                          <button
-                            className={styles.saveBtn}
-                            onClick={handleSaveTemplate}
-                            disabled={emailTemplateSaving}
-                          >
-                            <i className={`bi ${emailTemplateSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
-                            {emailTemplateSaving ? 'Đang lưu...' : 'Lưu mẫu email'}
-                          </button>
-                        </div>
-                      </div>
+              <div className={styles.settingItem}>
+                <label>Số lần đăng nhập sai tối đa</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={settings.maxFailedLoginAttempts || ''}
+                  onChange={e => handleInputChange('maxFailedLoginAttempts', e.target.value)}
+                  onBlur={e => handleBlur('maxFailedLoginAttempts', e.target.value)}
+                  placeholder="Ví dụ: 5"
+                  className={errors.maxFailedLoginAttempts ? styles.inputError : ''}
+                />
+                {errors.maxFailedLoginAttempts && <div className={styles.errorText}>{errors.maxFailedLoginAttempts}</div>}
+              </div>
+              <div className={styles.settingItem}>
+                <label>Thời gian khóa tài khoản (phút)</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={settings.accountLockoutDurationMinutes || ''}
+                  onChange={e => handleInputChange('accountLockoutDurationMinutes', e.target.value)}
+                  onBlur={e => handleBlur('accountLockoutDurationMinutes', e.target.value)}
+                  placeholder="Ví dụ: 15"
+                />
+              </div>
+              <div className={styles.settingItem}>
+                <label>Độ dài mật khẩu tối thiểu</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={settings.passwordMinLength || ''}
+                  onChange={e => handleInputChange('passwordMinLength', e.target.value)}
+                  onBlur={(e) => handleBlur('passwordMinLength', e.target.value)}
+                  placeholder="Ví dụ: 6"
+                  className={errors.passwordMinLength ? styles.inputError : ''}
+                />
+                {errors.passwordMinLength && <div className={styles.errorText}>{errors.passwordMinLength}</div>}
+              </div>
+              <div className={styles.settingItem}>
+                <label>Độ dài mật khẩu tối đa</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={settings.passwordMaxLength || ''}
+                  onChange={(e) => handleInputChange('passwordMaxLength', e.target.value)}
+                  onBlur={(e) => handleBlur('passwordMaxLength', e.target.value)}
+                  placeholder="Ví dụ: 128"
+                  className={errors.passwordMaxLength ? styles.inputError : ''}
+                />
+                {errors.passwordMaxLength && <div className={styles.errorText}>{errors.passwordMaxLength}</div>}
+              </div>
+              <div className={styles.settingItem}>
+                <label>
+                  <input type="checkbox" checked={settings.requireDigit || false} onChange={(e) => handleCheckboxChange('requireDigit', e.target.checked)} />
+                  Yêu cầu có chữ số
+                </label>
+              </div>
+              <div className={styles.settingItem}>
+                <label>
+                  <input type="checkbox" checked={settings.requireLowercase || false} onChange={(e) => handleCheckboxChange('requireLowercase', e.target.checked)} />
+                  Yêu cầu có chữ thường
+                </label>
+              </div>
+              <div className={styles.settingItem}>
+                <label>
+                  <input type="checkbox" checked={settings.requireUppercase || false} onChange={(e) => handleCheckboxChange('requireUppercase', e.target.checked)} />
+                  Yêu cầu có chữ hoa
+                </label>
+              </div>
+              <div className={styles.settingItem}>
+                <label>
+                  <input type="checkbox" checked={settings.requireSpecial || false} onChange={(e) => handleCheckboxChange('requireSpecial', e.target.checked)} />
+                  Yêu cầu có ký tự đặc biệt
+                </label>
+              </div>
+
+
+            </div>
+          )}
+        </div>
+
+
+
+        {/* Email Server Settings Card */}
+        <div className={styles.settingsCard}>
+          <div className={styles.cardHeader}>
+            <h3>
+              <i className="bi bi-envelope"></i>
+              Máy chủ email
+            </h3>
+          </div>
+          <div className={styles.cardContent}>
+            {emailSettingsLoading ? (
+              <div className={styles.loadingState}>Đang tải cấu hình email...</div>
+            ) : (
+              <>
+
+                <div className={styles.settingItem}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={emailServerSettings.enabled}
+                      onChange={(e) => updateEmailServer({ enabled: e.target.checked })}
+                    />
+                    Bật gửi email tự động
+                  </label>
+                </div>
+                <div className={styles.noticeBox}>
+                  <strong>Gmail SMTP:</strong> smtp.gmail.com:587 (STARTTLS) - Thiết lập cố định.
+                </div>
+                <div className={styles.settingItem}>
+                  <label>Tên đăng nhập SMTP</label>
+                  <input
+                    type="text"
+                    value={emailServerSettings.username}
+                    onChange={(e) => updateEmailServer({ username: e.target.value })}
+                    onBlur={handleEmailServerBlur}
+                    className={emailServerErrors.username ? styles.inputError : ''}
+                    placeholder="user@example.com"
+                  />
+                  {emailServerErrors.username && <div className={styles.errorText}>{emailServerErrors.username}</div>}
+                </div>
+                <div className={styles.settingItem}>
+                  <label>Email người gửi</label>
+                  <input
+                    type="email"
+                    value={emailServerSettings.fromEmail}
+                    onChange={(e) => updateEmailServer({ fromEmail: e.target.value })}
+                    onBlur={handleEmailServerBlur}
+                    className={emailServerErrors.fromEmail ? styles.inputError : ''}
+                    placeholder="noreply@example.com"
+                  />
+                  {emailServerErrors.fromEmail && <div className={styles.errorText}>{emailServerErrors.fromEmail}</div>}
+                </div>
+                <div className={styles.settingItem}>
+                  <label>Tên hiển thị</label>
+                  <input
+                    type="text"
+                    maxLength={225}
+                    value={emailServerSettings.fromName}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      updateEmailServer({ fromName: value });
+                    }}
+                    onBlur={handleEmailServerBlur}
+                    className={emailServerErrors.fromName ? styles.inputError : ''}
+                    placeholder="Medix Notifications"
+                  />
+                  {emailServerErrors.fromName && <div className={styles.errorText}>{emailServerErrors.fromName}</div>}
+                  <div className={styles.charCounter}>{(emailServerSettings.fromName || '').length}/225</div>
+                </div>
+                <div className={styles.settingItem}>
+                  <label>
+                    Mật khẩu SMTP
+                    {emailServerSettings.hasPassword && !passwordDirty && (
+                      <span className={styles.hintText}> Đã thiết lập</span>
                     )}
+                  </label>
+                  <div className={styles.passwordField}>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={emailServerSettings.password}
+                      onChange={(e) => updateEmailServer({ password: e.target.value })}
+                      placeholder={emailServerSettings.hasPassword && !passwordDirty ? '********' : 'Nhập mật khẩu ứng dụng'}
+                    />
+                    <button
+                      type="button"
+                      className={styles.toggleBtn}
+                      onClick={() => setShowPassword((prev) => !prev)}
+                    >
+                      {showPassword ? 'Ẩn' : 'Hiện'}
+                    </button>
                   </div>
-                )}
-              </div>
-            </div>
+                  <p className={styles.hintText} style={{ color: "red" }}>
+                    Bạn phải nhập chính xác mật khẩu ứng dụng SMTP để gửi email.
+                  </p>
 
-            {/* Refund Policy Settings */}
-            <div className={styles.settingsCard}>
-              <div className={styles.cardHeader}>
-                <h3>
-                  <i className="bi bi-cash-coin"></i>
-                  Chính sách hoàn tiền hủy lịch
-                </h3>
-              </div>
-              <div className={styles.cardContent}>
-                <div className={styles.settingItem}>
-                  <label>Tỷ lệ hoàn tiền cho bệnh nhân (%)</label>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={refundPercentage}
-                    onChange={(e) => setRefundPercentage(Number(e.target.value))}
-                  />
-                  <div className={styles.rangeValue}>
-                    <strong>{refundPercentage}%</strong>
-                    <span>Phí hủy lịch: {100 - refundPercentage}%</span>
-                  </div>
+                  <p className={styles.hintText}>
+                    Lưu ý: Để sử dụng SMTP của Gmail, bạn cần bật xác thực hai yếu tố (2FA) và tạo mật khẩu ứng dụng trong tài khoản Google của mình.
+                  </p>
+
                 </div>
-                <div className={styles.settingItem}>
-                  <label>Nhập chính xác</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={refundPercentage}
-                    onChange={(e) =>
-                      setRefundPercentage(Math.min(100, Math.max(0, Number(e.target.value) || 0)))
-                    }
-                  />
-                </div>
-                <p className={styles.hintText}>
-                  Áp dụng khi bệnh nhân hủy lịch hợp lệ. Ví dụ: 80% nghĩa là hoàn lại 80% chi phí, thu phí hủy 20%.
-                </p>
                 <div className={styles.settingItem}>
                   <button
                     className={styles.saveBtn}
-                    onClick={handleSaveRefundPercentage}
-                    disabled={refundSaving}
+                    onClick={handleSaveEmailServerSettings}
+                    disabled={emailSettingsSaving || Object.keys(emailServerErrors).length > 0}
                   >
-                    <i className={`bi ${refundSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
-                    {refundSaving ? 'Đang lưu...' : 'Lưu chính sách hoàn tiền'}
+                    <i className={`bi ${emailSettingsSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
+                    {emailSettingsSaving ? 'Đang lưu...' : 'Lưu cấu hình email'}
                   </button>
                 </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Email Templates Card */}
+        <div className={styles.settingsCard}>
+          <div className={styles.cardHeader}>
+            <h3>
+              <i className="bi bi-file-earmark-text"></i>
+              Mẫu email tự động
+            </h3>
+          </div>
+          <div className={styles.cardContent}>
+            {emailSettingsLoading ? (
+              <div className={styles.loadingState}>Đang tải mẫu email...</div>
+            ) : emailTemplates.length === 0 ? (
+              <div className={styles.emptyState}>Chưa có mẫu email nào.</div>
+            ) : (
+              <div className={styles.templateSection}>
+                <div className={styles.templateList}>
+                  {emailTemplates.map((template) => (
+                    <button
+                      key={template.templateKey}
+                      type="button"
+                      className={`${styles.templateButton} ${template.templateKey === selectedTemplateKey ? styles.templateButtonActive : ''}`}
+                      onClick={() => setSelectedTemplateKey(template.templateKey)}
+                    >
+                      <span>{template.displayName}</span>
+                      {template.description && <small>{template.description}</small>}
+                    </button>
+                  ))}
+                </div>
+                {selectedTemplate && (
+                  <div className={styles.templateEditor}>
+                    <div className={styles.settingItem}>
+                      <label>Tiêu đề email</label>
+                      <input
+                        type="text"
+                        maxLength={64}
+                        value={selectedTemplate.subject}
+                        onChange={(e) => handleTemplateChange('subject', e.target.value)}
+                        className={templateErrors[selectedTemplateKey]?.subject ? styles.inputError : ''}
+                      />
+                      {templateErrors[selectedTemplateKey]?.subject && (
+                        <div className={styles.errorText}>{templateErrors[selectedTemplateKey]?.subject}</div>
+                      )}
+                      <div className={styles.charCounter}>
+                        {(selectedTemplate.subject || '').length}/64
+                      </div>
+                      <div className={styles.editorWrapper}>
+                        <CKEditor
+                          key={selectedTemplate.templateKey}
+                          editor={ClassicEditor}
+                          data={selectedTemplate.body}
+                          onChange={(_, editor) => {
+                            const data = editor.getData();
+                            handleTemplateChange('body', data);
+                          }}
+                          config={{
+                            placeholder: 'Soạn nội dung email...',
+                            toolbar: [
+                              'heading', '|',
+                              'bold', 'italic', 'underline', 'link', '|',
+                              'bulletedList', 'numberedList', 'blockQuote', '|',
+                              'undo', 'redo'
+                            ],
+                          }}
+                        />
+                      </div>
+                      <div className={styles.charCounter}>
+                        {(selectedTemplate.body || '').replace(/<[^>]*>/g, '').length}/7000
+                      </div>
+                      {templateErrors[selectedTemplateKey]?.body && (
+                        <div className={styles.errorText}>{templateErrors[selectedTemplateKey]?.body}</div>
+                      )}
+                      {availableTokens.length > 0 && (
+                        <div className={styles.tokenHelper}>
+                          <span>Biến động có thể dùng:</span>
+                          <div className={styles.tokenChips}>
+                            {availableTokens.map((token) => (
+                              <button
+                                type="button"
+                                key={token.token}
+                                className={styles.tokenChip}
+                                onClick={() => copyTokenToClipboard(token.token)}
+                                title={token.description}
+                              >
+                                {token.token}
+                              </button>
+                            ))}
+                          </div>
+                          <p className={styles.hintText}>Nhấp để sao chép, sau đó dán vào vị trí mong muốn.</p>
+                        </div>
+                      )}
+                    </div>
+                    {selectedTemplate.description && (
+                      <p className={styles.hintText}>{selectedTemplate.description}</p>
+                    )}
+                    <div className={styles.settingItem}>
+                      <button
+                        className={styles.saveBtn}
+                        onClick={handleSaveTemplate}
+                        disabled={emailTemplateSaving}
+                      >
+                        <i className={`bi ${emailTemplateSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
+                        {emailTemplateSaving ? 'Đang lưu...' : 'Lưu mẫu email'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Refund Policy Settings Card */}
+        <div className={styles.settingsCard}>
+          <div className={styles.cardHeader}>
+            <h3>
+              <i className="bi bi-cash-coin"></i>
+              Chính sách hoàn tiền hủy lịch
+            </h3>
+          </div>
+          <div className={styles.cardContent}>
+            <div className={styles.settingItem}>
+              <label>Tỷ lệ hoàn tiền cho bệnh nhân (%)</label>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={refundPercentage}
+                onChange={(e) => setRefundPercentage(Number(e.target.value))}
+              />
+              <div className={styles.rangeValue}>
+                <strong>{refundPercentage}%</strong>
+                <span>Phí hủy lịch: {100 - refundPercentage}%</span>
               </div>
             </div>
+            <div className={styles.settingItem}>
+              <label>Nhập chính xác</label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={refundPercentage}
+                onChange={(e) =>
+                  setRefundPercentage(Math.min(100, Math.max(0, Number(e.target.value) || 0)))
+                }
+              />
+            </div>
+            <p className={styles.hintText}>
+              Áp dụng khi bệnh nhân hủy lịch hợp lệ. Ví dụ: 80% nghĩa là hoàn lại 80% chi phí, thu phí hủy 20%.
+            </p>
+            <div className={styles.settingItem}>
+              <button
+                className={styles.saveBtn}
+                onClick={handleSaveRefundPercentage}
+                disabled={refundSaving}
+              >
+                <i className={`bi ${refundSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
+                {refundSaving ? 'Đang lưu...' : 'Lưu chính sách hoàn tiền'}
+              </button>
+            </div>
+          </div>
+        </div>
 
-            {/* Backup Settings */}
-            <div className={styles.settingsCard}>
-              <div className={styles.cardHeader}>
-                <h3>
-                  <i className="bi bi-cloud-arrow-up"></i>
-                  Sao lưu
-                </h3>
-              </div>
-              <div className={styles.cardContent}>
-                {backupLoading ? (
-                  <div className={styles.loadingState}>Đang tải cấu hình sao lưu...</div>
-                ) : (
-                  <>
-                    <div className={styles.settingItem}>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={backupSettings.enabled}
-                          onChange={(e) => handleBackupSettingChange('enabled', e.target.checked)}
-                        />
-                        Bật sao lưu tự động
-                      </label>
-                    </div>
-                    <div className={styles.settingItem}>
-                      <label>Tần suất sao lưu</label>
-                      <select
-                        value={backupSettings.frequency}
-                        onChange={(e) => handleBackupSettingChange('frequency', e.target.value)}
-                      >
-                        <option value="daily">Hàng ngày</option>
-                        <option value="weekly">Hàng tuần</option>
-                        <option value="monthly">Hàng tháng</option>
-                      </select>
-                    </div>
-                    <div className={styles.settingItem}>
-                      <label>Thời gian sao lưu</label>
-                      <input
-                        type="time"
-                        value={backupSettings.time}
-                        onChange={(e) => handleBackupSettingChange('time', e.target.value)}
-                      />
-                    </div>
-                    <div className={styles.settingItem}>
+        {/* Backup Settings Card */}
+        <div className={styles.settingsCard}>
+          <div className={styles.cardHeader}>
+            <h3>
+              <i className="bi bi-cloud-arrow-up"></i>
+              Sao lưu
+            </h3>
+          </div>
+          <div className={styles.cardContent}>
+            {backupLoading ? (
+              <div className={styles.loadingState}>Đang tải cấu hình sao lưu...</div>
+            ) : (
+              <>
+                <div className={styles.settingItem}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={backupSettings.enabled}
+                      onChange={(e) => handleBackupSettingChange('enabled', e.target.checked)}
+                    />
+                    Bật sao lưu tự động
+                  </label>
+                </div>
+                <div className={styles.settingItem}>
+                  <label>Tần suất sao lưu</label>
+                  <select
+                    value={backupSettings.frequency}
+                    onChange={(e) => handleBackupSettingChange('frequency', e.target.value)}
+                  >
+                    <option value="daily">Hàng ngày</option>
+                    <option value="weekly">Hàng tuần</option>
+                    <option value="monthly">Hàng tháng</option>
+                  </select>
+                </div>
+                <div className={styles.settingItem}>
+                  <label>Thời gian sao lưu</label>
+                  <input
+                    type="time"
+                    value={backupSettings.time}
+                    onChange={(e) => handleBackupSettingChange('time', e.target.value)}
+                  />
+                </div>
+                {/* <div className={styles.settingItem}>
                       <label>Số bản sao lưu giữ lại</label>
                       <input
                         type="number"
@@ -992,123 +1240,127 @@ useEffect(() => {
                         value={backupSettings.retentionDays}
                         onChange={(e) => handleBackupSettingChange('retentionDays', e.target.value)}
                       />
-                    </div>
-                    <div className={styles.settingItem}>
-                      <button
-                        className={styles.saveBtn}
-                        onClick={handleSaveBackupSettings}
-                        disabled={backupSaving}
-                      >
-                        <i className={`bi ${backupSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
-                        {backupSaving ? 'Đang lưu...' : 'Lưu cấu hình sao lưu'}
-                      </button>
-                    </div>
-                    <hr />
-                    <div className={styles.settingItem}>
-                      <label>Đặt tên bản sao lưu (tùy chọn)</label>
-                      <input
-                        type="text"
-                        value={backupName}
-                        onChange={(e) => setBackupName(e.target.value)}
-                        placeholder="Ví dụ: BackUp"
-                      />
-                    </div>
-                    <div className={styles.settingItem}>
-                      <button
-                        className={styles.backupBtn}
-                        onClick={handleBackupNow}
-                        disabled={backupRunning}
-                      >
-                        <i className={`bi ${backupRunning ? 'bi-arrow-repeat' : 'bi-download'}`}></i>
-                        {backupRunning ? 'Đang sao lưu...' : 'Sao lưu ngay'}
-                      </button>
-                    </div>
-                    <div className={styles.settingItem}>
-                      <label>Danh sách bản sao lưu gần đây</label>
-                      {backupList.length === 0 ? (
-                        <p className={styles.emptyState}>Chưa có bản sao lưu nào.</p>
-                      ) : (
-                        <div className={styles.backupList}>
-                          {backupList.map((backup) => (
-                            <div key={backup.fileName} className={styles.backupRow}>
-                              <div>
-                                <strong>{backup.fileName}</strong>
-                                <div className={styles.backupMeta}>
-                                  {backup.fileSizeFormatted} •{' '}
-                                  {new Date(backup.createdAt).toLocaleString()}
-                                </div>
-                              </div>
-                              <button
-                                className={styles.downloadBtn}
-                                onClick={() => handleDownloadBackup(backup.fileName)}
-                              >
-                                <i className="bi bi-cloud-download"></i>
-                                Tải xuống
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Maintenance Settings */}
-            <div className={styles.settingsCard}>
-              <div className={styles.cardHeader}>
-                <h3>
-                  <i className="bi bi-tools"></i>
-                  Bảo trì
-                </h3>
-              </div>
-              <div className={styles.cardContent}>
-                <div className={styles.settingItem}>
-                  <label>Chế độ bảo trì</label>
-                  <div className={styles.toggleGroup}>
-                    <label className={styles.toggle}>
-                      <input
-                        type="radio"
-                        name="maintenance"
-                        value="off"
-                        checked={!settings.maintenanceMode}
-                        onChange={() => handleMaintenanceModeChange(false)}
-                      />
-                      <span>Tắt</span>
-                    </label>
-                    <label className={styles.toggle}>
-                      <input
-                        type="radio"
-                        name="maintenance"
-                        value="on"
-                        checked={!!settings.maintenanceMode}
-                        onChange={() => handleMaintenanceModeChange(true)}
-                      />
-                      <span>Bật</span>
-                    </label>
-                  </div>
-                </div>
-                <div className={styles.settingItem}>
-                  <label>Thông báo bảo trì</label>
-                  <textarea
-                    value={settings.maintenanceMessage || ''}
-                    onChange={(e) => handleInputChange('maintenanceMessage', e.target.value)}
-                    placeholder="Nhập thông báo bảo trì..."
-                  ></textarea>
-                </div>
-                
+                    </div> */}
                 <div className={styles.settingItem}>
                   <button
-                    className={styles.maintenanceBtn}
-                    onClick={() => handleSaveMaintenanceSettings()}
-                    disabled={maintenanceSaving}
+                    className={styles.saveBtn}
+                    onClick={handleSaveBackupSettings}
+                    disabled={backupSaving}
                   >
-                    <i className={`bi ${maintenanceSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
-                    {maintenanceSaving ? 'Đang lưu...' : 'Lưu cấu hình bảo trì'}
+                    <i className={`bi ${backupSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
+                    {backupSaving ? 'Đang lưu...' : 'Lưu cấu hình sao lưu'}
+                  </button>
+                </div>
+                <hr />
+                <div className={styles.settingItem}>
+                  <label>Đặt tên bản sao lưu (tùy chọn)</label>
+                  <input
+                    type="text"
+                    value={backupName}
+                    onChange={(e) => setBackupName(e.target.value)}
+                    placeholder="Ví dụ: BackUp"
+                  />
+                </div>
+                <div className={styles.settingItem}>
+                  <button
+                    className={styles.backupBtn}
+                    onClick={handleBackupNow}
+                    disabled={backupRunning}
+                  >
+                    <i className={`bi ${backupRunning ? 'bi-arrow-repeat' : 'bi-download'}`}></i>
+                    {backupRunning ? 'Đang sao lưu...' : 'Sao lưu ngay'}
                   </button>
                 </div>
                 <div className={styles.settingItem}>
+                  <label>Danh sách bản sao lưu gần đây</label>
+                  {backupList.length === 0 ? (
+                    <p className={styles.emptyState}>Chưa có bản sao lưu nào.</p>
+                  ) : (
+                    <div className={styles.backupList}>
+                      {backupList.map((backup) => (
+                        <div key={backup.fileName} className={styles.backupRow}>
+                          <div>
+                            <strong>{backup.fileName}</strong>
+                            <div className={styles.backupMeta}>
+                              {backup.fileSizeFormatted} •{' '}
+                              {new Date(backup.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+                          <button
+                            className={styles.downloadBtn}
+                            onClick={() => handleDownloadBackup(backup.fileName)}
+                          >
+                            <i className="bi bi-cloud-download"></i>
+                            Tải xuống
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Maintenance Settings Card */}
+        <div className={styles.settingsCard}>
+          <div className={styles.cardHeader}>
+            <h3>
+              <i className="bi bi-tools"></i>
+              Bảo trì
+            </h3>
+          </div>
+          <div className={styles.cardContent}>
+            <div className={styles.settingItem}>
+              <label>Chế độ bảo trì</label>
+              <div className={styles.toggleGroup}>
+                <label className={styles.toggle}>
+                  <input
+                    type="radio"
+                    name="maintenance"
+                    value="off"
+                    checked={!settings.maintenanceMode}
+                    onChange={() => handleMaintenanceModeChange(false)}
+                  />
+                  <span>Tắt</span>
+                </label>
+                <label className={styles.toggle}>
+                  <input
+                    type="radio"
+                    name="maintenance"
+                    value="on"
+                    checked={!!settings.maintenanceMode}
+                    onChange={() => handleMaintenanceModeChange(true)}
+                  />
+                  <span>Bật</span>
+                </label>
+              </div>
+            </div>
+            <div className={styles.settingItem}>
+              <label>Thông báo bảo trì</label>
+              <textarea
+                maxLength={255}
+                value={settings.maintenanceMessage || ''}
+                onChange={(e) => handleInputChange('maintenanceMessage', e.target.value)}
+                placeholder="Nhập thông báo bảo trì..."
+              ></textarea>
+              <div className={styles.charCounter}>
+                {(settings.maintenanceMessage || '').length}/255
+              </div>
+            </div>
+
+            <div className={styles.settingItem}>
+              <button
+                className={styles.maintenanceBtn}
+                onClick={() => handleSaveMaintenanceSettings()}
+                disabled={maintenanceSaving}
+              >
+                <i className={`bi ${maintenanceSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
+                {maintenanceSaving ? 'Đang lưu...' : 'Lưu cấu hình bảo trì'}
+              </button>
+            </div>
+            {/* <div className={styles.settingItem}>
                   <button
                     className={styles.maintenanceBtn}
                     onClick={() => handleSaveMaintenanceSettings(true)}
@@ -1117,10 +1369,18 @@ useEffect(() => {
                     <i className="bi bi-gear"></i>
                     Kích hoạt chế độ bảo trì
                   </button>
-                </div>
-              </div>
-            </div>
+                </div> */}
           </div>
+        </div>
+      </div>
+
+      {/* Footer Actions */}
+      <div className={styles.footerActions}>
+        <button onClick={handleSaveChanges} className={userStyles.btnCreate} disabled={saving || loading}>
+          <i className={`bi ${saving ? 'bi-arrow-repeat' : 'bi-check-lg'}`}></i>
+          {saving ? 'Đang lưu...' : 'Lưu tất cả thay đổi'}
+        </button>
+      </div>
     </div>
   );
 }

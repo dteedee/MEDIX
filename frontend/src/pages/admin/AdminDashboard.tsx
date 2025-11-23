@@ -195,7 +195,7 @@ export default function AdminDashboard() {
                 <div className={styles.statLabel}>Tổng người dùng</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>{dashboardData?.growth.usersGrowthPercentage}%</span>
+                  <span>{dashboardData?.growth.usersGrowthPercentage}% so với tháng trước</span>
                 </div>
               </div>
             </div>
@@ -209,7 +209,7 @@ export default function AdminDashboard() {
                 <div className={styles.statLabel}>Bác sĩ</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>{dashboardData?.growth.doctorsGrowthPercentage}%</span>
+                  <span>{dashboardData?.growth.doctorsGrowthPercentage}% so với tuần trước</span>
                 </div>
               </div>
             </div>
@@ -223,7 +223,7 @@ export default function AdminDashboard() {
                 <div className={styles.statLabel}>Lịch hẹn hôm nay</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>{dashboardData?.growth.todayAppointmentsGrowthPercentage}%</span>
+                  <span>{dashboardData?.growth.todayAppointmentsGrowthPercentage}% so với hôm qua</span>
                 </div>
               </div>
             </div>
@@ -237,7 +237,7 @@ export default function AdminDashboard() {
                 <div className={styles.statLabel}>Bài viết</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>{dashboardData?.growth.articlesGrowthPercentage}%</span>
+                  <span>{dashboardData?.growth.articlesGrowthPercentage}% so với tháng trước</span>
                 </div>
               </div>
             </div>
@@ -337,7 +337,6 @@ export default function AdminDashboard() {
           <div className={styles.activityCard}>
             <div className={styles.activityHeader}>
               <h3>Hoạt động gần đây</h3>
-              <button className={styles.viewAllBtn}>Xem tất cả</button>
             </div>
             <div className={styles.activityList}>
             {dashboardData?.recentActivities.slice(0, 5).map((activity: RecentActivity, index: number) => (

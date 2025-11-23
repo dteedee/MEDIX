@@ -116,7 +116,7 @@ export default function SettingsPage() {
   const [refundSaving, setRefundSaving] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof SystemSettings, string>>>({});
   const [templateErrors, setTemplateErrors] = useState<Partial<Record<string, { subject?: string; body?: string }>>>({});
-  const [emailServerErrors, setEmailServerErrors] = useState<Partial<Record<'username' | 'fromEmail', string>>>({});
+  const [emailServerErrors, setEmailServerErrors] = useState<Partial<Record<'username' | 'fromEmail' | 'fromName', string>>>({});
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -292,9 +292,10 @@ export default function SettingsPage() {
 
   const validateEmailServerFields = (
     username: string,
-    fromEmail: string
-  ): Partial<Record<'username' | 'fromEmail', string>> => {
-    const newErrors: Partial<Record<'username' | 'fromEmail', string>> = {};
+    fromEmail: string,
+    fromName: string
+  ): Partial<Record<'username' | 'fromEmail' | 'fromName', string>> => {
+    const newErrors: Partial<Record<'username' | 'fromEmail' | 'fromName', string>> = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     // Username validation
@@ -311,6 +312,11 @@ export default function SettingsPage() {
       newErrors.fromEmail = 'Định dạng email không hợp lệ.';
     }
 
+    // FromName validation
+    if (!fromName.trim()) {
+      newErrors.fromName = 'Tên hiển thị không được để trống.';
+    }
+
     // Cross-field validation (only if both fields have a valid format individually and are not empty)
     if (username && fromEmail && !newErrors.username && !newErrors.fromEmail && username !== fromEmail) {
       newErrors.username = 'Tên đăng nhập SMTP phải giống Email người gửi.';
@@ -323,7 +329,7 @@ export default function SettingsPage() {
   const updateEmailServer = (patch: Partial<EmailServerSettingsState>) => {
     setEmailServerSettings((prev) => {
       const newState = { ...prev, ...patch };
-      setEmailServerErrors(validateEmailServerFields(newState.username, newState.fromEmail));
+      setEmailServerErrors(validateEmailServerFields(newState.username, newState.fromEmail, newState.fromName));
       return newState;
     });
     if (Object.prototype.hasOwnProperty.call(patch, 'password')) {
@@ -332,12 +338,12 @@ export default function SettingsPage() {
   };
 
   const handleEmailServerBlur = () => {
-    const validationErrors = validateEmailServerFields(emailServerSettings.username, emailServerSettings.fromEmail);
+    const validationErrors = validateEmailServerFields(emailServerSettings.username, emailServerSettings.fromEmail, emailServerSettings.fromName);
     setEmailServerErrors(validationErrors);
   };
 
   const handleSaveEmailServerSettings = async () => {
-    const validationErrors = validateEmailServerFields(emailServerSettings.username, emailServerSettings.fromEmail);
+    const validationErrors = validateEmailServerFields(emailServerSettings.username, emailServerSettings.fromEmail, emailServerSettings.fromName);
     if (Object.keys(validationErrors).length > 0) {
       setEmailServerErrors(validationErrors);
       showToast('Vui lòng sửa các lỗi trong cấu hình máy chủ email.', 'error');
@@ -963,10 +969,18 @@ export default function SettingsPage() {
                   <label>Tên hiển thị</label>
                   <input
                     type="text"
+                    maxLength={225}
                     value={emailServerSettings.fromName}
-                    onChange={(e) => updateEmailServer({ fromName: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      updateEmailServer({ fromName: value });
+                    }}
+                    onBlur={handleEmailServerBlur}
+                    className={emailServerErrors.fromName ? styles.inputError : ''}
                     placeholder="Medix Notifications"
                   />
+                  {emailServerErrors.fromName && <div className={styles.errorText}>{emailServerErrors.fromName}</div>}
+                  <div className={styles.charCounter}>{(emailServerSettings.fromName || '').length}/225</div>
                 </div>
                 <div className={styles.settingItem}>
                   <label>

@@ -103,6 +103,13 @@ export default function FeedbackManagement() {
     });
   };
 
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       Public: { text: 'Public', class: styles.statusApproved },
@@ -154,17 +161,9 @@ export default function FeedbackManagement() {
           <p className={styles.subtitle}>Theo dõi và quản lý phản hồi từ bệnh nhân</p>
         </div>
         <div className={styles.headerRight}>
-          <div className={styles.filterSelector}>
-            <label>Lọc theo trạng thái:</label>
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className={styles.filterSelect}
-            >
-              <option value="all">Tất cả</option>
-              <option value="Public">Public</option>
-              <option value="Private">Private</option>
-            </select>
+          <div className={styles.dateTime}>
+            <i className="bi bi-calendar3"></i>
+            <span>{new Date().toLocaleDateString('vi-VN')}</span>
           </div>
         </div>
       </div>
@@ -215,6 +214,18 @@ export default function FeedbackManagement() {
 
         <div className={styles.tableHeader}>
           <h3>Danh sách Phản hồi</h3>
+          <div className={styles.filterSelector}>
+            <label>Lọc theo trạng thái:</label>
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className={styles.filterSelect}
+            >
+              <option value="all">Tất cả</option>
+              <option value="Public">Public</option>
+              <option value="Private">Private</option>
+            </select>
+          </div>
         </div>
 
         <div className={styles.tableContainer}>
@@ -323,10 +334,8 @@ export default function FeedbackManagement() {
               {/* Thông tin cuộc hẹn */}
               <h4>Thông tin cuộc hẹn</h4>
               <div className={styles.detailItem}>
-                <strong>Thời gian bắt đầu:</strong> {formatDate(selectedFeedback.appointmentStartTime)}
-              </div>
-              <div className={styles.detailItem}>
-                <strong>Thời gian kết thúc:</strong> {formatDate(selectedFeedback.appointmentEndTime)}
+                <strong>Thời gian:</strong> {new Date(selectedFeedback.appointmentStartTime).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                ({formatTime(selectedFeedback.appointmentStartTime)} - {formatTime(selectedFeedback.appointmentEndTime)})
               </div>
             </div>
           </div>

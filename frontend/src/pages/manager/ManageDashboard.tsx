@@ -165,7 +165,7 @@ export const ManageDashboard: React.FC = () => {
         <StatCard
           title="Bác sĩ hoạt động"
           value={summary.activeDoctors}
-          description="Bác sĩ đang online"
+          description="Bác sĩ đang hoạt động"
           icon={<FaUsers />}
           colorClass="Green"
         />
@@ -266,11 +266,11 @@ export const ManageDashboard: React.FC = () => {
 
         {/* Doctor Management */}
         <div className={styles.card}>
-          {/* <div className={styles.cardHeader}>
+          <div className={styles.cardHeader}>
             <h3 className={styles.cardTitle}>Bác sĩ gần đây</h3>
 
-          </div> */}
-          {/* <div className={styles.cardContent}>
+          </div>
+          <div className={styles.cardContent}>
             {recentDoctors && recentDoctors.length > 0 ? (
               <div className={styles.cardContentList}>
                 {recentDoctors.map((doctor) => (
@@ -279,19 +279,14 @@ export const ManageDashboard: React.FC = () => {
                       <h4>{doctor.doctorName}</h4>
                       <p>{doctor.specialtyName}</p>
                     </div>
-                    <div className={styles.doctorActions}>
-                      <span className={`${styles.doctorStatus} ${getDoctorStatusClass(doctor.status)}`}>
-                        {doctor.statusDisplayName}
-                      </span>
-                      <button className={styles.viewButton}>Xem</button>
-                    </div>
+                    
                   </div>
                 ))}
               </div>
             ) : (
               <p className={styles.emptyState}>Không có hoạt động nào của bác sĩ gần đây.</p>
             )}
-          </div> */}
+          </div>
         </div>
       </div>
     </div>

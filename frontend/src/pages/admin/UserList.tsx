@@ -185,14 +185,15 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
     setUpdatingIds(prev => ({ ...prev, [currentUser.id]: true }));
 
     try {
+      // Gửi lại toàn bộ thông tin người dùng để đảm bảo không bị mất dữ liệu,
+      // chỉ ghi đè những trường cần thay đổi.
       const payload: UpdateUserRequest = {
-        role: currentUser.role,
+        ...currentUser, // Lấy tất cả thông tin hiện có của người dùng
         lockoutEnabled: isBeingLocked,
       };
       
-      // Nếu mở khóa thì clear lockoutEnd
       if (!isBeingLocked) {
-        (payload as any).lockoutEnd = null;
+        payload.lockoutEnd = null; // Nếu mở khóa, đặt lockoutEnd về null
       }
 
       await userAdminService.update(currentUser.id, payload);
@@ -656,7 +657,15 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
 
       {/* Modals */}
       {viewing && (
-        <UserDetails user={viewing} onClose={() => setViewing(null)} isLoading={loadingDetails} />
+        <UserDetails 
+          user={viewing} 
+          onClose={() => setViewing(null)} 
+          isLoading={loadingDetails}
+          roles={rolesList}
+          role={
+            users.find(u => u.id === viewing.id)?.role || viewing.role
+          }
+        />
       )}
 
       {creating && (

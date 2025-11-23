@@ -56,6 +56,9 @@ export const PatientAppointments: React.FC = () => {
     timeRange: 'all',
     search: ''
   });
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [doctorProfiles, setDoctorProfiles] = useState<Map<string, DoctorProfileDto>>(new Map());
   const [loadingDoctors, setLoadingDoctors] = useState<Set<string>>(new Set());
   const [refundPercentage, setRefundPercentage] = useState(80);
@@ -243,7 +246,26 @@ export const PatientAppointments: React.FC = () => {
       );
     }
 
-    if (filters.timeRange !== 'all') {
+    // Filter by date range if provided
+    if (dateFrom || dateTo) {
+      filtered = filtered.filter(apt => {
+        const aptDate = new Date(apt.date);
+        if (dateFrom && dateTo) {
+          const fromDate = new Date(dateFrom);
+          const toDate = new Date(dateTo);
+          toDate.setHours(23, 59, 59, 999); // Include entire end date
+          return aptDate >= fromDate && aptDate <= toDate;
+        } else if (dateFrom) {
+          const fromDate = new Date(dateFrom);
+          return aptDate >= fromDate;
+        } else if (dateTo) {
+          const toDate = new Date(dateTo);
+          toDate.setHours(23, 59, 59, 999);
+          return aptDate <= toDate;
+        }
+        return true;
+      });
+    } else if (filters.timeRange !== 'all') {
       const now = new Date();
       filtered = filtered.filter(apt => {
         const aptDate = new Date(apt.date);
@@ -263,7 +285,7 @@ export const PatientAppointments: React.FC = () => {
     filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     setFilteredAppointments(filtered);
-  }, [filters, appointmentsWithDoctorInfo]);
+  }, [filters, appointmentsWithDoctorInfo, dateFrom, dateTo]);
 
   const handleCancelAppointment = async () => {
     if (!selectedAppointment) return;
@@ -556,42 +578,94 @@ export const PatientAppointments: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters Section */}
-      <div className={styles.filtersSection}>
+      {/* Search and Filter Section */}
+      <div className={styles.searchFilterSection}>
         <div className={styles.searchBox}>
-            <i className="bi bi-search"></i>
-            <input
-              type="text"
-            placeholder="Tìm kiếm bác sĩ, chuyên khoa..."
+          <i className="bi bi-search"></i>
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tiêu đề..."
             value={filters.search}
             onChange={(e) => setFilters({...filters, search: e.target.value})}
           />
         </div>
 
-        <div className={styles.filterButtons}>
-                <select 
-                  value={filters.status} 
-                  onChange={(e) => setFilters({...filters, status: e.target.value})}
-            className={styles.filterSelect}
-                >
-            <option value="all">Tất cả trạng thái</option>
-                  <option value="upcoming">Sắp diễn ra</option>
-            <option value="completed">Hoàn thành</option>
-                  <option value="cancelled">Đã hủy</option>
-                </select>
-
-                <select 
-            value={filters.timeRange} 
-            onChange={(e) => setFilters({...filters, timeRange: e.target.value})}
-            className={styles.filterSelect}
-                >
-            <option value="all">Tất cả thời gian</option>
-                  <option value="today">Hôm nay</option>
-                  <option value="week">Tuần này</option>
-                  <option value="month">Tháng này</option>
-                </select>
-              </div>
+        <button 
+          className={`${styles.filterToggleBtn} ${showFilterPanel ? styles.active : ''}`}
+          onClick={() => setShowFilterPanel(!showFilterPanel)}
+        >
+          <i className="bi bi-funnel"></i>
+          Bộ lọc
+        </button>
       </div>
+
+      {/* Advanced Filter Panel */}
+      {showFilterPanel && (
+        <div className={styles.filterPanel}>
+          <div className={styles.filterGrid}>
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-toggle-on"></i>
+                Trạng thái
+              </label>
+              <select 
+                value={filters.status} 
+                onChange={(e) => setFilters({...filters, status: e.target.value})}
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="upcoming">Sắp diễn ra</option>
+                <option value="completed">Hoàn thành</option>
+                <option value="cancelled">Đã hủy</option>
+              </select>
+            </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-calendar-event"></i>
+                Từ ngày
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-calendar-check"></i>
+                Đến ngày
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className={styles.filterActions}>
+            <button 
+              className={styles.resetFilterBtn}
+              onClick={() => {
+                setFilters({ status: 'all', timeRange: 'all', search: '' });
+                setDateFrom('');
+                setDateTo('');
+              }}
+            >
+              <i className="bi bi-arrow-counterclockwise"></i>
+              Đặt lại bộ lọc
+            </button>
+            <button 
+              className={styles.applyFilterBtn}
+              onClick={() => setShowFilterPanel(false)}
+            >
+              <i className="bi bi-check2"></i>
+              Áp dụng
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Appointments List */}
         {filteredAppointments.length === 0 ? (

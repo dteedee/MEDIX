@@ -1,4 +1,5 @@
-﻿using Medix.API.Models.Entities;
+﻿using Medix.API.Models.DTOs;
+using Medix.API.Models.Entities;
 
 namespace Medix.API.DataAccess.Interfaces.Classification
 {
@@ -14,5 +15,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task<bool> DeleteByUserIdAsync(Guid userId);
         Task<bool> IsPromotionAssignedToUserAsync(Guid userId, Guid promotionId);
         Task<int> IncrementUsageCountAsync(Guid id);
+
+   
     }
 }

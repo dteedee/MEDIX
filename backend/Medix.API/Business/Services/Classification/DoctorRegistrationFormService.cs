@@ -167,7 +167,7 @@ namespace Medix.API.Business.Services.Classification
                         AverageRating = 0,
                         TotalReviews = 0,
                         IsVerified = true,
-                        IsAcceptingAppointments = false
+                        IsAcceptingAppointments = true
                     };
                     await _doctorRepository.CreateDoctorAsync(doctor);
                     var wallet = new Wallet

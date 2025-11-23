@@ -47,7 +47,37 @@ namespace Medix.API.Business.Services.Classification
         {
             return await _doctorRepository.GetHomePageDoctorsAsync();
         }
+        public async Task<bool> UpdateDoctorEducationAndFeeAsync(Guid doctorId, string? education, decimal? consultationFee)
+        {
+            var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId);
+            if (doctor == null)
+                return false;
 
+            var updated = false;
+
+            if (education != null && education != doctor.Education)
+            {
+                doctor.Education = education;
+                updated = true;
+            }
+
+            if (consultationFee.HasValue && consultationFee.Value != doctor.ConsultationFee)
+            {
+                if (consultationFee.Value < 0)
+                    throw new ArgumentException("Consultation fee must be non-negative", nameof(consultationFee));
+
+                doctor.ConsultationFee = consultationFee.Value;
+                updated = true;
+            }
+
+            if (!updated)
+                return true; // nothing to change
+
+            doctor.UpdatedAt = DateTime.UtcNow;
+
+            var result = await _doctorRepository.UpdateDoctorAsync(doctor);
+            return result != null;
+        }
         public async Task<bool> LicenseNumberExistsAsync(string licenseNumber) => await _doctorRepository.LicenseNumberExistsAsync(licenseNumber);
 
         //public async Task<DoctorProfileDto?> GetDoctorProfileByUserNameAsync(string userName)
@@ -553,6 +583,98 @@ namespace Medix.API.Business.Services.Classification
                 throw;
             }
         }
+
+        // Updated: evaluate ALL doctors in DB (if count <= 0 return all; otherwise return top 'count')
+        public async Task<List<TopDoctorPerformanceDto>> GetTopDoctorsByPerformanceAsync( double ratingWeight = 0.7, double successWeight = 0.3)
+        {
+            // Normalize weights
+            var weightSum = ratingWeight + successWeight;
+            if (weightSum <= 0)
+            {
+                ratingWeight = 0.7;
+                successWeight = 0.3;
+                weightSum = 1.0;
+            }
+            ratingWeight /= weightSum;
+            successWeight /= weightSum;
+
+            // Load all doctors (important: include doctors with no reviews/appointments)
+            var doctors = await _doctorRepository.GetAllAsync();
+
+            // Load reviews and appointments
+            var reviews = await _reviewRepository.GetAllAsync();
+            var appointments = (await _appointmentRepository.GetAllAsync()).ToList();
+
+            // Group reviews by doctor id
+            var reviewsByDoctor = reviews
+                .Where(r => r.Appointment?.DoctorId != null)
+                .GroupBy(r => r.Appointment.DoctorId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => new
+                    {
+                        AvgRating = g.Any() ? g.Average(r => r.Rating) : 0.0,
+                        ReviewCount = g.Count()
+                    });
+
+            // Group appointments by doctor id and count successes
+            var successfulStatuses = Constants.SuccessfulAppointmentStatusCode;
+            var apptsByDoctor = appointments
+                .Where(a => a.DoctorId != Guid.Empty)
+                .GroupBy(a => a.DoctorId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => new
+                    {
+                        Total = g.Count(),
+                        Successful = g.Count(a => successfulStatuses.Contains(a.StatusCode))
+                    });
+
+            var results = new List<TopDoctorPerformanceDto>(doctors.Count);
+
+            foreach (var doc in doctors)
+            {
+                var did = doc.Id;
+                var avgRating = reviewsByDoctor.ContainsKey(did) ? reviewsByDoctor[did].AvgRating : 0.0;
+                var reviewCount = reviewsByDoctor.ContainsKey(did) ? reviewsByDoctor[did].ReviewCount : 0;
+                var totalCases = apptsByDoctor.ContainsKey(did) ? apptsByDoctor[did].Total : 0;
+                var successfulCases = apptsByDoctor.ContainsKey(did) ? apptsByDoctor[did].Successful : 0;
+                var successRate = totalCases > 0 ? (double)successfulCases / totalCases : 0.0;
+
+                // Normalize rating into 0..1 (rating / 5)
+                var normRating = Math.Max(0.0, Math.Min(5.0, avgRating)) / 5.0;
+
+                // Composite score (0..1)
+                var composite = (ratingWeight * normRating) + (successWeight * successRate);
+
+                results.Add(new TopDoctorPerformanceDto
+                {
+                    DoctorId = did,
+                    DoctorName = doc.User?.FullName ?? string.Empty,
+                    Specialization = doc.Specialization?.Name ?? string.Empty,
+                    AverageRating = Math.Round(avgRating, 2),
+                    ReviewCount = reviewCount,
+                    SuccessfulCases = successfulCases,
+                    TotalCases = totalCases,
+                    SuccessRate = Math.Round(successRate, 4),
+                    CompositeScore = Math.Round(composite, 4),
+                    ImageUrl = doc.User?.AvatarUrl,
+                    ConsultationFee = doc.ConsultationFee
+
+                });
+            }
+
+            // Order by composite score desc then by review count desc
+            var ordered = results
+                .OrderByDescending(r => r.CompositeScore)
+                .ThenByDescending(r => r.ReviewCount);
+
+        
+           
+
+            return ordered.ToList();
+        }
+
 
         //public static string GetAcceptEmailBody(string newPassword, string fullName)
         //{

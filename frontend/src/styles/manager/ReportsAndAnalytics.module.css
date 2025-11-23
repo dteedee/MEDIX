@@ -614,6 +614,394 @@
   font-size: 16px;
 }
 
+/* Top Rated Section */
+.topRatedSection {
+  margin-bottom: 32px;
+}
+
+.sectionHeader {
+  background: white;
+  padding: 24px;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.sectionHeader h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sectionHeader p {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.topRatedGrid {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 24px;
+  background: white;
+  padding: 60px 24px 40px;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  flex-wrap: wrap;
+}
+
+.topRatedCard {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 32px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  transition: all 0.3s ease;
+  overflow: visible;
+  flex: 0 0 260px;
+  min-height: 400px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.topRatedCard:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-color: #d1d5db;
+}
+
+/* Podium Heights - 1st place is tallest */
+.topRatedCard.rank1 {
+  order: 2;
+  margin-bottom: 60px;
+  border-color: rgba(255, 215, 0, 0.4);
+  background: linear-gradient(180deg, #fffef5 0%, #ffffff 100%);
+}
+
+.topRatedCard.rank1:hover {
+  border-color: rgba(255, 215, 0, 0.6);
+  box-shadow: 0 8px 24px rgba(255, 215, 0, 0.2);
+}
+
+.topRatedCard.rank2 {
+  order: 1;
+  margin-bottom: 20px;
+  border-color: rgba(192, 192, 192, 0.4);
+  background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+}
+
+.topRatedCard.rank2:hover {
+  border-color: rgba(192, 192, 192, 0.6);
+  box-shadow: 0 8px 24px rgba(192, 192, 192, 0.2);
+}
+
+.topRatedCard.rank3 {
+  order: 3;
+  margin-bottom: 0px;
+  border-color: rgba(205, 127, 50, 0.4);
+  background: linear-gradient(180deg, #fffaf5 0%, #ffffff 100%);
+}
+
+.topRatedCard.rank3:hover {
+  border-color: rgba(205, 127, 50, 0.6);
+  box-shadow: 0 8px 24px rgba(205, 127, 50, 0.2);
+}
+
+/* Podium Base */
+.topRatedCard::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  border-radius: 8px 8px 0 0;
+  z-index: -1;
+  transition: all 0.3s ease;
+  border: 3px solid;
+  border-bottom: none;
+}
+
+.topRatedCard.rank1::after {
+  height: 80px;
+  background: linear-gradient(180deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.3) 100%);
+  border-color: #ffd700;
+  box-shadow: 0 -4px 16px rgba(255, 215, 0, 0.3);
+}
+
+.topRatedCard.rank2::after {
+  height: 50px;
+  background: linear-gradient(180deg, rgba(192, 192, 192, 0.1) 0%, rgba(192, 192, 192, 0.3) 100%);
+  border-color: #c0c0c0;
+  box-shadow: 0 -4px 16px rgba(192, 192, 192, 0.3);
+}
+
+.topRatedCard.rank3::after {
+  height: 30px;
+  background: linear-gradient(180deg, rgba(205, 127, 50, 0.1) 0%, rgba(205, 127, 50, 0.3) 100%);
+  border-color: #cd7f32;
+  box-shadow: 0 -4px 16px rgba(205, 127, 50, 0.3);
+}
+
+.topRatedCard:hover::after {
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Podium Rank Number */
+.topRatedCard::before {
+  content: '';
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 900;
+  z-index: 0;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.topRatedCard.rank1::before {
+  content: '1';
+  background: #ffd700;
+  color: white;
+}
+
+.topRatedCard.rank2::before {
+  content: '2';
+  background: #c0c0c0;
+  color: white;
+}
+
+.topRatedCard.rank3::before {
+  content: '3';
+  background: #cd7f32;
+  color: white;
+}
+
+/* Laurel Badge */
+.laurelBadge {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.laurelWreath {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  color: #2d3748;
+}
+
+.rank1 .laurelWreath {
+  color: #ffd700;
+}
+
+.rank2 .laurelWreath {
+  color: #c0c0c0;
+}
+
+.rank3 .laurelWreath {
+  color: #cd7f32;
+}
+
+.crown {
+  position: absolute;
+  top: 8px;
+  width: 24px;
+  height: 24px;
+  color: inherit;
+}
+
+.rank1 .crown {
+  color: #ffd700;
+}
+
+.rank2 .crown {
+  color: #c0c0c0;
+}
+
+.rank3 .crown {
+  color: #cd7f32;
+}
+
+.rankText {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  border: 3px solid;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.rank1 .rankText {
+  border-color: #ffd700;
+  color: #ffd700;
+}
+
+.rank2 .rankText {
+  border-color: #c0c0c0;
+  color: #c0c0c0;
+}
+
+.rank3 .rankText {
+  border-color: #cd7f32;
+  color: #cd7f32;
+}
+
+.bestLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.rankNumber {
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.doctorAvatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-top: 40px;
+}
+
+.rank1 .doctorAvatar {
+  border-color: #ffd700;
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.4);
+}
+
+.rank2 .doctorAvatar {
+  border-color: #c0c0c0;
+  box-shadow: 0 4px 16px rgba(192, 192, 192, 0.4);
+}
+
+.rank3 .doctorAvatar {
+  border-color: #cd7f32;
+  box-shadow: 0 4px 16px rgba(205, 127, 50, 0.4);
+}
+
+.doctorAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.doctorInfo {
+  text-align: center;
+}
+
+.doctorName {
+  margin: 0 0 4px 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.doctorSpecialty {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.ratingInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding-top: 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+.ratingStars {
+  display: flex;
+  gap: 4px;
+  color: #fbbf24;
+}
+
+.ratingValue {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.ratingScore {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.ratingCount {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: #9ca3af;
+  grid-column: 1 / -1;
+}
+
+.emptyState i {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.emptyState p {
+  margin: 0;
+  font-size: 16px;
+  color: #6b7280;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .container {
@@ -645,6 +1033,18 @@
 
   .chartsGrid {
     grid-template-columns: 1fr;
+  }
+
+  .topRatedGrid {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .topRatedCard.rank1,
+  .topRatedCard.rank2,
+  .topRatedCard.rank3 {
+    margin-bottom: 20px;
+    order: initial;
   }
 
   .trendChart,

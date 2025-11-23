@@ -11,5 +11,12 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<UserPromotionDto?> UsePromotionAsync(Guid id);
         Task<bool> DeactivatePromotionAsync(Guid id);
         Task<bool> IsPromotionValidForUserAsync(Guid userId, Guid promotionId);
+
+        Task<IEnumerable<UserPromotionDto>> AssignPromotionToMultipleUsersAsync(
+      Guid promotionId,
+      bool applicableToAllUsers,
+      bool applicableToNewUsers,
+      bool applicableToVipUsers,
+      int newUserDays = 30);
     }
 }

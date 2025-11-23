@@ -1,8 +1,10 @@
 ﻿using Medix.API.Business.Interfaces.Classification;
+using Medix.API.DataAccess;
 using Medix.API.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medix.API.Presentation.Controller.Classification
 {
@@ -12,10 +14,14 @@ namespace Medix.API.Presentation.Controller.Classification
     public class PromotionController : ControllerBase
     {
         private readonly IPromotionService _promotionService;
+        private readonly MedixContext _context;
+        private readonly IUserPromotionService userPromotionService;
 
-        public PromotionController(IPromotionService promotionService)
+        public PromotionController(IPromotionService promotionService, MedixContext context, IUserPromotionService userPromotionService)
         {
             _promotionService = promotionService;
+            _context = context;
+            this.userPromotionService = userPromotionService;
         }
 
         [HttpGet("code/{code}")]
@@ -79,8 +85,63 @@ namespace Medix.API.Presentation.Controller.Classification
 
                 var created = await _promotionService.CreatePromotionAsync(promotionDto);
 
-                // Return 201 with location to GET by code
-                return  Ok();
+                // Try to read persisted Promotion entity to determine applicable targets.
+                // Use code (unique) to find the persisted row.
+                var persisted = await _context.Promotions
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Code == created.Code);
+
+                int assignedCount = 0;
+
+                if (persisted != null && !string.IsNullOrWhiteSpace(persisted.ApplicableTargets))
+                {
+                    // Expected format: comma separated tokens like "All", "New", "VIP"
+                    var tokens = persisted.ApplicableTargets
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(t => t.Trim())
+                        .ToList();
+
+                    var applicableToAll = tokens.Any(t => string.Equals(t, "All", StringComparison.OrdinalIgnoreCase));
+                    var applicableToNew = tokens.Any(t => string.Equals(t, "New", StringComparison.OrdinalIgnoreCase)
+                                                          || string.Equals(t, "NewUsers", StringComparison.OrdinalIgnoreCase));
+                    var applicableToVip = tokens.Any(t => string.Equals(t, "VIP", StringComparison.OrdinalIgnoreCase)
+                                                          || string.Equals(t, "Vip", StringComparison.OrdinalIgnoreCase));
+
+                    // Optional: if token contains "NewDays:XX" parse it
+                    var newDaysToken = tokens.FirstOrDefault(t => t.StartsWith("NewDays:", StringComparison.OrdinalIgnoreCase));
+                    int newUserDays = 30;
+                    if (newDaysToken != null)
+                    {
+                        var parts = newDaysToken.Split(':', 2);
+                        if (parts.Length == 2 && int.TryParse(parts[1], out var parsedDays))
+                            newUserDays = Math.Max(1, parsedDays);
+                    }
+
+                    // Call bulk assignment -- do not fail creation if assignment fails; catch exceptions separately.
+                    try
+                    {
+                        var assigned = await userPromotionService.AssignPromotionToMultipleUsersAsync(
+                            persisted.Id,
+                            applicableToAll,
+                            applicableToNew,
+                            applicableToVip,
+                            newUserDays);
+
+                        assignedCount = assigned?.Count() ?? 0;
+                    }
+                    catch (Exception ex)
+                    { 
+                   
+                    }
+                }
+
+                // Return created promotion and assignment summary
+                return Ok(new
+                {
+                    promotion = created,
+                    assignedCount,
+                    message = assignedCount > 0 ? "Promotion created and assigned to users." : "Promotion created."
+                });
             }
             catch (Exception)
             {
@@ -124,6 +185,29 @@ namespace Medix.API.Presentation.Controller.Classification
             catch (Exception)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An error occurred while updating the promotion." });
+            }
+        }
+
+        [HttpGet("getTarget")]
+        [Authorize]
+        public async Task<IActionResult> GetPromotionTargets()
+        {
+            try
+            {
+                var targets = await _context.RefPromotionTargets.Select(x => new
+                {
+                    x.Name,
+                    x.Id,
+                    x.Target,
+                    x.Description
+                }).ToListAsync();
+                if (targets == null || !targets.Any())
+                    return NoContent();
+                return Ok(targets);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An error occurred while fetching promotion targets." });
             }
         }
 

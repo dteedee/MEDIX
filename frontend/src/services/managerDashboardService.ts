@@ -4,6 +4,8 @@ export interface ManagerDashboardSummary {
   activeDoctors: number;
   todayAppointments: number;
   todayConfirmedAppointments: number;
+  completedAppointments: number;
+  cancelledAppointments: number;
   averageRating: number;
   totalReviews: number;
 }

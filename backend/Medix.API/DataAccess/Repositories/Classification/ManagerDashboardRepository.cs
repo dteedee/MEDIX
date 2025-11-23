@@ -265,6 +265,20 @@ namespace Medix.API.DataAccess.Repositories.Classification
                            (a.StatusCode == "Confirmed" || a.StatusCode == "InProgress"))
                 .CountAsync();
 
+            // Tổng số lịch hẹn đã hoàn thành trong hệ thống
+            var completedAppointments = await _context.Appointments
+                .Where(a => a.StatusCode == "Completed")
+                .CountAsync();
+
+            // Tổng số lịch hẹn đã hủy trong hệ thống
+            var cancelledAppointments = await _context.Appointments
+                .Where(a => a.StatusCode == "Cancelled" || 
+                           a.StatusCode == "CancelledByPatient" || 
+                           a.StatusCode == "CancelledByDoctor" || 
+                           a.StatusCode == "MissedByDoctor" || 
+                           a.StatusCode == "NoShow")
+                .CountAsync();
+
             // Đánh giá trung bình
             var averageRating = await _context.Reviews
                 .AverageAsync(r => (double?)r.Rating) ?? 0;
@@ -376,6 +390,8 @@ namespace Medix.API.DataAccess.Repositories.Classification
                     ActiveDoctors = activeDoctorsCount,
                     TodayAppointments = todayAppointments,
                     TodayConfirmedAppointments = todayConfirmedAppointments,
+                    CompletedAppointments = completedAppointments,
+                    CancelledAppointments = cancelledAppointments,
                     AverageRating = Math.Round(averageRating, 1),
                     TotalReviews = totalReviews
                 },

@@ -796,19 +796,29 @@
   .actionLock {
     background: #fee2e2;
     color: #dc2626;
+    background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
+    color: white;
+    border-color: #ff758c;
   }
   
   .actionLock:hover {
     background: #fecaca;
+    background: linear-gradient(135deg, #ff6b81 0%, #ff6b81 100%);
+    box-shadow: 0 6px 16px rgba(255, 123, 179, 0.4);
   }
   
   .actionUnlock {
     background: #d1fae5;
     color: #059669;
+    background: linear-gradient(135deg, #48c6ef 0%, #6f86d6 100%);
+    color: white;
+    border-color: #48c6ef;
   }
   
   .actionUnlock:hover {
     background: #a7f3d0;
+    background: linear-gradient(135deg, #3a9fbf 0%, #5a6dab 100%);
+    box-shadow: 0 6px 16px rgba(72, 198, 239, 0.4);
   }
   
   .actionBtn:disabled {

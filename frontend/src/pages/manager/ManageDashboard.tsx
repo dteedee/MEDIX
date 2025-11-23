@@ -127,11 +127,7 @@ export const ManageDashboard: React.FC = () => {
           <p className="text-sm text-gray-500 mt-1">Đã xác nhận: {summary.todayConfirmedAppointments}</p>
         </div>
         
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900">Đánh giá trung bình</h3>
-          <p className="text-3xl font-bold text-yellow-600 mt-2">{summary.averageRating.toFixed(1)} <span className="text-xl">/ 5</span></p>
-          <p className="text-sm text-gray-500 mt-1">Từ {summary.totalReviews} đánh giá</p>
-        </div>
+       
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

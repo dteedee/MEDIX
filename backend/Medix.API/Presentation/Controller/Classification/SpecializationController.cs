@@ -2,6 +2,7 @@ using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs.Specialization;
 using Medix.API.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
+using Medix.API.Business.Services.Community;
 
 namespace Medix.API.Presentation.Controller.Classification
 {
@@ -12,15 +13,18 @@ namespace Medix.API.Presentation.Controller.Classification
         private readonly ISpecializationService _specializationService;
         private readonly IDoctorService _doctorService;
         private readonly ILogger<SpecializationController> _logger;
+        private readonly CloudinaryService _cloudinaryService;
 
         public SpecializationController(
             ISpecializationService specializationService,
             IDoctorService doctorService,
-            ILogger<SpecializationController> logger)
+            ILogger<SpecializationController> logger,
+            CloudinaryService cloudinaryService)
         {
             _specializationService = specializationService;
             _doctorService = doctorService;
             _logger = logger;
+            _cloudinaryService = cloudinaryService;
         }
 
         /// <summary>
@@ -154,15 +158,32 @@ namespace Medix.API.Presentation.Controller.Classification
         /// Tạo chuyên khoa mới
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] SpecializationCreateDto dto)
+        public async Task<IActionResult> Create([FromForm] SpecializationCreateDto dto, IFormFile? imageFile)
         {
             try
             {
+                // Validate required fields
+                if (string.IsNullOrWhiteSpace(dto.Code))
+                {
+                    return BadRequest(new { Message = "Mã chuyên khoa không được để trống." });
+                }
+                if (string.IsNullOrWhiteSpace(dto.Name))
+                {
+                    return BadRequest(new { Message = "Tên chuyên khoa không được để trống." });
+                }
+
                 // Check if code already exists
                 var existing = await _specializationService.GetByCodeAsync(dto.Code);
                 if (existing != null)
                 {
                     return BadRequest(new { Message = "Mã chuyên khoa đã tồn tại." });
+                }
+
+                // Upload image if provided
+                if (imageFile != null && imageFile.Length > 0)
+                {
+                    var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile);
+                    dto.ImageUrl = imageUrl;
                 }
 
                 var specialization = new Specialization
@@ -205,10 +226,20 @@ namespace Medix.API.Presentation.Controller.Classification
         /// Cập nhật chuyên khoa
         /// </summary>
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] SpecializationUpdateDto dto)
+        public async Task<IActionResult> Update(Guid id, [FromForm] SpecializationUpdateDto dto, IFormFile? imageFile)
         {
             try
             {
+                // Validate required fields
+                if (string.IsNullOrWhiteSpace(dto.Code))
+                {
+                    return BadRequest(new { Message = "Mã chuyên khoa không được để trống." });
+                }
+                if (string.IsNullOrWhiteSpace(dto.Name))
+                {
+                    return BadRequest(new { Message = "Tên chuyên khoa không được để trống." });
+                }
+
                 var specialization = await _specializationService.GetByIdAsync(id);
                 if (specialization == null)
                 {
@@ -225,10 +256,22 @@ namespace Medix.API.Presentation.Controller.Classification
                     }
                 }
 
+                // Upload image if provided
+                if (imageFile != null && imageFile.Length > 0)
+                {
+                    var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile);
+                    dto.ImageUrl = imageUrl;
+                }
+                // If no new file and ImageUrl is empty/null, keep existing imageUrl
+                else if (string.IsNullOrWhiteSpace(dto.ImageUrl))
+                {
+                    dto.ImageUrl = specialization.ImageUrl;
+                }
+
                 specialization.Code = dto.Code;
                 specialization.Name = dto.Name;
                 specialization.Description = dto.Description;
-                specialization.ImageUrl = dto.ImageUrl;
+                specialization.ImageUrl = dto.ImageUrl ?? specialization.ImageUrl; // Keep existing if null
                 specialization.IsActive = dto.IsActive;
                 specialization.UpdatedAt = DateTime.UtcNow;
 

@@ -10,5 +10,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task<Specialization?> GetByIdAsync(Guid id);
         Task<Specialization?> GetByCodeAsync(string code);
         Task<IEnumerable<SpecializationDistributionDto>> GetDoctorCountBySpecializationAsync();
+        Task<Specialization> CreateAsync(Specialization specialization);
+        Task<Specialization> UpdateAsync(Specialization specialization);
     }
 }

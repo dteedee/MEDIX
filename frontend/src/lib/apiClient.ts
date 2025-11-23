@@ -27,6 +27,12 @@ class ApiClient {
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
         }
+        
+        // If sending FormData, remove Content-Type header to let browser set it with boundary
+        if (config.data instanceof FormData) {
+          delete config.headers['Content-Type'];
+        }
+        
         return config;
       },
       (error) => {
@@ -161,8 +167,8 @@ class ApiClient {
   public postMultipart<T = any>(url: string, formData: FormData): Promise<AxiosResponse<T>> {
     return this.client.post<T>(url, formData, {
       headers: {
-        // Let Axios set the correct boundary automatically
-        'Content-Type': 'multipart/form-data',
+        // Explicitly remove Content-Type to let browser set it with boundary
+        'Content-Type': undefined,
       },
     });
   }
@@ -174,8 +180,8 @@ class ApiClient {
   public putMultipart<T = any>(url: string, formData: FormData): Promise<AxiosResponse<T>> {
     return this.client.put<T>(url, formData, {
       headers: {
-        // Let Axios set the correct boundary automatically
-        'Content-Type': 'multipart/form-data',
+        // Explicitly remove Content-Type to let browser set it with boundary
+        'Content-Type': undefined,
       },
     });
   }

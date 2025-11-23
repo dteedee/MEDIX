@@ -18,6 +18,7 @@ export interface SpecializationCreateDto {
   description?: string;
   imageUrl?: string;
   isActive?: boolean;
+  imageFile?: File;
 }
 
 export interface SpecializationUpdateDto {
@@ -26,6 +27,7 @@ export interface SpecializationUpdateDto {
   description?: string;
   imageUrl?: string;
   isActive: boolean;
+  imageFile?: File;
 }
 
 export interface SpecializationDetailDto {
@@ -75,9 +77,32 @@ class SpecializationService {
    * Tạo chuyên khoa mới
    */
   async create(dto: SpecializationCreateDto): Promise<SpecializationListDto> {
-    const response = await apiClient.post<SpecializationListDto>(
+    const formData = new FormData();
+    formData.append('Code', dto.code || '');
+    formData.append('Name', dto.name || '');
+    // Always append Description, even if empty (backend expects it)
+    if (dto.description !== undefined && dto.description !== null) {
+      formData.append('Description', dto.description);
+    } else {
+      formData.append('Description', '');
+    }
+    // Always append ImageUrl, even if empty
+    formData.append('ImageUrl', dto.imageUrl || '');
+    formData.append('IsActive', String(dto.isActive ?? true));
+    
+    // Only append file if it exists and is a valid File object
+    if (dto.imageFile && dto.imageFile instanceof File) {
+      formData.append('imageFile', dto.imageFile);
+    }
+
+    console.log('FormData entries (create):', Array.from(formData.entries()).map(([key, value]) => [
+      key, 
+      value instanceof File ? `${value.name} (${value.size} bytes)` : value
+    ]));
+
+    const response = await apiClient.postMultipart<SpecializationListDto>(
       '/Specialization',
-      dto
+      formData
     );
     return response.data;
   }
@@ -86,9 +111,34 @@ class SpecializationService {
    * Cập nhật chuyên khoa
    */
   async update(id: string, dto: SpecializationUpdateDto): Promise<SpecializationListDto> {
-    const response = await apiClient.put<SpecializationListDto>(
+    const formData = new FormData();
+    formData.append('Code', dto.code || '');
+    formData.append('Name', dto.name || '');
+    // Always append Description, even if empty (backend expects it)
+    if (dto.description !== undefined && dto.description !== null) {
+      formData.append('Description', dto.description);
+    } else {
+      formData.append('Description', '');
+    }
+    // Always append ImageUrl, even if empty, to ensure backend receives it
+    // If we have a new file, backend will override this with uploaded URL
+    // If no new file, backend will use this existing URL
+    formData.append('ImageUrl', dto.imageUrl || '');
+    formData.append('IsActive', String(dto.isActive));
+    
+    // Only append file if it exists and is a valid File object
+    if (dto.imageFile && dto.imageFile instanceof File) {
+      formData.append('imageFile', dto.imageFile);
+    }
+
+    console.log('FormData entries:', Array.from(formData.entries()).map(([key, value]) => [
+      key, 
+      value instanceof File ? `${value.name} (${value.size} bytes)` : value
+    ]));
+
+    const response = await apiClient.putMultipart<SpecializationListDto>(
       `/Specialization/${id}`,
-      dto
+      formData
     );
     return response.data;
   }

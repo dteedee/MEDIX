@@ -67,16 +67,12 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<Specialization> CreateAsync(Specialization specialization)
         {
-            // TODO: Implement when repository method exists
-            await Task.Delay(1);
-            throw new NotImplementedException("Chức năng tạo chuyên khoa chưa được triển khai");
+            return await _specializationRepository.CreateAsync(specialization);
         }
 
         public async Task<Specialization> UpdateAsync(Specialization specialization)
         {
-            // TODO: Implement when repository method exists
-            await Task.Delay(1);
-            throw new NotImplementedException("Chức năng cập nhật chuyên khoa chưa được triển khai");
+            return await _specializationRepository.UpdateAsync(specialization);
         }
 
         public async Task<bool> DeleteAsync(Guid id)

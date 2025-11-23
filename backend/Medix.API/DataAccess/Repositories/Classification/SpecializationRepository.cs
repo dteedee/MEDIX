@@ -44,5 +44,42 @@ namespace Medix.API.DataAccess.Repositories.Classification
         
         public async Task<Specialization?> GetByCodeAsync(string code) => 
             await _context.Specializations.FirstOrDefaultAsync(s => s.Code == code);
+
+        public async Task<Specialization> CreateAsync(Specialization specialization)
+        {
+            _context.Specializations.Add(specialization);
+            await _context.SaveChangesAsync();
+            return specialization;
+        }
+
+        public async Task<Specialization> UpdateAsync(Specialization specialization)
+        {
+            var entry = _context.Entry(specialization);
+            
+            if (entry.State == EntityState.Detached)
+            {
+                // If detached, find the existing entity and update its properties
+                var existing = await _context.Specializations.FindAsync(specialization.Id);
+                if (existing != null)
+                {
+                    existing.Code = specialization.Code;
+                    existing.Name = specialization.Name;
+                    existing.Description = specialization.Description;
+                    existing.ImageUrl = specialization.ImageUrl;
+                    existing.IsActive = specialization.IsActive;
+                    existing.UpdatedAt = specialization.UpdatedAt;
+                    // CreatedAt should not be updated - it's already set on existing entity
+                }
+            }
+            else
+            {
+                // Entity is already tracked, EF Core will detect changes automatically
+                // Just ensure CreatedAt is not modified
+                entry.Property(e => e.CreatedAt).IsModified = false;
+            }
+            
+            await _context.SaveChangesAsync();
+            return specialization;
+        }
     }
 }

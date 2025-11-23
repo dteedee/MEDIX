@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { PromotionDto, UserPromotionDto } from "../types/promotion.types";
+import { PromotionDto, UserPromotionDto, PromotionTargetDto } from "../types/promotion.types";
 
 interface CreatePromotionDto {
     code: string;
@@ -11,6 +11,7 @@ interface CreatePromotionDto {
     startDate: string;
     endDate: string;
     isActive: boolean;
+    applicableTargets?: string;
 }
 
 interface UpdatePromotionDto {
@@ -23,6 +24,15 @@ interface UpdatePromotionDto {
     startDate: string;
     endDate: string;
     isActive: boolean;
+    applicableTargets?: string;
+}
+
+interface BulkAssignPromotionRequest {
+    promotionId: string;
+    applicableToAllUsers: boolean;
+    applicableToNewUsers: boolean;
+    applicableToVipUsers: boolean;
+    newUserDays?: number;
 }
 
 class PromotionService {
@@ -94,10 +104,35 @@ class PromotionService {
 
     async createPromotion(data: CreatePromotionDto): Promise<PromotionDto> {
         try {
-            const response = await apiClient.post<PromotionDto>('/promotion', data);
-            return response.data;
+            console.log('🚀 Creating promotion with data:', data);
+            const response = await apiClient.post<any>('/promotion', data);
+            console.log('✅ Create promotion response:', response);
+            console.log('✅ Response data:', response.data);
+            console.log('✅ Response data type:', typeof response.data);
+            console.log('✅ Response data keys:', Object.keys(response.data || {}));
+            
+            // Backend pode retornar diretamente o objeto ou dentro de uma propriedade
+            // Verificar todas as possíveis estruturas
+            let promotionData = response.data;
+            
+            // Se response.data tiver uma propriedade 'data', usar ela
+            if (response.data?.data) {
+                console.log('📦 Found nested data property');
+                promotionData = response.data.data;
+            }
+            
+            // Se response.data tiver propriedade 'result', usar ela
+            if (response.data?.result) {
+                console.log('📦 Found result property');
+                promotionData = response.data.result;
+            }
+            
+            console.log('✅ Final promotion data:', promotionData);
+            console.log('✅ Final promotion ID:', promotionData?.id);
+            
+            return promotionData;
         } catch (error: any) {
-            console.error('Create promotion error:', error);
+            console.error('❌ Create promotion error:', error);
             throw error;
         }
     }
@@ -128,6 +163,33 @@ class PromotionService {
         } catch (error: any) {
             console.error('Check promotion code exists error:', error);
             return false;
+        }
+    }
+
+    async assignPromotionBulk(request: BulkAssignPromotionRequest): Promise<any> {
+        try {
+            const payload = {
+                promotionId: request.promotionId,
+                applicableToAllUsers: request.applicableToAllUsers,
+                applicableToNewUsers: request.applicableToNewUsers,
+                applicableToVipUsers: request.applicableToVipUsers,
+                newUserDays: request.newUserDays || 30
+            };
+            const response = await apiClient.post('/UserPromotion/assign/bulk', payload);
+            return response.data;
+        } catch (error: any) {
+            console.error('Bulk assign promotion error:', error);
+            throw error;
+        }
+    }
+
+    async getPromotionTargets(): Promise<PromotionTargetDto[]> {
+        try {
+            const response = await apiClient.get<PromotionTargetDto[]>('/promotion/getTarget');
+            return response.data || [];
+        } catch (error: any) {
+            console.error('Get promotion targets error:', error);
+            return [];
         }
     }
 }

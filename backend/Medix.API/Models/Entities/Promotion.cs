@@ -29,5 +29,10 @@ public partial class Promotion
 
     public DateTime CreatedAt { get; set; }
 
+    // New column: stores the target audience for this promotion.
+    // Suggested format: comma-separated tokens, e.g. "All", "New", "VIP", "New,VIP"
+    // You can change to enum/int/bitmask later if you prefer.
+    public string? ApplicableTargets { get; set; }
+
     public virtual ICollection<UserPromotion> UserPromotions { get; set; } = new List<UserPromotion>();
 }

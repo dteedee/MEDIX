@@ -21,6 +21,18 @@ namespace Medix.API.Models.DTOs
         public bool IsExpired => DateTime.UtcNow > ExpiryDate;
         public bool IsValidNow => IsActive && !IsExpired;
     }
+
+
+    public class BulkAssignPromotionRequest
+    {
+        public Guid PromotionId { get; set; }
+        public bool ApplicableToAllUsers { get; set; } = false;
+        public bool ApplicableToNewUsers { get; set; } = false;
+        public bool ApplicableToVipUsers { get; set; } = false;
+
+        // Optional: days considered "new user"
+        public int? NewUserDays { get; set; } = 30;
+    }
 }
 
 

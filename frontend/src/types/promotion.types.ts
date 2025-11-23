@@ -11,6 +11,14 @@ export interface PromotionDto {
     endDate: string;
     isActive: boolean; // Backend pode retornar 0 ou 1
     createdAt: string;
+    applicableTargets?: string; // Comma-separated targets: "All", "New", "VIP", etc.
+}
+
+export interface PromotionTargetDto {
+    id: string;
+    name: string;
+    target: string;
+    description: string;
 }
 
 // Helper function to normalize isActive

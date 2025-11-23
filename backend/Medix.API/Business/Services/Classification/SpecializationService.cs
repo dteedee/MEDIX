@@ -50,11 +50,19 @@ namespace Medix.API.Business.Services.Classification
             return await _specializationRepository.GetAllAsync();
         }
 
+        public async Task<List<Specialization>> GetActiveAsync()
+        {
+            return await _specializationRepository.GetActiveAsync();
+        }
+
         public async Task<Specialization?> GetByIdAsync(Guid id)
         {
-            // TODO: Implement when repository method exists
-            await Task.Delay(1);
-            return null;
+            return await _specializationRepository.GetByIdAsync(id);
+        }
+
+        public async Task<Specialization?> GetByCodeAsync(string code)
+        {
+            return await _specializationRepository.GetByCodeAsync(code);
         }
 
         public async Task<Specialization> CreateAsync(Specialization specialization)

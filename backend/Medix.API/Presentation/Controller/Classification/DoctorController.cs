@@ -3,6 +3,7 @@ using Medix.API.Application.DTOs.Doctor;
 using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.UserManagement;
+using Medix.API.Business.Services.Classification;
 using Medix.API.Business.Services.Community;
 using Medix.API.Business.Validators;
 using Medix.API.Models.DTOs.Doctor;
@@ -58,6 +59,70 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
+
+        [HttpPut("{doctorId}/education-fee")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> UpdateDoctorEducationAndFee(Guid doctorId, [FromBody] DoctorEducationFeeUpdateRequest req)
+        {
+            try
+            {
+                if (req == null)
+                    return BadRequest(new { Message = "Request body is required." });
+
+                // basic validation
+                if (req.ConsultationFee.HasValue && req.ConsultationFee.Value < 0)
+                    return BadRequest(new { Message = "Consultation fee must be non-negative." });
+
+                // If caller is Doctor, ensure they update only their record
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+                if (userIdClaim == null)
+                    return Unauthorized(new { Message = "User ID not found in token" });
+
+                var callerRoles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+                if (callerRoles.Contains("Doctor") && !callerRoles.Contains("Manager"))
+                {
+                    var callerDoctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userIdClaim.Value));
+                    if (callerDoctor == null)
+                        return NotFound(new { Message = "Doctor not found for current user" });
+
+                    if (callerDoctor.Id != doctorId)
+                        return Forbid();
+                }
+
+                var success = await _doctorService.UpdateDoctorEducationAndFeeAsync(doctorId, req.Education, req.ConsultationFee);
+                if (!success)
+                    return NotFound(new { Message = "Doctor not found" });
+
+                return Ok(new { Message = "Doctor education and consultation fee updated successfully" });
+            }
+            catch (ArgumentException aex)
+            {
+                return BadRequest(new { Message = aex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while updating doctor's education/fee.");
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+
+        [HttpGet("top/performance")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetTopDoctorsByPerformance([FromQuery] double ratingWeight = 0.7, [FromQuery] double successWeight = 0.3)
+        {
+            try
+            {
+              
+                var result = await _doctorService.GetTopDoctorsByPerformanceAsync(ratingWeight, successWeight);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching top doctors by performance.");
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
         [HttpGet("profile/{doctorID}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetDoctorProfile(string doctorID)

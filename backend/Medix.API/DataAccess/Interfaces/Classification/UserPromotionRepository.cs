@@ -1,4 +1,5 @@
-﻿using Medix.API.Models.Entities;
+﻿using Medix.API.Models.DTOs;
+using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medix.API.DataAccess.Interfaces.Classification
@@ -131,6 +132,11 @@ namespace Medix.API.DataAccess.Interfaces.Classification
             await _context.SaveChangesAsync();
             
             return userPromotion.UsedCount;
+        }
+
+        public Task<IEnumerable<UserPromotionDto>> AssignPromotionToMultipleUsersAsync(Guid promotionId, bool applicableToAllUsers, bool applicableToNewUsers, bool applicableToVipUsers, int newUserDays = 30)
+        {
+            throw new NotImplementedException();
         }
     }
 }

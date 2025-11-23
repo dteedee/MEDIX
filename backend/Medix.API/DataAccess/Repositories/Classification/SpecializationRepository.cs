@@ -33,6 +33,16 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
             return await query.ToListAsync();
         }
+        
         public async Task<List<Specialization>> GetAllAsync() => await _context.Specializations.ToListAsync();
+        
+        public async Task<List<Specialization>> GetActiveAsync() => 
+            await _context.Specializations.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
+        
+        public async Task<Specialization?> GetByIdAsync(Guid id) => 
+            await _context.Specializations.FirstOrDefaultAsync(s => s.Id == id);
+        
+        public async Task<Specialization?> GetByCodeAsync(string code) => 
+            await _context.Specializations.FirstOrDefaultAsync(s => s.Code == code);
     }
 }

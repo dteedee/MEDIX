@@ -1,6 +1,7 @@
 ﻿﻿using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
+using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.DTOs.ReviewDTO;
 using Medix.API.Models.Entities;
 
@@ -22,6 +23,20 @@ namespace Medix.API.Business.Services.Classification
             _mapper = mapper;
         }
 
+        public async Task<List<TopDoctorDto>> GetTopDoctorsByRatingAsync(int count = 3)
+        {
+            var topDoctors = await _reviewRepo.GetTopDoctorsByRatingAsync(count);
+
+            return topDoctors.Select(d => new TopDoctorDto
+            {
+                DoctorId = d.DoctorId,
+                DoctorName = d.DoctorName,
+                Specialization = d.Specialization,
+                AverageRating = Math.Round(d.AverageRating, 1),
+                ReviewCount = d.ReviewCount,
+                ImageUrl = d.ImageUrl
+            }).ToList();
+        }
         public async Task<ReviewDoctorDto?> GetByAppointmentIdAsync(Guid appointmentId)
         {
             var review = await _reviewRepo.GetByAppointmentIdAsync(appointmentId);
@@ -181,5 +196,9 @@ namespace Medix.API.Business.Services.Classification
             return result;
         }
 
+        public Task<List<TopDoctorPerformanceDto>> GetTopDoctorsByPerformanceAsync(int count = 10, double ratingWeight = 0.7, double successWeight = 0.3)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

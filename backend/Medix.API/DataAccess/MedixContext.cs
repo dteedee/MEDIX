@@ -125,6 +125,8 @@ public partial class MedixContext : DbContext
     public virtual DbSet<NoticeSetup> NoticeSetups { get; set; }
     public virtual DbSet<UserPromotion> UserPromotions { get; set; }
 
+    public virtual DbSet<RefPromotionTarget> RefPromotionTargets { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AISymptomAnalysis>(entity =>
@@ -768,6 +770,7 @@ public partial class MedixContext : DbContext
             entity.Property(e => e.DiscountValue).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(200);
+            entity.Property(e => e.ApplicableTargets);
         });
 
         modelBuilder.Entity<RefAppointmentStatus>(entity =>
@@ -1247,6 +1250,25 @@ public partial class MedixContext : DbContext
                 .HasForeignKey(d => d.PromotionId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_UserPromotions_Promotion");
+        });
+        modelBuilder.Entity<RefPromotionTarget>(entity =>
+        {
+            entity.ToTable("RefPromotionTargets");
+
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Name)
+                  .IsRequired()
+                  .HasMaxLength(200);
+
+            entity.Property(x => x.Description)
+                  .HasMaxLength(500);
+
+            entity.Property(x => x.Target)
+                  .IsRequired()
+                  .HasMaxLength(200);
+            entity.Property(x => x.IsActive)
+                  .HasDefaultValue(true);
         });
         OnModelCreatingPartial(modelBuilder);
     }

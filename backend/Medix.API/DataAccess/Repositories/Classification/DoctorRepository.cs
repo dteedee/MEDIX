@@ -209,8 +209,12 @@ namespace Medix.API.DataAccess.Repositories.Classification
         }
 
         public async Task<List<Doctor>> GetAllAsync()
-            => await _context.Doctors
-                .Include(d => d.Appointments)
-                .ToListAsync();
+               => await _context.Doctors
+                   .Include(d => d.User)                       // ensure User (FullName, AvatarUrl, etc.) is loaded
+                   .Include(d => d.Specialization)             // useful for display
+                   .Include(d => d.ServiceTier)                // optional: if you use ServiceTier fields
+                   .Include(d => d.Appointments)
+                       .ThenInclude(a => a.Review)             // keep existing appointment->review include
+                   .ToListAsync();
     }
 }

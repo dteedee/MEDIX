@@ -8,6 +8,8 @@ import { ServiceTierWithPaginatedDoctorsDto, DoctorInTier, PaginationParams, Doc
 import { useLanguage } from '../../contexts/LanguageContext';
 import homeStyles from '../../styles/public/home.module.css';
 import styles from '../../styles/patient/DoctorBookingList.module.css';
+import ChatbotBubble from '../../components/ChatbotBubble';
+import BackToTopButton from '../../components/BackToTopButton';
 
 interface Doctor {
   id: string;
@@ -1293,6 +1295,8 @@ const DoctorBookingList: React.FC = () => {
           </div>
         </div>
       </div>
+      <BackToTopButton />
+      <ChatbotBubble />
     </div>
   );
 };

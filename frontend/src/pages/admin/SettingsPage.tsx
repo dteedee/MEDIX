@@ -115,6 +115,7 @@ export default function SettingsPage() {
   const [refundPercentage, setRefundPercentage] = useState(80);
   const [refundSaving, setRefundSaving] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof SystemSettings, string>>>({});
+  const [templateErrors, setTemplateErrors] = useState<Partial<Record<string, { subject?: string; body?: string }>>>({});
 
   useEffect(() => {
   const fetchSettings = async () => {
@@ -336,17 +337,41 @@ useEffect(() => {
   const availableTokens = selectedTemplate ? TEMPLATE_TOKEN_MAP[selectedTemplate.templateKey] ?? [] : [];
 
   const handleTemplateChange = (field: 'subject' | 'body', value: string) => {
+    let error: string | undefined = undefined;
+    let finalValue = value;
+
+    if (field === 'subject') {
+      if (!value.trim()) {
+        error = 'Tiêu đề không được để trống.';
+      }
+    } else if (field === 'body') {
+      if (!value.trim()) {
+        error = 'Nội dung email không được để trống.';
+      } else if (value.length > 7000) {
+        finalValue = value.substring(0, 7000); // Chặn không cho nhập quá
+        error = `Nội dung không được vượt quá 7000 ký tự.`;
+      }
+    }
+
+    setTemplateErrors(prev => ({
+      ...prev,
+      [selectedTemplateKey]: { ...prev[selectedTemplateKey], [field]: error }
+    }));
+
     setEmailTemplates((prev) =>
       prev.map((template) =>
         template.templateKey === selectedTemplateKey
-          ? { ...template, [field]: value }
+          ? { ...template, [field]: finalValue }
           : template
       )
     );
   };
 
   const handleSaveTemplate = async () => {
-    if (!selectedTemplate) return;
+    if (!selectedTemplate || templateErrors[selectedTemplateKey]?.subject || templateErrors[selectedTemplateKey]?.body) {
+      showToast('Vui lòng sửa lỗi trước khi lưu.', 'error');
+      return;
+    }
     setEmailTemplateSaving(true);
     showToast('Đang lưu mẫu email...', 'info');
     try {
@@ -379,6 +404,16 @@ useEffect(() => {
 
     if (key === 'siteName' && typeof value === 'string') { // Cho phép ký tự đặc biệt
       setSettings(prev => ({ ...prev, [key]: value }));
+    } else if (
+      (key === 'jwtExpiryMinutes' ||
+        key === 'maxFailedLoginAttempts' ||
+        key === 'accountLockoutDurationMinutes' ||
+        key === 'passwordMinLength' ||
+        key === 'passwordMaxLength') &&
+      typeof value === 'string'
+    ) {
+      const sanitizedValue = value.replace(/[^0-9]/g, ''); // Chỉ cho phép nhập số, không cho phép số âm
+      setSettings(prev => ({ ...prev, [key]: sanitizedValue }));
     } else if (key === 'contactEmail' && typeof value === 'string') { // Validation cho Email liên hệ
       setSettings(prev => ({ ...prev, [key]: value }));
       // Kiểm tra định dạng email bằng Regex
@@ -424,30 +459,53 @@ useEffect(() => {
     setErrors(prev => ({ ...prev, [key]: undefined }));
 
     if (key === 'contactEmail') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(value)) {
-        setErrors(prev => ({ ...prev, contactEmail: 'Định dạng email không hợp lệ.' }));
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        setErrors(prev => ({ ...prev, [key]: 'Định dạng email không hợp lệ.' }));
       }
     } else if (key === 'contactPhone') {
-      if (value.length !== 10) {
-        setErrors(prev => ({ ...prev, contactPhone: 'Số điện thoại phải có đúng 10 chữ số.' }));
+      const digitsOnly = value.replace(/\D/g, '');
+      if (digitsOnly.length !== 10) {
+        setErrors(prev => ({ ...prev, [key]: 'Số điện thoại phải có đúng 10 chữ số.' }));
       }
+    } else if (key === 'jwtExpiryMinutes') {
+      const numValue = parseInt(value, 10);
+      if (numValue < 30 || numValue > 60) {
+        setErrors(prev => ({ ...prev, [key]: 'Thời gian phải từ 30 đến 60 phút.' }));
+      }
+    } else if (key === 'maxFailedLoginAttempts') {
+      const numValue = parseInt(value, 10);
+      if (numValue >= 6) {
+        setErrors(prev => ({ ...prev, [key]: 'Số lần phải nhỏ hơn 6.' }));
+      }
+    } else if (key === 'passwordMinLength' || key === 'passwordMaxLength') {
+      // Cross-field validation for password lengths
+      const minLength = key === 'passwordMinLength' ? parseInt(value, 10) : settings.passwordMinLength;
+      const maxLength = key === 'passwordMaxLength' ? parseInt(value, 10) : settings.passwordMaxLength;
+
+      // Clear previous cross-field errors first
+      setErrors(prev => ({ ...prev, passwordMinLength: undefined, passwordMaxLength: undefined })); // Xóa lỗi cũ
+
+      // 1. Kiểm tra tương quan giữa min và max
+      if (minLength && maxLength && minLength >= maxLength - 5) {
+        const errorMessage = 'Độ dài tối thiểu phải nhỏ hơn độ dài tối đa ít nhất 6 ký tự.';
+        setErrors(prev => ({ ...prev, passwordMinLength: errorMessage, passwordMaxLength: errorMessage }));
+        return; // Dừng lại nếu có lỗi này
+      }
+
+      // 2. Kiểm tra giá trị cố định của passwordMaxLength
+     
     }
   };
 
   const validateBeforeSave = () => {
     // Kiểm tra tất cả các lỗi hiện có
     for (const key in errors) {
-      if (errors[key as keyof SystemSettings]) {
+      if (errors[key as keyof SystemSettings] || !settings[key as keyof SystemSettings]) {
         showToast(`Vui lòng sửa các lỗi trong form trước khi lưu.`, 'error');
         return false;
       }
     }
 
-    if (errors.contactPhone) {
-      showToast('Vui lòng sửa lỗi định dạng số điện thoại trước khi lưu.', 'error');
-      return false;
-    }
     return true;
   };
 
@@ -630,8 +688,7 @@ useEffect(() => {
                       type="text"
                       maxLength={18}
                       value={settings.siteName || ''}
-                      onChange={e => handleInputChange('siteName', e.target.value)}
-                      onBlur={e => handleBlur('siteName', e.target.value)}
+                      onChange={(e) => handleInputChange('siteName', e.target.value)}
                       placeholder="Nhập tên hệ thống"
                       className={errors.siteName ? styles.inputError : ''}
                     />
@@ -645,8 +702,7 @@ useEffect(() => {
                     <textarea
                       maxLength={50}
                       value={settings.systemDescription || ''}
-                      onChange={e => handleInputChange('systemDescription', e.target.value)}
-                      onBlur={e => handleBlur('systemDescription', e.target.value)}
+                      onChange={(e) => handleInputChange('systemDescription', e.target.value)}
                       placeholder="Nhập mô tả hệ thống"
                       className={errors.systemDescription ? styles.inputError : ''}
                     ></textarea>
@@ -661,8 +717,7 @@ useEffect(() => {
                       type="email"
                       maxLength={150}
                       value={settings.contactEmail || ''}
-                      onChange={e => handleInputChange('contactEmail', e.target.value)}
-                      onBlur={e => handleBlur('contactEmail', e.target.value)}
+                      onChange={(e) => handleInputChange('contactEmail', e.target.value)}
                       placeholder="Nhập email liên hệ"
                       className={errors.contactEmail ? styles.inputError : ''}
                     />
@@ -674,25 +729,23 @@ useEffect(() => {
                   <div className={styles.settingItem}>
                     <label>Số điện thoại</label>
                     <input
-                      type="tel"
-                      maxLength={10}
+                      type="text"
+                      inputMode="tel"
                       value={settings.contactPhone || ''}
-                      onChange={e => handleInputChange('contactPhone', e.target.value)}
-                      onBlur={e => handleBlur('contactPhone', e.target.value)}
+                      onChange={(e) => handleInputChange('contactPhone', e.target.value)}
                       placeholder="Nhập số điện thoại liên hệ"
                       className={errors.contactPhone ? styles.inputError : ''}
                     />
                     {errors.contactPhone && <div className={styles.errorText}>{errors.contactPhone}</div>}
                     <div className={styles.charCounter}>
-                      {(settings.contactPhone || '').length}/10
+                      {(settings.contactPhone || '').replace(/\D/g, '').length}/10 chữ số
                     </div>
                   </div>
                   <div className={styles.settingItem}>
                     <label>Địa chỉ liên hệ</label>
                     <textarea
                       value={settings.contactAddress || ''}
-                      onChange={e => handleInputChange('contactAddress', e.target.value)}
-                      onBlur={e => handleBlur('contactAddress', e.target.value)}
+                      onChange={(e) => handleInputChange('contactAddress', e.target.value)}
                       placeholder="Nhập địa chỉ liên hệ"
                       className={errors.contactAddress ? styles.inputError : ''}
                     ></textarea>
@@ -717,47 +770,65 @@ useEffect(() => {
                   <div className={styles.settingItem}>
                     <label>Thời gian hết hạn phiên đăng nhập (phút)</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={settings.jwtExpiryMinutes || ''}
-                      onChange={(e) => handleInputChange('jwtExpiryMinutes', e.target.value)}
+                      onChange={e => handleInputChange('jwtExpiryMinutes', e.target.value)}
+                      onBlur={e => handleBlur('jwtExpiryMinutes', e.target.value)}
                       placeholder="Ví dụ: 30"
+                      className={errors.jwtExpiryMinutes ? styles.inputError : ''}
                     />
+                    {errors.jwtExpiryMinutes && <div className={styles.errorText}>{errors.jwtExpiryMinutes}</div>}
                   </div>
                   <div className={styles.settingItem}>
                     <label>Số lần đăng nhập sai tối đa</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={settings.maxFailedLoginAttempts || ''}
-                      onChange={(e) => handleInputChange('maxFailedLoginAttempts', e.target.value)}
+                      onChange={e => handleInputChange('maxFailedLoginAttempts', e.target.value)}
+                      onBlur={e => handleBlur('maxFailedLoginAttempts', e.target.value)}
                       placeholder="Ví dụ: 5"
+                      className={errors.maxFailedLoginAttempts ? styles.inputError : ''}
                     />
+                    {errors.maxFailedLoginAttempts && <div className={styles.errorText}>{errors.maxFailedLoginAttempts}</div>}
                   </div>
                   <div className={styles.settingItem}>
                     <label>Thời gian khóa tài khoản (phút)</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={settings.accountLockoutDurationMinutes || ''}
-                      onChange={(e) => handleInputChange('accountLockoutDurationMinutes', e.target.value)}
+                      onChange={e => handleInputChange('accountLockoutDurationMinutes', e.target.value)}
+                      onBlur={e => handleBlur('accountLockoutDurationMinutes', e.target.value)}
                       placeholder="Ví dụ: 15"
                     />
                   </div>
                   <div className={styles.settingItem}>
                     <label>Độ dài mật khẩu tối thiểu</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={settings.passwordMinLength || ''}
-                      onChange={(e) => handleInputChange('passwordMinLength', e.target.value)}
+                      onChange={e => handleInputChange('passwordMinLength', e.target.value)}
+                      onBlur={(e) => handleBlur('passwordMinLength', e.target.value)}
                       placeholder="Ví dụ: 6"
+                      className={errors.passwordMinLength ? styles.inputError : ''}
                     />
+                    {errors.passwordMinLength && <div className={styles.errorText}>{errors.passwordMinLength}</div>}
                   </div>
                   <div className={styles.settingItem}>
                     <label>Độ dài mật khẩu tối đa</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={settings.passwordMaxLength || ''}
                       onChange={(e) => handleInputChange('passwordMaxLength', e.target.value)}
+                      onBlur={(e) => handleBlur('passwordMaxLength', e.target.value)}
                       placeholder="Ví dụ: 128"
+                      className={errors.passwordMaxLength ? styles.inputError : ''}
                     />
+                    {errors.passwordMaxLength && <div className={styles.errorText}>{errors.passwordMaxLength}</div>}
                   </div>
                   <div className={styles.settingItem}>
                     <label>
@@ -920,12 +991,17 @@ useEffect(() => {
                           <label>Tiêu đề email</label>
                           <input
                             type="text"
+                            maxLength={64}
                             value={selectedTemplate.subject}
                             onChange={(e) => handleTemplateChange('subject', e.target.value)}
+                            className={templateErrors[selectedTemplateKey]?.subject ? styles.inputError : ''}
                           />
-                        </div>
-                        <div className={styles.settingItem}>
-                          <label>Nội dung email</label>
+                          {templateErrors[selectedTemplateKey]?.subject && (
+                            <div className={styles.errorText}>{templateErrors[selectedTemplateKey]?.subject}</div>
+                          )}
+                          <div className={styles.charCounter}>
+                            {(selectedTemplate.subject || '').length}/64
+                          </div>
                           <div className={styles.editorWrapper}>
                             <CKEditor
                               key={selectedTemplate.templateKey}
@@ -936,24 +1012,22 @@ useEffect(() => {
                                 handleTemplateChange('body', data);
                               }}
                               config={{
+                                placeholder: 'Soạn nội dung email...',
                                 toolbar: [
-                                  'heading',
-                                  '|',
-                                  'bold',
-                                  'italic',
-                                  'underline',
-                                  'link',
-                                  'bulletedList',
-                                  'numberedList',
-                                  'blockQuote',
-                                  '|',
-                                  'undo',
-                                  'redo',
+                                  'heading', '|',
+                                  'bold', 'italic', 'underline', 'link', '|',
+                                  'bulletedList', 'numberedList', 'blockQuote', '|',
+                                  'undo', 'redo'
                                 ],
-                                placeholder: 'Soạn nội dung email...'
                               }}
                             />
                           </div>
+                          <div className={styles.charCounter}>
+                            {(selectedTemplate.body || '').replace(/<[^>]*>/g, '').length}/7000
+                          </div>
+                          {templateErrors[selectedTemplateKey]?.body && (
+                            <div className={styles.errorText}>{templateErrors[selectedTemplateKey]?.body}</div>
+                          )}
                           {availableTokens.length > 0 && (
                             <div className={styles.tokenHelper}>
                               <span>Biến động có thể dùng:</span>
@@ -1195,10 +1269,14 @@ useEffect(() => {
                 <div className={styles.settingItem}>
                   <label>Thông báo bảo trì</label>
                   <textarea
+                    maxLength={255}
                     value={settings.maintenanceMessage || ''}
                     onChange={(e) => handleInputChange('maintenanceMessage', e.target.value)}
                     placeholder="Nhập thông báo bảo trì..."
                   ></textarea>
+                  <div className={styles.charCounter}>
+                    {(settings.maintenanceMessage || '').length}/255
+                  </div>
                 </div>
                 
                 <div className={styles.settingItem}>
@@ -1211,7 +1289,7 @@ useEffect(() => {
                     {maintenanceSaving ? 'Đang lưu...' : 'Lưu cấu hình bảo trì'}
                   </button>
                 </div>
-                <div className={styles.settingItem}>
+                {/* <div className={styles.settingItem}>
                   <button
                     className={styles.maintenanceBtn}
                     onClick={() => handleSaveMaintenanceSettings(true)}
@@ -1220,7 +1298,7 @@ useEffect(() => {
                     <i className="bi bi-gear"></i>
                     Kích hoạt chế độ bảo trì
                   </button>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>

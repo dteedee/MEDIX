@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { managerDashboardService } from '../../services/managerDashboardService';
 import { useNavigate } from 'react-router-dom';
-import type { 
-  ManagerDashboardData, 
-  ManagerDashboardDoctor as RecentDoctor, 
-  ManagerDashboardRecentActivity as RecentActivity 
+import {
+  FaUsers, FaCalendarAlt, FaCalendarCheck, FaCalendarTimes,
+  FaUserPlus, FaFileAlt, FaBell, FaStar, FaRegStar
+} from 'react-icons/fa';
+
+import type {
+  ManagerDashboardData,
+  ManagerDashboardDoctor as RecentDoctor,
+  ManagerDashboardRecentActivity as RecentActivity
 } from '../../services/managerDashboardService';
+import { managerDashboardService } from '../../services/managerDashboardService';
 import { PageLoader } from '../../components/ui'; // Giả sử bạn có component này
+import styles from '../../styles/manager/ManageDashboard.module.css';
 
 // --- Helper Functions ---
 const formatRelativeTime = (dateString: string) => {
@@ -22,11 +28,11 @@ const formatRelativeTime = (dateString: string) => {
 };
 
 const getActivityIcon = (activityType: string) => {
-  const iconMap: { [key: string]: string } = {
-    DOCTOR_REGISTRATION: 'bi-person-plus-fill text-blue-500',
-    APPOINTMENT: 'bi-calendar-check-fill text-green-500',
-    ARTICLE_PUBLISHED: 'bi-file-earmark-text-fill text-purple-500',
-    default: 'bi-bell-fill text-gray-500',
+  const iconMap: { [key: string]: React.ReactElement } = {
+    DOCTOR_REGISTRATION: <FaUserPlus className={`${styles.activityIcon} text-blue-500`} />,
+    APPOINTMENT: <FaCalendarCheck className={`${styles.activityIcon} text-green-500`} />,
+    ARTICLE_PUBLISHED: <FaFileAlt className={`${styles.activityIcon} text-purple-500`} />,
+    default: <FaBell className={`${styles.activityIcon} text-gray-500`} />,
   };
   return iconMap[activityType] || iconMap.default;
 };
@@ -47,18 +53,48 @@ const getDoctorStatusClass = (status: string) => {
 const renderStars = (rating: number) => {
   const stars = [];
   // API trả về rating 0-5, nên cần xử lý trường hợp 0 sao
-  const validRating = Math.max(0, Math.min(5, rating)); 
+  const validRating = Math.max(0, Math.min(5, rating));
   const fullStars = Math.floor(validRating);
   const halfStar = validRating % 1 !== 0;
   const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
 
   for (let i = 0; i < fullStars; i++) {
-    stars.push(<i key={`full-${i}`} className="bi bi-star-fill text-yellow-400"></i>);
+    stars.push(<FaStar key={`full-${i}`} className="text-yellow-400" />);
   }
   for (let i = 0; i < emptyStars; i++) {
-    stars.push(<i key={`empty-${i}`} className="bi bi-star text-gray-300"></i>);
+    stars.push(<FaRegStar key={`empty-${i}`} className="text-gray-300" />);
   }
   return <div className="flex items-center">{stars}</div>;
+};
+
+// --- Sub-components ---
+
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  description?: string;
+  icon: React.ReactElement;
+  colorClass: 'Green' | 'Blue' | 'Red' | 'Yellow';
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, description, icon, colorClass }) => {
+  const valueColorClass = `statCardValue${colorClass}`;
+  const iconCircleColorClass = `iconCircle${colorClass}`;
+
+  return (
+    <div className={`${styles.statCard} ${styles.statCardWithIcon}`}>
+      <div className={styles.iconWrapper}>
+        <div className={`${styles.iconCircle} ${styles[iconCircleColorClass]}`}>
+          {React.cloneElement(icon, { className: styles.icon })}
+        </div>
+      </div>
+      <div>
+        <h3 className={styles.statCardTitle}>{title}</h3>
+        <p className={`${styles.statCardValue} ${styles[valueColorClass]}`}>{value}</p>
+        {description && <p className={styles.statCardDescription}>{description}</p>}
+      </div>
+    </div>
+  );
 };
 
 export const ManageDashboard: React.FC = () => {
@@ -92,17 +128,19 @@ export const ManageDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="p-6 text-center">
-        <h1 className="text-2xl font-bold text-red-600 mb-4">Lỗi</h1>
-        <p className="text-gray-700">{error}</p>
+      <div className={styles.container}>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Lỗi</h1>
+          <p className="text-gray-700">{error}</p>
+        </div>
       </div>
     );
   }
 
   if (!dashboardData) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-gray-700">Không có dữ liệu để hiển thị.</p>
+      <div className={styles.container}>
+        <p className="text-center text-gray-700">Không có dữ liệu để hiển thị.</p>
       </div>
     );
   }
@@ -110,128 +148,150 @@ export const ManageDashboard: React.FC = () => {
   const { summary, recentDoctors, recentActivities, recentFeedbacks } = dashboardData;
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Manager Dashboard</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {/* Stats Cards */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900">Bác sĩ hoạt động</h3>
-          <p className="text-3xl font-bold text-green-600 mt-2">{summary.activeDoctors}</p>
-          <p className="text-sm text-gray-500 mt-1">Bác sĩ đang online</p>
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <div className={styles.headerLeft}>
+          <h1 className={styles.title}>Manager Dashboard</h1>
         </div>
-        
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900">Lịch hẹn hôm nay</h3>
-          <p className="text-3xl font-bold text-blue-600 mt-2">{summary.todayAppointments}</p>
-          <p className="text-sm text-gray-500 mt-1">Đã xác nhận: {summary.todayConfirmedAppointments}</p>
+        <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <i className="bi bi-calendar3"></i>
+            <span>{new Date().toLocaleDateString('vi-VN')}</span>
+          </div>
         </div>
-        
-       
       </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Doctor Management */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h3 className="text-lg font-medium text-gray-900">Bác sĩ gần đây</h3>
-           
-          </div>
-          <div className="p-6">
-            {recentDoctors.length > 0 ? (
-              <div className="space-y-4">
-                {recentDoctors.map((doctor) => (
-                  <div key={doctor.doctorId} className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">{doctor.doctorName}</h4>
-                      <p className="text-sm text-gray-500">{doctor.specialtyName}</p>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getDoctorStatusClass(doctor.status)}`}>
-                        {doctor.statusDisplayName}
-                      </span>
-                      <button className="text-blue-600 hover:text-blue-800 text-sm">Xem</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 text-center py-4">Không có hoạt động nào của bác sĩ gần đây.</p>
-            )}
-          </div>
-        </div>
-        
-        {/* Recent Activities */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h3 className="text-lg font-medium text-gray-900">Hoạt động gần đây</h3>
-            
-          </div>
-          <div className="p-6">
-            {recentActivities.length > 0 ? (
-              <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                {recentActivities.map((activity, index) => (
-                  <div key={index} className="flex items-start">
-                    <div className="flex-shrink-0 mt-1">
-                      <i className={`bi ${getActivityIcon(activity.activityType)} text-lg`}></i>
-                    </div>
-                    <div className="ml-3 flex-grow">
-                      <p className="text-sm text-gray-800 font-medium">{activity.title}</p>
-                      <p className="text-sm text-gray-600">{activity.description}</p>
-                      <p className="text-xs text-gray-400 mt-1">{formatRelativeTime(activity.createdAt)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 text-center py-4">Không có hoạt động nào gần đây.</p>
-            )}
-          </div>
-        </div>
+      <div className={styles.statsGrid}>
+        {/* Stats Cards */}
+        <StatCard
+          title="Bác sĩ hoạt động"
+          value={summary.activeDoctors}
+          description="Bác sĩ đang online"
+          icon={<FaUsers />}
+          colorClass="Green"
+        />
+
+        <StatCard
+          title="Lịch hẹn hôm nay"
+          value={summary.todayAppointments}
+          description={`Đã xác nhận: ${summary.todayConfirmedAppointments}`}
+          icon={<FaCalendarAlt />}
+          colorClass="Blue"
+        />
+
+        <StatCard
+          title="Lịch hẹn đã hủy"
+          value={summary.cancelledAppointments}
+          description="Tổng số lịch hẹn bị hủy"
+          icon={<FaCalendarTimes />}
+          colorClass="Red"
+        />
+
+
       </div>
 
-      {/* Recent Feedbacks */}
-      <div className="bg-white rounded-lg shadow mt-6">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-lg font-medium text-gray-900">Đánh giá gần đây</h3>
-          <button
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-            onClick={() => navigate('/app/manager/feedback')}
-          >
-            Xem tất cả
-          </button>
-        </div>
-        <div className="p-6">
-          {recentFeedbacks && recentFeedbacks.length > 0 ? (
-            <div className="space-y-5">
-              {recentFeedbacks.map((feedback) => (
-                <div key={feedback.reviewId} className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
-                      {feedback.patientName.charAt(0)}
-                    </div>
-                  </div>
-                  <div className="ml-4 flex-grow">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{feedback.patientName}</p>
-                        <p className="text-xs text-gray-500">
-                          Đã đánh giá bác sĩ <span className="font-semibold">{feedback.doctorName}</span>
-                        </p>
-                      </div>
-                      {renderStars(feedback.rating)}
-                    </div>
-                    <p className="text-sm text-gray-700 mt-2 italic border-l-4 border-gray-200 pl-3">
-                      "{feedback.comment || 'Không có bình luận'}"
-                    </p>
-                    <p className="text-xs text-gray-400 mt-2 text-right">{formatRelativeTime(feedback.createdAt)}</p>
-                  </div>
-                </div>
-              ))}
+      <div className={styles.mainGrid}>
+        <div className={styles.mainContentArea}>
+          {/* Recent Activities */}
+          <div className={`${styles.card} mb-6`}>
+            <div className={styles.cardHeader}>
+              <h3 className={styles.cardTitle}>Hoạt động gần đây</h3>
             </div>
-          ) : (
-            <p className="text-sm text-gray-500 text-center py-4">Chưa có đánh giá nào gần đây.</p>
-          )}
+            <div className={styles.cardContent}>
+              {recentActivities && recentActivities.length > 0 ? (
+                <div className={styles.cardContentListScrollable}>
+                  {recentActivities.map((activity, index) => (
+                    <div key={index} className="flex items-start">
+                      <div className="flex-shrink-0 mt-1">
+                        {getActivityIcon(activity.activityType)}
+                      </div>
+                      <div className="ml-3 flex-grow">
+                        <p className="text-sm text-gray-800 font-medium">{activity.title}</p>
+                        <p className="text-sm text-gray-600">{activity.description}</p>
+                        <p className="text-xs text-gray-400 mt-1">{formatRelativeTime(activity.createdAt)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.emptyState}>Không có hoạt động nào gần đây.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Feedbacks */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h3 className={styles.cardTitle}>Đánh giá gần đây</h3>
+              <button
+                className={styles.viewAllButton}
+                onClick={() => navigate('/app/manager/feedback')}
+              >
+                Xem tất cả
+              </button>
+            </div>
+            <div className={styles.cardContent}>
+              {recentFeedbacks && recentFeedbacks.length > 0 ? (
+                <div className="space-y-5">
+                  {recentFeedbacks.map((feedback) => (
+                    <div key={feedback.reviewId} className="flex items-start">
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                          {feedback.patientName.charAt(0)}
+                        </div>
+                      </div>
+                      <div className="ml-4 flex-grow">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{feedback.patientName}</p>
+                            <p className="text-xs text-gray-500">
+                              Đã đánh giá bác sĩ <span className="font-semibold">{feedback.doctorName}</span>
+                            </p>
+                          </div>
+                          {renderStars(feedback.rating)}
+                        </div>
+                        <p className="text-sm text-gray-700 mt-2 italic border-l-4 border-gray-200 pl-3">
+                          "{feedback.comment || 'Không có bình luận'}"
+                        </p>
+                        <p className="text-xs text-gray-400 mt-2 text-right">{formatRelativeTime(feedback.createdAt)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.emptyState}>Chưa có đánh giá nào gần đây.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Doctor Management */}
+        <div className={styles.card}>
+          {/* <div className={styles.cardHeader}>
+            <h3 className={styles.cardTitle}>Bác sĩ gần đây</h3>
+
+          </div> */}
+          {/* <div className={styles.cardContent}>
+            {recentDoctors && recentDoctors.length > 0 ? (
+              <div className={styles.cardContentList}>
+                {recentDoctors.map((doctor) => (
+                  <div key={doctor.doctorId} className={styles.doctorItem}>
+                    <div className={styles.doctorInfo}>
+                      <h4>{doctor.doctorName}</h4>
+                      <p>{doctor.specialtyName}</p>
+                    </div>
+                    <div className={styles.doctorActions}>
+                      <span className={`${styles.doctorStatus} ${getDoctorStatusClass(doctor.status)}`}>
+                        {doctor.statusDisplayName}
+                      </span>
+                      <button className={styles.viewButton}>Xem</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.emptyState}>Không có hoạt động nào của bác sĩ gần đây.</p>
+            )}
+          </div> */}
         </div>
       </div>
     </div>

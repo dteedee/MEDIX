@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useToast } from '../../contexts/ToastContext'
-import styles from '../../styles/manager/FeedbackManagement.module.css'
+import styles from '../../styles/admin/ArticleManagement.module.css'
+
 
 interface Feedback {
   id: string;
@@ -22,12 +23,20 @@ export default function FeedbackManagement() {
   const [loading, setLoading] = useState(true);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
-  const [filter, setFilter] = useState('all');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Feedback; direction: 'ascending' | 'descending' } | null>({ key: 'createdAt', direction: 'descending' });
+  const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [filters, setFilters] = useState({
+    rating: 'all',
+    startDate: '',
+    endDate: '',
+  });
   const { showToast } = useToast();
 
   useEffect(() => {
     loadFeedbacks();
-  }, [filter]);
+  }, []);
 
   const loadFeedbacks = async () => {
     const API_URL = 'http://localhost:5123/api/Review';
@@ -94,10 +103,11 @@ export default function FeedbackManagement() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
+    return new Date(dateString).toLocaleDateString('vi-VN');
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit'
     });
@@ -105,34 +115,106 @@ export default function FeedbackManagement() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      Public: { text: 'Public', class: styles.statusApproved },
-      Private: { text: 'Private', class: styles.statusRejected },
-      pending: { text: 'Pending', class: styles.statusPending },
+      Public: { text: 'Công khai', class: styles.statusActive, icon: 'bi-check-circle-fill' },
+      Private: { text: 'Riêng tư', class: styles.statusLocked, icon: 'bi-pause-circle-fill' },
+      pending: { text: 'Đang chờ', class: styles.statusArchived, icon: 'bi-clock-fill' },
     };
-    
-    const config = statusConfig[status as keyof typeof statusConfig];
-    return <span className={`${styles.statusBadge} ${config?.class}`}>{config?.text}</span>;
-  };
 
-  const getCategoryBadge = (category: string) => {
-    const categoryConfig = {
-      appointment: { text: 'Appointment', class: styles.categoryAppointment },
-      service: { text: 'Service', class: styles.categoryService },
-      general: { text: 'General', class: styles.categoryGeneral }
-    };
-    
-    const config = categoryConfig[category as keyof typeof categoryConfig];
-    return <span className={`${styles.categoryBadge} ${config?.class}`}>{config?.text || 'General'}</span>;
+    const config = statusConfig[status as keyof typeof statusConfig];
+    if (!config) return null;
+    return (
+      <span className={`${styles.statusBadge} ${config.class}`}>
+        <i className={`bi ${config.icon}`}></i>
+        {config.text}
+      </span>
+    );
   };
 
   const getRatingStars = (rating: number) => {
     return '★'.repeat(rating) + '☆'.repeat(5 - rating);
   };
 
-  const filteredFeedbacks = feedbacks.filter(feedback => {
-    if (filter === 'all') return true;
-    return feedback.status === filter;
-  });
+  const filteredFeedbacks = useMemo(() => {
+    return feedbacks.filter(feedback => {
+      // Lọc theo đánh giá
+      if (filters.rating !== 'all' && feedback.rating !== parseInt(filters.rating, 10)) {
+        return false;
+      }
+      // Lọc theo ngày
+      const feedbackDate = new Date(feedback.date);
+      if (filters.startDate) {
+        if (feedbackDate < new Date(filters.startDate)) {
+          return false;
+        }
+      }
+      if (filters.endDate) {
+        if (feedbackDate > new Date(new Date(filters.endDate).setHours(23, 59, 59, 999))) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [feedbacks, filters]);
+
+  const sortedFeedbacks = useMemo(() => {
+    let sortableItems = [...filteredFeedbacks];
+    if (sortConfig !== null) {
+      const { key, direction } = sortConfig;
+      sortableItems.sort((a, b) => {
+        const valA = a[key];
+        const valB = b[key];
+
+        // Xử lý trường hợp giá trị có thể là null hoặc undefined để an toàn
+        if (valA == null) return 1;
+        if (valB == null) return -1;
+
+        if (valA < valB) {
+          return direction === 'ascending' ? -1 : 1;
+        }
+        if (valA > valB) {
+          return direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredFeedbacks, sortConfig]);
+
+  // Pagination: reset page when filters/sorting/data change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, sortConfig, feedbacks]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedFeedbacks.length / itemsPerPage));
+
+  const paginatedFeedbacks = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedFeedbacks.slice(start, start + itemsPerPage);
+  }, [sortedFeedbacks, currentPage, itemsPerPage]);
+
+  const requestSort = (key: keyof Feedback) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: keyof Feedback) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return null;
+    }
+    return <i className={`bi bi-arrow-${sortConfig.direction === 'ascending' ? 'up' : 'down'}`}></i>;
+  };
+
+  const averageRating = useMemo(() => {
+    if (feedbacks.length === 0) {
+      return 0;
+    }
+    const totalRating = feedbacks.reduce((sum, feedback) => sum + feedback.rating, 0);
+    return (totalRating / feedbacks.length).toFixed(1);
+  }, [feedbacks]);
+
 
   if (loading) {
     return (
@@ -146,193 +228,368 @@ export default function FeedbackManagement() {
   }
 
   return (
-    <div className={styles.container}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Quản lý Phản hồi</h1>
-          <p className={styles.subtitle}>Theo dõi và quản lý phản hồi từ bệnh nhân</p>
-        </div>
-        <div className={styles.headerRight}>
-          <div className={styles.filterSelector}>
-            <label>Lọc theo trạng thái:</label>
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className={styles.filterSelect}
-            >
-              <option value="all">Tất cả</option>
-              <option value="Public">Public</option>
-              <option value="Private">Private</option>
-            </select>
+    <>
+      <div className={styles.container}>
+        {/* Header */}
+        <div className={styles.header}>
+          <div className={styles.headerLeft}>
+            <h1 className={styles.title}>Quản lý Phản hồi</h1>
+            <p className={styles.subtitle}>Theo dõi và quản lý phản hồi từ bệnh nhân</p>
           </div>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className={styles.summaryGrid}>
-        <div className={`${styles.summaryCard} ${styles.summaryCard1}`}>
-          <div className={styles.summaryIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-          </div>
-          <div className={styles.summaryContent}>
-            <div className={styles.summaryLabel}>Tổng phản hồi</div>
-            <div className={styles.summaryValue}>{feedbacks.length}</div>
+          <div className={styles.headerRight}>
+            <div className={styles.dateTime}>
+              <i className="bi bi-calendar3"></i>
+              <span>{new Date().toLocaleDateString('vi-VN')}</span>
+            </div>
           </div>
         </div>
 
-        <div className={`${styles.summaryCard} ${styles.summaryCard2}`}>
-          <div className={styles.summaryIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20,6 9,17 4,12"></polyline>
-            </svg>
+
+        {/* Stats Cards */}
+        <div className={styles.statsGrid}>
+          <div className={`${styles.statCard} ${styles.statCard1}`}>
+            <div className={styles.statIcon}>
+              <i className="bi bi-chat-dots-fill"></i>
+            </div>
+            <div className={styles.statContent}>
+              <div className={styles.statLabel}>Tổng phản hồi</div>
+              <div className={styles.statValue}>{feedbacks.length}</div>
+            </div>
+            <div className={styles.statBg}>
+              <i className="bi bi-chat-dots-fill"></i>
+            </div>
           </div>
-          <div className={styles.summaryContent}>
-            <div className={styles.summaryLabel}>Trạng thái Public</div>
-            <div className={styles.summaryValue}>{feedbacks.filter(f => f.status === 'Public').length}</div>
+
+          <div className={`${styles.statCard} ${styles.statCard2}`}>
+            <div className={styles.statIcon}>
+              <i className="bi bi-star-half"></i>
+            </div>
+            <div className={styles.statContent}>
+              <div className={styles.statLabel}>Đánh giá trung bình</div>
+              <div className={styles.statValue}>{averageRating} / 5</div>
+            </div>
+            <div className={styles.statBg}>
+              <i className="bi bi-star-half"></i>
+            </div>
           </div>
         </div>
 
-        <div className={`${styles.summaryCard} ${styles.summaryCard3}`}>
-          <div className={styles.summaryIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="15" y1="9" x2="9" y2="15"></line>
-              <line x1="9" y1="9" x2="15" y2="15"></line>
-            </svg>
+        {/* Search and Filter */}
+        <div className={styles.searchSection}>
+          <div className={styles.searchWrapper}>
+            <i className="bi bi-search"></i>
+            <input
+              type="text"
+              placeholder="Tìm kiếm phản hồi..."
+              className={styles.searchInput}
+              disabled
+            />
           </div>
-          <div className={styles.summaryContent}>
-            <div className={styles.summaryLabel}>Trạng thái Private</div>
-            <div className={styles.summaryValue}>{feedbacks.filter(f => f.status === 'Private').length}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Feedbacks Table */}
-      <div className={styles.tableCard}>
-
-        <div className={styles.tableHeader}>
-          <h3>Danh sách Phản hồi</h3>
+          <button
+            className={`${styles.btnFilter} ${showFilters ? styles.active : ''}`}
+            onClick={() => setShowFilters(!showFilters)}>
+            <i className="bi bi-funnel"></i>
+            Bộ lọc
+            {(filters.rating !== 'all' || filters.startDate || filters.endDate) && <span className={styles.filterBadge}></span>}
+          </button>
         </div>
 
-        <div className={styles.tableContainer}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Bệnh nhân</th>
-                <th>Bác sĩ</th>
-                <th>Đánh giá</th>
-                <th>Bình luận</th>
-                <th>Ngày</th>
-                <th>Trạng thái</th>
-                <th>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredFeedbacks.map((feedback) => (
-                <tr key={feedback.id}>
-                  <td>
-                    <div className={styles.patientCell}>
-                      <span className={styles.patientName}>{feedback.patientName}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={styles.doctorName}>{feedback.doctorName}</span>
-                  </td>
-                  <td>
-                    <div className={styles.ratingCell}>
-                      <span className={styles.ratingStars}>{getRatingStars(feedback.rating)}</span>
-                      <span className={styles.ratingValue}>{feedback.rating}/5</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className={styles.commentCell}>
-                      <span className={styles.commentText}>
-                        {feedback.comment.length > 50 
-                          ? `${feedback.comment.substring(0, 50)}...` 
+        {/* Advanced Filters Panel */}
+        {showFilters && (
+          <div className={styles.filterPanel}>
+            <div className={styles.filterGrid}>
+              <div className={styles.filterItem}>
+                <label><i className="bi bi-star"></i> Đánh giá</label>
+                <select
+                  value={filters.rating}
+                  onChange={(e) => setFilters({ ...filters, rating: e.target.value })}
+                >
+                  <option value="all">Tất cả đánh giá</option>
+                  <option value="5">5 sao</option>
+                  <option value="4">4 sao</option>
+                  <option value="3">3 sao</option>
+                  <option value="2">2 sao</option>
+                  <option value="1">1 sao</option>
+                </select>
+              </div>
+              <div className={styles.filterItem}>
+                <label><i className="bi bi-calendar-range"></i> Từ ngày</label>
+                <input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                />
+              </div>
+              <div className={styles.filterItem}>
+                <label><i className="bi bi-calendar-range-fill"></i> Đến ngày</label>
+                <input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className={styles.filterActions}>
+              <button onClick={() => {
+                setFilters({
+                  rating: 'all',
+                  startDate: '',
+                  endDate: '',
+                });
+                setShowFilters(false);
+              }} className={styles.btnResetFilter}>
+                <i className="bi bi-arrow-counterclockwise"></i> Đặt lại
+              </button>
+              <button onClick={() => setShowFilters(false)} className={styles.btnApplyFilter} disabled>
+                <i className="bi bi-check2"></i> Áp dụng
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Feedbacks Table */}
+        <div className={styles.tableCard}>
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th style={{ width: '50px' }}>STT</th>
+                  <th onClick={() => requestSort('patientName')} className={styles.sortable}>Bệnh nhân {getSortIcon('patientName')}</th>
+                  <th onClick={() => requestSort('doctorName')} className={styles.sortable}>Bác sĩ {getSortIcon('doctorName')}</th>
+                  <th onClick={() => requestSort('rating')} className={styles.sortable}>Đánh giá {getSortIcon('rating')}</th>
+                  <th>Bình luận</th>
+                  <th onClick={() => requestSort('date')} className={styles.sortable}>Ngày {getSortIcon('date')}</th>
+                  <th style={{ textAlign: 'right', width: '120px' }}>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedFeedbacks.map((feedback, index) => (
+                  <tr key={feedback.id} className={styles.tableRow}>
+                    <td>
+                      <div style={{ fontWeight: 600, color: '#6b7280', textAlign: 'center' }}>{(currentPage - 1) * itemsPerPage + index + 1}</div>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 600, color: '#111827' }}>{feedback.patientName}</div>
+                    </td>
+                    <td>
+                      <span style={{ color: '#374151', fontWeight: 500 }}>{feedback.doctorName}</span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ color: '#fbbf24', fontSize: '14px' }}>{getRatingStars(feedback.rating)}</span>
+                        <span style={{ fontSize: '13px', color: '#6b7280' }}>{feedback.rating}/5</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ maxWidth: '250px', color: '#6b7280', lineHeight: '1.4' }}>
+                        {feedback.comment.length > 50
+                          ? `${feedback.comment.substring(0, 50)}...`
                           : feedback.comment
                         }
-                      </span>
-                    </div>
-                  </td>
-                  <td>{formatDate(feedback.date)}</td>
-                  <td>{getStatusBadge(feedback.status)}</td>
-                  <td>
-                    <div className={styles.actionButtons}>
-                      {feedback.status === 'pending' && (
-                        <>
-                          <button className={styles.approveButton}>
-                            Duyệt
-                          </button>
-                          <button className={styles.rejectButton}>
-                            Từ chối
-                          </button>
-                        </>
-                      )}
-                      <button 
-                        onClick={() => handleViewDetails(feedback)}
-                        className={styles.viewButton}
-                      >
-                        Xem chi tiết
-                      </button>
-                      <button 
-                        onClick={() => handleToggleStatus(feedback)}
-                        className={feedback.status === 'Public' ? styles.rejectButton : styles.approveButton}
-                      >
-                        {feedback.status === 'Public' ? 'Chuyển sang Private' : 'Chuyển sang Public'}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      </div>
+                    </td>
+                    <td>{formatDate(feedback.date)}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div className={styles.actions} style={{ flexWrap: 'wrap', gap: '8px' }}>
+                        {feedback.status === 'pending' && (
+                          <>
+                            <button
+                              style={{
+                                padding: '6px 12px',
+                                border: 'none',
+                                background: '#10b981',
+                                color: '#fff',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = '#059669'}
+                              onMouseOut={(e) => e.currentTarget.style.background = '#10b981'}
+                            >
+                              Duyệt
+                            </button>
+                            <button
+                              style={{
+                                padding: '6px 12px',
+                                border: 'none',
+                                background: '#ef4444',
+                                color: '#fff',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = '#dc2626'}
+                              onMouseOut={(e) => e.currentTarget.style.background = '#ef4444'}
+                            >
+                              Từ chối
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => handleViewDetails(feedback)}
+                          style={{
+                            padding: '6px 12px',
+                            border: '1px solid #d1d5db',
+                            background: 'white',
+                            color: '#4a5568',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.background = '#f9fafb';
+                            e.currentTarget.style.borderColor = '#9ca3af';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.background = 'white';
+                            e.currentTarget.style.borderColor = '#d1d5db';
+                          }}
+                        >
+                          Xem chi tiết
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Pagination */}
+          <div className={styles.pagination} style={{ alignItems: 'center' }}>
+            <div className={styles.paginationInfo}>
+              Hiển thị {sortedFeedbacks.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage + 1)} - {Math.min(currentPage * itemsPerPage, sortedFeedbacks.length)} trên {sortedFeedbacks.length} phản hồi
+            </div>
+            <div className={styles.paginationControls}>
+              <div className={styles.paginationButtons}>
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  aria-label="first"
+                >
+                  <i className="bi bi-chevron-bar-left"></i>
+                </button>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  aria-label="prev"
+                >
+                  <i className="bi bi-chevron-left"></i>
+                </button>
+
+                <div className={styles.pageIndicator} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>Trang</span>
+                  <strong>{currentPage}</strong>
+                  <span> / {totalPages}</span>
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  aria-label="next"
+                >
+                  <i className="bi bi-chevron-right"></i>
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  aria-label="last"
+                >
+                  <i className="bi bi-chevron-bar-right"></i>
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label style={{ fontSize: 13, color: '#6b7280' }}>Hiển thị</label>
+                <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} style={{ padding: 8, borderRadius: 8 }}>
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {isDetailModalOpen && selectedFeedback && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <div className={styles.modalHeader}>
-              <h3>Chi tiết Phản hồi</h3>
-              <button onClick={() => setIsDetailModalOpen(false)} className={styles.closeButton}>×</button>
-            </div>
-            <div className={styles.modalBody}>
-              {/* Thông tin chung */}
-              <div className={styles.detailItem}>
-                <strong>Bệnh nhân:</strong> {selectedFeedback.patientName}
-              </div>
-              <div className={styles.detailItem}>
-                <strong>Bác sĩ:</strong> {selectedFeedback.doctorName}
-              </div>
-              <div className={styles.detailItem}>
-                <strong>Đánh giá:</strong>
-                <span className={styles.ratingStars}>{getRatingStars(selectedFeedback.rating)}</span>
-                ({selectedFeedback.rating}/5)
-              </div>
-              <div className={styles.detailItem}>
-                <strong>Bình luận:</strong> {selectedFeedback.comment}
-              </div>
-              <div className={styles.detailItem}>
-                <strong>Ngày viết review:</strong> {formatDate(selectedFeedback.createdAt)}
-              </div>
-              <hr className={styles.divider} />
+        <div className={styles['neo-ui-overlay']}>
+          <div className={styles['neo-ui-dialog']}>
 
-              {/* Thông tin cuộc hẹn */}
-              <h4>Thông tin cuộc hẹn</h4>
-              <div className={styles.detailItem}>
-                <strong>Thời gian bắt đầu:</strong> {formatDate(selectedFeedback.appointmentStartTime)}
-              </div>
-              <div className={styles.detailItem}>
-                <strong>Thời gian kết thúc:</strong> {formatDate(selectedFeedback.appointmentEndTime)}
-              </div>
+            {/* Header */}
+            <div className={styles['neo-ui-header']}>
+              <h3 className={styles['neo-ui-header-title']}>Chi tiết Phản hồi</h3>
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                className={styles['neo-ui-close-btn']}
+              >
+                ×
+              </button>
             </div>
+
+            {/* Body */}
+            <div className={styles['neo-ui-content']}>
+
+              {/* Thông tin chung */}
+              <div className={styles['neo-ui-grid']}>
+                <div className={styles['neo-ui-field']}>
+                  <strong><i className="bi bi-person"></i> Bệnh nhân:</strong>
+                  <span>{selectedFeedback.patientName}</span>
+                </div>
+
+                <div className={styles['neo-ui-field']}>
+                  <strong><i className="bi bi-person-badge"></i> Bác sĩ:</strong>
+                  <span>{selectedFeedback.doctorName}</span>
+                </div>
+
+                <div className={styles['neo-ui-field']}>
+                  <strong><i className="bi bi-star-half"></i> Đánh giá:</strong>
+                  <span>
+                    <span className={styles['neo-ui-stars']}>
+                      {getRatingStars(selectedFeedback.rating)}
+                    </span>
+                    ({selectedFeedback.rating}/5)
+                  </span>
+                </div>
+
+                <div className={styles['neo-ui-field']}>
+                  <strong><i className="bi bi-calendar-event"></i> Ngày viết:</strong>
+                  <span>{formatDate(selectedFeedback.createdAt)}</span>
+                </div>
+              </div>
+
+              {/* Bình luận */}
+              <div className={`${styles['neo-ui-field']} ${styles['neo-ui-comment-box']}`}>
+                <strong><i className="bi bi-chat-dots"></i> Bình luận:</strong>
+                <p>{selectedFeedback.comment}</p>
+              </div>
+
+              <hr className={styles['neo-ui-line']} />
+
+              {/* Section */}
+              <h4 className={styles['neo-ui-section-label']}>
+                <i className="bi bi-calendar-check"></i> Thông tin cuộc hẹn
+              </h4>
+
+              <div className={styles['neo-ui-field']}>
+                <strong><i className="bi bi-clock"></i> Thời gian:</strong>
+                <span className={styles['neo-ui-time']}>
+                  {new Date(selectedFeedback.appointmentStartTime).toLocaleDateString("vi-VN")}
+                  ({formatTime(selectedFeedback.appointmentStartTime)} - {formatTime(selectedFeedback.appointmentEndTime)})
+                </span>
+              </div>
+
+            </div>
+
           </div>
         </div>
       )}
-    </div>
-
+    </>
   );
 }

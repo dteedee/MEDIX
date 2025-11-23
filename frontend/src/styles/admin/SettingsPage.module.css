@@ -231,9 +231,14 @@
   gap: 16px;
 }
 
+.backupRow > div:first-child {
+  min-width: 0; /* Cho phép flex item co lại */
+}
+
 .backupRow strong {
   font-size: 14px;
   color: #1a202c;
+  word-break: break-all; /* Ngắt từ nếu cần để tránh tràn */
 }
 
 .backupMeta {
@@ -254,6 +259,7 @@
   align-items: center;
   gap: 6px;
   transition: background 0.2s ease;
+  white-space: nowrap; /* Ngăn nút tải xuống bị ngắt dòng */
 }
 
 .downloadBtn:hover {
@@ -462,4 +468,50 @@
   .settingItem input[type="datetime-local"] {
     max-width: 100%;
   }
+}
+
+/* Footer Actions */
+.footerActions {
+  margin-top: 32px;
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Date Time from Dashboard */
+.dateTime {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f0f4ff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+/* Character Counter */
+.charCounter {
+  text-align: right;
+  font-size: 12px;
+  color: #718096;
+  margin-top: -4px;
+}
+
+/* Validation Error Styles */
+.inputError {
+  border-color: #e53e3e !important; /* Màu viền đỏ cho lỗi */
+  background-color: #fff5f5;
+}
+
+.errorText {
+  color: #c53030;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: -2px;
 }

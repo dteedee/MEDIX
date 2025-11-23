@@ -108,14 +108,15 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
           <i className="bi bi-image"></i>
           {sidebarOpen && <span>Banner</span>}
         </Link>
-         <Link
+        <Link
           to="/app/manager/categories"
           className={`${styles.navItem} ${currentPage === 'reports' ? styles.active : ''}`}
           onClick={() => setShowUserMenu(false)}
         >
-          <i className="bi bi-graph-up"></i>
+          <i className="bi bi-grid"></i>
           {sidebarOpen && <span>Danh mục</span>}
         </Link>
+
         <Link
           to="/app/manager/packages"
           className={`${styles.navItem} ${currentPage === 'packages' ? styles.active : ''}`}
@@ -137,12 +138,12 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
           className={`${styles.navItem} ${currentPage === 'transfer-transactions' ? styles.active : ''}`}
           onClick={() => setShowUserMenu(false)}
         >
-          
+
           <i className="bi bi-arrow-left-right"></i>
           {sidebarOpen && <span>Yêu cầu chuyển tiền</span>}
         </Link>
-  
-        
+
+
         <Link
           to="/app/manager/feedback"
           className={`${styles.navItem} ${currentPage === 'feedback' ? styles.active : ''}`}

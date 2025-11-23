@@ -5,7 +5,7 @@ import { BannerDTO, CreateBannerRequest, UpdateBannerRequest } from '../../types
 import { useToast } from '../../contexts/ToastContext';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 import BannerForm from './BannerForm';
-import styles from '../../styles/admin/BannerManagement.module.css';
+import styles from '../../styles/admin/ArticleManagement.module.css';
 
 interface BannerListFilters {
   page: number;

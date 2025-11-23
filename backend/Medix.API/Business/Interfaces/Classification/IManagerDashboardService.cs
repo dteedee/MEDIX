@@ -5,6 +5,7 @@ namespace Medix.API.Business.Interfaces.Classification
     public interface IManagerDashboardService
     {
         Task<ManagerDashboardDto> GetDashboardAsync();
+
     }
 }
 

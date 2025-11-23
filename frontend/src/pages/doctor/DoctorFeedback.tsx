@@ -134,9 +134,17 @@ const DoctorFeedback: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1>Bảng điều khiển Phản hồi</h1>
-        <p>Phân tích và quản lý đánh giá từ bệnh nhân cho bác sĩ <strong>{user?.fullName}</strong>.</p>
+      <div className={styles.header} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className={styles.headerLeft}>
+          <h1 className={styles.title}>Feedback</h1>
+          <p className={styles.subtitle}>Feedback của bệnh nhân</p>
+        </div>
+        <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <i className="bi bi-calendar3"></i>
+            <span>{new Date().toLocaleDateString('vi-VN')}</span>
+          </div>
+        </div>
       </div>
 
       <div className={styles.summaryGrid}>

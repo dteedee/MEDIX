@@ -74,6 +74,8 @@ export default function AdminDashboard() {
   const [userGrowthChartData, setUserGrowthChartData] = useState<UserGrowthItem[]>([]);
     // State lưu trữ bộ lọc thời gian cho biểu đồ tăng trưởng người dùng (7, 30, hoặc 90 ngày)
   const [userGrowthFilter, setUserGrowthFilter] = useState<number>(30); // 7, 30, or 90 days
+  // State cho bộ lọc biểu đồ hoạt động ('recent', 'today', 'week')
+  const [activityFilter, setActivityFilter] = useState<'today' | 'week'>('today');
   const [activityChartData, setActivityChartData] = useState<{ name: string; value: number }[]>([]);
 
   useEffect(() => {
@@ -129,14 +131,40 @@ export default function AdminDashboard() {
       return diffDays <= userGrowthFilter;
     });
 
+    // Chuyển đổi định dạng 'MM/DD' thành 'DD/MM' để hiển thị trên biểu đồ
+    const formattedChartData = filteredData.map(item => {
+      const parts = item.period.split('/');
+      return {
+        ...item,
+        period: `${parts[1]}/${parts[0]}` // Đảo ngược ngày và tháng
+      };
+    });
     // Cập nhật state dữ liệu cho biểu đồ tăng trưởng người dùng
-    setUserGrowthChartData(filteredData);
+    setUserGrowthChartData(formattedChartData);
 
 
     // Chuẩn bị dữ liệu cho biểu đồ hoạt động hệ thống
-    if (dashboardData?.recentActivities) {
+    if (dashboardData?.recentActivities) { 
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - today.getDay()); // Giả sử tuần bắt đầu từ Chủ nhật
+
+      const filteredActivities = dashboardData.recentActivities.filter(activity => {
+        const activityDate = new Date(activity.createdAt);
+        if (activityFilter === 'today') {
+          return activityDate >= today;
+        }
+        if (activityFilter === 'week') {
+          return activityDate >= startOfWeek;
+        }
+        // 'recent' sẽ hiển thị tất cả, không cần lọc thêm
+        return true;
+      });
+
+
       // Đếm số lượng của mỗi loại hoạt động
-      const activityCounts = dashboardData.recentActivities.reduce((acc, activity) => {
+      const activityCounts = filteredActivities.reduce((acc, activity) => {
         acc[activity.activityType] = (acc[activity.activityType] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
@@ -144,7 +172,7 @@ export default function AdminDashboard() {
       const activityMapping: Record<string, string> = {
         USER_REGISTRATION: 'Đăng ký mới',
         APPOINTMENT_CREATED: 'Tạo lịch hẹn',
-        ARTICLE_PUBLISHED: 'Xuất bản bài viết',
+        ARTICLE_PUBLISHED: 'Tạo bài viết',
       };
 
       // Chuyển đổi dữ liệu đếm thành định dạng phù hợp cho PieChart
@@ -158,7 +186,7 @@ export default function AdminDashboard() {
     }
 
 
-  }, [dashboardData, userGrowthFilter]);
+  }, [dashboardData, userGrowthFilter, activityFilter]);
 
   if (isLoading) {
     return <PageLoader />;
@@ -289,7 +317,16 @@ export default function AdminDashboard() {
               <div className={styles.chartHeader}>
                 <h3>Phân bổ hoạt động</h3>
                 <div className={styles.chartActions}>
-                  <button className={`${styles.chartBtn} ${styles.active}`}>Gần đây</button>
+                  <button 
+                    className={`${styles.chartBtn} ${activityFilter === 'today' ? styles.active : ''}`}
+                    onClick={() => setActivityFilter('today')}
+                  >
+                    Hôm nay
+                  </button>
+                  <button 
+                    className={`${styles.chartBtn} ${activityFilter === 'week' ? styles.active : ''}`}
+                    onClick={() => setActivityFilter('week')}
+                  >Tuần này</button>
                 </div>
               </div>
               <div className={styles.chartContent} style={{ width: '100%', height: 300 }}>

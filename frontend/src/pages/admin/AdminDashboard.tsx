@@ -337,7 +337,6 @@ export default function AdminDashboard() {
           <div className={styles.activityCard}>
             <div className={styles.activityHeader}>
               <h3>Hoạt động gần đây</h3>
-              <button className={styles.viewAllBtn}>Xem tất cả</button>
             </div>
             <div className={styles.activityList}>
             {dashboardData?.recentActivities.slice(0, 5).map((activity: RecentActivity, index: number) => (

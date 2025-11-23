@@ -20,6 +20,7 @@ const DoctorPatients: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const now = new Date();
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
@@ -43,30 +44,42 @@ const DoctorPatients: React.FC = () => {
     if (appointments.length === 0) return [];
 
     const patientMap = new Map<string, { appointments: Appointment[] }>();
-
     appointments.forEach(app => {
-      if (app.patientID) { // Chỉ xử lý các cuộc hẹn có patientID
+      // Chỉ xử lý các cuộc hẹn có patientID và chưa bị hủy
+      if (app.patientID && app.statusCode !== 'CancelledByPatient' && app.statusCode !== 'CancelledByDoctor') {
         if (!patientMap.has(app.patientID)) {
           patientMap.set(app.patientID, { appointments: [] });
         }
         patientMap.get(app.patientID)!.appointments.push(app);
       }
     });
+    
+    const patientList: Patient[] = Array.from(patientMap.entries())
+      .map(([patientId, data]) => {
+        // Lọc ra các cuộc hẹn đã diễn ra trong quá khứ hoặc đang diễn ra
+        const pastAppointments = data.appointments
+          .filter(app => new Date(app.appointmentStartTime) <= now)
+          .sort((a, b) => new Date(b.appointmentStartTime).getTime() - new Date(a.appointmentStartTime).getTime());
 
-    const patientList: Patient[] = Array.from(patientMap.entries()).map(([patientId, data]) => {
-      const sortedAppointments = data.appointments.sort((a, b) => new Date(b.appointmentStartTime).getTime() - new Date(a.appointmentStartTime).getTime());
-      const latestAppointment = sortedAppointments[0];
-      const firstAppointment = sortedAppointments[sortedAppointments.length - 1];
+        // Nếu không có cuộc hẹn nào trong quá khứ, không hiển thị bệnh nhân này
+        if (pastAppointments.length === 0) return null;
 
-      return {
-        id: patientId,
-        name: latestAppointment.patientName,
-        avatar: `https://ui-avatars.com/api/?name=${latestAppointment.patientName.replace(/\s/g, "+")}&background=random`,
-        totalAppointments: data.appointments.length,
-        lastVisit: new Date(latestAppointment.appointmentStartTime).toLocaleDateString('vi-VN'),
-        firstVisit: new Date(firstAppointment.appointmentStartTime).toLocaleDateString('vi-VN'),
-      };
-    });
+        const lastVisitAppointment = pastAppointments[0]; // Lần khám cuối cùng (gần nhất trong quá khứ)
+        const firstVisitAppointment = pastAppointments[pastAppointments.length - 1]; // Lần khám đầu tiên
+
+        return {
+          id: patientId,
+          name: lastVisitAppointment.patientName, // Lấy tên từ lần khám cuối
+          avatar: `https://ui-avatars.com/api/?name=${lastVisitAppointment.patientName.replace(/\s/g, "+")}&background=random`,
+          totalAppointments: pastAppointments.length, // Tổng số lần khám là số cuộc hẹn trong quá khứ
+          lastVisit: new Date(lastVisitAppointment.appointmentStartTime).toLocaleDateString('vi-VN'),
+          firstVisit: new Date(firstVisitAppointment.appointmentStartTime).toLocaleDateString('vi-VN'),
+        };
+      })
+      .filter((patient): patient is Patient => patient !== null); // Lọc bỏ các bệnh nhân null
+
+
+
 
     return patientList.sort((a, b) => new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime());
   }, [appointments]);

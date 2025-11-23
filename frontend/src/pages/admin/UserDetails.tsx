@@ -2,22 +2,36 @@ import React from 'react';
 import { UserDTO } from '../../types/user.types';
 import styles from '../../styles/admin/UserDetails.module.css';
 
+interface Role {
+  code: string;
+  displayName: string;
+}
+
 interface Props {
   user: UserDTO | null;
   onClose: () => void;
   isLoading: boolean;
+  roles: Role[]; // Nhận danh sách tất cả các vai trò
+  role?: string | null; // Nhận vai trò trực tiếp từ component cha
 }
 
-export default function UserDetails({ user, onClose, isLoading }: Props) {
+export default function UserDetails({ user, onClose, isLoading, roles, role: userRole }: Props) {
   if (!user) return null;
 
-  const fmtDate = (d?: string | null) => d ? new Date(`${d}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Chưa có';
+  const fmtDate = (d?: string | null) => d ? new Date(d).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Chưa có';
   const getGender = (code?: string) => {
-    if (code === 'MALE') return 'Nam';
-    if (code === 'FEMALE') return 'Nữ';
+    if (code?.toLowerCase() === 'male') return 'Nam';
+    if (code?.toLowerCase() === 'female') return 'Nữ';
     if (code === 'OTHER') return 'Khác';
     return 'Chưa có';
   };
+
+  const getRoleName = (userRoleCode?: string | null) => {
+    if (!userRoleCode) return 'Chưa có';
+    // Tìm trong danh sách roles được truyền vào
+    const role = roles.find(r => r.code.toLowerCase() === userRoleCode.toLowerCase());
+    return role ? role.displayName : userRoleCode; // Nếu không tìm thấy, hiển thị code
+  }
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -105,7 +119,7 @@ export default function UserDetails({ user, onClose, isLoading }: Props) {
                   <div className={styles.infoGrid}>
                     <div className={styles.infoItem}>
                       <label>Vai trò</label>
-                      <span className={styles.roleBadge}>{user.role || 'Chưa có'}</span>
+                      <span className={styles.roleBadge}>{getRoleName(userRole)}</span>
                     </div>
                     <div className={styles.infoItem}>
                       <label>Email xác thực</label>

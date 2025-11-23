@@ -102,7 +102,7 @@ namespace Medix.API.Business.Services.Classification
                     ReminderTypeCode = "Medication",
                     ScheduledDate = scheduledTime,
                     IsRecurring = false,
-                    IsCompleted = false,
+                    IsCompleted = true,
                     CreatedAt = DateTime.Now
                 };
 

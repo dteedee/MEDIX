@@ -157,15 +157,13 @@ namespace Medix.API.Business.Services.Classification
             }
 
             var dto = new DoctorBusinessStatsDto
-            {
-               
+            {      
                 TotalBookings = totalBookings,
                 SuccessfulBookings = successfulBookings,
                 TotalCases = totalCases,
                 SuccessfulCases = successfulCases,
                 Revenue = revenue,
                 TotalSalary = totalSalary,
-            
                 AverageRating = avgRating,
                 TotalReviews = totalReviews
             };

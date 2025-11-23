@@ -46,3 +46,13 @@ export interface ManagerDashboardSummaryDto {
     revenue: StatDto;
 }
 
+export interface TopRatedDoctorDto {
+    doctorId: string;
+    doctorName: string;
+    specialization: string;
+    averageRating: number;
+    reviewCount: number;
+    imageUrl?: string;
+    formattedRating: string;
+}
+

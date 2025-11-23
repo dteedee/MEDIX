@@ -1,0 +1,872 @@
+/* Specialty Pages Styles */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  min-height: 100vh;
+}
+
+.content {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  margin-bottom: 40px;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  margin-bottom: 30px;
+  font-size: 14px;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumb a {
+  color: #1976d2;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.breadcrumb a:hover {
+  color: #1565c0;
+  text-decoration: underline;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-bottom: 30px;
+  border-bottom: 3px solid #e3f2fd;
+}
+
+.header h1 {
+  color: #1565c0;
+  font-size: 42px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  letter-spacing: 2px;
+}
+
+.subtitle {
+  color: #6c757d;
+  font-size: 18px;
+  max-width: 800px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* Detail Header */
+.detailHeader {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 40px;
+  padding-bottom: 30px;
+  border-bottom: 3px solid #e3f2fd;
+}
+
+.headerImage {
+  flex: 0 0 300px;
+  height: 300px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.headerImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.placeholderImageLarge {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 80px;
+  color: #1976d2;
+}
+
+.headerContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.headerContent h1 {
+  color: #1565c0;
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+}
+
+.headerStats {
+  display: flex;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1976d2;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.statItem i {
+  font-size: 20px;
+}
+
+/* Search Section */
+.searchSection {
+  margin-bottom: 40px;
+}
+
+.searchBox {
+  position: relative;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.searchBox i {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+  font-size: 20px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 15px 20px 15px 50px;
+  border: 2px solid #e3f2fd;
+  border-radius: 12px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+/* Specialties Grid */
+.specialtiesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.specialtyCard {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.specialtyCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-color: #1976d2;
+}
+
+.cardImage {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+
+.cardImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.placeholderImage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60px;
+  color: #1976d2;
+}
+
+.cardContent {
+  padding: 20px;
+}
+
+.cardContent h3 {
+  color: #1565c0;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.cardDescription {
+  color: #6c757d;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 15px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 15px;
+  border-top: 1px solid #e8ecf1;
+}
+
+.doctorCount {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #1976d2;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.viewMore {
+  color: #1976d2;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: gap 0.3s ease;
+}
+
+.specialtyCard:hover .viewMore {
+  gap: 8px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  border-bottom: 3px solid #e8ecf1;
+  overflow: visible;
+  position: relative;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+}
+
+.tabs::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, #e3f2fd 50%, transparent 100%);
+  opacity: 0.5;
+}
+
+.tab {
+  padding: 15px 30px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #6c757d;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  position: relative;
+}
+
+.tab::before {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 80%;
+  height: 3px;
+  background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+  transition: transform 0.3s ease;
+  border-radius: 2px;
+}
+
+.tab:hover {
+  color: #1976d2;
+  background: #f8f9ff;
+}
+
+.tab:hover::before {
+  transform: translateX(-50%) scaleX(1);
+}
+
+.tab.active {
+  color: #1565c0;
+  background: #f8f9ff;
+}
+
+.tab.active::before {
+  transform: translateX(-50%) scaleX(1);
+}
+
+/* Tab Content */
+.tabContent {
+  min-height: 400px;
+  padding: 30px 0;
+}
+
+.tabContent h2 {
+  color: #1565c0;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 3px solid #e3f2fd;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tabContent h2::before {
+  content: '';
+  width: 4px;
+  height: 28px;
+  background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+  border-radius: 2px;
+}
+
+/* Overview Section */
+.overviewText,
+.servicesText,
+.technologyText {
+  line-height: 1.8;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.overviewText p,
+.servicesText p,
+.technologyText p {
+  margin-bottom: 16px;
+}
+
+.introCard {
+  background: linear-gradient(135deg, #f8f9ff 0%, #e3f2fd 100%);
+  border-radius: 16px;
+  padding: 30px;
+  margin-bottom: 30px;
+  display: flex;
+  gap: 20px;
+  border: 2px solid #e3f2fd;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.1);
+}
+
+.introIcon {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+}
+
+.introContent h3 {
+  color: #1565c0;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.introContent p {
+  color: #2c3e50;
+  line-height: 1.8;
+  margin: 0;
+}
+
+.highlightsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.highlightCard {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  border: 2px solid #e8ecf1;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.highlightCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  border-color: #1976d2;
+}
+
+.highlightIcon {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: white;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.highlightCard h4 {
+  color: #1565c0;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.highlightCard p {
+  color: #6c757d;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Services Section */
+.servicesContent {
+  margin-top: 20px;
+}
+
+.servicesIntro {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+  border-left: 4px solid #ffc107;
+}
+
+.servicesIntro p {
+  margin: 0;
+  color: #856404;
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.servicesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
+}
+
+.serviceCard {
+  background: white;
+  border-radius: 16px;
+  padding: 25px;
+  border: 2px solid #e8ecf1;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.serviceCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  border-color: #1976d2;
+}
+
+.serviceIcon {
+  width: 70px;
+  height: 70px;
+  background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: white;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+}
+
+.serviceCard h3 {
+  color: #1565c0;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 15px;
+}
+
+.serviceCard ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.serviceCard li {
+  padding: 10px 0;
+  padding-left: 25px;
+  position: relative;
+  color: #2c3e50;
+  line-height: 1.7;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.serviceCard li:last-child {
+  border-bottom: none;
+}
+
+.serviceCard li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #4caf50;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* Technology Section */
+.technologyContent {
+  margin-top: 20px;
+}
+
+.techIntro {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+  border-left: 4px solid #1976d2;
+}
+
+.techIntro p {
+  margin: 0;
+  color: #1565c0;
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.techCategories {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
+}
+
+.techCategory {
+  background: white;
+  border-radius: 16px;
+  padding: 25px;
+  border: 2px solid #e8ecf1;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.techCategory:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  border-color: #1976d2;
+}
+
+.techCategoryHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e8ecf1;
+}
+
+.techCategoryHeader i {
+  font-size: 32px;
+  color: #1976d2;
+}
+
+.techCategoryHeader h3 {
+  color: #1565c0;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.techItems {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.techItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9ff;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.techItem:hover {
+  background: #e3f2fd;
+  transform: translateX(5px);
+}
+
+.techItem i {
+  color: #4caf50;
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.techItem span {
+  color: #2c3e50;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.servicesText ul,
+.technologyText ul {
+  margin-left: 25px;
+  margin-bottom: 16px;
+}
+
+.servicesText li,
+.technologyText li {
+  margin-bottom: 12px;
+  line-height: 1.7;
+}
+
+/* Doctors Section */
+.doctorsSection {
+  margin-top: 20px;
+}
+
+.doctorsGridWrapper {
+  margin-top: 30px;
+}
+
+/* Ensure doctors grid uses consistent styling from DoctorBookingList */
+.doctorsGridWrapper .doctorsGrid {
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+  margin-bottom: 0;
+}
+
+/* Override any conflicting styles to ensure consistency */
+.doctorsGridWrapper .doctorCard {
+  min-height: auto;
+  height: auto;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Hide tier badge in specialty detail page */
+.doctorsGridWrapper .doctorCard .tierBadge {
+  display: none !important;
+}
+
+/* Ensure consistent card sizing */
+.doctorsGridWrapper .doctorCard .cardTopSection {
+  width: 100%;
+}
+
+/* Responsive adjustments for doctor cards */
+@media (max-width: 1200px) {
+  .doctorsGridWrapper .doctorsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .doctorsGridWrapper .doctorsGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* Loading & Error States */
+.loading,
+.error {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 18px;
+  color: #6c757d;
+}
+
+.error {
+  color: #d32f2f;
+}
+
+.noResults,
+.noDoctors {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6c757d;
+}
+
+.viewAllDoctors {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: #1976d2;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.viewAllDoctors:hover {
+  background: #1565c0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+}
+
+.backButton {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: #6c757d;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.backButton:hover {
+  background: #5a6268;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+
+  .content {
+    padding: 20px;
+  }
+
+  .header h1 {
+    font-size: 32px;
+  }
+
+  .detailHeader {
+    flex-direction: column;
+  }
+
+  .headerImage {
+    flex: 1;
+    width: 100%;
+  }
+
+  .specialtiesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .doctorsGridWrapper .doctorsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tabs {
+    flex-wrap: wrap;
+    overflow: visible;
+    justify-content: center;
+  }
+
+  .tab {
+    padding: 12px 20px;
+    font-size: 14px;
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+  }
+
+  .introCard {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .highlightsGrid,
+  .servicesGrid,
+  .techCategories {
+    grid-template-columns: 1fr;
+  }
+
+  .introIcon,
+  .highlightIcon,
+  .serviceIcon {
+    margin: 0 auto 15px;
+  }
+
+  .tabContent h2 {
+    font-size: 24px;
+  }
+
+  .introContent h3 {
+    font-size: 20px;
+  }
+
+  .serviceCard h3,
+  .techCategoryHeader h3 {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabContent h2 {
+    font-size: 20px;
+  }
+
+  .tab {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+
+  .introCard,
+  .serviceCard,
+  .techCategory {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header h1 {
+    font-size: 28px;
+  }
+
+  .headerContent h1 {
+    font-size: 28px;
+  }
+
+  .subtitle {
+    font-size: 16px;
+  }
+}
+

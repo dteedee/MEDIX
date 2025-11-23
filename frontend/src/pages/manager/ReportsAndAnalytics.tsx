@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { useToast } from '../../contexts/ToastContext'
 import dashboardService from '../../services/dashboardService'
-import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto, ManagerDashboardSummaryDto } from '../../types/dashboard.types'
+import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto, ManagerDashboardSummaryDto, TopRatedDoctorDto } from '../../types/dashboard.types'
 import styles from '../../styles/manager/ReportsAndAnalytics.module.css'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 export default function ReportsAndAnalytics() {
   const [summary, setSummary] = useState<ManagerDashboardSummaryDto | null>(null);
   const [specializations, setSpecializations] = useState<SpecializationDistributionDto[]>([]);
   const [appointmentTrends, setAppointmentTrends] = useState<AppointmentTrendsDto | null>(null);
   const [userGrowth, setUserGrowth] = useState<UserGrowthDto | null>(null);
+  const [topRatedDoctors, setTopRatedDoctors] = useState<TopRatedDoctorDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedPeriod, setSelectedPeriod] = useState('30days');
@@ -20,12 +22,13 @@ export default function ReportsAndAnalytics() {
     loadSpecializations();
     loadAppointmentTrends();  
     loadUserGrowth();
+    loadTopRatedDoctors();
   }, [selectedPeriod, selectedYear]);
 
   const loadSpecializations = async () => {
     try {
       const data = await dashboardService.getPopularSpecializations();
-      console.log('📊 Chuyên khoa phổ biến:', data);
+   
       setSpecializations(data);
     } catch (error) {
       console.error('Error loading specializations:', error);
@@ -36,10 +39,10 @@ export default function ReportsAndAnalytics() {
   const loadAppointmentTrends = async () => {
     try {
       const data = await dashboardService.getAppointmentTrends(undefined, selectedYear);
-      console.log('📈 Xu hướng lịch hẹn:', data);
+     
       setAppointmentTrends(data);
     } catch (error) {
-      console.error('Error loading appointment trends:', error);
+     
       showToast('Không thể tải dữ liệu xu hướng lịch hẹn', 'error');
     }
   };
@@ -47,10 +50,10 @@ export default function ReportsAndAnalytics() {
   const loadUserGrowth = async () => {
     try {
       const data = await dashboardService.getUserGrowth(selectedYear);
-      console.log('👥 Tăng trưởng người dùng:', data);
+      
       setUserGrowth(data);
     } catch (error) {
-      console.error('Error loading user growth:', error);
+     
       showToast('Không thể tải dữ liệu tăng trưởng người dùng', 'error');
     }
   };
@@ -59,13 +62,23 @@ export default function ReportsAndAnalytics() {
     setLoading(true);
     try {
       const data = await dashboardService.getSummary();
-      console.log('📊 Resumo do Dashboard:', data);
+   
       setSummary(data);
       setLoading(false);
     } catch (error) {
-      console.error('Error loading summary:', error);
+   
       showToast('Không thể tải dữ liệu tóm tắt', 'error');
       setLoading(false);
+    }
+  };
+
+  const loadTopRatedDoctors = async () => {
+    try {
+      const data = await dashboardService.getTopRatedDoctors(3);
+      setTopRatedDoctors(data);
+    } catch (error) {
+      console.error('Error loading top rated doctors:', error);
+      showToast('Không thể tải dữ liệu bác sĩ được đánh giá cao', 'error');
     }
   };
 
@@ -174,7 +187,7 @@ export default function ReportsAndAnalytics() {
                 <div className={styles.metricValue}>{formatNumber(summary.users.total)}</div>
                 <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.users.growth) }}>
                   {getGrowthIcon(summary.users.growth)}
-                  <span>{summary.users.growth > 0 ? '+' : ''}{summary.users.growth.toFixed(1)}%</span>
+                  <span>{summary.users.growth > 0 ? '+' : ''}{summary.users.growth.toFixed(1)}% so với tháng trước</span>
                 </div>
               </div>
             </div>
@@ -193,7 +206,7 @@ export default function ReportsAndAnalytics() {
                 <div className={styles.metricValue}>{formatNumber(summary.doctors.total)}</div>
                 <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.doctors.growth) }}>
                   {getGrowthIcon(summary.doctors.growth)}
-                  <span>{summary.doctors.growth > 0 ? '+' : ''}{summary.doctors.growth.toFixed(1)}%</span>
+                  <span>{summary.doctors.growth > 0 ? '+' : ''}{summary.doctors.growth.toFixed(1)}% so với tháng trước</span>
                 </div>
               </div>
             </div>
@@ -212,7 +225,7 @@ export default function ReportsAndAnalytics() {
                 <div className={styles.metricValue}>{formatNumber(summary.appointments.total)}</div>
                 <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.appointments.growth) }}>
                   {getGrowthIcon(summary.appointments.growth)}
-                  <span>{summary.appointments.growth > 0 ? '+' : ''}{summary.appointments.growth.toFixed(1)}%</span>
+                  <span>{summary.appointments.growth > 0 ? '+' : ''}{summary.appointments.growth.toFixed(1)}% so với tháng trước</span>
                 </div>
               </div>
             </div>
@@ -229,9 +242,97 @@ export default function ReportsAndAnalytics() {
                 <div className={styles.metricValue}>{formatCurrency(summary.revenue.total)}</div>
                 <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.revenue.growth) }}>
                   {getGrowthIcon(summary.revenue.growth)}
-                  <span>{summary.revenue.growth > 0 ? '+' : ''}{summary.revenue.growth.toFixed(1)}%</span>
+                  <span>{summary.revenue.growth > 0 ? '+' : ''}{summary.revenue.growth.toFixed(1)}% so với tháng trước</span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Top Rated Doctors */}
+          <div className={styles.topRatedSection}>
+            <div className={styles.sectionHeader}>
+              <h2>Top 3 Bác sĩ được đánh giá cao nhất</h2>
+              <p>Những bác sĩ có điểm đánh giá trung bình cao nhất</p>
+            </div>
+            <div className={styles.topRatedGrid}>
+              {topRatedDoctors.length > 0 ? (
+                topRatedDoctors.map((doctor, index) => (
+                  <div key={doctor.doctorId} className={`${styles.topRatedCard} ${styles[`rank${index + 1}`]}`}>
+                    <div className={styles.laurelBadge}>
+                      {/* Laurel Wreath */}
+                      <svg className={styles.laurelWreath} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        {/* Left Laurel */}
+                        <path d="M25,70 Q20,60 20,50 Q20,40 25,30 Q20,35 15,40 Q10,45 10,50 Q10,55 15,60 Q20,65 25,70" fill="currentColor"/>
+                        <path d="M30,65 Q28,58 28,50 Q28,42 30,35 Q26,40 22,45 Q18,50 22,55 Q26,60 30,65" fill="currentColor"/>
+                        <path d="M35,60 Q34,56 34,50 Q34,44 35,40 Q32,44 29,48 Q26,52 29,56 Q32,60 35,60" fill="currentColor"/>
+                        
+                        {/* Right Laurel */}
+                        <path d="M75,70 Q80,60 80,50 Q80,40 75,30 Q80,35 85,40 Q90,45 90,50 Q90,55 85,60 Q80,65 75,70" fill="currentColor"/>
+                        <path d="M70,65 Q72,58 72,50 Q72,42 70,35 Q74,40 78,45 Q82,50 78,55 Q74,60 70,65" fill="currentColor"/>
+                        <path d="M65,60 Q66,56 66,50 Q66,44 65,40 Q68,44 71,48 Q74,52 71,56 Q68,60 65,60" fill="currentColor"/>
+                      </svg>
+                      
+                      {/* Crown */}
+                      <svg className={styles.crown} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                        <path d="M12 2l2 6 6-2-4 6h8l-12 8-12-8h8l-4-6 6 2z"/>
+                        <rect x="3" y="18" width="18" height="3" rx="1"/>
+                      </svg>
+                      
+                      {/* Rank Text */}
+                      <div className={styles.rankText}>
+                        <div className={styles.bestLabel}>BEST</div>
+                        <div className={styles.rankNumber}>{index + 1}</div>
+                      </div>
+                    </div>
+                    
+                    <div className={styles.doctorAvatar}>
+                      {doctor.imageUrl ? (
+                        <img src={doctor.imageUrl} alt={doctor.doctorName} />
+                      ) : (
+                        <div className={styles.avatarPlaceholder}>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className={styles.doctorInfo}>
+                      <h3 className={styles.doctorName}>{doctor.doctorName}</h3>
+                      <p className={styles.doctorSpecialty}>{doctor.specialization}</p>
+                    </div>
+                    
+                    <div className={styles.ratingInfo}>
+                      <div className={styles.ratingStars}>
+                        {[...Array(5)].map((_, i) => (
+                          <svg
+                            key={i}
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill={i < Math.floor(doctor.averageRating) ? "currentColor" : "none"}
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                          </svg>
+                        ))}
+                      </div>
+                      <div className={styles.ratingValue}>
+                        <span className={styles.ratingScore}>{doctor.formattedRating}</span>
+                        <span className={styles.ratingCount}>({doctor.reviewCount} đánh giá)</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className={styles.emptyState}>
+                  <i className="bi bi-inbox"></i>
+                  <p>Chưa có dữ liệu đánh giá bác sĩ</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -305,30 +406,75 @@ export default function ReportsAndAnalytics() {
                         <span className={styles.summaryValue}>{formatCurrency(appointmentTrends.totalRevenue)}</span>
                       </div>
                     </div>
-                    <div className={styles.trendChart}>
-                      {appointmentTrends.monthly.map((trend) => {
-                        const monthName = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'][trend.month - 1];
-                        const maxAppointments = Math.max(...appointmentTrends.monthly.map(t => t.appointmentCount), 1);
-                        
-                        return (
-                          <div key={trend.month} className={styles.trendItem}>
-                            <div className={styles.trendBar}>
-                              <div 
-                                className={styles.trendBarFill}
-                                style={{ 
-                                  height: `${(trend.appointmentCount / maxAppointments) * 100}%` 
-                                }}
-                              ></div>
-                            </div>
-                            <div className={styles.trendInfo}>
-                              <span className={styles.trendMonth}>{monthName}</span>
-                              <span className={styles.trendAppointments}>{trend.appointmentCount} lịch hẹn</span>
-                              <span className={styles.trendRevenue}>{formatCurrency(trend.totalRevenue)}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <ResponsiveContainer width="100%" height={350}>
+                      <LineChart
+                        data={appointmentTrends.monthly.map(trend => ({
+                          month: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'][trend.month - 1],
+                          'Lịch hẹn': trend.appointmentCount,
+                          'Doanh thu (triệu)': Math.round(trend.totalRevenue / 1000000)
+                        }))}
+                        margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis 
+                          dataKey="month" 
+                          tick={{ fontSize: 13, fill: '#6b7280' }}
+                          stroke="#9ca3af"
+                        />
+                        <YAxis 
+                          yAxisId="left"
+                          tick={{ fontSize: 12, fill: '#667eea' }}
+                          stroke="#667eea"
+                          width={50}
+                        />
+                        <YAxis 
+                          yAxisId="right"
+                          orientation="right"
+                          tick={{ fontSize: 12, fill: '#f59e0b' }}
+                          stroke="#f59e0b"
+                          width={70}
+                          tickFormatter={(value) => `${value}M`}
+                        />
+                        <Tooltip 
+                          formatter={(value: number, name: string) => {
+                            if (name === 'Doanh thu (triệu)') {
+                              return [`${value} triệu VND`, 'Doanh thu'];
+                            }
+                            return [value, name];
+                          }}
+                          labelFormatter={(label) => `Tháng ${label}`}
+                          contentStyle={{ 
+                            backgroundColor: 'white', 
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            padding: '12px'
+                          }}
+                        />
+                        <Legend 
+                          wrapperStyle={{ paddingTop: '20px' }}
+                          iconType="line"
+                        />
+                        <Line 
+                          yAxisId="left"
+                          type="monotone"
+                          dataKey="Lịch hẹn"
+                          stroke="#667eea"
+                          strokeWidth={3}
+                          dot={{ fill: '#667eea', r: 5 }}
+                          activeDot={{ r: 7 }}
+                        />
+                        <Line 
+                          yAxisId="right"
+                          type="monotone"
+                          dataKey="Doanh thu (triệu)"
+                          stroke="#f59e0b"
+                          strokeWidth={3}
+                          dot={{ fill: '#f59e0b', r: 5 }}
+                          activeDot={{ r: 7 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </>
                 ) : (
                   <div className={styles.emptyState}>
@@ -369,41 +515,36 @@ export default function ReportsAndAnalytics() {
                         <span className={styles.summaryValue}>{userGrowth.totalNewDoctors}</span>
                       </div>
                     </div>
-                    <div className={styles.growthChart}>
-                      {userGrowth.monthly.map((growth) => {
-                        const monthName = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'][growth.month - 1];
-                        const maxUsers = Math.max(...userGrowth.monthly.map(g => g.newUsers), 1);
-                        const maxDoctors = Math.max(...userGrowth.monthly.map(g => g.newDoctors), 1);
-                        
-                        return (
-                          <div key={growth.month} className={styles.growthItem}>
-                            <div className={styles.growthBars}>
-                              <div className={styles.growthBar}>
-                                <div 
-                                  className={styles.growthBarFill}
-                                  style={{ 
-                                    height: `${(growth.newUsers / maxUsers) * 100}%` 
-                                  }}
-                                ></div>
-                              </div>
-                              <div className={styles.growthBar}>
-                                <div 
-                                  className={styles.growthBarFill2}
-                                  style={{ 
-                                    height: `${(growth.newDoctors / maxDoctors) * 100}%` 
-                                  }}
-                                ></div>
-                              </div>
-                            </div>
-                            <div className={styles.growthInfo}>
-                              <span className={styles.growthMonth}>{monthName}</span>
-                              <span className={styles.growthUsers}>{growth.newUsers} người dùng</span>
-                              <span className={styles.growthDoctors}>{growth.newDoctors} bác sĩ</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart 
+                        data={userGrowth.monthly.map(growth => ({
+                          month: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'][growth.month - 1],
+                          'Người dùng mới': growth.newUsers,  
+                          'Bác sĩ mới': growth.newDoctors
+                        }))}
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="Người dùng mới" 
+                          stroke="#3b82f6" 
+                          strokeWidth={2}
+                          activeDot={{ r: 8 }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="Bác sĩ mới" 
+                          stroke="#10b981" 
+                          strokeWidth={2}
+                          activeDot={{ r: 8 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </>
                 ) : (
                   <div className={styles.emptyState}>

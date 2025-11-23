@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto, ManagerDashboardSummaryDto } from "../types/dashboard.types";
+import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto, ManagerDashboardSummaryDto, TopRatedDoctorDto } from "../types/dashboard.types";
 
 class DashboardService {
     async getPopularSpecializations(): Promise<SpecializationDistributionDto[]> {
@@ -49,6 +49,16 @@ class DashboardService {
             return response.data;
         } catch (error: any) {
             console.error('Get dashboard summary error:', error);
+            throw error;
+        }
+    }
+
+    async getTopRatedDoctors(count: number = 3): Promise<TopRatedDoctorDto[]> {
+        try {
+            const response = await apiClient.get<TopRatedDoctorDto[]>(`/dashboard/top-doctors?count=${count}`);
+            return response.data || [];
+        } catch (error: any) {
+            console.error('Get top rated doctors error:', error);
             throw error;
         }
     }

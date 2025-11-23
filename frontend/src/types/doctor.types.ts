@@ -282,3 +282,19 @@ export interface DoctorSalary{
   netSalary: number;
   paidAt: string;
 }
+
+export interface DoctorPerformanceDto {
+  doctorId: string;
+  doctorName: string;
+  specialization: string;
+  averageRating: number;
+  reviewCount: number;
+  successfulCases: number;
+  totalCases: number;
+  successRate: number;
+  compositeScore: number;
+  imageUrl: string | null;
+  formattedRating: string;
+  formattedSuccessRate: string;
+  consultationFee: number | null;
+}

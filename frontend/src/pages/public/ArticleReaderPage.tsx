@@ -8,6 +8,8 @@ import type { ArticleDTO } from '../../types/article.types';
 import type { CategoryDTO } from '../../types/category.types';
 import Pagination from '../../components/layout/Pagination';
 import { useLanguage } from '../../contexts/LanguageContext';
+import ChatbotBubble from '../../components/ChatbotBubble';
+import BackToTopButton from '../../components/BackToTopButton';
 
 function scrollToTop() {
   window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
@@ -433,6 +435,8 @@ export default function ArticleReaderPage() {
           )}
         </main>
       </div>
+      <BackToTopButton />
+      <ChatbotBubble />
     </div>
   );
 }

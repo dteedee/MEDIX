@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, ServiceTierWithPaginatedDoctorsDto, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters, DoctorQuery, DoctorList, DoctorDto, EducationGroupWithPaginatedDoctorsDto } from "../types/doctor.types";
+import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, ServiceTierWithPaginatedDoctorsDto, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters, DoctorQuery, DoctorList, DoctorDto, EducationGroupWithPaginatedDoctorsDto, DoctorPerformanceDto } from "../types/doctor.types";
 
 class DoctorService {
     async getDoctorProfile(doctorID: string | undefined): Promise<DoctorProfileDto> {
@@ -100,6 +100,35 @@ class DoctorService {
             return response.data;
         } catch (error: any) {
             console.error('Get doctor statistics error: ', error);
+            throw this.handleApiError(error);
+        }
+    }
+
+    async getTopDoctorsByPerformance(ratingWeight: number = 0.7, successWeight: number = 0.3): Promise<DoctorPerformanceDto[]> {
+        try {
+            const response = await apiClient.get<DoctorPerformanceDto[]>('/doctor/top/performance', {
+                params: {
+                    ratingWeight,
+                    successWeight
+                }
+            });
+            return response.data;
+        } catch (error: any) {
+            console.error('Get top doctors by performance error: ', error);
+            throw this.handleApiError(error);
+        }
+    }
+
+    async updateDoctorEducationAndFee(doctorId: string, data: { education?: string, consultationFee?: number }): Promise<any> {
+        try {
+            const requestBody = {
+                education: data.education || null,
+                consultationFee: data.consultationFee || null
+            };
+            const response = await apiClient.put(`/doctor/${doctorId}/education-fee`, requestBody);
+            return response.data;
+        } catch (error: any) {
+            console.error('Update doctor education and fee error: ', error);
             throw this.handleApiError(error);
         }
     }

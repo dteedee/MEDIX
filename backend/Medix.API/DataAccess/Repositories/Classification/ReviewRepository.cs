@@ -112,5 +112,41 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .ToListAsync();
         }
 
+        public async Task<List<(Guid DoctorId, string DoctorName, string Specialization, double AverageRating, int ReviewCount, string? ImageUrl)>> GetTopDoctorsByRatingAsync(int count = 3)
+        {
+            var topDoctors = await _context.Reviews
+                .Include(r => r.Appointment)
+                    .ThenInclude(a => a.Doctor)
+                        .ThenInclude(d => d.User)
+                .Include(r => r.Appointment)
+                    .ThenInclude(a => a.Doctor)
+                        .ThenInclude(d => d.Specialization)
+                .Where(r => r.Appointment.Doctor != null && r.Appointment.Doctor.User != null)
+                .GroupBy(r => new
+                {
+                    DoctorId = r.Appointment.DoctorId,
+                    DoctorName = r.Appointment.Doctor.User.FullName,
+                    Specialization = r.Appointment.Doctor.Specialization.Name,
+                    ImageUrl = r.Appointment.Doctor.User.AvatarUrl
+                })
+                .Select(g => new
+                {
+                    DoctorId = g.Key.DoctorId,
+                    DoctorName = g.Key.DoctorName,
+                    Specialization = g.Key.Specialization,
+                    ImageUrl = g.Key.ImageUrl,
+                    AverageRating = g.Average(r => r.Rating),
+                    ReviewCount = g.Count()
+                })
+                .Where(x => x.ReviewCount >= 1) // only doctors with >= 1 review
+                .OrderByDescending(x => x.AverageRating)
+                .ThenByDescending(x => x.ReviewCount)
+                .Take(count)
+                .ToListAsync();
+
+            return topDoctors
+                .Select(d => (d.DoctorId, d.DoctorName, d.Specialization, d.AverageRating, d.ReviewCount, d.ImageUrl))
+                .ToList();
+        }
     }
 }

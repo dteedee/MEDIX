@@ -6,6 +6,7 @@ import DoctorDegreeService from '../../services/doctorDegreeService';
 import { useToast } from '../../contexts/ToastContext';
 import DoctorDetails from './DoctorDetails';
 import DoctorReviewModal from './DoctorReviewModal';
+import DoctorEvaluation from './DoctorEvaluation';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 import styles from '../../styles/manager/DoctorManagement.module.css';
 
@@ -48,7 +49,7 @@ const getInitialState = (): DoctorFilters => {
 };
 
 export default function DoctorManagement() {
-  const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'evaluation'>('all');
   const [allDoctors, setAllDoctors] = useState<any[]>([]);
   const [pendingDoctors, setPendingDoctors] = useState<any[]>([]);
   const [specializations, setSpecializations] = useState<string[]>([]);
@@ -434,6 +435,14 @@ export default function DoctorManagement() {
           Chờ phê duyệt
           {stats.pendingCount > 0 && <span className={styles.tabBadgeAlert}>{stats.pendingCount}</span>}
         </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'evaluation' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('evaluation')}
+        >
+          <i className="bi bi-clipboard-data"></i>
+          Đánh giá bác sĩ
+          <span className={styles.tabBadge}>{stats.activeDoctors}</span>
+        </button>
       </div>
 
       {/* Stats Cards */}
@@ -507,8 +516,17 @@ export default function DoctorManagement() {
         </div>
       </div>
 
-      {/* Search and Filter */}
-      <div className={styles.searchSection}>
+      {/* Evaluation Tab Content */}
+      {activeTab === 'evaluation' ? (
+        <DoctorEvaluation 
+          doctors={allDoctors}
+          degrees={degrees}
+          onRefresh={load}
+        />
+      ) : (
+        <>
+          {/* Search and Filter */}
+          <div className={styles.searchSection}>
         <div className={styles.searchWrapper}>
           <i className="bi bi-search"></i>
           <input
@@ -896,6 +914,8 @@ export default function DoctorManagement() {
           onSubmit={handleReviewSubmit}
           isLoading={loadingDetails}
         />
+      )}
+        </>
       )}
     </div>
   );

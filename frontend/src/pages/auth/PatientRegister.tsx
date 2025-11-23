@@ -1457,7 +1457,7 @@ export const PatientRegister: React.FC = () => {
                 onChange={handleChange}
               />
               <label htmlFor="terms" className="terms-text">
-                Tôi đồng ý <a href="#" className="terms-link">Điều khoản dịch vụ</a> và <a href="#" className="terms-link">Chính sách bảo mật</a> của MEDIX. Thông tin y tế của bạn được mã hóa
+                Tôi đồng ý <Link to="/terms" target="_blank" className="terms-link">Điều khoản dịch vụ</Link> và <Link to="/privacy" target="_blank" className="terms-link">Chính sách bảo mật</Link> của MEDIX. Thông tin y tế của bạn được mã hóa
                 và tuân thủ chuẩn bảo mật y tế.
               </label>
             </div>

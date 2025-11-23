@@ -3,7 +3,7 @@ import styles from '../../styles/doctor/doctor-register.module.css'
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 import { DoctorRegisterMetadata } from '../../types/doctor.types';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { PageLoader } from '../../components/ui';
 import DoctorRegistrationFormService from '../../services/doctorRegistrationFormService';
 
@@ -748,7 +748,7 @@ function DoctorRegister() {
                             <div className={styles["checkbox-wrapper"]}>
                                 <input type="checkbox" id="terms" name='agreeToTerms' />
                                 <label htmlFor="terms" className={styles["terms-text"]}>
-                                    Tôi đồng ý <a href="#" className={styles["terms-link"]}>Điều khoản dịch vụ</a> và <a href="#" className={styles["terms-link"]}>Chính sách bảo mật</a> của MEDIX. Thông tin y tế của bạn được mã hóa
+                                    Tôi đồng ý <Link to="/terms" target="_blank" className={styles["terms-link"]}>Điều khoản dịch vụ</Link> và <Link to="/privacy" target="_blank" className={styles["terms-link"]}>Chính sách bảo mật</Link> của MEDIX. Thông tin y tế của bạn được mã hóa
                                     và tuân thủ chuẩn bảo mật y tế.
                                 </label>
                             </div>

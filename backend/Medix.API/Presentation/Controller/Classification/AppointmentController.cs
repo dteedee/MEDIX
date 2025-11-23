@@ -137,7 +137,9 @@ namespace Medix.API.Presentation.Controllers
 
             // 3️⃣ Tạo lịch hẹn
             var created = await _service.CreateAsync(dto);
-          
+            WalletTransaction.RelatedAppointmentId = created.Id;
+
+            await walletTransactionService.UppdateWalletTrasactionAsync(WalletTransaction);
 
             var noticeSetup = await noticeSetupService.GetNoticeSetupByCodeAsync("AppointmentBookingSuccess");
             if (noticeSetup != null) {

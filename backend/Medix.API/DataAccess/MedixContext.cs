@@ -353,8 +353,11 @@ public partial class MedixContext : DbContext
             // ✅ Cấu hình cho các trường ban, miss và salary deduction
             entity.Property(e => e.TotalCaseMissPerWeek).HasDefaultValue(0);
             entity.Property(e => e.NextWeekMiss).HasDefaultValue(0);
-            entity.Property(e => e.isSalaryDeduction).HasDefaultValue(false); // ✅ Trường mới
+            entity.Property(e => e.isSalaryDeduction).HasDefaultValue(false);
             entity.Property(e => e.TotalBanned).HasDefaultValue(0);
+            entity.Property(e=>e.StartDateBanned).HasDefaultValue(null);
+            entity.Property(e=>e.EndDateBanned).HasDefaultValue(null);
+            
 
             entity.HasOne(d => d.ServiceTier).WithMany(p => p.Doctors)
                 .HasForeignKey(d => d.ServiceTierId)

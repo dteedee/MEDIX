@@ -78,6 +78,101 @@ namespace Medix.API.Business.Services.Classification
             var result = await _doctorRepository.UpdateDoctorAsync(doctor);
             return result != null;
         }
+
+
+        public async Task<DoctorBusinessStatsDto?> GetDoctorBusinessStatsAsync(Guid doctorId, DateTime? startDate = null, DateTime? endDate = null)
+        {
+            var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId);
+            if (doctor == null) return null;
+
+            // Use appointments loaded with the doctor repository when available; otherwise fetch via repository.
+            var appointments = doctor.Appointments?.AsEnumerable() ?? (await _appointmentRepository.GetByDoctorAsync(doctorId));
+
+            // apply date filters on AppointmentStartTime if provided
+            if (startDate.HasValue)
+            {
+                var sd = startDate.Value.Date;
+                appointments = appointments.Where(a => a.AppointmentStartTime.Date >= sd);
+            }
+            if (endDate.HasValue)
+            {
+                var ed = endDate.Value.Date;
+                appointments = appointments.Where(a => a.AppointmentStartTime.Date <= ed);
+            }
+
+            var apptList = appointments.ToList();
+
+            // Business calculations
+            var totalBookings = apptList.Select(a => a.PatientId).Distinct().Count();
+            var successfulStatuses = Constants.SuccessfulAppointmentStatusCode;
+            var successfulBookings = apptList.Count(a => successfulStatuses.Contains(a.StatusCode));
+            var totalCases = apptList.Count;
+            var successfulCases = apptList.Count(a => a.StatusCode == Constants.CompletedAppointmentStatusCode);
+            var revenue = apptList.Select(a => a.TotalAmount).DefaultIfEmpty(0m).Sum();
+
+            // Salaries (DoctorSalaries) - use _context to query DoctorSalaries
+            var salariesQuery = _context.DoctorSalaries.AsQueryable().Where(s => s.DoctorId == doctorId);
+
+            if (startDate.HasValue)
+            {
+                var sd = DateOnly.FromDateTime(startDate.Value.Date);
+                // include salaries that end on/after startDate
+                salariesQuery = salariesQuery.Where(s => s.PeriodEndDate >= sd);
+            }
+            if (endDate.HasValue)
+            {
+                var ed = DateOnly.FromDateTime(endDate.Value.Date);
+                // include salaries that start on/before endDate
+                salariesQuery = salariesQuery.Where(s => s.PeriodStartDate <= ed);
+            }
+
+            var salaries = await salariesQuery
+                .OrderByDescending(s => s.PaidAt)
+                .ToListAsync();
+
+            var salaryDtos = salaries.Select(s => new DoctorSalaryDto
+            {
+                Id = s.Id,
+                PeriodStartDate = s.PeriodStartDate,
+                PeriodEndDate = s.PeriodEndDate,
+                TotalAppointments = s.TotalAppointments,
+                TotalEarnings = s.TotalEarnings,
+                CommissionDeductions = s.CommissionDeductions,
+                NetSalary = s.NetSalary,
+                Status = s.Status,
+                PaidAt = s.PaidAt
+            }).ToList();
+
+            var totalSalary = salaryDtos.Sum(s => s.NetSalary);
+
+            // Reviews
+            var reviews = await _reviewRepository.GetReviewsByDoctorAsync(doctorId);
+            var avgRating = reviews.Any() ? Math.Round(reviews.Average(r => r.Rating), 2) : 0.0;
+            var totalReviews = reviews.Count;
+            var ratingByStar = new int[5];
+            foreach (var r in reviews)
+            {
+                if (r.Rating >= 1 && r.Rating <= 5)
+                    ratingByStar[r.Rating - 1]++;
+            }
+
+            var dto = new DoctorBusinessStatsDto
+            {
+               
+                TotalBookings = totalBookings,
+                SuccessfulBookings = successfulBookings,
+                TotalCases = totalCases,
+                SuccessfulCases = successfulCases,
+                Revenue = revenue,
+                TotalSalary = totalSalary,
+            
+                AverageRating = avgRating,
+                TotalReviews = totalReviews,
+                RatingByStar = ratingByStar
+            };
+
+            return dto;
+        }
         public async Task<bool> LicenseNumberExistsAsync(string licenseNumber) => await _doctorRepository.LicenseNumberExistsAsync(licenseNumber);
 
         //public async Task<DoctorProfileDto?> GetDoctorProfileByUserNameAsync(string userName)

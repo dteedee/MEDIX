@@ -67,4 +67,39 @@
         public decimal? ConsultationFee { get; set; }
     }
 
+
+    public class DoctorSalaryDto
+    {
+        public Guid Id { get; set; }
+        public DateOnly PeriodStartDate { get; set; }
+        public DateOnly PeriodEndDate { get; set; }
+        public int TotalAppointments { get; set; }
+        public decimal TotalEarnings { get; set; }
+        public decimal CommissionDeductions { get; set; }
+        public decimal NetSalary { get; set; }
+        public string? Status { get; set; }
+        public DateTime? PaidAt { get; set; }
+    }
+
+    public class DoctorBusinessStatsDto
+    {
+     
+
+       
+        public int TotalBookings { get; set; }            // distinct patients
+        public int SuccessfulBookings { get; set; }       // appointments with success statuses
+        public int TotalCases { get; set; }               // total appointments
+        public int SuccessfulCases { get; set; }          // Completed cases
+        public decimal Revenue { get; set; }              // sum TotalAmount
+
+        // Salary / payroll (from DoctorSalaries)
+        public decimal TotalSalary { get; set; }
+     
+
+        // Performance / reviews
+        public double AverageRating { get; set; }         // 0..5
+        public int TotalReviews { get; set; }
+
+    }
+
 }

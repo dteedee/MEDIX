@@ -32,11 +32,18 @@ export default function DoctorEvaluation({
   const [loading, setLoading] = useState(true);
   const [updateModalDoctor, setUpdateModalDoctor] = useState<any>(null);
   const [updateType, setUpdateType] = useState<'salary' | 'education' | 'both'>('both');
+  const [specializations, setSpecializations] = useState<any[]>([]);
+  const [filterSpecialization, setFilterSpecialization] = useState<string>('all');
+  const [filterEducation, setFilterEducation] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const { showToast } = useToast();
 
   // Load performance data from API
   useEffect(() => {
     loadPerformanceData();
+    loadSpecializations();
   }, []);
 
   const loadPerformanceData = async () => {
@@ -49,6 +56,15 @@ export default function DoctorEvaluation({
       showToast('Không thể tải dữ liệu hiệu suất bác sĩ', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSpecializations = async () => {
+    try {
+      const metadata = await DoctorService.getMetadata();
+      setSpecializations(metadata.specializations || []);
+    } catch (error) {
+      console.error('Error loading specializations:', error);
     }
   };
 
@@ -112,11 +128,19 @@ export default function DoctorEvaluation({
   const filteredAndSortedDoctors = useMemo(() => {
     let filtered = doctorsWithMetrics.filter(d => {
       const searchLower = searchTerm.toLowerCase();
-      return (
+      const matchSearch = (
         d.fullName?.toLowerCase().includes(searchLower) ||
         d.email?.toLowerCase().includes(searchLower) ||
         d.specialization?.toLowerCase().includes(searchLower)
       );
+
+      const matchSpecialization = filterSpecialization === 'all' || 
+        d.specialization === filterSpecialization;
+
+      const matchEducation = filterEducation === 'all' || 
+        d.education === filterEducation;
+
+      return matchSearch && matchSpecialization && matchEducation;
     });
 
     // Sắp xếp
@@ -172,7 +196,21 @@ export default function DoctorEvaluation({
     });
 
     return filtered;
-  }, [doctorsWithMetrics, searchTerm, sortConfig]);
+  }, [doctorsWithMetrics, searchTerm, sortConfig, filterSpecialization, filterEducation]);
+
+  // Phân trang
+  const paginatedDoctors = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredAndSortedDoctors.slice(startIndex, endIndex);
+  }, [filteredAndSortedDoctors, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredAndSortedDoctors.length / pageSize);
+
+  // Reset về trang 1 khi filter thay đổi
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterSpecialization, filterEducation]);
 
   const handleSort = (key: string) => {
     setSortConfig(prev => ({
@@ -325,21 +363,92 @@ export default function DoctorEvaluation({
         </div>
       </div>
 
-      {/* Thanh tìm kiếm */}
-      <div className={styles.searchBar}>
-        <i className="bi bi-search"></i>
-        <input
-          type="text"
-          placeholder="Tìm kiếm bác sĩ theo tên, email hoặc chuyên khoa..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        {searchTerm && (
-          <button onClick={() => setSearchTerm('')} className={styles.clearBtn}>
-            <i className="bi bi-x-lg"></i>
-          </button>
-        )}
+      {/* Thanh tìm kiếm và filter */}
+      <div className={styles.searchSection}>
+        <div className={styles.searchBar}>
+          <i className="bi bi-search"></i>
+          <input
+            type="text"
+            placeholder="Tìm kiếm bác sĩ theo tên, email hoặc chuyên khoa..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          {searchTerm && (
+            <button onClick={() => setSearchTerm('')} className={styles.clearBtn}>
+              <i className="bi bi-x-lg"></i>
+            </button>
+          )}
+        </div>
+        <button
+          className={`${styles.filterBtn} ${showFilters ? styles.active : ''}`}
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <i className="bi bi-funnel-fill"></i>
+          Lọc
+          {(filterSpecialization !== 'all' || filterEducation !== 'all') && (
+            <span className={styles.filterBadge}></span>
+          )}
+        </button>
       </div>
+
+      {/* Filter Panel */}
+      {showFilters && (
+        <div className={styles.filterPanel}>
+          <div className={styles.filterGrid}>
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-hospital"></i>
+                Chuyên khoa
+              </label>
+              <select 
+                value={filterSpecialization} 
+                onChange={(e) => setFilterSpecialization(e.target.value)}
+              >
+                <option value="all">Tất cả chuyên khoa</option>
+                {specializations.map((spec: any) => (
+                  <option key={spec.id} value={spec.name}>{spec.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-mortarboard-fill"></i>
+                Trình độ học vấn
+              </label>
+              <select 
+                value={filterEducation} 
+                onChange={(e) => setFilterEducation(e.target.value)}
+              >
+                <option value="all">Tất cả trình độ</option>
+                {degrees.map((degree: any) => (
+                  <option key={degree.code} value={degree.code}>{degree.description}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.filterActions}>
+            <button 
+              onClick={() => {
+                setFilterSpecialization('all');
+                setFilterEducation('all');
+              }} 
+              className={styles.btnResetFilter}
+            >
+              <i className="bi bi-arrow-counterclockwise"></i>
+              Đặt lại
+            </button>
+            <button 
+              onClick={() => setShowFilters(false)} 
+              className={styles.btnApplyFilter}
+            >
+              <i className="bi bi-check2"></i>
+              Áp dụng
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Bảng đánh giá */}
       <div className={styles.tableContainer}>
@@ -407,10 +516,10 @@ export default function DoctorEvaluation({
             </tr>
           </thead>
           <tbody>
-            {filteredAndSortedDoctors.length > 0 ? (
-              filteredAndSortedDoctors.map((doctor, index) => (
+            {paginatedDoctors.length > 0 ? (
+              paginatedDoctors.map((doctor, index) => (
                 <tr key={doctor.id} className={styles.tableRow}>
-                  <td>{index + 1}</td>
+                  <td>{(currentPage - 1) * pageSize + index + 1}</td>
                   <td>
                     <img
                       src={doctor.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.fullName)}&background=667eea&color=fff`}
@@ -513,6 +622,72 @@ export default function DoctorEvaluation({
             )}
           </tbody>
         </table>
+
+        {/* Pagination */}
+        {filteredAndSortedDoctors.length > 0 && (
+          <div className={styles.pagination}>
+            <div className={styles.paginationInfo}>
+              Hiển thị {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredAndSortedDoctors.length)} trong tổng số {filteredAndSortedDoctors.length} bác sĩ
+            </div>
+
+            <div className={styles.paginationControls}>
+              <select 
+                value={pageSize} 
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className={styles.pageSizeSelect}
+              >
+                <option value={5}>5 / trang</option>
+                <option value={10}>10 / trang</option>
+                <option value={15}>15 / trang</option>
+                <option value={20}>20 / trang</option>
+                <option value={50}>50 / trang</option>
+              </select>
+
+              <div className={styles.paginationButtons}>
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className={styles.pageBtn}
+                  title="Trang đầu"
+                >
+                  <i className="bi bi-chevron-double-left"></i>
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className={styles.pageBtn}
+                  title="Trang trước"
+                >
+                  <i className="bi bi-chevron-left"></i>
+                </button>
+
+                <span className={styles.pageIndicator}>
+                  Trang {currentPage} / {totalPages || 1}
+                </span>
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className={styles.pageBtn}
+                  title="Trang sau"
+                >
+                  <i className="bi bi-chevron-right"></i>
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className={styles.pageBtn}
+                  title="Trang cuối"
+                >
+                  <i className="bi bi-chevron-double-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal chi tiết */}

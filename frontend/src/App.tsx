@@ -77,6 +77,10 @@ import ErrorPageWrapper from './pages/error/ErrorPageWrapper';
 import PrivacyPolicy from './pages/public/PrivacyPolicy';
 import TermsOfService from './pages/public/TermsOfService';
 import AboutUs from './pages/public/AboutUs';
+
+// Specialty pages
+import SpecialtyListPage from './pages/public/SpecialtyListPage';
+import SpecialtyDetailPage from './pages/public/SpecialtyDetailPage';
 import EMRTimeline from './pages/patient/EMRTimeline';
 import CategoryList from './pages/manager/CategoryManagement';
 
@@ -110,6 +114,8 @@ export function App() {
                 <Route element={<PublicLayout />}>
                   <Route index element={<HomePage />} />
                   <Route path="/doctors" element={<DoctorBookingList />} />
+                  <Route path="/specialties" element={<SpecialtyListPage />} />
+                  <Route path="/specialties/:id" element={<SpecialtyDetailPage />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/about" element={<AboutUs />} />

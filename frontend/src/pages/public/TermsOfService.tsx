@@ -22,8 +22,9 @@ const TermsOfService: React.FC = () => {
         <div className={styles["privacy-body"]}>
           <p>
             Điều khoản dịch vụ này quy định các điều kiện sử dụng dịch vụ của Hệ thống Y tế Thông minh MEDIX 
-            (sau đây gọi là "MEDIX" hoặc "Chúng tôi"). Bằng việc sử dụng dịch vụ của MEDIX, bạn đồng ý tuân thủ 
-            các điều khoản và điều kiện được nêu trong tài liệu này.
+            (sau đây gọi là "MEDIX" hoặc "Chúng tôi"). Bằng việc truy cập, đăng ký tài khoản hoặc sử dụng bất kỳ 
+            dịch vụ nào của MEDIX, bạn xác nhận rằng đã đọc, hiểu và đồng ý tuân thủ các điều khoản và điều kiện 
+            được nêu trong tài liệu này. Nếu bạn không đồng ý với bất kỳ điều khoản nào, vui lòng không sử dụng dịch vụ của chúng tôi.
           </p>
 
           <section className={styles["section"]}>
@@ -79,8 +80,21 @@ const TermsOfService: React.FC = () => {
               <h3>3.2. Giới hạn dịch vụ:</h3>
               <p>
                 MEDIX không thay thế hoàn toàn việc khám bệnh trực tiếp tại cơ sở y tế. 
-                Dịch vụ chỉ mang tính chất hỗ trợ và tư vấn.
+                Dịch vụ chỉ mang tính chất hỗ trợ và tư vấn. Trong trường hợp khẩn cấp y tế, 
+                bạn nên liên hệ ngay với cơ sở y tế gần nhất hoặc gọi số 115. 
+                MEDIX không chịu trách nhiệm cho các quyết định y tế được đưa ra dựa trên 
+                thông tin từ hệ thống AI mà không có sự tư vấn trực tiếp từ bác sĩ.
               </p>
+            </div>
+
+            <div className={styles["subsection"]}>
+              <h3>3.3. Dịch vụ AI chẩn đoán:</h3>
+              <ul>
+                <li>AI chẩn đoán của MEDIX có độ chính xác khoảng 95% nhưng không thể thay thế chẩn đoán của bác sĩ</li>
+                <li>Kết quả AI chỉ mang tính chất tham khảo và hỗ trợ</li>
+                <li>Người dùng nên tham khảo ý kiến bác sĩ trước khi quyết định điều trị</li>
+                <li>MEDIX không chịu trách nhiệm cho các quyết định y tế dựa hoàn toàn trên kết quả AI</li>
+              </ul>
             </div>
           </section>
 
@@ -164,18 +178,29 @@ const TermsOfService: React.FC = () => {
             <div className={styles["subsection"]}>
               <h3>7.1. Phương thức thanh toán:</h3>
               <ul>
-                <li>Thẻ tín dụng/ghi nợ</li>
-                <li>Ví điện tử (MoMo, ZaloPay, VNPay)</li>
-                <li>Chuyển khoản ngân hàng</li>
-                <li>Thanh toán tại cơ sở y tế</li>
+                <li>Thẻ tín dụng/ghi nợ (Visa, Mastercard, JCB)</li>
+                <li>Ví điện tử (MoMo, ZaloPay, VNPay, ShopeePay)</li>
+                <li>Chuyển khoản ngân hàng qua Internet Banking</li>
+                <li>Thanh toán tại cơ sở y tế đối tác</li>
+                <li>Ví điện tử MEDIX (nếu có)</li>
               </ul>
             </div>
 
             <div className={styles["subsection"]}>
               <h3>7.2. Chính sách hoàn tiền:</h3>
               <p>
-                MEDIX sẽ hoàn tiền trong các trường hợp: hủy dịch vụ trước khi sử dụng, 
-                lỗi kỹ thuật từ phía MEDIX, hoặc không thể cung cấp dịch vụ như cam kết.
+                MEDIX sẽ hoàn tiền trong các trường hợp sau:
+              </p>
+              <ul>
+                <li>Hủy dịch vụ trước khi sử dụng (hoàn 100% trong vòng 24 giờ)</li>
+                <li>Lỗi kỹ thuật từ phía MEDIX khiến không thể sử dụng dịch vụ</li>
+                <li>Không thể cung cấp dịch vụ như cam kết do lỗi hệ thống</li>
+                <li>Bác sĩ hủy lịch hẹn mà không có bác sĩ thay thế</li>
+                <li>Dịch vụ bị gián đoạn do lỗi kỹ thuật trong quá trình sử dụng</li>
+              </ul>
+              <p>
+                <strong>Lưu ý:</strong> Phí giao dịch (nếu có) sẽ không được hoàn lại. 
+                Thời gian xử lý hoàn tiền từ 5-10 ngày làm việc tùy theo phương thức thanh toán.
               </p>
             </div>
           </section>
@@ -204,18 +229,35 @@ const TermsOfService: React.FC = () => {
             <h2>ĐIỀU 9. GIỚI HẠN TRÁCH NHIỆM</h2>
             
             <div className={styles["subsection"]}>
-              <h3>9.1. Giới hạn:</h3>
+              <h3>9.1. Giới hạn trách nhiệm:</h3>
               <p>
                 MEDIX không chịu trách nhiệm cho các thiệt hại gián tiếp, đặc biệt, 
-                ngẫu nhiên hoặc hậu quả phát sinh từ việc sử dụng dịch vụ.
+                ngẫu nhiên hoặc hậu quả phát sinh từ việc sử dụng dịch vụ, bao gồm nhưng không giới hạn:
               </p>
+              <ul>
+                <li>Thiệt hại do quyết định y tế dựa trên thông tin từ AI mà không có tư vấn bác sĩ</li>
+                <li>Thiệt hại do người dùng cung cấp thông tin không chính xác</li>
+                <li>Thiệt hại do lỗi kết nối internet hoặc thiết bị của người dùng</li>
+                <li>Thiệt hại do lỗi từ bên thứ ba (nhà cung cấp thanh toán, nhà mạng, v.v.)</li>
+                <li>Mất mát dữ liệu do lỗi từ phía người dùng</li>
+              </ul>
             </div>
 
             <div className={styles["subsection"]}>
-              <h3>9.2. Trường hợp ngoại lệ:</h3>
+              <h3>9.2. Trường hợp MEDIX chịu trách nhiệm:</h3>
               <p>
-                MEDIX vẫn chịu trách nhiệm trong các trường hợp: lỗi kỹ thuật nghiêm trọng, 
-                vi phạm bảo mật dữ liệu, hoặc không tuân thủ cam kết dịch vụ.
+                MEDIX vẫn chịu trách nhiệm trong các trường hợp sau:
+              </p>
+              <ul>
+                <li>Lỗi kỹ thuật nghiêm trọng từ hệ thống MEDIX</li>
+                <li>Vi phạm bảo mật dữ liệu do lỗi từ phía MEDIX</li>
+                <li>Không tuân thủ cam kết dịch vụ đã công bố</li>
+                <li>Thiệt hại trực tiếp do lỗi hệ thống gây ra</li>
+                <li>Vi phạm quyền riêng tư và bảo mật thông tin người dùng</li>
+              </ul>
+              <p>
+                Trách nhiệm bồi thường của MEDIX không vượt quá số tiền người dùng đã thanh toán 
+                cho dịch vụ gây ra thiệt hại trong 12 tháng gần nhất.
               </p>
             </div>
           </section>
@@ -292,9 +334,11 @@ const TermsOfService: React.FC = () => {
               <h3>13.1. Thông tin liên hệ:</h3>
               <div className={styles["contact-info"]}>
                 <p><strong>Hệ thống Y tế Thông minh MEDIX</strong></p>
-                <p>Email: support@medix.com</p>
-                <p>Hotline: 1900-MEDIX (1900-63349)</p>
-                <p>Địa chỉ: Việt Nam</p>
+                <p>📧 Email: support@medix.com</p>
+                <p>📞 Hotline: 1900-MEDIX (1900-63349)</p>
+                <p>🌐 Website: https://medix.com</p>
+                <p>📍 Địa chỉ: Việt Nam</p>
+                <p>⏰ Thời gian hỗ trợ: 24/7</p>
               </div>
             </div>
 
@@ -330,7 +374,8 @@ const TermsOfService: React.FC = () => {
           <div className={styles["footer-note"]}>
             <p>
               <strong>Cảm ơn bạn đã tin tưởng và sử dụng dịch vụ của MEDIX!</strong><br/>
-              Chúng tôi cam kết mang đến những dịch vụ y tế chất lượng cao và bảo vệ quyền lợi của người dùng.
+              Chúng tôi cam kết mang đến những dịch vụ y tế chất lượng cao, an toàn và bảo vệ quyền lợi của người dùng. 
+              Nếu bạn có bất kỳ câu hỏi nào về điều khoản dịch vụ, vui lòng liên hệ với chúng tôi qua các kênh hỗ trợ đã nêu trên.
             </p>
           </div>
         </div>

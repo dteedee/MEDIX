@@ -16,14 +16,17 @@ const PrivacyPolicy: React.FC = () => {
 
         <div className={styles["privacy-header"]}>
           <h1>Chính sách bảo vệ dữ liệu cá nhân của Hệ thống Y tế Thông minh MEDIX</h1>
-          <p className={styles["update-date"]}>Ngày cập nhật: 12-10-2025</p>
+          <p className={styles["update-date"]}>Ngày cập nhật: 12-12-2025</p>
         </div>
 
         <div className={styles["privacy-body"]}>
           <p>
             Chính Sách Bảo Vệ Dữ Liệu Cá Nhân này mô tả cách thức thu thập, sử dụng và xử lý dữ liệu cá nhân 
-            phát sinh trong quá trình hoạt động, kinh doanh của Hệ thống Y tế Thông minh MEDIX (sau đây gọi là "Hệ thống"), 
-            có địa chỉ tại Việt Nam và trang thông tin điện tử chính thức là https://medix.com.
+            phát sinh trong quá trình hoạt động, kinh doanh của Hệ thống Y tế Thông minh MEDIX (sau đây gọi là "Hệ thống" hoặc "MEDIX"), 
+            có địa chỉ tại Việt Nam và trang thông tin điện tử chính thức là https://medix.com. 
+            Chúng tôi cam kết bảo vệ thông tin cá nhân và dữ liệu y tế của bạn theo các tiêu chuẩn bảo mật cao nhất, 
+            tuân thủ nghiêm ngặt các quy định của Luật An toàn thông tin mạng, Luật Bảo vệ dữ liệu cá nhân và 
+            các quy định pháp luật liên quan của Việt Nam.
           </p>
 
           <section className={styles["section"]}>
@@ -34,7 +37,8 @@ const PrivacyPolicy: React.FC = () => {
               <p>
                 là thông tin dưới dạng ký hiệu, chữ viết, chữ số, hình ảnh, âm thanh hoặc dạng tương tự trên môi trường điện tử 
                 gắn liền với con người cụ thể hoặc giúp xác định con người cụ thể. Dữ Liệu Cá Nhân bao gồm Dữ Liệu Cá Nhân cơ bản 
-                và Dữ Liệu Cá Nhân nhạy cảm.
+                và Dữ Liệu Cá Nhân nhạy cảm. Trong bối cảnh y tế, dữ liệu cá nhân bao gồm cả thông tin sức khỏe, bệnh án, 
+                kết quả xét nghiệm và các thông tin y tế khác.
               </p>
             </div>
 
@@ -192,11 +196,14 @@ const PrivacyPolicy: React.FC = () => {
             <div className={styles["subsection"]}>
               <h3>6.1. Biện pháp kỹ thuật:</h3>
               <ul>
-                <li>Mã hóa dữ liệu với chuẩn AES-256</li>
-                <li>Xác thực đa yếu tố (2FA/MFA)</li>
-                <li>Firewall và hệ thống phát hiện xâm nhập</li>
-                <li>Backup và khôi phục dữ liệu định kỳ</li>
-                <li>Giám sát và audit log hệ thống</li>
+                <li>Mã hóa dữ liệu với chuẩn AES-256 cho dữ liệu ở trạng thái nghỉ (at rest)</li>
+                <li>Mã hóa TLS/SSL 1.3 cho dữ liệu truyền tải (in transit)</li>
+                <li>Xác thực đa yếu tố (2FA/MFA) cho tất cả tài khoản</li>
+                <li>Firewall và hệ thống phát hiện xâm nhập (IDS/IPS) 24/7</li>
+                <li>Backup và khôi phục dữ liệu định kỳ với nhiều bản sao lưu</li>
+                <li>Giám sát và audit log hệ thống toàn diện</li>
+                <li>Tuân thủ chuẩn bảo mật y tế HIPAA và ISO 27001</li>
+                <li>Kiểm tra bảo mật định kỳ và penetration testing</li>
               </ul>
             </div>
 
@@ -252,21 +259,34 @@ const PrivacyPolicy: React.FC = () => {
             <div className={styles["subsection"]}>
               <h3>8.1. Dữ liệu hồ sơ bệnh án:</h3>
               <p>
-                Được lưu trữ tối thiểu 15 năm kể từ lần khám cuối cùng theo quy định của Bộ Y tế.
+                Được lưu trữ tối thiểu 15 năm kể từ lần khám cuối cùng theo quy định của Bộ Y tế Việt Nam. 
+                Đối với trẻ em, thời gian lưu trữ được tính từ khi đủ 18 tuổi. Dữ liệu được lưu trữ an toàn 
+                với nhiều lớp bảo vệ và có thể được truy xuất khi cần thiết cho mục đích y tế.
               </p>
             </div>
 
             <div className={styles["subsection"]}>
               <h3>8.2. Dữ liệu tài khoản:</h3>
               <p>
-                Được lưu trữ cho đến khi người dùng yêu cầu xóa tài khoản.
+                Được lưu trữ cho đến khi người dùng yêu cầu xóa tài khoản. Tuy nhiên, một số thông tin có thể 
+                được giữ lại để tuân thủ các nghĩa vụ pháp lý hoặc giải quyết tranh chấp. Sau khi xóa tài khoản, 
+                dữ liệu sẽ được xóa vĩnh viễn trong vòng 30 ngày, trừ khi pháp luật yêu cầu lưu trữ lâu hơn.
               </p>
             </div>
 
             <div className={styles["subsection"]}>
               <h3>8.3. Dữ liệu log hệ thống:</h3>
               <p>
-                Được lưu trữ tối thiểu 2 năm để phục vụ mục đích bảo mật và audit.
+                Được lưu trữ tối thiểu 2 năm để phục vụ mục đích bảo mật, audit và tuân thủ pháp luật. 
+                Các log quan trọng có thể được lưu trữ lâu hơn theo yêu cầu của cơ quan có thẩm quyền.
+              </p>
+            </div>
+
+            <div className={styles["subsection"]}>
+              <h3>8.4. Dữ liệu AI và phân tích:</h3>
+              <p>
+                Dữ liệu được sử dụng để huấn luyện và cải thiện mô hình AI được xử lý theo nguyên tắc 
+                ẩn danh hóa (anonymization) và tổng hợp hóa (aggregation) để không thể nhận diện cá nhân cụ thể.
               </p>
             </div>
           </section>
@@ -327,9 +347,11 @@ const PrivacyPolicy: React.FC = () => {
               
               <div className={styles["contact-info"]}>
                 <p><strong>Hệ thống Y tế Thông minh MEDIX</strong></p>
-                <p>Email: privacy@medix.com</p>
-                <p>Hotline: 1900-MEDIX (1900-63349)</p>
-                <p>Địa chỉ: Việt Nam</p>
+                <p>📧 Email: privacy@medix.com</p>
+                <p>📞 Hotline: 1900-MEDIX (1900-63349)</p>
+                <p>🌐 Website: https://medix.com</p>
+                <p>📍 Địa chỉ: Việt Nam</p>
+                <p>⏰ Thời gian hỗ trợ: 24/7</p>
               </div>
             </div>
 
@@ -348,7 +370,7 @@ const PrivacyPolicy: React.FC = () => {
             <div className={styles["subsection"]}>
               <h3>12.1. Hiệu lực:</h3>
               <p>
-                Chính sách này có hiệu lực từ ngày 12/10/2025 và được áp dụng cho tất cả các dịch vụ của Hệ thống MEDIX.
+                Chính sách này có hiệu lực từ ngày 12/12/2025 và được áp dụng cho tất cả các dịch vụ của Hệ thống MEDIX.
               </p>
             </div>
 

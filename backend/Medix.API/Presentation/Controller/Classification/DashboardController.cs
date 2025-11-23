@@ -115,5 +115,6 @@ namespace Medix.API.Presentation.Controller.Classification
             var result = await _managerService.GetDashboardAsync();
             return Ok(result);
         }
+
     }
 }

@@ -4,6 +4,7 @@ import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import { apiClient } from '../../lib/apiClient';
 import { useToast } from '../../contexts/ToastContext';
 import styles from '../../styles/admin/SettingsPage.module.css';
+import userStyles from '../../styles/admin/UserList.module.css'; // Import CSS từ UserList
 import { Language } from '../../contexts/LanguageContext';
 
 interface SystemSettings {
@@ -113,6 +114,7 @@ export default function SettingsPage() {
   const [emailTemplateSaving, setEmailTemplateSaving] = useState(false);
   const [refundPercentage, setRefundPercentage] = useState(80);
   const [refundSaving, setRefundSaving] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof SystemSettings, string>>>({});
 
   useEffect(() => {
   const fetchSettings = async () => {
@@ -372,7 +374,36 @@ useEffect(() => {
 
 
   const handleInputChange = (key: keyof SystemSettings, value: string | boolean) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    // Xóa lỗi cũ khi người dùng bắt đầu nhập
+    setErrors(prev => ({ ...prev, [key]: undefined }));
+
+    if (key === 'siteName' && typeof value === 'string') { // Cho phép ký tự đặc biệt
+      setSettings(prev => ({ ...prev, [key]: value }));
+    } else if (key === 'contactEmail' && typeof value === 'string') { // Validation cho Email liên hệ
+      setSettings(prev => ({ ...prev, [key]: value }));
+      // Kiểm tra định dạng email bằng Regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (value && !emailRegex.test(value)) {
+        setErrors(prev => ({ ...prev, contactEmail: 'Định dạng email không hợp lệ.' }));
+      } else {
+        setErrors(prev => ({ ...prev, contactEmail: undefined }));
+      }
+
+    } else if (key === 'systemDescription' && typeof value === 'string') { // Validation cho Mô tả hệ thống
+      setSettings(prev => ({ ...prev, [key]: value }));
+
+    } else if (key === 'contactPhone' && typeof value === 'string') { // Validation cho Số điện thoại
+      const sanitizedValue = value.replace(/\D/g, ''); // Chỉ giữ lại số
+      setSettings(prev => ({ ...prev, [key]: sanitizedValue }));
+
+      if (sanitizedValue && sanitizedValue.length !== 10) {
+        setErrors(prev => ({ ...prev, contactPhone: 'Số điện thoại phải có đúng 10 chữ số.' }));
+      } else {
+        setErrors(prev => ({ ...prev, contactPhone: undefined }));
+      }
+    } else {
+      setSettings(prev => ({ ...prev, [key]: value }));
+    }
   };
 
   const handleCheckboxChange = (key: keyof SystemSettings, checked: boolean) => {
@@ -381,6 +412,43 @@ useEffect(() => {
 
   const handleMaintenanceModeChange = (enabled: boolean) => {
     setSettings(prev => ({ ...prev, maintenanceMode: enabled }));
+  };
+
+  const handleBlur = (key: keyof SystemSettings, value: string) => {
+    if (!value || value.trim() === '') {
+      setErrors(prev => ({ ...prev, [key]: 'Trường này không được để trống.' }));
+      return; // Dừng lại nếu trường trống
+    }
+
+    // Nếu không trống, xóa lỗi "để trống" và thực hiện các validation khác
+    setErrors(prev => ({ ...prev, [key]: undefined }));
+
+    if (key === 'contactEmail') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) {
+        setErrors(prev => ({ ...prev, contactEmail: 'Định dạng email không hợp lệ.' }));
+      }
+    } else if (key === 'contactPhone') {
+      if (value.length !== 10) {
+        setErrors(prev => ({ ...prev, contactPhone: 'Số điện thoại phải có đúng 10 chữ số.' }));
+      }
+    }
+  };
+
+  const validateBeforeSave = () => {
+    // Kiểm tra tất cả các lỗi hiện có
+    for (const key in errors) {
+      if (errors[key as keyof SystemSettings]) {
+        showToast(`Vui lòng sửa các lỗi trong form trước khi lưu.`, 'error');
+        return false;
+      }
+    }
+
+    if (errors.contactPhone) {
+      showToast('Vui lòng sửa lỗi định dạng số điện thoại trước khi lưu.', 'error');
+      return false;
+    }
+    return true;
   };
 
   const handleSaveChanges = async () => {
@@ -523,24 +591,28 @@ useEffect(() => {
 
 
   return (
-    <div className={styles.container}>
+    <div className={userStyles.container}>
           {/* Header */}
-          <div className={styles.header}>
-            <div className={styles.headerLeft}>
-              <h1 className={styles.title}>Cấu hình hệ thống</h1>
-              <p className={styles.subtitle}>Quản lý cài đặt và cấu hình hệ thống</p>
+          <div className={userStyles.header}>
+            <div className={userStyles.headerLeft}>
+              <h1 className={userStyles.title}>Cấu hình hệ thống</h1>
+              <p className={userStyles.subtitle}>Quản lý cài đặt và cấu hình hệ thống</p>
             </div>
-            <div className={styles.headerRight}>
-              <button onClick={handleSaveChanges} className={styles.saveBtn} disabled={saving || loading}>
-                <i className={`bi ${saving ? 'bi-arrow-repeat' : 'bi-check-lg'}`}></i>
-                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-              </button>
+            <div className={userStyles.headerRight}>
+              <div className={styles.dateTime}>
+                <i className="bi bi-calendar3"></i>
+                <span>{new Date().toLocaleDateString('vi-VN')}</span>
+              </div>
             </div>
           </div>
 
-          {/* Settings Grid */}
+          {/* System Overview Stats */}
+          
+
+
+          {/* Settings Grid - Giữ lại grid layout của trang settings */}
           <div className={styles.settingsGrid}>
-            {/* General Settings */}
+            {/* General Settings Card */}
             <div className={styles.settingsCard}>
               <div className={styles.cardHeader}>
                 <h3>
@@ -556,50 +628,81 @@ useEffect(() => {
                     <label>Tên hệ thống</label>
                     <input
                       type="text"
+                      maxLength={18}
                       value={settings.siteName || ''}
-                      onChange={(e) => handleInputChange('siteName', e.target.value)}
+                      onChange={e => handleInputChange('siteName', e.target.value)}
+                      onBlur={e => handleBlur('siteName', e.target.value)}
                       placeholder="Nhập tên hệ thống"
+                      className={errors.siteName ? styles.inputError : ''}
                     />
+                    {errors.siteName && <div className={styles.errorText}>{errors.siteName}</div>}
+                    <div className={styles.charCounter}>
+                      {(settings.siteName || '').length}/18
+                    </div>
                   </div>
                   <div className={styles.settingItem}>
                     <label>Mô tả hệ thống</label>
                     <textarea
+                      maxLength={50}
                       value={settings.systemDescription || ''}
-                      onChange={(e) => handleInputChange('systemDescription', e.target.value)}
+                      onChange={e => handleInputChange('systemDescription', e.target.value)}
+                      onBlur={e => handleBlur('systemDescription', e.target.value)}
                       placeholder="Nhập mô tả hệ thống"
+                      className={errors.systemDescription ? styles.inputError : ''}
                     ></textarea>
+                    {errors.systemDescription && <div className={styles.errorText}>{errors.systemDescription}</div>}
+                    <div className={styles.charCounter}>
+                      {(settings.systemDescription || '').length}/50
+                    </div>
                   </div>
                   <div className={styles.settingItem}>
                     <label>Email liên hệ</label>
                     <input
                       type="email"
+                      maxLength={150}
                       value={settings.contactEmail || ''}
-                      onChange={(e) => handleInputChange('contactEmail', e.target.value)}
+                      onChange={e => handleInputChange('contactEmail', e.target.value)}
+                      onBlur={e => handleBlur('contactEmail', e.target.value)}
                       placeholder="Nhập email liên hệ"
+                      className={errors.contactEmail ? styles.inputError : ''}
                     />
+                    {errors.contactEmail && <div className={styles.errorText}>{errors.contactEmail}</div>}
+                    <div className={styles.charCounter}>
+                      {(settings.contactEmail || '').length}/150
+                    </div>
                   </div>
                   <div className={styles.settingItem}>
                     <label>Số điện thoại</label>
                     <input
                       type="tel"
+                      maxLength={10}
                       value={settings.contactPhone || ''}
-                      onChange={(e) => handleInputChange('contactPhone', e.target.value)}
+                      onChange={e => handleInputChange('contactPhone', e.target.value)}
+                      onBlur={e => handleBlur('contactPhone', e.target.value)}
                       placeholder="Nhập số điện thoại liên hệ"
+                      className={errors.contactPhone ? styles.inputError : ''}
                     />
+                    {errors.contactPhone && <div className={styles.errorText}>{errors.contactPhone}</div>}
+                    <div className={styles.charCounter}>
+                      {(settings.contactPhone || '').length}/10
+                    </div>
                   </div>
                   <div className={styles.settingItem}>
                     <label>Địa chỉ liên hệ</label>
                     <textarea
                       value={settings.contactAddress || ''}
-                      onChange={(e) => handleInputChange('contactAddress', e.target.value)}
+                      onChange={e => handleInputChange('contactAddress', e.target.value)}
+                      onBlur={e => handleBlur('contactAddress', e.target.value)}
                       placeholder="Nhập địa chỉ liên hệ"
+                      className={errors.contactAddress ? styles.inputError : ''}
                     ></textarea>
+                    {errors.contactAddress && <div className={styles.errorText}>{errors.contactAddress}</div>}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Security Settings */}
+            {/* Security Settings Card */}
             <div className={styles.settingsCard}>
               <div className={styles.cardHeader}>
                 <h3>
@@ -688,7 +791,7 @@ useEffect(() => {
 
             
            
-            {/* Email Server Settings */}
+            {/* Email Server Settings Card */}
             <div className={styles.settingsCard}>
               <div className={styles.cardHeader}>
                 <h3>
@@ -783,7 +886,7 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Email Templates */}
+            {/* Email Templates Card */}
             <div className={styles.settingsCard}>
               <div className={styles.cardHeader}>
                 <h3>
@@ -891,7 +994,7 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Refund Policy Settings */}
+            {/* Refund Policy Settings Card */}
             <div className={styles.settingsCard}>
               <div className={styles.cardHeader}>
                 <h3>
@@ -942,7 +1045,7 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Backup Settings */}
+            {/* Backup Settings Card */}
             <div className={styles.settingsCard}>
               <div className={styles.cardHeader}>
                 <h3>
@@ -1055,7 +1158,7 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Maintenance Settings */}
+            {/* Maintenance Settings Card */}
             <div className={styles.settingsCard}>
               <div className={styles.cardHeader}>
                 <h3>
@@ -1120,6 +1223,14 @@ useEffect(() => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className={styles.footerActions}>
+            <button onClick={handleSaveChanges} className={userStyles.btnCreate} disabled={saving || loading}>
+              <i className={`bi ${saving ? 'bi-arrow-repeat' : 'bi-check-lg'}`}></i>
+              {saving ? 'Đang lưu...' : 'Lưu tất cả thay đổi'}
+            </button>
           </div>
     </div>
   );

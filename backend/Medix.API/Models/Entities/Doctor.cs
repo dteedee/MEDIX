@@ -28,17 +28,17 @@ public partial class Doctor
     public decimal AverageRating { get; set; }
 
     public int TotalReviews { get; set; }
-    public int? TotalCaseMissPerWeek { get; set; }
-    public bool? isSalaryDeduction { get; set; }
+    public int? TotalCaseMissPerWeek { get; set; } = 0;
+    public bool? isSalaryDeduction { get; set; } = false;
 
 
-    public int? NextWeekMiss { get; set; }
+    public int? NextWeekMiss { get; set; } = 0;
 
     public DateTime? StartDateBanned { get; set; }
 
     public DateTime? EndDateBanned { get; set; }
 
-    public int? TotalBanned { get; set; }
+    public int? TotalBanned { get; set; } = 0;
 
     public bool IsVerified { get; set; }
 

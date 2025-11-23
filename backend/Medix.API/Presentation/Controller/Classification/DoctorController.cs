@@ -393,8 +393,39 @@ namespace Medix.API.Presentation.Controller.Classification
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
         }
+        [HttpGet("{doctorId}/business-stats")]
+        [Authorize(Roles ="Manager")] // allow Manager or Doctor; controller will restrict doctor to own data
+        public async Task<IActionResult> GetDoctorBusinessStats(Guid doctorId, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
 
-        [HttpGet("{id}/statistics")]
+                // If caller is a doctor (not manager), ensure they can only request their own stats
+                if (User.IsInRole("Doctor"))
+                {
+                    if (userIdClaim == null)
+                        return Unauthorized(new { Message = "User ID not found in token" });
+
+                    var callerDoctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userIdClaim.Value));
+                    if (callerDoctor == null) return NotFound(new { Message = "Doctor not found for current user" });
+                    if (callerDoctor.Id != doctorId) return Forbid();
+                }
+
+                var stats = await _doctorService.GetDoctorBusinessStatsAsync(doctorId, startDate, endDate);
+                if (stats == null)
+                    return NotFound(new { Message = "Doctor not found" });
+
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching business stats for doctor {DoctorId}", doctorId);
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+            [HttpGet("{id}/statistics")]
      
         public async Task<IActionResult> GetStatistic(Guid id)
         {

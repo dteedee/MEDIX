@@ -411,7 +411,8 @@ export default function ReportsAndAnalytics() {
                         data={appointmentTrends.monthly.map(trend => ({
                           month: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'][trend.month - 1],
                           'Lịch hẹn': trend.appointmentCount,
-                          'Doanh thu (triệu)': Math.round(trend.totalRevenue / 1000000)
+                          'Doanh thu (triệu)': Math.round(trend.totalRevenue / 1000000),
+                          revenueRaw: trend.totalRevenue
                         }))}
                         margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
                       >
@@ -432,13 +433,18 @@ export default function ReportsAndAnalytics() {
                           orientation="right"
                           tick={{ fontSize: 12, fill: '#f59e0b' }}
                           stroke="#f59e0b"
-                          width={70}
-                          tickFormatter={(value) => `${value}M`}
+                          width={80}
+                          tickFormatter={(value) => {
+                            if (value >= 1000) {
+                              return `${(value / 1000).toFixed(1)}B`;
+                            }
+                            return `${value}M`;
+                          }}
                         />
                         <Tooltip 
                           formatter={(value: number, name: string) => {
                             if (name === 'Doanh thu (triệu)') {
-                              return [`${value} triệu VND`, 'Doanh thu'];
+                              return [`${value.toLocaleString('vi-VN')} triệu VND`, 'Doanh thu'];
                             }
                             return [value, name];
                           }}

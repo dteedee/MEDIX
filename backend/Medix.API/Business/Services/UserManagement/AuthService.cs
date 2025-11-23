@@ -315,7 +315,7 @@ namespace Medix.API.Business.Services.UserManagement
 
                 var walletDto = new WalletDTo
                 {
-                    UserId = newPatient.Id,
+                    UserId = newUser.Id,
                     Balance = 0,
                     Currency = "VND",
                     IsActive = true,

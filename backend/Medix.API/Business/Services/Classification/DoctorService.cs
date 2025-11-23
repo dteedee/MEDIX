@@ -168,7 +168,7 @@ namespace Medix.API.Business.Services.Classification
             
                 AverageRating = avgRating,
                 TotalReviews = totalReviews,
-                RatingByStar = ratingByStar
+              
             };
 
             return dto;

@@ -70,7 +70,6 @@ export default function CategoryList(): JSX.Element {
         name: selectedCategory.name,
         slug: selectedCategory.slug,
         description: selectedCategory.description,
-        parentId: selectedCategory.parentId,
         isActive: !selectedCategory.isActive, // Đảo ngược trạng thái hiện tại
       });
       showToast(`Đã ${selectedCategory.isActive ? 'khôi phục' : 'xóa'} danh mục "${selectedCategory.name}"`, 'success');
@@ -160,8 +159,8 @@ export default function CategoryList(): JSX.Element {
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Quản lý Danh mục</h1>
-          <p className={styles.subtitle}>Quản lý danh sách danh mục nội dung</p>
+          <h1 className={styles.title}>Quản lý Danh mục Bài viết</h1>
+          <p className={styles.subtitle}>Quản lý danh sách danh mục bài viết sức khỏe</p>
         </div>
         <div className={styles.headerRight}>
           <button onClick={() => handleOpenForm(null)} className={styles.btnCreate}><i className="bi bi-plus-lg"></i> Tạo mới</button>
@@ -241,7 +240,6 @@ export default function CategoryList(): JSX.Element {
                   <th onClick={() => handleSort('name')} className={styles.sortable}>Tên</th>
                   <th onClick={() => handleSort('slug')} className={styles.sortable}>Slug</th>
                   <th onClick={() => handleSort('description')} className={styles.sortable}>Mô tả</th> 
-                  <th>Danh mục cha</th>
                   <th>Trạng thái</th>
                   <th>Thao tác</th>
                 </tr>
@@ -255,7 +253,6 @@ export default function CategoryList(): JSX.Element {
                     <td>{category.name}</td>
                     <td>{category.slug}</td>
                     <td>{category.description || '-'}</td>
-                    <td>{category.parentName || '-'}</td>
                     <td>
                       <span className={`${styles.statusBadge} ${category.isActive ? styles.statusActive : styles.statusLocked}`}>
                         {category.isActive ? 'Hoạt động' : 'Tạm dừng'}
@@ -358,7 +355,7 @@ export default function CategoryList(): JSX.Element {
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
-              <h2>{editingCategory ? 'Chỉnh sửa Danh mục' : 'Tạo Danh mục mới'}</h2>
+              <h2>{editingCategory ? 'Chỉnh sửa Danh mục Bài viết' : 'Tạo Danh mục Bài viết mới'}</h2>
               <button onClick={handleCloseForm} className={styles.closeButton}>
                 <i className="bi bi-x-lg"></i>
               </button>
@@ -375,7 +372,7 @@ export default function CategoryList(): JSX.Element {
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
-              <h2>Chi tiết Danh mục</h2>
+              <h2>Chi tiết Danh mục Bài viết</h2>
               <button onClick={() => setViewingCategory(null)} className={styles.closeButton}>
                 <i className="bi bi-x-lg"></i>
               </button>

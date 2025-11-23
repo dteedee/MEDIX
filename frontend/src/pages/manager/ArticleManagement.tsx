@@ -6,6 +6,8 @@ import { useToast } from '../../contexts/ToastContext';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import ArticleForm from './ArticleForm';
+import { categoryService } from '../../services/categoryService';
+import { CategoryDTO } from '../../types/category.types';
 import styles from '../../styles/admin/ArticleManagement.module.css';
 
 interface ArticleListFilters {
@@ -13,6 +15,7 @@ interface ArticleListFilters {
   pageSize: number;
   search: string;
   statusFilter: 'all' | 'published' | 'draft';
+  categoryFilter: string; // Filter by category ID
   dateFrom: string;
   dateTo: string;
   sortBy: string;
@@ -33,6 +36,7 @@ const getInitialState = (): ArticleListFilters => {
     pageSize: 10,
     search: '',
     statusFilter: 'all',
+    categoryFilter: '',
     dateFrom: '',
     dateTo: '',
     sortBy: 'displayOrder',
@@ -44,6 +48,7 @@ export default function ArticleManagement() {
   const [allArticles, setAllArticles] = useState<ArticleDTO[]>([]);
   const [total, setTotal] = useState<number | undefined>(undefined);
   const [statuses, setStatuses] = useState<Array<{ code: string; displayName: string }>>([]);
+  const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [filters, setFilters] = useState<ArticleListFilters>(getInitialState);
   const [loading, setLoading] = useState(true);
   const [viewing, setViewing] = useState<ArticleDTO | null>(null);
@@ -119,7 +124,7 @@ export default function ArticleManagement() {
 
     // Draft articles: similar logic
     const draftNow = allArticles.filter(a => a.statusCode?.toUpperCase() === 'DRAFT').length;
-    const draftLastWeek = existingLastWeek.filter(a => a.statusCode === 'Draft').length;
+    const draftLastWeek = existingLastWeek.filter(a => a.statusCode?.toUpperCase() === 'DRAFT').length;
     const draftChange = draftLastWeek > 0
       ? ((draftNow - draftLastWeek) / draftLastWeek) * 100
       : (draftNow > 0 ? 100 : 0);
@@ -149,12 +154,23 @@ export default function ArticleManagement() {
     }
   };
 
+  const loadCategories = async () => {
+    try {
+      const { items } = await categoryService.list(1, 9999);
+      // Chỉ lấy categories đang active để hiển thị trong filter
+      setCategories(items.filter(cat => cat.isActive) || []);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
+  };
+
   useEffect(() => {
     localStorage.setItem('articleListState', JSON.stringify(filters));
   }, [filters]);
 
   useEffect(() => {
     load();
+    loadCategories();
     const fetchStatuses = async () => {
       try {
         const fetchedStatuses = await articleService.getStatuses();
@@ -307,6 +323,7 @@ export default function ArticleManagement() {
     setFilters({
       ...filters,
       statusFilter: 'all',
+      categoryFilter: '',
       dateFrom: '',
       dateTo: '',
     });
@@ -329,6 +346,10 @@ export default function ArticleManagement() {
       const okStatus = filters.statusFilter === 'all' || 
         (filters.statusFilter === 'published' ? a.statusCode?.toUpperCase() === 'PUBLISHED' : 
          filters.statusFilter === 'draft' ? a.statusCode?.toUpperCase() === 'DRAFT' : true);
+
+      // Filter by category
+      const okCategory = !filters.categoryFilter || 
+        (a.categoryIds && a.categoryIds.includes(filters.categoryFilter));
 
       let okDate = true;
       if (from || to) {
@@ -381,7 +402,22 @@ export default function ArticleManagement() {
     }
 
     const statusInfo = statuses.find(s => s.code.toUpperCase() === statusCode.toUpperCase());
-    const displayName = statusInfo ? statusInfo.displayName : statusCode; // Fallback to code if not found
+    
+    // Đảm bảo luôn hiển thị tiếng Việt
+    let displayName = statusInfo ? statusInfo.displayName : '';
+    if (!displayName) {
+      // Fallback: map trực tiếp sang tiếng Việt
+      switch (statusCode.toUpperCase()) {
+        case 'PUBLISHED':
+          displayName = 'Xuất bản';
+          break;
+        case 'DRAFT':
+          displayName = 'Bản nháp';
+          break;
+        default:
+          displayName = statusCode; // Fallback cuối cùng
+      }
+    }
 
     let statusClass = styles.statusDefault; // Default color
     let iconClass = 'bi bi-question-circle';
@@ -394,10 +430,6 @@ export default function ArticleManagement() {
       case 'DRAFT':
         statusClass = styles.statusInactive;
         iconClass = 'bi bi-file-text';
-        break;
-      case 'ARCHIVE':
-        statusClass = styles.statusArchived;
-        iconClass = 'bi bi-archive-fill';
         break;
       case 'ANHAI': // Example for custom status
         statusClass = styles.statusCustom;
@@ -485,7 +517,7 @@ export default function ArticleManagement() {
 
         <div className={`${styles.statCard} ${styles.statCard3}`}>
           <div className={styles.statIcon}>
-            <i className="bi bi-pause-circle-fill"></i>
+            <i className="bi bi-file-text"></i>
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Bản nháp</div>
@@ -505,7 +537,7 @@ export default function ArticleManagement() {
             </div>
           </div>
           <div className={styles.statBg}>
-            <i className="bi bi-pause-circle-fill"></i>
+            <i className="bi bi-file-text"></i>
           </div>
         </div>
       </div>
@@ -537,7 +569,7 @@ export default function ArticleManagement() {
           >
             <i className="bi bi-funnel"></i>
             Bộ lọc
-          {(filters.statusFilter !== 'all' || filters.dateFrom || filters.dateTo) && (
+          {(filters.statusFilter !== 'all' || filters.categoryFilter || filters.dateFrom || filters.dateTo) && (
             <span className={styles.filterBadge}></span>
           )}
           </button>
@@ -554,10 +586,23 @@ export default function ArticleManagement() {
               </label>
               <select value={filters.statusFilter} onChange={e => handleFilterChange('statusFilter', e.target.value)}>
                 <option value="all">Tất cả trạng thái</option>
-                <option value="published">Đã xuất bản</option>
+                <option value="published">Xuất bản</option>
                 <option value="draft">Bản nháp</option>
                 </select>
               </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-tags"></i>
+                Danh mục
+              </label>
+              <select value={filters.categoryFilter} onChange={e => handleFilterChange('categoryFilter', e.target.value)}>
+                <option value="">Tất cả danh mục</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
 
             <div className={styles.filterItem}>
               <label>
@@ -616,6 +661,7 @@ export default function ArticleManagement() {
                       <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
+                  <th>Danh mục</th>
                   <th>Ảnh</th>
                   <th onClick={() => handleSort('displayOrder')} className={styles.sortable}>
                     Thứ tự
@@ -654,6 +700,24 @@ export default function ArticleManagement() {
                       <div className={styles.titleCell} title={article.title}>
                         {article.title || 'Chưa có tiêu đề'}
                       </div>
+                    </td>
+                    <td className={styles.categoryCell}>
+                      {article.categories && article.categories.length > 0 ? (
+                        <div className={styles.categoryTags}>
+                          {article.categories.slice(0, 2).map((cat) => (
+                            <span key={cat.id} className={styles.categoryTag} title={cat.name}>
+                              {cat.name}
+                            </span>
+                          ))}
+                          {article.categories.length > 2 && (
+                            <span className={styles.categoryTagMore} title={article.categories.slice(2).map(c => c.name).join(', ')}>
+                              +{article.categories.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className={styles.noCategory}>Chưa có</span>
+                      )}
                     </td>
                     <td className={styles.imageCell}>
                       {article.thumbnailUrl || article.coverImageUrl ? (

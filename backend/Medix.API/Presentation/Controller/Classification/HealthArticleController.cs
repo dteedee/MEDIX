@@ -88,7 +88,16 @@ namespace Medix.API.Presentation.Controller.Classification
         public async Task<IActionResult> GetStatuses()
         {
             var statuses = await _statusRepository.GetActiveStatusesAsync();
-            var result = statuses.Select(s => new { s.Code, s.DisplayName });
+            // CHỈ trả về Published và Draft, bỏ Archived - Tất cả hiển thị bằng tiếng Việt
+            var result = statuses
+                .Where(s => s.Code.ToUpper() == "PUBLISHED" || s.Code.ToUpper() == "DRAFT")
+                .Select(s => new { 
+                    Code = s.Code, 
+                    DisplayName = s.Code.ToUpper() == "PUBLISHED" ? "Xuất bản" : 
+                                  s.Code.ToUpper() == "DRAFT" ? "Bản nháp" : s.DisplayName 
+                })
+                .OrderBy(s => s.Code.ToUpper() == "DRAFT" ? 0 : 1) // Draft trước, Published sau
+                .ToList();
             return Ok(result);
         }
 

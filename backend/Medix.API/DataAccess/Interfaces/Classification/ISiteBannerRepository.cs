@@ -24,5 +24,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
 
         Task<List<SiteBanner>> GetRunningBannersAsync();
         Task<(IEnumerable<SiteBanner> Banners, int TotalCount)> SearchByNameAsync(string name, int page, int pageSize);
+        
+        Task IncrementDisplayOrderForConflictsAsync(int displayOrder, Guid? excludeId = null);
     }
 }

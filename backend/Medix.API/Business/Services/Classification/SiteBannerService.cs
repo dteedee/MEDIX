@@ -6,6 +6,7 @@ using Medix.API.Models.DTOs.SiteBanner;
 using Medix.API.Models.Entities;
 using Medix.API.Business.Helper;
 using Medix.API.Business.Validators;
+using Microsoft.Extensions.Logging;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -14,12 +15,14 @@ namespace Medix.API.Business.Services.Classification
         private readonly ISiteBannerRepository _siteBannerRepository;
         private readonly IMapper _mapper;
         private readonly IDtoValidatorService _validator;
+        private readonly ILogger<SiteBannerService>? _logger;
 
-        public SiteBannerService(ISiteBannerRepository siteBannerRepository, IMapper mapper, IDtoValidatorService validator)
+        public SiteBannerService(ISiteBannerRepository siteBannerRepository, IMapper mapper, IDtoValidatorService validator, ILogger<SiteBannerService>? logger = null)
         {
             _siteBannerRepository = siteBannerRepository;
             _mapper = mapper;
             _validator = validator;
+            _logger = logger;
         }
 
         public async Task<(int total, IEnumerable<SiteBannerDto> data)> GetPagedAsync(int page = 1, int pageSize = 10)
@@ -110,6 +113,11 @@ namespace Medix.API.Business.Services.Classification
             // Validate using DtoValidatorService
             await _validator.ValidateSiteBannerCreateAsync(createDto);
 
+            // Tự động điều chỉnh thứ tự hiển thị: tăng các banner có DisplayOrder >= giá trị mới lên 1
+            // Phải gọi TRƯỚC khi tạo banner mới
+            _logger?.LogInformation($"Điều chỉnh thứ tự hiển thị cho DisplayOrder = {createDto.DisplayOrder}");
+            await _siteBannerRepository.IncrementDisplayOrderForConflictsAsync(createDto.DisplayOrder);
+
             var banner = new SiteBanner
             {
                 Id = Guid.NewGuid(),
@@ -123,6 +131,8 @@ namespace Medix.API.Business.Services.Classification
                 CreatedAt = DateTime.UtcNow
             };
 
+            // CreateAsync sẽ gọi SaveChangesAsync, lưu banner mới
+            _logger?.LogInformation($"Tạo banner mới với DisplayOrder = {banner.DisplayOrder}");
             await _siteBannerRepository.CreateAsync(banner);
 
             return await GetByIdAsync(banner.Id) ?? throw new MedixException("Failed to retrieve created banner");
@@ -138,6 +148,16 @@ namespace Medix.API.Business.Services.Classification
 
             // Validate using DtoValidatorService
             await _validator.ValidateSiteBannerUpdateAsync(id, updateDto);
+
+            // Lưu DisplayOrder cũ để so sánh
+            var oldDisplayOrder = banner.DisplayOrder;
+            var newDisplayOrder = updateDto.DisplayOrder;
+
+            // Nếu DisplayOrder thay đổi và giá trị mới đã tồn tại, điều chỉnh các banner khác
+            if (oldDisplayOrder != newDisplayOrder)
+            {
+                await _siteBannerRepository.IncrementDisplayOrderForConflictsAsync(newDisplayOrder, id);
+            }
 
             banner.BannerTitle = updateDto.BannerTitle;
             // Only update the image URL if a new one is provided.

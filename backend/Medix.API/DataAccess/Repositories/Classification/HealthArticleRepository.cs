@@ -231,5 +231,28 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
             await _context.SaveChangesAsync();
         }
+
+        public async Task IncrementDisplayOrderForConflictsAsync(int displayOrder, Guid? excludeId = null)
+        {
+            var query = _context.HealthArticles
+                .Where(a => a.DisplayOrder >= displayOrder);
+
+            if (excludeId.HasValue)
+            {
+                query = query.Where(a => a.Id != excludeId.Value);
+            }
+
+            var conflictingArticles = await query.ToListAsync();
+            foreach (var article in conflictingArticles)
+            {
+                article.DisplayOrder += 1;
+            }
+
+            // Lưu ngay các thay đổi để đảm bảo không có conflict khi tạo bài viết mới
+            if (conflictingArticles.Any())
+            {
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 }

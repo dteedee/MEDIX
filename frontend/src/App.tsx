@@ -83,6 +83,7 @@ import SpecialtyListPage from './pages/public/SpecialtyListPage';
 import SpecialtyDetailPage from './pages/public/SpecialtyDetailPage';
 import EMRTimeline from './pages/patient/EMRTimeline';
 import CategoryList from './pages/manager/CategoryManagement';
+import CategoryManagementPage from './pages/manager/CategoryManagementPage';
 
 export function App() {
   return (
@@ -164,7 +165,7 @@ export function App() {
                     <Route path="services" element={<ServicePackageManagement />} />
                     <Route path="commissions" element={<CommissionManagement />} />
                     <Route path="feedback" element={<FeedbackManagement />} />
-                    <Route path="categories" element={<CategoryList />} />
+                    <Route path="categories" element={<CategoryManagementPage />} />
                     
                     <Route path="transfer-transactions" element={<TransferTransactions />} />
                     <Route path="promotions" element={<PromotionManagement />} />

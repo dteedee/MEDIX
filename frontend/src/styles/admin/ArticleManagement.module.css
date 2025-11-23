@@ -652,6 +652,49 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  /* Category Cell */
+  .categoryCell {
+    padding: 12px;
+  }
+
+  .categoryTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .categoryTag {
+    display: inline-block;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%);
+    color: #667eea;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .categoryTagMore {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #f3f4f6;
+    color: #6b7280;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: help;
+  }
+
+  .noCategory {
+    color: #9ca3af;
+    font-style: italic;
+    font-size: 13px;
+  }
   
   /* Order Badge */
   .orderBadge {

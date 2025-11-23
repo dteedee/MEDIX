@@ -6,8 +6,12 @@
     background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 40%, #90caf9 100%);
     background-size: 200% 200%;
     position: relative;
-    overflow: hidden;
-    padding: 50px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 40px 20px;
+    min-height: 100vh;
+    width: 100%;
+    box-sizing: border-box;
     animation: gradientShift 15s ease infinite;
   }
 
@@ -104,6 +108,7 @@
     box-shadow: 0 12px 40px rgba(33,150,243,0.13);
     border: 1px solid rgba(33,150,243,0.10);
     animation: slideUp 0.6s ease-out;
+    margin: auto;
   }
   
   @keyframes slideUp {
@@ -129,6 +134,7 @@
     position: relative;
     overflow: hidden;
     animation: sectionGradient 10s ease infinite;
+    min-height: 100%;
   }
 
   @keyframes sectionGradient {
@@ -627,6 +633,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 100%;
   }
   
   .form-container {
@@ -840,10 +847,64 @@
   }
   
   /* Responsive Design */
-  @media (max-width: 1024px) {
+  
+  /* Màn hình lớn (Desktop) - 1200px trở lên */
+  @media (min-width: 1200px) {
+    .login-page {
+      padding: 60px 50px;
+    }
+    
+    .login-container {
+      max-width: 1200px;
+    }
+  }
+  
+  /* Màn hình vừa lớn (Large Desktop) - 1025px đến 1199px */
+  @media (min-width: 1025px) and (max-width: 1199px) {
+    .login-page {
+      padding: 50px 40px;
+    }
+    
+    .login-container {
+      max-width: 1100px;
+    }
+  }
+  
+  /* Màn hình vừa (Tablet Landscape) - 769px đến 1024px */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .login-page {
+      padding: 40px 30px;
+    }
+    
     .login-container {
       grid-template-columns: 1fr;
-      max-width: 500px;
+      max-width: 600px;
+    }
+  
+    .brand-section {
+      display: none;
+    }
+  
+    .form-section {
+      padding: 50px 40px;
+      min-height: auto;
+    }
+    
+    .brand-section {
+      min-height: auto;
+    }
+  }
+  
+  /* Màn hình nhỏ (Tablet Portrait) - 481px đến 768px */
+  @media (min-width: 481px) and (max-width: 768px) {
+    .login-page {
+      padding: 30px 20px;
+    }
+    
+    .login-container {
+      grid-template-columns: 1fr;
+      max-width: 550px;
+      border-radius: 20px;
     }
   
     .brand-section {
@@ -852,46 +913,76 @@
   
     .form-section {
       padding: 40px 30px;
+      min-height: auto;
     }
-  }
-  
-  @media (max-width: 640px) {
-    .login-page {
-      padding: 10px;
-    }
-  
-    .login-container {
-      border-radius: 20px;
-    }
-  
-    .form-section {
-      padding: 30px 24px;
-    }
-  
+    
     .form-header h2 {
       font-size: 28px;
     }
-  
-    .brand-heading {
-      font-size: 40px;
-    }
-  
-    .stat-number {
-      font-size: 28px;
-    }
   }
   
-  @media (max-width: 480px) {
+  /* Màn hình rất nhỏ (Mobile) - 320px đến 480px */
+  @media (min-width: 320px) and (max-width: 480px) {
+    .login-page {
+      padding: 20px 12px;
+    }
+    
+    .login-container {
+      grid-template-columns: 1fr;
+      max-width: 100%;
+      border-radius: 16px;
+    }
+  
+    .brand-section {
+      display: none;
+    }
+  
     .form-section {
-      padding: 24px 20px;
+      padding: 30px 20px;
+      min-height: auto;
     }
   
     .form-header h2 {
       font-size: 24px;
     }
+    
+    .form-header p {
+      font-size: 14px;
+    }
   
     .input-group input,
     .btn-login {
       padding: 12px 14px;
+      font-size: 14px;
+    }
+    
+    .input-group label {
+      font-size: 13px;
+    }
+  }
+  
+  /* Màn hình cực nhỏ (Small Mobile) - dưới 320px */
+  @media (max-width: 319px) {
+    .login-page {
+      padding: 16px 8px;
+    }
+    
+    .login-container {
+      border-radius: 12px;
+    }
+    
+    .form-section {
+      padding: 24px 16px;
+      min-height: auto;
+    }
+    
+    .form-header h2 {
+      font-size: 22px;
+    }
+    
+    .input-group input,
+    .btn-login {
+      padding: 10px 12px;
+      font-size: 13px;
     }
   }

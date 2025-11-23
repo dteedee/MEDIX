@@ -321,7 +321,7 @@ export const PatientDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Stats */}
+      {/* Quick Stats - Improved Grid */}
       <div className={styles.quickStats}>
         <div className={styles.statCard} onClick={() => navigate('/app/patient/appointments')}>
           <div className={styles.statIconWrapper}>
@@ -389,9 +389,9 @@ export const PatientDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Improved Grid Layout */}
       <div className={styles.mainContent}>
-        {/* Left Column */}
+        {/* Left Column - Wider for better balance */}
         <div className={styles.leftColumn}>
           {/* Upcoming Appointments */}
           <div className={styles.sectionCard}>
@@ -500,7 +500,7 @@ export const PatientDashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Health Summary */}
+          {/* Health Summary - Enhanced */}
           <div className={styles.sectionCard}>
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle}>
@@ -545,12 +545,62 @@ export const PatientDashboard: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Recent Medical Records - Moved to left for better balance */}
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionTitle}>
+                <i className="bi bi-clock-history"></i>
+                <h2>Lịch sử khám gần đây</h2>
+              </div>
+              <button 
+                className={styles.viewAllLink}
+                onClick={() => navigate('/app/patient/emr-timeline')}
+              >
+                Xem tất cả
+                <i className="bi bi-arrow-right"></i>
+              </button>
+            </div>
+            
+            {medicalRecords.length > 0 ? (
+              <div className={styles.recordsList}>
+                {medicalRecords.slice(0, 3).map((record, index) => (
+                  <div 
+                    key={record.id} 
+                    className={styles.recordItem}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                    onClick={() => navigate('/app/patient/emr-timeline')}
+                  >
+                    <div className={styles.recordIcon}>
+                      <i className="bi bi-file-text"></i>
+                    </div>
+                    <div className={styles.recordInfo}>
+                      <h5>{record.diagnosis || record.chiefComplaint || 'Khám tổng quát'}</h5>
+                      <p>{record.doctor}</p>
+                      <span className={styles.recordDate}>
+                        <i className="bi bi-calendar3"></i>
+                        {formatDate(record.date)}
+                      </span>
+                    </div>
+                    <i className="bi bi-chevron-right"></i>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.emptyState}>
+                <div className={styles.emptyIcon}>
+                  <i className="bi bi-file-medical"></i>
+                </div>
+                <p>Chưa có hồ sơ bệnh án</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Right Column */}
+        {/* Right Column - Better organized */}
         <div className={styles.rightColumn}>
-          {/* Reminder Widget */}
-          <div className={styles.sectionCard} style={{ background: 'linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%)', border: '2px solid #ff6b6b' }}>
+          {/* Reminder Widget - Priority: Moved to top */}
+          <div className={`${styles.sectionCard} ${styles.reminderCardPriority}`} style={{ background: 'linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%)', border: '2px solid #ff6b6b' }}>
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle} style={{ color: '#ff6b6b' }}>
                 <i className="bi bi-bell-fill"></i>
@@ -633,7 +683,7 @@ export const PatientDashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Quick Actions */}
+          {/* Quick Actions - Enhanced */}
           <div className={styles.sectionCard}>
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle}>
@@ -683,56 +733,6 @@ export const PatientDashboard: React.FC = () => {
                 <span>Nạp tiền</span>
               </button>
             </div>
-          </div>
-
-          {/* Recent Medical Records */}
-          <div className={styles.sectionCard}>
-            <div className={styles.sectionHeader}>
-              <div className={styles.sectionTitle}>
-                <i className="bi bi-clock-history"></i>
-                <h2>Lịch sử khám gần đây</h2>
-              </div>
-              <button 
-                className={styles.viewAllLink}
-                onClick={() => navigate('/app/patient/emr-timeline')}
-              >
-                Xem tất cả
-                <i className="bi bi-arrow-right"></i>
-              </button>
-            </div>
-            
-            {medicalRecords.length > 0 ? (
-              <div className={styles.recordsList}>
-                {medicalRecords.slice(0, 4).map((record, index) => (
-                  <div 
-                    key={record.id} 
-                    className={styles.recordItem}
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                    onClick={() => navigate('/app/patient/emr-timeline')}
-                  >
-                    <div className={styles.recordIcon}>
-                      <i className="bi bi-file-text"></i>
-                    </div>
-                    <div className={styles.recordInfo}>
-                      <h5>{record.diagnosis || record.chiefComplaint || 'Khám tổng quát'}</h5>
-                      <p>{record.doctor}</p>
-                      <span className={styles.recordDate}>
-                        <i className="bi bi-calendar3"></i>
-                        {formatDate(record.date)}
-                      </span>
-                    </div>
-                    <i className="bi bi-chevron-right"></i>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={styles.emptyState}>
-                <div className={styles.emptyIcon}>
-                  <i className="bi bi-file-medical"></i>
-                </div>
-                <p>Chưa có hồ sơ bệnh án</p>
-              </div>
-            )}
           </div>
 
           {/* AI Analysis Results */}

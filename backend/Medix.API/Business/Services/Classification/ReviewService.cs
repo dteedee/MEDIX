@@ -47,6 +47,7 @@ namespace Medix.API.Business.Services.Classification
             dto.DoctorId = review.Appointment.DoctorId;
             dto.DoctorName = review.Appointment.Doctor.User.FullName;
             dto.PatientName = review.Appointment.Patient.User.FullName;
+            dto.PatientAvatar = review.Appointment.Patient.User.AvatarUrl;
             dto.AppointmentStartTime = review.Appointment.AppointmentStartTime;
             dto.AppointmentEndTime = review.Appointment.AppointmentEndTime;
             return dto;
@@ -69,7 +70,7 @@ namespace Medix.API.Business.Services.Classification
                 Rating = dto.Rating,
                 Comment = dto.Comment,
                 Status = "PUBLISHED",
-                AdminResponse = "Thanks for your feedback!",
+                AdminResponse = "Cảm ơn bạn đã chia sẻ phản hồi với MEDIX!",
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -80,6 +81,7 @@ namespace Medix.API.Business.Services.Classification
             result.DoctorId = appointment.DoctorId;
             result.DoctorName = appointment.Doctor.User.FullName;
             result.PatientName = appointment.Patient.User.FullName;
+            result.PatientAvatar = appointment.Patient.User.AvatarUrl;
             result.AppointmentStartTime = appointment.AppointmentStartTime;
             result.AppointmentEndTime = appointment.AppointmentEndTime;
             return result;
@@ -102,6 +104,7 @@ namespace Medix.API.Business.Services.Classification
             result.DoctorId = review.Appointment.DoctorId;
             result.DoctorName = review.Appointment.Doctor.User.FullName;
             result.PatientName = review.Appointment.Patient.User.FullName;
+            result.PatientAvatar = review.Appointment.Patient.User.AvatarUrl;
             result.AppointmentStartTime = review.Appointment.AppointmentStartTime;
             result.AppointmentEndTime = review.Appointment.AppointmentEndTime;
             return result;
@@ -128,6 +131,7 @@ namespace Medix.API.Business.Services.Classification
                 r.DoctorId = entity.Appointment.DoctorId;
                 r.DoctorName = entity.Appointment.Doctor.User.FullName;
                 r.PatientName = entity.Appointment.Patient.User.FullName;
+                r.PatientAvatar = entity.Appointment.Patient.User.AvatarUrl;
                 r.AppointmentStartTime = entity.Appointment.AppointmentStartTime;
                 r.AppointmentEndTime = entity.Appointment.AppointmentEndTime;
             }
@@ -148,6 +152,7 @@ namespace Medix.API.Business.Services.Classification
                 r.DoctorId = entity.Appointment.DoctorId;
                 r.DoctorName = entity.Appointment.Doctor.User.FullName;
                 r.PatientName = entity.Appointment.Patient.User.FullName;
+                r.PatientAvatar = entity.Appointment.Patient.User.AvatarUrl;
                 r.AppointmentStartTime = entity.Appointment.AppointmentStartTime;
                 r.AppointmentEndTime = entity.Appointment.AppointmentEndTime;
             }
@@ -169,6 +174,7 @@ namespace Medix.API.Business.Services.Classification
                 r.DoctorId = entity.Appointment.DoctorId;
                 r.DoctorName = entity.Appointment.Doctor.User.FullName;
                 r.PatientName = entity.Appointment.Patient.User.FullName;
+                r.PatientAvatar = entity.Appointment.Patient.User.AvatarUrl;
                 r.AppointmentStartTime = entity.Appointment.AppointmentStartTime;
                 r.AppointmentEndTime = entity.Appointment.AppointmentEndTime;
             }
@@ -191,6 +197,7 @@ namespace Medix.API.Business.Services.Classification
             result.DoctorId = review.Appointment.DoctorId;
             result.DoctorName = review.Appointment.Doctor.User.FullName;
             result.PatientName = review.Appointment.Patient.User.FullName;
+            result.PatientAvatar = review.Appointment.Patient.User.AvatarUrl;
             result.AppointmentStartTime = review.Appointment.AppointmentStartTime;
             result.AppointmentEndTime = review.Appointment.AppointmentEndTime;
             return result;

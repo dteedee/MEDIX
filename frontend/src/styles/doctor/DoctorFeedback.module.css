@@ -677,9 +677,9 @@
 }
 
 .reviewCard {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #f6f8fd 100%);
   border-radius: 20px;
-  box-shadow: 
+  box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.08),
     0 2px 10px rgba(102, 126, 234, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.8);
@@ -696,14 +696,14 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #48bb78 100%);
+  background: linear-gradient(90deg, #f97316 0%, #fb923c 50%, #facc15 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
 .reviewCard:hover {
-  transform: translateY(-6px);
-  box-shadow: 
+  transform: translateY(-4px);
+  box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.15),
     0 8px 30px rgba(102, 126, 234, 0.2);
 }
@@ -712,77 +712,45 @@
   opacity: 1;
 }
 
-.appointmentTimeHeader {
-  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-  padding: 12px 20px;
-  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+.reviewMain {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 16px;
+  padding: 20px;
 }
 
-.appointmentTimeItem {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #4a5568;
-  font-weight: 500;
-}
-
-.appointmentTimeItem svg {
-  color: #667eea;
+.avatarColumn {
+  width: 60px;
   flex-shrink: 0;
 }
 
-.reviewHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
-}
-
-.patientInfo {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1;
-}
-
-.patientAvatarWrapper {
-  position: relative;
-}
-
 .patientAvatar {
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  object-fit: cover;
   border: 3px solid #ffffff;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
-  transition: all 0.3s ease;
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.25);
+  object-fit: cover;
+  transition: transform 0.3s ease;
 }
 
 .reviewCard:hover .patientAvatar {
-  transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+  transform: scale(1.05);
 }
 
-.avatarBadge {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 16px;
-  height: 16px;
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-  border-radius: 50%;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 8px rgba(72, 187, 120, 0.3);
+.reviewContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.patientDetails {
+.reviewTopRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.patientNameRow {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -796,35 +764,86 @@
 
 .reviewDate {
   font-size: 12px;
-  color: #718096;
-  font-weight: 500;
+  color: #94a3b8;
+  font-weight: 600;
 }
 
-.reviewMeta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.ratingBadge {
+.ratingRow {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border-radius: 12px;
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  margin-top: 6px;
 }
 
 .ratingNumber {
-  font-size: 14px;
   font-weight: 700;
-  color: #92400e;
+  color: #f97316;
+  font-size: 14px;
 }
 
-.reviewBody {
-  padding: 20px;
+.comment {
+  color: #1f2937;
+  line-height: 1.6;
+  font-size: 14px;
+  margin: 0;
+}
+
+.noComment {
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metaItem svg {
+  color: #6366f1;
+}
+
+.metaDivider {
+  color: #cbd5f5;
+  font-weight: 700;
+}
+
+.adminResponseBlock {
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  background: linear-gradient(135deg, #fef9f2 0%, #fff5eb 100%);
+  padding: 16px 20px;
+}
+
+.adminLabel {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #c2410c;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.responseText {
+  color: #7c2d12;
+  line-height: 1.6;
+  font-size: 13px;
+  margin: 0;
 }
 
 .sentimentBadge {
@@ -882,45 +901,26 @@
 }
 
 .adminResponse {
-  margin: 0 20px 20px;
-  background: linear-gradient(135deg, #f0f4ff 0%, #e6edff 100%);
-  padding: 16px;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
   border-radius: 12px;
-  border-left: 4px solid #667eea;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
-}
-
-.responseHeader {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.responseIcon {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 12px;
-}
-
-.responseTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: #667eea;
-  margin: 0;
+  padding: 14px;
+  border-left: 4px solid #6366f1;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
 }
 
 .responseText {
-  color: #4a5568;
+  color: #4338ca;
   line-height: 1.6;
   font-size: 13px;
-  margin: 0;
+  margin: 0 0 6px 0;
+}
+
+.responseMeta {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 /* Stars */

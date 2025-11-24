@@ -47,6 +47,9 @@ export interface ReviewDto {
   rating: number;
   comment: string;
   date: string;
+  adminResponse?: string | null;
+  patientName?: string;
+  patientAvatar?: string;
 }
 
 export interface DoctorScheduleDto {

@@ -1,4 +1,4 @@
-﻿﻿namespace Medix.API.Models.DTOs.ApointmentDTO
+﻿namespace Medix.API.Models.DTOs.ApointmentDTO
 {
     public class AppointmentDto
     {
@@ -7,7 +7,8 @@
        public Guid? PatientID { get; set; }
         public Guid? DoctorID { get; set; }
 
-        public string PatientName { get; set; } = null!;  
+        public string PatientName { get; set; } = null!;
+        public string PatientEmail { get; set; } = null!;
         public string DoctorName { get; set; } = null!;   
 
         public DateTime AppointmentStartTime { get; set; }

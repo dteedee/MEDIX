@@ -28,6 +28,9 @@ namespace Medix.API.Models.DTOs.Doctor
         public int Rating { get; set; }
         public string? Comment { get; set; }
         public string? Date { get; set; }
+        public string? AdminResponse { get; set; }
+        public string? PatientName { get; set; }
+        public string? PatientAvatar { get; set; }
     }
     public class AppointmentBookedDto
     {

@@ -322,6 +322,9 @@ namespace Medix.API.Business.Services.Classification
                     Rating = r.Rating,
                     Comment = r.Comment,
                     Date = r.CreatedAt.ToString("dd/MM/yyyy"),
+                    AdminResponse = r.AdminResponse,
+                    PatientName = r.Appointment?.Patient?.User?.FullName,
+                    PatientAvatar = r.Appointment?.Patient?.User?.AvatarUrl
                 })
                 .Take(4)
                 .ToList();

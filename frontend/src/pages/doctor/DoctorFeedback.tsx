@@ -60,6 +60,15 @@ const RatingDistributionChart: React.FC<{ reviews: DoctorReview[] }> = ({ review
   );
 };
 
+const normalizeAdminResponse = (response?: string | null) => {
+  if (!response) return null;
+  const trimmed = response.trim();
+  if (/^thanks for your feedback!?$/i.test(trimmed)) {
+    return 'Cảm ơn bạn đã chia sẻ phản hồi với MEDIX!';
+  }
+  return response;
+};
+
 const DoctorFeedback: React.FC = () => {
   const [reviews, setReviews] = useState<DoctorReview[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -74,8 +83,11 @@ const DoctorFeedback: React.FC = () => {
       try {
         setIsLoading(true);
         const data = await reviewService.getReviewsForCurrentDoctor();
-        // Lọc chỉ những review có status là 'Public'
-        const publicReviews = data.filter(review => review.status === 'Public');
+        // Chỉ giữ các đánh giá đã xuất bản (bao gồm mọi biến thể chữ hoa/thường)
+        const publicReviews = data.filter(review => {
+          const status = review.status?.toUpperCase();
+          return status === 'PUBLIC' || status === 'PUBLISHED' || status === 'APPROVED';
+        });
         // Sắp xếp các đánh giá mới nhất lên đầu
         setReviews(publicReviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
         setError(null);
@@ -338,57 +350,41 @@ const DoctorFeedback: React.FC = () => {
       <div className={styles.reviewList}>
         {filteredAndSortedReviews.length > 0 ? (
           filteredAndSortedReviews.map((review, index) => {
-            const sentiment = getSentiment(review.rating);
+            const localizedAdminResponse = normalizeAdminResponse(review.adminResponse);
+            const patientName = review.patientName || 'Ẩn danh';
+            const avatarSrc = review.patientAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(patientName)}&background=667eea&color=fff&size=128&bold=true`;
             return (
-              <div 
-                key={review.id} 
-                className={styles.reviewCard}
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                {/* Appointment Info Header */}
-                <div className={styles.appointmentTimeHeader}>
-                  <div className={styles.appointmentTimeItem}>
-                    <Clock size={14} />
-                    <span>
-                      {formatTime(review.appointmentStartTime)} - {formatTime(review.appointmentEndTime)}
-                    </span>
-                  </div>
-                  <div className={styles.appointmentTimeItem}>
-                    <Calendar size={14} />
-                    <span>{formatDate(review.appointmentStartTime)}</span>
-                  </div>
+            <div 
+              key={review.id} 
+              className={styles.reviewCard}
+              style={{ animationDelay: `${index * 0.05}s` }}
+            >
+              <div className={styles.reviewMain}>
+                <div className={styles.avatarColumn}>
+                  <img 
+                    src={avatarSrc} 
+                    alt={patientName} 
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(patientName)}&background=667eea&color=fff&size=128&bold=true`;
+                    }}
+                    className={styles.patientAvatar} 
+                  />
                 </div>
+                <div className={styles.reviewContent}>
+                  <div className={styles.reviewTopRow}>
+                    <div>
+                      <div className={styles.patientNameRow}>
+                        <span className={styles.patientName}>{patientName}</span>
+                        <span className={styles.reviewDate}>{formatDateTime(review.createdAt)}</span>
+                      </div>
+                      <div className={styles.ratingRow}>
+                        <StarRating rating={review.rating} size={18} />
+                        <span className={styles.ratingNumber}>{review.rating}/5</span>
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Review Header */}
-                <div className={styles.reviewHeader}>
-                  <div className={styles.patientInfo}>
-                    <div className={styles.patientAvatarWrapper}>
-                      <img 
-                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(review.patientName)}&background=667eea&color=fff&size=128&bold=true`} 
-                        alt={review.patientName} 
-                        className={styles.patientAvatar} 
-                      />
-                      <div className={styles.avatarBadge}></div>
-                    </div>
-                    <div className={styles.patientDetails}>
-                      <span className={styles.patientName}>{review.patientName}</span>
-                      <span className={styles.reviewDate}>{formatDateTime(review.createdAt)}</span>
-                    </div>
-                  </div>
-                  <div className={styles.reviewMeta}>
-                    <div className={styles.ratingBadge}>
-                      <StarRating rating={review.rating} size={20} />
-                      <span className={styles.ratingNumber}>{review.rating}/5</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Review Body */}
-                <div className={styles.reviewBody}>
-                  <div className={`${styles.sentimentBadge} ${sentiment.className}`}>
-                    {sentiment.icon}
-                    <span>{sentiment.text}</span>
-                  </div>
                   {review.comment ? (
                     <p className={styles.comment}>{review.comment}</p>
                   ) : (
@@ -397,21 +393,28 @@ const DoctorFeedback: React.FC = () => {
                       Bệnh nhân không để lại bình luận.
                     </p>
                   )}
-                </div>
 
-                {/* Admin Response */}
-                {review.adminResponse && (
-                  <div className={styles.adminResponse}>
-                    <div className={styles.responseHeader}>
-                      <div className={styles.responseIcon}>
-                        <i className="bi bi-shield-check"></i>
-                      </div>
-                      <h4 className={styles.responseTitle}>Phản hồi từ Admin</h4>
+                  <div className={styles.metaRow}>
+                    <div className={styles.metaItem}>
+                      <Calendar size={14} />
+                      <span>Đánh giá: {formatDate(review.createdAt)} {formatTime(review.createdAt)}</span>
                     </div>
-                    <p className={styles.responseText}>{review.adminResponse}</p>
+                    <span className={styles.metaDivider}>|</span>
+                    <div className={styles.metaItem}>
+                      <Clock size={14} />
+                      <span>Cuộc hẹn: {formatTime(review.appointmentStartTime)} - {formatDate(review.appointmentStartTime)}</span>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
+
+              {localizedAdminResponse && (
+                <div className={styles.adminResponseBlock}>
+                  <span className={styles.adminLabel}>Phản hồi từ MEDIX</span>
+                  <p className={styles.responseText}>{localizedAdminResponse}</p>
+                </div>
+              )}
+            </div>
             );
           })
         ) : (

@@ -16,6 +16,15 @@ import DoctorRegistrationFormService from "../../services/doctorRegistrationForm
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useToast } from "../../contexts/ToastContext";
 
+const normalizeAdminResponse = (response?: string | null) => {
+    if (!response) return null;
+    const trimmed = response.trim();
+    if (/^thanks for your feedback!?$/i.test(trimmed)) {
+        return 'Cảm ơn bạn đã chia sẻ phản hồi với MEDIX!';
+    }
+    return response;
+};
+
 function DoctorDetails() {
     const { showToast } = useToast();
     const [profileData, setProfileData] = useState<DoctorProfileDto>();
@@ -2034,14 +2043,25 @@ function DoctorDetails() {
                                             </h3>
                                             {profileData.reviews && profileData.reviews.length > 0 ? (
                                                 <div className={styles.reviewsList}>
-                                                    {profileData.reviews.map((review, index) => (
-                                                        <div className={styles.reviewCard} key={index}>
+                                                    {profileData.reviews.map((review, index) => {
+                                                        const adminResponse = normalizeAdminResponse(review.adminResponse);
+                                                        const patientDisplayName = review.patientName || (review as any).PatientName || 'Ẩn danh';
+                                                        const avatarSrc = review.patientAvatar || (review as any).PatientAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(patientDisplayName)}&background=667eea&color=fff&size=128&bold=true`;
+                                                        return (
+                                                            <div className={styles.reviewCard} key={index}>
                                                             <div className={styles.reviewHeader}>
                                                                 <div className={styles.reviewerAvatar}>
-                                                                    <i className="bi bi-person-circle"></i>
+                                                                    <img 
+                                                                        src={avatarSrc}
+                                                                        alt={patientDisplayName}
+                                                                        onError={(e) => {
+                                                                            const target = e.currentTarget;
+                                                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(patientDisplayName)}&background=667eea&color=fff&size=128&bold=true`;
+                                                                        }}
+                                                                    />
                                                                 </div>
                                                                 <div className={styles.reviewerInfo}>
-                                                                    <span className={styles.reviewerName}>Bệnh nhân</span>
+                                                                    <span className={styles.reviewerName}>{patientDisplayName}</span>
                                                                     <div className={styles.reviewRating}>
                                                                         {renderStars(review.rating)}
                                                                         <span className={styles.reviewDate}>{review.date}</span>
@@ -2049,8 +2069,15 @@ function DoctorDetails() {
                                                                 </div>
                                                             </div>
                                                             <p className={styles.reviewText}>{review.comment}</p>
-                                                        </div>
-                                                    ))}
+                                                            {adminResponse && (
+                                                                <div className={styles.adminReplyBlock}>
+                                                                    <span className={styles.adminReplyLabel}>Phản hồi từ MEDIX</span>
+                                                                    <p className={styles.adminReplyText}>{adminResponse}</p>
+                                                                </div>
+                                                            )}
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             ) : (
                                                 <div className={styles.noReviews}>

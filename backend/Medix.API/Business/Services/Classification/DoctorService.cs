@@ -26,6 +26,7 @@ namespace Medix.API.Business.Services.Classification
         private readonly IServiceTierRepository _serviceTierRepository;
         private readonly IAppointmentRepository _appointmentRepository;
 
+
         public DoctorService(IDoctorRepository doctorRepository, IUserRepository userRepository,
             MedixContext context, IReviewRepository reviewRepository, IServiceTierRepository serviceTierRepository, IServiceTierRepository serviceTierRepo, IDoctorScheduleRepository doctorScheduleRepository,
             IEmailService emailService, IDoctorScheduleOverrideRepository doctorScheduleOverrideRepository, IAppointmentService appointmentService, IAppointmentRepository appointmentRepository)

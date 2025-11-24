@@ -1,3 +1,4 @@
+using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.Community;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.UserManagement;
@@ -20,12 +21,17 @@ namespace Medix.API.Presentation.Controller.UserManagement
         private readonly IEmailService _emailService;
         private readonly MedixContext _context;
 
-        public AuthController(IAuthService authService, ILogger<AuthController> logger, IEmailService emailService, MedixContext context)
+        private readonly IUserPromotionService userPromotionService;
+        private readonly IPromotionService promotionService;
+
+        public AuthController(IAuthService authService, ILogger<AuthController> logger, IEmailService emailService, MedixContext context, IUserPromotionService userPromotionService, IPromotionService promotionService)
         {
             _authService = authService;
             _logger = logger;
             _emailService = emailService;
             _context = context;
+            this.userPromotionService = userPromotionService;
+            this.promotionService = promotionService;
         }
 
         [HttpPost("login")]
@@ -73,6 +79,15 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 }
 
                 var result = await _authService.RegisterAsync(registerRequest);
+                var promotionBegin = await promotionService.GetPromotionforTypeTarget("NEW_USER");
+                foreach (var promo in promotionBegin)
+                {
+                    await userPromotionService.AssignPromotionToUserAsync(
+                        result.User.Id,
+                        promo.Id
+                    );
+                }
+
                 return Ok(result);
             }
             catch (ValidationException ex)

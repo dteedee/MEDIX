@@ -164,5 +164,12 @@ namespace Medix.API.Business.Services.Classification
                 throw;
             }
         }
+
+        public async Task<IEnumerable<PromotionDto>> GetPromotionforTypeTarget(string type)
+        {
+            var x = await _promotionRepository.PromotionTarget(type);
+            var dtoList = _mapper.Map<IEnumerable<PromotionDto>>(x);
+            return dtoList;
+        }
     }
 }

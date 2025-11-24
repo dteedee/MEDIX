@@ -418,19 +418,26 @@ function HomePage() {
                     <div className={styles["doctors-grid"]}>
                         {getVisibleDoctors().map((doctor, index) => (
                             <a key={`doctor-${doctor.userName}-${index}`} href={`/doctor/details/${doctor.id}`} className={styles["doctor-card"]}>
-                                <div className={styles["doctor-photo"]} style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
-                                    <img className={styles['doctor-photo']} src={doctor.avatarUrl} style={{objectFit:'cover', display:'block'}} />
+                                <div className={styles["doctor-photo"]}>
+                                    <img src={doctor.avatarUrl} alt={doctor.fullName} />
                                 </div>
-                                <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'center'}}>
-                                    <h3 style={{margin:0}}>{doctor.fullName}</h3>
-                                    <p className={styles["specialty"]} style={{margin:0}}>
-                                        {(doctorEducationMap[doctor.id] || '—')} - {doctor.specializationName}
-                                    </p>
-                                    <p className={styles["specialty"]} style={{margin:0}}>
-                                        {doctor.yearsOfExperience} {t('common.years-experience')}
-                                    </p>
+                                <div className={styles["doctor-info"]}>
+                                    <h3>{doctor.fullName}</h3>
+                                    <div className={styles["doctor-details"]}>
+                                        <p className={styles["specialty"]}>
+                                            <i className="bi bi-mortarboard" style={{marginRight: '6px'}}></i>
+                                            {(doctorEducationMap[doctor.id] || '—')} - {doctor.specializationName}
+                                        </p>
+                                        <p className={styles["experience"]}>
+                                            <i className="bi bi-clock-history" style={{marginRight: '6px'}}></i>
+                                            {doctor.yearsOfExperience} {t('common.years-experience')}
+                                        </p>
+                                    </div>
                                     <div className={styles["rating"]}>
                                         {'★'.repeat(Math.round(doctor.averageRating)) + '☆'.repeat(5 - Math.round(doctor.averageRating))}
+                                        {doctor.averageRating > 0 && (
+                                            <span className={styles["rating-value"]}> ({doctor.averageRating.toFixed(1)})</span>
+                                        )}
                                     </div>
                                 </div>
                             </a>

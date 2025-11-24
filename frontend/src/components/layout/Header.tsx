@@ -202,9 +202,14 @@ export const Header: React.FC = () => {
                                     onClick={handleUserDropdownToggle}
                                 >
                                     <img
+                                        key={user.avatarUrl || 'avatar'} // Force re-render when avatar changes
                                         src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || user.email || 'User')}&background=667eea&color=fff`}
                                         alt="User avatar"
                                         className={styles["user-avatar"]}
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || user.email || 'User')}&background=667eea&color=fff`;
+                                        }}
                                     />
                                     <div className={styles["user-info"]}>
                                         <div className={styles["user-name"]}>{user.fullName || 'Người dùng'}</div>

@@ -126,8 +126,13 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
         >
           <div className={styles.userAvatar}>
             <img
+              key={user?.avatarUrl || 'avatar'} // Force re-render when avatar changes
               src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || user?.email || 'Patient')}&background=667eea&color=fff`}
               alt={user?.fullName || 'Patient'}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || user?.email || 'Patient')}&background=667eea&color=fff`;
+              }}
             />
           </div>
           {sidebarOpen && (

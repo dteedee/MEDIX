@@ -5,12 +5,15 @@ import PatientService from '../../services/patientService';
 import { BasicEMRInfo } from '../../types/patient.types';
 import { MedicalRecordDetail, MedicalRecordDto, MedicalRecordQuery } from '../../types/medicalRecord.types';
 import { medicalRecordService } from '../../services/medicalRecordService';
+import { useAuth } from '../../contexts/AuthContext';
 import html2pdf from 'html2pdf.js';
 
 export default function EMRTimeline() {
+    const { user } = useAuth();
     const [pageLoading, setPageLoading] = useState(true);
     const [basicInfoError, setBasicInfoError] = useState<string | null>(null);
     const [listError, setListError] = useState<string | null>(null);
+    const [avatarUpdateKey, setAvatarUpdateKey] = useState(0);
 
     const [showDetails, setshowDetails] = useState(false);
     const [recordDetails, setRecordDetails] = useState<MedicalRecordDetail | null>(null);
@@ -18,12 +21,20 @@ export default function EMRTimeline() {
 
     const [basicInfo, setBasicInfo] = useState<BasicEMRInfo | null>(null);
     const [list, setList] = useState<MedicalRecordDto[]>([]);
+    const [filteredList, setFilteredList] = useState<MedicalRecordDto[]>([]);
     const [dateFrom, setDateFrom] = useState<string>('');
     const [dateTo, setDateTo] = useState<string>('');
     const [dateRangeError, setDateRangeError] = useState<string | null>(null);
     const [isFiltering, setIsFiltering] = useState<boolean>(false);
+    const [searchQuery, setSearchQuery] = useState<string>('');
+    const [selectedDoctor, setSelectedDoctor] = useState<string>('all');
+    const [sortBy, setSortBy] = useState<'date' | 'doctor'>('date');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [viewMode, setViewMode] = useState<'timeline' | 'list'>('timeline');
+    const [showFilterPanel, setShowFilterPanel] = useState<boolean>(false);
 
     const contentRef = useRef<HTMLDivElement>(null);
+    const recordContentRef = useRef<HTMLDivElement>(null);
 
     const handleClearDateRange = () => {
         setDateFrom('');
@@ -36,10 +47,10 @@ export default function EMRTimeline() {
         fetchMedicalRecordList(query);
     };
 
-    const getTotalRecords = () => list.length;
-    const getTotalAttachments = () => list.reduce((sum, record) => sum + (record.attatchments?.length || 0), 0);
+    const getTotalRecords = () => filteredList.length;
+    const getTotalAttachments = () => filteredList.reduce((sum, record) => sum + (record.attatchments?.length || 0), 0);
     const getUniqueDoctors = () => {
-        const doctors = new Set(list.map(record => record.doctor).filter(Boolean));
+        const doctors = new Set(filteredList.map(record => record.doctor).filter(Boolean));
         return doctors.size;
     };
 
@@ -88,6 +99,7 @@ export default function EMRTimeline() {
             setIsFiltering(true);
             const data = await medicalRecordService.getMedicalRecordsOfPatient(query);
             setList(data);
+            setFilteredList(data);
         } catch (error: any) {
             if (error.response?.status === 404) {
                 setListError('Đã có lỗi xảy ra. Vui lòng thử lại sau.');
@@ -98,6 +110,130 @@ export default function EMRTimeline() {
             setIsFiltering(false);
         }
     }
+
+    // Get unique doctors from list
+    const getUniqueDoctorsList = () => {
+        const doctors = Array.from(new Set(list.map(record => record.doctor).filter(Boolean)));
+        return doctors.sort();
+    };
+
+    // Filter and sort records
+    useEffect(() => {
+        let filtered = [...list];
+
+        // Filter by search query
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(record => 
+                record.doctor?.toLowerCase().includes(query) ||
+                record.chiefComplaint?.toLowerCase().includes(query) ||
+                record.diagnosis?.toLowerCase().includes(query) ||
+                record.treatmentPlan?.toLowerCase().includes(query)
+            );
+        }
+
+        // Filter by doctor
+        if (selectedDoctor !== 'all') {
+            filtered = filtered.filter(record => record.doctor === selectedDoctor);
+        }
+
+        // Sort
+        filtered.sort((a, b) => {
+            if (sortBy === 'date') {
+                const dateA = new Date(a.date).getTime();
+                const dateB = new Date(b.date).getTime();
+                return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+            } else if (sortBy === 'doctor') {
+                const doctorA = a.doctor || '';
+                const doctorB = b.doctor || '';
+                if (sortOrder === 'asc') {
+                    return doctorA.localeCompare(doctorB);
+                } else {
+                    return doctorB.localeCompare(doctorA);
+                }
+            }
+            return 0;
+        });
+
+        setFilteredList(filtered);
+    }, [list, searchQuery, selectedDoctor, sortBy, sortOrder]);
+
+    const handleDownloadRecord = (record: MedicalRecordDto) => {
+        // Create a temporary div with record content
+        const tempDiv = document.createElement('div');
+        tempDiv.style.padding = '20px';
+        tempDiv.style.background = 'white';
+        tempDiv.innerHTML = `
+            <h2 style="text-align: center; margin-bottom: 20px;">Hồ sơ khám bệnh</h2>
+            <div style="margin-bottom: 15px;">
+                <strong>Ngày khám:</strong> ${record.date}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong>Bác sĩ phụ trách:</strong> ${record.doctor || 'N/A'}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong>Lý do khám & Triệu chứng:</strong> ${record.chiefComplaint || 'N/A'}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong>Chẩn đoán:</strong> ${record.diagnosis || 'N/A'}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong>Kế hoạch điều trị:</strong> ${record.treatmentPlan || 'N/A'}
+            </div>
+        `;
+        document.body.appendChild(tempDiv);
+
+        const opt = {
+            margin: 0.5,
+            filename: `EMR_${record.date}_${record.doctor?.replace(/\s+/g, '_') || 'record'}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(tempDiv).save().then(() => {
+            document.body.removeChild(tempDiv);
+        });
+    };
+
+    const handlePrintRecord = (record: MedicalRecordDto) => {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Hồ sơ khám bệnh - ${record.date}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; padding: 20px; }
+                            h2 { text-align: center; color: #333; }
+                            .info-row { margin-bottom: 15px; }
+                            .label { font-weight: bold; }
+                        </style>
+                    </head>
+                    <body>
+                        <h2>Hồ sơ khám bệnh</h2>
+                        <div class="info-row">
+                            <span class="label">Ngày khám:</span> ${record.date}
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Bác sĩ phụ trách:</span> ${record.doctor || 'N/A'}
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Lý do khám & Triệu chứng:</span> ${record.chiefComplaint || 'N/A'}
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Chẩn đoán:</span> ${record.diagnosis || 'N/A'}
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Kế hoạch điều trị:</span> ${record.treatmentPlan || 'N/A'}
+                        </div>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+    };
 
     useEffect(() => {
         const query: MedicalRecordQuery = {
@@ -122,6 +258,23 @@ export default function EMRTimeline() {
             isMounted = false;
         }
     }, []);
+
+    // Update avatar when user avatar changes
+    useEffect(() => {
+        if (user?.avatarUrl) {
+            setAvatarUpdateKey(prev => prev + 1);
+            // Reload basicInfo to sync avatar from backend
+            const reloadBasicInfo = async () => {
+                try {
+                    const updatedBasicInfo = await PatientService.getBasicEMRInfo();
+                    setBasicInfo(updatedBasicInfo);
+                } catch (error) {
+                    console.warn('Failed to reload basicInfo after avatar update:', error);
+                }
+            };
+            reloadBasicInfo();
+        }
+    }, [user?.avatarUrl]);
 
     const fetchMedicalRecordDetail = async (id: string) => {
         try {
@@ -183,7 +336,21 @@ export default function EMRTimeline() {
     return (
         <>
             <div ref={contentRef} className={styles.container}>
-                <h1 className={styles.pageTitle}>Hồ sơ Y tế</h1>
+                <div className={styles.header}>
+                    <div className={styles.headerLeft}>
+                        <h1 className={styles.pageTitle}>
+                            <i className="bi bi-file-medical-fill"></i>
+                            Hồ sơ Y tế
+                        </h1>
+                        <p className={styles.pageSubtitle}>Quản lý và xem lịch sử khám bệnh của bạn</p>
+                    </div>
+                    <div className={styles.headerRight}>
+                        <div className={styles.dateTime}>
+                            <i className="bi bi-calendar3"></i>
+                            <span>{new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                        </div>
+                    </div>
+                </div>
                 
                 {basicInfoError ? (
                     <div className={styles.errorMessage}>
@@ -196,9 +363,18 @@ export default function EMRTimeline() {
                             <div className={styles.profileSection}>
                                 <div className={styles.profileImageWrapper}>
                                     <img 
+                                        key={avatarUpdateKey}
                                         className={styles.profileImage} 
-                                        src={basicInfo?.avatarUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(basicInfo?.fullName || '') + '&background=667eea&color=fff'} 
-                                        alt={basicInfo?.fullName}
+                                        src={
+                                            (user?.avatarUrl || basicInfo?.avatarUrl) 
+                                                ? `${(user?.avatarUrl || basicInfo?.avatarUrl)}?v=${avatarUpdateKey || Date.now()}`
+                                                : `https://ui-avatars.com/api/?name=${encodeURIComponent(basicInfo?.fullName || user?.fullName || 'Patient')}&background=667eea&color=fff`
+                                        }
+                                        alt={basicInfo?.fullName || user?.fullName || 'Patient'}
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(basicInfo?.fullName || user?.fullName || 'Patient')}&background=667eea&color=fff`;
+                                        }}
                                     />
                                 </div>
                                 <div className={styles.profileInfo}>
@@ -229,7 +405,7 @@ export default function EMRTimeline() {
                                         <h3>Thông tin Y tế</h3>
                                         <div className={styles.infoItem}>
                                             <span className={styles.infoLabel}>Mã số EMR</span>
-                                            <span className={styles.infoValue}>{basicInfo?.emrNumber || 'N/A'}</span>
+                                            <span className={styles.infoValue}>{basicInfo?.id || 'N/A'}</span>
                                         </div>
                                         <div className={styles.infoItem}>
                                             <span className={styles.infoLabel}>Ngày sinh</span>
@@ -275,7 +451,9 @@ export default function EMRTimeline() {
                                             </div>
                                             <div className={styles.statInfo}>
                                                 <div className={styles.statValue}>{getTotalRecords()}</div>
-                                                <div className={styles.statLabel}>Tổng số lần khám</div>
+                                                <div className={styles.statLabel}>
+                                                    {searchQuery || selectedDoctor !== 'all' ? 'Kết quả tìm kiếm' : 'Tổng số lần khám'}
+                                                </div>
                                             </div>
                                         </div>
                                         <div className={styles.statItem}>
@@ -313,24 +491,115 @@ export default function EMRTimeline() {
                 )}
 
                 <div className={styles.historyCard}>
-                    <h2 className={styles.sectionTitle}>Lịch sử khám</h2>
-                    
+                    <div className={styles.sectionHeader}>
+                        <div className={styles.sectionHeaderLeft}>
+                            <h2 className={styles.sectionTitle}>
+                                <i className="bi bi-clock-history"></i>
+                                Lịch sử khám
+                            </h2>
+                            <p className={styles.sectionSubtitle}>Xem chi tiết các lần khám bệnh của bạn</p>
+                        </div>
+                        <div className={styles.sectionHeaderRight}>
+                            <div className={styles.viewModeToggle}>
+                                <button
+                                    className={`${styles.viewModeBtn} ${viewMode === 'timeline' ? styles.active : ''}`}
+                                    onClick={() => setViewMode('timeline')}
+                                    title="Xem dạng timeline"
+                                >
+                                    <i className="bi bi-list-ul"></i>
+                                </button>
+                                <button
+                                    className={`${styles.viewModeBtn} ${viewMode === 'list' ? styles.active : ''}`}
+                                    onClick={() => setViewMode('list')}
+                                    title="Xem dạng danh sách"
+                                >
+                                    <i className="bi bi-grid"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Unified Filter Section */}
                     <div className={`${styles.filterCard} pdf-exclude`}>
                         <div className={styles.filterHeader}>
                             <div className={styles.filterTitle}>
                                 <i className="bi bi-funnel"></i>
                                 <span>Bộ lọc tìm kiếm</span>
                             </div>
-                            {(dateFrom || dateTo) && (
+                            {(searchQuery || selectedDoctor !== 'all' || dateFrom || dateTo) && (
                                 <button
                                     className={styles.clearFilterButton}
-                                    onClick={handleClearDateRange}
+                                    onClick={() => {
+                                        setSearchQuery('');
+                                        setSelectedDoctor('all');
+                                        handleClearDateRange();
+                                    }}
                                 >
                                     <i className="bi bi-x"></i>
                                     Xóa bộ lọc
                                 </button>
                             )}
                         </div>
+                        
+                        <div className={styles.searchBar} style={{ marginBottom: '16px' }}>
+                            <i className="bi bi-search"></i>
+                            <input
+                                type="text"
+                                placeholder="Tìm kiếm theo bác sĩ, chẩn đoán, triệu chứng..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className={styles.searchInput}
+                            />
+                            {searchQuery && (
+                                <button
+                                    className={styles.clearSearchBtn}
+                                    onClick={() => setSearchQuery('')}
+                                >
+                                    <i className="bi bi-x"></i>
+                                </button>
+                            )}
+                        </div>
+
+                        <div className={styles.quickFilters} style={{ marginBottom: '16px' }}>
+                            <div className={styles.quickFilterItem}>
+                                <label>
+                                    <i className="bi bi-funnel"></i>
+                                    Bác sĩ:
+                                </label>
+                                <select
+                                    value={selectedDoctor}
+                                    onChange={(e) => setSelectedDoctor(e.target.value)}
+                                    className={styles.quickFilterSelect}
+                                >
+                                    <option value="all">Tất cả bác sĩ</option>
+                                    {getUniqueDoctorsList().map(doctor => (
+                                        <option key={doctor} value={doctor}>{doctor}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className={styles.quickFilterItem}>
+                                <label>
+                                    <i className="bi bi-sort-down"></i>
+                                    Sắp xếp:
+                                </label>
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value as 'date' | 'doctor')}
+                                    className={styles.quickFilterSelect}
+                                >
+                                    <option value="date">Theo ngày</option>
+                                    <option value="doctor">Theo bác sĩ</option>
+                                </select>
+                            </div>
+                            <button
+                                className={styles.sortOrderBtn}
+                                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                title={sortOrder === 'asc' ? 'Tăng dần' : 'Giảm dần'}
+                            >
+                                <i className={`bi bi-sort-${sortOrder === 'asc' ? 'alpha-down' : 'alpha-up'}`}></i>
+                            </button>
+                    </div>
+                    
                         <div className={styles.dateFilter}>
                             <div className={styles.dateInputGroup}>
                                 <label htmlFor="dateFrom">
@@ -393,64 +662,174 @@ export default function EMRTimeline() {
                             <i className="bi bi-exclamation-triangle"></i>
                             {listError}
                         </div>
-                    ) : list.length === 0 ? (
+                    ) : filteredList.length === 0 ? (
                         <div className={styles.emptyState}>
                             <i className={`bi bi-clipboard-x ${styles.emptyStateIcon}`}></i>
-                            <p className={styles.emptyStateText}>Chưa có lịch sử khám</p>
+                            <p className={styles.emptyStateText}>
+                                {searchQuery || selectedDoctor !== 'all' 
+                                    ? 'Không tìm thấy kết quả phù hợp' 
+                                    : 'Chưa có lịch sử khám'}
+                            </p>
                         </div>
-                    ) : (
+                    ) : viewMode === 'timeline' ? (
                         <div className={styles.timeline}>
-                            {list.map((item) => (
+                            {filteredList.map((item, index) => (
                                 <div
                                     key={item.id}
                                     className={styles.timelineItem}
+                                    style={{ animationDelay: `${index * 0.1}s` }}
                                 >
-                                    <div className={styles.timelineDot} />
-                                    <div className={styles.timelineDate}>{item.date}</div>
-                                    <div className={styles.recordCard}>
-                                        <div className={styles.recordRow}>
-                                            <span className={styles.recordLabel}>Bác sĩ phụ trách</span>
-                                            <span className={styles.recordValue}>{item.doctor || 'N/A'}</span>
+                                    <div className={styles.timelineConnector}>
+                                        <div className={styles.timelineDot} />
+                                        {index < list.length - 1 && <div className={styles.timelineLine} />}
+                                    </div>
+                                    <div className={styles.timelineContent}>
+                                        <div className={styles.timelineDate}>
+                                            <i className="bi bi-calendar3"></i>
+                                            <span>{item.date}</span>
                                         </div>
-                                        <div className={styles.recordRow}>
-                                            <span className={styles.recordLabel}>Lý do khám &amp; Triệu chứng</span>
-                                            <span className={styles.recordValue}>{item.chiefComplaint || 'N/A'}</span>
-                                        </div>
-                                        <div className={styles.recordRow}>
-                                            <span className={styles.recordLabel}>Chẩn đoán</span>
-                                            <span className={styles.recordValue}>{item.diagnosis || 'N/A'}</span>
-                                        </div>
-                                        <div className={styles.recordRow}>
-                                            <span className={styles.recordLabel}>Kế hoạch điều trị</span>
-                                            <span className={styles.recordValue}>{item.treatmentPlan || 'N/A'}</span>
-                                        </div>
-                                        {item.attatchments && item.attatchments.length > 0 && (
-                                            <div className={`${styles.recordRow} pdf-exclude`}>
-                                                <span className={styles.recordLabel}>Kết quả cận lâm sàng</span>
-                                                <div className={styles.attachmentLinks}>
-                                                    {item.attatchments.map((attatchment) => (
-                                                        <a 
-                                                            key={attatchment.id} 
-                                                            href={attatchment.fileUrl} 
-                                                            className={styles.attachmentLink}
-                                                            rel="noopener noreferrer" 
-                                                            target="_blank"
-                                                        >
-                                                            <i className="bi bi-file-earmark-pdf"></i>
-                                                            {attatchment.fileName}
-                                                        </a>
-                                                    ))}
+                                        <div className={styles.recordCard}>
+                                            <div className={styles.recordHeader}>
+                                                <div className={styles.doctorInfo}>
+                                                    <div className={styles.doctorIcon}>
+                                                        <i className="bi bi-person-badge"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div className={styles.recordLabel}>Bác sĩ phụ trách</div>
+                                                        <div className={styles.recordValue}>{item.doctor || 'N/A'}</div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        )}
+                                            <div className={styles.recordBody}>
+                                                <div className={styles.recordSection}>
+                                                    <div className={styles.recordSectionHeader}>
+                                                        <i className="bi bi-chat-left-text"></i>
+                                                        <span>Lý do khám & Triệu chứng</span>
+                                                    </div>
+                                                    <div className={styles.recordSectionContent}>
+                                                        {item.chiefComplaint || 'N/A'}
+                                                    </div>
+                                                </div>
+                                                <div className={styles.recordSection}>
+                                                    <div className={styles.recordSectionHeader}>
+                                                        <i className="bi bi-clipboard-check"></i>
+                                                        <span>Chẩn đoán</span>
+                                                    </div>
+                                                    <div className={`${styles.recordSectionContent} ${styles.diagnosisContent}`}>
+                                                        {item.diagnosis || 'N/A'}
+                                                    </div>
+                                                </div>
+                                                <div className={styles.recordSection}>
+                                                    <div className={styles.recordSectionHeader}>
+                                                        <i className="bi bi-file-medical"></i>
+                                                        <span>Kế hoạch điều trị</span>
+                                                    </div>
+                                                    <div className={styles.recordSectionContent}>
+                                                        {item.treatmentPlan || 'N/A'}
+                                                    </div>
+                                                </div>
+                                                {item.attatchments && item.attatchments.length > 0 && (
+                                                    <div className={`${styles.recordSection} pdf-exclude`}>
+                                                        <div className={styles.recordSectionHeader}>
+                                                            <i className="bi bi-paperclip"></i>
+                                                            <span>Kết quả cận lâm sàng</span>
+                                                        </div>
+                                                        <div className={styles.attachmentLinks}>
+                                                            {item.attatchments.map((attatchment) => (
+                                                                <a 
+                                                                    key={attatchment.id} 
+                                                                    href={attatchment.fileUrl} 
+                                                                    className={styles.attachmentLink}
+                                                                    rel="noopener noreferrer" 
+                                                                    target="_blank"
+                                                                >
+                                                                    <i className="bi bi-file-earmark-pdf"></i>
+                                                                    {attatchment.fileName}
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className={styles.recordFooter}>
+                                                <div className={styles.recordActions}>
+                                                    <button 
+                                                        className={`${styles.viewEmrButton} pdf-exclude`} 
+                                                        onClick={() => handleShowDetails(item.id)}
+                                                    >
+                                                        <i className="bi bi-eye"></i>
+                                                        Xem chi tiết
+                                                    </button>
+                                                    <button 
+                                                        className={`${styles.actionButton} ${styles.downloadButton} pdf-exclude`}
+                                                        onClick={() => handleDownloadRecord(item)}
+                                                        title="Tải xuống PDF"
+                                                    >
+                                                        <i className="bi bi-download"></i>
+                                                    </button>
+                                                    <button 
+                                                        className={`${styles.actionButton} ${styles.printButton} pdf-exclude`}
+                                                        onClick={() => handlePrintRecord(item)}
+                                                        title="In"
+                                                    >
+                                                        <i className="bi bi-printer"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <button 
-                                        className={`${styles.viewEmrButton} pdf-exclude`} 
-                                        onClick={() => handleShowDetails(item.id)}
-                                    >
-                                        <i className="bi bi-eye"></i>
-                                        Xem EMR chi tiết
-                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className={styles.listView}>
+                            {filteredList.map((item, index) => (
+                                <div key={item.id} className={styles.listItem} style={{ animationDelay: `${index * 0.05}s` }}>
+                                    <div className={styles.listItemHeader}>
+                                        <div className={styles.listItemDate}>
+                                            <i className="bi bi-calendar3"></i>
+                                            <span>{item.date}</span>
+                                        </div>
+                                        <div className={styles.listItemDoctor}>
+                                            <i className="bi bi-person-badge"></i>
+                                            <span>{item.doctor || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    <div className={styles.listItemBody}>
+                                        <div className={styles.listItemSection}>
+                                            <span className={styles.listItemLabel}>Chẩn đoán:</span>
+                                            <span className={styles.listItemValue}>{item.diagnosis || 'N/A'}</span>
+                                        </div>
+                                        <div className={styles.listItemSection}>
+                                            <span className={styles.listItemLabel}>Triệu chứng:</span>
+                                            <span className={styles.listItemValue}>{item.chiefComplaint || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    <div className={styles.listItemFooter}>
+                                        <button 
+                                            className={`${styles.viewEmrButton} pdf-exclude`} 
+                                            onClick={() => handleShowDetails(item.id)}
+                                        >
+                                            <i className="bi bi-eye"></i>
+                                            Xem chi tiết
+                                        </button>
+                                        <div className={styles.listItemActions}>
+                                            <button 
+                                                className={`${styles.actionButton} ${styles.downloadButton} pdf-exclude`}
+                                                onClick={() => handleDownloadRecord(item)}
+                                                title="Tải xuống PDF"
+                                            >
+                                                <i className="bi bi-download"></i>
+                                            </button>
+                                            <button 
+                                                className={`${styles.actionButton} ${styles.printButton} pdf-exclude`}
+                                                onClick={() => handlePrintRecord(item)}
+                                                title="In"
+                                            >
+                                                <i className="bi bi-printer"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -463,9 +842,12 @@ export default function EMRTimeline() {
                     <div className={styles.modalOverlay} onClick={handleCloseDetails}>
                         <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                             <div className={styles.modalHeader}>
-                                <h3>Chi tiết hồ sơ khám bệnh</h3>
+                                <h3>
+                                    <i className="bi bi-file-medical-fill"></i>
+                                    Chi tiết hồ sơ khám bệnh
+                                </h3>
                                 <button onClick={handleCloseDetails} className={styles.closeButton}>
-                                    <i className="bi bi-x"></i>
+                                    <i className="bi bi-x-lg"></i>
                                 </button>
                             </div>
                             <div className={styles.modalBody}>
@@ -475,58 +857,161 @@ export default function EMRTimeline() {
                                         {detailsError}
                                     </div>
                                 ) : recordDetails ? (
-                                    <div className={styles.recordCard}>
-                                        <div className={styles.recordRow}>
-                                            <span className={styles.recordLabel}>Ngày khám</span>
-                                            <span className={styles.recordValue}>{recordDetails.date || 'N/A'}</span>
+                                    <div ref={recordContentRef}>
+                                        <div className="pdf-exclude" style={{ display: 'flex', gap: '8px', marginBottom: '16px', justifyContent: 'flex-end' }}>
+                                            <button 
+                                                className={styles.modalActionButton}
+                                                onClick={() => {
+                                                    if (!recordContentRef.current) return;
+                                                    const excludedElements = recordContentRef.current.querySelectorAll('.pdf-exclude');
+                                                    excludedElements.forEach(el => (el as HTMLElement).style.display = 'none');
+                                                    const opt = {
+                                                        margin: 0.5,
+                                                        filename: `EMR_${recordDetails.date}_${recordDetails.doctor?.replace(/\s+/g, '_') || 'record'}.pdf`,
+                                                        image: { type: 'jpeg', quality: 0.98 },
+                                                        html2canvas: { scale: 2 },
+                                                        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                                                    };
+                                                    html2pdf().set(opt).from(recordContentRef.current).save().then(() => {
+                                                        excludedElements.forEach(el => (el as HTMLElement).style.display = '');
+                                                    });
+                                                }}
+                                            >
+                                                <i className="bi bi-download"></i>
+                                                Tải PDF
+                                            </button>
+                                            <button 
+                                                className={styles.modalActionButton}
+                                                onClick={() => {
+                                                    const printWindow = window.open('', '_blank');
+                                                    if (printWindow && recordDetails) {
+                                                        printWindow.document.write(`
+                                                            <html>
+                                                                <head>
+                                                                    <title>Hồ sơ khám bệnh - ${recordDetails.date}</title>
+                                                                    <style>
+                                                                        body { font-family: Arial, sans-serif; padding: 20px; }
+                                                                        h2 { text-align: center; color: #333; }
+                                                                        .info-row { margin-bottom: 15px; }
+                                                                        .label { font-weight: bold; }
+                                                                    </style>
+                                                                </head>
+                                                                <body>
+                                                                    <h2>Hồ sơ khám bệnh</h2>
+                                                                    <div class="info-row"><span class="label">Ngày khám:</span> ${recordDetails.date}</div>
+                                                                    <div class="info-row"><span class="label">Bác sĩ phụ trách:</span> ${recordDetails.doctor || 'N/A'}</div>
+                                                                    <div class="info-row"><span class="label">Lý do khám & Triệu chứng:</span> ${recordDetails.chiefComplaint || 'N/A'}</div>
+                                                                    <div class="info-row"><span class="label">Chẩn đoán:</span> ${recordDetails.diagnosis || 'N/A'}</div>
+                                                                    <div class="info-row"><span class="label">Kế hoạch điều trị:</span> ${recordDetails.treatmentPlan || 'N/A'}</div>
+                                                                    ${recordDetails.prescription && recordDetails.prescription.length > 0 ? `
+                                                                        <div class="info-row">
+                                                                            <span class="label">Đơn thuốc:</span>
+                                                                            <ul>
+                                                                                ${recordDetails.prescription.map(p => `<li>${p.medicationName} - ${p.instructions}</li>`).join('')}
+                                                                            </ul>
+                                                                        </div>
+                                                                    ` : ''}
+                                                                </body>
+                                                            </html>
+                                                        `);
+                                                        printWindow.document.close();
+                                                        printWindow.print();
+                                                    }
+                                                }}
+                                            >
+                                                <i className="bi bi-printer"></i>
+                                                In
+                                            </button>
                                         </div>
-                                        <div className={styles.recordRow}>
-                                            <span className={styles.recordLabel}>Bác sĩ phụ trách</span>
-                                            <span className={styles.recordValue}>{recordDetails.doctor || 'N/A'}</span>
-                                        </div>
-                                        <div className={styles.recordRow}>
-                                            <span className={styles.recordLabel}>Lý do khám &amp; Triệu chứng</span>
-                                            <span className={styles.recordValue}>{recordDetails.chiefComplaint || 'N/A'}</span>
-                                        </div>
-                                        <div className={styles.recordRow}>
-                                            <span className={styles.recordLabel}>Chẩn đoán</span>
-                                            <span className={styles.recordValue}>{recordDetails.diagnosis || 'N/A'}</span>
-                                        </div>
-                                        <div className={styles.recordRow}>
-                                            <span className={styles.recordLabel}>Kế hoạch điều trị</span>
-                                            <span className={styles.recordValue}>{recordDetails.treatmentPlan || 'N/A'}</span>
-                                        </div>
-                                        {recordDetails.prescription && recordDetails.prescription.length > 0 && (
-                                            <div className={styles.recordRow}>
-                                                <span className={styles.recordLabel}>Đơn thuốc</span>
-                                                <div className={styles.recordValue}>
-                                                    {recordDetails.prescription.map((medication) => (
-                                                        <div key={medication.id} style={{ marginBottom: '8px', padding: '8px', background: '#f7fafc', borderRadius: '8px' }}>
-                                                            <strong>{medication.medicationName}</strong> - {medication.instructions}
-                                                        </div>
-                                                    ))}
+                                        <div className={styles.modalRecordCard}>
+                                        <div className={styles.modalRecordHeader}>
+                                            <div className={styles.modalDoctorInfo}>
+                                                <div className={styles.modalDoctorIcon}>
+                                                    <i className="bi bi-person-badge"></i>
+                                                </div>
+                                                <div>
+                                                    <div className={styles.modalRecordLabel}>Bác sĩ phụ trách</div>
+                                                    <div className={styles.modalRecordValue}>{recordDetails.doctor || 'N/A'}</div>
                                                 </div>
                                             </div>
-                                        )}
-                                        {recordDetails.attatchments && recordDetails.attatchments.length > 0 && (
-                                            <div className={styles.recordRow}>
-                                                <span className={styles.recordLabel}>Kết quả cận lâm sàng</span>
-                                                <div className={styles.attachmentLinks}>
-                                                    {recordDetails.attatchments.map((attatchment) => (
-                                                        <a 
-                                                            key={attatchment.id} 
-                                                            href={attatchment.fileUrl} 
-                                                            className={styles.attachmentLink}
-                                                            rel="noopener noreferrer" 
-                                                            target="_blank"
-                                                        >
-                                                            <i className="bi bi-file-earmark-pdf"></i>
-                                                            {attatchment.fileName}
-                                                        </a>
-                                                    ))}
+                                            <div className={styles.modalDateInfo}>
+                                                <i className="bi bi-calendar3"></i>
+                                                <span>{recordDetails.date || 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                        <div className={styles.modalRecordBody}>
+                                            <div className={styles.recordSection}>
+                                                <div className={styles.recordSectionHeader}>
+                                                    <i className="bi bi-chat-left-text"></i>
+                                                    <span>Lý do khám & Triệu chứng</span>
+                                                </div>
+                                                <div className={styles.recordSectionContent}>
+                                                    {recordDetails.chiefComplaint || 'N/A'}
                                                 </div>
                                             </div>
-                                        )}
+                                            <div className={styles.recordSection}>
+                                                <div className={styles.recordSectionHeader}>
+                                                    <i className="bi bi-clipboard-check"></i>
+                                                    <span>Chẩn đoán</span>
+                                                </div>
+                                                <div className={`${styles.recordSectionContent} ${styles.diagnosisContent}`}>
+                                                    {recordDetails.diagnosis || 'N/A'}
+                                                </div>
+                                            </div>
+                                            <div className={styles.recordSection}>
+                                                <div className={styles.recordSectionHeader}>
+                                                    <i className="bi bi-file-medical"></i>
+                                                    <span>Kế hoạch điều trị</span>
+                                                </div>
+                                                <div className={styles.recordSectionContent}>
+                                                    {recordDetails.treatmentPlan || 'N/A'}
+                                                </div>
+                                            </div>
+                                            {recordDetails.prescription && recordDetails.prescription.length > 0 && (
+                                                <div className={styles.recordSection}>
+                                                    <div className={styles.recordSectionHeader}>
+                                                        <i className="bi bi-capsule"></i>
+                                                        <span>Đơn thuốc</span>
+                                                    </div>
+                                                    <div className={styles.prescriptionList}>
+                                                        {recordDetails.prescription.map((medication) => (
+                                                            <div key={medication.id} className={styles.prescriptionItem}>
+                                                                <div className={styles.prescriptionName}>
+                                                                    <i className="bi bi-capsule-pill"></i>
+                                                                    <strong>{medication.medicationName}</strong>
+                                                                </div>
+                                                                <div className={styles.prescriptionInstructions}>
+                                                                    {medication.instructions}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {recordDetails.attatchments && recordDetails.attatchments.length > 0 && (
+                                                <div className={styles.recordSection}>
+                                                    <div className={styles.recordSectionHeader}>
+                                                        <i className="bi bi-paperclip"></i>
+                                                        <span>Kết quả cận lâm sàng</span>
+                                                    </div>
+                                                    <div className={styles.attachmentLinks}>
+                                                        {recordDetails.attatchments.map((attatchment) => (
+                                                            <a 
+                                                                key={attatchment.id} 
+                                                                href={attatchment.fileUrl} 
+                                                                className={styles.attachmentLink}
+                                                                rel="noopener noreferrer" 
+                                                                target="_blank"
+                                                            >
+                                                                <i className="bi bi-file-earmark-pdf"></i>
+                                                                {attatchment.fileName}
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className={styles.emptyState}>

@@ -57,6 +57,7 @@ export const PatientProfile: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+  const [avatarUpdateKey, setAvatarUpdateKey] = useState(0); // Track avatar updates
 
   // Validation functions
   const validateUsername = (username: string): string | null => {
@@ -199,8 +200,12 @@ export const PatientProfile: React.FC = () => {
             console.log('Patient info not available, using mock data');
           }
           
+          // Use avatarUrl from user context if imageURL is not available
+          const imageURL = res.imageURL || user?.avatarUrl || (res as any).avatarUrl;
+          
           const extendedData: ExtendedUserInfo = {
             ...res,
+            imageURL: imageURL, // Ensure imageURL is set
             cccd: res.identificationNumber || (res as any).cccd || patientData.cccd,
             identificationNumber: res.identificationNumber || (res as any).identificationNumber,
             gender: (res as any).gender || patientData.gender || 'male',
@@ -222,7 +227,8 @@ export const PatientProfile: React.FC = () => {
             emergencyContactName: res.emergencyContactName || (res as any).emergencyContactName || '',
             emergencyContactPhone: res.emergencyContactPhone || (res as any).emergencyContactPhone || '',
             medicalHistory: res.medicalHistory || (res as any).medicalHistory || '',
-            allergies: res.allergies || (res as any).allergies || ''
+            allergies: res.allergies || (res as any).allergies || '',
+            imageURL: imageURL
           });
         }
       } catch (e: any) {
@@ -232,7 +238,15 @@ export const PatientProfile: React.FC = () => {
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [user?.avatarUrl]); // Re-run when user avatar changes
+
+  // Sync avatar from user context when it changes
+  useEffect(() => {
+    if (user?.avatarUrl && data && (!data.imageURL || data.imageURL !== user.avatarUrl)) {
+      setData(prev => prev ? { ...prev, imageURL: user.avatarUrl || prev.imageURL } : null);
+      setAvatarUpdateKey(prev => prev + 1); // Force re-render
+    }
+  }, [user?.avatarUrl, data]);
 
   const handleSaveClick = () => {
     // Validate before showing confirmation
@@ -390,12 +404,51 @@ export const PatientProfile: React.FC = () => {
     try {
       const result = await userService.uploadProfileImage(file);
       
-      if (data && result.imageUrl) {
-        const updatedData = { ...data, imageURL: result.imageUrl };
-        setData(updatedData);
-        
-        // Update user context with new avatar
-        updateUser({ avatarUrl: result.imageUrl });
+      if (result.imageUrl) {
+        // Reload user info from API to get the latest data
+        try {
+          const latestUserInfo = await userService.getUserInfo();
+          const updatedData: ExtendedUserInfo = {
+            ...latestUserInfo,
+            cccd: latestUserInfo.identificationNumber || data?.cccd,
+            identificationNumber: latestUserInfo.identificationNumber || data?.identificationNumber,
+            gender: (latestUserInfo as any).gender || data?.gender,
+            bloodType: (latestUserInfo as any).bloodType || data?.bloodType,
+            emergencyContactName: latestUserInfo.emergencyContactName || data?.emergencyContactName,
+            emergencyContactPhone: latestUserInfo.emergencyContactPhone || data?.emergencyContactPhone,
+            medicalHistory: latestUserInfo.medicalHistory || data?.medicalHistory,
+            allergies: latestUserInfo.allergies || data?.allergies
+          };
+          setData(updatedData);
+          
+          // Update editData with latest info
+          setEditData(prev => ({
+            ...prev,
+            imageURL: latestUserInfo.imageURL || result.imageUrl
+          }));
+          
+          // Use the latest imageURL from API response
+          const finalImageUrl = latestUserInfo.imageURL || result.imageUrl;
+          
+          // Update user context with new avatar - this will update sidebar, header, and other components
+          updateUser({ avatarUrl: finalImageUrl });
+          
+          // Force avatar refresh by updating key
+          setAvatarUpdateKey(prev => prev + 1);
+        } catch (reloadError) {
+          console.warn('Failed to reload user info, using uploaded image URL:', reloadError);
+          // Fallback: use the uploaded image URL directly
+          if (data) {
+            const updatedData = { ...data, imageURL: result.imageUrl };
+            setData(updatedData);
+          }
+          
+          // Update user context with uploaded image URL
+          updateUser({ avatarUrl: result.imageUrl });
+          
+          // Force avatar refresh by updating key
+          setAvatarUpdateKey(prev => prev + 1);
+        }
       }
       
       showToast('Cập nhật ảnh đại diện thành công!', 'success');
@@ -403,13 +456,27 @@ export const PatientProfile: React.FC = () => {
       URL.revokeObjectURL(previewUrl);
       setPreviewImage(null);
     } catch (e: any) {
-      const errorMessage = e?.message || 'Không thể tải ảnh lên';
-      setError(`${errorMessage}. Ảnh preview sẽ được hiển thị tạm thời.`);
+      console.error('Upload error details:', e);
+      let errorMessage = e?.message || 'Không thể tải ảnh lên';
       
+      // Handle specific error cases
+      if (e?.message?.includes('405')) {
+        errorMessage = 'Lỗi 405: Không thể tải ảnh lên. Endpoint upload có thể chưa được kích hoạt trong backend. Ảnh preview sẽ được hiển thị tạm thời.';
+      } else if (e?.message?.includes('404')) {
+        errorMessage = 'Lỗi 404: Endpoint upload không tồn tại. Vui lòng liên hệ quản trị viên.';
+      } else if (e?.message?.includes('401')) {
+        errorMessage = 'Lỗi 401: Bạn cần đăng nhập lại để upload ảnh.';
+      } else if (e?.message?.includes('413')) {
+        errorMessage = 'File quá lớn. Vui lòng chọn ảnh nhỏ hơn 10MB.';
+      }
+      
+      setError(errorMessage);
+      
+      // Keep preview for 10 seconds, then clear
       setTimeout(() => {
         URL.revokeObjectURL(previewUrl);
         setPreviewImage(null);
-        setError(null);
+        // Don't clear error immediately - let user see it
       }, 10000);
     } finally {
       setUploading(false);
@@ -464,11 +531,16 @@ export const PatientProfile: React.FC = () => {
             <div className={styles.profileInfoSection}>
               <div className={styles.avatarSection}>
                 <div className={styles.avatarContainer}>
-                  {(previewImage || data.imageURL) ? (
+                  {(previewImage || data.imageURL || user?.avatarUrl) ? (
                     <img 
-                      src={previewImage || data.imageURL || ''} 
+                      key={`avatar-${avatarUpdateKey}-${data.imageURL || user?.avatarUrl || ''}`} // Force re-render when avatar changes
+                      src={previewImage || data.imageURL || user?.avatarUrl || ''} 
                       alt="Profile" 
                       className={styles.avatarImage}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data?.fullName || data?.email || 'Patient')}&background=667eea&color=fff`;
+                      }}
                     />
                   ) : (
                     <div className={styles.avatarPlaceholder}>

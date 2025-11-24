@@ -1147,26 +1147,33 @@ body {
   .doctors-grid {
     display: flex;
     flex-wrap: nowrap;
-    gap: 25px;
+    gap: 30px;
     overflow: hidden;
+    justify-content: center;
+    align-items: stretch;
   }
   
   .doctor-card {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border-radius: 16px;
-    padding: 20px;
+    border-radius: 24px;
+    padding: 32px 28px;
     text-align: center;
     color: #1565c0;
-    width: 220px;
+    width: 320px;
+    min-height: 420px;
     flex-shrink: 0;
     text-decoration: none;
-    box-shadow: 0 6px 20px rgba(33, 150, 243, 0.15);
-    border: 1px solid rgba(33, 150, 243, 0.1);
+    box-shadow: 0 8px 30px rgba(33, 150, 243, 0.2);
+    border: 2px solid rgba(33, 150, 243, 0.15);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .doctor-card::before {
@@ -1203,41 +1210,107 @@ body {
   }
   
   .doctor-card:hover {
-    transform: translateY(-8px) scale(1.03);
-    box-shadow: 0 12px 35px rgba(33, 150, 243, 0.25);
+    transform: translateY(-12px) scale(1.02);
+    box-shadow: 0 16px 50px rgba(33, 150, 243, 0.3);
     background: rgba(255, 255, 255, 1);
-    border-color: rgba(33, 150, 243, 0.3);
+    border-color: rgba(33, 150, 243, 0.4);
   }
   
+  .doctor-photo {
+    width: 180px;
+    height: 180px;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .doctor-photo img {
-    width: 120px;
-    height: 120px;
+    width: 180px;
+    height: 180px;
     object-fit: cover;
     border-radius: 50%;
-    border: 3px solid #2196f3;
-    margin-bottom: 15px;
+    border: 5px solid #2196f3;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     z-index: 2;
+    box-shadow: 0 8px 25px rgba(33, 150, 243, 0.2);
   }
 
   .doctor-card:hover .doctor-photo img {
-    transform: scale(1.1) rotate(5deg);
+    transform: scale(1.08) rotate(3deg);
     border-color: #1976d2;
-    box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3);
+    box-shadow: 0 12px 35px rgba(33, 150, 243, 0.4);
+  }
+
+  .doctor-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .doctor-card h3 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1565c0;
+    margin: 0;
+    line-height: 1.3;
+    text-align: center;
+  }
+
+  .doctor-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    margin: 8px 0;
   }
   
   .specialty {
-    font-size: 14px;
+    font-size: 15px;
     color: #1976d2;
-    opacity: 0.9;
-    margin-bottom: 4px;
+    opacity: 0.95;
+    margin: 0;
+    line-height: 1.5;
+    font-weight: 500;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .experience {
+    font-size: 14px;
+    color: #64b5f6;
+    margin: 0;
+    line-height: 1.5;
+    font-weight: 500;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .rating {
     color: #fbbf24;
-    font-size: 16px;
+    font-size: 22px;
     margin-top: 8px;
+    letter-spacing: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .rating-value {
+    font-size: 16px;
+    color: #666;
+    font-weight: 600;
+    letter-spacing: 0;
   }
   
   .view-all {
@@ -1786,3 +1859,100 @@ body {
     transform: scale(0.8);
     transition: all 0.3s ease;
   }
+
+/* Responsive Design for Doctor Cards */
+@media (max-width: 1024px) {
+  .doctors-grid {
+    gap: 20px;
+  }
+
+  .doctor-card {
+    width: 280px;
+    min-height: 400px;
+    padding: 28px 24px;
+  }
+
+  .doctor-photo img {
+    width: 160px;
+    height: 160px;
+    border-width: 4px;
+  }
+}
+
+@media (max-width: 768px) {
+  .doctors-grid {
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .doctor-card {
+    width: 100%;
+    max-width: 300px;
+    min-height: 380px;
+    padding: 24px 20px;
+  }
+
+  .doctor-photo img {
+    width: 150px;
+    height: 150px;
+  }
+
+  .doctor-card h3 {
+    font-size: 20px;
+  }
+
+  .specialty,
+  .experience {
+    font-size: 14px;
+  }
+
+  .rating {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .doctors {
+    padding: 0 15px;
+  }
+
+  .doctors h2 {
+    font-size: 28px;
+    margin-bottom: 30px;
+  }
+
+  .doctor-card {
+    width: 100%;
+    max-width: 100%;
+    min-height: auto;
+    padding: 20px 16px;
+  }
+
+  .doctor-photo img {
+    width: 140px;
+    height: 140px;
+    border-width: 3px;
+  }
+
+  .doctor-card h3 {
+    font-size: 18px;
+  }
+
+  .specialty {
+    font-size: 13px;
+  }
+
+  .experience {
+    font-size: 12px;
+  }
+
+  .rating {
+    font-size: 16px;
+    letter-spacing: 2px;
+  }
+
+  .rating-value {
+    font-size: 14px;
+  }
+}

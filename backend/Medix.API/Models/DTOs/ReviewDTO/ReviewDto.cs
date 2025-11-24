@@ -7,6 +7,7 @@
         public Guid DoctorId { get; set; }
         public string? DoctorName { get; set; }
         public string? PatientName { get; set; }
+        public string? PatientAvatar { get; set; }
 
 
         public int Rating { get; set; }

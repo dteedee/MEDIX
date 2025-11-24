@@ -5,8 +5,10 @@ import { DoctorSalary } from '../../types/doctor.types';
 import { walletService } from '../../services/walletService';
 import { WalletDto, OrderCreateRequest, WalletTransactionDto, BankInfo, WithdrawalRequest, TransferTransactionCreateRequest } from '../../types/wallet.types';
 import styles from '../../styles/doctor/DoctorWallet.module.css';
+import { Wallet2, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, PlusCircle, Clock, Calendar } from 'lucide-react';
+import { PageLoader } from '../../components/ui';
 
-type TabType = 'all' | 'deposit' | 'withdrawal' | 'salary';
+type TabType = 'all' | 'deposit' | 'withdrawal' | 'salary' | 'expense';
 
 const BANKS: BankInfo[] = [
   { name: 'Ngân hàng TMCP Ngoại thương Việt Nam', bin: '970436', shortName: 'Vietcombank', code: 'VCB', logo: 'https://api.vietqr.io/img/VCB.png' },
@@ -370,7 +372,12 @@ export const DoctorWallet: React.FC = () => {
     }
   };
 
-  const getTransactionTypeName = (typeCode: string | undefined): string => {
+  const getTransactionTypeName = (typeCode: string | undefined, transaction?: WalletTransactionDto): string => {
+    // Kiểm tra xem có phải giao dịch mua gói dịch vụ không
+    if (transaction && isServicePackagePurchase(transaction)) {
+      return 'Mua gói dịch vụ';
+    }
+    
     if (!typeCode) return 'Giao dịch';
     
     const typeMap: { [key: string]: string } = {
@@ -379,13 +386,20 @@ export const DoctorWallet: React.FC = () => {
       'Deposit': 'Nạp tiền',
       'DoctorSalary': 'Lương bác sĩ',
       'SystemCommission': 'Hoa hồng hệ thống',
-      'Withdrawal': 'Rút tiền'
+      'Withdrawal': 'Rút tiền',
+      'ServicePackagePurchase': 'Mua gói dịch vụ',
+      'TierUpgrade': 'Mua gói dịch vụ'
     };
     
     return typeMap[typeCode] || typeCode;
   };
 
-  const getTransactionTypeIcon = (typeCode: string | undefined): string => {
+  const getTransactionTypeIcon = (typeCode: string | undefined, transaction?: WalletTransactionDto): string => {
+    // Kiểm tra xem có phải giao dịch mua gói dịch vụ không
+    if (transaction && isServicePackagePurchase(transaction)) {
+      return 'bi-box-seam';
+    }
+    
     if (!typeCode) return 'bi-arrow-left-right';
     
     const iconMap: { [key: string]: string } = {
@@ -394,28 +408,72 @@ export const DoctorWallet: React.FC = () => {
       'Deposit': 'bi-cash-coin',
       'DoctorSalary': 'bi-wallet2',
       'SystemCommission': 'bi-percent',
-      'Withdrawal': 'bi-cash-stack'
+      'Withdrawal': 'bi-cash-stack',
+      'ServicePackagePurchase': 'bi-box-seam',
+      'TierUpgrade': 'bi-box-seam'
     };
     
     return iconMap[typeCode] || 'bi-arrow-left-right';
   };
 
-  const isDebitTransaction = (typeCode: string | undefined): boolean => {
-    if (!typeCode) return false;
+  // Kiểm tra xem giao dịch có phải là mua gói dịch vụ không
+  const isServicePackagePurchase = (transaction: WalletTransactionDto): boolean => {
+    if (!transaction) return false;
+    
+    // Kiểm tra description có chứa từ khóa liên quan đến gói dịch vụ
+    const desc = (transaction.description || '').toLowerCase();
+    const servicePackageKeywords = [
+      'service tier',
+      'service package',
+      'gói dịch vụ',
+      'upgrade package',
+      'tier upgrade',
+      'doctor paid for service tier',
+      'doctor paid for service package'
+    ];
+    
+    // Nếu description chứa từ khóa liên quan đến gói dịch vụ
+    if (servicePackageKeywords.some(keyword => desc.includes(keyword))) {
+      return true;
+    }
+    
+    // Nếu transactionTypeCode là SystemCommission nhưng description liên quan đến gói dịch vụ
+    if (transaction.transactionTypeCode === 'SystemCommission' && 
+        (desc.includes('tier') || desc.includes('package') || desc.includes('gói'))) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  const isDebitTransaction = (typeCode: string | undefined, transaction?: WalletTransactionDto): boolean => {
+    if (!typeCode) {
+      // Nếu không có typeCode nhưng có transaction, kiểm tra xem có phải mua gói dịch vụ không
+      if (transaction && isServicePackagePurchase(transaction)) {
+        return true;
+      }
+      return false;
+    }
+    
+    // Giao dịch mua gói dịch vụ luôn là debit (trừ tiền)
+    if (transaction && isServicePackagePurchase(transaction)) {
+      return true;
+    }
+    
     const debitTypes = ['AppointmentPayment', 'Withdrawal'];
     return debitTypes.includes(typeCode);
   };
 
-  const formatTransactionAmount = (amount: number | undefined, typeCode: string | undefined): string => {
+  const formatTransactionAmount = (amount: number | undefined, typeCode: string | undefined, transaction?: WalletTransactionDto): string => {
     if (!amount) return 'N/A';
-    const isDebit = isDebitTransaction(typeCode);
+    const isDebit = isDebitTransaction(typeCode, transaction);
     const sign = isDebit ? '-' : '+';
     const absAmount = Math.abs(amount);
     return `${sign}${formatBalance(absAmount, 'VND')}`;
   };
 
-  const getTransactionColor = (typeCode: string | undefined): string => {
-    return isDebitTransaction(typeCode) ? '#e53e3e' : '#38a169';
+  const getTransactionColor = (typeCode: string | undefined, transaction?: WalletTransactionDto): string => {
+    return isDebitTransaction(typeCode, transaction) ? '#e53e3e' : '#38a169';
   };
 
   const getStatusLabel = (status?: string): string => {
@@ -446,6 +504,22 @@ export const DoctorWallet: React.FC = () => {
       });
     };
 
+    // Kiểm tra xem có phải giao dịch mua gói dịch vụ không
+    if (isServicePackagePurchase(transaction)) {
+      // Trích xuất tên gói từ description nếu có
+      const desc = transaction.description || '';
+      const tierMatch = desc.match(/tier\s+(\w+)/i) || desc.match(/gói\s+(\w+)/i);
+      if (tierMatch) {
+        return `Mua gói dịch vụ ${tierMatch[1]}`;
+      }
+      // Kiểm tra các pattern khác
+      if (desc.includes('VIP') || desc.includes('Premium') || desc.includes('Professional') || desc.includes('Basic')) {
+        const tierName = desc.match(/(VIP|Premium|Professional|Basic)/i)?.[0] || '';
+        return `Mua gói dịch vụ ${tierName}`;
+      }
+      return 'Mua gói dịch vụ';
+    }
+
     switch (transaction.transactionTypeCode) {
       case 'Deposit':
         if (transaction.description) {
@@ -469,6 +543,10 @@ export const DoctorWallet: React.FC = () => {
           return `Lương tháng ${formatDate(new Date(salary.periodStartDate))} - ${formatDate(new Date(salary.periodEndDate))}`;
         }
         return transaction.description || `Lương bác sĩ${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
+      
+      case 'SystemCommission':
+        // Nếu là SystemCommission nhưng không phải mua gói dịch vụ, hiển thị hoa hồng
+        return transaction.description || 'Hoa hồng hệ thống';
       
       default:
         return transaction.description || 'Giao dịch';
@@ -511,11 +589,17 @@ export const DoctorWallet: React.FC = () => {
       return allTransactions;
     }
     
+    if (activeTab === 'expense') {
+      // Lọc các giao dịch mua gói dịch vụ
+      return allTransactions.filter(t => isServicePackagePurchase(t));
+    }
+    
     const typeMap: { [key in TabType]: string[] } = {
       'all': [],
       'deposit': ['Deposit'],
       'withdrawal': ['Withdrawal'],
-      'salary': ['DoctorSalary']
+      'salary': ['DoctorSalary'],
+      'expense': []
     };
     
     const allowedTypes = typeMap[activeTab];
@@ -563,28 +647,36 @@ export const DoctorWallet: React.FC = () => {
       
       const amount = Math.abs(transaction.amount || 0);
       const typeCode = transaction.transactionTypeCode;
+      
+      // Kiểm tra xem có phải giao dịch mua gói dịch vụ không
+      const isPackagePurchase = isServicePackagePurchase(transaction);
 
+      // Tính doanh thu (tiền vào)
       if (typeCode === 'DoctorSalary' || typeCode === 'Deposit') {
         totalRevenue += amount;
       }
-      if (typeCode === 'Withdrawal') {
+      
+      // Tính chi tiêu (tiền ra) - bao gồm rút tiền và mua gói dịch vụ
+      if (typeCode === 'Withdrawal' || isPackagePurchase) {
         totalSpent += amount;
       }
 
+      // Tính cho tuần hiện tại
       if (transactionDate >= startOfCurrentWeek && transactionDate <= endOfCurrentWeek) {
         if (typeCode === 'DoctorSalary' || typeCode === 'Deposit') {
           currentWeekRevenue += amount;
         }
-        if (typeCode === 'Withdrawal') {
+        if (typeCode === 'Withdrawal' || isPackagePurchase) {
           currentWeekSpent += amount;
         }
       }
 
+      // Tính cho tuần trước
       if (transactionDate >= startOfLastWeek && transactionDate <= endOfLastWeek) {
         if (typeCode === 'DoctorSalary' || typeCode === 'Deposit') {
           lastWeekRevenue += amount;
         }
-        if (typeCode === 'Withdrawal') {
+        if (typeCode === 'Withdrawal' || isPackagePurchase) {
           lastWeekSpent += amount;
         }
       }
@@ -614,37 +706,62 @@ export const DoctorWallet: React.FC = () => {
     { id: 'all' as TabType, label: 'Tất cả', icon: 'bi-list-ul' },
     { id: 'deposit' as TabType, label: 'Nạp tiền', icon: 'bi-cash-coin' },
     { id: 'withdrawal' as TabType, label: 'Rút tiền', icon: 'bi-cash-stack' },
-    { id: 'salary' as TabType, label: 'Lương', icon: 'bi-wallet2' }
+    { id: 'salary' as TabType, label: 'Lương', icon: 'bi-wallet2' },
+    { id: 'expense' as TabType, label: 'Chi tiêu', icon: 'bi-box-seam' }
   ];
+
+  if (loading) {
+    return <PageLoader />;
+  }
 
   return (
     <div className={styles.container}>
+      {/* Header Section */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1>Ví & Doanh thu</h1>
-          <p>Quản lý doanh thu và giao dịch</p>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <Wallet2 size={28} />
+            </div>
+            <div>
+              <h1 className={styles.title}>Ví & Doanh thu</h1>
+              <p className={styles.subtitle}>Quản lý doanh thu và giao dịch của bạn</p>
+            </div>
+          </div>
         </div>
-        <div className={styles.dateTime}>
-          <i className="bi bi-calendar3"></i>
-          <span>{new Date().toLocaleDateString('vi-VN')}</span>
+        <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <Calendar size={20} className={styles.dateIcon} />
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>{new Date().toLocaleDateString('vi-VN', { 
+                weekday: 'long', 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+              })}</span>
+              <div className={styles.dateGlow}></div>
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Main Grid */}
       <div className={styles.mainGrid}>
-        <div className={styles.walletCard}>
+        {/* Wallet Balance Card */}
+        <div className={`${styles.walletCard} ${styles.walletCardPrimary}`}>
           <div className={styles.walletHeader}>
             <div className={styles.walletIcon}>
-              <i className="bi bi-wallet2"></i>
+              <Wallet2 size={24} />
             </div>
-            <div className={styles.walletStatus}>
+            <div className={`${styles.walletStatus} ${wallet?.isActive ? styles.statusActive : styles.statusInactive}`}>
               {wallet?.isActive ? 'Đang hoạt động' : 'Đã khóa'}
             </div>
           </div>
           <div className={styles.walletBalance}>
             <div className={styles.walletLabel}>Số dư ví</div>
-            {loading ? (
-              <div className={styles.walletAmount}>Đang tải...</div>
-            ) : error ? (
+            {error ? (
               <div className={styles.walletAmount}>Lỗi</div>
             ) : wallet ? (
               <div className={styles.walletAmount}>
@@ -655,17 +772,20 @@ export const DoctorWallet: React.FC = () => {
             )}
           </div>
           
+          {/* Revenue & Expense Report */}
           <div className={styles.walletReport}>
             <div className={styles.reportHeader}>
               <div className={styles.reportIcon}>
-                <i className="bi bi-graph-up-arrow"></i>
+                <TrendingUp size={20} />
               </div>
               <h3 className={styles.reportTitle}>Báo cáo thu chi</h3>
             </div>
             <div className={styles.reportContent}>
               <div className={styles.reportItem}>
                 <div className={styles.reportItemHeader}>
-                  <i className={`bi bi-arrow-up-circle ${styles.reportIconUp}`}></i>
+                  <div className={styles.reportIconWrapper}>
+                    <ArrowUpCircle size={20} className={styles.reportIconUp} />
+                  </div>
                   <div className={styles.reportItemInfo}>
                     <div className={styles.reportLabel}>Đã thu</div>
                     <div className={styles.reportAmountRow}>
@@ -681,7 +801,9 @@ export const DoctorWallet: React.FC = () => {
               </div>
               <div className={styles.reportItem}>
                 <div className={styles.reportItemHeader}>
-                  <i className={`bi bi-arrow-down-circle ${styles.reportIconDown}`}></i>
+                  <div className={styles.reportIconWrapper}>
+                    <ArrowDownCircle size={20} className={styles.reportIconDown} />
+                  </div>
                   <div className={styles.reportItemInfo}>
                     <div className={styles.reportLabel}>Đã chi</div>
                     <div className={styles.reportAmountRow}>
@@ -699,14 +821,15 @@ export const DoctorWallet: React.FC = () => {
           </div>
         </div>
 
-        <div className={styles.depositCard}>
+        {/* Transaction Actions Card */}
+        <div className={`${styles.depositCard} ${styles.depositCardSecondary}`}>
           <div className={styles.depositHeader}>
             <div className={styles.depositIcon}>
-              <i className="bi bi-wallet2"></i>
+              <Wallet2 size={24} />
             </div>
             <h3 className={styles.depositTitle}>Giao dịch ví</h3>
           </div>
-          <div>
+          <div className={styles.depositContent}>
             <input
               type="text"
               value={depositAmount}
@@ -740,12 +863,12 @@ export const DoctorWallet: React.FC = () => {
               >
                 {isProcessing ? (
                   <>
-                    <i className="bi bi-hourglass-split" style={{ marginRight: '8px' }}></i>
+                    <i className="bi bi-hourglass-split"></i>
                     Đang xử lý...
                   </>
                 ) : (
                   <>
-                    <i className="bi bi-plus-circle" style={{ marginRight: '8px' }}></i>
+                    <PlusCircle size={18} />
                     Nạp tiền
                   </>
                 )}
@@ -770,12 +893,12 @@ export const DoctorWallet: React.FC = () => {
               >
                 {isProcessingWithdrawal ? (
                   <>
-                    <i className="bi bi-hourglass-split" style={{ marginRight: '8px' }}></i>
+                    <i className="bi bi-hourglass-split"></i>
                     Đang xử lý...
                   </>
                 ) : (
                   <>
-                    <i className="bi bi-arrow-down-circle" style={{ marginRight: '8px' }}></i>
+                    <ArrowDownCircle size={18} />
                     Rút tiền
                   </>
                 )}
@@ -785,14 +908,18 @@ export const DoctorWallet: React.FC = () => {
         </div>
       </div>
 
+      {/* Transactions Card */}
       <div className={styles.transactionsCard}>
         <div className={styles.transactionsHeader}>
-          <div className={styles.transactionsIcon}>
-            <i className="bi bi-credit-card"></i>
+          <div className={styles.transactionsIconWrapper}>
+            <div className={styles.transactionsIcon}>
+              <i className="bi bi-credit-card"></i>
+            </div>
+            <h3 className={styles.transactionsTitle}>Giao dịch gần đây</h3>
           </div>
-          <h3 className={styles.transactionsTitle}>Giao dịch gần đây</h3>
         </div>
 
+        {/* Filter Tabs */}
         <div className={styles.tabsContainer}>
           <div className={styles.tabsList}>
             {tabs.map((tab) => (
@@ -801,7 +928,7 @@ export const DoctorWallet: React.FC = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`${styles.tab} ${activeTab === tab.id ? styles.active : ''}`}
               >
-                <i className={`bi ${tab.icon}`} style={{ marginRight: '6px' }}></i>
+                <i className={`bi ${tab.icon}`}></i>
                 {tab.label}
               </button>
             ))}
@@ -820,67 +947,71 @@ export const DoctorWallet: React.FC = () => {
               <p className={styles.emptyStateText}>Chưa có giao dịch nào</p>
             </div>
           ) : (
-            filteredTransactions.map((transaction) => (
-              <div key={transaction.id} className={styles.transactionItem}>
-                <div className={styles.transactionLeft}>
-                  <div className={styles.transactionIconWrapper}>
-                    <i className={getTransactionTypeIcon(transaction.transactionTypeCode)}></i>
-                  </div>
-                  <div className={styles.transactionInfo}>
-                    <div className={styles.transactionHeader}>
-                      <div className={styles.transactionName}>
-                        {getTransactionTypeName(transaction.transactionTypeCode)}
-                        <span className={styles.transactionDateInline}>
-                          {' '}
-                          {(() => {
-                            const dateStr = transaction.transactionDate || transaction.createdAt;
-                            if (dateStr) {
-                              try {
-                                const date = new Date(dateStr);
-                                if (!isNaN(date.getTime())) {
-                                  return date.toLocaleString('vi-VN', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  });
-                                }
-                              } catch (e) {
-                              }
-                            }
-                            return 'N/A';
-                          })()}
-                        </span>
+            filteredTransactions.map((transaction, index) => {
+              const transactionDate = transaction.transactionDate || transaction.createdAt;
+              const formattedDate = transactionDate ? new Date(transactionDate).toLocaleString('vi-VN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              }) : 'N/A';
+
+              return (
+                <div 
+                  key={transaction.id} 
+                  className={styles.transactionItem}
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <div className={styles.transactionLeft}>
+                    <div 
+                      className={styles.transactionIconWrapper}
+                      style={{ 
+                        background: isDebitTransaction(transaction.transactionTypeCode, transaction) 
+                          ? 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' 
+                          : 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)'
+                      }}
+                    >
+                      <i className={getTransactionTypeIcon(transaction.transactionTypeCode, transaction)}></i>
+                    </div>
+                    <div className={styles.transactionInfo}>
+                      <div className={styles.transactionHeader}>
+                        <div className={styles.transactionName}>
+                          {getTransactionTypeName(transaction.transactionTypeCode, transaction)}
+                        </div>
+                        <div className={styles.transactionDate}>
+                          <Clock size={14} />
+                          <span>{formattedDate}</span>
+                        </div>
+                      </div>
+                      <div className={styles.transactionDescription}>
+                        {formatTransactionDescription(transaction)}
+                        {transaction.orderCode && transaction.orderCode !== 0 && !formatTransactionDescription(transaction).includes('Mã đơn:') && (
+                          <span className={styles.orderCode}> • Mã đơn: {transaction.orderCode}</span>
+                        )}
                       </div>
                     </div>
-                    <div className={styles.transactionDescription}>
-                      {formatTransactionDescription(transaction)}
-                      {transaction.orderCode && transaction.orderCode !== 0 && !formatTransactionDescription(transaction).includes('Mã đơn:') && (
-                        <span className={styles.orderCode}> • Mã đơn: {transaction.orderCode}</span>
-                      )}
+                  </div>
+                  <div className={styles.transactionRight}>
+                    <div 
+                      className={styles.transactionAmount}
+                      style={{ color: getTransactionColor(transaction.transactionTypeCode, transaction) }}
+                    >
+                      {formatTransactionAmount(transaction.amount, transaction.transactionTypeCode, transaction)}
+                    </div>
+                    <div className={`${styles.transactionStatus} ${
+                      (transaction.status === 'Completed' || transaction.status === 'Compeleted') 
+                        ? styles.statusCompleted 
+                        : transaction.status === 'Pending' 
+                        ? styles.statusPending 
+                        : styles.statusFailed
+                    }`}>
+                      {getStatusLabel(transaction.status)}
                     </div>
                   </div>
                 </div>
-                <div className={styles.transactionRight}>
-                  <div 
-                    className={styles.transactionAmount}
-                    style={{ color: getTransactionColor(transaction.transactionTypeCode) }}
-                  >
-                    {formatTransactionAmount(transaction.amount, transaction.transactionTypeCode)}
-                  </div>
-                  <div className={`${styles.transactionStatus} ${
-                    (transaction.status === 'Completed' || transaction.status === 'Compeleted') 
-                      ? styles.statusCompleted 
-                      : transaction.status === 'Pending' 
-                      ? styles.statusPending 
-                      : styles.statusFailed
-                  }`}>
-                    {getStatusLabel(transaction.status)}
-                  </div>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

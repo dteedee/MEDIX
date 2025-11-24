@@ -4,6 +4,7 @@ export interface DoctorReview {
   doctorId: string;
   doctorName: string;
   patientName: string;
+  patientAvatar?: string | null;
   rating: number;
   comment: string | null;
   adminResponse: string | null;

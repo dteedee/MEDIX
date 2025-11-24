@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using AutoMapper;
+﻿﻿using AutoMapper;
 using Medix.API.Application.DTOs.Doctor;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.ApointmentDTO;
@@ -66,6 +66,7 @@ namespace Medix.API.Configurations
 
             CreateMap<Appointment, AppointmentDto>()
             .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => src.Patient.User.FullName))
+            .ForMember(dest => dest.PatientEmail, opt => opt.MapFrom(src => src.Patient.User.Email))
             .ForMember(dest => dest.DoctorName, opt => opt.MapFrom(src => src.Doctor.User.FullName))
             .ForMember(dest => dest.StatusDisplayName, opt => opt.MapFrom(src => src.StatusCodeNavigation.DisplayName))
             .ForMember(dest => dest.PaymentStatusName, opt => opt.MapFrom(src => src.PaymentStatusCodeNavigation.DisplayName))

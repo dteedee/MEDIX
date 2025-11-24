@@ -11,7 +11,7 @@ namespace Medix.API.Business.Interfaces.Classification
         /// </summary>
         /// <param name="createAppointment">Thông tin cuộc hẹn.</param>
         /// <returns>Đối tượng PatientHealthReminder đã được lên lịch.</returns>
-        Task<PatientHealthReminder> SendHealthReminderAppointmentAsync(CreateAppointmentDto createAppointment);
+        Task<List<PatientHealthReminder>> SendHealthReminderAppointmentAsync(AppointmentDto createAppointment);
 
         /// <summary>
         /// Thực thi việc gửi nhắc nhở sức khỏe (thường được gọi bởi Hangfire).

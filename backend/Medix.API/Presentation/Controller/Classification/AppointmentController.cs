@@ -32,9 +32,10 @@ namespace Medix.API.Presentation.Controllers
         private readonly IUserPromotionService userPromotionService;
         private readonly IPromotionService promotionService;
 
+        private readonly INotificationService notificationService;
 
 
-        public AppointmentController(IAppointmentService service, IWalletService walletService, IWalletTransactionService walletTransactionService, IPatientService patientService, IUserService userService, INoticeSetupService noticeSetupService, IEmailService emailService, IDoctorService doctorService, IPatientHealthReminderService patientHealthReminderService, IUserPromotionService userPromotionService, IPromotionService promotionService, ISystemConfigurationService systemConfigurationService)
+        public AppointmentController(IAppointmentService service, IWalletService walletService, IWalletTransactionService walletTransactionService, IPatientService patientService, IUserService userService, INoticeSetupService noticeSetupService, IEmailService emailService, IDoctorService doctorService, IPatientHealthReminderService patientHealthReminderService, IUserPromotionService userPromotionService, IPromotionService promotionService, ISystemConfigurationService systemConfigurationService, INotificationService notificationService)
         {
             _service = service;
             _walletService = walletService;
@@ -49,6 +50,7 @@ namespace Medix.API.Presentation.Controllers
             this.userPromotionService = userPromotionService;
             this.promotionService = promotionService;
             _systemConfigurationService = systemConfigurationService;
+            this.notificationService = notificationService;
         }
 
         [HttpGet]

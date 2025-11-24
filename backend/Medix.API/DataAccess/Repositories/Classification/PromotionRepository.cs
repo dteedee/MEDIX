@@ -68,6 +68,11 @@ namespace Medix.API.DataAccess.Repositories.Classification
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<IEnumerable<Promotion>> PromotionTarget(string type)
+        {
+            return await _context.Promotions.Where(x => x.ApplicableTargets == type).ToListAsync();
+        }
     }
 
 }

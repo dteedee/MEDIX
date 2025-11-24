@@ -3,7 +3,7 @@ import { useToast } from '../../contexts/ToastContext'
 import dashboardService from '../../services/dashboardService'
 import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto, ManagerDashboardSummaryDto, TopRatedDoctorDto } from '../../types/dashboard.types'
 import styles from '../../styles/manager/ReportsAndAnalytics.module.css'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 export default function ReportsAndAnalytics() {
   const [summary, setSummary] = useState<ManagerDashboardSummaryDto | null>(null);
@@ -407,11 +407,11 @@ export default function ReportsAndAnalytics() {
                       </div>
                     </div>
                     <ResponsiveContainer width="100%" height={350}>
-                      <LineChart
+                      <BarChart
                         data={appointmentTrends.monthly.map(trend => ({
                           month: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'][trend.month - 1],
                           'Lịch hẹn': trend.appointmentCount,
-                          'Doanh thu (triệu)': Math.round(trend.totalRevenue / 1000000),
+                          'Doanh thu': trend.totalRevenue,
                           revenueRaw: trend.totalRevenue
                         }))}
                         margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
@@ -431,22 +431,26 @@ export default function ReportsAndAnalytics() {
                         <YAxis 
                           yAxisId="right"
                           orientation="right"
-                          tick={{ fontSize: 12, fill: '#f59e0b' }}
+                          tick={{ fontSize: 11, fill: '#f59e0b' }}
                           stroke="#f59e0b"
-                          width={80}
+                          width={90}
                           tickFormatter={(value) => {
-                            if (value >= 1000) {
-                              return `${(value / 1000).toFixed(1)}B`;
+                            if (value >= 1000000000) {
+                              return `${(value / 1000000000).toFixed(1)}B`;
+                            } else if (value >= 1000000) {
+                              return `${(value / 1000000).toFixed(1)}M`;
+                            } else if (value >= 1000) {
+                              return `${(value / 1000).toFixed(0)}K`;
                             }
-                            return `${value}M`;
+                            return value.toString();
                           }}
                         />
                         <Tooltip 
                           formatter={(value: number, name: string) => {
-                            if (name === 'Doanh thu (triệu)') {
-                              return [`${value.toLocaleString('vi-VN')} triệu VND`, 'Doanh thu'];
+                            if (name === 'Doanh thu') {
+                              return [formatCurrency(value), 'Doanh thu'];
                             }
-                            return [value, name];
+                            return [value.toLocaleString('vi-VN'), name];
                           }}
                           labelFormatter={(label) => `Tháng ${label}`}
                           contentStyle={{ 
@@ -459,27 +463,22 @@ export default function ReportsAndAnalytics() {
                         />
                         <Legend 
                           wrapperStyle={{ paddingTop: '20px' }}
-                          iconType="line"
                         />
-                        <Line 
+                        <Bar 
                           yAxisId="left"
-                          type="monotone"
                           dataKey="Lịch hẹn"
-                          stroke="#667eea"
-                          strokeWidth={3}
-                          dot={{ fill: '#667eea', r: 5 }}
-                          activeDot={{ r: 7 }}
+                          fill="#667eea"
+                          radius={[8, 8, 0, 0]}
+                          maxBarSize={60}
                         />
-                        <Line 
+                        <Bar 
                           yAxisId="right"
-                          type="monotone"
-                          dataKey="Doanh thu (triệu)"
-                          stroke="#f59e0b"
-                          strokeWidth={3}
-                          dot={{ fill: '#f59e0b', r: 5 }}
-                          activeDot={{ r: 7 }}
+                          dataKey="Doanh thu"
+                          fill="#f59e0b"
+                          radius={[8, 8, 0, 0]}
+                          maxBarSize={60}
                         />
-                      </LineChart>
+                      </BarChart>
                     </ResponsiveContainer>
                   </>
                 ) : (

@@ -95,6 +95,29 @@ namespace Medix.API.Presentation.Controller.Money
             }
 
         }
+        [HttpGet("Redirect-Success")]
+        public IActionResult RedirectSuccess([FromQuery] PaymentReturnDto paymentReturnDto)
+        {
+            var result = _client.PaymentRequests.GetAsync(paymentReturnDto.Id).Result;
+
+
+            int transactionId = (int)result.OrderCode;
+            var order = OrderService.GetOrderByOrderCode(transactionId);
+
+            var frontendBaseUrl = order.baseURLFE ?? "http://localhost:5173";
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+
+
+            if (string.Equals(role, "Doctor", StringComparison.OrdinalIgnoreCase))
+            {
+                return Redirect($"{frontendBaseUrl}/app/doctor/wallet");
+            }
+
+            return Redirect($"{frontendBaseUrl}/app/patient/finance");
+
+
+        }
 
         [HttpPost("create-payment")]
         [Authorize]
@@ -123,7 +146,7 @@ namespace Medix.API.Presentation.Controller.Money
 
             var orderCode = DateTimeOffset.Now.ToUnixTimeSeconds();
             var backendBaseUrl = $"{Request.Scheme}://{Request.Host}";
-            var returnUrl = request.ReturnUrl ?? $"{backendBaseUrl}/api/Receive/payment-success";
+            var returnUrl = request.ReturnUrl ?? $"{backendBaseUrl}/api/Receive/Redirect-Success";
             //var returnUrl = "https://www.youtube.com/";
             var cancelUrl = request.CancelUrl ?? $"{backendBaseUrl}/api/Receive/payment-failed";
 
@@ -276,22 +299,114 @@ namespace Medix.API.Presentation.Controller.Money
             return DateTimeOffset.Now;
         }
 
+        //public async Task HandlePayOsWebhookAsync(Webhook webhookData)
+        //{
+        //    WebhookData verifiedData;
+        //    try
+        //    {
+        //        // 1. Xác thực Webhook
+        //        verifiedData = await _payosClient.Webhooks.VerifyAsync(webhookData);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw new Exception($"Signature Webhook không hợp lệ: {ex.Message}");
+        //    }
 
-        [HttpGet("payment-success")]
+        //    if (verifiedData.OrderCode == 123 && verifiedData.Description == "VQRIO123")
+        //    {
+        //        return; // Đây là "ping", trả về 200 OK để PayOS lưu.
+        //    }
+
+        //    int transactionId = (int)verifiedData.OrderCode;
+        //    var transaction = await _unitOfWork.Transactions.GetByIdAsync(transactionId);
+
+        //    if (transaction == null)
+        //    {
+        //        _logger.LogWarning("Webhook: Không tìm thấy transaction với OrderCode: {OrderCode}", verifiedData.OrderCode);
+        //        return;
+        //    }
+
+        //    // Nếu transaction đã success, không xử lý lại
+        //    if (transaction.Status == TransactionStatus.Success)
+        //    {
+        //        _logger.LogInformation("Webhook: Transaction {TransactionId} đã thành công, bỏ qua webhook", transactionId);
+        //        return;
+        //    }
+
+        //    // 2. Kiểm tra code và xử lý theo trạng thái
+        //    await _unitOfWork.BeginTransactionAsync();
+        //    try
+        //    {
+        //        if (verifiedData.Code == "00")
+        //        {
+        //            // SUCCESS: Thanh toán thành công
+        //            _logger.LogInformation("Webhook: Transaction {TransactionId} thành công (Code: {Code})", transactionId, verifiedData.Code);
+
+        //            transaction.Status = TransactionStatus.Success;
+        //            await _unitOfWork.Transactions.UpdateAsync(transaction);
+
+        //            // Cộng tiền vào tài khoản
+        //            var account = await _unitOfWork.Accounts.GetByIdAsync(transaction.TargetAccountId.Value);
+        //            if (account != null)
+        //            {
+        //                account.Balance += transaction.Amount;
+        //                await _unitOfWork.Accounts.UpdateAsync(account);
+        //                _logger.LogInformation("Webhook: Đã cộng {Amount} vào balance của account {AccountId}", transaction.Amount, account.Id);
+        //            }
+        //        }
+        //        else
+        //        {
+        //            // FAILED hoặc CANCELLED: Giao dịch thất bại hoặc bị hủy
+        //            _logger.LogWarning("Webhook: Transaction {TransactionId} thất bại/hủy (Code: {Code}, Description: {Description})",
+        //                transactionId, verifiedData.Code, verifiedData.Description);
+
+        //            transaction.Status = TransactionStatus.Failed;
+        //            await _unitOfWork.Transactions.UpdateAsync(transaction);
+
+        //            // Log thông tin webhook để debug
+        //            _logger.LogInformation("Webhook data: Code={Code}, OrderCode={OrderCode}, Description={Description}, Amount={Amount}",
+        //                verifiedData.Code, verifiedData.OrderCode, verifiedData.Description, verifiedData.Amount);
+        //        }
+
+        //        // Lưu thay đổi
+        //        await _unitOfWork.SaveChangesAsync();
+        //        await _unitOfWork.CommitTransactionAsync();
+
+        //        _logger.LogInformation("Webhook: Đã cập nhật transaction {TransactionId} thành công", transactionId);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await _unitOfWork.RollbackTransactionAsync();
+        //        _logger.LogError(ex, "Webhook: Lỗi khi xử lý webhook cho transaction {TransactionId}", transactionId);
+        //        throw;
+        //    }
+        //}
+
+
+        [HttpPost("payment-success")]
      
-        public async Task<IActionResult> paymentSuccess([FromQuery] PaymentReturnDto paymentReturnDto)
+        public async Task<IActionResult> paymentSuccess(Webhook webhook)
         {
-     
-
-            if (paymentReturnDto.Status != "PAID")
+            WebhookData verifiedData;
+            try
             {
-
-                return BadRequest(new { message = "Payment was not successfull" });
+                // 1. Xác thực Webhook
+                verifiedData = await _client.Webhooks.VerifyAsync(webhook);
             }
-            var order = OrderService.GetOrderByOrderCode(paymentReturnDto.OrderCode);
+            catch (Exception ex)
+            {
+                throw new Exception($"Signature Webhook không hợp lệ: {ex.Message}");
+            }
+            if (verifiedData.OrderCode == 123 && verifiedData.Description == "VQRIO123")
+            {
+                return Ok();  // Đây là "ping", trả về 200 OK để PayOS lưu.
+            }
+
+            int transactionId = (int)verifiedData.OrderCode;
+            var order = OrderService.GetOrderByOrderCode(transactionId);
 
             var frontendBaseUrl = order.baseURLFE ?? "http://localhost:5173";
-            var walletTransaction = await transactionService.GetWalletTransactionByOrderCodeAsync(paymentReturnDto.OrderCode);
+            var walletTransaction = await transactionService.GetWalletTransactionByOrderCodeAsync(transactionId);
 
             if (walletTransaction == null)
             {

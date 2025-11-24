@@ -14,5 +14,7 @@ namespace Medix.API.Business.Interfaces.Classification
 
         public Task<bool> DeletePromotionAsync(Guid id);
 
+        public Task<IEnumerable<PromotionDto>> GetPromotionforTypeTarget(string type);
+
     }
 }

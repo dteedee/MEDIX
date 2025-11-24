@@ -598,8 +598,8 @@ export default function EMRTimeline() {
                             >
                                 <i className={`bi bi-sort-${sortOrder === 'asc' ? 'alpha-down' : 'alpha-up'}`}></i>
                             </button>
-                        </div>
-
+                    </div>
+                    
                         <div className={styles.dateFilter}>
                             <div className={styles.dateInputGroup}>
                                 <label htmlFor="dateFrom">
@@ -1011,7 +1011,7 @@ export default function EMRTimeline() {
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className={styles.emptyState}>

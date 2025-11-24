@@ -402,19 +402,135 @@ export const PatientFinance: React.FC = () => {
     return statusMap[status] || status;
   };
 
-  // Helper function to remove trailing "0" from description
-  const cleanDescription = (desc: string): string => {
+   // Helper function to remove trailing "0" from description - XÓA HOÀN TOÀN SỐ 0
+   const cleanDescription = (desc: any): string => {
     if (!desc) return '';
-    // Remove trailing "0" (including multiple zeros)
-    let cleaned = desc.replace(/0+$/, '').trim();
-    // Also handle cases like "cuộc hẹn0" -> "cuộc hẹn"
-    cleaned = cleaned.replace(/cuộc hẹn0+$/i, 'cuộc hẹn').trim();
-    // Remove any trailing "0" again after the above replacement
-    cleaned = cleaned.replace(/0+$/, '').trim();
+  
+    // Nếu BE trả về mảng -> join lại
+    if (Array.isArray(desc)) {
+      desc = desc.join(' ');
+    }
+  
+    desc = String(desc);
+    
+    // Nếu description chỉ là "0" hoặc chỉ chứa số 0, return empty
+    if (desc.trim() === '0' || /^0+$/.test(desc.trim())) {
+      return '';
+    }
+  
+    // Loại bỏ tất cả số "0" ở cuối một cách triệt để
+    let cleaned = desc.trim();
+    let maxIterations = 15;
+    let iterations = 0;
+    
+    while (iterations < maxIterations) {
+      const before = cleaned;
+      
+      // Xóa "0" sau "h" - ví dụ: "9h0", "10h00" -> "9h", "10h"
+      cleaned = cleaned.replace(/(\d+)h0+/gi, '$1h');
+      
+      // Xóa "0" sau dấu ngoặc đóng - ví dụ: ")0" -> ")"
+      cleaned = cleaned.replace(/\)0+/g, ')');
+      
+      // Xóa "0" sau chữ cái và dấu cách - ví dụ: "hẹn 0", "hẹn0" -> "hẹn"
+      cleaned = cleaned.replace(/([a-zA-ZÀ-ỹ])\s*0+(?=\s*$)/gi, '$1');
+      
+      // Xóa "0" đứng một mình ở cuối (có hoặc không có khoảng trắng trước)
+      cleaned = cleaned.replace(/\s+0+$/g, '');
+      cleaned = cleaned.replace(/\s*0+$/g, '');
+      
+      // Xóa tất cả "0" ở cuối dòng
+      cleaned = cleaned.replace(/0+$/g, '');
+      
+      // Trim lại
+      cleaned = cleaned.trim();
+      
+      // Nếu không thay đổi gì, dừng lại
+      if (cleaned === before) {
+        break;
+      }
+      
+      iterations++;
+    }
+  
+    // Kiểm tra cuối cùng: nếu còn "0" đơn lẻ ở cuối, xóa luôn
+    if (cleaned.endsWith(' 0')) {
+      cleaned = cleaned.substring(0, cleaned.length - 2).trim();
+    }
+    if (cleaned.endsWith('0') && cleaned.length > 1) {
+      const lastChar = cleaned[cleaned.length - 2];
+      // Chỉ xóa "0" nếu ký tự trước nó không phải là số
+      if (!/\d/.test(lastChar)) {
+        cleaned = cleaned.substring(0, cleaned.length - 1).trim();
+      }
+    }
+    
     return cleaned;
+  };
+  // Helper function to format date and time from transaction date if appointment is not available
+  const formatTransactionDateTime = (transaction: WalletTransactionDto): { date: string | null; time: string | null } => {
+    const dateStr = transaction.transactionDate || transaction.createdAt;
+    if (!dateStr) {
+      return { date: null, time: null };
+    }
+    
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return { date: null, time: null };
+      }
+      
+      const formattedDate = date.toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      
+      const hour = date.getHours();
+      const formattedTime = `ca ${hour}h`;
+      
+      return { date: formattedDate, time: formattedTime };
+    } catch (e) {
+      return { date: null, time: null };
+    }
+  };
+
+  // Helper function to format date and time from appointment
+  const formatAppointmentDateTime = (appointment: Appointment | null | undefined): { date: string | null; time: string | null } => {
+    if (!appointment || !appointment.appointmentStartTime) {
+      return { date: null, time: null };
+    }
+    
+    try {
+      const appointmentDate = new Date(appointment.appointmentStartTime);
+      if (isNaN(appointmentDate.getTime())) {
+        return { date: null, time: null };
+      }
+      
+      const date = appointmentDate.toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      
+      const hour = appointmentDate.getHours();
+      const time = `ca ${hour}h`;
+      
+      return { date, time };
+    } catch (e) {
+      return { date: null, time: null };
+    }
   };
 
   const formatTransactionDescription = (transaction: WalletTransactionDto): string => {
+    // Clean description ngay từ đầu để loại bỏ "0" từ backend - không mutate transaction
+    let originalDescription = transaction.description;
+    let cleanedDescription = originalDescription ? cleanDescription(originalDescription) : null;
+    // Nếu sau khi clean chỉ còn "0" hoặc rỗng, bỏ qua description gốc
+    if (cleanedDescription && (cleanedDescription.trim() === '0' || /^0+$/.test(cleanedDescription.trim()))) {
+      cleanedDescription = null;
+    }
+    
     // Try to find appointment from map first, then from array
     let appointment = transaction.relatedAppointmentId 
       ? (appointmentMap.get(transaction.relatedAppointmentId) || appointments.find(apt => apt.id === transaction.relatedAppointmentId))
@@ -465,8 +581,8 @@ export const PatientFinance: React.FC = () => {
         }
         
         // If no doctor name from appointment, try to extract from description
-        if (!doctorName && transaction.description) {
-          let desc = transaction.description.trim();
+        if (!doctorName && cleanedDescription) {
+          let desc = cleanedDescription.trim();
           
           // Handle case where description might be "Thanh toán cuộc hẹn0" or similar
           // Remove trailing "0" if it's part of a malformed description
@@ -524,12 +640,20 @@ export const PatientFinance: React.FC = () => {
           }
         }
         
-        // Build the description - ALWAYS show doctor name if available
-        // Don't include date in description since it's already shown in transactionDateInline
+        // Build the description - ALWAYS show doctor name, date, and time if available
         if (doctorName) {
           // Clean doctor name to remove any trailing "0"
           const cleanDoctorName = cleanDescription(doctorName);
+          const { date, time } = formatAppointmentDateTime(appointment);
+          
           let result = `Thanh toán cuộc hẹn với bác sĩ ${cleanDoctorName}`;
+          if (date) {
+            result += ` ngày ${date}`;
+          }
+          if (time) {
+            result += ` ${time}`;
+          }
+          
           // Ensure no trailing "0" in final description
           return cleanDescription(result);
         }
@@ -554,25 +678,62 @@ export const PatientFinance: React.FC = () => {
           });
         }
         
-        // Fallback: use generic message without date (date already shown above)
-        // Also clean any trailing "0" from description if it exists
-        let fallbackDesc = transaction.description ? cleanDescription(transaction.description) : 'Thanh toán cuộc hẹn';
-        // If description is just "Thanh toán cuộc hẹn0" or similar, use generic message
-        if (!fallbackDesc || fallbackDesc === 'Thanh toán cuộc hẹn0' || fallbackDesc.match(/^Thanh toán cuộc hẹn0+$/i)) {
-          return 'Thanh toán cuộc hẹn';
+        // Fallback: try to extract doctor name from description or use transaction date/time
+        if (cleanedDescription && cleanedDescription.trim() !== '0' && !/^0+$/.test(cleanedDescription.trim())) {
+          let desc = cleanDescription(cleanedDescription);
+          // If cleaned description is empty or just "0", skip
+          if (!desc || desc.trim() === '0' || /^0+$/.test(desc.trim())) {
+            // Skip to last fallback
+          } else {
+            // Try to extract doctor name one more time
+            const doctorNameMatch = desc.match(/bác sĩ\s+([A-Za-zÀ-ỹ\s]+?)(?:\s+ngày|$)/i);
+            if (doctorNameMatch && doctorNameMatch[1]) {
+              const extractedName = cleanDescription(doctorNameMatch[1].trim());
+              if (extractedName && extractedName !== '0' && extractedName !== 'O' && extractedName.length > 1) {
+                const { date, time } = formatTransactionDateTime(transaction);
+                let result = `Thanh toán cuộc hẹn với bác sĩ ${extractedName}`;
+                if (date) {
+                  result += ` ngày ${date}`;
+                }
+                if (time) {
+                  result += ` ${time}`;
+                }
+                return cleanDescription(result);
+              }
+            }
+          }
         }
-        return cleanDescription(fallbackDesc);
+        
+        // Last fallback: use transaction date/time
+        const { date, time } = formatTransactionDateTime(transaction);
+        let result = 'Thanh toán cuộc hẹn';
+        if (date) {
+          result += ` ngày ${date}`;
+        }
+        if (time) {
+          result += ` ${time}`;
+        }
+        return cleanDescription(result);
       
       case 'AppointmentRefund':
         if (appointment && appointment.doctorName && appointment.doctorName.trim() !== '' && appointment.doctorName !== '0' && appointment.doctorName !== 'O') {
           // Clean description first to remove trailing "0" or other artifacts
-          let cleanDesc = transaction.description ? cleanDescription(transaction.description) : '';
+          let cleanDesc = cleanedDescription || '';
           
           const refundPercent = cleanDesc.match(/(\d+)%/)?.[1] || '80';
           const cancelFee = cleanDesc.match(/Phí hủy:\s*([\d.,]+)/)?.[1] || '';
           // Clean doctor name to remove any trailing "0"
           const cleanDoctorName = cleanDescription(appointment.doctorName.trim());
-          let desc = `Hoàn tiền hủy lịch hẹn cho bác sĩ ${cleanDoctorName}`;
+          const { date, time } = formatAppointmentDateTime(appointment);
+          
+          let desc = `Hoàn lại tiền hủy lịch với bác sĩ ${cleanDoctorName}`;
+          if (date) {
+            desc += ` ngày ${date}`;
+          }
+          if (time) {
+            desc += ` ${time}`;
+          }
+          
           if (refundPercent) {
             desc += ` (${refundPercent}%`;
             if (cancelFee) {
@@ -580,16 +741,32 @@ export const PatientFinance: React.FC = () => {
             }
             desc += ')';
           }
+          
           // Ensure no trailing "0" in final description
           return cleanDescription(desc);
         }
         // If appointment not found or doctorName is missing, check description
-        if (transaction.description && transaction.description.includes('bác sĩ')) {
+        if (cleanedDescription && 
+            cleanedDescription.trim() !== '0' && 
+            !/^0+$/.test(cleanedDescription.trim()) &&
+            cleanedDescription.includes('bác sĩ')) {
           // Clean description first
-          let cleanDesc = cleanDescription(transaction.description);
+          let cleanDesc = cleanDescription(cleanedDescription);
           
-          if (cleanDesc.includes('bác sĩ 0') || cleanDesc.includes('bác sĩ0')) {
-            return 'Hoàn tiền cuộc hẹn';
+          // If cleaned description is empty or just "0", skip
+          if (!cleanDesc || cleanDesc.trim() === '0' || /^0+$/.test(cleanDesc.trim())) {
+            // Skip to fallback
+          } else if (cleanDesc.includes('bác sĩ 0') || cleanDesc.includes('bác sĩ0')) {
+            // Use transaction date/time as fallback
+            const { date, time } = formatTransactionDateTime(transaction);
+            let result = 'Hoàn lại tiền hủy lịch';
+            if (date) {
+              result += ` ngày ${date}`;
+            }
+            if (time) {
+              result += ` ${time}`;
+            }
+            return cleanDescription(result);
           }
           // Try to extract doctor name from description
           const doctorNameMatch = cleanDesc.match(/bác sĩ\s+([^0O\s][^\s]*(?:\s+[^0O\s][^\s]*)*?)/i);
@@ -599,7 +776,15 @@ export const PatientFinance: React.FC = () => {
               // Extract refund info if available
               const refundPercent = cleanDesc.match(/(\d+)%/)?.[1] || '';
               const cancelFee = cleanDesc.match(/Phí hủy:\s*([\d.,]+)/)?.[1] || '';
-              let desc = `Hoàn tiền hủy lịch hẹn cho bác sĩ ${extractedName}`;
+              const { date, time } = formatAppointmentDateTime(appointment);
+              
+              let desc = `Hoàn lại tiền hủy lịch với bác sĩ ${extractedName}`;
+              if (date) {
+                desc += ` ngày ${date}`;
+              }
+              if (time) {
+                desc += ` ${time}`;
+              }
               if (refundPercent) {
                 desc += ` (${refundPercent}%`;
                 if (cancelFee) {
@@ -610,39 +795,56 @@ export const PatientFinance: React.FC = () => {
               return cleanDescription(desc);
             }
           }
-          // Remove date and trailing "0" from description if it exists
-          let result = cleanDesc.replace(/\s*ngày\s+\d{2}\/\d{2}\/\d{4,}/g, '').trim();
-          return cleanDescription(result) || 'Hoàn tiền cuộc hẹn';
+          // If we can't extract doctor name, try to use transaction date/time as fallback
+          const { date, time } = formatTransactionDateTime(transaction);
+          let result = 'Hoàn lại tiền hủy lịch';
+          if (date) {
+            result += ` ngày ${date}`;
+          }
+          if (time) {
+            result += ` ${time}`;
+          }
+          return cleanDescription(result);
         }
-        // Remove date and trailing "0" from description if it exists
-        let desc = transaction.description ? cleanDescription(transaction.description) : '';
-        desc = desc.replace(/\s*ngày\s+\d{2}\/\d{2}\/\d{4,}/g, '').trim();
-        return cleanDescription(desc) || 'Hoàn tiền cuộc hẹn';
+        // Fallback: use transaction date/time if available
+        const { date: refundDate, time: refundTime } = formatTransactionDateTime(transaction);
+        let desc = 'Hoàn lại tiền hủy lịch';
+        if (refundDate) {
+          desc += ` ngày ${refundDate}`;
+        }
+        if (refundTime) {
+          desc += ` ${refundTime}`;
+        }
+        return cleanDescription(desc);
       
       case 'Deposit':
-        if (transaction.description) {
+        if (cleanedDescription) {
           // Handle English descriptions like "Payment for order 123456"
-          if (transaction.description.toLowerCase().includes('payment for order')) {
-            const orderMatch = transaction.description.match(/order\s+(\d+)/i);
+          if (cleanedDescription.toLowerCase().includes('payment for order')) {
+            const orderMatch = cleanedDescription.match(/order\s+(\d+)/i);
             if (orderMatch) {
               return `Nạp tiền vào ví - Mã đơn: ${orderMatch[1]}`;
             }
             return 'Nạp tiền vào ví';
           }
           // Remove date from description if it exists and clean trailing "0"
-          let desc = transaction.description.replace(/\s*ngày\s+\d{2}\/\d{2}\/\d{4,}/g, '').trim();
+          let desc = cleanedDescription.replace(/\s*ngày\s+\d{2}\/\d{2}\/\d{4,}/g, '').trim();
           return cleanDescription(desc) || 'Nạp tiền vào ví';
         }
         return 'Nạp tiền vào ví';
       
       case 'Withdrawal':
         // Remove date and trailing "0" from description if it exists
-        let withdrawalDesc = transaction.description ? cleanDescription(transaction.description) : '';
+        let withdrawalDesc = cleanedDescription ? cleanDescription(cleanedDescription) : '';
         withdrawalDesc = withdrawalDesc.replace(/\s*ngày\s+\d{2}\/\d{2}\/\d{4,}/g, '').trim();
         return cleanDescription(withdrawalDesc) || 'Rút tiền từ ví';
       
       default:
-        return cleanDescription(transaction.description || 'Giao dịch');
+        // If description is just "0" or empty, return generic message
+        if (!cleanedDescription || cleanedDescription.trim() === '0' || /^0+$/.test(cleanedDescription.trim())) {
+          return 'Giao dịch';
+        }
+        return cleanDescription(cleanedDescription);
     }
   };
 
@@ -1078,7 +1280,7 @@ export const PatientFinance: React.FC = () => {
                       </div>
                     </div>
                     <div className={styles.transactionDescription}>
-                      {formatTransactionDescription(transaction)}
+                    {cleanDescription(formatTransactionDescription(transaction))}
                       {transaction.orderCode && transaction.orderCode !== 0 && !formatTransactionDescription(transaction).includes('Mã đơn:') && (
                         <span className={styles.orderCode}> • Mã đơn: {transaction.orderCode}</span>
                       )}

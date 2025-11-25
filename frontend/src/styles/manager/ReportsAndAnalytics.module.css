@@ -321,95 +321,267 @@
 /* Metrics Grid */
 .metricsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 24px;
   margin-bottom: 32px;
+  animation: fadeInUp 0.6s ease-out 0.2s both;
+}
+
+@media (max-width: 768px) {
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(45deg);
+  }
+}
+
+@keyframes iconBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 .metricCard {
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 20px;
+  padding: 28px;
   display: flex;
-  align-items: center;
-  gap: 16px;
-  transition: all 0.2s ease;
+  align-items: flex-start;
+  gap: 20px;
+  box-shadow: 
+    0 4px 14px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(102, 126, 234, 0.05);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(226, 232, 240, 0.8);
   position: relative;
   overflow: hidden;
+  cursor: pointer;
+}
+
+.metricCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease;
+}
+
+.metricCard::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.5s ease;
 }
 
 .metricCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.15),
+    0 8px 24px rgba(102, 126, 234, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  border-color: rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
+}
+
+.metricCard:hover::before {
+  transform: scaleX(1);
+}
+
+.metricCard:hover::after {
+  left: 100%;
+}
+
+.metricCard:hover .metricIcon {
+  transform: scale(1.15) rotate(5deg);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  animation: iconBounce 0.6s ease-in-out;
+}
+
+.metricCard:hover .metricValue {
+  transform: scale(1.05);
+  color: #667eea;
+}
+
+.metricCard:hover .metricGrowth {
+  transform: translateX(4px);
+}
+
+.metricCard:hover .metricBg {
+  transform: scale(1.2) rotate(-10deg);
+  opacity: 0.5;
 }
 
 .metricCard1 {
-  border-left: 4px solid #667eea;
+  animation: fadeInUp 0.6s ease-out 0.2s both;
+}
+
+.metricCard1::before {
+  background: linear-gradient(90deg, #667eea, #764ba2);
 }
 
 .metricCard2 {
-  border-left: 4px solid #48bb78;
+  animation: fadeInUp 0.6s ease-out 0.3s both;
+}
+
+.metricCard2::before {
+  background: linear-gradient(90deg, #10b981, #34d399);
 }
 
 .metricCard3 {
-  border-left: 4px solid #f56565;
+  animation: fadeInUp 0.6s ease-out 0.4s both;
+}
+
+.metricCard3::before {
+  background: linear-gradient(90deg, #f56565, #e53e3e);
 }
 
 .metricCard4 {
-  border-left: 4px solid #ed8936;
+  animation: fadeInUp 0.6s ease-out 0.5s both;
+}
+
+.metricCard4::before {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.metricCard1 .metricIcon { 
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.metricCard2 .metricIcon { 
+  background: linear-gradient(135deg, #10b981, #34d399);
+  animation: pulse 2s ease-in-out infinite 0.2s;
+}
+
+.metricCard3 .metricIcon { 
+  background: linear-gradient(135deg, #f56565, #e53e3e);
+  animation: pulse 2s ease-in-out infinite 0.4s;
+}
+
+.metricCard4 .metricIcon { 
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  animation: pulse 2s ease-in-out infinite 0.6s;
 }
 
 .metricIcon {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
+  font-size: 28px;
   flex-shrink: 0;
+  box-shadow: 
+    0 8px 20px rgba(0, 0, 0, 0.15),
+    0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
 
-.metricCard1 .metricIcon {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.metricIcon::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transform: rotate(45deg);
+  transition: all 0.6s ease;
 }
 
-.metricCard2 .metricIcon {
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-}
-
-.metricCard3 .metricIcon {
-  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
-}
-
-.metricCard4 .metricIcon {
-  background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+.metricCard:hover .metricIcon::before {
+  animation: shimmer 0.6s ease-in-out;
 }
 
 .metricContent {
   flex: 1;
+  min-width: 0;
 }
 
 .metricLabel {
-  font-size: 14px;
-  color: #6b7280;
-  margin-bottom: 4px;
+  font-size: 13px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .metricValue {
-  font-size: 2.25rem;
-  font-weight: 700;
-  color: #111827;
+  font-size: 32px;
+  font-weight: 800;
+  color: #1f2937;
   margin-bottom: 8px;
+  line-height: 1;
+  transition: all 0.3s ease;
 }
 
 .metricGrowth {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  font-weight: 500;
+  gap: 6px;
+  font-size: 13px;
+  color: #10b981;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.metricGrowth.negative {
+  color: #ef4444;
+}
+
+.metricBg {
+  position: absolute;
+  right: -20px;
+  bottom: -20px;
+  font-size: 120px;
+  color: #f3f4f6;
+  opacity: 0.3;
+  transition: all 0.3s ease;
+  z-index: 0;
 }
 
 /* Charts Grid */
@@ -421,15 +593,29 @@
 }
 
 .chartCard {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 20px;
+  box-shadow: 
+    0 4px 14px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(102, 126, 234, 0.05);
+  border: 1px solid rgba(226, 232, 240, 0.8);
   overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.chartCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 
+    0 12px 32px rgba(0, 0, 0, 0.12),
+    0 6px 16px rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.2);
 }
 
 .chartHeader {
   padding: 24px 24px 16px 24px;
   border-bottom: 1px solid #f3f4f6;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .chartHeader h3 {
@@ -460,6 +646,20 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.specialtyItem:hover {
+  background: linear-gradient(135deg, #f0f4ff 0%, #ffffff 100%);
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.specialtyItem:hover .specialtyBarFill {
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .specialtyInfo {
@@ -499,7 +699,24 @@
   height: 100%;
   background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
   border-radius: 4px;
-  transition: width 0.3s ease;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.specialtyBarFill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+.specialtyItem:hover .specialtyBarFill::after {
+  left: 100%;
 }
 
 .specialtyPercentage {
@@ -761,6 +978,132 @@
   font-size: 16px;
 }
 
+/* Additional Metrics */
+.additionalMetricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.additionalMetricCard {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    0 1px 4px rgba(102, 126, 234, 0.04);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.additionalMetricCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.additionalMetricCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.1),
+    0 4px 12px rgba(102, 126, 234, 0.12);
+  border-color: rgba(102, 126, 234, 0.2);
+}
+
+.additionalMetricCard:hover::before {
+  transform: scaleX(1);
+}
+
+.additionalMetricCard1::before {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.additionalMetricCard2::before {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.additionalMetricCard3::before {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.additionalMetricCard4::before {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.additionalMetricIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.additionalMetricCard1 .additionalMetricIcon {
+  background: linear-gradient(135deg, #10b981, #34d399);
+}
+
+.additionalMetricCard2 .additionalMetricIcon {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+}
+
+.additionalMetricCard3 .additionalMetricIcon {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+}
+
+.additionalMetricCard4 .additionalMetricIcon {
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
+}
+
+.additionalMetricCard:hover .additionalMetricIcon {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.additionalMetricContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.additionalMetricLabel {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.additionalMetricValue {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: 4px;
+  line-height: 1;
+}
+
+.additionalMetricSubtext {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
 /* Top Rated Section */
 .topRatedSection {
   margin-bottom: 32px;
@@ -803,26 +1146,41 @@
 }
 
 .topRatedCard {
-  background: white;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border: 2px solid #e5e7eb;
-  border-radius: 16px;
+  border-radius: 20px;
   padding: 32px 20px 60px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
   position: relative;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: visible;
   flex: 0 0 260px;
   min-height: 400px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 
+    0 4px 14px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(102, 126, 234, 0.05);
+  cursor: pointer;
 }
 
 .topRatedCard:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-  border-color: #d1d5db;
+  transform: translateY(-12px) scale(1.03);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.15),
+    0 8px 24px rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
+}
+
+.topRatedCard:hover .doctorAvatar {
+  transform: scale(1.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.topRatedCard:hover .laurelBadge {
+  transform: translateX(-50%) translateY(-5px) scale(1.1);
 }
 
 /* Podium Heights - 1st place is tallest */
@@ -951,6 +1309,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
 }
 
 .laurelWreath {
@@ -1043,6 +1403,7 @@
   background: white;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   margin-top: 40px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .rank1 .doctorAvatar {

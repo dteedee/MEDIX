@@ -2,16 +2,19 @@ import React, { useState, useEffect } from 'react'
 import { Calendar } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import dashboardService from '../../services/dashboardService'
+import { managerDashboardService, AppointmentStats } from '../../services/managerDashboardService'
 import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto, ManagerDashboardSummaryDto, TopRatedDoctorDto } from '../../types/dashboard.types'
 import styles from '../../styles/manager/ReportsAndAnalytics.module.css'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 export default function ReportsAndAnalytics() {
   const [summary, setSummary] = useState<ManagerDashboardSummaryDto | null>(null);
+  const [appointmentStats, setAppointmentStats] = useState<AppointmentStats | null>(null);
   const [specializations, setSpecializations] = useState<SpecializationDistributionDto[]>([]);
   const [appointmentTrends, setAppointmentTrends] = useState<AppointmentTrendsDto | null>(null);
   const [userGrowth, setUserGrowth] = useState<UserGrowthDto | null>(null);
   const [topRatedDoctors, setTopRatedDoctors] = useState<TopRatedDoctorDto[]>([]);
+  const [patientCount, setPatientCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedPeriod, setSelectedPeriod] = useState('30days');
@@ -20,11 +23,18 @@ export default function ReportsAndAnalytics() {
 
   useEffect(() => {
     loadSummary();
+    loadAppointmentStats();
     loadSpecializations();
     loadAppointmentTrends();  
     loadUserGrowth();
     loadTopRatedDoctors();
   }, [selectedPeriod, selectedYear]);
+
+  useEffect(() => {
+    if (summary) {
+      loadPatientCount();
+    }
+  }, [summary]);
 
   const loadSpecializations = async () => {
     try {
@@ -63,13 +73,36 @@ export default function ReportsAndAnalytics() {
     setLoading(true);
     try {
       const data = await dashboardService.getSummary();
-   
       setSummary(data);
       setLoading(false);
     } catch (error) {
-   
       showToast('Không thể tải dữ liệu tóm tắt', 'error');
       setLoading(false);
+    }
+  };
+
+  const loadAppointmentStats = async () => {
+    try {
+      const dashboardData = await managerDashboardService.getDashboardData();
+      setAppointmentStats(dashboardData.appointmentStats);
+    } catch (error) {
+      console.error('Error loading appointment stats:', error);
+      // Không hiển thị toast để tránh spam, vì đây là dữ liệu bổ sung
+    }
+  };
+
+  const loadPatientCount = async () => {
+    try {
+      // Tính số bệnh nhân = tổng users - tổng bác sĩ (vì users bao gồm cả bác sĩ, admin, manager, patient)
+      // Nếu có API riêng, sẽ thay thế logic này
+      if (summary) {
+        // Giả sử users.total bao gồm tất cả, trừ đi doctors để lấy số bệnh nhân
+        // (có thể còn admin/manager nhưng số lượng nhỏ)
+        const calculatedPatientCount = Math.max(0, summary.users.total - summary.doctors.total);
+        setPatientCount(calculatedPatientCount);
+      }
+    } catch (error) {
+      console.error('Error calculating patient count:', error);
     }
   };
 
@@ -196,74 +229,161 @@ export default function ReportsAndAnalytics() {
         <>
           {/* Key Metrics */}
           <div className={styles.metricsGrid}>
+            {/* Hàng trên: Tổng bệnh nhân, Tổng bác sĩ */}
             <div className={`${styles.metricCard} ${styles.metricCard1}`}>
               <div className={styles.metricIcon}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
+                <i className="bi bi-people" style={{ fontSize: '28px' }}></i>
               </div>
               <div className={styles.metricContent}>
-                <div className={styles.metricLabel}>Tổng người dùng</div>
-                <div className={styles.metricValue}>{formatNumber(summary.users.total)}</div>
-                <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.users.growth) }}>
-                  {getGrowthIcon(summary.users.growth)}
+                <div className={styles.metricLabel}>Tổng bệnh nhân</div>
+                <div className={styles.metricValue}>
+                  {patientCount !== null 
+                    ? formatNumber(patientCount)
+                    : summary 
+                    ? formatNumber(Math.max(0, summary.users.total - summary.doctors.total))
+                    : '0'}
+                </div>
+                <div className={`${styles.metricGrowth} ${summary.users.growth < 0 ? styles.negative : ''}`}>
+                  <i className={`bi bi-arrow-${summary.users.growth >= 0 ? 'up' : 'down'}`}></i>
                   <span>{summary.users.growth > 0 ? '+' : ''}{summary.users.growth.toFixed(1)}% so với tháng trước</span>
                 </div>
+              </div>
+              <div className={styles.metricBg}>
+                <i className="bi bi-people"></i>
               </div>
             </div>
 
             <div className={`${styles.metricCard} ${styles.metricCard2}`}>
               <div className={styles.metricIcon}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
+                <i className="bi bi-person-badge" style={{ fontSize: '28px' }}></i>
               </div>
               <div className={styles.metricContent}>
                 <div className={styles.metricLabel}>Tổng bác sĩ</div>
                 <div className={styles.metricValue}>{formatNumber(summary.doctors.total)}</div>
-                <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.doctors.growth) }}>
-                  {getGrowthIcon(summary.doctors.growth)}
+                <div className={`${styles.metricGrowth} ${summary.doctors.growth < 0 ? styles.negative : ''}`}>
+                  <i className={`bi bi-arrow-${summary.doctors.growth >= 0 ? 'up' : 'down'}`}></i>
                   <span>{summary.doctors.growth > 0 ? '+' : ''}{summary.doctors.growth.toFixed(1)}% so với tháng trước</span>
                 </div>
               </div>
+              <div className={styles.metricBg}>
+                <i className="bi bi-person-badge"></i>
+              </div>
             </div>
 
+            {/* Hàng dưới: Tổng lịch hẹn, Tổng doanh thu */}
             <div className={`${styles.metricCard} ${styles.metricCard3}`}>
               <div className={styles.metricIcon}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
+                <i className="bi bi-calendar-check" style={{ fontSize: '28px' }}></i>
               </div>
               <div className={styles.metricContent}>
                 <div className={styles.metricLabel}>Tổng lịch hẹn</div>
                 <div className={styles.metricValue}>{formatNumber(summary.appointments.total)}</div>
-                <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.appointments.growth) }}>
-                  {getGrowthIcon(summary.appointments.growth)}
+                <div className={`${styles.metricGrowth} ${summary.appointments.growth < 0 ? styles.negative : ''}`}>
+                  <i className={`bi bi-arrow-${summary.appointments.growth >= 0 ? 'up' : 'down'}`}></i>
                   <span>{summary.appointments.growth > 0 ? '+' : ''}{summary.appointments.growth.toFixed(1)}% so với tháng trước</span>
                 </div>
+              </div>
+              <div className={styles.metricBg}>
+                <i className="bi bi-calendar-check"></i>
               </div>
             </div>
 
             <div className={`${styles.metricCard} ${styles.metricCard4}`}>
               <div className={styles.metricIcon}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="1" x2="12" y2="23"></line>
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
+                <i className="bi bi-currency-dollar" style={{ fontSize: '28px' }}></i>
               </div>
               <div className={styles.metricContent}>
                 <div className={styles.metricLabel}>Tổng doanh thu</div>
                 <div className={styles.metricValue}>{formatCurrency(summary.revenue.total)}</div>
-                <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.revenue.growth) }}>
-                  {getGrowthIcon(summary.revenue.growth)}
+                <div className={`${styles.metricGrowth} ${summary.revenue.growth < 0 ? styles.negative : ''}`}>
+                  <i className={`bi bi-arrow-${summary.revenue.growth >= 0 ? 'up' : 'down'}`}></i>
                   <span>{summary.revenue.growth > 0 ? '+' : ''}{summary.revenue.growth.toFixed(1)}% so với tháng trước</span>
+                </div>
+              </div>
+              <div className={styles.metricBg}>
+                <i className="bi bi-currency-dollar"></i>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Metrics */}
+          <div className={styles.additionalMetricsGrid}>
+            <div className={`${styles.additionalMetricCard} ${styles.additionalMetricCard1}`}>
+              <div className={styles.additionalMetricIcon}>
+                <i className="bi bi-check-circle" style={{ fontSize: '24px' }}></i>
+              </div>
+              <div className={styles.additionalMetricContent}>
+                <div className={styles.additionalMetricLabel}>Tỷ lệ hoàn thành</div>
+                <div className={styles.additionalMetricValue}>
+                  {appointmentStats && appointmentStats.totalAppointments > 0
+                    ? ((appointmentStats.completed / appointmentStats.totalAppointments) * 100).toFixed(1)
+                    : summary && summary.appointments.total > 0
+                    ? '0.0'
+                    : '0'}%
+                </div>
+                <div className={styles.additionalMetricSubtext}>
+                  {appointmentStats 
+                    ? `${appointmentStats.completed.toLocaleString('vi-VN')} / ${appointmentStats.totalAppointments.toLocaleString('vi-VN')} lịch hẹn`
+                    : 'Lịch hẹn đã hoàn thành'}
+                </div>
+              </div>
+            </div>
+
+            <div className={`${styles.additionalMetricCard} ${styles.additionalMetricCard2}`}>
+              <div className={styles.additionalMetricIcon}>
+                <i className="bi bi-x-circle" style={{ fontSize: '24px' }}></i>
+              </div>
+              <div className={styles.additionalMetricContent}>
+                <div className={styles.additionalMetricLabel}>Tỷ lệ hủy</div>
+                <div className={styles.additionalMetricValue}>
+                  {appointmentStats && appointmentStats.totalAppointments > 0
+                    ? (((appointmentStats.cancelledByPatient + appointmentStats.cancelledByDoctor) / appointmentStats.totalAppointments) * 100).toFixed(1)
+                    : summary && summary.appointments.total > 0
+                    ? '0.0'
+                    : '0'}%
+                </div>
+                <div className={styles.additionalMetricSubtext}>
+                  {appointmentStats
+                    ? `${(appointmentStats.cancelledByPatient + appointmentStats.cancelledByDoctor).toLocaleString('vi-VN')} lịch hẹn bị hủy`
+                    : 'Lịch hẹn bị hủy'}
+                </div>
+              </div>
+            </div>
+
+            <div className={`${styles.additionalMetricCard} ${styles.additionalMetricCard3}`}>
+              <div className={styles.additionalMetricIcon}>
+                <i className="bi bi-star" style={{ fontSize: '24px' }}></i>
+              </div>
+              <div className={styles.additionalMetricContent}>
+                <div className={styles.additionalMetricLabel}>Đánh giá trung bình</div>
+                <div className={styles.additionalMetricValue}>
+                  {topRatedDoctors.length > 0
+                    ? (topRatedDoctors.reduce((sum, d) => sum + d.averageRating, 0) / topRatedDoctors.length).toFixed(1)
+                    : '0.0'}
+                </div>
+                <div className={styles.additionalMetricSubtext}>
+                  {topRatedDoctors.reduce((sum, d) => sum + d.reviewCount, 0)} đánh giá
+                </div>
+              </div>
+            </div>
+
+            <div className={`${styles.additionalMetricCard} ${styles.additionalMetricCard4}`}>
+              <div className={styles.additionalMetricIcon}>
+                <i className="bi bi-arrow-repeat" style={{ fontSize: '24px' }}></i>
+              </div>
+              <div className={styles.additionalMetricContent}>
+                <div className={styles.additionalMetricLabel}>Tỷ lệ đặt lại lịch</div>
+                <div className={styles.additionalMetricValue}>
+                  {appointmentStats && appointmentStats.totalAppointments > 0
+                    ? ((appointmentStats.BeforeAppoiment / appointmentStats.totalAppointments) * 100).toFixed(1)
+                    : summary && summary.appointments.total > 0
+                    ? '0.0'
+                    : '0'}%
+                </div>
+                <div className={styles.additionalMetricSubtext}>
+                  {appointmentStats
+                    ? `${appointmentStats.BeforeAppoiment.toLocaleString('vi-VN')} lịch hẹn được đặt lại`
+                    : 'Lịch hẹn được đặt lại'}
                 </div>
               </div>
             </div>

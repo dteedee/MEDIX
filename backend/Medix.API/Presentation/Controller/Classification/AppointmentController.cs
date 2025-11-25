@@ -177,7 +177,8 @@ namespace Medix.API.Presentation.Controllers
         {
             if (id != dto.Id)
                 return BadRequest("Mismatched appointment ID");
-         
+            dto.AppointmentStartTime = DateTime.Now;
+            dto.AppointmentEndTime = DateTime.Now.AddHours(1);
 
             var updated = await _service.UpdateAsync(dto);
             if (updated == null)

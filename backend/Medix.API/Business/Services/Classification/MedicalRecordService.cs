@@ -33,8 +33,11 @@ namespace Medix.API.Business.Services.Classification
             var record = await _medicalRecordRepo.GetByAppointmentIdAsync(appointmentId);
             if (record == null)
                 return null;
-
-            return _mapper.Map<MedicalRecordDto>(record);
+            var result = _mapper.Map<MedicalRecordDto>(record);
+            result.StatusAppointment = record.Appointment.StatusCode;
+            result.AppointmentEndDate = record.Appointment.AppointmentEndTime;
+            result.AppointmentStartDate = record.Appointment.AppointmentStartTime;
+            return result ;
         }
 
         public async Task<MedicalRecordDto> CreateAsync(CreateOrUpdateMedicalRecordDto dto)

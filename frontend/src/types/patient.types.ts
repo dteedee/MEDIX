@@ -1,4 +1,5 @@
 export interface BasicEMRInfo{
+  id: string;
   avatarUrl: string;
   fullName: string;
   identificationNumber: string;

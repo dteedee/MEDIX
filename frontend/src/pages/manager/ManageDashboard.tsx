@@ -41,10 +41,13 @@ const getAppointmentStatusInfo = (status: string) => {
     Confirmed: { icon: <FaCheckCircle />, text: 'Đã xác nhận', className: 'text-green-500' },
     OnProgressing: { icon: <FaRunning />, text: 'Đang diễn ra', className: 'text-blue-500' },
     CancelledByPatient: { icon: <FaTimesCircle />, text: 'Bệnh nhân hủy', className: 'text-red-500' },
-    CancelledByDoctor: { icon: <FaTimesCircle />, text: 'Bác sĩ hủy', className: 'text-red-600' },
+    CancelledByDoctor: { icon: <FaBan />, text: 'Bác sĩ hủy', className: 'text-red-600' }, // NOSONAR
     MissedByDoctor: { icon: <FaUserClock />, text: 'Bác sĩ vắng', className: 'text-yellow-600' },
-    NoShow: { icon: <FaUserInjured />, text: 'Bệnh nhân không đến', className: 'text-yellow-500' },
+    MissedByPatient: { icon: <FaUserInjured />, text: 'Bệnh nhân không đến', className: 'text-yellow-500' },
+    NoShow: { icon: <FaUserInjured />, text: 'Bệnh nhân không đến', className: 'text-yellow-500' }, // Giữ lại để tương thích
     Completed: { icon: <FaCheckCircle />, text: 'Đã hoàn thành', className: 'text-gray-500' },
+    BeforeAppointment: { icon: <FaCalendarAlt />, text: 'Sắp diễn ra', className: 'text-purple-500' }, // NOSONAR
+    BeforeAppoiment: { icon: <FaCalendarAlt />, text: 'Sắp diễn ra', className: 'text-purple-500' }, // Xử lý lỗi chính tả từ backend
     default: { icon: <FaQuestionCircle />, text: 'Không xác định', className: 'text-gray-400' }
   };
   return statusMap[status] || statusMap.default;
@@ -157,8 +160,13 @@ export const ManageDashboard: React.FC = () => {
         </div>
         <div className={styles.headerRight}>
           <div className={styles.dateTime}>
-            <i className="bi bi-calendar3"></i>
-            <span>{new Date().toLocaleDateString('vi-VN')}</span>
+            <div className={styles.dateIconWrapper}>
+              <i className={`bi bi-calendar3 ${styles.dateIcon}`}></i>
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>{new Date().toLocaleDateString('vi-VN')}</span>
+              <div className={styles.dateGlow}></div>
+            </div>
           </div>
         </div>
       </div>
@@ -186,24 +194,29 @@ export const ManageDashboard: React.FC = () => {
           colorClass="Blue"
         />
         <StatCard
-          title="Đã xác nhận"
-          value={appointmentStats.confirmed}
+          title="Sắp diễn ra" //NOSONAR
+          value={
+            allAppointments.filter(
+              (a) => a.status === 'BeforeAppoiment'
+            ).length
+          }
           description="Lịch hẹn đang chờ diễn ra"
           icon={<FaCalendarCheck />}
           colorClass="Green"
         />
         <StatCard
-          title="Lịch hẹn đã hủy"
-          value={appointmentStats.cancelledByPatient + appointmentStats.cancelledByDoctor}
-          description="Bởi bệnh nhân hoặc bác sĩ"
-          icon={<FaCalendarTimes />}
-          colorClass="Red"
+          title="Bác sĩ vắng"
+          value={appointmentStats.missedByDoctor}
+          description="Lịch hẹn bị bác sĩ bỏ lỡ"
+          icon={<FaUserClock />}
+          colorClass="Yellow"
         />
         <StatCard
-          title="Lịch hẹn bị lỡ"
-          value={appointmentStats.missedByDoctor + appointmentStats.noShow}
-          description="Bác sĩ vắng hoặc BN không đến"
-          icon={<FaUserClock />}
+          title="Bệnh nhân không đến"
+          // TODO: Update AppointmentStats type to include missedByPatient and use it here.
+          value={appointmentStats.missedByPatient}
+          description="Lịch hẹn bị bệnh nhân bỏ lỡ"
+          icon={<FaUserInjured />}
           colorClass="Yellow"
         />
       </div>
@@ -261,14 +274,6 @@ export const ManageDashboard: React.FC = () => {
                           <h4 className="font-bold text-gray-800">{doctor.doctorName}</h4>
                           <p className="text-sm text-gray-500">{doctor.specializationName}</p>
                         </div>
-                      </div>
-                      <div className={styles.workShiftsGrid}>
-                        {doctor.workShifts.sort((a, b) => a.startTime.localeCompare(b.startTime)).map((shift, index) => (
-                          <div key={index} className={styles.workShift}>
-                            <FaClock className="mr-1" />
-                            {formatTime(shift.startTime)} - {formatTime(shift.endTime)}
-                          </div>
-                        ))}
                       </div>
                     </div>
                   ))}

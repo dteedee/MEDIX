@@ -39,7 +39,18 @@ const createReview = async (dto: CreateReviewDto): Promise<CreateReviewResponse>
   }
 };
 
+const getAllReviews = async (): Promise<DoctorReview[]> => {
+  try {
+    const response = await apiClient.get<DoctorReview[]>('/Review');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching all reviews:', error);
+    throw error;
+  }
+};
+
 export const reviewService = {
   getReviewsForCurrentDoctor,
+  getAllReviews,
   createReview,
 };

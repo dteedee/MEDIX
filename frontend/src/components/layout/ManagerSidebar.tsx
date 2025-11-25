@@ -118,8 +118,8 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
         </Link>
 
         <Link
-          to="/app/manager/packages"
-          className={`${styles.navItem} ${currentPage === 'packages' ? styles.active : ''}`}
+          to="/app/manager/services"
+          className={`${styles.navItem} ${currentPage === 'services' ? styles.active : ''}`}
           onClick={() => setShowUserMenu(false)}
         >
           <i className="bi bi-box"></i>
@@ -150,7 +150,7 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
           onClick={() => setShowUserMenu(false)}
         >
           <i className="bi bi-chat-dots"></i>
-          {sidebarOpen && <span>Quản lý phản hồi</span>}
+          {sidebarOpen && <span>Phản hồi</span>}
         </Link>
 
         <Link

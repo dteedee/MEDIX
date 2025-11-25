@@ -11,28 +11,80 @@ interface PromotionListFilters {
   search: string;
   statusFilter: 'all' | 'active' | 'inactive';
   discountTypeFilter: 'all' | 'Percentage' | 'FixedAmount';
+  timelineFilter: 'all' | 'upcoming' | 'ongoing' | 'expired';
+  usageFilter: 'all' | 'limited' | 'unlimited';
   sortBy: string;
   sortDirection: 'asc' | 'desc';
 }
+
+const defaultFilters: PromotionListFilters = {
+  page: 1,
+  pageSize: 10,
+  search: '',
+  statusFilter: 'all',
+  discountTypeFilter: 'all',
+  timelineFilter: 'all',
+  usageFilter: 'all',
+  sortBy: 'createdAt',
+  sortDirection: 'desc'
+};
 
 const getInitialState = (): PromotionListFilters => {
   try {
     const savedState = localStorage.getItem('promotionListState');
     if (savedState) {
-      return JSON.parse(savedState);
+        return { ...defaultFilters, ...JSON.parse(savedState) };
     }
   } catch (e) {
     console.error("Failed to parse promotionListState from localStorage", e);
   }
-  return {
-    page: 1,
-    pageSize: 10,
-    search: '',
-    statusFilter: 'all',
-    discountTypeFilter: 'all',
-    sortBy: 'createdAt',
-    sortDirection: 'desc' as const,
-  };
+  return defaultFilters;
+};
+
+const formatDiscountValue = (value: number, type: string) => {
+  if (type === 'Percentage') {
+    return `${value}%`;
+  }
+  return `${value.toLocaleString('vi-VN')}đ`;
+};
+
+const formatIsoToDisplayDate = (value?: string | null) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${day}/${month}/${date.getFullYear()}`;
+};
+
+const parseDateInputValue = (value: string): string | null => {
+  const parts = value.split('/');
+  if (parts.length !== 3) return null;
+  const [dayStr, monthStr, yearStr] = parts;
+  if (dayStr.length !== 2 || monthStr.length !== 2 || yearStr.length !== 4) {
+    return null;
+  }
+  const day = Number(dayStr);
+  const month = Number(monthStr);
+  const year = Number(yearStr);
+  if (!day || !month || !year) return null;
+  const date = new Date(year, month - 1, day);
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== year ||
+    date.getMonth() + 1 !== month ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+  return date.toISOString();
+};
+
+const formatDateInputValue = (value: string) => {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 };
 
 export default function PromotionManagement() {
@@ -42,7 +94,7 @@ export default function PromotionManagement() {
   const [viewing, setViewing] = useState<PromotionDto | null>(null);
   const [editing, setEditing] = useState<PromotionDto | null>(null);
   const [creating, setCreating] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [confirmationDialog, setConfirmationDialog] = useState<{
     isOpen: boolean;
     promotion: PromotionDto | null;
@@ -52,25 +104,12 @@ export default function PromotionManagement() {
     promotion: null,
     action: null
   });
-
   const { showToast } = useToast();
 
   const load = async () => {
     setLoading(true);
     try {
       const promotions = await promotionService.getAllPromotions();
-      
-      // Debug: Log first promotion to see data structure
-      if (promotions && promotions.length > 0) {
-        console.log('📊 Sample promotion from backend:', {
-          id: promotions[0].id,
-          code: promotions[0].code,
-          isActive_VALUE: promotions[0].isActive,
-          isActive_TYPE: typeof promotions[0].isActive,
-          isActive_NORMALIZED: normalizeIsActive(promotions[0].isActive)
-        });
-      }
-      
       setAllPromotions(promotions || []);
     } catch (error) {
       console.error('Error loading promotions:', error);
@@ -102,23 +141,8 @@ export default function PromotionManagement() {
 
   const handleToggleStatus = async (promotion: PromotionDto) => {
     try {
-      console.log('🔍 ANTES DE TOGGLE:', {
-        promotionId: promotion.id,
-        promotionCode: promotion.code,
-        isActive_RAW: promotion.isActive,
-        isActive_TYPE: typeof promotion.isActive,
-      });
-      
       const currentIsActive = normalizeIsActive(promotion.isActive);
       const newIsActive = !currentIsActive;
-      
-      console.log('🔄 DEPOIS DE NORMALIZAR:', {
-        currentIsActive: currentIsActive,
-        newIsActive: newIsActive,
-        message: currentIsActive ? 'Vai DESATIVAR (false)' : 'Vai ATIVAR (true)'
-      });
-      
-      // Toggle status by updating the promotion
       const updatedData = {
         code: promotion.code,
         name: promotion.name,
@@ -130,12 +154,6 @@ export default function PromotionManagement() {
         endDate: promotion.endDate,
         isActive: newIsActive, // Send boolean (true/false)
       };
-      
-      console.log('📤 ENVIANDO PARA API:', {
-        id: promotion.id,
-        isActive: newIsActive,
-        fullData: updatedData
-      });
       
       await promotionService.updatePromotion(promotion.id, updatedData);
       showToast(`Đã ${currentIsActive ? 'tắt' : 'bật'} khuyến mãi thành công`, 'success');
@@ -166,6 +184,8 @@ export default function PromotionManagement() {
         await promotionService.deletePromotion(promotion.id);
         showToast('Đã xóa khuyến mãi thành công', 'success');
         await load();
+      } else if (action === 'toggle') {
+        await handleToggleStatus(promotion);
       }
     } catch (error: any) {
       console.error('Error performing action:', error);
@@ -187,10 +207,13 @@ export default function PromotionManagement() {
       ...filters,
       statusFilter: 'all',
       discountTypeFilter: 'all',
+      timelineFilter: 'all',
+      usageFilter: 'all'
     });
   };
 
   const processedItems = useMemo(() => {
+    const now = new Date();
     const filtered = allPromotions.filter(p => {
       const searchTerm = filters.search.toLowerCase();
       const okSearch = !searchTerm ||
@@ -204,7 +227,28 @@ export default function PromotionManagement() {
       const okDiscountType = filters.discountTypeFilter === 'all' ||
         p.discountType === filters.discountTypeFilter;
 
-      return okSearch && okStatus && okDiscountType;
+      const promoStart = p.startDate ? new Date(p.startDate) : null;
+      const promoEnd = p.endDate ? new Date(p.endDate) : null;
+      const isUpcoming = promoStart ? promoStart > now : false;
+      const isExpired = promoEnd ? promoEnd < now : false;
+      const isOngoing = promoStart && promoEnd
+        ? promoStart <= now && now <= promoEnd
+        : isActive && !isExpired;
+
+      const okTimeline = (() => {
+        switch (filters.timelineFilter) {
+          case 'upcoming': return isUpcoming;
+          case 'ongoing': return isOngoing;
+          case 'expired': return isExpired;
+          default: return true;
+        }
+      })();
+
+      const isLimited = typeof p.maxUsage === 'number' && p.maxUsage > 0;
+      const okUsage = filters.usageFilter === 'all' ||
+        (filters.usageFilter === 'limited' ? isLimited : !isLimited);
+
+      return okSearch && okStatus && okDiscountType && okTimeline && okUsage;
     });
 
     const sorted = [...filtered].sort((a, b) => {
@@ -275,13 +319,6 @@ export default function PromotionManagement() {
     );
   };
 
-  const formatDiscountValue = (value: number, type: string) => {
-    if (type === 'Percentage') {
-      return `${value}%`;
-    }
-    return `${value.toLocaleString('vi-VN')}đ`;
-  };
-
   const getStats = () => {
     const active = allPromotions.filter(p => normalizeIsActive(p.isActive)).length;
     const inactive = allPromotions.length - active;
@@ -296,152 +333,297 @@ export default function PromotionManagement() {
   };
 
   const stats = getStats();
+  const activeRate = stats.total ? Math.round((stats.active / stats.total) * 100) : 0;
+  const inactiveRate = stats.total ? Math.round((stats.inactive / stats.total) * 100) : 0;
+  const todayLabel = useMemo(() => 
+    new Date().toLocaleDateString('vi-VN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }), []);
+
+  const summaryCards = useMemo(() => ([
+    {
+      label: 'Tổng khuyến mãi',
+      value: stats.total.toLocaleString('vi-VN'),
+      description: 'Chiến dịch đã tạo',
+      icon: 'bi-tags',
+      accent: styles.cardPrimary
+    },
+    {
+      label: 'Tỷ lệ hoạt động',
+      value: `${activeRate}%`,
+      description: `${stats.active} chiến dịch đang chạy`,
+      icon: 'bi-lightning-charge',
+      accent: styles.cardPositive
+    },
+    {
+      label: 'Tỷ lệ tạm dừng',
+      value: `${inactiveRate}%`,
+      description: `${stats.inactive} chiến dịch tạm ngưng`,
+      icon: 'bi-pause-circle',
+      accent: styles.cardWarning
+    },
+    {
+      label: 'Tổng lượt sử dụng',
+      value: stats.totalUsed.toLocaleString('vi-VN'),
+      description: 'Tích lũy toàn hệ thống',
+      icon: 'bi-graph-up-arrow',
+      accent: styles.cardNeutral
+    }
+  ]), [stats, activeRate, inactiveRate]);
+
+  const upcomingPromotions = useMemo(() => {
+    const now = new Date();
+    return processedItems
+      .filter(p => p.startDate && new Date(p.startDate) > now)
+      .sort((a, b) => new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime())
+      .slice(0, 3);
+  }, [processedItems]);
+
+  const expiringSoon = useMemo(() => {
+    const now = new Date();
+    const nextSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    return processedItems
+      .filter(p => p.endDate && new Date(p.endDate) <= nextSevenDays && new Date(p.endDate) >= now)
+      .sort((a, b) => new Date(a.endDate!).getTime() - new Date(b.endDate!).getTime())
+      .slice(0, 3);
+  }, [processedItems]);
+
+  const topPerformers = useMemo(
+    () => [...processedItems]
+      .sort((a, b) => b.usedCount - a.usedCount)
+      .slice(0, 3),
+    [processedItems]
+  );
+
+  const getUsageRate = (promotion: PromotionDto) => {
+    if (!promotion.maxUsage || promotion.maxUsage <= 0) return null;
+    const rate = Math.min(100, (promotion.usedCount / promotion.maxUsage) * 100);
+    return Math.round(rate);
+  };
+
+  const pendingPromotion = confirmationDialog.promotion;
+  const isToggleDialog = confirmationDialog.action === 'toggle';
+  const nextStatusLabel = pendingPromotion && normalizeIsActive(pendingPromotion.isActive) ? 'tắt' : 'bật';
+
+  const drawerHasActiveFilter = 
+    filters.statusFilter !== 'all' ||
+    filters.timelineFilter !== 'all' ||
+    filters.discountTypeFilter !== 'all' ||
+    filters.usageFilter !== 'all' ||
+    !(filters.sortBy === 'createdAt' && filters.sortDirection === 'desc');
+
+  const handleSortPresetChange = (value: string) => {
+    const [sortBy, direction] = value.split(':');
+    setFilters(prev => ({ ...prev, sortBy, sortDirection: direction as 'asc' | 'desc' }));
+  };
 
   return (
     <div className={styles.container}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Quản lý Khuyến mãi</h1>
-          <p className={styles.subtitle}>Quản lý các mã khuyến mãi và chương trình giảm giá</p>
-        </div>
-        <button onClick={() => setCreating(true)} className={styles.btnCreate}>
-          <i className="bi bi-plus-lg"></i>
-          Tạo mới
-        </button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className={styles.statsGrid}>
-        <div className={`${styles.statCard} ${styles.statCard1}`}>
-          <div className={styles.statIcon}>
-            <i className="bi bi-tag-fill"></i>
+      <section className={styles.pageHeader}>
+        <div className={styles.headerMain}>
+          <div className={styles.headerIcon}>
+            <i className="bi bi-stars"></i>
           </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Tổng số khuyến mãi</div>
-            <div className={styles.statValue}>{stats.total}</div>
-          </div>
-          <div className={styles.statBg}>
-            <i className="bi bi-tag-fill"></i>
+          <div>
+            <h1 className={styles.title}>Quản lý khuyến mãi</h1>
+            <p className={styles.subtitle}>
+              Theo dõi chiến dịch, cập nhật trạng thái và tối ưu hiệu suất ưu đãi một cách trực quan.
+            </p>
           </div>
         </div>
-
-        <div className={`${styles.statCard} ${styles.statCard2}`}>
-          <div className={styles.statIcon}>
-            <i className="bi bi-check-circle-fill"></i>
+        <div className={styles.headerDate}>
+          <div className={styles.dateIcon}>
+            <i className="bi bi-calendar3"></i>
           </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Đang hoạt động</div>
-            <div className={styles.statValue}>{stats.active}</div>
-          </div>
-          <div className={styles.statBg}>
-            <i className="bi bi-check-circle-fill"></i>
+          <div>
+            <p className={styles.dateLabel}>Hôm nay</p>
+            <strong>{todayLabel}</strong>
           </div>
         </div>
+      </section>
 
-        <div className={`${styles.statCard} ${styles.statCard3}`}>
-          <div className={styles.statIcon}>
-            <i className="bi bi-pause-circle-fill"></i>
-          </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Không hoạt động</div>
-            <div className={styles.statValue}>{stats.inactive}</div>
-          </div>
-          <div className={styles.statBg}>
-            <i className="bi bi-pause-circle-fill"></i>
-          </div>
+      <section className={styles.overviewSection}>
+        <div className={styles.summaryGrid}>
+          {summaryCards.map(card => (
+            <div key={card.label} className={`${styles.summaryCard} ${card.accent}`}>
+              <div className={styles.summaryCardIcon}>
+                <i className={`bi ${card.icon}`}></i>
+              </div>
+              <div>
+                <p>{card.label}</p>
+                <h3>{card.value}</h3>
+                <span>{card.description}</span>
+              </div>
+            </div>
+          ))}
         </div>
 
-        <div className={`${styles.statCard} ${styles.statCard4}`}>
-          <div className={styles.statIcon}>
-            <i className="bi bi-graph-up"></i>
-          </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Tổng lượt sử dụng</div>
-            <div className={styles.statValue}>{stats.totalUsed}</div>
-          </div>
-          <div className={styles.statBg}>
-            <i className="bi bi-graph-up"></i>
-          </div>
-        </div>
-      </div>
-
-      {/* Search and Filter */}
-      <div className={styles.searchSection}>
-        <div className={styles.searchWrapper}>
-          <i className="bi bi-search"></i>
-          <input
-            type="text"
-            placeholder="Tìm kiếm theo tên hoặc mã..."
-            value={filters.search}
-            onChange={e => handleFilterChange('search', e.target.value)}
-            className={styles.searchInput}
-          />
-          {filters.search && (
-            <button 
-              className={styles.clearSearch}
-              onClick={() => handleFilterChange('search', '')}
-            >
-              <i className="bi bi-x-lg"></i>
+        <div className={styles.activityPanel}>
+          <div className={styles.activityHeader}>
+            <div className={styles.activityTitle}>
+              <span>Trạng thái vận hành</span>
+              <strong>Giám sát chiến dịch</strong>
+            </div>
+            <button onClick={load} className={styles.refreshButton} title="Làm mới dữ liệu">
+              <i className="bi bi-arrow-repeat"></i>
+              <span>Làm mới</span>
             </button>
-          )}
+          </div>
+          <div className={styles.activityStats}>
+            <div>
+              <span>Đang chạy</span>
+              <strong>{stats.active}</strong>
+            </div>
+            <div>
+              <span>Tạm dừng</span>
+              <strong>{stats.inactive}</strong>
+            </div>
+          </div>
+          <div className={styles.activityLists}>
+            <div>
+              <h5>Sắp diễn ra</h5>
+              {upcomingPromotions.length ? upcomingPromotions.map(promo => (
+                <div key={promo.id} className={styles.activityItem}>
+                  <div>
+                    <p>{promo.name}</p>
+                    <small>Bắt đầu: {formatDateTime(promo.startDate)}</small>
+                  </div>
+                  {getStatusBadge(promo.isActive)}
+                </div>
+              )) : (
+                <p className={styles.timelineEmpty}>Chưa có chiến dịch mới.</p>
+              )}
+            </div>
+            <div>
+              <h5>Sắp hết hạn</h5>
+              {expiringSoon.length ? expiringSoon.map(promo => (
+                <div key={`exp-${promo.id}`} className={styles.activityItem}>
+                  <div>
+                    <p>{promo.name}</p>
+                    <small>Kết thúc: {formatDateTime(promo.endDate)}</small>
+                  </div>
+                  {getStatusBadge(promo.isActive)}
+                </div>
+              )) : (
+                <p className={styles.timelineEmpty}>Không có chiến dịch cần lưu ý.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className={styles.filterBar}>
+        <div className={styles.filterBarLeft}>
+          <div className={styles.searchWrapper}>
+            <i className="bi bi-search"></i>
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên hoặc mã..."
+              value={filters.search}
+              onChange={e => handleFilterChange('search', e.target.value)}
+              className={styles.searchInput}
+            />
+            {filters.search && (
+              <button 
+                className={styles.clearSearch}
+                onClick={() => handleFilterChange('search', '')}
+              >
+                <i className="bi bi-x-lg"></i>
+              </button>
+            )}
+          </div>
         </div>
 
-        <button 
-          className={`${styles.btnFilter} ${showFilters ? styles.active : ''}`}
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          <i className="bi bi-funnel"></i>
-          Bộ lọc
-          {(filters.statusFilter !== 'all' || filters.discountTypeFilter !== 'all') && (
-            <span className={styles.filterBadge}></span>
-          )}
-        </button>
+        <div className={styles.filterBarRight}>
+          <button 
+            className={`${styles.btnFilter} ${isFilterDrawerOpen ? styles.active : ''}`}
+            onClick={() => setIsFilterDrawerOpen(prev => !prev)}
+          >
+            <i className="bi bi-sliders2"></i>
+            Bộ lọc chi tiết
+            {drawerHasActiveFilter && <span className={styles.filterBadge}></span>}
+          </button>
+          <button onClick={() => setCreating(true)} className={styles.btnCreate}>
+            <i className="bi bi-plus-lg"></i>
+            Tạo khuyến mãi
+          </button>
+        </div>
       </div>
 
-      {/* Advanced Filters */}
-      {showFilters && (
-        <div className={styles.filterPanel}>
-          <div className={styles.filterGrid}>
-            <div className={styles.filterItem}>
-              <label>
-                <i className="bi bi-toggle-on"></i>
-                Trạng thái
-              </label>
+      {isFilterDrawerOpen && (
+        <div className={styles.filterDrawer}>
+          <div className={styles.drawerGrid}>
+            <div className={styles.drawerField}>
+              <label>Trạng thái</label>
               <select value={filters.statusFilter} onChange={e => handleFilterChange('statusFilter', e.target.value)}>
-                <option value="all">Tất cả trạng thái</option>
-                <option value="active">Hoạt động</option>
+                <option value="all">Tất cả</option>
+                <option value="active">Đang hoạt động</option>
                 <option value="inactive">Không hoạt động</option>
               </select>
             </div>
-
-            <div className={styles.filterItem}>
-              <label>
-                <i className="bi bi-percent"></i>
-                Loại giảm giá
-              </label>
+            <div className={styles.drawerField}>
+              <label>Chu kỳ chiến dịch</label>
+              <select value={filters.timelineFilter} onChange={e => handleFilterChange('timelineFilter', e.target.value)}>
+                <option value="all">Tất cả</option>
+                <option value="upcoming">Sắp diễn ra</option>
+                <option value="ongoing">Đang triển khai</option>
+                <option value="expired">Đã kết thúc</option>
+              </select>
+            </div>
+            <div className={styles.drawerField}>
+              <label>Loại giảm giá</label>
               <select value={filters.discountTypeFilter} onChange={e => handleFilterChange('discountTypeFilter', e.target.value)}>
                 <option value="all">Tất cả loại</option>
                 <option value="Percentage">Phần trăm</option>
                 <option value="FixedAmount">Cố định</option>
               </select>
             </div>
+            <div className={styles.drawerField}>
+              <label>Giới hạn sử dụng</label>
+              <select value={filters.usageFilter} onChange={e => handleFilterChange('usageFilter', e.target.value)}>
+                <option value="all">Tất cả</option>
+                <option value="limited">Có giới hạn</option>
+                <option value="unlimited">Không giới hạn</option>
+              </select>
+            </div>
+            <div className={styles.drawerField}>
+              <label>Sắp xếp</label>
+              <select
+                value={`${filters.sortBy}:${filters.sortDirection}`}
+                onChange={e => handleSortPresetChange(e.target.value)}
+              >
+                <option value="createdAt:desc">Mới tạo gần đây</option>
+                <option value="createdAt:asc">Mới tạo lâu nhất</option>
+                <option value="startDate:asc">Bắt đầu sớm nhất</option>
+                <option value="startDate:desc">Bắt đầu muộn nhất</option>
+                <option value="endDate:asc">Kết thúc sớm nhất</option>
+                <option value="endDate:desc">Kết thúc muộn nhất</option>
+                <option value="discountValue:desc">Giá trị giảm cao nhất</option>
+                <option value="usedCount:desc">Lượt dùng nhiều nhất</option>
+              </select>
+            </div>
           </div>
-
-          <div className={styles.filterActions}>
-            <button onClick={handleResetFilters} className={styles.btnResetFilter}>
-              <i className="bi bi-arrow-counterclockwise"></i>
-              Đặt lại bộ lọc
+          <div className={styles.drawerActions}>
+            <button onClick={handleResetFilters} className={styles.btnGhost}>
+              Đặt lại
             </button>
-            <button onClick={() => setShowFilters(false)} className={styles.btnApplyFilter}>
-              <i className="bi bi-check2"></i>
+            <button onClick={() => setIsFilterDrawerOpen(false)} className={styles.btnApplyFilter}>
               Áp dụng
             </button>
           </div>
         </div>
       )}
 
-      {/* Table */}
+      <div className={styles.viewToolbar}>
+        <div>
+          <h3>Danh sách khuyến mãi</h3>
+          <p>Đang hiển thị {paginatedItems.length} / {processedItems.length} chiến dịch phù hợp bộ lọc</p>
+        </div>
+      </div>
+
       <div className={styles.tableCard}>
         {loading ? (
           <div className={styles.loading}>
@@ -454,46 +636,64 @@ export default function PromotionManagement() {
               <thead>
                 <tr>
                   <th style={{ width: '60px' }}>STT</th>
-                  <th onClick={() => handleSort('code')} className={styles.sortable}>
+                  <th
+                    onClick={() => handleSort('code')}
+                    className={`${styles.sortable} ${filters.sortBy === 'code' ? styles.sortActive : ''}`}
+                  >
                     Mã
                     {filters.sortBy === 'code' && (
                       <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
-                  <th onClick={() => handleSort('name')} className={styles.sortable}>
+                  <th
+                    onClick={() => handleSort('name')}
+                    className={`${styles.sortable} ${filters.sortBy === 'name' ? styles.sortActive : ''}`}
+                  >
                     Tên
                     {filters.sortBy === 'name' && (
                       <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
                   <th>Loại</th>
-                  <th onClick={() => handleSort('discountValue')} className={styles.sortable}>
+                  <th
+                    onClick={() => handleSort('discountValue')}
+                    className={`${styles.sortable} ${filters.sortBy === 'discountValue' ? styles.sortActive : ''}`}
+                  >
                     Giá trị
                     {filters.sortBy === 'discountValue' && (
                       <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
-                  <th onClick={() => handleSort('usedCount')} className={styles.sortable}>
+                  <th
+                    onClick={() => handleSort('usedCount')}
+                    className={`${styles.sortable} ${filters.sortBy === 'usedCount' ? styles.sortActive : ''}`}
+                  >
                     Đã dùng
                     {filters.sortBy === 'usedCount' && (
                       <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
                   <th>Giới hạn</th>
-                  <th onClick={() => handleSort('startDate')} className={styles.sortable}>
+                  <th
+                    onClick={() => handleSort('startDate')}
+                    className={`${styles.sortable} ${filters.sortBy === 'startDate' ? styles.sortActive : ''}`}
+                  >
                     Ngày bắt đầu
                     {filters.sortBy === 'startDate' && (
                       <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
-                  <th onClick={() => handleSort('endDate')} className={styles.sortable}>
+                  <th
+                    onClick={() => handleSort('endDate')}
+                    className={`${styles.sortable} ${filters.sortBy === 'endDate' ? styles.sortActive : ''}`}
+                  >
                     Ngày kết thúc
                     {filters.sortBy === 'endDate' && (
                       <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
                   <th>Trạng thái</th>
-                  <th style={{ textAlign: 'right', width: '180px' }}>Thao tác</th>
+                  <th style={{ textAlign: 'right', width: '220px' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -528,19 +728,25 @@ export default function PromotionManagement() {
                       <div className={styles.actions}>
                         <button 
                           onClick={() => setViewing(promotion)}
-                          className={styles.actionBtn}
+                          className={`${styles.actionBtn} ${styles.actionView}`}
                           title="Xem chi tiết"
                         >
                           <i className="bi bi-eye"></i>
                         </button>
                         <button 
                           onClick={() => setEditing(promotion)}
-                          className={styles.actionBtn}
+                          className={`${styles.actionBtn} ${styles.actionEdit}`}
                           title="Chỉnh sửa"
                         >
                           <i className="bi bi-pencil"></i>
                         </button>
-                   
+                        <button
+                          onClick={() => setConfirmationDialog({ isOpen: true, promotion, action: 'toggle' })}
+                          className={`${styles.actionBtn} ${styles.actionToggle}`}
+                          title={normalizeIsActive(promotion.isActive) ? 'Tắt khuyến mãi' : 'Bật khuyến mãi'}
+                        >
+                          <i className={`bi bi-${normalizeIsActive(promotion.isActive) ? 'toggle-off' : 'toggle-on'}`}></i>
+                        </button>
                         <button 
                           onClick={() => handleDelete(promotion)}
                           className={`${styles.actionBtn} ${styles.actionDelete}`}
@@ -554,8 +760,7 @@ export default function PromotionManagement() {
                 ))}
               </tbody>
             </table>
-            
-            {/* Pagination */}
+
             <div className={styles.pagination}>
               <div className={styles.paginationInfo}>
                 <span>Hiển thị {(filters.page - 1) * filters.pageSize + 1} – {Math.min(filters.page * filters.pageSize, processedItems.length)} trong tổng số {processedItems.length} kết quả</span>
@@ -584,18 +789,84 @@ export default function PromotionManagement() {
           </>
         ) : (
           <div className={styles.emptyState}>
-            <i className="bi bi-inbox"></i>
-            <h3>Không có khuyến mãi nào</h3>
-            <p>Hãy tạo khuyến mãi đầu tiên của bạn</p>
+            <div className={styles.emptyIllustration}>
+              <i className="bi bi-archive"></i>
+            </div>
+            <h3>Chưa có chiến dịch phù hợp</h3>
+            <p>Hãy điều chỉnh bộ lọc hoặc tạo khuyến mãi mới để bắt đầu.</p>
+            <button onClick={() => setCreating(true)} className={styles.btnCreate}>
+              <i className="bi bi-plus-circle"></i>
+              Tạo khuyến mãi đầu tiên
+            </button>
           </div>
         )}
       </div>
 
+      {processedItems.length > 0 && (
+        <section className={styles.insightsSection}>
+          <div className={styles.timelineCard}>
+            <h4>Sắp diễn ra</h4>
+            {upcomingPromotions.length ? upcomingPromotions.map(promo => (
+              <div key={promo.id} className={styles.timelineItem}>
+                <div className={styles.timelinePoint}></div>
+                <div className={styles.timelineText}>
+                  <p>{promo.name}</p>
+                  <small>Khởi chạy: {formatDateTime(promo.startDate)}</small>
+                </div>
+                <span className={styles.timelineTag}>Sắp bắt đầu</span>
+              </div>
+            )) : (
+              <p className={styles.timelineEmpty}>Không có chiến dịch sắp diễn ra.</p>
+            )}
+
+            <h4>Gần hết hạn</h4>
+            {expiringSoon.length ? expiringSoon.map(promo => (
+              <div key={`exp-${promo.id}`} className={styles.timelineItem}>
+                <div className={styles.timelinePointWarning}></div>
+                <div className={styles.timelineText}>
+                  <p>{promo.name}</p>
+                  <small>Kết thúc: {formatDateTime(promo.endDate)}</small>
+                </div>
+                <span className={styles.timelineTagWarning}>Theo dõi</span>
+              </div>
+            )) : (
+              <p className={styles.timelineEmpty}>Không có chiến dịch sắp hết hạn.</p>
+            )}
+          </div>
+
+          <div className={styles.topCard}>
+            <h4>Hiệu suất cao nhất</h4>
+            <ul>
+              {topPerformers.map(promo => (
+                <li key={promo.id}>
+                  <div>
+                    <strong>{promo.name}</strong>
+                    <span>{promo.code}</span>
+                  </div>
+                  <div className={styles.topNumbers}>
+                    <span>{promo.usedCount.toLocaleString('vi-VN')} lượt</span>
+                    {promo.maxUsage && (
+                      <small>{Math.round((promo.usedCount / promo.maxUsage) * 100)}% giới hạn</small>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
       {/* Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={confirmationDialog.isOpen}
-        title="Xóa khuyến mãi"
-        message={`Bạn có chắc chắn muốn xóa khuyến mãi "${confirmationDialog.promotion?.name}"? Hành động này không thể hoàn tác.`}
+        title={isToggleDialog ? 'Thay đổi trạng thái khuyến mãi' : 'Xóa khuyến mãi'}
+        message={
+          isToggleDialog
+            ? `Bạn có chắc chắn muốn ${nextStatusLabel} khuyến mãi "${pendingPromotion?.name}"?`
+            : `Bạn có chắc chắn muốn xóa khuyến mãi "${pendingPromotion?.name}"? Hành động này không thể hoàn tác.`
+        }
+        confirmText={isToggleDialog ? 'Xác nhận' : 'Xóa'}
+        type={isToggleDialog ? 'warning' : 'danger'}
         onConfirm={handleConfirmAction}
         onCancel={() => setConfirmationDialog({ isOpen: false, promotion: null, action: null })}
       />
@@ -670,19 +941,6 @@ interface PromotionModalProps {
 }
 
 const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClose, onSave }) => {
-  // Debug: Log initial isActive value
-  React.useEffect(() => {
-    if (promotion) {
-      console.log('📝 Modal opened for promotion:', {
-        id: promotion.id,
-        code: promotion.code,
-        isActive_RAW: promotion.isActive,
-        isActive_TYPE: typeof promotion.isActive,
-        isActive_NORMALIZED: normalizeIsActive(promotion.isActive)
-      });
-    }
-  }, [promotion]);
-
   const [formData, setFormData] = useState({
     code: promotion?.code || '',
     name: promotion?.name || '',
@@ -690,13 +948,18 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
     discountType: promotion?.discountType || 'Percentage',
     discountValue: promotion?.discountValue || 0,
     maxUsage: promotion?.maxUsage || undefined,
-    startDate: promotion?.startDate ? new Date(promotion.startDate).toISOString().split('T')[0] : '',
-    endDate: promotion?.endDate ? new Date(promotion.endDate).toISOString().split('T')[0] : '',
+    startDate: promotion?.startDate || '',
+    endDate: promotion?.endDate || '',
     isActive: promotion ? normalizeIsActive(promotion.isActive) : true,
     applicableTargets: promotion?.applicableTargets || '',
   });
+  const [startDateInput, setStartDateInput] = useState(() => formatIsoToDisplayDate(promotion?.startDate));
+  const [endDateInput, setEndDateInput] = useState(() => formatIsoToDisplayDate(promotion?.endDate));
+  const [discountValueInput, setDiscountValueInput] = useState(
+    promotion?.discountValue ? String(promotion.discountValue) : ''
+  );
   
-  // Estado para controlar os alvos selecionados como array
+  // Quản lý danh sách nhóm áp dụng được chọn dưới dạng mảng
   const [selectedTargets, setSelectedTargets] = useState<string[]>(() => {
     if (promotion?.applicableTargets) {
       return promotion.applicableTargets.split(',').map(t => t.trim()).filter(t => t);
@@ -705,11 +968,14 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [liveValidationEnabled, setLiveValidationEnabled] = useState(false);
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [targets, setTargets] = useState<PromotionTargetDto[]>([]);
   const [loadingTargets, setLoadingTargets] = useState(false);
   const { showToast } = useToast();
 
-  // Buscar alvos de promoção quando o modal abrir
+  // Tải danh sách nhóm áp dụng khi mở modal
   React.useEffect(() => {
     const fetchTargets = async () => {
       setLoadingTargets(true);
@@ -717,8 +983,8 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
         const data = await promotionService.getPromotionTargets();
         setTargets(data);
       } catch (error) {
-        console.error('Erro ao buscar alvos de promoção:', error);
-        showToast('Não foi possível carregar os alvos de promoção', 'error');
+        console.error('Error loading promotion targets:', error);
+        showToast('Không thể tải danh sách nhóm áp dụng', 'error');
       } finally {
         setLoadingTargets(false);
       }
@@ -727,21 +993,160 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
     fetchTargets();
   }, []);
 
-  const handleChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+  const visibleTargets = React.useMemo(
+    () => targets.filter(t => !/vip/i.test(`${t.name || ''}${t.target || ''}`)),
+    [targets]
+  );
+
+  const targetDisplayMap = React.useMemo<Record<string, { name: string; description?: string }>>(() => ({
+    all: { name: 'Tất cả người dùng', description: 'Áp dụng cho toàn bộ người dùng hệ thống' },
+    all_users: { name: 'Tất cả người dùng', description: 'Áp dụng cho toàn bộ người dùng hệ thống' },
+    new_users: { name: 'Người dùng mới', description: 'Áp dụng cho người dùng mới đăng ký' },
+  }), []);
+
+  React.useEffect(() => {
+    setFormData({
+      code: promotion?.code || '',
+      name: promotion?.name || '',
+      description: promotion?.description || '',
+      discountType: promotion?.discountType || 'Percentage',
+      discountValue: promotion?.discountValue || 0,
+      maxUsage: promotion?.maxUsage || undefined,
+      startDate: promotion?.startDate || '',
+      endDate: promotion?.endDate || '',
+      isActive: promotion ? normalizeIsActive(promotion.isActive) : true,
+      applicableTargets: promotion?.applicableTargets || '',
+    });
+    setStartDateInput(formatIsoToDisplayDate(promotion?.startDate));
+    setEndDateInput(formatIsoToDisplayDate(promotion?.endDate));
+    setDiscountValueInput(promotion?.discountValue ? String(promotion.discountValue) : '');
+    if (promotion?.applicableTargets) {
+      setSelectedTargets(
+        promotion.applicableTargets.split(',').map(t => t.trim()).filter(t => t)
+      );
+    } else {
+      setSelectedTargets([]);
     }
+    setErrors({});
+    setTouchedFields({});
+    setLiveValidationEnabled(false);
+    setHasSubmitted(false);
+  }, [promotion, mode]);
+
+  const buildValidationErrors = React.useCallback((
+    data: typeof formData,
+    startInput: string,
+    endInput: string,
+    discountInput: string
+  ) => {
+    const newErrors: Record<string, string> = {};
+    const dateFormatRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+
+    if (!data.code.trim()) {
+      newErrors.code = 'Mã khuyến mãi là bắt buộc';
+    } else {
+      const codeRegex = /^[A-Za-z0-9_-]+$/;
+      if (!codeRegex.test(data.code)) {
+        newErrors.code = 'Mã khuyến mãi chỉ được chứa chữ cái, số, gạch ngang và gạch dưới';
+      }
+    }
+
+    if (!data.name.trim()) newErrors.name = 'Tên khuyến mãi là bắt buộc';
+    const hasRawDiscount = discountInput !== '';
+    const discountNumber = hasRawDiscount ? Number(discountInput) : (data.discountValue || 0);
+    if (!discountNumber || discountNumber <= 0) {
+      newErrors.discountValue = 'Giá trị giảm giá phải lớn hơn 0';
+    } else if (data.discountType === 'Percentage' && discountNumber > 100) {
+      newErrors.discountValue = 'Phần trăm giảm giá không được vượt quá 100%';
+    }
+
+    if (data.maxUsage && data.maxUsage < 1) {
+      newErrors.maxUsage = 'Giới hạn sử dụng phải lớn hơn hoặc bằng 1';
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isStartFormatValid = dateFormatRegex.test(startInput);
+    const isEndFormatValid = dateFormatRegex.test(endInput);
+    const startIso = isStartFormatValid ? parseDateInputValue(startInput) : null;
+    const endIso = isEndFormatValid ? parseDateInputValue(endInput) : null;
+    const parsedStart = startIso ? new Date(startIso) : null;
+    const parsedEnd = endIso ? new Date(endIso) : null;
+
+    if (!startInput) {
+      newErrors.startDate = 'Ngày bắt đầu là bắt buộc (dd/mm/yyyy)';
+    } else if (!isStartFormatValid) {
+      newErrors.startDate = 'Vui lòng nhập đúng định dạng dd/mm/yyyy';
+    } else if (!startIso || !parsedStart || Number.isNaN(parsedStart.getTime())) {
+      newErrors.startDate = 'Ngày bắt đầu không hợp lệ, vui lòng kiểm tra lại';
+    } else if (parsedStart < today) {
+      newErrors.startDate = 'Ngày bắt đầu không được nhỏ hơn hôm nay';
+    }
+
+    if (!endInput) {
+      newErrors.endDate = 'Ngày kết thúc là bắt buộc (dd/mm/yyyy)';
+    } else if (!isEndFormatValid) {
+      newErrors.endDate = 'Vui lòng nhập đúng định dạng dd/mm/yyyy';
+    } else if (!endIso || !parsedEnd || Number.isNaN(parsedEnd.getTime())) {
+      newErrors.endDate = 'Ngày kết thúc không hợp lệ, vui lòng kiểm tra lại';
+    } else if (parsedEnd < today) {
+      newErrors.endDate = 'Ngày kết thúc không được nhỏ hơn hôm nay';
+    }
+
+    if (parsedStart && parsedEnd && parsedEnd <= parsedStart) {
+      newErrors.endDate = 'Ngày kết thúc phải lớn hơn ngày bắt đầu';
+    }
+
+    return newErrors;
+  }, []);
+
+  React.useEffect(() => {
+    if (!liveValidationEnabled) return;
+    setErrors(buildValidationErrors(formData, startDateInput, endDateInput, discountValueInput));
+  }, [buildValidationErrors, formData, startDateInput, endDateInput, discountValueInput, liveValidationEnabled]);
+
+  const markFieldTouched = (field?: string) => {
+    setLiveValidationEnabled(true);
+    if (!field) return;
+    setTouchedFields(prev => (prev[field] ? prev : { ...prev, [field]: true }));
   };
 
-  // Função para gerenciar seleção de alvos
+  const handleChange = (field: string, value: any) => {
+    markFieldTouched(field);
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleStartDateChange = (value: string) => {
+    markFieldTouched('startDate');
+    const formatted = formatDateInputValue(value);
+    setStartDateInput(formatted);
+    const isoString = formatted.length === 10 ? parseDateInputValue(formatted) : null;
+    setFormData(prev => ({ ...prev, startDate: isoString || '' }));
+  };
+
+  const handleEndDateChange = (value: string) => {
+    markFieldTouched('endDate');
+    const formatted = formatDateInputValue(value);
+    setEndDateInput(formatted);
+    const isoString = formatted.length === 10 ? parseDateInputValue(formatted) : null;
+    setFormData(prev => ({ ...prev, endDate: isoString || '' }));
+  };
+
+  const handleDiscountValueChange = (value: string) => {
+    markFieldTouched('discountValue');
+    const sanitized = value.replace(/[^\d.]/g, '');
+    setDiscountValueInput(sanitized);
+    handleChange('discountValue', sanitized === '' ? 0 : Number(sanitized));
+  };
+
+  // Xử lý thao tác chọn nhóm áp dụng
   const handleTargetToggle = (targetValue: string) => {
     setSelectedTargets(prev => {
       const newTargets = prev.includes(targetValue)
         ? prev.filter(t => t !== targetValue)
         : [...prev, targetValue];
       
-      // Atualizar formData com a string concatenada
+      // Đồng bộ lại chuỗi applicableTargets trong form
       const targetsString = newTargets.join(',');
       setFormData(prevData => ({ ...prevData, applicableTargets: targetsString }));
       
@@ -749,62 +1154,28 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
     });
   };
 
-  const validate = async () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.code.trim()) {
-      newErrors.code = 'Mã khuyến mãi là bắt buộc';
-    } else {
-      // Check if code contains only valid characters
-      const codeRegex = /^[A-Za-z0-9_-]+$/;
-      if (!codeRegex.test(formData.code)) {
-        newErrors.code = 'Mã khuyến mãi chỉ được chứa chữ cái, số, gạch ngang và gạch dưới';
-      }
-    }
-
-    if (!formData.name.trim()) newErrors.name = 'Tên khuyến mãi là bắt buộc';
-    if (!formData.discountValue || formData.discountValue <= 0) {
-      newErrors.discountValue = 'Giá trị giảm giá phải lớn hơn 0';
-    } else if (formData.discountType === 'Percentage' && formData.discountValue > 100) {
-      newErrors.discountValue = 'Phần trăm giảm giá không được vượt quá 100%';
-    }
-    
-    if (formData.maxUsage && formData.maxUsage < 1) {
-      newErrors.maxUsage = 'Giới hạn sử dụng phải lớn hơn hoặc bằng 1';
-    }
-
-    if (!formData.startDate) {
-      newErrors.startDate = 'Ngày bắt đầu là bắt buộc';
-    }
-    
-    if (!formData.endDate) {
-      newErrors.endDate = 'Ngày kết thúc là bắt buộc';
-    }
-    
-    if (formData.startDate && formData.endDate) {
-      const startDate = new Date(formData.startDate);
-      const endDate = new Date(formData.endDate);
-      
-      if (startDate >= endDate) {
-        newErrors.endDate = 'Ngày kết thúc phải sau ngày bắt đầu';
-      }
-    }
-
+  const validate = React.useCallback(() => {
+    const newErrors = buildValidationErrors(formData, startDateInput, endDateInput, discountValueInput);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [buildValidationErrors, formData, startDateInput, endDateInput, discountValueInput]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
+    setLiveValidationEnabled(true);
+    setHasSubmitted(true);
     
-    const isValid = await validate();
+    const isValid = validate();
     if (!isValid) {
       showToast('Vui lòng kiểm tra lại thông tin', 'error');
       return;
     }
+
+    const startIso = parseDateInputValue(startDateInput);
+    const endIso = parseDateInputValue(endDateInput);
 
     setSaving(true);
     try {
@@ -815,13 +1186,12 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
         discountType: formData.discountType,
         discountValue: formData.discountValue,
         maxUsage: formData.maxUsage || undefined,
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: new Date(formData.endDate).toISOString(),
+        startDate: startIso || undefined,
+        endDate: endIso || undefined,
         isActive: Boolean(formData.isActive), // Ensure it's a boolean
         applicableTargets: formData.applicableTargets || undefined,
       };
       
-      console.log('Submitting promotion data:', submitData);
       await onSave(submitData);
     } catch (error: any) {
       console.error('Error saving promotion:', error);
@@ -840,15 +1210,19 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
   };
 
   const isViewMode = mode === 'view';
+  const shouldShowError = (field: string) =>
+    Boolean(errors[field] && (hasSubmitted || touchedFields[field]));
 
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modalContent}>
         <div className={styles.modalHeader}>
-          <h2>
-            {mode === 'view' ? 'Chi tiết Khuyến mãi' : 
-             mode === 'edit' ? 'Chỉnh sửa Khuyến mãi' : 'Tạo Khuyến mãi mới'}
-          </h2>
+          <div className={styles.modalTitleGroup}>
+            <h2>
+              {mode === 'view' ? 'Chi tiết khuyến mãi' : 
+               mode === 'edit' ? 'Chỉnh sửa khuyến mãi' : 'Tạo khuyến mãi mới'}
+            </h2>
+          </div>
           <button onClick={onClose} className={styles.closeButton}>
             <i className="bi bi-x-lg"></i>
           </button>
@@ -864,10 +1238,10 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
                   value={formData.code}
                   onChange={e => handleChange('code', e.target.value)}
                   disabled={isViewMode || mode === 'edit'}
-                  className={errors.code ? styles.error : ''}
+                  className={shouldShowError('code') ? styles.error : ''}
                   title={mode === 'edit' ? 'Mã khuyến mãi không thể thay đổi khi chỉnh sửa' : ''}
                 />
-                {errors.code && <span className={styles.errorText}>{errors.code}</span>}
+                {shouldShowError('code') && <span className={styles.errorText}>{errors.code}</span>}
                 {mode === 'edit' && (
                   <small style={{ color: '#718096', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                     <i className="bi bi-info-circle"></i> Mã khuyến mãi không thể thay đổi
@@ -882,9 +1256,9 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
                   value={formData.name}
                   onChange={e => handleChange('name', e.target.value)}
                   disabled={isViewMode}
-                  className={errors.name ? styles.error : ''}
+                  className={shouldShowError('name') ? styles.error : ''}
                 />
-                {errors.name && <span className={styles.errorText}>{errors.name}</span>}
+                {shouldShowError('name') && <span className={styles.errorText}>{errors.name}</span>}
               </div>
 
               <div className={styles.formGroup}>
@@ -903,14 +1277,21 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
                 <label>Giá trị giảm giá *</label>
                 <input
                   type="number"
-                  value={formData.discountValue}
-                  onChange={e => handleChange('discountValue', Number(e.target.value))}
+                  value={discountValueInput}
+                  onChange={e => handleDiscountValueChange(e.target.value)}
+                  onBlur={() => {
+                    if (!discountValueInput) {
+                      setDiscountValueInput('');
+                      handleChange('discountValue', 0);
+                    }
+                  }}
+                  placeholder="0"
                   disabled={isViewMode}
-                  className={errors.discountValue ? styles.error : ''}
+                  className={shouldShowError('discountValue') ? styles.error : ''}
                   min="0"
                   step={formData.discountType === 'Percentage' ? '1' : '1000'}
                 />
-                {errors.discountValue && <span className={styles.errorText}>{errors.discountValue}</span>}
+                {shouldShowError('discountValue') && <span className={styles.errorText}>{errors.discountValue}</span>}
               </div>
 
               <div className={styles.formGroup}>
@@ -920,70 +1301,76 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
                   value={formData.maxUsage || ''}
                   onChange={e => handleChange('maxUsage', e.target.value ? Number(e.target.value) : undefined)}
                   disabled={isViewMode}
-                  placeholder="Không giới hạn"
+                  placeholder="Để trống nếu không giới hạn"
                   min="1"
+                  className={shouldShowError('maxUsage') ? styles.error : ''}
                 />
+                {shouldShowError('maxUsage') && <span className={styles.errorText}>{errors.maxUsage}</span>}
               </div>
 
-              <div className={styles.formGroup}>
-                <label>Ngày bắt đầu *</label>
-                <input
-                  type="date"
-                  value={formData.startDate}
-                  onChange={e => handleChange('startDate', e.target.value)}
-                  disabled={isViewMode}
-                  className={errors.startDate ? styles.error : ''}
-                />
-                {errors.startDate && <span className={styles.errorText}>{errors.startDate}</span>}
-              </div>
+              <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                <div className={styles.dateRow}>
+                  <div className={styles.dateField}>
+                    <label>Ngày bắt đầu *</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="dd/mm/yyyy"
+                      value={startDateInput}
+                      onChange={e => handleStartDateChange(e.target.value)}
+                      disabled={isViewMode}
+                      className={shouldShowError('startDate') ? styles.error : ''}
+                      maxLength={10}
+                    />
+                    {shouldShowError('startDate') && <span className={styles.errorText}>{errors.startDate}</span>}
+                  </div>
 
-              <div className={styles.formGroup}>
-                <label>Ngày kết thúc *</label>
-                <input
-                  type="date"
-                  value={formData.endDate}
-                  onChange={e => handleChange('endDate', e.target.value)}
-                  disabled={isViewMode}
-                  className={errors.endDate ? styles.error : ''}
-                />
-                {errors.endDate && <span className={styles.errorText}>{errors.endDate}</span>}
+                  <div className={styles.dateField}>
+                    <label>Ngày kết thúc *</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="dd/mm/yyyy"
+                      value={endDateInput}
+                      onChange={e => handleEndDateChange(e.target.value)}
+                      disabled={isViewMode}
+                      className={shouldShowError('endDate') ? styles.error : ''}
+                      maxLength={10}
+                    />
+                    {shouldShowError('endDate') && <span className={styles.errorText}>{errors.endDate}</span>}
+                  </div>
+                </div>
               </div>
 
               <div className={styles.formGroup}>
                 <label>Trạng thái khuyến mãi</label>
-                <div className={styles.toggleContainer}>
-                  <label className={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={formData.isActive}
-                      onChange={e => {
-                        const newValue = e.target.checked;
-                        console.log('✏️ Changing isActive:', {
-                          from: formData.isActive,
-                          to: newValue
-                        });
-                        handleChange('isActive', newValue);
-                      }}
-                      disabled={isViewMode}
-                    />
-                    <span className={formData.isActive ? styles.activeLabel : styles.inactiveLabel}>
-                      {formData.isActive ? (
-                        <>
-                          <i className="bi bi-check-circle-fill"></i> Hoạt động
-                        </>
-                      ) : (
-                        <>
-                          <i className="bi bi-x-circle-fill"></i> Không hoạt động
-                        </>
-                      )}
-                    </span>
-                  </label>
-                </div>
+                {isViewMode ? (
+                  <div className={styles.statusReadonly}>
+                    {formData.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                  </div>
+                ) : (
+                  <div className={styles.statusToggle}>
+                    <button
+                      type="button"
+                      className={`${styles.statusOption} ${formData.isActive ? `${styles.statusOptionActive} ${styles.statusActiveBtn}` : ''}`}
+                      onClick={() => handleChange('isActive', true)}
+                    >
+                      <i className="bi bi-check-circle"></i> Hoạt động
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.statusOption} ${!formData.isActive ? `${styles.statusOptionActive} ${styles.statusOptionInactive}` : ''}`}
+                      onClick={() => handleChange('isActive', false)}
+                    >
+                      <i className="bi bi-pause-circle"></i> Tạm dừng
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className={`${styles.formGroup} ${styles.fullWidth}`}>
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>Público-alvo da Promoção</span>
+                  <span>Nhóm áp dụng khuyến mãi</span>
                   {!isViewMode && selectedTargets.length > 0 && (
                     <span style={{ 
                       fontSize: '0.875rem', 
@@ -993,17 +1380,17 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
                       padding: '0.25rem 0.75rem',
                       borderRadius: '12px'
                     }}>
-                      {selectedTargets.length} {selectedTargets.length === 1 ? 'selecionado' : 'selecionados'}
+                      {selectedTargets.length} nhóm
                     </span>
                   )}
                 </label>
                 {loadingTargets ? (
                   <div style={{ padding: '1rem', textAlign: 'center', color: '#718096' }}>
-                    <i className="bi bi-hourglass-split"></i> Carregando alvos...
+                    <i className="bi bi-hourglass-split"></i> Đang tải danh sách đối tượng...
                   </div>
                 ) : (
                   <>
-                    {!isViewMode && targets.length > 0 && (
+                    {!isViewMode && visibleTargets.length > 0 && (
                       <div style={{ 
                         marginBottom: '0.75rem', 
                         padding: '0.5rem',
@@ -1013,11 +1400,16 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
                         color: '#1e40af'
                       }}>
                         <i className="bi bi-info-circle-fill" style={{ marginRight: '0.5rem' }}></i>
-                        Selecione um ou mais públicos-alvo para esta promoção
+                        Chọn một hoặc nhiều nhóm khách hàng cho chương trình này
                       </div>
                     )}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '0.75rem', marginTop: '0.5rem' }}>
-                      {targets.map(target => (
+                      {visibleTargets.map(target => {
+                        const key = target.target.trim();
+                        const translation = targetDisplayMap[key];
+                        const displayName = translation?.name || target.name;
+                        const displayDesc = translation?.description || target.description;
+                        return (
                         <label 
                           key={target.id} 
                           className={styles.checkboxLabel}
@@ -1042,20 +1434,21 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
                           />
                           <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 600, color: '#2d3748', marginBottom: '0.25rem' }}>
-                              {target.name}
+                              {displayName}
                             </div>
                             <div style={{ fontSize: '0.875rem', color: '#718096' }}>
-                              {target.description}
+                              {displayDesc}
                             </div>
                           </div>
                         </label>
-                      ))}
+                        );
+                      })}
                     </div>
                   </>
                 )}
-                {!loadingTargets && targets.length === 0 && (
+                {!loadingTargets && visibleTargets.length === 0 && (
                   <div style={{ padding: '1rem', textAlign: 'center', color: '#718096', backgroundColor: '#f7fafc', borderRadius: '8px' }}>
-                    <i className="bi bi-info-circle"></i> Nenhum alvo disponível
+                    <i className="bi bi-info-circle"></i> Chưa có nhóm nào khả dụng
                   </div>
                 )}
               </div>
@@ -1073,7 +1466,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
               {mode === 'view' && promotion && (
                 <>
                   <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                    <label>Público-alvo da Promoção</label>
+                    <label>Nhóm áp dụng khuyến mãi</label>
                     <div style={{ 
                       padding: '0.75rem', 
                       backgroundColor: '#f7fafc', 
@@ -1083,7 +1476,10 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
                       {promotion.applicableTargets ? (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                           {promotion.applicableTargets.split(',').map((targetValue, idx) => {
-                            const target = targets.find(t => t.target === targetValue.trim());
+                            const trimmed = targetValue.trim();
+                            const target = visibleTargets.find(t => t.target === trimmed);
+                            const translation = targetDisplayMap[trimmed];
+                            const displayName = translation?.name || target?.name || trimmed;
                             return (
                               <span 
                                 key={idx}
@@ -1099,14 +1495,14 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
                                 }}
                               >
                                 <i className="bi bi-people-fill" style={{ marginRight: '0.375rem' }}></i>
-                                {target?.name || targetValue.trim()}
+                                {displayName}
                               </span>
                             );
                           })}
                         </div>
                       ) : (
                         <span style={{ color: '#718096', fontStyle: 'italic' }}>
-                          Nenhum público-alvo especificado
+                          Chưa thiết lập nhóm áp dụng
                         </span>
                       )}
                     </div>
@@ -1148,7 +1544,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
                         new Date(promotion.endDate) < new Date() ? 'Đã hết hạn' :
                         new Date(promotion.startDate) > new Date() ? 'Chưa bắt đầu' :
                         promotion.maxUsage && promotion.usedCount >= promotion.maxUsage ? 'Đã hết lượt sử dụng' :
-                        'Đang hoạt động' 
+                        'Hoạt động' 
                       }
                       disabled 
                     />

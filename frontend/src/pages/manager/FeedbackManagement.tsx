@@ -1,595 +1,583 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useToast } from '../../contexts/ToastContext'
-import styles from '../../styles/admin/ArticleManagement.module.css'
+import { reviewService } from '../../services/reviewService';
+import { DoctorReview } from '../../types/review.types';
+import { PageLoader } from '../../components/ui';
+import styles from '../../styles/manager/FeedbackManagement.module.css';
+import {
+  MessageSquare,
+  Calendar,
+  Star,
+  TrendingUp,
+  Filter,
+  ArrowUpDown,
+  Award,
+  AlertTriangle,
+  ThumbsUp,
+  ThumbsDown,
+  Meh,
+  Clock,
+  Stethoscope,
+  Sparkles,
+} from 'lucide-react';
 
+type SortOption = 'newest' | 'oldest' | 'highest' | 'lowest';
 
-interface Feedback {
-  id: string;
-  patientName: string;
+interface DoctorAggregate {
+  doctorId: string;
   doctorName: string;
-  rating: number;
-  comment: string;
-  appointmentId: string;
-  appointmentStartTime: string;
-  appointmentEndTime: string;
-  date: string;
-  createdAt: string;
-  status: 'Public' | 'Private' | 'pending';
-  adminResponse: string | null;
+  totalReviews: number;
+  averageRating: number;
+  latestReview: DoctorReview | null;
 }
 
-export default function FeedbackManagement() {
-  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Feedback; direction: 'ascending' | 'descending' } | null>({ key: 'createdAt', direction: 'descending' });
-  const [showFilters, setShowFilters] = useState(false);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
-  const [filters, setFilters] = useState({
-    rating: 'all',
-    startDate: '',
-    endDate: '',
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
   });
-  const { showToast } = useToast();
+};
+
+const formatTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const formatRelativeDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Hôm nay';
+  if (diffDays === 1) return 'Hôm qua';
+  if (diffDays < 7) return `${diffDays} ngày trước`;
+  return formatDate(dateString);
+};
+
+const getSentiment = (rating: number) => {
+  if (rating >= 4) {
+    return { text: 'Tích cực', icon: <ThumbsUp size={16} />, className: styles.sentimentPositive };
+  }
+  if (rating === 3) {
+    return { text: 'Góp ý', icon: <Meh size={16} />, className: styles.sentimentNeutral };
+  }
+  return { text: 'Cần cải thiện', icon: <ThumbsDown size={16} />, className: styles.sentimentNegative };
+};
+
+const getAccentClass = (rating: number) => {
+  if (rating >= 4) return styles.accentPositive;
+  if (rating <= 2) return styles.accentNegative;
+  return styles.accentNeutral;
+};
+
+const StarRating: React.FC<{ rating: number; size?: number }> = ({ rating, size = 18 }) => (
+  <div className={styles.stars}>
+    {Array.from({ length: 5 }, (_, i) => (
+      <i
+        key={i}
+        className={`bi bi-star-fill ${i < rating ? styles.starFilled : styles.starEmpty}`}
+        style={{ fontSize: `${size}px` }}
+      ></i>
+    ))}
+  </div>
+);
+
+const RatingDistributionChart: React.FC<{ reviews: DoctorReview[] }> = ({ reviews }) => {
+  const distribution = useMemo(() => {
+    const counts = [0, 0, 0, 0, 0];
+    reviews.forEach(review => {
+      if (review.rating >= 1 && review.rating <= 5) {
+        counts[review.rating - 1]++;
+      }
+    });
+    return counts;
+  }, [reviews]);
+
+  const totalReviews = reviews.length;
+  if (totalReviews === 0) return null;
+
+  return (
+    <div className={styles.ratingDistribution}>
+      {distribution.map((count, index) => {
+        const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+        const starCount = index + 1;
+        return (
+          <div key={index} className={styles.barRow}>
+            <div className={styles.barLabelGroup}>
+              <span className={styles.barLabel}>{starCount}</span>
+              <Star size={14} className={styles.barStarIcon} />
+            </div>
+            <div className={styles.barContainer}>
+              <div
+                className={styles.bar}
+                style={{ width: `${percentage}%` }}
+              ></div>
+            </div>
+            <span className={styles.barPercentage}>{count}</span>
+          </div>
+        );
+      }).reverse()}
+    </div>
+  );
+};
+
+const DoctorHighlightCard: React.FC<{ variant: 'top' | 'low'; doctor?: DoctorAggregate | null }> = ({
+  variant,
+  doctor,
+}) => {
+  const isTop = variant === 'top';
+  const label = isTop ? 'Bác sĩ được đánh giá cao nhất' : 'Bác sĩ cần cải thiện';
+  return (
+    <div
+      className={`${styles.doctorHighlightCard} ${
+        isTop ? styles.highlightPositive : styles.highlightNegative
+      }`}
+    >
+      <div className={styles.highlightHeader}>
+        <div className={styles.highlightIcon}>
+          {isTop ? <Award size={22} /> : <AlertTriangle size={22} />}
+        </div>
+        <div>
+          <p className={styles.highlightLabel}>{label}</p>
+          <h3 className={styles.highlightTitle}>{doctor ? doctor.doctorName : 'Chưa có dữ liệu'}</h3>
+        </div>
+      </div>
+      {doctor ? (
+        <>
+          <div className={styles.highlightStats}>
+            <div>
+              <span className={styles.highlightValue}>{doctor.averageRating.toFixed(1)}</span>
+              <span className={styles.highlightSubtext}>Điểm trung bình</span>
+            </div>
+            <div>
+              <span className={styles.highlightValue}>{doctor.totalReviews}</span>
+              <span className={styles.highlightSubtext}>Lượt đánh giá</span>
+            </div>
+          </div>
+          {doctor.latestReview && (
+            <div className={styles.highlightRecentReview}>
+              <p className={styles.highlightRecentLabel}>Nhận xét gần nhất</p>
+              <p className={styles.highlightRecentText}>
+                {doctor.latestReview.comment || 'Bệnh nhân không để lại bình luận.'}
+              </p>
+              <span className={styles.highlightRecentMeta}>
+                {formatDate(doctor.latestReview.createdAt)}
+              </span>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className={styles.highlightEmpty}>Chưa có dữ liệu để thống kê.</p>
+      )}
+    </div>
+  );
+};
+
+const FeedbackManagement: React.FC = () => {
+  const [reviews, setReviews] = useState<DoctorReview[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filterRating, setFilterRating] = useState<number>(0);
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   useEffect(() => {
-    loadFeedbacks();
-  }, []);
-
-  const loadFeedbacks = async () => {
-    const API_URL = 'http://localhost:5123/api/Review';
-    setLoading(true);
-    try {
-      const response = await fetch(API_URL);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    const fetchReviews = async () => {
+      try {
+        setIsLoading(true);
+        const data = await reviewService.getAllReviews();
+        const sorted = data.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setReviews(sorted);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading reviews', err);
+        setError('Không thể tải danh sách phản hồi. Vui lòng thử lại.');
+      } finally {
+        setIsLoading(false);
       }
-
-      const data = await response.json();
-
-      const mockFeedbacks: Feedback[] = data.map((item: any) => ({
-        ...item,
-        date: item.createdAt, // Using createdAt for the date field
-      }));
-
-      setTimeout(() => {
-        setFeedbacks(mockFeedbacks);
-        setLoading(false);
-      }, 1000);
-    } catch (error) {
-      console.error('Error loading feedbacks:', error);
-      showToast('Không thể tải dữ liệu phản hồi', 'error');
-      setLoading(false);
-    }
-  };
-
-  const handleToggleStatus = async (feedback: Feedback) => {
-    // API để đổi trạng thái là http://localhost:5123/api/Review/status
-    // Sửa logic: Nếu là 'Public' thì chuyển thành 'Private', ngược lại chuyển thành 'Public'
-    const newStatus = feedback.status === 'Public' ? 'Private' : 'Public';
-    const API_URL = `http://localhost:5123/api/Review/status`;
-
-    try {
-      const response = await fetch(API_URL, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // Sửa payload: Gửi đúng `reviewId` và status viết hoa chữ cái đầu theo yêu cầu.
-        body: JSON.stringify({
-          reviewId: feedback.id,
-          status: newStatus,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      showToast('Cập nhật trạng thái thành công!', 'success');
-      loadFeedbacks(); // Tải lại danh sách phản hồi để cập nhật UI
-    } catch (error) {
-      console.error('Error updating feedback status:', error);
-      showToast('Không thể cập nhật trạng thái', 'error');
-    }
-  };
-
-  const handleViewDetails = (feedback: Feedback) => {
-    setSelectedFeedback(feedback);
-    setIsDetailModalOpen(true);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN');
-  };
-
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      Public: { text: 'Công khai', class: styles.statusActive, icon: 'bi-check-circle-fill' },
-      Private: { text: 'Riêng tư', class: styles.statusLocked, icon: 'bi-pause-circle-fill' },
-      pending: { text: 'Đang chờ', class: styles.statusArchived, icon: 'bi-clock-fill' },
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig];
-    if (!config) return null;
-    return (
-      <span className={`${styles.statusBadge} ${config.class}`}>
-        <i className={`bi ${config.icon}`}></i>
-        {config.text}
-      </span>
-    );
-  };
-
-  const getRatingStars = (rating: number) => {
-    return '★'.repeat(rating) + '☆'.repeat(5 - rating);
-  };
-
-  const filteredFeedbacks = useMemo(() => {
-    return feedbacks.filter(feedback => {
-      // Lọc theo đánh giá
-      if (filters.rating !== 'all' && feedback.rating !== parseInt(filters.rating, 10)) {
-        return false;
-      }
-      // Lọc theo ngày
-      const feedbackDate = new Date(feedback.date);
-      if (filters.startDate) {
-        if (feedbackDate < new Date(filters.startDate)) {
-          return false;
-        }
-      }
-      if (filters.endDate) {
-        if (feedbackDate > new Date(new Date(filters.endDate).setHours(23, 59, 59, 999))) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [feedbacks, filters]);
-
-  const sortedFeedbacks = useMemo(() => {
-    let sortableItems = [...filteredFeedbacks];
-    if (sortConfig !== null) {
-      const { key, direction } = sortConfig;
-      sortableItems.sort((a, b) => {
-        const valA = a[key];
-        const valB = b[key];
-
-        // Xử lý trường hợp giá trị có thể là null hoặc undefined để an toàn
-        if (valA == null) return 1;
-        if (valB == null) return -1;
-
-        if (valA < valB) {
-          return direction === 'ascending' ? -1 : 1;
-        }
-        if (valA > valB) {
-          return direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableItems;
-  }, [filteredFeedbacks, sortConfig]);
-
-  // Pagination: reset page when filters/sorting/data change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filters, sortConfig, feedbacks]);
-
-  const totalPages = Math.max(1, Math.ceil(sortedFeedbacks.length / itemsPerPage));
-
-  const paginatedFeedbacks = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return sortedFeedbacks.slice(start, start + itemsPerPage);
-  }, [sortedFeedbacks, currentPage, itemsPerPage]);
-
-  const requestSort = (key: keyof Feedback) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const getSortIcon = (key: keyof Feedback) => {
-    if (!sortConfig || sortConfig.key !== key) {
-      return null;
-    }
-    return <i className={`bi bi-arrow-${sortConfig.direction === 'ascending' ? 'up' : 'down'}`}></i>;
-  };
+    fetchReviews();
+  }, []);
 
   const averageRating = useMemo(() => {
-    if (feedbacks.length === 0) {
-      return 0;
+    if (reviews.length === 0) return 0;
+    const total = reviews.reduce((sum, review) => sum + review.rating, 0);
+    return total / reviews.length;
+  }, [reviews]);
+
+  const ratingStats = useMemo(() => {
+    return {
+      excellent: reviews.filter(r => r.rating === 5).length,
+      good: reviews.filter(r => r.rating === 4).length,
+      average: reviews.filter(r => r.rating === 3).length,
+      poor: reviews.filter(r => r.rating === 2).length,
+      veryPoor: reviews.filter(r => r.rating === 1).length,
+    };
+  }, [reviews]);
+
+  const doctorAggregates = useMemo<DoctorAggregate[]>(() => {
+    const map = new Map<string, DoctorAggregate>();
+    reviews.forEach(review => {
+      if (!review.doctorId) {
+        return;
+      }
+      if (!map.has(review.doctorId)) {
+        map.set(review.doctorId, {
+          doctorId: review.doctorId,
+          doctorName: review.doctorName,
+          totalReviews: 0,
+          averageRating: 0,
+          latestReview: null,
+        });
+      }
+      const entry = map.get(review.doctorId)!;
+      entry.totalReviews += 1;
+      entry.averageRating =
+        ((entry.averageRating * (entry.totalReviews - 1)) + review.rating) / entry.totalReviews;
+      if (
+        !entry.latestReview ||
+        new Date(review.createdAt).getTime() > new Date(entry.latestReview.createdAt).getTime()
+      ) {
+        entry.latestReview = review;
+      }
+    });
+
+    return Array.from(map.values()).sort(
+      (a, b) => b.averageRating - a.averageRating || b.totalReviews - a.totalReviews
+    );
+  }, [reviews]);
+
+  const topDoctor = doctorAggregates[0] || null;
+  const lowestDoctor =
+    doctorAggregates.length > 0
+      ? [...doctorAggregates]
+          .sort((a, b) => a.averageRating - b.averageRating || b.totalReviews - a.totalReviews)[0]
+      : null;
+
+  const filteredAndSortedReviews = useMemo(() => {
+    let filtered = reviews;
+
+    if (filterRating > 0) {
+      filtered = reviews.filter(r => r.rating === filterRating);
     }
-    const totalRating = feedbacks.reduce((sum, feedback) => sum + feedback.rating, 0);
-    return (totalRating / feedbacks.length).toFixed(1);
-  }, [feedbacks]);
 
+    switch (sortBy) {
+      case 'highest':
+        return [...filtered].sort(
+          (a, b) => b.rating - a.rating || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      case 'lowest':
+        return [...filtered].sort(
+          (a, b) => a.rating - b.rating || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      case 'oldest':
+        return [...filtered].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+      case 'newest':
+      default:
+        return [...filtered].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+    }
+  }, [reviews, filterRating, sortBy]);
 
-  if (loading) {
+  if (isLoading) {
+    return <PageLoader />;
+  }
+
+  if (error) {
     return (
       <div className={styles.container}>
-        <div className={styles.loading}>
-          <div className={styles.spinner}></div>
-          <p>Đang tải dữ liệu phản hồi...</p>
+        <div className={styles.errorState}>
+          <i className="bi bi-exclamation-triangle"></i>
+          <p>{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <>
-      <div className={styles.container}>
-        {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.headerLeft}>
-            <h1 className={styles.title}>Quản lý Phản hồi</h1>
-            <p className={styles.subtitle}>Theo dõi và quản lý phản hồi từ bệnh nhân</p>
-          </div>
-          <div className={styles.headerRight}>
-            <div className={styles.dateTime}>
-              <i className="bi bi-calendar3"></i>
-              <span>{new Date().toLocaleDateString('vi-VN')}</span>
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <div className={styles.headerLeft}>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <MessageSquare size={28} />
+            </div>
+            <div>
+              <h1 className={styles.title}>Phản hồi từ bệnh nhân</h1>
+              <p className={styles.subtitle}>
+                Tổng quan tất cả đánh giá và hiệu suất bác sĩ trong hệ thống
+              </p>
             </div>
           </div>
         </div>
-
-
-        {/* Stats Cards */}
-        <div className={styles.statsGrid}>
-          <div className={`${styles.statCard} ${styles.statCard1}`}>
-            <div className={styles.statIcon}>
-              <i className="bi bi-chat-dots-fill"></i>
+        <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <Calendar size={20} className={styles.dateIcon} />
             </div>
-            <div className={styles.statContent}>
-              <div className={styles.statLabel}>Tổng phản hồi</div>
-              <div className={styles.statValue}>{feedbacks.length}</div>
-            </div>
-            <div className={styles.statBg}>
-              <i className="bi bi-chat-dots-fill"></i>
-            </div>
-          </div>
-
-          <div className={`${styles.statCard} ${styles.statCard2}`}>
-            <div className={styles.statIcon}>
-              <i className="bi bi-star-half"></i>
-            </div>
-            <div className={styles.statContent}>
-              <div className={styles.statLabel}>Đánh giá trung bình</div>
-              <div className={styles.statValue}>{averageRating} / 5</div>
-            </div>
-            <div className={styles.statBg}>
-              <i className="bi bi-star-half"></i>
-            </div>
-          </div>
-        </div>
-
-        {/* Search and Filter */}
-        <div className={styles.searchSection}>
-          <div className={styles.searchWrapper}>
-            <i className="bi bi-search"></i>
-            <input
-              type="text"
-              placeholder="Tìm kiếm phản hồi..."
-              className={styles.searchInput}
-              disabled
-            />
-          </div>
-          <button
-            className={`${styles.btnFilter} ${showFilters ? styles.active : ''}`}
-            onClick={() => setShowFilters(!showFilters)}>
-            <i className="bi bi-funnel"></i>
-            Bộ lọc
-            {(filters.rating !== 'all' || filters.startDate || filters.endDate) && <span className={styles.filterBadge}></span>}
-          </button>
-        </div>
-
-        {/* Advanced Filters Panel */}
-        {showFilters && (
-          <div className={styles.filterPanel}>
-            <div className={styles.filterGrid}>
-              <div className={styles.filterItem}>
-                <label><i className="bi bi-star"></i> Đánh giá</label>
-                <select
-                  value={filters.rating}
-                  onChange={(e) => setFilters({ ...filters, rating: e.target.value })}
-                >
-                  <option value="all">Tất cả đánh giá</option>
-                  <option value="5">5 sao</option>
-                  <option value="4">4 sao</option>
-                  <option value="3">3 sao</option>
-                  <option value="2">2 sao</option>
-                  <option value="1">1 sao</option>
-                </select>
-              </div>
-              <div className={styles.filterItem}>
-                <label><i className="bi bi-calendar-range"></i> Từ ngày</label>
-                <input
-                  type="date"
-                  value={filters.startDate}
-                  onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                />
-              </div>
-              <div className={styles.filterItem}>
-                <label><i className="bi bi-calendar-range-fill"></i> Đến ngày</label>
-                <input
-                  type="date"
-                  value={filters.endDate}
-                  onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className={styles.filterActions}>
-              <button onClick={() => {
-                setFilters({
-                  rating: 'all',
-                  startDate: '',
-                  endDate: '',
-                });
-                setShowFilters(false);
-              }} className={styles.btnResetFilter}>
-                <i className="bi bi-arrow-counterclockwise"></i> Đặt lại
-              </button>
-              <button onClick={() => setShowFilters(false)} className={styles.btnApplyFilter} disabled>
-                <i className="bi bi-check2"></i> Áp dụng
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Feedbacks Table */}
-        <div className={styles.tableCard}>
-          <div className={styles.tableWrapper}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th style={{ width: '50px' }}>STT</th>
-                  <th onClick={() => requestSort('patientName')} className={styles.sortable}>Bệnh nhân {getSortIcon('patientName')}</th>
-                  <th onClick={() => requestSort('doctorName')} className={styles.sortable}>Bác sĩ {getSortIcon('doctorName')}</th>
-                  <th onClick={() => requestSort('rating')} className={styles.sortable}>Đánh giá {getSortIcon('rating')}</th>
-                  <th>Bình luận</th>
-                  <th onClick={() => requestSort('date')} className={styles.sortable}>Ngày {getSortIcon('date')}</th>
-                  <th style={{ textAlign: 'right', width: '120px' }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedFeedbacks.map((feedback, index) => (
-                  <tr key={feedback.id} className={styles.tableRow}>
-                    <td>
-                      <div style={{ fontWeight: 600, color: '#6b7280', textAlign: 'center' }}>{(currentPage - 1) * itemsPerPage + index + 1}</div>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: '#111827' }}>{feedback.patientName}</div>
-                    </td>
-                    <td>
-                      <span style={{ color: '#374151', fontWeight: 500 }}>{feedback.doctorName}</span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ color: '#fbbf24', fontSize: '14px' }}>{getRatingStars(feedback.rating)}</span>
-                        <span style={{ fontSize: '13px', color: '#6b7280' }}>{feedback.rating}/5</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ maxWidth: '250px', color: '#6b7280', lineHeight: '1.4' }}>
-                        {feedback.comment.length > 50
-                          ? `${feedback.comment.substring(0, 50)}...`
-                          : feedback.comment
-                        }
-                      </div>
-                    </td>
-                    <td>{formatDate(feedback.date)}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div className={styles.actions} style={{ flexWrap: 'wrap', gap: '8px' }}>
-                        {feedback.status === 'pending' && (
-                          <>
-                            <button
-                              style={{
-                                padding: '6px 12px',
-                                border: 'none',
-                                background: '#10b981',
-                                color: '#fff',
-                                borderRadius: '6px',
-                                fontSize: '12px',
-                                fontWeight: 500,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease'
-                              }}
-                              onMouseOver={(e) => e.currentTarget.style.background = '#059669'}
-                              onMouseOut={(e) => e.currentTarget.style.background = '#10b981'}
-                            >
-                              Duyệt
-                            </button>
-                            <button
-                              style={{
-                                padding: '6px 12px',
-                                border: 'none',
-                                background: '#ef4444',
-                                color: '#fff',
-                                borderRadius: '6px',
-                                fontSize: '12px',
-                                fontWeight: 500,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease'
-                              }}
-                              onMouseOver={(e) => e.currentTarget.style.background = '#dc2626'}
-                              onMouseOut={(e) => e.currentTarget.style.background = '#ef4444'}
-                            >
-                              Từ chối
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => handleViewDetails(feedback)}
-                          style={{
-                            padding: '6px 12px',
-                            border: '1px solid #d1d5db',
-                            background: 'white',
-                            color: '#4a5568',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseOver={(e) => {
-                            e.currentTarget.style.background = '#f9fafb';
-                            e.currentTarget.style.borderColor = '#9ca3af';
-                          }}
-                          onMouseOut={(e) => {
-                            e.currentTarget.style.background = 'white';
-                            e.currentTarget.style.borderColor = '#d1d5db';
-                          }}
-                        >
-                          Xem chi tiết
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {/* Pagination */}
-          <div className={styles.pagination} style={{ alignItems: 'center' }}>
-            <div className={styles.paginationInfo}>
-              Hiển thị {sortedFeedbacks.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage + 1)} - {Math.min(currentPage * itemsPerPage, sortedFeedbacks.length)} trên {sortedFeedbacks.length} phản hồi
-            </div>
-            <div className={styles.paginationControls}>
-              <div className={styles.paginationButtons}>
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  aria-label="first"
-                >
-                  <i className="bi bi-chevron-bar-left"></i>
-                </button>
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  aria-label="prev"
-                >
-                  <i className="bi bi-chevron-left"></i>
-                </button>
-
-                <div className={styles.pageIndicator} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span>Trang</span>
-                  <strong>{currentPage}</strong>
-                  <span> / {totalPages}</span>
-                </div>
-
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  aria-label="next"
-                >
-                  <i className="bi bi-chevron-right"></i>
-                </button>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  aria-label="last"
-                >
-                  <i className="bi bi-chevron-bar-right"></i>
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <label style={{ fontSize: 13, color: '#6b7280' }}>Hiển thị</label>
-                <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} style={{ padding: 8, borderRadius: 8 }}>
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={styles.dateGlow}></div>
             </div>
           </div>
         </div>
       </div>
 
-      {isDetailModalOpen && selectedFeedback && (
-        <div className={styles['neo-ui-overlay']}>
-          <div className={styles['neo-ui-dialog']}>
-
-            {/* Header */}
-            <div className={styles['neo-ui-header']}>
-              <h3 className={styles['neo-ui-header-title']}>Chi tiết Phản hồi</h3>
-              <button
-                onClick={() => setIsDetailModalOpen(false)}
-                className={styles['neo-ui-close-btn']}
-              >
-                ×
-              </button>
+      <div className={styles.summaryGrid}>
+        <div className={`${styles.summaryCard} ${styles.summaryCardPrimary}`}>
+          <div className={styles.cardHeader}>
+            <div
+              className={styles.cardIcon}
+              style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+            >
+              <Star size={24} color="#fff" />
             </div>
-
-            {/* Body */}
-            <div className={styles['neo-ui-content']}>
-
-              {/* Thông tin chung */}
-              <div className={styles['neo-ui-grid']}>
-                <div className={styles['neo-ui-field']}>
-                  <strong><i className="bi bi-person"></i> Bệnh nhân:</strong>
-                  <span>{selectedFeedback.patientName}</span>
-                </div>
-
-                <div className={styles['neo-ui-field']}>
-                  <strong><i className="bi bi-person-badge"></i> Bác sĩ:</strong>
-                  <span>{selectedFeedback.doctorName}</span>
-                </div>
-
-                <div className={styles['neo-ui-field']}>
-                  <strong><i className="bi bi-star-half"></i> Đánh giá:</strong>
-                  <span>
-                    <span className={styles['neo-ui-stars']}>
-                      {getRatingStars(selectedFeedback.rating)}
-                    </span>
-                    ({selectedFeedback.rating}/5)
-                  </span>
-                </div>
-
-                <div className={styles['neo-ui-field']}>
-                  <strong><i className="bi bi-calendar-event"></i> Ngày viết:</strong>
-                  <span>{formatDate(selectedFeedback.createdAt)}</span>
-                </div>
-              </div>
-
-              {/* Bình luận */}
-              <div className={`${styles['neo-ui-field']} ${styles['neo-ui-comment-box']}`}>
-                <strong><i className="bi bi-chat-dots"></i> Bình luận:</strong>
-                <p>{selectedFeedback.comment}</p>
-              </div>
-
-              <hr className={styles['neo-ui-line']} />
-
-              {/* Section */}
-              <h4 className={styles['neo-ui-section-label']}>
-                <i className="bi bi-calendar-check"></i> Thông tin cuộc hẹn
-              </h4>
-
-              <div className={styles['neo-ui-field']}>
-                <strong><i className="bi bi-clock"></i> Thời gian:</strong>
-                <span className={styles['neo-ui-time']}>
-                  {new Date(selectedFeedback.appointmentStartTime).toLocaleDateString("vi-VN")}
-                  ({formatTime(selectedFeedback.appointmentStartTime)} - {formatTime(selectedFeedback.appointmentEndTime)})
-                </span>
-              </div>
-
+            <div className={styles.cardHeaderText}>
+              <h3 className={styles.cardTitle}>Đánh giá trung bình</h3>
+              <p className={styles.cardSubtitle}>Từ {reviews.length} phản hồi</p>
             </div>
-
+          </div>
+          <div className={styles.cardContent}>
+            <div className={styles.ratingDisplay}>
+              <span className={styles.ratingValue}>{averageRating.toFixed(1)}</span>
+              <span className={styles.ratingMax}>/5.0</span>
+            </div>
+            <StarRating rating={Math.round(averageRating)} size={22} />
+            <div className={styles.ratingTrend}>
+              <TrendingUp size={16} />
+              <span>Dựa trên dữ liệu mới nhất</span>
+            </div>
           </div>
         </div>
-      )}
-    </>
+
+        <div className={`${styles.summaryCard} ${styles.summaryCardSecondary}`}>
+          <div className={styles.cardHeader}>
+            <div
+              className={styles.cardIcon}
+              style={{ background: 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)' }}
+            >
+              <MessageSquare size={24} color="#fff" />
+            </div>
+            <div className={styles.cardHeaderText}>
+              <h3 className={styles.cardTitle}>Tổng số phản hồi</h3>
+              <p className={styles.cardSubtitle}>Toàn bộ hệ thống</p>
+            </div>
+          </div>
+          <div className={styles.cardContent}>
+            <div className={styles.reviewCountDisplay}>
+              <span className={styles.reviewCountValue}>{reviews.length}</span>
+              <span className={styles.reviewCountLabel}>phản hồi</span>
+            </div>
+            <div className={styles.reviewBreakdown}>
+              <div className={styles.breakdownItem}>
+                <span className={styles.breakdownLabel}>Xuất sắc (5⭐)</span>
+                <span className={styles.breakdownValue}>{ratingStats.excellent}</span>
+              </div>
+              <div className={styles.breakdownItem}>
+                <span className={styles.breakdownLabel}>Tốt (4⭐)</span>
+                <span className={styles.breakdownValue}>{ratingStats.good}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className={`${styles.summaryCard} ${styles.summaryCardTertiary}`}>
+          <div className={styles.cardHeader}>
+            <div
+              className={styles.cardIcon}
+              style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}
+            >
+              <TrendingUp size={24} color="#fff" />
+            </div>
+            <div className={styles.cardHeaderText}>
+              <h3 className={styles.cardTitle}>Phân bổ đánh giá</h3>
+              <p className={styles.cardSubtitle}>Chi tiết theo sao</p>
+            </div>
+          </div>
+          <div className={styles.cardContent}>
+            <RatingDistributionChart reviews={reviews} />
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.topDoctorsSection}>
+        <DoctorHighlightCard variant="top" doctor={topDoctor} />
+        <DoctorHighlightCard variant="low" doctor={lowestDoctor} />
+      </div>
+
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarLeft}>
+          <div className={styles.filterGroup}>
+            <Filter size={18} className={styles.toolbarIcon} />
+            <span className={styles.toolbarLabel}>Lọc theo:</span>
+            <div className={styles.filterButtons}>
+              {[0, 5, 4, 3, 2, 1].map(star => (
+                <button
+                  key={star}
+                  className={`${styles.filterButton} ${filterRating === star ? styles.active : ''}`}
+                  onClick={() => setFilterRating(star)}
+                >
+                  {star === 0 ? (
+                    <>Tất cả</>
+                  ) : (
+                    <>
+                      {star} <Star size={12} />
+                    </>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className={styles.toolbarRight}>
+          <div className={styles.sortGroup}>
+            <ArrowUpDown size={18} className={styles.toolbarIcon} />
+            <span className={styles.toolbarLabel}>Sắp xếp:</span>
+            <select
+              className={styles.sortDropdown}
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as SortOption)}
+            >
+              <option value="newest">Mới nhất</option>
+              <option value="oldest">Cũ nhất</option>
+              <option value="highest">Đánh giá cao nhất</option>
+              <option value="lowest">Đánh giá thấp nhất</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.reviewList}>
+        {filteredAndSortedReviews.length > 0 ? (
+          filteredAndSortedReviews.map((review, index) => {
+            const patientName = review.patientName || 'Ẩn danh';
+            const avatarSrc =
+              review.patientAvatar ||
+              `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                patientName
+              )}&background=667eea&color=fff&size=128&bold=true`;
+            const sentiment = getSentiment(review.rating);
+            const accentClass = getAccentClass(review.rating);
+            const badgeText =
+              review.rating >= 4 ? 'Được khen' : review.rating <= 2 ? 'Cần chú ý' : 'Đánh giá trung lập';
+
+            return (
+              <div
+                key={review.id}
+                className={styles.reviewCard}
+                style={{ animationDelay: `${index * 0.04}s` }}
+              >
+                <div className={`${styles.reviewAccent} ${accentClass}`}></div>
+                <div className={styles.reviewGlow}></div>
+                <span className={styles.reviewIndex}>#{String(index + 1).padStart(2, '0')}</span>
+
+                <div className={styles.reviewMain}>
+                  <div className={styles.avatarColumn}>
+                    <img
+                      src={avatarSrc}
+                      alt={patientName}
+                      className={styles.patientAvatar}
+                      onError={e => {
+                        const target = e.currentTarget;
+                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                          patientName
+                        )}&background=667eea&color=fff&size=128&bold=true`;
+                      }}
+                    />
+                  </div>
+                  <div className={styles.reviewContent}>
+                    <div className={styles.reviewTopRow}>
+                      <div className={styles.patientNameRow}>
+                        <span className={styles.patientName}>{patientName}</span>
+                        <span className={styles.reviewDate}>
+                          {formatRelativeDate(review.createdAt)}
+                        </span>
+                      </div>
+                      <div className={styles.doctorTag}>
+                        <Stethoscope size={14} />
+                        <span>{review.doctorName}</span>
+                      </div>
+                    </div>
+
+                    <div className={styles.rowBadges}>
+                      <span className={`${styles.sentimentBadge} ${sentiment.className}`}>
+                        {sentiment.icon}
+                        {sentiment.text}
+                      </span>
+                      <span className={styles.highlightBadge}>
+                        <Sparkles size={14} />
+                        {badgeText}
+                      </span>
+                    </div>
+
+                    <div className={styles.ratingRow}>
+                      <StarRating rating={review.rating} size={18} />
+                      <span className={styles.ratingNumber}>{review.rating}/5</span>
+                    </div>
+
+                    {review.comment ? (
+                      <p className={styles.comment}>{review.comment}</p>
+                    ) : (
+                      <p className={styles.noComment}>
+                        <i className="bi bi-info-circle"></i>
+                        Bệnh nhân không để lại bình luận.
+                      </p>
+                    )}
+
+                    <div className={styles.metaRow}>
+                      <div className={styles.metaItem}>
+                        <Calendar size={14} />
+                        <span>
+                          Đánh giá: {formatDate(review.createdAt)} {formatTime(review.createdAt)}
+                        </span>
+                      </div>
+                      <span className={styles.metaDivider}>|</span>
+                      <div className={styles.metaItem}>
+                        <Clock size={14} />
+                        <span>
+                          Cuộc hẹn: {formatTime(review.appointmentStartTime)} -{' '}
+                          {formatDate(review.appointmentStartTime)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className={styles.emptyState}>
+            <div className={styles.emptyStateIcon}>
+              <MessageSquare size={64} />
+            </div>
+            <h3 className={styles.emptyStateTitle}>Chưa có phản hồi phù hợp</h3>
+            <p className={styles.emptyStateText}>
+              {filterRating > 0
+                ? `Không tìm thấy đánh giá ${filterRating} sao nào phù hợp với tiêu chí hiện tại.`
+                : 'Chưa có bệnh nhân nào để lại phản hồi trong hệ thống.'}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
   );
-}
+};
+
+export default FeedbackManagement;

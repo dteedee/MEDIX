@@ -440,8 +440,16 @@ export default function ReportsAndAnalytics() {
                     </div>
                     
                     <div className={styles.doctorInfo}>
-                      <h3 className={styles.doctorName}>{doctor.doctorName}</h3>
+                      <h3 className={styles.doctorName}>
+                        {doctor.degree && <span className={styles.doctorDegree}>{doctor.degree}</span>}
+                        {doctor.doctorName}
+                      </h3>
                       <p className={styles.doctorSpecialty}>{doctor.specialization}</p>
+                      {doctor.experienceYears && (
+                        <p className={styles.doctorExperience}>
+                          <i className="bi bi-briefcase"></i> {doctor.experienceYears} năm kinh nghiệm
+                        </p>
+                      )}
                     </div>
                     
                     <div className={styles.ratingInfo}>
@@ -464,6 +472,36 @@ export default function ReportsAndAnalytics() {
                       <div className={styles.ratingValue}>
                         <span className={styles.ratingScore}>{doctor.formattedRating}</span>
                         <span className={styles.ratingCount}>({doctor.reviewCount} đánh giá)</span>
+                      </div>
+                    </div>
+
+                    {/* Thông tin số ca đã thực hiện và thành công - Compact design */}
+                    <div className={styles.doctorStatsCompact}>
+                      <div className={styles.statCompactItem}>
+                        <div className={styles.statCompactIcon}>
+                          <i className="bi bi-clipboard-check"></i>
+                        </div>
+                        <div className={styles.statCompactValue}>
+                          {doctor.completedAppointments !== undefined 
+                            ? doctor.completedAppointments.toLocaleString('vi-VN')
+                            : doctor.totalAppointments !== undefined
+                            ? doctor.totalAppointments.toLocaleString('vi-VN')
+                            : '0'}
+                        </div>
+                        <div className={styles.statCompactLabel}>Ca đã thực hiện</div>
+                      </div>
+                      <div className={styles.statCompactItem}>
+                        <div className={styles.statCompactIcon}>
+                          <i className="bi bi-check-circle"></i>
+                        </div>
+                        <div className={styles.statCompactValue}>
+                          {doctor.successfulAppointments !== undefined 
+                            ? doctor.successfulAppointments.toLocaleString('vi-VN')
+                            : doctor.successRate !== undefined && doctor.completedAppointments !== undefined
+                            ? Math.round((doctor.successRate / 100) * doctor.completedAppointments).toLocaleString('vi-VN')
+                            : '0'}
+                        </div>
+                        <div className={styles.statCompactLabel}>Ca thành công</div>
                       </div>
                     </div>
                   </div>

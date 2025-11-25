@@ -50,9 +50,15 @@ export interface TopRatedDoctorDto {
     doctorId: string;
     doctorName: string;
     specialization: string;
+    degree?: string; // Học vị: "GS.", "PGS.", "TS.", "ThS.", etc.
     averageRating: number;
     reviewCount: number;
     imageUrl?: string;
     formattedRating: string;
+    completedAppointments?: number; // Số ca đã thực hiện
+    successfulAppointments?: number; // Số ca thành công
+    totalAppointments?: number; // Tổng số lịch hẹn
+    experienceYears?: number; // Số năm kinh nghiệm
+    successRate?: number; // Tỷ lệ thành công (%)
 }
 

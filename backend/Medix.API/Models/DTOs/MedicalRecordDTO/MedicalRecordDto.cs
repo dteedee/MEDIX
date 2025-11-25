@@ -27,6 +27,12 @@
         public string DoctorName { get; set; } = null!;
         public DateTime AppointmentDate { get; set; }
 
+        public DateTime AppointmentStartDate { get; set; }
+        public DateTime AppointmentEndDate { get; set; }
+
+        public string StatusAppointment { get; set; }
+
+
         // --- Thông tin hồ sơ ---
         public string? ChiefComplaint { get; set; }
         public string? PhysicalExamination { get; set; }

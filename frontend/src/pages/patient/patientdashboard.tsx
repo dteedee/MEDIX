@@ -12,6 +12,7 @@ import { MedicalRecordDto } from '../../types/medicalRecord.types';
 import { DoctorProfileDto } from '../../types/doctor.types';
 import { PatientHealthReminderDto } from '../../types/patient.types';
 import styles from '../../styles/patient/PatientDashboard.module.css';
+import { apiClient } from '../../lib/apiClient';
 import modalStyles from '../../styles/patient/PatientAppointments.module.css';
 
 export const PatientDashboard: React.FC = () => {
@@ -26,6 +27,9 @@ export const PatientDashboard: React.FC = () => {
   const [loadingDoctors, setLoadingDoctors] = useState<Set<string>>(new Set());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [isMaintenance, setIsMaintenance] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -54,6 +58,25 @@ export const PatientDashboard: React.FC = () => {
     };
 
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const checkMaintenanceMode = async () => {
+      try {
+        const response = await apiClient.get('/SystemConfiguration/MAINTENANCE_MODE');
+        if (response.data?.configValue?.toLowerCase() === 'true') {
+          setIsMaintenance(true);
+          const msgResponse = await apiClient.get('/SystemConfiguration/MAINTENANCE_MESSAGE');
+          setMaintenanceMessage(msgResponse.data?.configValue || 'Hệ thống đang được bảo trì để nâng cấp. Vui lòng quay lại sau.');
+        } else {
+          setIsMaintenance(false);
+        }
+      } catch (error) {
+        // Không hiển thị lỗi cho người dùng, chỉ log ra console
+        console.error("Không thể kiểm tra trạng thái bảo trì:", error);
+      }
+    };
+    checkMaintenanceMode();
   }, []);
 
   const formatBalance = (balance: number, currency: string): string => {
@@ -269,6 +292,18 @@ export const PatientDashboard: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [upcomingAppointments]);
+
+  if (isMaintenance) {
+    return (
+      <div className={styles.maintenanceOverlay}>
+        <div className={styles.maintenanceBox}>
+          <i className="bi bi-tools"></i>
+          <h2>Hệ thống đang bảo trì</h2>
+          <p>{maintenanceMessage}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>

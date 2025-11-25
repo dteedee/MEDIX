@@ -118,34 +118,9 @@ export const userService = {
       console.log('- File type:', imageFile.type);
       console.log('- File size:', imageFile.size);
       
-      // Try using the File/upload endpoint first (available endpoint)
-      let imageUrl: string;
-      try {
-        const uploadResponse = await apiClient.postMultipart<{ url: string }>('/classification/File/upload', formData);
-        console.log('Upload successful:', uploadResponse.data);
-        imageUrl = uploadResponse.data.url;
-      } catch (uploadError: any) {
-        // If classification endpoint fails, try the user endpoint (might be uncommented)
-        if (uploadError.response?.status === 404 || uploadError.response?.status === 405) {
-          console.log('Classification endpoint not available, trying user endpoint...');
-          const userResponse = await apiClient.postMultipart<{ imageUrl: string }>('/user/uploadAvatar', formData);
-          imageUrl = userResponse.data.imageUrl;
-        } else {
-          throw uploadError;
-        }
-      }
-      
-      // After successful upload, update user info with the new image URL
-      if (imageUrl) {
-        try {
-          await this.updateUserInfo({ imageURL: imageUrl });
-          console.log('User avatar URL updated successfully');
-        } catch (updateError) {
-          console.warn('Failed to update user avatar URL, but image was uploaded:', updateError);
-          // Don't throw error here - image was uploaded successfully
-        }
-      }
-      
+      // Chỉ gọi endpoint /user/uploadAvatar
+      const userResponse = await apiClient.postMultipart<{ imageUrl: string }>('/user/uploadAvatar', formData);
+      const imageUrl = userResponse.data.imageUrl;
       return { imageUrl };
     } catch (error: any) {
       console.error('Error uploading profile image:', error);

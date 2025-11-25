@@ -1,3 +1,16 @@
+    // Map statusCode sang tiếng Việt
+    const statusDisplayNameMap: Record<string, string> = {
+      'BeforeAppoiment': 'Trước giờ khám',
+      'CancelledByDoctor': 'Bác sĩ hủy',
+      'CancelledByPatient': 'Bệnh nhân hủy',
+      'Completed': 'Hoàn thành',
+      'Confirmed': 'Đã xác nhận',
+      'MissedByDoctor': 'Bác sĩ vắng mặt',
+      'MissedByPatient': 'Bệnh nhân vắng mặt',
+      'NoShow': 'Không đến',
+      'OnProgressing': 'Đang khám',
+      'PendingConfirmation': 'Chờ xác nhận',
+    };
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../../styles/doctor/DoctorAppointments.module.css';
@@ -577,7 +590,7 @@ const DoctorAppointments: React.FC = () => {
                 <div className={styles.cardHeader}>
                   <div className={styles.statusBadge} style={{ background: statusConfig.color }}>
                     <i className={statusConfig.icon}></i>
-                    <span>{statusConfig.label}</span>
+                    <span>{statusDisplayNameMap[appointment.statusCode] || appointment.statusDisplayName || appointment.statusCode}</span>
                   </div>
                   {appointment.paymentStatusCode === 'Paid' && (
                     <div className={styles.paidBadge}>
@@ -652,16 +665,51 @@ const DoctorAppointments: React.FC = () => {
                         <i className="bi bi-file-text"></i>
                         Xem EMR
                       </button>
-                      {appointment.statusCode === 'OnProgressing' && (
+                      {appointment.statusCode === 'BeforeAppoiment' && (
                         <button 
                           className={styles.completeBtn}
-                          onClick={() => {
-                            setSelectedAppointment(appointment);
-                            setShowConfirmCompleteModal(true);
+                          onClick={async () => {
+                            if (!appointment.appointmentStartTime || new Date(appointment.appointmentStartTime) > new Date()) {
+                              showToast('Chưa đến giờ bắt đầu ca khám!', 'warning');
+                              return;
+                            }
+                            try {
+                              await appointmentService.updateStatus(appointment.id, 'OnProgressing');
+                              showToast('Đã bắt đầu ca khám!', 'success');
+                              // Gọi lại API lấy danh sách mới
+                              const now = new Date();
+                              const startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+                              const endDate = new Date(now.getFullYear(), now.getMonth() + 3, 0);
+                              const startDateStr = startDate.toISOString().split('T')[0];
+                              const endDateStr = endDate.toISOString().split('T')[0];
+                              const data = await appointmentService.getMyAppointmentsByDateRange(startDateStr, endDateStr);
+                              const transformedData = data.map(apt => {
+                                const startDate = new Date(apt.appointmentStartTime);
+                                return {
+                                  id: apt.id,
+                                  patientName: apt.patientName,
+                                  date: startDate.toISOString().split('T')[0],
+                                  time: `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`,
+                                  fee: apt.consultationFee,
+                                  avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.patientName)}&background=667eea&color=fff`,
+                                  patientID: apt.patientID,
+                                  appointmentStartTime: apt.appointmentStartTime,
+                                  appointmentEndTime: apt.appointmentEndTime,
+                                  statusCode: apt.statusCode,
+                                  statusDisplayName: apt.statusCode === 'OnProgressing' ? 'Đang khám' : apt.statusDisplayName,
+                                  paymentStatusCode: apt.paymentStatusCode,
+                                  totalAmount: apt.totalAmount,
+                                  medicalInfo: apt.medicalInfo,
+                                };
+                              });
+                              setAppointments(transformedData);
+                            } catch (error) {
+                              showToast('Có lỗi xảy ra!', 'error');
+                            }
                           }}
                         >
-                          <i className="bi bi-check-circle"></i>
-                          Kết thúc ca khám
+                          <i className="bi bi-play-circle"></i>
+                          Bắt đầu ca khám
                         </button>
                       )}
                     </div>

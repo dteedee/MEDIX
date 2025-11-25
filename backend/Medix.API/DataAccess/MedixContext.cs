@@ -1130,6 +1130,8 @@ public partial class MedixContext : DbContext
             // DateTime properties with defaults
             entity.Property(e => e.CreatedDate).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.UpdatedDate).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e=> e.CreatedBy).HasMaxLength(50);
+            entity.Property(e => e.UpdatedBy).HasMaxLength(50);
         });
 
         modelBuilder.Entity<WalletTransaction>(entity =>

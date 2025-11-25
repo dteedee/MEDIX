@@ -65,7 +65,7 @@ namespace Medix.API.BackgroundServices
                             }
                         }
 
-                        await RunBackupPipelineAsync(configService, backupService, retentionDays);
+                        await RunBackupPipelineAsync(backupService, retentionDays);
                         runImmediately = false;
                     }
                     else
@@ -147,7 +147,6 @@ namespace Medix.API.BackgroundServices
         }
 
         private async Task RunBackupPipelineAsync(
-            ISystemConfigurationService configService,
             IBackupService backupService,
             int retentionDays)
         {
@@ -155,34 +154,26 @@ namespace Medix.API.BackgroundServices
             {
                 _logger.LogInformation("Bắt đầu tạo backup toàn bộ database (.bak)...");
                 var backupLabel = $"auto-backup-{DateTime.UtcNow:yyyyMMdd_HHmmss}";
-                var dbBackupPath = await configService.BackupDatabaseAsync(backupLabel);
-                _logger.LogInformation("Đã tạo backup database tại: {Path}", dbBackupPath);
+                var backup = await backupService.CreateBackupAsync(backupLabel, "system");
+                _logger.LogInformation("Đã tạo backup database tại: {Path}", backup.FilePath);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Không thể tạo backup database");
+                return;
             }
 
-            var configBackupSuccess = await backupService.CreateAutomaticBackupAsync();
-            if (configBackupSuccess)
+            try
             {
-                _logger.LogInformation("Đã lưu backup cấu hình hệ thống (JSON).");
-                try
+                var deletedCount = await backupService.CleanupOldBackupsAsync(retentionDays);
+                if (deletedCount > 0)
                 {
-                    var deletedCount = await backupService.CleanupOldBackupsAsync(retentionDays);
-                    if (deletedCount > 0)
-                    {
-                        _logger.LogInformation("Đã xóa {DeletedCount} bản backup cấu hình cũ", deletedCount);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Lỗi khi dọn dẹp backup cấu hình cũ");
+                    _logger.LogInformation("Đã xóa {DeletedCount} bản backup cũ", deletedCount);
                 }
             }
-            else
+            catch (Exception ex)
             {
-                _logger.LogWarning("Không thể tạo backup cấu hình tự động (có thể đã bị tắt).");
+                _logger.LogWarning(ex, "Lỗi khi dọn dẹp backup cũ");
             }
         }
     }

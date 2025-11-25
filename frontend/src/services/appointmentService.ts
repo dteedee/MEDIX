@@ -76,4 +76,8 @@ export const appointmentService = {
   getPatientAppointments,
   cancelPatientAppointment,
   completeAppointment,
+  updateStatus: async (appointmentId: string, status: string) => {
+    const response = await apiClient.put(`${API_ENDPOINT}/UpdateStatus/${appointmentId}/${status}`);
+    return response.data;
+  },
 };

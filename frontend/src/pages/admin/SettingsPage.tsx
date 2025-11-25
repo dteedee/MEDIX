@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { CKEditor } from '@ckeditor/ckeditor5-react';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import { apiClient } from '../../lib/apiClient';
@@ -117,6 +117,31 @@ export default function SettingsPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof SystemSettings, string>>>({});
   const [templateErrors, setTemplateErrors] = useState<Partial<Record<string, { subject?: string; body?: string }>>>({});
   const [emailServerErrors, setEmailServerErrors] = useState<Partial<Record<'username' | 'fromEmail' | 'fromName', string>>>({});
+
+  const passwordRequirementSummary = useMemo(() => {
+    const boolText = (value?: boolean) => (value ? 'Bắt buộc' : 'Không bắt buộc');
+    return [
+      {
+        label: 'Độ dài tối thiểu',
+        value: settings.passwordMinLength ? `${settings.passwordMinLength} ký tự` : 'Chưa cấu hình',
+      },
+      {
+        label: 'Độ dài tối đa',
+        value: settings.passwordMaxLength ? `${settings.passwordMaxLength} ký tự` : 'Chưa cấu hình',
+      },
+      { label: 'Chữ số', value: boolText(settings.requireDigit) },
+      { label: 'Chữ thường', value: boolText(settings.requireLowercase) },
+      { label: 'Chữ hoa', value: boolText(settings.requireUppercase) },
+      { label: 'Ký tự đặc biệt', value: boolText(settings.requireSpecial) },
+    ];
+  }, [
+    settings.passwordMinLength,
+    settings.passwordMaxLength,
+    settings.requireDigit,
+    settings.requireLowercase,
+    settings.requireUppercase,
+    settings.requireSpecial,
+  ]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -720,6 +745,23 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      <div className={styles.pageIntroCard}>
+        <div className={styles.introIcon}>
+          <i className="bi bi-stars"></i>
+        </div>
+        <div>
+          <div className={styles.introTitle}>Tất cả cấu hình quan trọng tại một nơi</div>
+          <p className={styles.introSubtitle}>
+            Các nhãn và mô tả đã được đơn giản hóa để bạn dễ dàng bật/tắt tính năng mà không cần hiểu thuật ngữ kỹ thuật.
+          </p>
+          <ul className={styles.introList}>
+            <li><i className="bi bi-toggle-on"></i>Nhìn nhanh trạng thái bảo mật, email, sao lưu.</li>
+            <li><i className="bi bi-pen"></i>Thay đổi thông tin liên hệ và thông báo bảo trì với hướng dẫn rõ ràng.</li>
+            <li><i className="bi bi-life-preserver"></i>Luôn có gợi ý giúp bạn chọn giá trị phù hợp cho người dùng cuối.</li>
+          </ul>
+        </div>
+      </div>
+
       {/* System Overview Stats */}
 
 
@@ -891,24 +933,36 @@ export default function SettingsPage() {
                   <input type="checkbox" checked={settings.requireDigit || false} onChange={(e) => handleCheckboxChange('requireDigit', e.target.checked)} />
                   Yêu cầu có chữ số
                 </label>
+                <div className={styles.helperNote}>Ví dụ: <strong>Medix2024</strong> có chữ số “2024”.</div>
               </div>
               <div className={styles.settingItem}>
                 <label>
                   <input type="checkbox" checked={settings.requireLowercase || false} onChange={(e) => handleCheckboxChange('requireLowercase', e.target.checked)} />
                   Yêu cầu có chữ thường
                 </label>
+                <div className={styles.helperNote}>Giúp mật khẩu dễ đọc nhưng vẫn đủ mạnh.</div>
               </div>
               <div className={styles.settingItem}>
                 <label>
                   <input type="checkbox" checked={settings.requireUppercase || false} onChange={(e) => handleCheckboxChange('requireUppercase', e.target.checked)} />
                   Yêu cầu có chữ hoa
                 </label>
+                <div className={styles.helperNote}>Tăng độ phức tạp bằng cách thêm chữ in hoa.</div>
               </div>
               <div className={styles.settingItem}>
                 <label>
                   <input type="checkbox" checked={settings.requireSpecial || false} onChange={(e) => handleCheckboxChange('requireSpecial', e.target.checked)} />
                   Yêu cầu có ký tự đặc biệt
                 </label>
+                <div className={styles.helperNote}>Ví dụ: !, @, # giúp tài khoản an toàn hơn.</div>
+              </div>
+              <div className={styles.summaryChips}>
+                {passwordRequirementSummary.map((item) => (
+                  <div key={item.label} className={styles.summaryChip}>
+                    <span className={styles.summaryLabel}>{item.label}</span>
+                    <span className={styles.summaryValue}>{item.value}</span>
+                  </div>
+                ))}
               </div>
 
 
@@ -1363,6 +1417,9 @@ export default function SettingsPage() {
                 <i className={`bi ${maintenanceSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
                 {maintenanceSaving ? 'Đang lưu...' : 'Lưu cấu hình bảo trì'}
               </button>
+              <div className={styles.helperNote}>
+                Người dùng sẽ thấy thông điệp này khi truy cập vào khung giờ bảo trì.
+              </div>
             </div>
             {/* <div className={styles.settingItem}>
                   <button

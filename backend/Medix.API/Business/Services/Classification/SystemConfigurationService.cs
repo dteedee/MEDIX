@@ -136,7 +136,15 @@ namespace Medix.API.Business.Services.Classification
                 }
             }
 
-            entity.ConfigValue = value.ToString()!;
+            var newValue = value?.ToString() ?? string.Empty;
+
+            if (string.Equals(entity.ConfigValue, newValue, StringComparison.Ordinal))
+            {
+                // Không có thay đổi thực sự, bỏ qua để tránh tạo audit log rỗng
+                return;
+            }
+
+            entity.ConfigValue = newValue;
             entity.UpdatedBy = updatedBy;
             entity.UpdatedAt = DateTime.UtcNow;
 

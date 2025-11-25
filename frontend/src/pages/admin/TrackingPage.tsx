@@ -260,6 +260,18 @@ export default function TrackingPage() {
     Title: 'Tiêu đề',
     Summary: 'Tóm tắt',
     Content: 'Nội dung',
+    CreatedAt: 'Ngày tạo',
+    UpdatedAt: 'Ngày cập nhật',
+    CreatedBy: 'Người tạo',
+    UpdatedBy: 'Người cập nhật',
+    IsActive: 'Trạng thái hoạt động',
+    IsRead: 'Trạng thái đọc',
+    IsPublished: 'Trạng thái xuất bản',
+    IsApproved: 'Trạng thái phê duyệt',
+    IsPinned: 'Ghim lên đầu',
+    IsFeatured: 'Nổi bật',
+    Message: 'Nội dung thông báo',
+    Type: 'Kiểu',
     StatusCode: 'Trạng thái',
     // Thêm các trường khác nếu cần
     Slug: 'Đường dẫn (Slug)',
@@ -273,7 +285,16 @@ export default function TrackingPage() {
     MetaTitle: 'Tiêu đề SEO',
   };
 
-  const getFriendlyFieldName = (key: string) => friendlyFieldNames[key] || key;
+  const getFriendlyFieldName = (key: string) => {
+    if (friendlyFieldNames[key]) return friendlyFieldNames[key];
+    const humanized = key
+      .replace(/_/g, ' ')
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!humanized) return key;
+    return humanized.charAt(0).toUpperCase() + humanized.slice(1);
+  };
 
   // Chuyển đổi giá trị sang dạng dễ hiểu
   const getFriendlyValue = (key: string, value: any): string => {
@@ -285,7 +306,8 @@ export default function TrackingPage() {
       if (keyForCheck === 'IsAvailable') return value ? 'Sẵn sàng' : 'Không sẵn sàng';
       if (keyForCheck === 'LockoutEnabled') return value ? 'Đang khóa' : 'Hoạt động';
       if (keyForCheck === 'OverrideType') return value ? 'Tăng ca' : 'Nghỉ';
-      if (keyForCheck === 'IsHomepageVisible') return value ? 'Có' : 'Không';
+      if (keyForCheck === 'IsHomepageVisible') return value ? 'Hiển thị' : 'Ẩn';
+      if (keyForCheck === 'IsRead') return value ? 'Đã đọc' : 'Chưa đọc';
       return value ? 'Có' : 'Không';
     }
 
@@ -414,6 +436,67 @@ export default function TrackingPage() {
     }
   };
 
+  const actionLabelMap: Record<string, string> = {
+    CREATE: 'Tạo mới',
+    UPDATE: 'Cập nhật',
+    DELETE: 'Xóa',
+    LOGIN: 'Đăng nhập',
+    LOGOUT: 'Đăng xuất',
+    VIEW: 'Xem',
+    APPROVE: 'Phê duyệt',
+    REJECT: 'Từ chối',
+  };
+
+  const actionVerbMap: Record<string, string> = {
+    CREATE: 'đã tạo mới',
+    UPDATE: 'đã cập nhật',
+    DELETE: 'đã xóa',
+    LOGIN: 'đã đăng nhập vào',
+    LOGOUT: 'đã đăng xuất khỏi',
+    VIEW: 'đã xem',
+    APPROVE: 'đã phê duyệt',
+    REJECT: 'đã từ chối',
+  };
+
+  const entityLabelMap: Record<string, string> = {
+    RefreshToken: 'Phiên đăng nhập',
+    HealthArticle: 'Bài viết sức khỏe',
+    DoctorSchedule: 'Lịch khám của bác sĩ',
+    Appointment: 'Lịch hẹn',
+    Patient: 'Hồ sơ bệnh nhân',
+    Doctor: 'Hồ sơ bác sĩ',
+    Notification: 'Thông báo',
+    SystemConfiguration: 'Cấu hình hệ thống',
+    BackupJob: 'Bản sao lưu',
+    Feedback: 'Phản hồi người dùng',
+  };
+
+  const getFriendlyActionLabel = (action: string) =>
+    actionLabelMap[action.toUpperCase()] || action;
+
+  const getFriendlyEntityLabel = (entityType?: string) => {
+    if (!entityType) return 'Đối tượng khác';
+    if (entityType === 'RefreshToken') return entityLabelMap.RefreshToken;
+    return entityLabelMap[entityType] || entityType;
+  };
+
+  const formatTimestamp = (timestamp: string) =>
+    new Date(timestamp).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+
+  const getActionDescription = (log: AuditLog) => {
+    const actor = log.userName || 'Hệ thống';
+    const actionVerb = actionVerbMap[log.displayActionType] || 'đã thao tác trên';
+    if (log.displayActionType === 'LOGIN') {
+      const ipText = log.ipAddress ? ` (IP: ${log.ipAddress})` : '';
+      return `${actor} đã đăng nhập vào hệ thống${ipText}.`;
+    }
+    const friendlyEntity =
+      log.entityType === 'RefreshToken'
+        ? 'phiên đăng nhập'
+        : getFriendlyEntityLabel(log.entityType).toLowerCase();
+    return `${actor} ${actionVerb} ${friendlyEntity}.`;
+  };
+
   const getActionBadgeStyle = (action: string) => {
     switch (action.toUpperCase()) {
       case 'CREATE': return styles.actionCreate;
@@ -484,8 +567,20 @@ export default function TrackingPage() {
       <div className={userStyles.contentCard}>
         <div className={userStyles.cardHeader}>
           <h3>Nhật ký hoạt động</h3>
-          <div className={userStyles.cardActions}>
-          
+          <div className={userStyles.cardActions}></div>
+        </div>
+
+        <div className={styles.auditInfoCard}>
+          <div className={styles.auditInfoIcon}>
+            <i className="bi bi-shield-check"></i>
+          </div>
+          <div>
+            <div className={styles.auditInfoTitle}>Giám sát thao tác một cách dễ hiểu</div>
+            <ul className={styles.auditInfoList}>
+              <li>Theo dõi ai đang làm gì với từng đối tượng trong hệ thống</li>
+              <li>Lọc nhanh theo người dùng, hành động hoặc mốc thời gian</li>
+              <li>Bấm “Xem chi tiết” để xem dữ liệu trước và sau khi thay đổi</li>
+            </ul>
           </div>
         </div>
 
@@ -587,7 +682,8 @@ export default function TrackingPage() {
                       )}
                     </th>
                     <th>Hành động</th>
-                    <th>Loại đối tượng</th>
+                  <th>Loại đối tượng</th>
+                  <th>Mô tả chi tiết</th>
                     <th style={{ textAlign: 'right', width: '150px' }}>Thao tác</th>
                   </tr>
                 </thead>
@@ -612,9 +708,39 @@ export default function TrackingPage() {
                           <span className={userStyles.userName}>{log.userName || 'Unknown'}</span>
                         </div>
                       </td>
-                      <td><span className={`${styles.actionBadge} ${getActionBadgeStyle(log.displayActionType)}`}>{log.displayActionType}</span></td>
                       <td>
-                        {log.entityType === 'RefreshToken' ? 'Login' : (log.entityType || 'N/A')}
+                        <div className={styles.actionCell}>
+                          <span className={`${styles.actionBadge} ${getActionBadgeStyle(log.displayActionType)}`}>
+                            {getFriendlyActionLabel(log.displayActionType)}
+                          </span>
+                          <span className={styles.actionHint}>{log.displayActionType}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className={styles.entityCell}>
+                          <span className={styles.entityLabel}>
+                            {log.entityType === 'RefreshToken' ? 'Phiên đăng nhập' : getFriendlyEntityLabel(log.entityType)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className={styles.descriptionCell}>
+                        <p className={styles.actionDescription}>{getActionDescription(log)}</p>
+                        <div className={styles.descriptionMeta}>
+                          <span className={styles.metaItem}>
+                            <i className="bi bi-clock-history"></i>
+                            {formatTimestamp(log.timestamp)}
+                          </span>
+                          {log.ipAddress && (
+                            <span className={styles.metaItem}>
+                              <i className="bi bi-globe-asia-australia"></i>
+                              IP: {log.ipAddress}
+                            </span>
+                          )}
+                          <span className={styles.metaItem}>
+                            <i className="bi bi-hash"></i>
+                            Log #{log.id}
+                          </span>
+                        </div>
                       </td>
                       <td>
                         <div className={userStyles.actions}>
@@ -677,7 +803,7 @@ export default function TrackingPage() {
         <div className={userStyles.modalOverlay} onClick={() => setViewingLog(null)}>
           <div className={userStyles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div className={userStyles.modalHeader}>
-              <h3>Chi tiết Log #{viewingLog.id}</h3>
+              <h3>Chi tiết hoạt động</h3>
               <button onClick={() => setViewingLog(null)} className={userStyles.closeButton}>
                 <i className="bi bi-x-lg"></i>
               </button>
@@ -688,19 +814,41 @@ export default function TrackingPage() {
                 maxHeight: '70vh', // Giới hạn chiều cao tối đa của phần thân modal
                 overflowY: 'auto'  // Thêm thanh cuộn dọc khi nội dung vượt quá chiều cao
               }}>
-              <div className={userStyles.detailGrid}>
-                <div className={userStyles.detailItem}><strong>Hành động:</strong> <span>{viewingLog.displayActionType}</span></div>
-                <div className={userStyles.detailItem}><strong>Đối tượng:</strong> <span>{viewingLog.entityType === 'RefreshToken' ? 'Login' : viewingLog.entityType}</span></div>
-                <div className={userStyles.detailItem}><strong>Người dùng:</strong> <span>{viewingLog.userName}</span></div>
-                <div className={userStyles.detailItem}><strong>Thời gian:</strong> <span>{new Date(viewingLog.timestamp).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span></div>
+              <div className={styles.modalSummary}>
+                <div className={styles.summaryIcon}>
+                  <i className="bi bi-activity"></i>
+                </div>
+                <div>
+                  <div className={styles.modalSummaryTitle}>{getActionDescription(viewingLog)}</div>
+                  <div className={styles.summaryMeta}>
+                    <span className={styles.infoPill}>
+                      <i className="bi bi-person-circle"></i>
+                      {viewingLog.userName || 'Không rõ người dùng'}
+                    </span>
+                    <span className={styles.infoPill}>
+                      <i className="bi bi-cpu"></i>
+                      {viewingLog.entityType === 'RefreshToken' ? 'Phiên đăng nhập' : getFriendlyEntityLabel(viewingLog.entityType)}
+                    </span>
+                    <span className={styles.infoPill}>
+                      <i className="bi bi-clock-history"></i>
+                      {formatTimestamp(viewingLog.timestamp)}
+                    </span>
+                    {viewingLog.ipAddress && (
+                      <span className={styles.infoPill}>
+                        <i className="bi bi-globe2"></i>
+                        IP: {viewingLog.ipAddress}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
               <div className={styles.jsonContainer}> 
                 <div className={styles.jsonBox}> 
-                  <h4>Giá trị cũ (Old Values)</h4>
+                  <h4>Trước khi thay đổi</h4>
                   {renderJson(viewingLog.oldValues)}
                 </div>
                 <div className={styles.jsonBox}> 
-                  <h4>Giá trị mới (New Values)</h4>
+                  <h4>Sau khi thay đổi</h4>
                   {renderJson(viewingLog.newValues)}
                 </div>
               </div>

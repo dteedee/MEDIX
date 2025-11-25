@@ -65,6 +65,62 @@
   gap: 24px;
 }
 
+.pageIntroCard {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.08);
+}
+
+.introIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.introTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.introSubtitle {
+  color: #4a5568;
+  margin: 4px 0 12px;
+}
+
+.introList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #2d3748;
+  font-size: 14px;
+}
+
+.introList li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.introList i {
+  color: #22d3ee;
+}
+
 .settingsCard {
   background: white;
   border-radius: 16px;
@@ -514,4 +570,39 @@
   font-size: 13px;
   font-weight: 500;
   margin-top: -2px;
+}
+
+.summaryChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.summaryChip {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+
+.summaryLabel {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summaryValue {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.helperNote {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: -4px;
 }

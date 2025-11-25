@@ -12,6 +12,9 @@ export interface AppointmentStats {
   cancelledByPatient: number;
   cancelledByDoctor: number;
   missedByDoctor: number;
+  missedByPatient: number;
+  BeforeAppoiment: number;
+
   noShow: number;
   completed: number;
   todayAppointmentsCount: number;

@@ -3,31 +3,24 @@ namespace Medix.API.Models.DTOs.Manager
 
     public class ManagerDashboardDto
     {
-        // ---------- 1. Doctor Work Schedule Today ----------
         public List<DoctorScheduleTodayDto> DoctorsTodaySchedules { get; set; }
             = new();
 
-        // ---------- 2. Appointment Statistics (Global) ----------
         public AppointmentStatisticsDto AppointmentStats { get; set; }
             = new();
 
-        // ---------- 3. Today's Appointments ----------
         public List<AppointmentTodayDto> TodayAppointments { get; set; }
             = new();
         public List<AppointmentFullDto> AllAppointments { get; set; } = new();
 
     }
 
-    // --------------------------------------------
-    // DTO: Doctor and their working schedule today
-    // --------------------------------------------
     public class DoctorScheduleTodayDto
     {
         public Guid DoctorId { get; set; }
         public string DoctorName { get; set; } = null!;
         public string SpecializationName { get; set; } = null!;
 
-        // Các ca làm việc hôm nay (lấy từ DoctorSchedule hoặc Override)
         public List<WorkShiftDto> WorkShifts { get; set; } = new();
     }
 
@@ -35,14 +28,11 @@ namespace Medix.API.Models.DTOs.Manager
     {
         public TimeOnly StartTime { get; set; }
         public TimeOnly EndTime { get; set; }
-        public bool IsAvailable { get; set; }   // true: có làm | false: nghỉ
+        public bool IsAvailable { get; set; }   
         public string? OverrideReason { get; set; }
-        public bool? OverrideType { get; set; } // null: không override | true: AVAIL | false: UNAVAIL
+        public bool? OverrideType { get; set; } 
     }
 
-    // --------------------------------------------
-    // DTO: Appointment statistics summary
-    // --------------------------------------------
     public class AppointmentStatisticsDto
     {
         public int TotalAppointments { get; set; }
@@ -51,16 +41,16 @@ namespace Medix.API.Models.DTOs.Manager
         public int CancelledByPatient { get; set; }
         public int CancelledByDoctor { get; set; }
         public int MissedByDoctor { get; set; }
+        public int MissedByPatient { get; set; }
+        public int BeforeAppoinment { get; set; }
+
         public int NoShow { get; set; }
         public int Completed { get; set; }
 
-        // lịch hẹn trong ngày hôm nay
         public int TodayAppointmentsCount { get; set; }
     }
 
-    // --------------------------------------------
-    // DTO: All appointments today (full info)
-    // --------------------------------------------
+   
     public class AppointmentTodayDto
     {
         public Guid AppointmentId { get; set; }

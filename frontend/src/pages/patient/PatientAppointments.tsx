@@ -63,6 +63,20 @@ export const PatientAppointments: React.FC = () => {
   const [loadingDoctors, setLoadingDoctors] = useState<Set<string>>(new Set());
   const [refundPercentage, setRefundPercentage] = useState(80);
 
+  // Map statusCode sang tiếng Việt - đồng bộ với DoctorAppointments
+  const statusDisplayNameMap: Record<string, string> = {
+    'BeforeAppoiment': 'Trước giờ khám',
+    'CancelledByDoctor': 'Bác sĩ hủy',
+    'CancelledByPatient': 'Bệnh nhân hủy',
+    'Completed': 'Hoàn thành',
+    'Confirmed': 'Đã xác nhận',
+    'MissedByDoctor': 'Bác sĩ vắng mặt',
+    'MissedByPatient': 'Bệnh nhân vắng mặt',
+    'NoShow': 'Không đến',
+    'OnProgressing': 'Đang khám',
+    'PendingConfirmation': 'Chờ xác nhận',
+  };
+
   const calculateRefundAmount = (appointment: Appointment | null) => {
     if (!appointment) return 0;
     const total = appointment.totalAmount ?? appointment.fee ?? 0;
@@ -385,61 +399,65 @@ export const PatientAppointments: React.FC = () => {
     }).format(amount);
   };
 
-  const getStatusConfig = (statusCode: string, startTime?: string, endTime?: string) => {
-    const currentTime = new Date();
-    const appointmentStartTime = startTime ? new Date(startTime) : null;
-    const appointmentEndTime = endTime ? new Date(endTime) : null;
-
-    // ✅ 1. Trạng thái cố định - Completed
-    if (statusCode === 'Completed') {
-      return { 
-        label: 'Hoàn thành', 
+  const getStatusConfig = (statusCode: string) => {
+    // Retorna configuração baseada APENAS no statusCode - NÃO verifica tempo
+    const config: Record<string, { label: string; icon: string; color: string }> = {
+      'OnProgressing': { 
+        label: statusDisplayNameMap[statusCode] || 'Đang khám', 
+        icon: 'bi-arrow-repeat',
+        color: '#f59e0b'
+      },
+      'BeforeAppoiment': { 
+        label: statusDisplayNameMap[statusCode] || 'Trước giờ khám', 
+        icon: 'bi-calendar-check',
+        color: '#3b82f6'
+      },
+      'Completed': { 
+        label: statusDisplayNameMap[statusCode] || 'Hoàn thành', 
         icon: 'bi-check-circle-fill',
         color: '#10b981'
-      };
-    }
-    
-    // ✅ 2. Trạng thái hủy
-    if (statusCode === 'CancelledByPatient' || 
-        statusCode === 'CancelledByDoctor' || 
-        statusCode === 'MissedByDoctor' || 
-        statusCode === 'NoShow') {
-      return { 
-        label: 'Đã hủy', 
-        icon: 'bi-x-circle-fill',
+      },
+      'CancelledByPatient': { 
+        label: statusDisplayNameMap[statusCode] || 'Bệnh nhân hủy', 
+        icon: 'bi-x-circle',
         color: '#ef4444'
-      };
-    }
-
-    // ✅ 3. Xác định trạng thái theo thời gian
-    if (appointmentStartTime && appointmentEndTime) {
-      if (currentTime >= appointmentStartTime && currentTime <= appointmentEndTime) {
-        return { 
-          label: 'Đang diễn ra', 
-          icon: 'bi-clock-history',
-          color: '#3b82f6'
-        };
-      } else if (currentTime < appointmentStartTime) {
-        return { 
-          label: 'Sắp diễn ra', 
-          icon: 'bi-clock-history',
-          color: '#f59e0b'
-        };
-      } else if (currentTime > appointmentEndTime) {
-        // ✅ Lịch đã qua => coi như "Hoàn thành"
-        return { 
-          label: 'Hoàn thành', 
-          icon: 'bi-check-circle-fill',
-          color: '#10b981'
-        };
+      },
+      'CancelledByDoctor': { 
+        label: statusDisplayNameMap[statusCode] || 'Bác sĩ hủy', 
+        icon: 'bi-x-circle',
+        color: '#ef4444'
+      },
+      'MissedByPatient': { 
+        label: statusDisplayNameMap[statusCode] || 'Bệnh nhân vắng mặt', 
+        icon: 'bi-exclamation-circle',
+        color: '#f59e0b'
+      },
+      'MissedByDoctor': { 
+        label: statusDisplayNameMap[statusCode] || 'Bác sĩ vắng mặt', 
+        icon: 'bi-exclamation-circle',
+        color: '#f59e0b'
+      },
+      'NoShow': { 
+        label: statusDisplayNameMap[statusCode] || 'Không đến', 
+        icon: 'bi-question-circle',
+        color: '#6b7280'
+      },
+      'PendingConfirmation': { 
+        label: statusDisplayNameMap[statusCode] || 'Chờ xác nhận', 
+        icon: 'bi-clock-history',
+        color: '#8b5cf6'
+      },
+      'Confirmed': { 
+        label: statusDisplayNameMap[statusCode] || 'Đã xác nhận', 
+        icon: 'bi-check2-circle',
+        color: '#10b981'
       }
-    }
+    };
 
-    // ✅ 4. Mặc định
-    return { 
-      label: 'Sắp diễn ra', 
-      icon: 'bi-clock-history',
-      color: '#f59e0b'
+    return config[statusCode] || { 
+      label: statusCode, 
+      icon: 'bi-info-circle',
+      color: '#6b7280'
     };
   };
 
@@ -681,11 +699,7 @@ export const PatientAppointments: React.FC = () => {
           {filteredAppointments.map((appointment) => {
             // Get the appointment with doctor info
             const appointmentWithInfo = appointmentsWithDoctorInfo.find(apt => apt.id === appointment.id) || appointment;
-            const statusConfig = getStatusConfig(
-              appointmentWithInfo.statusCode || '',
-              appointmentWithInfo.appointmentStartTime,
-              appointmentWithInfo.appointmentEndTime
-            );
+            const statusConfig = getStatusConfig(appointmentWithInfo.statusCode || '');
             
             return (
             <div 
@@ -757,11 +771,7 @@ export const PatientAppointments: React.FC = () => {
             </div>
 
                 <div className={styles.cardFooter} onClick={(e) => e.stopPropagation()}>
-                  {appointmentWithInfo.statusCode !== 'Completed' && 
-                   appointmentWithInfo.statusCode !== 'CancelledByPatient' && 
-                   appointmentWithInfo.statusCode !== 'CancelledByDoctor' && 
-                   appointmentWithInfo.statusCode !== 'MissedByDoctor' && 
-                   appointmentWithInfo.statusCode !== 'NoShow' && (
+                  {appointmentWithInfo.statusCode === 'BeforeAppoiment' && (
                     <div className={styles.footerActions}>
               <button 
                         className={styles.viewInfoBtn}
@@ -862,14 +872,14 @@ export const PatientAppointments: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className={styles.modalStatus} style={{ background: getStatusConfig(selectedAppointment.statusCode || '', selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime).color }}>
-                <i className={getStatusConfig(selectedAppointment.statusCode || '', selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime).icon}></i>
-                {getStatusConfig(selectedAppointment.statusCode || '', selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime).label}
+              <div className={styles.modalStatus} style={{ background: getStatusConfig(selectedAppointment.statusCode || '').color }}>
+                <i className={getStatusConfig(selectedAppointment.statusCode || '').icon}></i>
+                {getStatusConfig(selectedAppointment.statusCode || '').label}
                 </div>
               </div>
 
             <div className={styles.modalBody}>
-              <div className={styles.detailSection}>
+              <div className={styles.detailSection}>    
                 <h4 className={styles.sectionTitle}>
                   <i className="bi bi-calendar-event"></i>
                   Thông tin lịch hẹn
@@ -930,11 +940,7 @@ export const PatientAppointments: React.FC = () => {
             </div>
             
             <div className={styles.modalFooter}>
-              {selectedAppointment.statusCode !== 'Completed' && 
-               selectedAppointment.statusCode !== 'CancelledByPatient' && 
-               selectedAppointment.statusCode !== 'CancelledByDoctor' && 
-               selectedAppointment.statusCode !== 'MissedByDoctor' && 
-               selectedAppointment.statusCode !== 'NoShow' && (
+              {selectedAppointment.statusCode === 'BeforeAppoiment' && (
                 <button 
                   className={styles.modalCancelBtn}
                   onClick={() => {

@@ -14,18 +14,21 @@ namespace Medix.API.Business.Services.Classification
         private readonly IMedicalRecordRepository _medicalRecordRepo;
         private readonly IAppointmentRepository _appointmentRepo;
         private readonly IMapper _mapper;
+        private readonly IPatientHealthReminderService patientHealthReminderService; 
         private readonly MedixContext _context; // 🩺 Thêm DbContext để update Patient
 
         public MedicalRecordService(
             IMedicalRecordRepository medicalRecordRepo,
             IAppointmentRepository appointmentRepo,
             IMapper mapper,
-            MedixContext context)
+            MedixContext context,
+            IPatientHealthReminderService patientHealthReminderService)
         {
             _medicalRecordRepo = medicalRecordRepo;
             _appointmentRepo = appointmentRepo;
             _mapper = mapper;
             _context = context;
+            this.patientHealthReminderService = patientHealthReminderService;
         }
 
         public async Task<MedicalRecordDto?> GetByAppointmentIdAsync(Guid appointmentId)
@@ -113,8 +116,13 @@ namespace Medix.API.Business.Services.Classification
                     Frequency = p.Frequency,
                     Duration = p.Duration,
                     Instructions = p.Instructions,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    MedicalRecordId = existingRecord.Id,
+                    MedicalRecord = existingRecord
+
                 }).ToList();
+
+                await patientHealthReminderService.sendHealthReminderPrescription((List<Prescription>)existingRecord.Prescriptions);
             }
 
             await _medicalRecordRepo.UpdateAsync(existingRecord);

@@ -54,6 +54,7 @@ namespace Medix.API.Models.DTOs
         public
             string? Allergies { get; set; }
         public string? MedicalHistory { get; set; }
+        public string? bloodTypeCode { get; set; }
 
 
         public DateTime CreatedAt { get; set; }
@@ -80,7 +81,9 @@ namespace Medix.API.Models.DTOs
 
         public string? MedicalHistory { get; set; }
 
-    }
+        public string? BloodTypeCode { get; set; }
+
+        }
 
 
     public class GoogleLoginRequestDto

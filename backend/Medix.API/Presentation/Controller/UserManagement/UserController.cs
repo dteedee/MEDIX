@@ -97,6 +97,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 patient.EmergencyContactPhone = updateDto.EmergencyContactPhone;
                 patient.Allergies = updateDto.Allergies;
                 patient.MedicalHistory = updateDto.MedicalHistory;
+                patient.BloodTypeCode = updateDto.BloodTypeCode;
 
                 var patientDTO = await _patientService.UpdateAsync(userId, patient);
                 if (patientDTO == null)

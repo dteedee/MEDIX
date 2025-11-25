@@ -26,6 +26,7 @@ const timeSlots = [
   { label: 'Ca 6 (14:00 - 14:50)', startTime: '14:00', endTime: '14:50' },
   { label: 'Ca 7 (15:00 - 15:50)', startTime: '15:00', endTime: '15:50' },
   { label: 'Ca 8 (16:00 - 16:50)', startTime: '16:00', endTime: '16:50' },
+
 ];
 
 const getDayLabel = (dayValue: number) => daysOfWeek.find(d => d.value === dayValue)?.label || 'Không xác định';

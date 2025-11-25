@@ -4,6 +4,7 @@ import React, { useEffect, useState, FormEvent, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { medicalRecordService } from '../../services/medicalRecordService';
 import { prescriptionService } from '../../services/prescriptionService';
+import { appointmentService } from '../../services/appointmentService';
 import { MedicalRecord, Prescription } from '../../types/medicalRecord.types';
 import { PageLoader } from '../../components/ui';
 import Swal from 'sweetalert2';
@@ -21,6 +22,20 @@ const MedicalRecordDetails: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [newAllergy, setNewAllergy] = useState('');
+
+  // Map statusCode sang tiếng Việt
+  const statusDisplayNameMap: Record<string, string> = {
+    'BeforeAppoiment': 'Trước giờ khám',
+    'CancelledByDoctor': 'Bác sĩ hủy',
+    'CancelledByPatient': 'Bệnh nhân hủy',
+    'Completed': 'Hoàn thành',
+    'Confirmed': 'Đã xác nhận',
+    'MissedByDoctor': 'Bác sĩ vắng mặt',
+    'MissedByPatient': 'Bệnh nhân vắng mặt',
+    'NoShow': 'Không đến',
+    'OnProgressing': 'Đang khám',
+    'PendingConfirmation': 'Chờ xác nhận',
+  };
 
   const showBannedPopup = () => {
     if (user) {
@@ -200,25 +215,231 @@ const MedicalRecordDetails: React.FC = () => {
     });
   };
 
+  // Função para cancelar a consulta (status: MissedByPatient)
+  const handleCancelAppointment = async () => {
+    if (!medicalRecord) return;
+
+    // Validar se pode cancelar (apenas até startTime + 30 minutos)
+    if (!canCancelAppointment) {
+      if (medicalRecord.appointmentStartDate) {
+        const now = new Date();
+        const startDate = new Date(medicalRecord.appointmentStartDate);
+        const startDatePlus30Min = new Date(startDate.getTime() + 30 * 60 * 1000);
+        
+        if (now > startDatePlus30Min) {
+          const minutesPassed = Math.ceil((now.getTime() - startDatePlus30Min.getTime()) / 60000);
+          Swal.fire({
+            title: 'Không thể hủy',
+            html: `Đã quá thời gian cho phép hủy lịch khám.<br/>Chỉ có thể hủy trong vòng <b>30 phút</b> sau khi bắt đầu ca khám.<br/>Đã qua <b>${minutesPassed} phút</b>.`,
+            icon: 'warning',
+            confirmButtonText: 'Đã hiểu'
+          });
+          return;
+        }
+      }
+    }
+
+    Swal.fire({
+      title: 'Hủy lịch khám',
+      text: 'Bạn có chắc chắn muốn hủy lịch khám này?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Xác nhận hủy',
+      cancelButtonText: 'Đóng'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        setIsSubmitting(true);
+        try {
+          // Chama a API UpdateStatus com status "MissedByPatient"
+          await appointmentService.updateStatus(medicalRecord.appointmentId, 'MissedByPatient');
+          
+          Swal.fire({
+            title: 'Thành công!',
+            text: 'Lịch khám đã được hủy.',
+            icon: 'success',
+            confirmButtonText: 'OK'
+          }).then(() => {
+            navigate(-1);
+          });
+        } catch (err: any) {
+          console.error("Failed to cancel appointment:", err);
+          Swal.fire('Thất bại!', err.response?.data?.message || 'Không thể hủy lịch khám. Vui lòng thử lại.', 'error');
+        } finally {
+          setIsSubmitting(false);
+        }
+      }
+    });
+  };
+
+  // Função para completar a consulta (status: Completed)
+  const handleCompleteAppointment = async () => {
+    if (!medicalRecord) return;
+
+    // Validar campos obrigatórios E janela de tempo
+    if (!canComplete) {
+      // Verificar campos obrigatórios
+      const missingFields: string[] = [];
+      if (!medicalRecord.diagnosis || medicalRecord.diagnosis.trim() === '') {
+        missingFields.push('Chẩn đoán chính');
+      }
+      if (!medicalRecord.treatmentPlan || medicalRecord.treatmentPlan.trim() === '') {
+        missingFields.push('Kế hoạch điều trị');
+      }
+
+      if (missingFields.length > 0) {
+        Swal.fire({
+          title: 'Không thể hoàn thành',
+          html: `Vui lòng điền đầy đủ các trường sau:<br/><b>${missingFields.join(', ')}</b>`,
+          icon: 'warning',
+          confirmButtonText: 'Đã hiểu'
+        });
+        return;
+      }
+
+      // Verificar janela de tempo (endTime - 5min até endTime + 10min)
+      if (medicalRecord.appointmentEndDate) {
+        const now = new Date();
+        const endDate = new Date(medicalRecord.appointmentEndDate);
+        const endDateMinus5Min = new Date(endDate.getTime() - 5 * 60 * 1000);
+        const endDatePlus10Min = new Date(endDate.getTime() + 10 * 60 * 1000);
+
+        if (now < endDateMinus5Min) {
+          const timeLeft = Math.ceil((endDateMinus5Min.getTime() - now.getTime()) / 60000);
+          Swal.fire({
+            title: 'Chưa thể hoàn thành',
+            html: `Chỉ có thể hoàn thành từ <b>5 phút trước</b> khi kết thúc ca khám.<br/>Vui lòng đợi thêm <b>${timeLeft} phút</b>.`,
+            icon: 'info',
+            confirmButtonText: 'Đã hiểu'
+          });
+          return;
+        }
+
+        if (now > endDatePlus10Min) {
+          const minutesPassed = Math.ceil((now.getTime() - endDatePlus10Min.getTime()) / 60000);
+          Swal.fire({
+            title: 'Đã quá thời gian',
+            html: `Đã quá thời gian cho phép hoàn thành ca khám.<br/>Chỉ có thể hoàn thành trong vòng <b>10 phút</b> sau khi kết thúc ca khám.<br/>Đã qua <b>${minutesPassed} phút</b>.`,
+            icon: 'warning',
+            confirmButtonText: 'Đã hiểu'
+          });
+          return;
+        }
+      }
+    }
+
+    Swal.fire({
+      title: 'Hoàn thành lịch khám',
+      text: 'Bạn có chắc chắn muốn đánh dấu lịch khám này là hoàn thành?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#28a745',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Xác nhận',
+      cancelButtonText: 'Hủy bỏ'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        setIsSubmitting(true);
+        try {
+          // Chama a API UpdateStatus com status "Completed"
+          await appointmentService.updateStatus(medicalRecord.appointmentId, 'Completed');
+          
+          Swal.fire({
+            title: 'Thành công!',
+            text: 'Lịch khám đã được hoàn thành.',
+            icon: 'success',
+            confirmButtonText: 'OK'
+          }).then(() => {
+            navigate(-1);
+          });
+        } catch (err: any) {
+          console.error("Failed to complete appointment:", err);
+          Swal.fire('Thất bại!', err.response?.data?.message || 'Không thể hoàn thành lịch khám. Vui lòng thử lại.', 'error');
+        } finally {
+          setIsSubmitting(false);
+        }
+      }
+    });
+  };
+
   // Xác định xem hồ sơ có được phép chỉnh sửa hay không
-  // LOGIC: Chỉ cho phép bác sĩ chỉnh sửa hồ sơ bệnh án trong khoảng thời gian diễn ra cuộc hẹn (50 phút).
- const isEditable = useMemo(() => {
-  if (isBanned || !medicalRecord || !medicalRecord.appointmentDate) return false;
+  // LOGIC: Chỉ dựa vào status của appointment
+  const isEditable = useMemo(() => {
+    if (isBanned || !medicalRecord) return false;
 
-  const now = new Date();
+    // Không cho phép chỉnh sửa nếu status là các trạng thái đã kết thúc
+    const blockedStatuses = ['MissedByPatient', 'MissedByDoctor', 'Completed', 'CancelledByPatient', 'CancelledByDoctor'];
+    if (medicalRecord.statusAppointment && blockedStatuses.includes(medicalRecord.statusAppointment)) {
+      return false;
+    }
 
-  // Thêm "+07:00" để parse đúng timezone VN
-  const startTime = new Date(medicalRecord.appointmentDate.replace(" ", "T") + "+07:00");
+    // Cho phép chỉnh sửa nếu status là OnProgressing
+    return medicalRecord.statusAppointment === 'OnProgressing';
+  }, [medicalRecord, isBanned]);
 
-  // Ca khám kéo dài 30 phút (có thể thay 50 phút nếu bạn muốn)
-  const endTime = new Date(startTime.getTime() + 60 * 60000);
+  // Verificar se os botões "Hủy lịch khám" e "Hoàn thành" devem ser exibidos
+  const showActionButtons = useMemo(() => {
+    if (!medicalRecord) return false;
 
-  // Chỉ cho phép chỉnh sửa trong 20 phút cuối ca khám
-  const editableStartTime = new Date(endTime.getTime() - 20 * 60000);
+    // Botões aparecem APENAS se o status é "OnProgressing"
+    return medicalRecord.statusAppointment === "OnProgressing";
+  }, [medicalRecord]);
 
-  return now >= editableStartTime && now <= endTime;
+  // Verificar se o botão "Hủy" pode ser habilitado
+  // Pode clicar apenas até startTime + 30 minutos
+  const canCancelAppointment = useMemo(() => {
+    if (!medicalRecord || !medicalRecord.appointmentStartDate) return false;
 
-}, [medicalRecord, isBanned]);
+    const now = new Date();
+    const startDate = new Date(medicalRecord.appointmentStartDate);
+    const startDatePlus30Min = new Date(startDate.getTime() + 30 * 60 * 1000);
+
+    console.log('=== VALIDAÇÃO BOTÃO HỦY ===');
+    console.log('Giờ hiện tại:', now.toISOString());
+    console.log('Start time:', startDate.toISOString());
+    console.log('Start time + 30min:', startDatePlus30Min.toISOString());
+    console.log('Pode cancelar?', now <= startDatePlus30Min);
+
+    // Pode cancelar apenas até startTime + 30 minutos
+    return now <= startDatePlus30Min;
+  }, [medicalRecord]);
+
+  // Verificar se o botão "Hoàn thành" pode ser habilitado
+  // Pode clicar entre endTime - 5 minutos e endTime + 10 minutos
+  const canComplete = useMemo(() => {
+    if (!medicalRecord || !medicalRecord.appointmentEndDate) return false;
+
+    const now = new Date();
+    const endDate = new Date(medicalRecord.appointmentEndDate);
+    const endDateMinus5Min = new Date(endDate.getTime() - 5 * 60 * 1000);
+    const endDatePlus10Min = new Date(endDate.getTime() + 10 * 60 * 1000);
+
+    // Verificar se os campos obrigatórios da seção IV estão preenchidos
+    const requiredFields: (keyof MedicalRecord)[] = [
+      'diagnosis',          // Chẩn đoán chính
+      'treatmentPlan',      // Kế hoạch điều trị
+    ];
+
+    const allFieldsFilled = requiredFields.every(field => {
+      const value = medicalRecord[field];
+      return value && (typeof value === 'string' && value.trim() !== '');
+    });
+
+    console.log('=== VALIDAÇÃO BOTÃO HOÀN THÀNH ===');
+    console.log('Giờ hiện tại:', now.toISOString());
+    console.log('End time - 5min:', endDateMinus5Min.toISOString());
+    console.log('End time:', endDate.toISOString());
+    console.log('End time + 10min:', endDatePlus10Min.toISOString());
+    console.log('Campos preenchidos?', allFieldsFilled);
+    console.log('Trong khung giờ?', now >= endDateMinus5Min && now <= endDatePlus10Min);
+    console.log('Pode completar?', allFieldsFilled && now >= endDateMinus5Min && now <= endDatePlus10Min);
+
+    // Botão habilitado se:
+    // 1. Todos os campos obrigatórios estão preenchidos
+    // 2. Está entre endTime - 5min e endTime + 10min
+    return allFieldsFilled && now >= endDateMinus5Min && now <= endDatePlus10Min;
+  }, [medicalRecord]);
 
 
   if (isLoading) {
@@ -263,6 +484,21 @@ const MedicalRecordDetails: React.FC = () => {
           <span>Bệnh nhân: <strong>{medicalRecord.patientName}</strong></span>
           <span>Ngày khám: <strong>{new Date(medicalRecord.appointmentDate).toLocaleDateString('vi-VN')}</strong></span>
         </div>
+        {!isEditable && medicalRecord.statusAppointment && ['MissedByPatient', 'MissedByDoctor', 'Completed', 'CancelledByPatient', 'CancelledByDoctor'].includes(medicalRecord.statusAppointment) && (
+          <div style={{ 
+            marginTop: '15px', 
+            padding: '12px 20px', 
+            backgroundColor: '#fff3cd', 
+            border: '1px solid #ffc107', 
+            borderRadius: '8px',
+            color: '#856404',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}>
+            <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: '8px' }}></i>
+            Hồ sơ bệnh án này không thể chỉnh sửa vì ca khám đã kết thúc với trạng thái: <strong>{statusDisplayNameMap[medicalRecord.statusAppointment] || medicalRecord.statusAppointment}</strong>
+          </div>
+        )}
       </div>
 
       <section className="form-section">
@@ -449,9 +685,28 @@ const MedicalRecordDetails: React.FC = () => {
             <button type="submit" className="btn-submit" disabled={isSubmitting} >
               {isSubmitting ? 'Đang lưu...' : 'Hoàn tất & Lưu hồ sơ'}
             </button>
-            <button type="button" className="btn-secondary">
-              Xác nhận kết thúc ca khám
-            </button>
+            {showActionButtons && (
+              <>
+                <button 
+                  type="button" 
+                  className="btn-cancel" 
+                  onClick={handleCancelAppointment}
+                  disabled={isSubmitting || !canCancelAppointment}
+                  title={!canCancelAppointment ? 'Chỉ có thể hủy trong vòng 30 phút sau khi bắt đầu ca khám' : ''}
+                >
+                  Hủy lịch khám
+                </button>
+                <button 
+                  type="button" 
+                  className="btn-complete" 
+                  onClick={handleCompleteAppointment}
+                  disabled={isSubmitting || !canComplete}
+                  title={!canComplete ? 'Có thể hoàn thành từ 5 phút trước đến 10 phút sau khi kết thúc ca khám' : ''}
+                >
+                  Hoàn thành
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <button type="button" className="btn-submit" onClick={() => navigate(-1)}>

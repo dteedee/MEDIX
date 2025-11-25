@@ -25,7 +25,7 @@ namespace Medix.API.Business.Interfaces.Classification
         /// </summary>
         /// <param name="prescription">Thông tin toa thuốc.</param>
         /// <returns>Một PatientHealthReminder mẫu (vì nhiều job được lên lịch).</returns>
-        Task<PatientHealthReminder> sendHealthReminderPrescription(Prescription prescription);
+        Task<PatientHealthReminder> sendHealthReminderPrescription(List<Prescription> prescription);
 
 
         /// <summary>

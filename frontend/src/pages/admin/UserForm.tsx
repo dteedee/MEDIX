@@ -445,11 +445,11 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                     </div>
                     <div className={styles.inputGroup}>
                       <label className={styles.label}>Ngày tạo tài khoản</label>
-                      <input value={createdAt ? new Date(`${createdAt}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''} disabled className={styles.input} style={{ display: isEditMode ? 'block' : 'none' }} />
+                      <input value={createdAt ? new Date(createdAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''} disabled className={styles.input} style={{ display: isEditMode ? 'block' : 'none' }} />
                     </div>
                     <div className={styles.inputGroup}>
                       <label className={styles.label}>Cập nhật lần cuối</label>
-                      <input value={updatedAt ? new Date(`${updatedAt}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''} disabled className={styles.input} style={{ display: isEditMode ? 'block' : 'none' }} />
+                      <input value={updatedAt ? new Date(updatedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''} disabled className={styles.input} style={{ display: isEditMode ? 'block' : 'none' }} />
                     </div>
                   </div>
                 </div>                
@@ -462,15 +462,6 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                 </div>
                 <div className={styles.sectionContent}>
                   <div className={styles.grid}>
-                    <div className={styles.inputGroup}>
-                      <label className={styles.label}>Vai trò</label>
-                      <select value={role} onChange={e => setRole(e.target.value)} className={styles.select} disabled={rolesList.length === 0}>
-                        {rolesList.length === 0 && <option>Đang tải...</option>}
-                        {rolesList.map(r => (
-                          <option key={r.code} value={r.code}>{r.displayName}</option>
-                        ))}
-                      </select>
-                    </div>
                     <div className={styles.inputGroup}>
                       <label className={styles.label}>Trạng thái tài khoản</label>
                       <div className={styles.statusContainer}>

@@ -26,7 +26,7 @@ interface UserListFilters {
   page: number;
   pageSize: number;
   search: string;
-  roleFilter: 'all' | 'ADMIN' | 'MANAGER' | 'DOCTOR' | 'PATIENT';
+  roleFilter: string;
   statusFilter: 'all' | 'locked' | 'unlocked';
   dateFrom: string;
   dateTo: string;
@@ -100,10 +100,10 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
     try {
       // TODO: Backend và userAdminService.list cần được cập nhật để xử lý đầy đủ các bộ lọc.
       // Tạm thời chỉ truyền các tham số được hỗ trợ để tránh lỗi.
-      // Khi backend sẵn sàng, bạn có thể truyền đầy đủ object `filters`.
-      // const response = await userAdminService.list(filters);
-      const response = await userAdminService.list(filters.page, filters.pageSize, filters.search);
-      setUsers(response.items || []);
+      // Khi backend sẵn sàng, bạn có thể truyền đầy đủ object `filters` và xóa logic filter ở FE.
+      // Tạm thời, tải một danh sách lớn để filter ở FE.
+      const response = await userAdminService.list(1, 5000, ''); // Lấy 5000 người dùng, không search ở API
+      setUsers(response.items || []); // Lưu tất cả user vào state
       setTotal(response.total);
     } catch (error) {
       showToast('Không thể tải danh sách người dùng.', 'error');
@@ -111,7 +111,7 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
       setLoading(false);
     }
   }, [filters, showToast]); // Dependency `filters` là đúng để load lại khi filter thay đổi
-
+  
   useEffect(() => {
     load();
   }, [load]);
@@ -119,8 +119,10 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        const roles = await userAdminService.getRoles();
-        setRolesList(roles);
+        const roles = await userAdminService.getRoles(); // Lấy tất cả vai trò
+        // Lọc bỏ vai trò 'Admin' khỏi danh sách hiển thị trong bộ lọc
+        const filteredRoles = roles.filter(r => r.code.toLowerCase() !== 'admin');
+        setRolesList(filteredRoles);
       } catch (error) {
         console.error("Failed to fetch roles:", error);        
         showToast('Không thể tải danh sách vai trò.', 'error');
@@ -274,8 +276,65 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
     load();
   }
 
-  // Với phân trang phía server, `users` chính là danh sách đã được xử lý cho trang hiện tại.
-  const processedItems = users;
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const searchLower = filters.search.toLowerCase();
+      const nameMatch = user.fullName?.toLowerCase().includes(searchLower);
+      const emailMatch = user.email?.toLowerCase().includes(searchLower);
+  
+      const roleMatch = filters.roleFilter === 'all' || (
+        rolesList.find(r => r.code.toLowerCase() === filters.roleFilter.toLowerCase())
+          ?.displayName?.toLowerCase() === user.role?.toLowerCase()
+      );
+
+  
+      const userLocked = isUserLocked(user);
+      const statusMatch = filters.statusFilter === 'all' ||
+        (filters.statusFilter === 'locked' && userLocked) ||
+        (filters.statusFilter === 'unlocked' && !userLocked);
+  
+      const createdAt = user.createdAt ? new Date(user.createdAt) : null;
+      const dateFrom = filters.dateFrom ? new Date(filters.dateFrom) : null;
+      const dateTo = filters.dateTo ? new Date(filters.dateTo) : null;
+      if (dateFrom) dateFrom.setHours(0, 0, 0, 0);
+      if (dateTo) dateTo.setHours(23, 59, 59, 999);
+      const dateMatch = (!dateFrom || (createdAt && createdAt >= dateFrom)) &&
+                         (!dateTo || (createdAt && createdAt <= dateTo));
+  
+      return (nameMatch || emailMatch) && roleMatch && statusMatch && dateMatch;
+    }); 
+  }, [users, filters, rolesList]);
+
+  const processedItems = useMemo(() => {
+    // Lọc trên FE
+    // let filteredUsers = users.filter(user => {
+    //   const searchLower = filters.search.toLowerCase();
+    //   const nameMatch = user.fullName?.toLowerCase().includes(searchLower);
+    //   const emailMatch = user.email?.toLowerCase().includes(searchLower);
+
+    //   const roleMatch = filters.roleFilter === 'all' || user.role === filters.roleFilter;
+
+    //   const userLocked = isUserLocked(user);
+    //   const statusMatch = filters.statusFilter === 'all' ||
+    //     (filters.statusFilter === 'locked' && userLocked) ||
+    //     (filters.statusFilter === 'unlocked' && !userLocked);
+
+    //   const createdAt = user.createdAt ? new Date(user.createdAt) : null;
+    //   const dateFrom = filters.dateFrom ? new Date(filters.dateFrom) : null;
+    //   const dateTo = filters.dateTo ? new Date(filters.dateTo) : null;
+    //   if (dateFrom) dateFrom.setHours(0, 0, 0, 0);
+    //   if (dateTo) dateTo.setHours(23, 59, 59, 999);
+    //   const dateMatch = (!dateFrom || (createdAt && createdAt >= dateFrom)) &&
+    //                     (!dateTo || (createdAt && createdAt <= dateTo));
+
+    //   return (nameMatch || emailMatch) && roleMatch && statusMatch && dateMatch;
+    // });
+
+    // Phân trang trên FE
+    const startIndex = (filters.page - 1) * filters.pageSize;
+    return filteredUsers.slice(startIndex, startIndex + filters.pageSize);
+
+  }, [users, filters]);
 
   const handleResetFilters = () => {
     setFilters({
@@ -311,7 +370,7 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
     return { activeUsers, newUsersLast7Days, doctorCount, growthPercentageLast7Days: growthPercentage, lockedUsersCount };
   }, [allUsersForStats]);
 
-  const totalPages = total ? Math.ceil(total / filters.pageSize) : 1;
+  const totalPages = Math.ceil(filteredUsers.length / filters.pageSize);
 
   return (
     <div className={styles.container}>
@@ -439,7 +498,7 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
                 Vai trò
               </label>
               <select value={filters.roleFilter} onChange={e => handleFilterChange('roleFilter', e.target.value)}>
-                <option value="all">Tất cả</option>
+                <option value="all">Tất cả vai trò</option>
                 {rolesList.length === 0 && <option disabled>Đang tải...</option>}
                 {rolesList.map(r => (
                   <option key={r.code} value={r.code}>{r.displayName}</option>
@@ -604,7 +663,7 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
         {processedItems.length > 0 && (
           <div className={styles.pagination}>
             <div className={styles.paginationInfo}>
-              Hiển thị {(filters.page - 1) * filters.pageSize + 1} - {Math.min(filters.page * filters.pageSize, total ?? 0)} trong tổng số {total ?? 0} kết quả
+              Hiển thị {(filters.page - 1) * filters.pageSize + 1} - {Math.min(filters.page * filters.pageSize, filteredUsers.length)} trong tổng số {filteredUsers.length} kết quả
             </div>
 
             <div className={styles.paginationControls}>

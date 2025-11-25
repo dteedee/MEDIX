@@ -162,6 +162,13 @@ export default function MedicationManagement(): JSX.Element {
   const totalFilteredItems = sortedMedications.length;
   const totalPages = Math.ceil(totalFilteredItems / filters.pageSize);
 
+  const stats = useMemo(() => {
+    const total = medications.length;
+    const active = medications.filter(m => m.isActive).length;
+    const inactive = total - active;
+    return { total, active, inactive };
+  }, [medications]);
+
   return (
     <div>
       <div className={styles.header}>
@@ -172,6 +179,49 @@ export default function MedicationManagement(): JSX.Element {
           <button onClick={() => handleOpenForm(null)} className={styles.btnCreate}>
             <i className="bi bi-plus-lg"></i> Tạo mới
           </button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className={styles.statsGrid}>
+        <div className={`${styles.statCard} ${styles.statCard1}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-capsule"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Tổng số thuốc</div>
+            <div className={styles.statValue}>{stats.total}</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-arrow-up"></i>
+              <span>Trong hệ thống</span>
+            </div>
+          </div>
+        </div>
+        <div className={`${styles.statCard} ${styles.statCard2}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-check-circle-fill"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Đang hoạt động</div>
+            <div className={styles.statValue}>{stats.active}</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-arrow-up"></i>
+              <span>Thuốc đang sử dụng</span>
+            </div>
+          </div>
+        </div>
+        <div className={`${styles.statCard} ${styles.statCardLocked}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-lock-fill"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Bị khóa</div>
+            <div className={styles.statValue}>{stats.inactive}</div>
+            <div className={`${styles.statTrend} ${styles.negative}`}>
+              <i className="bi bi-arrow-down"></i>
+              <span>Thuốc tạm dừng</span>
+            </div>
+          </div>
         </div>
       </div>
 

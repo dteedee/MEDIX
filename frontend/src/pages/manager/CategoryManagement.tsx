@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useToast } from '../../contexts/ToastContext';
-import styles from '../../styles/admin/ArticleManagement.module.css'; // Sử dụng style từ ArticleManagement
-import { PageLoader } from '../../components/ui';
+import styles from '../../styles/admin/UserList.module.css';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 import { categoryService } from '../../services/categoryService';
 import type { CategoryDTO } from '../../types/category.types';
@@ -14,13 +14,18 @@ interface CategoryListFilters {
   statusFilter: 'all' | 'active' | 'inactive';
 }
 
-export default function CategoryList(): JSX.Element {
+interface CategoryListProps {
+  hideHeader?: boolean;
+  title?: string;
+}
+
+export default function CategoryList({ hideHeader = false, title = 'Quản lý Danh mục Bài viết' }: CategoryListProps): JSX.Element {
   const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [total, setTotal] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<CategoryListFilters>({
     page: 1,
-    pageSize: 5,
+    pageSize: 10,
     search: '',
     statusFilter: 'all',
   });
@@ -53,9 +58,16 @@ export default function CategoryList(): JSX.Element {
     load();
   }, [load]);
 
-  const handleFilterChange = (key: keyof CategoryListFilters, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
-  };
+  const handleFilterChange = useCallback((key: keyof CategoryListFilters, value: any) => {
+    setFilters(prev => {
+      const newFilters = { ...prev, [key]: value };
+      // Reset page to 1 only when changing search, statusFilter, or pageSize
+      if (key !== 'page') {
+        newFilters.page = 1;
+      }
+      return newFilters;
+    });
+  }, []);
 
   const handleToggleActive = (category: CategoryDTO) => {
     setSelectedCategory(category); // Lưu category để dùng trong dialog
@@ -85,20 +97,19 @@ export default function CategoryList(): JSX.Element {
     }
   };
 
-  const handleEdit = (category: CategoryDTO) => {
+  const handleOpenForm = (category: CategoryDTO | null) => {
     setEditingCategory(category);
     setIsFormOpen(true);
   };
 
-  const handleCreateNew = () => {
-    setEditingCategory(null); // Đảm bảo không có category nào được chọn
-    setIsFormOpen(true);
-  };
-
-  const handleFormSaved = () => {
+  const handleCloseForm = () => {
     setIsFormOpen(false);
     setEditingCategory(null);
-    load(); // Tải lại danh sách sau khi lưu
+  };
+
+  const handleFormSaved = async () => {
+    handleCloseForm();
+    await load(); // Reload data after save
   };
 
   const handleSort = (key: keyof CategoryDTO) => {
@@ -107,6 +118,15 @@ export default function CategoryList(): JSX.Element {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      page: 1,
+      pageSize: 10,
+      search: '',
+      statusFilter: 'all',
+    });
   };
 
   const sortedCategories = useMemo(() => {
@@ -130,13 +150,21 @@ export default function CategoryList(): JSX.Element {
 
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
-        const valA = a[sortConfig.key] || '';
-        const valB = b[sortConfig.key] || '';
+        let valA: any = a[sortConfig.key];
+        let valB: any = b[sortConfig.key];
+        
+        // Handle undefined/null values
+        if (valA == null) valA = '';
+        if (valB == null) valB = '';
+        
+        // Convert to string for comparison
+        const strA = String(valA).toLowerCase();
+        const strB = String(valB).toLowerCase();
 
-        if (valA < valB) {
+        if (strA < strB) {
           return sortConfig.direction === 'asc' ? -1 : 1;
         }
-        if (valA > valB) {
+        if (strA > strB) {
           return sortConfig.direction === 'asc' ? 1 : -1;
         }
         return 0;
@@ -153,53 +181,69 @@ export default function CategoryList(): JSX.Element {
   const totalFilteredItems = sortedCategories.length;
   const totalPages = Math.ceil(totalFilteredItems / filters.pageSize);
 
-  const getStats = () => {
+  const stats = useMemo(() => {
     const total = categories.length;
     const active = categories.filter(c => c.isActive).length;
     const inactive = total - active;
     return { total, active, inactive };
-  };
-
-  const stats = getStats();
+  }, [categories]);
 
   return (
-    <div className={styles.container}>
+    <div>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Quản lý Danh mục Bài viết</h1>
-          <p className={styles.subtitle}>Quản lý danh sách danh mục bài viết sức khỏe</p>
+          <h2 className={styles.title}>{title}</h2>
         </div>
-        <button onClick={handleCreateNew} className={styles.btnCreate}>
-          <i className="bi bi-plus-lg"></i> Tạo mới
-        </button>
+        <div className={styles.headerRight}>
+          <button onClick={() => handleOpenForm(null)} className={styles.btnCreate}>
+            <i className="bi bi-plus-lg"></i> Tạo mới
+          </button>
+        </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Summary Cards */}
       <div className={styles.statsGrid}>
         <div className={`${styles.statCard} ${styles.statCard1}`}>
-          <div className={styles.statIcon}><i className="bi bi-tags-fill"></i></div>
+          <div className={styles.statIcon}>
+            <i className="bi bi-book"></i>
+          </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Tổng số danh mục</div>
             <div className={styles.statValue}>{stats.total}</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-arrow-up"></i>
+              <span>Trong hệ thống</span>
+            </div>
           </div>
         </div>
         <div className={`${styles.statCard} ${styles.statCard2}`}>
-          <div className={styles.statIcon}><i className="bi bi-check-circle-fill"></i></div>
+          <div className={styles.statIcon}>
+            <i className="bi bi-check-circle-fill"></i>
+          </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Đang hoạt động</div>
             <div className={styles.statValue}>{stats.active}</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-arrow-up"></i>
+              <span>Danh mục đang sử dụng</span>
+            </div>
           </div>
         </div>
-        <div className={`${styles.statCard} ${styles.statCard3}`}>
-          <div className={styles.statIcon}><i className="bi bi-pause-circle-fill"></i></div>
+        <div className={`${styles.statCard} ${styles.statCardLocked}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-lock-fill"></i>
+          </div>
           <div className={styles.statContent}>
-            <div className={styles.statLabel}>Tạm dừng</div>
+            <div className={styles.statLabel}>Bị khóa</div>
             <div className={styles.statValue}>{stats.inactive}</div>
+            <div className={`${styles.statTrend} ${styles.negative}`}>
+              <i className="bi bi-arrow-down"></i>
+              <span>Danh mục tạm dừng</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Search and Filter */}
       <div className={styles.searchSection}>
         <div className={styles.searchWrapper}>
           <i className="bi bi-search"></i>
@@ -211,17 +255,20 @@ export default function CategoryList(): JSX.Element {
             className={styles.searchInput}
           />
           {filters.search && (
-            <button className={styles.clearSearch} onClick={() => handleFilterChange('search', '')} title="Xóa tìm kiếm">
+            <button className={styles.clearSearch} onClick={() => handleFilterChange('search', '')}>
               <i className="bi bi-x-lg"></i>
             </button>
           )}
         </div>
         <button
           className={`${styles.btnFilter} ${showFilters ? styles.active : ''}`}
-          onClick={() => setShowFilters(!showFilters)}>
+          onClick={() => setShowFilters(!showFilters)}
+        >
           <i className="bi bi-funnel"></i>
           Bộ lọc
-          {filters.statusFilter !== 'all' && <span className={styles.filterBadge}></span>}
+          {(filters.statusFilter !== 'all') && (
+            <span className={styles.filterBadge}></span>
+          )}
         </button>
       </div>
 
@@ -230,20 +277,28 @@ export default function CategoryList(): JSX.Element {
         <div className={styles.filterPanel}>
           <div className={styles.filterGrid}>
             <div className={styles.filterItem}>
-              <label><i className="bi bi-toggle-on"></i> Trạng thái</label>
-              <select value={filters.statusFilter} onChange={e => handleFilterChange('statusFilter', e.target.value)}>
+              <label>
+                <i className="bi bi-toggle-on"></i>
+                Trạng thái
+              </label>
+              <select 
+                value={filters.statusFilter} 
+                onChange={e => handleFilterChange('statusFilter', e.target.value as 'all' | 'active' | 'inactive')}
+              >
                 <option value="all">Tất cả trạng thái</option>
                 <option value="active">Hoạt động</option>
-                <option value="inactive">Đã tạm dừng</option>
+                <option value="inactive">Tạm dừng</option>
               </select>
             </div>
           </div>
           <div className={styles.filterActions}>
-            <button onClick={() => handleFilterChange('statusFilter', 'all')} className={styles.btnResetFilter}>
-              <i className="bi bi-arrow-counterclockwise"></i> Đặt lại
+            <button onClick={handleResetFilters} className={styles.btnResetFilter}>
+              <i className="bi bi-arrow-counterclockwise"></i>
+              Đặt lại
             </button>
             <button onClick={() => setShowFilters(false)} className={styles.btnApplyFilter}>
-              <i className="bi bi-check2"></i> Áp dụng
+              <i className="bi bi-check2"></i>
+              Áp dụng
             </button>
           </div>
         </div>
@@ -252,70 +307,130 @@ export default function CategoryList(): JSX.Element {
       <div className={styles.tableCard}>
         {loading ? (
           <div className={styles.loading}>
-            <div className={styles.loadingSpinner}></div>
+            <LoadingSpinner />
             <p>Đang tải dữ liệu...</p>
           </div>
         ) : paginatedCategories.length > 0 ? (
           <>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th style={{ width: '60px' }}>STT</th>
-                  <th onClick={() => handleSort('name')} className={styles.sortable}>
-                    Tên danh mục
-                    {sortConfig?.key === 'name' && <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>}
-                  </th>
-                  <th onClick={() => handleSort('slug')} className={styles.sortable}>
-                    Slug
-                    {sortConfig?.key === 'slug' && <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>}
-                  </th>
-                  <th onClick={() => handleSort('description')} className={styles.sortable}>
-                    Mô tả
-                    {sortConfig?.key === 'description' && <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>}
-                  </th>
-                  <th onClick={() => handleSort('isActive')} className={styles.sortable}>
-                    Trạng thái
-                    {sortConfig?.key === 'isActive' && <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>}
-                  </th>
-                  <th style={{ textAlign: 'right', width: '150px' }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedCategories.map((category, index) => (
-                  <tr key={category.id} className={styles.tableRow}>
-                    <td className={styles.indexCell}>
-                      {(filters.page - 1) * filters.pageSize + index + 1}
-                    </td>
-                    <td><div className={styles.titleCell}>{category.name}</div></td>
-                    <td><span className={styles.slugBadge}>{category.slug}</span></td>
-                    <td><div className={styles.descriptionCell}>{category.description || '-'}</div></td>
-                    <td>
-                      <span className={`${styles.statusBadge} ${category.isActive ? styles.statusActive : styles.statusInactive}`}>
-                        <i className={`bi ${category.isActive ? 'bi-check-circle-fill' : 'bi-pause-circle-fill'}`}></i>
-                        {category.isActive ? 'Hoạt động' : 'Đã tạm dừng'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className={styles.actions}>
-                        <button onClick={() => setViewingCategory(category)} className={styles.actionBtn} title="Xem chi tiết">
-                          <i className="bi bi-eye"></i>
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={{ width: '60px' }}>STT</th>
+                    <th onClick={() => handleSort('name')} className={styles.sortable}>
+                      Tên danh mục {sortConfig?.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('slug')} className={styles.sortable}>
+                      Slug {sortConfig?.key === 'slug' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('description')} className={styles.sortable}>
+                      Mô tả {sortConfig?.key === 'description' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedCategories.map((category, index) => (
+                    <tr key={category.id}>
+                      <td className={styles.indexCell}>
+                        {(filters.page - 1) * filters.pageSize + index + 1}
+                      </td>
+                      <td><strong>{category.name}</strong></td>
+                      <td>{category.slug}</td>
+                      <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {category.description || '-'}
+                      </td>
+                      <td>
+                        <span className={`${styles.statusBadge} ${category.isActive ? styles.statusActive : styles.statusLocked}`}>
+                          {category.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                        </span>
+                      </td>
+                      <td className={styles.actions}>
+                        <button 
+                          onClick={() => setViewingCategory(category)} 
+                          className={styles.actionBtn} 
+                          title="Xem chi tiết"
+                        >
+                          <i className="bi bi-eye-fill"></i>
                         </button>
-                        <button onClick={() => { setEditingCategory(category); setIsFormOpen(true); }} className={styles.actionBtn} title="Chỉnh sửa">
-                          <i className="bi bi-pencil"></i>
+                        <button 
+                          onClick={() => handleOpenForm(category)} 
+                          className={styles.actionBtn} 
+                          title="Chỉnh sửa"
+                        >
+                          <i className="bi bi-pencil-fill"></i>
                         </button>
                         <button
                           onClick={() => handleToggleActive(category)}
                           className={`${styles.actionBtn} ${category.isActive ? styles.actionLock : styles.actionUnlock}`}
-                          title={category.isActive ? 'Tạm dừng (Khóa)' : 'Kích hoạt (Mở khóa)'}
+                          title={category.isActive ? 'Tạm dừng' : 'Kích hoạt'}
                         >
-                          <i className={`bi bi-${category.isActive ? 'lock' : 'unlock'}`}></i>
+                          <i className={`bi ${category.isActive ? 'bi-lock' : 'bi-unlock'}`}></i>
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalFilteredItems > 0 && (
+              <div className={styles.pagination}>
+                <div className={styles.paginationInfo}>
+                  Hiển thị {(filters.page - 1) * filters.pageSize + 1} - {Math.min(filters.page * filters.pageSize, totalFilteredItems)} trong tổng số {totalFilteredItems} kết quả
+                </div>
+
+                <div className={styles.paginationControls}>
+                  <select 
+                    value={filters.pageSize} 
+                    onChange={e => handleFilterChange('pageSize', Number(e.target.value))}
+                  >
+                    <option value={5}>5 / trang</option>
+                    <option value={10}>10 / trang</option>
+                    <option value={15}>15 / trang</option>
+                    <option value={20}>20 / trang</option>
+                  </select>
+
+                  <div className={styles.paginationButtons}>
+                    <button
+                      onClick={() => handleFilterChange('page', 1)}
+                      disabled={filters.page <= 1}
+                      className={filters.page <= 1 ? styles.disabled : ''}
+                    >
+                      <i className="bi bi-chevron-double-left"></i>
+                    </button>
+                    <button
+                      onClick={() => handleFilterChange('page', filters.page - 1)}
+                      disabled={filters.page <= 1}
+                      className={filters.page <= 1 ? styles.disabled : ''}
+                    >
+                      <i className="bi bi-chevron-left"></i>
+                    </button>
+
+                    <span className={styles.pageIndicator}>
+                      {filters.page} / {totalPages || 1}
+                    </span>
+
+                    <button
+                      onClick={() => handleFilterChange('page', filters.page + 1)}
+                      disabled={filters.page >= totalPages}
+                      className={filters.page >= totalPages ? styles.disabled : ''}
+                    >
+                      <i className="bi bi-chevron-right"></i>
+                    </button>
+                    <button
+                      onClick={() => handleFilterChange('page', totalPages)}
+                      disabled={filters.page >= totalPages}
+                      className={filters.page >= totalPages ? styles.disabled : ''}
+                    >
+                      <i className="bi bi-chevron-double-right"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className={styles.emptyState}>
@@ -323,59 +438,42 @@ export default function CategoryList(): JSX.Element {
             <p>Không tìm thấy danh mục nào</p>
           </div>
         )}
-
-        {/* Pagination */}
-        {totalFilteredItems > 0 && (
-          <div className={styles.pagination}>
-            <div className={styles.paginationInfo}>
-              <span>Hiển thị {(filters.page - 1) * filters.pageSize + 1} – {Math.min(filters.page * filters.pageSize, totalFilteredItems)} trong tổng số {totalFilteredItems} kết quả</span>
-            </div>
-            <div className={styles.paginationControls}>
-              <select
-                value={filters.pageSize}
-                onChange={e => handleFilterChange('pageSize', Number(e.target.value))}
-                className={styles.pageSizeSelect}
-              >
-                <option value={5}>5 / trang</option>
-                <option value={10}>10 / trang</option>
-                <option value={15}>15 / trang</option>
-                <option value={20}>20 / trang</option>
-              </select>
-              <div className={styles.paginationButtons}>
-                <button onClick={() => handleFilterChange('page', 1)} disabled={filters.page === 1} className={styles.pageBtn}><i className="bi bi-chevron-double-left"></i></button>
-                <button onClick={() => handleFilterChange('page', filters.page - 1)} disabled={filters.page === 1} className={styles.pageBtn}><i className="bi bi-chevron-left"></i></button>
-                <span className={styles.pageIndicator}>
-                  {filters.page} / {totalPages || 1}
-                </span>
-                <button onClick={() => handleFilterChange('page', filters.page + 1)} disabled={filters.page >= totalPages} className={styles.pageBtn}><i className="bi bi-chevron-right"></i></button>
-                <button onClick={() => handleFilterChange('page', totalPages)} disabled={filters.page >= totalPages} className={styles.pageBtn}><i className="bi bi-chevron-double-right"></i></button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Confirmation Dialog */}
-      <ConfirmationDialog
-        isOpen={showConfirmation}
-        title={`Xác nhận ${selectedCategory?.isActive ? 'tạm dừng' : 'kích hoạt'}`}
-        message={`Bạn có chắc chắn muốn ${selectedCategory?.isActive ? 'tạm dừng' : 'kích hoạt'} danh mục "${selectedCategory?.name}" không?`}
-        onConfirm={confirmSoftDelete}
-        onCancel={() => setShowConfirmation(false)}
-      />
+      {showConfirmation && (
+        <ConfirmationDialog
+          isOpen={showConfirmation}
+          title={`Xác nhận ${selectedCategory?.isActive ? 'tạm dừng' : 'kích hoạt'} danh mục`}
+          message={`Bạn có chắc chắn muốn ${selectedCategory?.isActive ? 'tạm dừng' : 'kích hoạt'} danh mục "${selectedCategory?.name}" không?`}
+          confirmText={selectedCategory?.isActive ? 'Tạm dừng' : 'Kích hoạt'}
+          cancelText="Hủy"
+          onConfirm={confirmSoftDelete}
+          onCancel={() => {
+            setShowConfirmation(false);
+            setSelectedCategory(null);
+          }}
+          type={selectedCategory?.isActive ? 'danger' : 'warning'}
+        />
+      )}
 
       {/* Create/Edit Form Modal */}
       {isFormOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
+        <div className={styles.modalOverlay} onClick={handleCloseForm}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h2>{editingCategory ? 'Chỉnh sửa Danh mục Bài viết' : 'Tạo Danh mục Bài viết mới'}</h2>
-              <button onClick={() => { setIsFormOpen(false); setEditingCategory(null); }} className={styles.closeButton}>
+              <button onClick={handleCloseForm} className={styles.closeButton}>
                 <i className="bi bi-x-lg"></i>
               </button>
             </div>
             <div className={`${styles.modalBody} ${styles.scrollableModalBody}`}>
-              <CategoryForm category={editingCategory} mode={editingCategory ? 'edit' : 'create'} onSaved={handleFormSaved} onCancel={() => { setIsFormOpen(false); setEditingCategory(null); }} />
+              <CategoryForm 
+                category={editingCategory} 
+                mode={editingCategory ? 'edit' : 'create'} 
+                onSaved={handleFormSaved} 
+                onCancel={handleCloseForm} 
+              />
             </div>
           </div>
         </div>
@@ -383,16 +481,21 @@ export default function CategoryList(): JSX.Element {
 
       {/* View Details Modal */}
       {viewingCategory && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
+        <div className={styles.modalOverlay} onClick={() => setViewingCategory(null)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h2>Chi tiết Danh mục Bài viết</h2>
               <button onClick={() => setViewingCategory(null)} className={styles.closeButton}>
                 <i className="bi bi-x-lg"></i>
               </button>
             </div>
-            <div className={styles.modalBody}>
-              <CategoryForm category={viewingCategory} mode="view" onSaved={() => {}} onCancel={() => setViewingCategory(null)} />
+            <div className={`${styles.modalBody} ${styles.scrollableModalBody}`}>
+              <CategoryForm 
+                category={viewingCategory} 
+                mode="view" 
+                onSaved={() => {}} 
+                onCancel={() => setViewingCategory(null)} 
+              />
             </div>
           </div>
         </div>

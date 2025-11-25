@@ -76,8 +76,8 @@
    /* Stats Grid */
    .statsGrid {
      display: grid;
-     grid-template-columns: repeat(4, 1fr);
-     gap: 20px;
+     grid-template-columns: repeat(3, 1fr);
+     gap: 24px;
      margin-bottom: 32px;
      animation: fadeInUp 0.6s ease-out 0.2s both;
    }
@@ -92,21 +92,51 @@
       transform: translateY(0);
     }
   }
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes iconBounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
   
   .statCard {
-    background: white;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
     border-radius: 20px;
     padding: 28px;
     display: flex;
     align-items: flex-start;
     gap: 20px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    box-shadow: 
+      0 4px 14px rgba(0, 0, 0, 0.08),
+      0 2px 8px rgba(102, 126, 234, 0.05);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid transparent;
+    border: 1px solid rgba(226, 232, 240, 0.8);
     position: relative;
     overflow: hidden;
+    cursor: pointer;
   }
-  
+
   .statCard::before {
     content: '';
     position: absolute;
@@ -119,31 +149,93 @@
     transform-origin: left;
     transition: transform 0.4s ease;
   }
+
+  .statCard::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s ease;
+  }
   
-   .statCard:hover {
-     transform: translateY(-12px) scale(1.02);
-     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-     border-color: rgba(102, 126, 234, 0.3);
-   }
-   
-   .statCard:hover::before {
-     transform: scaleX(1);
-   }
-   
-   .statCard:hover .statIcon {
-     transform: scale(1.15) rotate(10deg);
-     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
-   }
-   
-   .statCard:hover .statBg {
-     transform: scale(1.2) rotate(-10deg);
-     opacity: 0.5;
-   }
+  .statCard:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 
+      0 20px 50px rgba(0, 0, 0, 0.15),
+      0 8px 24px rgba(102, 126, 234, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    border-color: rgba(102, 126, 234, 0.3);
+    background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
+  }
+
+  .statCard:hover::before {
+    transform: scaleX(1);
+  }
+
+  .statCard:hover::after {
+    left: 100%;
+  }
   
-  .statCard1 .statIcon { background: linear-gradient(135deg, #667eea, #764ba2); }
-  .statCard2 .statIcon { background: linear-gradient(135deg, #f093fb, #f5576c); }
+  .statCard:hover .statIcon {
+    transform: scale(1.15) rotate(5deg);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+    animation: iconBounce 0.6s ease-in-out;
+  }
+
+  .statCard:hover .statValue {
+    transform: scale(1.05);
+    color: #667eea;
+  }
+
+  .statCard:hover .statTrend {
+    transform: translateX(4px);
+  }
+  
+  .statCard:hover .statBg {
+    transform: scale(1.2) rotate(-10deg);
+    opacity: 0.5;
+  }
+
+  .statCard1 {
+    animation: fadeInUp 0.6s ease-out 0.2s both;
+  }
+
+  .statCard1::before {
+    background: linear-gradient(90deg, #667eea, #764ba2);
+  }
+
+  .statCard2 {
+    animation: fadeInUp 0.6s ease-out 0.3s both;
+  }
+
+  .statCard2::before {
+    background: linear-gradient(90deg, #10b981, #34d399);
+  }
+
+  .statCardLocked {
+    animation: fadeInUp 0.6s ease-out 0.4s both;
+  }
+
+  .statCardLocked::before {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+  }
+  
+  .statCard1 .statIcon { 
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .statCard2 .statIcon { 
+    background: linear-gradient(135deg, #10b981, #34d399);
+    animation: pulse 2s ease-in-out infinite 0.2s;
+  }
   .statCard3 .statIcon { background: linear-gradient(135deg, #4facfe, #00f2fe); }
-  .statCardLocked .statIcon { background: linear-gradient(135deg, #fd6585, #ff8d8d); }
+  .statCardLocked .statIcon { 
+    background: linear-gradient(135deg, #ef4444, #f87171);
+    animation: pulse 2s ease-in-out infinite 0.4s;
+  }
   .statCard4 .statIcon { background: linear-gradient(135deg, #fa709a, #fee140); }
   
   .statIcon {
@@ -156,8 +248,28 @@
     color: white;
     font-size: 28px;
     flex-shrink: 0;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-    transition: all 0.3s ease;
+    box-shadow: 
+      0 8px 20px rgba(0, 0, 0, 0.15),
+      0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .statIcon::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transform: rotate(45deg);
+    transition: all 0.6s ease;
+  }
+
+  .statCard:hover .statIcon::before {
+    animation: shimmer 0.6s ease-in-out;
   }
   
   
@@ -859,6 +971,7 @@
    @media (max-width: 1200px) {
      .statsGrid {
        grid-template-columns: repeat(2, 1fr);
+       gap: 16px;
      }
    }
    
@@ -948,9 +1061,17 @@
     }
   }
   
+  @media (max-width: 768px) {
+    .statsGrid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+  }
+
   @media (max-width: 480px) {
     .statCard {
       padding: 20px;
+      gap: 16px;
     }
   
     .statIcon {
@@ -960,7 +1081,15 @@
     }
   
     .statValue {
-      font-size: 24px;
+      font-size: 28px;
+    }
+
+    .statLabel {
+      font-size: 12px;
+    }
+
+    .statTrend {
+      font-size: 12px;
     }
   
     .actions {

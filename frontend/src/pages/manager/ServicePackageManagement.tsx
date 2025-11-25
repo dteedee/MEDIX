@@ -3,7 +3,7 @@ import axios from 'axios'
 import { useToast } from '../../contexts/ToastContext'
 import styles from '../../styles/manager/ServicePackageManagement.module.css'
 import { servicePackageService } from '../../services/servicePackageService'
-import { ServicePackageModel } from '../../types/service-package.types'
+import { ServicePackageModel, ServicePackageUpdateRequest } from '../../types/service-package.types'
 
 // SVG Icons for actions
 const ViewIcon = () => (
@@ -13,8 +13,15 @@ const ViewIcon = () => (
   </svg>
 );
 
+const EditIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+);
+
 const SortIcon = ({ direction }: { direction?: 'asc' | 'desc' }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', marginLeft: 4, color: direction ? '#111827' : '#9ca3af' }}>
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', marginLeft: 4, color: direction ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
     {direction === 'asc' && <path d="M18 15l-6-6-6 6" />}
     {direction === 'desc' && <path d="M6 9l6 6 6-6" />}
   </svg>
@@ -24,6 +31,7 @@ type ServicePackage = ServicePackageModel;
 type SortableFields = 'name' | 'monthlyFee' | 'displayOrder' | 'isActive' | 'createdAt';
 
 const MAX_FETCH_LIMIT = 50;
+const NAME_CHAR_LIMIT = 225;
 
 export default function ServicePackageManagement() {
   const [packages, setPackages] = useState<ServicePackage[]>([]);
@@ -35,8 +43,13 @@ export default function ServicePackageManagement() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [selectedPackage, setSelectedPackage] = useState<ServicePackage | null>(null);
+  const [viewPackage, setViewPackage] = useState<ServicePackage | null>(null);
+  const [editPackage, setEditPackage] = useState<ServicePackage | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState<ServicePackageUpdateRequest>({ name: '', monthlyFee: 0 });
+  const [formErrors, setFormErrors] = useState<{ name?: string; monthlyFee?: string }>({});
+  const [saving, setSaving] = useState(false);
   const { showToast } = useToast();
 
   const loadPackages = useCallback(async () => {
@@ -90,7 +103,7 @@ export default function ServicePackageManagement() {
     setDetailLoading(true);
     try {
       const latest = await servicePackageService.getById(pkg.id);
-      setSelectedPackage(latest);
+      setViewPackage(latest);
       setShowDetails(true);
     } catch (error) {
       console.error('Failed to load service package detail', error);
@@ -106,8 +119,102 @@ export default function ServicePackageManagement() {
 
   const handleCloseDetails = () => {
     setShowDetails(false);
-    setSelectedPackage(null);
+    setViewPackage(null);
   };
+
+  const handleOpenEdit = async (pkg: ServicePackage) => {
+    setDetailLoading(true);
+    try {
+      const latest = await servicePackageService.getById(pkg.id);
+      setEditPackage(latest);
+      setEditForm({ name: latest.name, monthlyFee: latest.monthlyFee });
+      setFormErrors({});
+      setShowEditModal(true);
+    } catch (error) {
+      console.error('Failed to load service package detail', error);
+      const message =
+        axios.isAxiosError(error)
+          ? error.response?.data?.message ?? 'Không thể tải thông tin gói dịch vụ.'
+          : 'Không thể tải thông tin gói dịch vụ.';
+      showToast(message, 'error');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleCloseEdit = () => {
+    setShowEditModal(false);
+    setEditPackage(null);
+    setEditForm({ name: '', monthlyFee: 0 });
+    setFormErrors({});
+  };
+
+  const handleEditChange = (field: keyof ServicePackageUpdateRequest, value: string) => {
+    if (field === 'name') {
+      const truncated = value.slice(0, NAME_CHAR_LIMIT);
+      setEditForm(prev => ({ ...prev, name: truncated }));
+      if (formErrors.name) {
+        setFormErrors(prev => ({ ...prev, name: undefined }));
+      }
+      return;
+    }
+
+    if (field === 'monthlyFee') {
+      const sanitized = value.replace(/[^0-9]/g, '');
+      setEditForm(prev => ({ ...prev, monthlyFee: sanitized ? Number(sanitized) : 0 }));
+      if (formErrors.monthlyFee) {
+        setFormErrors(prev => ({ ...prev, monthlyFee: undefined }));
+      }
+      return;
+    }
+  };
+
+  const validateEditForm = () => {
+    const errors: { name?: string; monthlyFee?: string } = {};
+    if (!editForm.name.trim()) {
+      errors.name = 'Tên gói không được bỏ trống';
+    }
+    if (editForm.monthlyFee <= 0) {
+      errors.monthlyFee = 'Phí hàng tháng phải là số lớn hơn 0 và chỉ gồm chữ số';
+    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveBasicInfo = async () => {
+    if (!editPackage) return;
+    if (!validateEditForm()) return;
+
+    setSaving(true);
+    try {
+      const updated = await servicePackageService.updateBasicInfo(editPackage.id, {
+        name: editForm.name.trim(),
+        monthlyFee: editForm.monthlyFee,
+      });
+
+      setEditPackage(updated);
+      setEditForm({ name: updated.name, monthlyFee: updated.monthlyFee });
+      setPackages(prev => prev.map(p => (p.id === updated.id ? updated : p)));
+      if (viewPackage && viewPackage.id === updated.id) {
+        setViewPackage(updated);
+      }
+      showToast('Cập nhật gói dịch vụ thành công', 'success');
+      handleCloseEdit();
+    } catch (error) {
+      console.error('Failed to update service package', error);
+      const message =
+        axios.isAxiosError(error)
+          ? error.response?.data?.message ?? 'Không thể cập nhật gói dịch vụ.'
+          : 'Không thể cập nhật gói dịch vụ.';
+      showToast(message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const hasChanges =
+    !!editPackage &&
+    (editForm.name.trim() !== editPackage.name || editForm.monthlyFee !== editPackage.monthlyFee);
 
   const filteredAndSortedPackages = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
@@ -268,15 +375,7 @@ export default function ServicePackageManagement() {
         </button>
       </div>
 
-      <div className={styles.listCard}>
-        <div className={styles.tableHeader}>
-          <h3>Danh sách Gói Dịch vụ</h3>
-          <div className={styles.tableActions}>
-            <span className={styles.resultsCount}>
-              Hiển thị {startRange}-{endRange} trong tổng số {resultCount} gói
-            </span>
-          </div>
-        </div>
+      <div className={styles.tableCard}>
 
         {fetchError && renderErrorState()}
         {!fetchError && paginatedPackages.length === 0 ? (
@@ -296,7 +395,7 @@ export default function ServicePackageManagement() {
           </div>
         ) : (
           <>
-            <div className={styles.tableContainer}>
+            <div className={styles.tableWrapper}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -330,7 +429,7 @@ export default function ServicePackageManagement() {
                   {paginatedPackages.map((pkg, index) => {
                     const rowNumber = startIndex + index + 1;
                     return (
-                    <tr key={pkg.id}>
+                    <tr key={pkg.id} className={styles.tableRow}>
                       <td>
                         <div className={styles.indexCell}>{rowNumber}</div>
                       </td>
@@ -358,11 +457,18 @@ export default function ServicePackageManagement() {
                       <td>
                         <div className={styles.actionButtons}>
                           <button
-                            className={styles.actionButton}
+                            className={`${styles.actionButton} ${styles.viewButton}`}
                             onClick={() => handleViewDetails(pkg)}
                             title="Xem chi tiết"
                           >
                             <ViewIcon />
+                          </button>
+                          <button
+                            className={`${styles.actionButton} ${styles.editButton}`}
+                            onClick={() => handleOpenEdit(pkg)}
+                            title="Chỉnh sửa tên & giá"
+                          >
+                            <EditIcon />
                           </button>
                         </div>
                       </td>
@@ -372,70 +478,66 @@ export default function ServicePackageManagement() {
               </table>
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
+            <div className={styles.tableFooter}>
+              <div className={styles.resultsSummary}>
+                Hiển thị {startRange}-{endRange} trong tổng số {resultCount} gói
+              </div>
+
               <div className={styles.pagination}>
                 <div className={styles.paginationInfo}>
-                  <span>Hiển thị</span>
                   <select
                     value={itemsPerPage}
                     onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
                     className={styles.pageSizeSelect}
                   >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
+                    <option value={5}>5 / trang</option>
+                    <option value={10}>10 / trang</option>
+                    <option value={20}>20 / trang</option>
+                    <option value={50}>50 / trang</option>
                   </select>
-                  <span>gói mỗi trang</span>
                 </div>
 
                 <div className={styles.paginationControls}>
                   <button
                     className={styles.paginationButton}
+                    onClick={() => handlePageChange(1)}
+                    disabled={currentPage === 1}
+                  >
+                    «
+                  </button>
+                  <button
+                    className={styles.paginationButton}
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                   >
-                    Trước
+                    ‹
                   </button>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                    if (
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= currentPage - 2 && page <= currentPage + 2)
-                    ) {
-                      return (
-                        <button
-                          key={page}
-                          className={`${styles.paginationButton} ${page === currentPage ? styles.active : ''}`}
-                          onClick={() => handlePageChange(page)}
-                        >
-                          {page}
-                        </button>
-                      );
-                    } else if (page === currentPage - 3 || page === currentPage + 3) {
-                      return <span key={page} className={styles.paginationEllipsis}>...</span>;
-                    }
-                    return null;
-                  })}
-
+                  <span className={styles.paginationStatus}>
+                    {currentPage} / {totalPages}
+                  </span>
                   <button
                     className={styles.paginationButton}
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
                   >
-                    Sau
+                    ›
+                  </button>
+                  <button
+                    className={styles.paginationButton}
+                    onClick={() => handlePageChange(totalPages)}
+                    disabled={currentPage === totalPages}
+                  >
+                    »
                   </button>
                 </div>
               </div>
-            )}
+            </div>
           </>
         )}
       </div>
 
       {/* Package Details Modal */}
-      {showDetails && selectedPackage && (
+      {showDetails && viewPackage && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
             <div className={styles.modalHeader}>
@@ -445,23 +547,23 @@ export default function ServicePackageManagement() {
             <div className={styles.modalBody}>
               <div className={styles.packageDetails}>
                 <div className={styles.packageHeader}>
-                  <h4>{selectedPackage.name}</h4>
-                  <span className={styles.orderBadge}>Display #{selectedPackage.displayOrder}</span>
+                  <h4>{viewPackage.name}</h4>
+                  <span className={styles.orderBadge}>Display #{viewPackage.displayOrder}</span>
                 </div>
                 <div className={styles.packageInfo}>
-                  <p><strong>Mô tả:</strong> {selectedPackage.description || 'Chưa có mô tả'}</p>
-                  <p><strong>Phí hàng tháng:</strong> {formatCurrency(selectedPackage.monthlyFee)}</p>
-                  <p><strong>Thứ tự hiển thị:</strong> {selectedPackage.displayOrder}</p>
-                  <p><strong>Trạng thái:</strong> {getStatusBadge(selectedPackage.isActive)}</p>
-                  <p><strong>Ngày tạo:</strong> {formatDate(selectedPackage.createdAt)}</p>
+                  <p><strong>Mô tả:</strong> {viewPackage.description || 'Chưa có mô tả'}</p>
+                  <p><strong>Phí hàng tháng:</strong> {formatCurrency(viewPackage.monthlyFee)}</p>
+                  <p><strong>Thứ tự hiển thị:</strong> {viewPackage.displayOrder}</p>
+                  <p><strong>Trạng thái:</strong> {getStatusBadge(viewPackage.isActive)}</p>
+                  <p><strong>Ngày tạo:</strong> {formatDate(viewPackage.createdAt)}</p>
                 </div>
                 <div className={styles.featuresSection}>
                   <h5>Tính năng:</h5>
                   <ul className={styles.featuresList}>
-                    {selectedPackage.featuresList.length === 0 && (
+                    {viewPackage.featuresList.length === 0 && (
                       <li className={styles.featureItemMuted}>Chưa cấu hình tính năng</li>
                     )}
-                    {selectedPackage.featuresList.map((feature, index) => (
+                    {viewPackage.featuresList.map((feature, index) => (
                       <li key={index} className={styles.featureItem}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20,6 9,17 4,12"></polyline>
@@ -472,6 +574,59 @@ export default function ServicePackageManagement() {
                   </ul>
                 </div>
               </div>
+            </div>
+            <div className={styles.modalActions}>
+              <button className={styles.cancelButton} onClick={handleCloseDetails}>
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editPackage && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h3>Chỉnh sửa gói dịch vụ</h3>
+              <button onClick={handleCloseEdit} className={styles.closeButton}>&times;</button>
+            </div>
+            <div className={styles.modalBody}>
+              <div className={styles.packageDetails}>
+                <div className={styles.packageHeader}>
+                  <h4>{editPackage.name}</h4>
+                  <span className={styles.orderBadge}>Display #{editPackage.displayOrder}</span>
+                </div>
+                <div className={styles.packageInfo}>
+                  <label className={styles.editField}>
+                    <span>Tên gói</span>
+                    <input
+                      type="text"
+                      maxLength={NAME_CHAR_LIMIT}
+                      value={editForm.name}
+                      onChange={(e) => handleEditChange('name', e.target.value)}
+                      className={formErrors.name ? styles.inputError : ''}
+                    />
+                    <span className={styles.charCount}>
+                      {editForm.name.length}/{NAME_CHAR_LIMIT}
+                    </span>
+                    {formErrors.name && <span className={styles.errorText}>{formErrors.name}</span>}
+                  </label>
+                  <label className={styles.editField}>
+                    <span>Phí hàng tháng (VND)</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={editForm.monthlyFee ? editForm.monthlyFee.toString() : ''}
+                      onChange={(e) => handleEditChange('monthlyFee', e.target.value)}
+                      className={formErrors.monthlyFee ? styles.inputError : ''}
+                    />
+                    {formErrors.monthlyFee && <span className={styles.errorText}>{formErrors.monthlyFee}</span>}
+                  </label>
+                </div>
+              </div>
               {detailLoading && (
                 <div className={styles.modalLoading}>
                   <div className={styles.spinner}></div>
@@ -479,8 +634,15 @@ export default function ServicePackageManagement() {
               )}
             </div>
             <div className={styles.modalActions}>
-              <button className={styles.cancelButton} onClick={handleCloseDetails}>
-                Đóng
+              <button className={styles.cancelButton} onClick={handleCloseEdit}>
+                Hủy
+              </button>
+              <button
+                className={styles.saveButton}
+                onClick={handleSaveBasicInfo}
+                disabled={!hasChanges || saving}
+              >
+                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
               </button>
             </div>
           </div>

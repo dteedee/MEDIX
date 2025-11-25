@@ -34,5 +34,12 @@ public class ServicePackageRepository : IServicePackageRepository
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == id);
     }
+
+    public async Task<ServicePackage> UpdateAsync(ServicePackage package)
+    {
+        _context.ServicePackages.Update(package);
+        await _context.SaveChangesAsync();
+        return package;
+    }
 }
 

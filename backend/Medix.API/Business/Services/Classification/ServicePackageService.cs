@@ -26,6 +26,21 @@ public class ServicePackageService : IServicePackageService
         return package == null ? null : MapToDto(package);
     }
 
+    public async Task<ServicePackageDto?> UpdateBasicInfoAsync(Guid id, ServicePackageUpdateRequest request)
+    {
+        var package = await _repository.GetByIdAsync(id);
+        if (package == null)
+        {
+            return null;
+        }
+
+        package.Name = request.Name.Trim();
+        package.MonthlyFee = request.MonthlyFee;
+
+        var updated = await _repository.UpdateAsync(package);
+        return MapToDto(updated);
+    }
+
     private static ServicePackageDto MapToDto(Models.Entities.ServicePackage package)
     {
         return new ServicePackageDto

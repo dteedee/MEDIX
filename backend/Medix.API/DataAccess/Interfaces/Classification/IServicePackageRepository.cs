@@ -6,5 +6,6 @@ public interface IServicePackageRepository
 {
     Task<List<ServicePackage>> GetTopAsync(int limit);
     Task<ServicePackage?> GetByIdAsync(Guid id);
+    Task<ServicePackage> UpdateAsync(ServicePackage package);
 }
 

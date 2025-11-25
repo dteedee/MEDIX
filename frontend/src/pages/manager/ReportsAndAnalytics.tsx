@@ -315,15 +315,15 @@ export default function ReportsAndAnalytics() {
               <div className={styles.additionalMetricContent}>
                 <div className={styles.additionalMetricLabel}>Tỷ lệ hoàn thành</div>
                 <div className={styles.additionalMetricValue}>
-                  {appointmentStats && appointmentStats.totalAppointments > 0
-                    ? ((appointmentStats.completed / appointmentStats.totalAppointments) * 100).toFixed(1)
+                  {appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.completed !== undefined
+                    ? (((appointmentStats.completed || 0) / appointmentStats.totalAppointments) * 100).toFixed(1)
                     : summary && summary.appointments.total > 0
                     ? '0.0'
                     : '0'}%
                 </div>
                 <div className={styles.additionalMetricSubtext}>
-                  {appointmentStats 
-                    ? `${appointmentStats.completed.toLocaleString('vi-VN')} / ${appointmentStats.totalAppointments.toLocaleString('vi-VN')} lịch hẹn`
+                  {appointmentStats && appointmentStats.completed !== undefined && appointmentStats.totalAppointments !== undefined
+                    ? `${(appointmentStats.completed || 0).toLocaleString('vi-VN')} / ${(appointmentStats.totalAppointments || 0).toLocaleString('vi-VN')} lịch hẹn`
                     : 'Lịch hẹn đã hoàn thành'}
                 </div>
               </div>
@@ -336,15 +336,15 @@ export default function ReportsAndAnalytics() {
               <div className={styles.additionalMetricContent}>
                 <div className={styles.additionalMetricLabel}>Tỷ lệ hủy</div>
                 <div className={styles.additionalMetricValue}>
-                  {appointmentStats && appointmentStats.totalAppointments > 0
-                    ? (((appointmentStats.cancelledByPatient + appointmentStats.cancelledByDoctor) / appointmentStats.totalAppointments) * 100).toFixed(1)
+                  {appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.cancelledByPatient !== undefined && appointmentStats.cancelledByDoctor !== undefined
+                    ? ((((appointmentStats.cancelledByPatient || 0) + (appointmentStats.cancelledByDoctor || 0)) / appointmentStats.totalAppointments) * 100).toFixed(1)
                     : summary && summary.appointments.total > 0
                     ? '0.0'
                     : '0'}%
                 </div>
                 <div className={styles.additionalMetricSubtext}>
-                  {appointmentStats
-                    ? `${(appointmentStats.cancelledByPatient + appointmentStats.cancelledByDoctor).toLocaleString('vi-VN')} lịch hẹn bị hủy`
+                  {appointmentStats && appointmentStats.cancelledByPatient !== undefined && appointmentStats.cancelledByDoctor !== undefined
+                    ? `${((appointmentStats.cancelledByPatient || 0) + (appointmentStats.cancelledByDoctor || 0)).toLocaleString('vi-VN')} lịch hẹn bị hủy`
                     : 'Lịch hẹn bị hủy'}
                 </div>
               </div>
@@ -374,15 +374,15 @@ export default function ReportsAndAnalytics() {
               <div className={styles.additionalMetricContent}>
                 <div className={styles.additionalMetricLabel}>Tỷ lệ đặt lại lịch</div>
                 <div className={styles.additionalMetricValue}>
-                  {appointmentStats && appointmentStats.totalAppointments > 0
-                    ? ((appointmentStats.BeforeAppoiment / appointmentStats.totalAppointments) * 100).toFixed(1)
+                  {appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.BeforeAppoiment !== undefined
+                    ? (((appointmentStats.BeforeAppoiment || 0) / appointmentStats.totalAppointments) * 100).toFixed(1)
                     : summary && summary.appointments.total > 0
                     ? '0.0'
                     : '0'}%
                 </div>
                 <div className={styles.additionalMetricSubtext}>
-                  {appointmentStats
-                    ? `${appointmentStats.BeforeAppoiment.toLocaleString('vi-VN')} lịch hẹn được đặt lại`
+                  {appointmentStats && appointmentStats.BeforeAppoiment !== undefined
+                    ? `${(appointmentStats.BeforeAppoiment || 0).toLocaleString('vi-VN')} lịch hẹn được đặt lại`
                     : 'Lịch hẹn được đặt lại'}
                 </div>
               </div>

@@ -745,23 +745,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className={styles.pageIntroCard}>
-        <div className={styles.introIcon}>
-          <i className="bi bi-stars"></i>
-        </div>
-        <div>
-          <div className={styles.introTitle}>Tất cả cấu hình quan trọng tại một nơi</div>
-          <p className={styles.introSubtitle}>
-            Các nhãn và mô tả đã được đơn giản hóa để bạn dễ dàng bật/tắt tính năng mà không cần hiểu thuật ngữ kỹ thuật.
-          </p>
-          <ul className={styles.introList}>
-            <li><i className="bi bi-toggle-on"></i>Nhìn nhanh trạng thái bảo mật, email, sao lưu.</li>
-            <li><i className="bi bi-pen"></i>Thay đổi thông tin liên hệ và thông báo bảo trì với hướng dẫn rõ ràng.</li>
-            <li><i className="bi bi-life-preserver"></i>Luôn có gợi ý giúp bạn chọn giá trị phù hợp cho người dùng cuối.</li>
-          </ul>
-        </div>
-      </div>
-
+      
       {/* System Overview Stats */}
 
 

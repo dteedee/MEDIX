@@ -89,6 +89,8 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 MissedByDoctor = stats.Count(a => a.StatusCode == "MissedByDoctor"),
                 NoShow = stats.Count(a => a.StatusCode == "NoShow"),
                 Completed = stats.Count(a => a.StatusCode == "Completed"),
+                MissedByPatient = stats.Count(a => a.StatusCode == "MissedByPatient"),
+                BeforeAppoinment = stats.Count(a => a.StatusCode == "BeforeAppoinment"),
                 TodayAppointmentsCount = stats.Count(a => a.AppointmentStartTime.Date == DateTime.Today)
             };
 

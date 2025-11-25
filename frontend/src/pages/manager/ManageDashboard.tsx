@@ -160,8 +160,13 @@ export const ManageDashboard: React.FC = () => {
         </div>
         <div className={styles.headerRight}>
           <div className={styles.dateTime}>
-            <i className="bi bi-calendar3"></i>
-            <span>{new Date().toLocaleDateString('vi-VN')}</span>
+            <div className={styles.dateIconWrapper}>
+              <i className={`bi bi-calendar3 ${styles.dateIcon}`}></i>
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>{new Date().toLocaleDateString('vi-VN')}</span>
+              <div className={styles.dateGlow}></div>
+            </div>
           </div>
         </div>
       </div>

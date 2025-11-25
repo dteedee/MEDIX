@@ -109,9 +109,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
         }
 
 
-
-
-
         [HttpPost("uploadAvatar")]
         [Authorize]
         public async Task<IActionResult> UploadAvatar([FromForm] IFormFile file, [FromServices] CloudinaryService cloudinaryService)

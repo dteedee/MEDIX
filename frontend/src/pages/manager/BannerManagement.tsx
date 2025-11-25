@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Calendar } from 'lucide-react';
 import { bannerService } from '../../services/bannerService';
 import { BannerDTO, CreateBannerRequest, UpdateBannerRequest } from '../../types/banner.types';
 import { useToast } from '../../contexts/ToastContext';
@@ -362,13 +363,34 @@ export default function BannerManagement() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Quản lý Banner</h1>
-          <p className={styles.subtitle}>Quản lý và theo dõi các banner quảng cáo</p>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <i className="bi bi-image" style={{ fontSize: '28px' }}></i>
+            </div>
+            <div>
+              <h1 className={styles.title}>Quản lý Banner</h1>
+              <p className={styles.subtitle}>Quản lý và theo dõi các banner quảng cáo</p>
+            </div>
+          </div>
         </div>
-        <button onClick={handleCreateNew} className={styles.btnCreate}>
-          <i className="bi bi-plus-lg"></i>
-          Tạo mới
-        </button>
+        <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <Calendar size={20} className={styles.dateIcon} />
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={styles.dateGlow}></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -480,6 +502,10 @@ export default function BannerManagement() {
           {(filters.statusFilter !== 'all' || filters.dateFrom || filters.dateTo) && (
             <span className={styles.filterBadge}></span>
           )}
+        </button>
+        <button onClick={handleCreateNew} className={styles.btnCreate}>
+          <i className="bi bi-plus-lg"></i>
+          Tạo mới
         </button>
       </div>
 

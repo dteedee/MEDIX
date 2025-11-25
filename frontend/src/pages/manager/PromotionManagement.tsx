@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Calendar } from 'lucide-react';
 import promotionService from '../../services/promotionService';
 import { PromotionDto, normalizeIsActive, PromotionTargetDto } from '../../types/promotion.types';
 import { useToast } from '../../contexts/ToastContext';
@@ -434,13 +435,15 @@ export default function PromotionManagement() {
             </p>
           </div>
         </div>
-        <div className={styles.headerDate}>
-          <div className={styles.dateIcon}>
-            <i className="bi bi-calendar3"></i>
-          </div>
-          <div>
-            <p className={styles.dateLabel}>Hôm nay</p>
-            <strong>{todayLabel}</strong>
+        <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <Calendar size={20} className={styles.dateIcon} />
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>{todayLabel}</span>
+              <div className={styles.dateGlow}></div>
+            </div>
           </div>
         </div>
       </section>

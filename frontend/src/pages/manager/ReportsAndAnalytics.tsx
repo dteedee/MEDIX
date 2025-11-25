@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Calendar } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import dashboardService from '../../services/dashboardService'
 import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto, ManagerDashboardSummaryDto, TopRatedDoctorDto } from '../../types/dashboard.types'
@@ -150,12 +151,32 @@ export default function ReportsAndAnalytics() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Báo cáo & Thống kê</h1>
-          <p className={styles.subtitle}>Phân tích và theo dõi hiệu suất hệ thống</p>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <i className="bi bi-graph-up-arrow" style={{ fontSize: '28px' }}></i>
+            </div>
+            <div>
+              <h1 className={styles.title}>Báo cáo & Thống kê</h1>
+              <p className={styles.subtitle}>Phân tích và theo dõi hiệu suất hệ thống</p>
+            </div>
+          </div>
         </div>
         <div className={styles.headerRight}>
-          <div className={styles.periodSelector}>
-           
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <Calendar size={20} className={styles.dateIcon} />
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={styles.dateGlow}></div>
+            </div>
           </div>
           <button className={styles.exportButton} onClick={handleExportReport}>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

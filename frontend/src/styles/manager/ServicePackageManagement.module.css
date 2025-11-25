@@ -100,41 +100,16 @@
   cursor: not-allowed;
 }
 
-.listCard {
+.tableCard {
   background: white;
   border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
   overflow: hidden;
 }
 
-.tableHeader {
-  padding: 24px;
-  border-bottom: 1px solid #e5e7eb;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.tableHeader h3 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-.tableActions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.resultsCount {
-  font-size: 14px;
-  color: #6b7280;
-}
-
 /* Table */
-.tableContainer {
+.tableWrapper {
   overflow-x: auto;
 }
 
@@ -143,30 +118,63 @@
   border-collapse: collapse;
 }
 
-.table th {
-  background: #f9fafb;
-  padding: 16px 12px;
-  text-align: left;
-  font-weight: 600;
-  color: #374151;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 14px;
+.table thead {
+  background: linear-gradient(135deg, #637ff7 0%, #8457d9 100%);
 }
 
-.table th.sortable {
+.table th {
+  padding: 18px 16px;
+  text-align: left;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: white;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sortable {
   cursor: pointer;
   user-select: none;
-  transition: color 0.2s ease;
+  transition: background 0.2s ease;
 }
 
-.table th.sortable:hover {
-  color: #667eea;
+.sortable:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tableRow {
+  border-bottom: 1px solid #f3f4f6;
+  transition: all 0.3s ease;
+}
+
+.tableRow:hover {
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  transform: scale(1.01);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .table td {
   padding: 16px 12px;
   border-bottom: 1px solid #f3f4f6;
   font-size: 14px;
+  color: #4b5563;
+}
+
+.tableFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #fdfefe;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+}
+
+.resultsSummary {
+  font-size: 14px;
+  color: #6b7280;
 }
 
 .table tbody tr:hover {
@@ -298,90 +306,95 @@
 }
 
 .actionButton {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border: none;
-  border-radius: 6px;
-  background: #f3f4f6;
-  color: #6b7280;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #4c1d95;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(76, 29, 149, 0.15);
 }
 
 .actionButton:hover {
-  background: #e5e7eb;
-  color: #374151;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(76, 29, 149, 0.2);
 }
 
-.actionButton.deleteButton:hover {
-  background: #fee2e2;
-  color: #dc2626;
+.viewButton {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+.editButton {
+  background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+  color: white;
 }
 
 /* Pagination */
 .pagination {
-  padding: 24px;
-  border-top: 1px solid #e5e7eb;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 16px;
 }
 
 .paginationInfo {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  color: #6b7280;
 }
 
 .pageSizeSelect {
-  padding: 4px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
   font-size: 14px;
   background: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .paginationControls {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 8px;
 }
 
 .paginationButton {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e5e7eb;
   background: white;
-  color: #374151;
-  border-radius: 6px;
+  color: #4b5563;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s ease;
 }
 
 .paginationButton:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #9ca3af;
+  border-color: #a5b4fc;
+  color: #4338ca;
+  box-shadow: 0 4px 12px rgba(67, 56, 202, 0.15);
+  transform: translateY(-1px);
 }
 
 .paginationButton:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-.paginationButton.active {
-  background: #667eea;
-  color: white;
-  border-color: #667eea;
-}
-
-.paginationEllipsis {
-  padding: 8px 4px;
-  color: #9ca3af;
-  font-size: 14px;
+.paginationStatus {
+  min-width: 60px;
+  text-align: center;
+  font-weight: 600;
+  color: #1f2937;
 }
 
 /* Empty State */
@@ -546,6 +559,47 @@
   color: #111827;
 }
 
+.editField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editField span {
+  font-weight: 600;
+  color: #374151;
+}
+
+.editField input {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.editField input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.inputError {
+  border-color: #f87171 !important;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.2);
+}
+
+.errorText {
+  color: #dc2626;
+  font-size: 12px;
+}
+
+.charCount {
+  align-self: flex-end;
+  font-size: 12px;
+  color: #6b7280;
+}
+
 .featuresSection {
   border-top: 1px solid #e5e7eb;
   padding-top: 16px;
@@ -607,19 +661,22 @@
   border-color: #9ca3af;
 }
 
-.editButton {
+.saveButton {
   padding: 10px 20px;
   border: none;
-  background: #667eea;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.2s ease;
+  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
 }
 
-.editButton:hover {
-  background: #5a67d8;
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .deleteButton {

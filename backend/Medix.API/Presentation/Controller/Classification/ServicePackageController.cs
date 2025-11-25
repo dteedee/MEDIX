@@ -2,6 +2,7 @@ using System.Linq;
 using Medix.API.Business.Interfaces.Classification;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Medix.API.Models.DTOs;
 
 namespace Medix.API.Presentation.Controller.Classification;
 
@@ -42,6 +43,34 @@ public class ServicePackageController : ControllerBase
         }
 
         return Ok(package);
+    }
+
+    [HttpPut("{id:guid}/basic-info")]
+    [Authorize(Roles = "Manager")]
+    public async Task<IActionResult> UpdateBasicInfo(Guid id, [FromBody] ServicePackageUpdateRequest request)
+    {
+        if (request == null)
+        {
+            return BadRequest("Payload is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return BadRequest("Tên gói không được bỏ trống.");
+        }
+
+        if (request.MonthlyFee <= 0)
+        {
+            return BadRequest("Phí hàng tháng phải lớn hơn 0.");
+        }
+
+        var result = await _servicePackageService.UpdateBasicInfoAsync(id, request);
+        if (result == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(result);
     }
 }
 

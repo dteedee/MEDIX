@@ -13,3 +13,8 @@ export interface ServicePackageModel extends ServicePackageDto {
   featuresList: string[];
 }
 
+export interface ServicePackageUpdateRequest {
+  name: string;
+  monthlyFee: number;
+}
+

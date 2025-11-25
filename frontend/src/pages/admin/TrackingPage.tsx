@@ -565,24 +565,9 @@ export default function TrackingPage() {
       </div>
 
       <div className={userStyles.contentCard}>
-        <div className={userStyles.cardHeader}>
-          <h3>Nhật ký hoạt động</h3>
-          <div className={userStyles.cardActions}></div>
-        </div>
+        
 
-        <div className={styles.auditInfoCard}>
-          <div className={styles.auditInfoIcon}>
-            <i className="bi bi-shield-check"></i>
-          </div>
-          <div>
-            <div className={styles.auditInfoTitle}>Giám sát thao tác một cách dễ hiểu</div>
-            <ul className={styles.auditInfoList}>
-              <li>Theo dõi ai đang làm gì với từng đối tượng trong hệ thống</li>
-              <li>Lọc nhanh theo người dùng, hành động hoặc mốc thời gian</li>
-              <li>Bấm “Xem chi tiết” để xem dữ liệu trước và sau khi thay đổi</li>
-            </ul>
-          </div>
-        </div>
+       
 
         {/* Search and Filter */}
         <div className={userStyles.searchSection}>

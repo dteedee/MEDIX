@@ -1,5 +1,5 @@
 import { apiClient } from '../lib/apiClient';
-import { ServicePackageDto, ServicePackageModel } from '../types/service-package.types';
+import { ServicePackageDto, ServicePackageModel, ServicePackageUpdateRequest } from '../types/service-package.types';
 
 const BASE = '/ServicePackage';
 
@@ -27,6 +27,11 @@ export const servicePackageService = {
 
   async getById(id: string): Promise<ServicePackageModel> {
     const response = await apiClient.get<ServicePackageDto>(`${BASE}/${id}`);
+    return toModel(response.data);
+  },
+
+  async updateBasicInfo(id: string, payload: ServicePackageUpdateRequest): Promise<ServicePackageModel> {
+    const response = await apiClient.put<ServicePackageDto>(`${BASE}/${id}/basic-info`, payload);
     return toModel(response.data);
   },
 };

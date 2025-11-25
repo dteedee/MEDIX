@@ -29,6 +29,13 @@ export interface MedicationUpdateDto {
   isActive: boolean;
 }
 
+export interface MedicationSearchResult {
+  id: string;
+  name: string;
+  dosage?: string;
+  unit?: string;
+}
+
 class MedicationService {
   /**
    * Lấy tất cả thuốc (bao gồm cả inactive) - dành cho manager
@@ -69,6 +76,16 @@ class MedicationService {
     const response = await apiClient.patch<{ id: string; isActive: boolean; message: string }>(
       `/Medication/${id}/toggle-active`
     );
+    return response.data;
+  }
+
+  /**
+   * Tìm kiếm thuốc để gợi ý khi kê đơn
+   */
+  async searchMedications(query: string): Promise<MedicationSearchResult[]> {
+    const response = await apiClient.get<MedicationSearchResult[]>('/Medication/search', {
+      params: { query },
+    });
     return response.data;
   }
 }

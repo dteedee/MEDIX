@@ -13,44 +13,91 @@ namespace Medix.API.Business.Services.Classification
     {
 
         private readonly IPatientHealthReminderRepository patientHealthReminderRepository;
+        private readonly IAppointmentService appointmentService;
 
 
-        public PatientHealthReminderService(IPatientHealthReminderRepository patientHealthReminderRepository)
+        public PatientHealthReminderService(IPatientHealthReminderRepository patientHealthReminderRepository, IAppointmentService appointmentService)
         {
             this.patientHealthReminderRepository = patientHealthReminderRepository;
+            this.appointmentService = appointmentService;
         }
 
-        public async Task<PatientHealthReminder> SendHealthReminderAppointmentAsync(CreateAppointmentDto createAppointment)
+        public async Task<List<PatientHealthReminder>> SendHealthReminderAppointmentAsync(AppointmentDto createAppointment)
         {
-            var appointmentTime = createAppointment.AppointmentStartTime ?? DateTime.MinValue;
-            var description = $"Bạn có một cuộc hẹn với bác sĩ vào ngày {appointmentTime:dd/MM/yyyy} lúc {appointmentTime:HH:mm}. Vui lòng đến đúng giờ.";
+            var appointmentTime = createAppointment.AppointmentStartTime ;
+       
+            // Nếu appointmentTime không hợp lệ thì trả về danh sách rỗng
+            if (appointmentTime == DateTime.MinValue)
+                return new List<PatientHealthReminder>();
 
-            var healthReminder = new PatientHealthReminder
+            var reminders = new List<PatientHealthReminder>();
+
+            // 1) Nhắc 1 ngày trước vào 08:00 sáng của ngày trước đó
+            var dayBeforeAt8 = appointmentTime.Date.AddDays(-1).AddHours(8);
+            reminders.Add(new PatientHealthReminder
             {
-                Title = "Nhắc nhở lịch khám",
-                Description = description,
-                PatientId = (Guid)createAppointment.PatientId,
+                Title = "Nhắc nhở lịch khám - 1 ngày trước",
+                Description = $"Bạn có một cuộc hẹn với bác sĩ vào ngày {appointmentTime:dd/MM/yyyy} lúc {appointmentTime:HH:mm}. Vui lòng đến đúng giờ.",
+                PatientId = (Guid)createAppointment.PatientID,
+                RelatedAppointmentId = createAppointment.Id,
                 ReminderTypeCode = "FollowUp",
-                ScheduledDate = appointmentTime.AddDays(-1), 
+                ScheduledDate = dayBeforeAt8
+            });
 
-            };
-
-            var scheduledTime = appointmentTime.AddDays(-1);
-            if (scheduledTime > DateTime.Now)
+            // 2) Nhắc 4 giờ trước start time
+            var fourHoursBefore = appointmentTime.AddHours(-4);
+            reminders.Add(new PatientHealthReminder
             {
-                BackgroundJob.Schedule<IPatientHealthReminderService>(
-                    service=>service.ExecuteSendReminderAsync(healthReminder)
-                    , scheduledTime);
+                Title = "Nhắc nhở lịch khám - 4 giờ trước",
+                Description = $"Bạn có một cuộc hẹn với bác sĩ vào ngày {appointmentTime:dd/MM/yyyy} lúc {appointmentTime:HH:mm}.",
+                PatientId = (Guid)createAppointment.PatientID,
+                RelatedAppointmentId = createAppointment.Id,
+                ReminderTypeCode = "FollowUp",
+                ScheduledDate = fourHoursBefore
+            });
 
+            // 3) Nhắc 2 giờ trước start time
+            var twoHoursBefore = appointmentTime.AddHours(-2);
+            reminders.Add(new PatientHealthReminder
+            {
+                Title = "Nhắc nhở lịch khám - 2 giờ trước",
+                Description = $"Bạn có một cuộc hẹn với bác sĩ vào ngày {appointmentTime:dd/MM/yyyy} lúc {appointmentTime:HH:mm}.",
+                PatientId = (Guid)createAppointment.PatientID,
+                RelatedAppointmentId = createAppointment.Id,
+                ReminderTypeCode = "FollowUp",
+                ScheduledDate = twoHoursBefore
+            });
+
+            // Đặt lịch cho những reminder có thời gian > now
+            foreach (var reminder in reminders)
+            {
+                if (reminder.ScheduledDate > DateTime.Now)
+                {
+                  
+                    BackgroundJob.Schedule<IPatientHealthReminderService>(
+                        service => service.ExecuteSendReminderAsync(reminder),
+                        reminder.ScheduledDate
+                    );
                 }
-            return healthReminder;
+                else
+                {
+                   
+                    BackgroundJob.Enqueue<IPatientHealthReminderService>(s => s.ExecuteSendReminderAsync(reminder));
+                }
+            }
+
+            return reminders;
         }
 
-          
-        
+
+
+
 
         public async Task ExecuteSendReminderAsync(PatientHealthReminder healthReminder)
         {
+            var x = appointmentService.GetByIdAsync(healthReminder.Id).Result;
+            if (x.StatusCode != "Completed") { return; }
+
             await patientHealthReminderRepository.SendHealthReminderAsync(healthReminder);
         }
 

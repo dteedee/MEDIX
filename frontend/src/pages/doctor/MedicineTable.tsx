@@ -3,11 +3,14 @@
 import React, { useState } from 'react';
 import "../../styles/doctor/MedicineTable.css"
 import { Prescription } from "../../types/medicalRecord.types";
+import MedicineSearchableInput from './MedicineSearchableInput';
+import { MedicationSearchResult } from '../../services/medicationService';
 
 interface MedicineTableProps {
   medicines: Prescription[];
   onDelete: (id: string) => void;
   onUpdate: (id: string, field: keyof Prescription, value: any) => void;
+  onSelectMedication: (id: string, updates: Partial<Prescription>) => void;
   isEditable: boolean;
 }
 
@@ -17,8 +20,19 @@ interface MedicationDetailsModalProps {
   onUpdate: (id: string, field: keyof Prescription, value: any) => void;
 }
 
-export default function MedicineTable({ medicines, onDelete, onUpdate, isEditable }: MedicineTableProps) {
+export default function MedicineTable({ medicines, onDelete, onUpdate, onSelectMedication, isEditable }: MedicineTableProps) {
   const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
+
+  const handleSelectMedication = (prescriptionId: string, suggestion: MedicationSearchResult) => {
+    const updates: Partial<Prescription> = {
+      medicationName: suggestion.name,
+      medicationId: suggestion.id,
+    };
+
+    updates.dosage = suggestion.dosage || '';
+
+    onSelectMedication(prescriptionId, updates);
+  };
 
   return (
     <div className="medicine-table-wrapper">
@@ -38,15 +52,21 @@ export default function MedicineTable({ medicines, onDelete, onUpdate, isEditabl
           {medicines.map((medicine) => (
             <tr key={medicine.id}>
               <td>
-                {/* Thay thế component tìm kiếm bằng input text thông thường */}
-                <input
-                  type="text"
-                  value={medicine.medicationName}
-                  onChange={(e) => onUpdate(medicine.id, "medicationName", e.target.value)}
-                  className="table-input"
-                  placeholder="Nhập tên thuốc"
-                  disabled={!isEditable}
-                />
+                {isEditable ? (
+                  <MedicineSearchableInput
+                    value={medicine.medicationName || ''}
+                    disabled={!isEditable}
+                    onInputChange={(text) => onUpdate(medicine.id, 'medicationName', text)}
+                    onSelect={(suggestion) => handleSelectMedication(medicine.id, suggestion)}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={medicine.medicationName}
+                    className="table-input"
+                    disabled
+                  />
+                )}
               </td>
               <td>
                 <input

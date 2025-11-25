@@ -210,7 +210,7 @@ function DoctorRegister() {
             console.log('Registration successful');
             Swal.fire({
                 title: 'Đăng ký thành công!',
-                text: 'Bạn sẽ được chuyển về trang chủ',
+                text: 'Tài khoản của bạn đang chờ xác minh. Hệ thống sẽ tự động quay lại trang chủ.',
                 icon: 'success',
                 confirmButtonText: 'OK',
             }).then(() => {

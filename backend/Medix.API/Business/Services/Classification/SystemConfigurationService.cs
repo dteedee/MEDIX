@@ -136,7 +136,15 @@ namespace Medix.API.Business.Services.Classification
                 }
             }
 
-            entity.ConfigValue = value.ToString()!;
+            var newValue = value?.ToString() ?? string.Empty;
+
+            if (string.Equals(entity.ConfigValue, newValue, StringComparison.Ordinal))
+            {
+                // Không có thay đổi thực sự, bỏ qua để tránh tạo audit log rỗng
+                return;
+            }
+
+            entity.ConfigValue = newValue;
             entity.UpdatedBy = updatedBy;
             entity.UpdatedAt = DateTime.UtcNow;
 
@@ -223,9 +231,16 @@ namespace Medix.API.Business.Services.Classification
                     ? "db-backup"
                     : SanitizeFileName(backupName!);
 
-                var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
-                var fileName = $"{baseName}_{timestamp}.bak";
+                var fileName = $"{baseName}.bak";
                 var filePath = Path.Combine(_dbBackupFolder, fileName);
+
+                foreach (var file in Directory.GetFiles(_dbBackupFolder, "*.bak"))
+                {
+                    if (!file.Equals(filePath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.Delete(file);
+                    }
+                }
 
                 await using var connection = new SqlConnection(_connectionString);
                 await connection.OpenAsync();
@@ -240,8 +255,6 @@ namespace Medix.API.Business.Services.Classification
                     command.CommandTimeout = 0;
                     await command.ExecuteNonQueryAsync();
                 }
-
-                await CleanupOldDatabaseBackupsAsync();
 
                 _logger.LogInformation("Database backup created at {Path}", filePath);
                 return filePath;
@@ -294,6 +307,61 @@ namespace Medix.API.Business.Services.Classification
 
             var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             return Task.FromResult<FileStream?>(stream);
+        }
+
+        public async Task RestoreDatabaseAsync(string backupFilePath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(backupFilePath))
+                {
+                    throw new ArgumentException("Backup file path is required.", nameof(backupFilePath));
+                }
+
+                Directory.CreateDirectory(_dbBackupFolder);
+
+                var sanitizedFileName = Path.GetFileName(backupFilePath);
+                var filePath = Path.Combine(_dbBackupFolder, sanitizedFileName);
+
+                if (!File.Exists(filePath))
+                {
+                    throw new FileNotFoundException("Backup file not found.", filePath);
+                }
+
+                var builder = new SqlConnectionStringBuilder(_connectionString);
+                var databaseName = builder.InitialCatalog;
+                if (string.IsNullOrWhiteSpace(databaseName))
+                {
+                    throw new InvalidOperationException("Initial catalog is required to restore the database.");
+                }
+
+                var masterBuilder = new SqlConnectionStringBuilder(builder.ConnectionString)
+                {
+                    InitialCatalog = "master"
+                };
+
+                await using var connection = new SqlConnection(masterBuilder.ConnectionString);
+                await connection.OpenAsync();
+
+                var escapedPath = filePath.Replace("'", "''");
+                var commandText = $@"
+ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+RESTORE DATABASE [{databaseName}] FROM DISK = '{escapedPath}' WITH REPLACE;
+ALTER DATABASE [{databaseName}] SET MULTI_USER;";
+
+                await using var command = new SqlCommand(commandText, connection)
+                {
+                    CommandTimeout = 0
+                };
+
+                await command.ExecuteNonQueryAsync();
+                _logger.LogInformation("Database restored successfully from {BackupFile}", filePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to restore database from backup.");
+                throw;
+            }
         }
 
         public async Task<EmailServerSettingsDto> GetEmailServerSettingsAsync()

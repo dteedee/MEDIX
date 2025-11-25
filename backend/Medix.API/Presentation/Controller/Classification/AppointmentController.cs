@@ -10,6 +10,7 @@ using Medix.API.Models.DTOs.Wallet;
 using Medix.API.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Numerics;
 using System.Security.Claims;
 
 namespace Medix.API.Presentation.Controllers
@@ -31,6 +32,7 @@ namespace Medix.API.Presentation.Controllers
         private const string PatientCancelRefundConfigKey = "APPOINTMENT_PATIENT_CANCEL_REFUND_PERCENT";
         private readonly IUserPromotionService userPromotionService;
         private readonly IPromotionService promotionService;
+       
 
         private readonly INotificationService notificationService;
 
@@ -168,7 +170,17 @@ namespace Medix.API.Presentation.Controllers
 
                 await userPromotionService.DeactivatePromotionAsync(Guid.Parse(dto.UserPromotionID));
             }   
-            await _patientHealthReminderService.SendHealthReminderAppointmentAsync(dto);
+            await _patientHealthReminderService.SendHealthReminderAppointmentAsync(created);
+            await notificationService.CreateNotificationAsync(
+            doctor.UserId,
+              "Thông báo lịch hẹn mới",
+                $"Bạn có một lịch hẹn mới từ bệnh nhân {user.FullName} vào lúc {dto.AppointmentStartTime?.ToString("g")}. Vui lòng kiểm tra để chuẩn bị.","Annouce"
+
+       );
+
+            await notificationService.CreateNotificationAsync(user.Id, "Thông báo lịch hẹn mới", $"Lịch hẹn của bạn vào lúc {dto.AppointmentStartTime?.ToString("g")} đã được sắp xếp. Vui lòng kiểm tra trong Lịch hẹn", "Annouce");
+
+
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
@@ -177,7 +189,8 @@ namespace Medix.API.Presentation.Controllers
         {
             if (id != dto.Id)
                 return BadRequest("Mismatched appointment ID");
-         
+            dto.AppointmentStartTime = DateTime.Now;
+            dto.AppointmentEndTime = DateTime.Now.AddHours(1);
 
             var updated = await _service.UpdateAsync(dto);
             if (updated == null)
@@ -217,8 +230,15 @@ namespace Medix.API.Presentation.Controllers
                 MedicalInfo = appoint.MedicalInfo,
             };
 
-
+            var patient = await _patientService.GetByIdAsync((Guid)appoint.PatientID);
+            await notificationService.CreateNotificationAsync(
+       patient.UserId,
+       "Kết quả khám bệnh đã có",
+       $"Bác sĩ đã hoàn tất buổi khám lúc {dto.AppointmentStartTime} và cập nhật kết quả. Vui lòng truy cập lịch hẹn để xem chi tiết.",
+       "Annouce"
+   );
             var updated = await _service.UpdateAsync(dto);
+
             if (updated == null)
                 return NotFound();
 

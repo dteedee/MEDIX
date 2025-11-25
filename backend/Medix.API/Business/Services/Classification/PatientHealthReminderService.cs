@@ -13,13 +13,15 @@ namespace Medix.API.Business.Services.Classification
     {
 
         private readonly IPatientHealthReminderRepository patientHealthReminderRepository;
-        private readonly IAppointmentService appointmentService;
+        private readonly IAppointmentRepository appointmentService;
+        private readonly IMedicalRecordRepository medicalRecordRepository;
 
 
-        public PatientHealthReminderService(IPatientHealthReminderRepository patientHealthReminderRepository, IAppointmentService appointmentService)
+        public PatientHealthReminderService(IPatientHealthReminderRepository patientHealthReminderRepository, IAppointmentRepository appointmentService, IMedicalRecordRepository medicalRecordRepository)
         {
             this.patientHealthReminderRepository = patientHealthReminderRepository;
             this.appointmentService = appointmentService;
+            this.medicalRecordRepository = medicalRecordRepository;
         }
 
         public async Task<List<PatientHealthReminder>> SendHealthReminderAppointmentAsync(AppointmentDto createAppointment)
@@ -95,8 +97,9 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task ExecuteSendReminderAsync(PatientHealthReminder healthReminder)
         {
-            var x = appointmentService.GetByIdAsync(healthReminder.Id).Result;
-            if (x.StatusCode != "Completed") { return; }
+            var x = await appointmentService.GetByIdAsync((Guid)healthReminder.RelatedAppointmentId);
+            if (x.StatusCode != "Completed") {
+                return; }
 
             await patientHealthReminderRepository.SendHealthReminderAsync(healthReminder);
         }
@@ -106,72 +109,88 @@ namespace Medix.API.Business.Services.Classification
             throw new NotImplementedException();
         }
 
-        public async Task<PatientHealthReminder> sendHealthReminderPrescription(Prescription prescription)
+        public async Task<PatientHealthReminder> sendHealthReminderPrescription(List<Prescription> prescriptions)
         {
-            // Parse duration từ string sang số ngày
-            int durationDays = ParseDurationToDays(prescription.Duration);
+            if (prescriptions == null || !prescriptions.Any())
+                throw new ArgumentException("Danh sách prescription rỗng");
 
-            if (durationDays <= 0)
+            PatientHealthReminder? firstScheduled = null;
+            var now = DateTime.Now;
+
+            foreach (var prescription in prescriptions)
             {
-                throw new ArgumentException("Duration không hợp lệ hoặc không thể parse");
-            }
-
-            var startDate = prescription.CreatedAt.AddDays(1).Date; // Bắt đầu từ ngày hôm sau, lúc 00:00
-            var endDate = prescription.CreatedAt.AddDays(durationDays).Date;
-
-            // Lấy PatientId từ MedicalRecord -> Appointment -> Patient
-            var patientId = prescription.MedicalRecord?.Appointment?.PatientId
-                ?? throw new ArgumentException("Không tìm thấy thông tin bệnh nhân");
-
-            var medicationName = prescription.MedicationName;
-            var dosage = prescription.Dosage ?? "theo chỉ định";
-            var frequency = prescription.Frequency ?? "theo toa";
-
-            // Lên lịch job cho từng ngày
-            for (DateTime currentDate = startDate; currentDate <= endDate; currentDate = currentDate.AddDays(1))
-            {
-                // Đặt giờ nhắc nhở vào 8:00 sáng mỗi ngày
-                var scheduledTime = currentDate.AddHours(8);
-
-                var description = $"🔔 Nhắc nhở uống thuốc\n\n" +
-                                $"- Thuốc: {medicationName}\n" +
-                                $"- Liều lượng: {dosage}\n" +
-                                $"- Tần suất: {frequency}\n" +
-                                $"- Ngày: {currentDate:dd/MM/yyyy}\n\n" +
-                                $"Vui lòng uống thuốc đúng giờ theo chỉ định của bác sĩ.";
-
-                var healthReminder = new PatientHealthReminder
+                // Try to parse duration (fall back to 0 => skip)
+                int durationDays = 0;
+                try
                 {
-                    Id = Guid.NewGuid(),
-                    Title = $"Nhắc uống thuốc: {medicationName}",
-                    Description = description,
-                    PatientId = patientId,
-                    ReminderTypeCode = "Medication",
-                    ScheduledDate = scheduledTime,
-                    IsRecurring = false,
-                    IsCompleted = true,
-                    CreatedAt = DateTime.Now
-                };
-
-                // Chỉ lên lịch nếu thời gian chưa qua
-                if (scheduledTime > DateTime.Now)
+                    durationDays = ParseDurationToDays(prescription.Duration);
+                }
+                catch
                 {
-                    BackgroundJob.Schedule<IPatientHealthReminderService>(
-                        service => service.ExecuteSendReminderAsync(healthReminder)
-                        , scheduledTime);
+                    durationDays = 0;
+                }
+
+                if (durationDays <= 0)
+                    continue; // skip invalid/unknown duration
+
+                // Start the first reminder the day after prescription.CreatedAt at 08:00
+                var startDate = prescription.CreatedAt.AddDays(1).Date;
+                var endDate = startDate.AddDays(durationDays - 1).Date; // inclusive
+
+                var app = appointmentService.GetByIdAsync(prescription.MedicalRecord.AppointmentId);
+                var patientId = app.Result.PatientId;
+
+
+
+                var medicationName = string.IsNullOrWhiteSpace(prescription.MedicationName) ? "Thuốc" : prescription.MedicationName;
+                var dosage = !string.IsNullOrWhiteSpace(prescription.Dosage) ? prescription.Dosage : "theo chỉ định";
+                var frequency = !string.IsNullOrWhiteSpace(prescription.Frequency) ? prescription.Frequency : "theo toa";
+
+                for (var current = startDate; current <= endDate; current = current.AddDays(1))
+                {
+                    var scheduledTime = current.AddHours(8); // 08:00 each day
+
+                    var description = $"🔔 Nhắc nhở uống thuốc\n\n" +
+                                      $"- Thuốc: {medicationName}\n" +
+                                      $"- Liều lượng: {dosage}\n" +
+                                      $"- Tần suất: {frequency}\n" +
+                                      $"- Ngày: {current:dd/MM/yyyy}\n\n" +
+                                      "Vui lòng uống thuốc đúng giờ theo chỉ định của bác sĩ.";
+
+                    var healthReminder = new PatientHealthReminder
+                    {
+                        Id = Guid.NewGuid(),
+                        Title = $"Nhắc uống thuốc: {medicationName}",
+                        Description = description,
+                        PatientId = patientId,
+                        ReminderTypeCode = "Medication",
+                        ScheduledDate = scheduledTime,
+                        IsRecurring = false,
+                        IsCompleted = false,
+                        RelatedAppointmentId = null,
+                        CreatedAt = now
+                    };
+
+                    // Schedule job: if scheduledTime is in the future -> schedule; otherwise enqueue immediately.
+                    if (scheduledTime > now)
+                    {
+                        BackgroundJob.Schedule<IPatientHealthReminderService>(
+                            service => service.ExecuteSendReminderAsync(healthReminder),
+                            scheduledTime);
+                    }
+                    else
+                    {
+                        BackgroundJob.Enqueue<IPatientHealthReminderService>(s => s.ExecuteSendReminderAsync(healthReminder));
+                    }
+
+                    firstScheduled ??= healthReminder;
                 }
             }
 
-            // Trả về reminder đầu tiên làm sample
-            return new PatientHealthReminder
-            {
-                Title = $"Nhắc uống thuốc: {medicationName}",
-                Description = $"Đã lên lịch {durationDays} ngày nhắc nhở uống thuốc",
-                PatientId = patientId,
-                ReminderTypeCode = "Medication",
-                ScheduledDate = startDate.AddHours(8),
-                CreatedAt = DateTime.Now
-            };
+            if (firstScheduled == null)
+                throw new ArgumentException("Không có toa thuốc hợp lệ để lên lịch nhắc");
+
+            return firstScheduled;
         }
 
         private int ParseDurationToDays(string? duration)

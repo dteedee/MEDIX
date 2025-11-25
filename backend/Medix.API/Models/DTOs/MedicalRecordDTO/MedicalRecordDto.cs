@@ -1,4 +1,7 @@
-﻿namespace Medix.API.Models.DTOs.MedicalRecordDTO
+﻿using Medix.API.Business.Helper;
+using System.Text.Json.Serialization;
+
+namespace Medix.API.Models.DTOs.MedicalRecordDTO
 {
     public class MedicalRecordDto
     {
@@ -25,9 +28,11 @@
 
         // --- Thông tin bác sĩ & cuộc hẹn ---
         public string DoctorName { get; set; } = null!;
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime AppointmentDate { get; set; }
-
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime AppointmentStartDate { get; set; }
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime AppointmentEndDate { get; set; }
 
         public string StatusAppointment { get; set; }

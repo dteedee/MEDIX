@@ -197,6 +197,7 @@
   gap: 1rem; /* Space between buttons */
   justify-content: flex-end; /* Align buttons to the right */
   align-items: center;
+  flex-wrap: wrap;
 }
 
 /* Secondary button style */
@@ -215,6 +216,52 @@
 .btn-secondary:hover:not(:disabled) {
   background-color: #f9fafb; /* Slightly grayer on hover */
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Cancel appointment button style */
+.btn-cancel {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  background-color: #dc3545;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background-color: #c82333;
+  box-shadow: 0 2px 4px 0 rgba(220, 53, 69, 0.2);
+}
+
+.btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Complete appointment button style */
+.btn-complete {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  background-color: #28a745;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.btn-complete:hover:not(:disabled) {
+  background-color: #218838;
+  box-shadow: 0 2px 4px 0 rgba(40, 167, 69, 0.2);
+}
+
+.btn-complete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {

@@ -40,7 +40,7 @@ namespace Medix.API.Business.Services.Classification
 
             await _repository.AddAsync(entity);
 
-            await patientHealthReminderService.sendHealthReminderPrescription(entity);
+            //await patientHealthReminderService.sendHealthReminderPrescription(entity);
             return _mapper.Map<PrescriptionDto>(entity);
         }
 

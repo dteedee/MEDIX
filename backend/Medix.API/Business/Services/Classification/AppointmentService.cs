@@ -77,7 +77,27 @@ namespace Medix.API.Business.Services.Classification
         public async Task<AppointmentDto?> GetByIdAsync(Guid id)
         {
             var entity = await _repository.GetByIdAsync(id);
-            return entity == null ? null : _mapper.Map<AppointmentDto>(entity);
+            var result = new AppointmentDto
+            {AppointmentEndTime = entity.AppointmentEndTime,
+                AppointmentStartTime = entity.AppointmentStartTime,
+                CreatedAt = entity.CreatedAt,
+                UpdatedAt = entity.UpdatedAt,
+                DiscountAmount = entity.DiscountAmount,
+                DurationMinutes = entity.DurationMinutes,
+                Id = entity.Id,
+                ConsultationFee = entity.ConsultationFee,
+                DoctorID = entity.DoctorId,
+                MedicalInfo = entity.MedicalInfo,
+                PatientID = entity.PatientId,
+                PaymentMethodCode = entity.PaymentMethodCode,
+                PaymentStatusCode = entity.PaymentStatusCode,
+                PlatformFee = entity.PlatformFee,
+                RefundAmount = entity.RefundAmount,
+                StatusCode = entity.StatusCode,
+                TotalAmount = entity.TotalAmount
+
+            };
+            return result;
         }
 
         public async Task<AppointmentDto> CreateAsync(CreateAppointmentDto dto)
@@ -120,9 +140,27 @@ namespace Medix.API.Business.Services.Classification
             var existing = await _repository.GetByIdAsync(dto.Id);
             if (existing == null) return null;
 
-            _mapper.Map(dto, existing);
-            existing.UpdatedAt = DateTime.UtcNow;
-        
+            // Update basic fields (apply dto values when provided)
+            if (!string.IsNullOrWhiteSpace(dto.StatusCode)) existing.StatusCode = dto.StatusCode;
+            if (!string.IsNullOrWhiteSpace(dto.PaymentStatusCode)) existing.PaymentStatusCode = dto.PaymentStatusCode;
+            if (!string.IsNullOrWhiteSpace(dto.PaymentMethodCode)) existing.PaymentMethodCode = dto.PaymentMethodCode;
+            if (!string.IsNullOrWhiteSpace(dto.MedicalInfo)) existing.MedicalInfo = dto.MedicalInfo;
+
+            // Date/times: only update when a meaningful value is passed
+            if (dto.AppointmentStartTime != default) existing.AppointmentStartTime = (DateTime)dto.AppointmentStartTime;
+            if (dto.AppointmentEndTime != default) existing.AppointmentEndTime = (DateTime)dto.AppointmentEndTime;
+            existing.UpdatedAt = (DateTime)((dto.UpdatedAt != default) ? dto.UpdatedAt : DateTime.UtcNow);
+
+            // Numeric / money values - update when DTO provides a non-default value (DTOs often use nullable types;
+            // if your DTO uses nullable decimals/ints you can simplify to coalescing)
+            if (dto.ConsultationFee != default) existing.ConsultationFee = (decimal)dto.ConsultationFee;
+            if (dto.TotalAmount != default) existing.TotalAmount = (decimal)dto.TotalAmount;
+            if (dto.PlatformFee != default) existing.PlatformFee = (decimal)dto.PlatformFee;
+            if (dto.RefundAmount != default) existing.RefundAmount = dto.RefundAmount;
+            if (dto.DiscountAmount != default) existing.DiscountAmount = (decimal)dto.DiscountAmount;
+            if (dto.DurationMinutes != default) existing.DurationMinutes = (int)dto.DurationMinutes;
+
+            // Persist appointment changes
             await _repository.UpdateAsync(existing);
             return _mapper.Map<AppointmentDto>(existing);
         }
@@ -207,9 +245,27 @@ namespace Medix.API.Business.Services.Classification
             // 2. Lấy các lịch hẹn của bác sĩ trong khoảng thời gian đã cho
             //    Thêm 1 ngày vào endDate để bao gồm tất cả các cuộc hẹn trong ngày cuối cùng.
             var list = await _repository.GetByDoctorAndDateAsync(doctor.Id, startDate, endDate.AddDays(1));
-
+            var ResultLis = list.Select(x => new AppointmentDto
+            {
+                Id = x.Id,
+                PatientID = x.PatientId,
+                DoctorID = x.DoctorId,
+                AppointmentStartTime = x.AppointmentStartTime,
+                AppointmentEndTime = x.AppointmentEndTime,
+                DurationMinutes = x.DurationMinutes,
+                StatusCode = x.StatusCode,
+                ConsultationFee = x.ConsultationFee,
+                PlatformFee = x.PlatformFee,
+                DiscountAmount = x.DiscountAmount,
+                TotalAmount = x.TotalAmount,
+                PaymentStatusCode = x.PaymentStatusCode,
+                PaymentMethodCode = x.PaymentMethodCode,
+                MedicalInfo = x.MedicalInfo,
+                CreatedAt = x.CreatedAt,
+                UpdatedAt = x.UpdatedAt
+            }).ToList() ;
             // 3. Map sang DTO
-            return _mapper.Map<IEnumerable<AppointmentDto>>(list);
+            return ResultLis;
         }
 
         public async Task<bool> IsDoctorBusyAsync(Guid doctorId, DateTime appointmentStartTime, DateTime appointmentEndTime)
@@ -285,7 +341,7 @@ namespace Medix.API.Business.Services.Classification
             }
 
 
-            if (!hasEnoughMedicalRecord && appointment.StatusCode != "Completed")
+            if (!hasEnoughMedicalRecord && (appointment.StatusCode == "BeforeAppoiment"||appointment.StatusCode== "OnProgressing"))
             {
                 var updateDto = new UpdateAppointmentDto
                 {

@@ -21,6 +21,9 @@ export interface MedicalRecord {
   appointmentDate: string;
   appointmentStartTime?: string;
   appointmentEndTime?: string;
+  appointmentStartDate?: string; // Nova propriedade
+  appointmentEndDate?: string;   // Nova propriedade
+  statusAppointment?: string;    // Nova propriedade
   chiefComplaint: string;
   physicalExamination: string;
   diagnosis: string;

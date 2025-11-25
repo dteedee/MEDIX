@@ -331,7 +331,8 @@ namespace Medix.API.Business.Services.UserManagement
                 MedicalHistory = patient?.MedicalHistory,
                 MedicalRecordNumber = patient?.MedicalRecordNumber,
                 EmergencyContactName = patient?.EmergencyContactName,
-                EmergencyContactPhone = patient?.EmergencyContactPhone
+                EmergencyContactPhone = patient?.EmergencyContactPhone,
+                bloodTypeCode = patient?.BloodTypeCode
 
             };
         }

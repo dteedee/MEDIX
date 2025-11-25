@@ -174,25 +174,41 @@ namespace Medix.API.Presentation.Controllers
             await notificationService.CreateNotificationAsync(
             doctor.UserId,
               "Thông báo lịch hẹn mới",
-                $"Bạn có một lịch hẹn mới từ bệnh nhân {user.FullName} vào lúc {dto.AppointmentStartTime?.ToString("g")}. Vui lòng kiểm tra để chuẩn bị.","Annouce"
+                $"Bạn có một lịch hẹn mới từ bệnh nhân {user.FullName} vào lúc {dto.AppointmentStartTime?.ToString("g")}. Vui lòng kiểm tra để chuẩn bị.", "Reminder"
 
        );
 
-            await notificationService.CreateNotificationAsync(user.Id, "Thông báo lịch hẹn mới", $"Lịch hẹn của bạn vào lúc {dto.AppointmentStartTime?.ToString("g")} đã được sắp xếp. Vui lòng kiểm tra trong Lịch hẹn", "Annouce");
+            await notificationService.CreateNotificationAsync(user.Id, "Thông báo lịch hẹn mới", $"Lịch hẹn của bạn vào lúc {dto.AppointmentStartTime?.ToString("g")} đã được sắp xếp. Vui lòng kiểm tra trong Lịch hẹn", "Reminder");
 
 
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateAppointmentDto? dto)
+        public async Task<IActionResult> Update(Guid id)
         {
-            if (id != dto.Id)
-                return BadRequest("Mismatched appointment ID");
-            dto.AppointmentStartTime = DateTime.Now;
-            dto.AppointmentEndTime = DateTime.Now.AddHours(1);
+       
+            var dto = _service.GetByIdAsync(id);
+            var updateDto = new UpdateAppointmentDto
+            {
+                Id = dto.Result.Id,
+                AppointmentStartTime = dto.Result.AppointmentStartTime,
+                AppointmentEndTime = dto.Result.AppointmentEndTime,
+                DurationMinutes = dto.Result.DurationMinutes,
+                StatusCode = dto.Result.StatusCode,
+                ConsultationFee = dto.Result.ConsultationFee,
+                PlatformFee = dto.Result.PlatformFee,
+                DiscountAmount = dto.Result.DiscountAmount,
+                TotalAmount = dto.Result.TotalAmount,
+                PaymentStatusCode = dto.Result.PaymentStatusCode,
+                PaymentMethodCode = dto.Result.PaymentMethodCode,
+                MedicalInfo = dto.Result.MedicalInfo,
+            };
+            updateDto.AppointmentStartTime = DateTime.UtcNow.AddHours(7);
+            updateDto.AppointmentEndTime = DateTime.UtcNow.AddHours(7).AddMinutes(1);
 
-            var updated = await _service.UpdateAsync(dto);
+
+            var updated = await _service.UpdateAsync(updateDto);
             if (updated == null)
                 return NotFound();
 

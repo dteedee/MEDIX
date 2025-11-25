@@ -48,7 +48,8 @@ namespace Medix.API.Business.Services.UserManagement
                 MedicalHistory = savedPatient.MedicalHistory,
                 Allergies = savedPatient.Allergies,
                 EmergencyContactName = savedPatient.EmergencyContactName,
-                EmergencyContactPhone = savedPatient.EmergencyContactPhone
+                EmergencyContactPhone = savedPatient.EmergencyContactPhone,
+                
             };
         }
 
@@ -76,6 +77,7 @@ namespace Medix.API.Business.Services.UserManagement
                 UserId = patientEntity.UserId,
                 EmergencyContactName = patientEntity.EmergencyContactName,
                 EmergencyContactPhone = patientEntity.EmergencyContactPhone
+               ,BloodTypeCode = patientEntity.BloodTypeCode
              
             };
         }
@@ -95,6 +97,7 @@ namespace Medix.API.Business.Services.UserManagement
             patientEntity.EmergencyContactPhone = patientDTO.EmergencyContactPhone;
             patientEntity.Allergies = patientDTO.Allergies;
             patientEntity.MedicalHistory = patientDTO.MedicalHistory;
+            patientEntity.BloodTypeCode = patientDTO.BloodTypeCode;
 
             var updatedEntity = await _patientRepository.UpdatePatientAsync(patientEntity);
 
@@ -103,8 +106,9 @@ namespace Medix.API.Business.Services.UserManagement
                 Id = updatedEntity.Id,
                 UserId = updatedEntity.UserId,
                 EmergencyContactName = updatedEntity.EmergencyContactName,
-                EmergencyContactPhone = updatedEntity.EmergencyContactPhone
-
+                EmergencyContactPhone = updatedEntity.EmergencyContactPhone,
+                BloodTypeCode =updatedEntity.BloodTypeCode
+                
 
             };
         }

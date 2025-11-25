@@ -386,16 +386,20 @@ export const PatientRegister: React.FC = () => {
     const loadOptions = async () => {
       try {
         // Load blood types từ registrationService
+        console.log('🔄 Carregando tipos sanguíneos...');
         const bloodTypesResponse = await registrationService.getBloodTypes();
+        console.log('📥 Resposta da API getBloodTypes:', bloodTypesResponse);
+        
         if (bloodTypesResponse.success && bloodTypesResponse.data) {
           // Convert BloodTypeDTO to BloodType (add isActive field)
           const bloodTypesWithActive = bloodTypesResponse.data.map(bt => ({
             ...bt,
             isActive: true
           }));
+          console.log('✅ Tipos sanguíneos carregados:', bloodTypesWithActive);
           setBloodTypes(bloodTypesWithActive);
         } else {
-          console.error('Failed to load blood types:', bloodTypesResponse.errors);
+          console.error('❌ Falha ao carregar tipos sanguíneos:', bloodTypesResponse.errors);
         }
         
         // Set gender options from enum
@@ -404,10 +408,10 @@ export const PatientRegister: React.FC = () => {
           { code: GenderEnum.FEMALE, displayName: 'Nữ' },
           { code: GenderEnum.OTHER, displayName: 'Khác' }
         ];
-        console.log('Gender Options:', genderOptionsFromEnum);
+        console.log('✅ Opções de gênero:', genderOptionsFromEnum);
         setGenderOptions(genderOptionsFromEnum);
       } catch (err) {
-        console.error('Error loading options:', err);
+        console.error('❌ Erro ao carregar opções:', err);
       }
     };
 
@@ -715,6 +719,26 @@ export const PatientRegister: React.FC = () => {
     }
   };
 
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    // Validate field when user leaves it
+    if (name === 'dateOfBirth') {
+      // For date field, use the stored value
+      if (formData.dateOfBirth) {
+        validateField(name, formData.dateOfBirth);
+      } else if (dateOfBirthDisplay) {
+        // If user typed something but it's not valid yet
+        setValidationErrors((prev: any) => ({ 
+          ...prev, 
+          DateOfBirth: ['Vui lòng nhập đầy đủ ngày sinh'] 
+        }));
+      }
+    } else {
+      validateField(name, value);
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     
@@ -845,63 +869,63 @@ export const PatientRegister: React.FC = () => {
     
     // Check required basic fields
     if (!formData.fullName?.trim()) {
-      newErrors.fullName = ['Vui lòng nhập họ và tên'];
+      newErrors.FullName = ['Vui lòng nhập họ và tên'];
     }
     
     if (!formData.email?.trim()) {
-      newErrors.email = ['Vui lòng nhập email'];
+      newErrors.Email = ['Vui lòng nhập email'];
     } else if (emailExists) {
-      newErrors.email = ['Email này đã được sử dụng. Vui lòng sử dụng email khác.'];
+      newErrors.Email = ['Email này đã được sử dụng. Vui lòng sử dụng email khác.'];
     } else if (!emailVerified) {
-      newErrors.email = ['Vui lòng xác thực email trước khi đăng ký'];
+      newErrors.Email = ['Vui lòng xác thực email trước khi đăng ký'];
     }
     
     if (!formData.phoneNumber?.trim()) {
-      newErrors.phoneNumber = ['Vui lòng nhập số điện thoại'];
+      newErrors.PhoneNumber = ['Vui lòng nhập số điện thoại'];
     }
     
     if (!formData.password) {
-      newErrors.password = ['Vui lòng nhập mật khẩu'];
+      newErrors.Password = ['Vui lòng nhập mật khẩu'];
     }
     
     if (!formData.passwordConfirmation) {
-      newErrors.passwordConfirmation = ['Vui lòng xác nhận mật khẩu'];
+      newErrors.PasswordConfirmation = ['Vui lòng xác nhận mật khẩu'];
     }
     
     // Check identification number
     if (!formData.identificationNumber?.trim()) {
-      newErrors.identificationNumber = ['Vui lòng nhập số CCCD'];
+      newErrors.IdentificationNumber = ['Vui lòng nhập số CCCD'];
     } else if (formData.identificationNumber && formData.identificationNumber.length !== 12) {
-      newErrors.identificationNumber = ['Số CCCD phải gồm đúng 12 chữ số'];
+      newErrors.IdentificationNumber = ['Số CCCD phải gồm đúng 12 chữ số'];
     } else if (idNumberExists) {
-      newErrors.identificationNumber = ['Số CCCD này đã được sử dụng. Vui lòng kiểm tra lại.'];
+      newErrors.IdentificationNumber = ['Số CCCD này đã được sử dụng. Vui lòng kiểm tra lại.'];
     }
     
     if (!formData.dateOfBirth) {
-      newErrors.dateOfBirth = ['Vui lòng chọn ngày sinh'];
+      newErrors.DateOfBirth = ['Vui lòng chọn ngày sinh'];
     }
     
     if (!formData.genderCode) {
-      newErrors.genderCode = ['Vui lòng chọn giới tính'];
+      newErrors.GenderCode = ['Vui lòng chọn giới tính'];
     } 
     
     if (!formData.bloodTypeCode) {
-      newErrors.bloodTypeCode = ['Vui lòng chọn nhóm máu'];
+      newErrors.BloodTypeCode = ['Vui lòng chọn nhóm máu'];
     }
 
     // Check required emergency contact fields
     if (!formData.emergencyContactName?.trim()) {
-      newErrors.emergencyContactName = ['Vui lòng nhập họ tên người liên hệ khẩn cấp'];
+      newErrors.EmergencyContactName = ['Vui lòng nhập họ tên người liên hệ khẩn cấp'];
     }
     
     if (!formData.emergencyContactPhone?.trim()) {
-      newErrors.emergencyContactPhone = ['Vui lòng nhập số điện thoại liên hệ khẩn cấp'];
+      newErrors.EmergencyContactPhone = ['Vui lòng nhập số điện thoại liên hệ khẩn cấp'];
     }
     
     // Check if phone numbers are the same
     if (formData.phoneNumber && formData.emergencyContactPhone && 
         formData.phoneNumber === formData.emergencyContactPhone) {
-      newErrors.emergencyContactPhone = ['Số điện thoại liên hệ khẩn cấp không được giống số điện thoại chính'];
+      newErrors.EmergencyContactPhone = ['Só điện thoại liên hệ khẩn cấp không được giống số điện thoại chính'];
     }
 
     // Validate form data
@@ -1077,6 +1101,7 @@ export const PatientRegister: React.FC = () => {
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Nguyễn Văn A"
                     className={`form-control ${validationErrors.FullName?.[0]
                       ? 'is-invalid'
@@ -1097,6 +1122,7 @@ export const PatientRegister: React.FC = () => {
                     pattern="[0-9]{12}"
                     value={formData.identificationNumber}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Nhập số căn cước công dân 12 số"
                     className={`form-control ${validationErrors.IdentificationNumber?.[0]
                       ? 'is-invalid'
@@ -1143,6 +1169,7 @@ export const PatientRegister: React.FC = () => {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="Email@example.com"
                       disabled={emailVerified}
                       className={`form-control ${validationErrors.Email?.[0]
@@ -1296,6 +1323,7 @@ export const PatientRegister: React.FC = () => {
                     maxLength={10}
                     value={formData.phoneNumber}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="09xxxxxxxx"
                     className={`form-control ${validationErrors.PhoneNumber?.[0]
                       ? 'is-invalid'
@@ -1315,6 +1343,7 @@ export const PatientRegister: React.FC = () => {
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="••••••••"
                       className={`form-control ${validationErrors.Password?.[0]
                         ? 'is-invalid'
@@ -1391,6 +1420,7 @@ export const PatientRegister: React.FC = () => {
                       name="passwordConfirmation"
                       value={formData.passwordConfirmation}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="••••••••"
                       className={`form-control ${validationErrors.PasswordConfirmation?.[0]
                         ? 'is-invalid'
@@ -1450,6 +1480,7 @@ export const PatientRegister: React.FC = () => {
                     name="dateOfBirth"
                     value={dateOfBirthDisplay}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="dd/mm/yyyy"
                     title="Nhập ngày sinh theo định dạng: dd/mm/yyyy (ví dụ: 25/12/1990)"
                     maxLength={10}
@@ -1510,6 +1541,7 @@ export const PatientRegister: React.FC = () => {
                     name="bloodTypeCode"
                     value={formData.bloodTypeCode}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     className={`form-control ${validationErrors.BloodTypeCode?.[0]
                       ? 'is-invalid'
                       : formData.bloodTypeCode?.trim()
@@ -1518,11 +1550,15 @@ export const PatientRegister: React.FC = () => {
                       }`}
                   >
                     <option value="">Chọn nhóm máu</option>
-                    {bloodTypes.map((bloodType) => (
-                      <option key={bloodType.code} value={bloodType.code}>
-                        {bloodType.displayName}
-                      </option>
-                    ))}
+                    {bloodTypes.length > 0 ? (
+                      bloodTypes.map((bloodType) => (
+                        <option key={bloodType.code} value={bloodType.code}>
+                          {bloodType.displayName}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>Đang tải...</option>
+                    )}
                   </select>
                   {validationErrors.BloodTypeCode?.[0] && <div className="text-danger">{validationErrors.BloodTypeCode[0]}</div>}
                 </div>
@@ -1538,6 +1574,7 @@ export const PatientRegister: React.FC = () => {
                     name="emergencyContactName"
                     value={formData.emergencyContactName}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Họ và tên"
                     className={`form-control ${validationErrors.EmergencyContactName?.[0]
                       ? 'is-invalid'
@@ -1557,6 +1594,7 @@ export const PatientRegister: React.FC = () => {
                     maxLength={10}
                     value={formData.emergencyContactPhone}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Số điện thoại khẩn cấp"
                     className={`form-control ${validationErrors.EmergencyContactPhone?.[0]
                       ? 'is-invalid'

@@ -17,6 +17,7 @@ export interface UserBasicInfo {
   emergencyContactPhone?: string | null; // Editável
   allergies?: string | null; // Match backend DTO field name
   medicalHistory?: string | null; // Match backend DTO field name
+  bloodTypeCode?: string | null; // Blood type code
 }
 
 export interface UpdateUserInfo {
@@ -32,6 +33,7 @@ export interface UpdateUserInfo {
   medicalHistory?: string;
   allergies?: string;
   imageURL?: string; // Avatar URL
+  bloodTypeCode?: string; // Blood type code
 }
 
 export const userService = {
@@ -89,6 +91,9 @@ export const userService = {
       }
       if (data.imageURL !== undefined) {
         updateDto.imageURL = data.imageURL;
+      }
+      if (data.bloodTypeCode !== undefined) {
+        updateDto.bloodTypeCode = data.bloodTypeCode;
       }
 
       const response = await apiClient.put<UserBasicInfo>('/user/updateUserInfor', updateDto);

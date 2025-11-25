@@ -69,6 +69,17 @@ const completeAppointment = async (appointmentId: string): Promise<Appointment> 
   return response.data;
 };
 
+/**
+ * Atualizar o status de um appointment.
+ * @param appointmentId - ID do appointment.
+ * @param status - Novo status (ex: "Completed", "MissedByPatient", etc).
+ * @returns {Promise<any>} Appointment atualizado.
+ */
+const updateStatus = async (appointmentId: string, status: string): Promise<any> => {
+  const response = await apiClient.put(`${API_ENDPOINT}/UpdateStatus/${appointmentId}/${status}`);
+  return response.data;
+};
+
 export const appointmentService = {
   getMyDayAppointments,
   getMyAppointmentsByDateRange,
@@ -76,8 +87,5 @@ export const appointmentService = {
   getPatientAppointments,
   cancelPatientAppointment,
   completeAppointment,
-  updateStatus: async (appointmentId: string, status: string) => {
-    const response = await apiClient.put(`${API_ENDPOINT}/UpdateStatus/${appointmentId}/${status}`);
-    return response.data;
-  },
+  updateStatus,
 };

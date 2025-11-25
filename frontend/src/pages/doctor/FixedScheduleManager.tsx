@@ -160,7 +160,7 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
-      confirmButtonText: 'Vâng, xóa nó!',
+      confirmButtonText: 'Xóa',
       cancelButtonText: 'Hủy'
     });
 

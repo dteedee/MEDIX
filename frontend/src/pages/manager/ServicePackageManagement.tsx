@@ -1,27 +1,15 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import axios from 'axios'
 import { useToast } from '../../contexts/ToastContext'
 import styles from '../../styles/manager/ServicePackageManagement.module.css'
+import { servicePackageService } from '../../services/servicePackageService'
+import { ServicePackageModel } from '../../types/service-package.types'
 
 // SVG Icons for actions
 const ViewIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-
-const EditIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-  </svg>
-);
-
-const DeleteIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="3 6 5 6 21 6" />
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
   </svg>
 );
 
@@ -32,105 +20,54 @@ const SortIcon = ({ direction }: { direction?: 'asc' | 'desc' }) => (
   </svg>
 );
 
-interface ServicePackage {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  duration: number; // in months
-  features: string[];
-  isActive: boolean;
-  maxBookings: number;
-  discountPercent: number;
-  createdAt: string;
-  tier: 'Basic' | 'Professional' | 'Premium' | 'VIP';
-}
+type ServicePackage = ServicePackageModel;
+type SortableFields = 'name' | 'monthlyFee' | 'displayOrder' | 'isActive' | 'createdAt';
+
+const MAX_FETCH_LIMIT = 50;
 
 export default function ServicePackageManagement() {
   const [packages, setPackages] = useState<ServicePackage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState('createdAt');
+  const [sortField, setSortField] = useState<SortableFields>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedPackage, setSelectedPackage] = useState<ServicePackage | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [packageToDelete, setPackageToDelete] = useState<ServicePackage | null>(null);
-
-  const navigate = useNavigate();
   const { showToast } = useToast();
 
-  // Mock data - replace with actual API calls
-  useEffect(() => {
-    const mockPackages: ServicePackage[] = [
-      {
-        id: '1',
-        name: 'Gói Basic',
-        description: 'Gói khám cơ bản, phù hợp cho các nhu cầu tư vấn và khám tổng quát.',
-        price: 0,
-        duration: 1,
-        features: ['Tư vấn trực tuyến', 'Khám tổng quát', 'Kê đơn thuốc cơ bản'],
-        isActive: true,
-        maxBookings: 10,
-        discountPercent: 0,
-        createdAt: '2024-01-15T08:00:00Z',
-        tier: 'Basic'
-      },
-      {
-        id: '2',
-        name: 'Gói Professional',
-        description: 'Gói khám chuyên sâu, dành cho các trường hợp cần chẩn đoán và điều trị chi tiết hơn.',
-        price: 100000,
-        duration: 1,
-        features: ['Tư vấn chuyên sâu', 'Chẩn đoán hình ảnh', 'Xét nghiệm cơ bản', 'Hỗ trợ 24/7'],
-        isActive: true,
-        maxBookings: 7,
-        discountPercent: 5,
-        createdAt: '2024-01-10T10:30:00Z',
-        tier: 'Professional'
-      },
-      {
-        id: '3',
-        name: 'Gói Premium',
-        description: 'Gói cao cấp, cung cấp dịch vụ y tế toàn diện với các bác sĩ hàng đầu.',
-        price: 250000,
-        duration: 1,
-        features: ['Bác sĩ chuyên khoa đầu ngành', 'Phẫu thuật nhỏ', 'Tư vấn dinh dưỡng', 'Ưu tiên đặt lịch'],
-        isActive: true,
-        maxBookings: 5,
-        discountPercent: 10,
-        createdAt: '2024-01-05T14:20:00Z',
-        tier: 'Premium'
-      },
-      {
-        id: '4',
-        name: 'Gói VIP',
-        description: 'Dịch vụ y tế đẳng cấp nhất, chăm sóc sức khỏe cá nhân hóa với đội ngũ chuyên gia.',
-        price: 500000,
-        duration: 1,
-        features: ['Bác sĩ riêng', 'Chăm sóc tại nhà', 'Hỗ trợ y tế toàn cầu', 'Gói khám sức khỏe định kỳ'],
-        isActive: false,
-        maxBookings: 3,
-        discountPercent: 15,
-        createdAt: '2024-01-01T09:15:00Z',
-        tier: 'VIP'
-      }
-    ];
-
-    setTimeout(() => {
-      setPackages(mockPackages);
+  const loadPackages = useCallback(async () => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const data = await servicePackageService.getTop(MAX_FETCH_LIMIT);
+      setPackages(data);
+    } catch (error) {
+      console.error('Failed to load service packages', error);
+      const message =
+        axios.isAxiosError(error)
+          ? error.response?.data?.message ?? 'Không thể tải danh sách gói dịch vụ.'
+          : 'Không thể tải danh sách gói dịch vụ.';
+      setFetchError(message);
+      showToast(message, 'error');
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, []);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    loadPackages();
+  }, [loadPackages]);
 
   const handleSearch = (searchTerm: string) => {
     setSearchTerm(searchTerm);
     setCurrentPage(1);
   };
 
-  const handleSort = (field: string) => {
+  const handleSort = (field: SortableFields) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -149,9 +86,22 @@ export default function ServicePackageManagement() {
     setCurrentPage(1);
   };
 
-  const handleViewDetails = (pkg: ServicePackage) => {
-    setSelectedPackage(pkg);
-    setShowDetails(true);
+  const handleViewDetails = async (pkg: ServicePackage) => {
+    setDetailLoading(true);
+    try {
+      const latest = await servicePackageService.getById(pkg.id);
+      setSelectedPackage(latest);
+      setShowDetails(true);
+    } catch (error) {
+      console.error('Failed to load service package detail', error);
+      const message =
+        axios.isAxiosError(error)
+          ? error.response?.data?.message ?? 'Không thể tải chi tiết gói dịch vụ.'
+          : 'Không thể tải chi tiết gói dịch vụ.';
+      showToast(message, 'error');
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const handleCloseDetails = () => {
@@ -159,66 +109,52 @@ export default function ServicePackageManagement() {
     setSelectedPackage(null);
   };
 
-  const handleEdit = (pkg: ServicePackage) => {
-    navigate(`/manager/services/edit/${pkg.id}`);
-  };
+  const filteredAndSortedPackages = useMemo(() => {
+    const keyword = searchTerm.trim().toLowerCase();
+    const filtered = packages.filter(pkg => {
+      if (!keyword) return true;
+      const source = [
+        pkg.name,
+        pkg.description ?? '',
+        pkg.featuresList.join(' '),
+        pkg.displayOrder.toString(),
+      ]
+        .join(' ')
+        .toLowerCase();
+      return source.includes(keyword);
+    });
 
-  const handleDelete = (pkg: ServicePackage) => {
-    setPackageToDelete(pkg);
-    setShowDeleteConfirm(true);
-  };
+    return filtered.sort((a, b) => {
+      let aValue: any = a[sortField];
+      let bValue: any = b[sortField];
 
-  const confirmDelete = async () => {
-    if (!packageToDelete) return;
+      if (sortField === 'createdAt') {
+        aValue = new Date(aValue).getTime();
+        bValue = new Date(bValue).getTime();
+      } else if (sortField === 'isActive') {
+        aValue = a.isActive ? 1 : 0;
+        bValue = b.isActive ? 1 : 0;
+      } else if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = (bValue as string).toLowerCase();
+      }
 
-    try {
-      // Mock delete - replace with actual API call
-      setPackages(prev => prev.filter(p => p.id !== packageToDelete.id));
-      showToast('Xóa gói dịch vụ thành công!', 'success');
-    } catch (error) {
-      console.error('Error deleting package:', error);
-      showToast('Không thể xóa gói dịch vụ', 'error');
-    } finally {
-      setShowDeleteConfirm(false);
-      setPackageToDelete(null);
-    }
-  };
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [packages, searchTerm, sortDirection, sortField]);
 
-  const cancelDelete = () => {
-    setShowDeleteConfirm(false);
-    setPackageToDelete(null);
-  };
-
-  const handleCreateNew = () => {
-    navigate('/manager/services/new');
-  };
-
-  // Filter and sort packages
-  const filteredAndSortedPackages = packages.filter(pkg =>
-    pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pkg.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pkg.tier.toLowerCase().includes(searchTerm.toLowerCase())
-  ).sort((a, b) => {
-    let aValue: any = a[sortField as keyof ServicePackage];
-    let bValue: any = b[sortField as keyof ServicePackage];
-
-    if (sortField === 'createdAt') {
-      aValue = new Date(aValue).getTime();
-      bValue = new Date(bValue).getTime();
-    } else if (typeof aValue === 'string') {
-      aValue = aValue.toLowerCase();
-      bValue = bValue.toLowerCase();
-    }
-
-    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredAndSortedPackages.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredAndSortedPackages.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedPackages = filteredAndSortedPackages.slice(startIndex, startIndex + itemsPerPage);
+  const resultCount = filteredAndSortedPackages.length;
+  const startRange = resultCount ? startIndex + 1 : 0;
+  const endRange = resultCount ? Math.min(startIndex + itemsPerPage, resultCount) : 0;
+
+  const handleRefresh = () => {
+    loadPackages();
+  };
 
   const formatCurrency = (amount: number) => {
     if (amount === 0) return 'Miễn phí';
@@ -246,23 +182,48 @@ export default function ServicePackageManagement() {
     );
   };
 
-  const getTierBadge = (tier: string) => {
-    const tierColors = {
-      Basic: '#6b7280',
-      Professional: '#3b82f6',
-      Premium: '#8b5cf6',
-      VIP: '#f59e0b'
-    };
-    
+  const renderFeaturesPreview = (pkg: ServicePackage) => {
+    if (!pkg.featuresList.length) {
+      return <span className={styles.emptyFeature}>Chưa cấu hình</span>;
+    }
+
+    const preview = pkg.featuresList.slice(0, 2);
+    const remaining = pkg.featuresList.length - preview.length;
+
     return (
-      <span 
-        className={styles.tierBadge}
-        style={{ backgroundColor: tierColors[tier as keyof typeof tierColors] }}
-      >
-        {tier}
-      </span>
+      <div className={styles.featurePills}>
+        {preview.map((feature, index) => (
+          <span key={`${pkg.id}-feature-${index}`} className={styles.featurePill}>
+            {feature}
+          </span>
+        ))}
+        {remaining > 0 && <span className={styles.moreFeature}>+{remaining}</span>}
+      </div>
     );
   };
+
+  const getDescriptionPreview = (pkg: ServicePackage) => {
+    const description = (pkg.description ?? '').trim();
+    if (!description) return 'Chưa có mô tả';
+    return description.length > 50 ? `${description.substring(0, 50)}...` : description;
+  };
+
+  const renderErrorState = () => (
+    <div className={styles.errorState}>
+      <div className={styles.emptyIcon}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
+      <h3>Không thể tải dữ liệu</h3>
+      <p>{fetchError}</p>
+      <button className={styles.refreshButton} onClick={handleRefresh}>
+        Thử lại
+      </button>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -277,110 +238,48 @@ export default function ServicePackageManagement() {
 
   return (
     <div className={styles.container}>
-      {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Quản lý Gói Dịch vụ</h1>
-          <p className={styles.subtitle}>Quản lý các gói dịch vụ y tế</p>
-        </div>
-        <div className={styles.headerRight}>
-          <button className={styles.createButton} onClick={handleCreateNew}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Tạo Gói mới
-          </button>
+          <h1 className={styles.title}>Gói dịch vụ</h1>
+          <p className={styles.subtitle}>Danh sách gói đang cung cấp trong hệ thống</p>
         </div>
       </div>
 
-      {/* Search and Filter */}
-      <div className={styles.searchFilterSection}>
-        <div className={styles.searchBar}>
-          <div className={styles.searchInput}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="M21 21l-4.35-4.35"></path>
-            </svg>
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo tên, mô tả hoặc tier..."
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-          </div>
+      <div className={styles.actionsBar}>
+        <div className={styles.searchInput}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="M21 21l-4.35-4.35"></path>
+          </svg>
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tên, mô tả..."
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+          />
         </div>
+        <button className={styles.refreshButton} onClick={handleRefresh} disabled={loading}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10m-2.51 5a9 9 0 0 1-14.13 3.36L1 14"></path>
+          </svg>
+          Làm mới
+        </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className={styles.statsGrid}>
-        <div className={`${styles.statCard} ${styles.statCard1}`}>
-          <div className={styles.statIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-              <polyline points="3.27,6.96 12,12.01 20.73,6.96"></polyline>
-              <line x1="12" y1="22.08" x2="12" y2="12"></line>
-            </svg>
-          </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Tổng số Gói</div>
-            <div className={styles.statValue}>{packages.length}</div>
-          </div>
-        </div>
-
-        <div className={`${styles.statCard} ${styles.statCard2}`}>
-          <div className={styles.statIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20,6 9,17 4,12"></polyline>
-            </svg>
-          </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Đang hoạt động</div>
-            <div className={styles.statValue}>{packages.filter(p => p.isActive).length}</div>
-          </div>
-        </div>
-
-        <div className={`${styles.statCard} ${styles.statCard3}`}>
-          <div className={styles.statIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-          </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Ngừng hoạt động</div>
-            <div className={styles.statValue}>{packages.filter(p => !p.isActive).length}</div>
-          </div>
-        </div>
-
-        <div className={`${styles.statCard} ${styles.statCard4}`}>
-          <div className={styles.statIcon}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-              <line x1="8" y1="21" x2="16" y2="21"></line>
-              <line x1="12" y1="17" x2="12" y2="21"></line>
-            </svg>
-          </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Kết quả tìm kiếm</div>
-            <div className={styles.statValue}>{filteredAndSortedPackages.length}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Packages Table */}
-      <div className={styles.tableCard}>
+      <div className={styles.listCard}>
         <div className={styles.tableHeader}>
           <h3>Danh sách Gói Dịch vụ</h3>
           <div className={styles.tableActions}>
             <span className={styles.resultsCount}>
-              Hiển thị {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredAndSortedPackages.length)} trong tổng số {filteredAndSortedPackages.length} gói
+              Hiển thị {startRange}-{endRange} trong tổng số {resultCount} gói
             </span>
           </div>
         </div>
 
-        {paginatedPackages.length === 0 ? (
+        {fetchError && renderErrorState()}
+        {!fetchError && paginatedPackages.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyIcon}>
               <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
@@ -390,9 +289,9 @@ export default function ServicePackageManagement() {
               </svg>
             </div>
             <h3>Không tìm thấy gói dịch vụ nào</h3>
-            <p>Hãy thử thay đổi từ khóa tìm kiếm hoặc tạo gói mới</p>
-            <button className={styles.createButton} onClick={handleCreateNew}>
-              Tạo Gói đầu tiên
+            <p>Hãy thử thay đổi từ khóa tìm kiếm hoặc làm mới dữ liệu</p>
+            <button className={styles.refreshButton} onClick={handleRefresh}>
+              Làm mới danh sách
             </button>
           </div>
         ) : (
@@ -401,19 +300,21 @@ export default function ServicePackageManagement() {
               <table className={styles.table}>
                 <thead>
                   <tr>
+                    <th>STT</th>
                     <th className={styles.sortable} onClick={() => handleSort('name')}>
                       Tên gói
                       <SortIcon direction={sortField === 'name' ? sortDirection : undefined} />
                     </th>
-                    <th>Tier</th>
                     <th>Mô tả</th>
-                    <th className={styles.sortable} onClick={() => handleSort('price')}>
-                      Giá
-                      <SortIcon direction={sortField === 'price' ? sortDirection : undefined} />
+                    <th className={styles.sortable} onClick={() => handleSort('monthlyFee')}>
+                      Phí hàng tháng
+                      <SortIcon direction={sortField === 'monthlyFee' ? sortDirection : undefined} />
                     </th>
-                    <th>Thời hạn</th>
-                    <th>Số lịch tối đa</th>
-                    <th>Giảm giá</th>
+                    <th>Tính năng chính</th>
+                    <th className={styles.sortable} onClick={() => handleSort('displayOrder')}>
+                      Thứ tự hiển thị
+                      <SortIcon direction={sortField === 'displayOrder' ? sortDirection : undefined} />
+                    </th>
                     <th className={styles.sortable} onClick={() => handleSort('isActive')}>
                       Trạng thái
                       <SortIcon direction={sortField === 'isActive' ? sortDirection : undefined} />
@@ -426,37 +327,31 @@ export default function ServicePackageManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedPackages.map((pkg) => (
+                  {paginatedPackages.map((pkg, index) => {
+                    const rowNumber = startIndex + index + 1;
+                    return (
                     <tr key={pkg.id}>
+                      <td>
+                        <div className={styles.indexCell}>{rowNumber}</div>
+                      </td>
                       <td>
                         <div className={styles.nameCell}>
                           <span className={styles.nameText}>{pkg.name}</span>
                         </div>
                       </td>
-                      <td>{getTierBadge(pkg.tier)}</td>
                       <td>
                         <div className={styles.descriptionCell}>
                           <span className={styles.descriptionText}>
-                            {pkg.description.length > 50 
-                              ? `${pkg.description.substring(0, 50)}...` 
-                              : pkg.description
-                            }
+                            {getDescriptionPreview(pkg)}
                           </span>
                         </div>
                       </td>
                       <td>
-                        <span className={styles.priceText}>{formatCurrency(pkg.price)}</span>
+                        <span className={styles.priceText}>{formatCurrency(pkg.monthlyFee)}</span>
                       </td>
+                      <td>{renderFeaturesPreview(pkg)}</td>
                       <td>
-                        <span className={styles.durationText}>{pkg.duration} tháng</span>
-                      </td>
-                      <td>
-                        <span className={styles.maxBookingsText}>{pkg.maxBookings} lịch</span>
-                      </td>
-                      <td>
-                        <span className={styles.discountText}>
-                          {pkg.discountPercent > 0 ? `${pkg.discountPercent}%` : 'Không có'}
-                        </span>
+                        <span className={styles.displayOrderText}>{pkg.displayOrder}</span>
                       </td>
                       <td>{getStatusBadge(pkg.isActive)}</td>
                       <td>{formatDate(pkg.createdAt)}</td>
@@ -469,24 +364,10 @@ export default function ServicePackageManagement() {
                           >
                             <ViewIcon />
                           </button>
-                          <button
-                            className={styles.actionButton}
-                            onClick={() => handleEdit(pkg)}
-                            title="Chỉnh sửa"
-                          >
-                            <EditIcon />
-                          </button>
-                          <button
-                            className={`${styles.actionButton} ${styles.deleteButton}`}
-                            onClick={() => handleDelete(pkg)}
-                            title="Xóa"
-                          >
-                            <DeleteIcon />
-                          </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
             </div>
@@ -565,21 +446,22 @@ export default function ServicePackageManagement() {
               <div className={styles.packageDetails}>
                 <div className={styles.packageHeader}>
                   <h4>{selectedPackage.name}</h4>
-                  {getTierBadge(selectedPackage.tier)}
+                  <span className={styles.orderBadge}>Display #{selectedPackage.displayOrder}</span>
                 </div>
                 <div className={styles.packageInfo}>
-                  <p><strong>Mô tả:</strong> {selectedPackage.description}</p>
-                  <p><strong>Giá:</strong> {formatCurrency(selectedPackage.price)}</p>
-                  <p><strong>Thời hạn:</strong> {selectedPackage.duration} tháng</p>
-                  <p><strong>Số lịch tối đa:</strong> {selectedPackage.maxBookings} lịch</p>
-                  <p><strong>Giảm giá:</strong> {selectedPackage.discountPercent > 0 ? `${selectedPackage.discountPercent}%` : 'Không có'}</p>
+                  <p><strong>Mô tả:</strong> {selectedPackage.description || 'Chưa có mô tả'}</p>
+                  <p><strong>Phí hàng tháng:</strong> {formatCurrency(selectedPackage.monthlyFee)}</p>
+                  <p><strong>Thứ tự hiển thị:</strong> {selectedPackage.displayOrder}</p>
                   <p><strong>Trạng thái:</strong> {getStatusBadge(selectedPackage.isActive)}</p>
                   <p><strong>Ngày tạo:</strong> {formatDate(selectedPackage.createdAt)}</p>
                 </div>
                 <div className={styles.featuresSection}>
                   <h5>Tính năng:</h5>
                   <ul className={styles.featuresList}>
-                    {selectedPackage.features.map((feature, index) => (
+                    {selectedPackage.featuresList.length === 0 && (
+                      <li className={styles.featureItemMuted}>Chưa cấu hình tính năng</li>
+                    )}
+                    {selectedPackage.featuresList.map((feature, index) => (
                       <li key={index} className={styles.featureItem}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20,6 9,17 4,12"></polyline>
@@ -590,36 +472,15 @@ export default function ServicePackageManagement() {
                   </ul>
                 </div>
               </div>
+              {detailLoading && (
+                <div className={styles.modalLoading}>
+                  <div className={styles.spinner}></div>
+                </div>
+              )}
             </div>
             <div className={styles.modalActions}>
               <button className={styles.cancelButton} onClick={handleCloseDetails}>
                 Đóng
-              </button>
-              <button className={styles.editButton} onClick={() => handleEdit(selectedPackage)}>
-                Chỉnh sửa
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && packageToDelete && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <div className={styles.modalHeader}>
-              <h3>Xác nhận xóa gói dịch vụ</h3>
-            </div>
-            <div className={styles.modalBody}>
-              <p>Bạn có chắc chắn muốn xóa gói dịch vụ <strong>"{packageToDelete.name}"</strong>?</p>
-              <p className={styles.warningText}>Hành động này không thể hoàn tác.</p>
-            </div>
-            <div className={styles.modalActions}>
-              <button className={styles.cancelButton} onClick={cancelDelete}>
-                Hủy
-              </button>
-              <button className={styles.deleteButton} onClick={confirmDelete}>
-                Xóa
               </button>
             </div>
           </div>

@@ -133,7 +133,7 @@ namespace Medix.API.Presentation.Controllers
             dto.PatientId = patient.Id;
             dto.PaymentMethodCode = "Wallet";
             dto.PaymentStatusCode = "Paid";
-            dto.StatusCode = "OnProgressing";
+            dto.StatusCode = "BeforeAppoiment";
             dto.TransactionID = transaction.id;
 
 
@@ -177,8 +177,7 @@ namespace Medix.API.Presentation.Controllers
         {
             if (id != dto.Id)
                 return BadRequest("Mismatched appointment ID");
-            dto.AppointmentStartTime = DateTime.Now;
-            dto.AppointmentEndTime = DateTime.Now.AddHours(1);
+         
 
             var updated = await _service.UpdateAsync(dto);
             if (updated == null)
@@ -189,18 +188,54 @@ namespace Medix.API.Presentation.Controllers
 
 
         [HttpPut("Complete/{id}/{status}")]
-        public async Task<IActionResult> Complete(Guid id,string status)
+        public async Task<IActionResult> Complete(Guid id, string status)
         {
             if (id == null)
             {
                 return BadRequest("Mismatched appointment ID");
             }
-       var appoint =   await _service.GetByIdAsync(id);
+            var appoint = await _service.GetByIdAsync(id);
             var allowedCompleteTime = appoint.AppointmentEndTime.AddMinutes(10);
             if (DateTime.Now < allowedCompleteTime)
             {
                 return BadRequest("Vui lòng chờ đợi đến giờ xác nhận");
             }
+
+            var dto = new UpdateAppointmentDto
+            {
+                Id = appoint.Id,
+                AppointmentStartTime = appoint.AppointmentStartTime,
+                AppointmentEndTime = appoint.AppointmentEndTime,
+                DurationMinutes = appoint.DurationMinutes,
+                StatusCode = status,
+                ConsultationFee = appoint.ConsultationFee,
+                PlatformFee = appoint.PlatformFee,
+                DiscountAmount = appoint.DiscountAmount,
+                TotalAmount = appoint.TotalAmount,
+                PaymentStatusCode = appoint.PaymentStatusCode,
+                PaymentMethodCode = appoint.PaymentMethodCode,
+                MedicalInfo = appoint.MedicalInfo,
+            };
+
+
+            var updated = await _service.UpdateAsync(dto);
+            if (updated == null)
+                return NotFound();
+
+            return Ok(updated);
+
+
+
+        }
+
+
+        [HttpPut("UpdateStatus/{id}/{status}")]
+        public async Task<IActionResult> Status(Guid id, string status)
+        {
+          
+            var appoint = await _service.GetByIdAsync(id);
+          
+           
 
             var dto = new UpdateAppointmentDto
             {

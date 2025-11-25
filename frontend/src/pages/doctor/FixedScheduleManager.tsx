@@ -280,8 +280,9 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
             <button onClick={() => {
               setIsAdding(true);
               setFormState({ dayOfWeek: selectedDay, startTime: timeSlots[0].startTime, endTime: timeSlots[0].endTime, isAvailable: true });
-            }} className="w-full mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-              Thêm ca làm việc cho {getDayLabel(selectedDay)} disabled={isBanned}
+            }} className="w-full mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            disabled={isBanned}>
+              Thêm ca làm việc cho {getDayLabel(selectedDay)}
             </button>
           )}
         </div>

@@ -29,10 +29,7 @@ export default function MedicineTable({ medicines, onDelete, onUpdate, onSelectM
       medicationId: suggestion.id,
     };
 
-    if (suggestion.dosage || suggestion.unit) {
-      const formattedDosage = `${suggestion.dosage || ''}${suggestion.unit ? ` ${suggestion.unit}` : ''}`.trim();
-      updates.dosage = formattedDosage;
-    }
+    updates.dosage = suggestion.dosage || '';
 
     onSelectMedication(prescriptionId, updates);
   };

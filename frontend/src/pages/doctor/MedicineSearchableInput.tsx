@@ -18,8 +18,7 @@ interface SelectOption {
   value: MedicationSearchResult | null;
 }
 
-const formatMedicationLabel = (med: MedicationSearchResult) =>
-  `${med.name}${med.dosage ? ` • ${med.dosage}${med.unit ? ` ${med.unit}` : ''}` : ''}`;
+const formatMedicationLabel = (med: MedicationSearchResult) => med.name;
 
 const MedicineSearchableInput: React.FC<MedicineSearchableInputProps> = ({
   value,
@@ -72,8 +71,7 @@ const MedicineSearchableInput: React.FC<MedicineSearchableInputProps> = ({
     const option = { label: formatMedicationLabel(medication), value: medication };
     setSelectedOption(option);
     skipSyncRef.current = true;
-    onSelect(medication);
-    onInputChange(medication.name);
+    onSelect(medication); // Chỉ gọi onSelect, không gọi onInputChange
     setInputValue('');
   };
 

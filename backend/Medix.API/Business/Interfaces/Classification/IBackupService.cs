@@ -10,7 +10,6 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<bool> RestoreBackupAsync(Guid backupId);
         Task<bool> DeleteBackupAsync(Guid id);
         Task<int> CleanupOldBackupsAsync(int retentionDays);
-        Task<bool> CreateAutomaticBackupAsync();
     }
 }
 

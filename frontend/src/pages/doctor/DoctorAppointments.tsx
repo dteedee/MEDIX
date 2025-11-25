@@ -652,16 +652,21 @@ const DoctorAppointments: React.FC = () => {
                         <i className="bi bi-file-text"></i>
                         Xem EMR
                       </button>
-                      {appointment.statusCode === 'OnProgressing' && (
+                      {appointment.statusCode !== 'OnProgressing' && (
                         <button 
                           className={styles.completeBtn}
-                          onClick={() => {
-                            setSelectedAppointment(appointment);
-                            setShowConfirmCompleteModal(true);
+                          onClick={async () => {
+                            try {
+                              await appointmentService.updateStatus(appointment.id, 'OnProgressing');
+                              showToast('Đã bắt đầu ca khám!', 'success');
+                              // Có thể reload hoặc cập nhật lại danh sách
+                            } catch (error) {
+                              showToast('Có lỗi xảy ra!', 'error');
+                            }
                           }}
                         >
-                          <i className="bi bi-check-circle"></i>
-                          Kết thúc ca khám
+                          <i className="bi bi-play-circle"></i>
+                          Bắt đầu ca khám
                         </button>
                       )}
                     </div>

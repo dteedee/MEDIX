@@ -562,6 +562,10 @@ export default function SettingsPage() {
   };
 
   const handleSaveChanges = async () => {
+    if (!validateBeforeSave()) {
+      return;
+    }
+
     setSaving(true);
     showToast('Đang lưu thay đổi...', 'info');
     try {

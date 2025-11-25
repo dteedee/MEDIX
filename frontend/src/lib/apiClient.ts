@@ -70,8 +70,8 @@ class ApiClient {
               return this.client(originalRequest);
             }
           } catch (refreshError) {
-            this.handleLogout();
-            window.location.href = '/login';
+            // this.handleLogout();
+            // window.location.href = '/login';
             return Promise.reject(refreshError);
           }
         }
@@ -124,7 +124,7 @@ class ApiClient {
       const expirationTime = parseInt(expiration);
       if (Date.now() >= expirationTime) {
         // Token expired, clear it
-        this.clearTokens();
+        this.clearAccessTokens();
         return null;
       }
     }
@@ -142,6 +142,11 @@ class ApiClient {
     // Set token expiration time (30 minutes from now)
     const expirationTime = Date.now() + (30 * 60 * 1000); // 30 minutes
     localStorage.setItem('tokenExpiration', expirationTime.toString());
+  }
+
+    public clearAccessTokens(): void {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('tokenExpiration');
   }
 
   public clearTokens(): void {

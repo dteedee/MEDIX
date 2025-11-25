@@ -29,6 +29,7 @@ namespace Medix.API.Business.Services.Classification
         private readonly IReviewRepository reviewRepository;
 
         private readonly IPromotionService promotionService;
+        
 
         public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService, IWalletTransactionService walletTransactionService, IWalletService walletService, IDoctorRepository doctorRepository, IUserPromotionService userPromotionService, IPromotionService promotionService, IReviewRepository reviewRepository)
         {

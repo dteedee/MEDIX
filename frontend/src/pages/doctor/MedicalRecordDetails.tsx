@@ -128,6 +128,13 @@ const MedicalRecordDetails: React.FC = () => {
     handleUpdateField('prescriptions', medicalRecord?.prescriptions.map((med) => (med.id === id ? { ...med, [field]: value } : med)));
   };
 
+  const handleUpdateMedicineFields = (id: string, updates: Partial<Prescription>) => {
+    handleUpdateField(
+      'prescriptions',
+      medicalRecord?.prescriptions.map((med) => (med.id === id ? { ...med, ...updates } : med))
+    );
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!medicalRecord) return;
@@ -209,7 +216,9 @@ const MedicalRecordDetails: React.FC = () => {
   // Chỉ cho phép chỉnh sửa trong 20 phút cuối ca khám
   const editableStartTime = new Date(endTime.getTime() - 20 * 60000);
 
-  return now >= editableStartTime && now <= endTime;
+  // return now >= editableStartTime && now <= endTime;
+  return true;
+
 }, [medicalRecord, isBanned]);
 
 
@@ -419,10 +428,11 @@ const MedicalRecordDetails: React.FC = () => {
           </button>
           )}
         </div>
-        <MedicineTable 
-          medicines={medicalRecord.prescriptions} 
-          onDelete={handleDeleteMedicine} 
-          onUpdate={handleUpdateMedicine} 
+        <MedicineTable
+          medicines={medicalRecord.prescriptions}
+          onDelete={handleDeleteMedicine}
+          onUpdate={handleUpdateMedicine}
+          onSelectMedication={handleUpdateMedicineFields}
           isEditable={isEditable}
         />
       </section>

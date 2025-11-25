@@ -150,7 +150,7 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
           onClick={() => setShowUserMenu(false)}
         >
           <i className="bi bi-chat-dots"></i>
-          {sidebarOpen && <span>Quản lý phản hồi</span>}
+          {sidebarOpen && <span>Phản hồi</span>}
         </Link>
 
         <Link

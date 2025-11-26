@@ -5,7 +5,7 @@
 }
 
 body {
-  font-family: "Poppins", -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif !important;
   background: linear-gradient(135deg, #e3f2fd, #bbdefb, #90caf9);
   color: #1e293b;
   line-height: 1.6;

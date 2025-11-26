@@ -785,7 +785,7 @@
 .diffLine {
   padding: 6px 10px;
   border-radius: 4px;
-  font-family: "Courier New", monospace;
+  font-family: 'Be Vietnam Pro', sans-serif !important;
   font-size: 12px;
   line-height: 1.5;
 }

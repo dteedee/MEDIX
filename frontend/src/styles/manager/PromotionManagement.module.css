@@ -939,7 +939,7 @@
 }
 
 .codeCell {
-  font-family: 'Courier New', monospace;
+  font-family: 'Be Vietnam Pro', sans-serif !important;
   background: #f7fafc;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;

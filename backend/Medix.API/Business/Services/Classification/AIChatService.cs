@@ -7,6 +7,10 @@ using Medix.API.Models.DTOs.AIChat;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
+using System.Text;
+using System.Globalization;
+using System.Text;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -18,6 +22,8 @@ namespace Medix.API.Business.Services.Classification
         private readonly IAppointmentRepository _appointmentRepository;
         private readonly IServiceTierRepository _serviceTierRepository;
         private readonly IServiceTierSubscriptionsRepository _serviceTierSubscriptionsRepository;
+        private readonly IServicePackageRepository _servicePackageRepository;
+        private readonly IHealthArticleRepository _healthArticleRepository;
         private readonly IUserRepository _userRepository;
         private readonly MedixContext _context;
         private readonly IRAGService _ragService;
@@ -32,6 +38,8 @@ namespace Medix.API.Business.Services.Classification
             IAppointmentRepository appointmentRepository,
             IServiceTierRepository serviceTierRepository,
             IServiceTierSubscriptionsRepository serviceTierSubscriptionsRepository,
+            IServicePackageRepository servicePackageRepository,
+            IHealthArticleRepository healthArticleRepository,
             IUserRepository userRepository,
             MedixContext context,
             IRAGService ragService,
@@ -45,6 +53,8 @@ namespace Medix.API.Business.Services.Classification
             _appointmentRepository = appointmentRepository;
             _serviceTierRepository = serviceTierRepository;
             _serviceTierSubscriptionsRepository = serviceTierSubscriptionsRepository;
+            _servicePackageRepository = servicePackageRepository;
+            _healthArticleRepository = healthArticleRepository;
             _userRepository = userRepository;
             _context = context;
             _ragService = ragService;
@@ -75,9 +85,10 @@ namespace Medix.API.Business.Services.Classification
             }
 
             var lowerMessage = message.ToLower();
+            var normalizedMessage = NormalizeText(lowerMessage);
 
             // Check if it's a system query
-            if (IsSystemQuery(lowerMessage))
+            if (IsSystemQuery(lowerMessage, normalizedMessage))
             {
                 var queryResponse = await QuerySystemAsync(lowerMessage);
                 return new ChatResponseDto
@@ -89,7 +100,7 @@ namespace Medix.API.Business.Services.Classification
             }
 
             // Check if it's a symptom description
-            if (IsSymptomQuery(lowerMessage))
+            if (IsSymptomQuery(lowerMessage, normalizedMessage))
             {
                 return new ChatResponseDto
                 {
@@ -289,17 +300,191 @@ namespace Medix.API.Business.Services.Classification
         public async Task<SystemQueryResponseDto> QuerySystemAsync(string query)
         {
             var lowerQuery = query.ToLower();
+            var normalizedQuery = NormalizeText(lowerQuery);
+            var mentionsSpecialty = lowerQuery.Contains("chuyên khoa") || lowerQuery.Contains("khoa") ||
+                                    normalizedQuery.Contains("chuyen khoa") || normalizedQuery.Contains("khoa");
+            var mentionsCount = lowerQuery.Contains("bao nhiêu") || lowerQuery.Contains("mấy") || lowerQuery.Contains("số lượng") || lowerQuery.Contains("tổng") ||
+                                normalizedQuery.Contains("bao nhieu") || normalizedQuery.Contains("may") || normalizedQuery.Contains("so luong") || normalizedQuery.Contains("tong");
+            var mentionsList = lowerQuery.Contains("danh sách") || lowerQuery.Contains("bao gồm") || lowerQuery.Contains("gồm những") || lowerQuery.Contains("gồm các") ||
+                               normalizedQuery.Contains("danh sach") || normalizedQuery.Contains("bao gom") || normalizedQuery.Contains("gom nhung") || normalizedQuery.Contains("gom cac");
+            var mentionsPackage = lowerQuery.Contains("gói") || lowerQuery.Contains("package") || lowerQuery.Contains("dịch vụ") ||
+                                  normalizedQuery.Contains("goi") || normalizedQuery.Contains("package") || normalizedQuery.Contains("dich vu");
+            var mentionsPrice = lowerQuery.Contains("giá") || lowerQuery.Contains("chi phí") || lowerQuery.Contains("phí") || lowerQuery.Contains("bao nhiêu tiền") ||
+                                normalizedQuery.Contains("gia") || normalizedQuery.Contains("chi phi") || normalizedQuery.Contains("phi") || normalizedQuery.Contains("bao nhieu tien");
+            var mentionsArticle = lowerQuery.Contains("bài viết") || lowerQuery.Contains("bài báo") || lowerQuery.Contains("tin tức") || lowerQuery.Contains("article") ||
+                                  normalizedQuery.Contains("bai viet") || normalizedQuery.Contains("bai bao") || normalizedQuery.Contains("tin tuc") || normalizedQuery.Contains("article");
 
-            // Count doctors by specialty
+            // Specializations
+            if (mentionsSpecialty && mentionsCount)
+            {
+                var allSpecializations = await _specializationRepository.GetAllAsync();
+                var activeSpecializations = allSpecializations.Where(s => s.IsActive).ToList();
+
+                return new SystemQueryResponseDto
+                {
+                    Answer = $"Hiện tại hệ thống MEDIX có {activeSpecializations.Count} chuyên khoa đang hoạt động.",
+                    Data = new
+                    {
+                        Count = activeSpecializations.Count,
+                        Specialties = activeSpecializations.Select(s => s.Name).ToList()
+                    }
+                };
+            }
+
+            if (mentionsSpecialty && mentionsList)
+            {
+                var allSpecializations = await _specializationRepository.GetAllAsync();
+                var activeSpecializations = allSpecializations.Where(s => s.IsActive).ToList();
+                var names = string.Join(", ", activeSpecializations.Select(s => s.Name));
+
+                return new SystemQueryResponseDto
+                {
+                    Answer = $"Các chuyên khoa hiện có trong hệ thống: {names}.",
+                    Data = new
+                    {
+                        Count = activeSpecializations.Count,
+                        Specialties = activeSpecializations.Select(s => s.Name).ToList()
+                    }
+                };
+            }
+
+            // Service packages / pricing
+            if (mentionsPackage && (mentionsPrice || !lowerQuery.Contains("bác sĩ")))
+            {
+                var packages = await _servicePackageRepository.GetTopAsync(20);
+                var activePackages = packages.Where(p => p.IsActive)
+                    .OrderBy(p => p.DisplayOrder)
+                    .ToList();
+
+                if (activePackages.Any())
+                {
+                    var builder = new StringBuilder();
+                    builder.AppendLine("Các gói dịch vụ MEDIX hiện có:");
+
+                    foreach (var package in activePackages.Take(5))
+                    {
+                        var price = FormatCurrency(package.MonthlyFee);
+                        var description = string.IsNullOrWhiteSpace(package.Description)
+                            ? "Bao gồm nhiều tiện ích quản lý và hỗ trợ người dùng."
+                            : package.Description;
+                        builder.AppendLine($"• {package.Name}: {price}/tháng – {description}");
+                    }
+
+                    if (activePackages.Count > 5)
+                    {
+                        builder.AppendLine($"… và {activePackages.Count - 5} gói khác.");
+                    }
+
+                    return new SystemQueryResponseDto
+                    {
+                        Answer = builder.ToString(),
+                        Data = activePackages.Select(p => new
+                        {
+                            p.Id,
+                            p.Name,
+                            p.MonthlyFee,
+                            p.Description
+                        }).ToList()
+                    };
+                }
+            }
+
+            // Doctor service tiers
+            if (mentionsPackage && lowerQuery.Contains("bác sĩ"))
+            {
+                var tiers = (await _serviceTierRepository.GetActiveTiersAsync()).ToList();
+                if (tiers.Any())
+                {
+                    var builder = new StringBuilder();
+                    builder.AppendLine("Các hạng dịch vụ dành cho bác sĩ trên MEDIX:");
+
+                    foreach (var tier in tiers.OrderBy(t => t.MonthlyPrice))
+                    {
+                        var featurePreview = !string.IsNullOrWhiteSpace(tier.Features) ? tier.Features : tier.Description;
+                        builder.AppendLine($"• {tier.Name}: {FormatCurrency(tier.MonthlyPrice)}/tháng – {featurePreview}");
+                    }
+
+                    return new SystemQueryResponseDto
+                    {
+                        Answer = builder.ToString(),
+                        Data = tiers.Select(t => new
+                        {
+                            t.Id,
+                            t.Name,
+                            t.MonthlyPrice,
+                            t.Features,
+                            t.Description
+                        }).ToList()
+                    };
+                }
+            }
+
+            // Articles
+            if (mentionsArticle)
+            {
+                if (mentionsCount)
+                {
+                    var publishedCount = await _context.HealthArticles.CountAsync(a => a.PublishedAt != null || a.StatusCode == "PUBLISHED");
+                    return new SystemQueryResponseDto
+                    {
+                        Answer = $"Hiện tại MEDIX có {publishedCount} bài viết/bài báo đã xuất bản.",
+                        Data = new { Count = publishedCount }
+                    };
+                }
+
+                var topicKeyword = ExtractTopicKeyword(query);
+                IEnumerable<HealthArticle> articles;
+
+                if (!string.IsNullOrEmpty(topicKeyword))
+                {
+                    articles = await _healthArticleRepository.SearchByNameAsync(topicKeyword);
+                }
+                else
+                {
+                    var (pagedArticles, _) = await _healthArticleRepository.GetPublishedPagedAsync(1, 5);
+                    articles = pagedArticles;
+                }
+
+                var publishedArticles = articles
+                    .Where(a => a.PublishedAt != null || a.StatusCode == "PUBLISHED")
+                    .Take(5)
+                    .ToList();
+
+                if (publishedArticles.Any())
+                {
+                    var builder = new StringBuilder();
+                    builder.AppendLine("Một số bài viết liên quan mà bạn có thể tham khảo:");
+
+                    foreach (var article in publishedArticles)
+                    {
+                        var summary = SummarizeText(article.Summary ?? article.Content);
+                        builder.AppendLine($"• {article.Title}: {summary}");
+                    }
+
+                    return new SystemQueryResponseDto
+                    {
+                        Answer = builder.ToString(),
+                        Data = publishedArticles.Select(a => new
+                        {
+                            a.Id,
+                            a.Title,
+                            a.Slug,
+                            a.PublishedAt
+                        }).ToList()
+                    };
+                }
+            }
+
+            // Doctors by specialty
             if (lowerQuery.Contains("bác sĩ") && lowerQuery.Contains("khoa"))
             {
                 var specialtyName = ExtractSpecialtyName(lowerQuery);
                 if (!string.IsNullOrEmpty(specialtyName))
                 {
                     var allSpecializations = await _specializationRepository.GetAllAsync();
-                    var specialization = allSpecializations.FirstOrDefault(s => 
+                    var specialization = allSpecializations.FirstOrDefault(s =>
                         s.Name.ToLower().Contains(specialtyName) || specialtyName.Contains(s.Name.ToLower()));
-                    
+
                     if (specialization != null)
                     {
                         var doctors = await _doctorRepository.GetDoctorsAsync(new DoctorQuery
@@ -367,22 +552,36 @@ namespace Medix.API.Business.Services.Classification
                 Answer = "Tôi có thể giúp bạn tìm kiếm thông tin về:\n\n" +
                         "• Số lượng bác sĩ theo chuyên khoa\n" +
                         "• Thông tin chi tiết về bác sĩ\n" +
-                        "• Danh sách chuyên khoa\n\n" +
+                        "• Danh sách chuyên khoa, gói dịch vụ và bài viết\n\n" +
                         "Vui lòng đặt câu hỏi cụ thể hơn."
             };
         }
 
         // Helper methods
-        private bool IsSystemQuery(string message)
+        private bool IsSystemQuery(string message, string normalizedMessage)
         {
-            var systemKeywords = new[] { "bác sĩ", "chuyên khoa", "bao nhiêu", "số lượng", "thông tin", "danh sách" };
-            return systemKeywords.Any(keyword => message.Contains(keyword));
+            var systemKeywords = new[]
+            {
+                "bác sĩ", "chuyên khoa", "bao nhiêu", "số lượng", "thông tin", "danh sách",
+                "gói", "dịch vụ", "giá", "chi phí", "phí", "bài viết", "bài báo", "tin tức", "article", "package"
+            };
+
+            var normalizedKeywords = new[]
+            {
+                "bac si", "chuyen khoa", "bao nhieu", "so luong", "thong tin", "danh sach",
+                "goi", "dich vu", "gia", "chi phi", "phi", "bai viet", "bai bao", "tin tuc", "article", "package"
+            };
+
+            return systemKeywords.Any(keyword => message.Contains(keyword)) ||
+                   normalizedKeywords.Any(keyword => normalizedMessage.Contains(keyword));
         }
 
-        private bool IsSymptomQuery(string message)
+        private bool IsSymptomQuery(string message, string normalizedMessage)
         {
             var symptomKeywords = new[] { "đau", "mệt", "sốt", "ho", "khó", "buồn", "chóng", "nóng", "ngứa", "triệu chứng" };
-            return symptomKeywords.Any(keyword => message.Contains(keyword));
+            var normalizedSymptomKeywords = new[] { "dau", "met", "sot", "ho", "kho", "buon", "chong", "nong", "ngua", "trieu chung" };
+            return symptomKeywords.Any(keyword => message.Contains(keyword)) ||
+                   normalizedSymptomKeywords.Any(keyword => normalizedMessage.Contains(keyword));
         }
 
         private bool IsHealthRelated(string message)
@@ -681,14 +880,105 @@ namespace Medix.API.Business.Services.Classification
         {
             // Simple extraction - in production, use NLP
             var specialties = new[] { "tim mạch", "thần kinh", "tiêu hóa", "da liễu", "nội", "ngoại", "nhi", "sản" };
-            return specialties.FirstOrDefault(s => query.Contains(s)) ?? string.Empty;
+            var normalizedQuery = NormalizeText(query);
+            var normalizedSpecialties = specialties.Select(NormalizeText).ToArray();
+
+            for (int i = 0; i < specialties.Length; i++)
+            {
+                if (query.Contains(specialties[i]) || normalizedQuery.Contains(normalizedSpecialties[i]))
+                {
+                    return specialties[i];
+                }
+            }
+
+            return string.Empty;
         }
 
         private string ExtractDoctorName(string query)
         {
             // Simple extraction - in production, use NLP
-            var parts = query.Split(new[] { "bác sĩ", "thông tin" }, StringSplitOptions.RemoveEmptyEntries);
+            var normalizedQuery = NormalizeText(query);
+            var parts = normalizedQuery.Split(new[] { "bac si", "thong tin" }, StringSplitOptions.RemoveEmptyEntries);
             return parts.Length > 1 ? parts[1].Trim() : string.Empty;
+        }
+
+        private string ExtractTopicKeyword(string query)
+        {
+            var markers = new[] { "về", "liên quan đến", "chủ đề", "topic" };
+            var normalizedMarkers = markers.Select(NormalizeText).ToArray();
+            var normalizedQuery = NormalizeText(query);
+
+            foreach (var marker in markers)
+            {
+                var index = query.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+                if (index >= 0)
+                {
+                    var keyword = query[(index + marker.Length)..].Trim();
+                    if (keyword.Length > 2)
+                    {
+                        return keyword;
+                    }
+                }
+            }
+
+            foreach (var marker in normalizedMarkers)
+            {
+                var index = normalizedQuery.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+                if (index >= 0)
+                {
+                    var keyword = normalizedQuery[(index + marker.Length)..].Trim();
+                    if (keyword.Length > 2)
+                    {
+                        return keyword;
+                    }
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private string SummarizeText(string? text, int maxLength = 140)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return "Xem chi tiết trong bài viết.";
+            }
+
+            var clean = text.Replace("\n", " ").Replace("\r", " ").Trim();
+            if (clean.Length <= maxLength)
+            {
+                return clean;
+            }
+
+            return clean.Substring(0, maxLength).Trim() + "...";
+        }
+
+        private string FormatCurrency(decimal amount)
+        {
+            var culture = CultureInfo.GetCultureInfo("vi-VN");
+            return string.Format(culture, "{0:N0} VND", amount);
+        }
+
+        private string NormalizeText(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            var normalized = text.Normalize(NormalizationForm.FormD);
+            var builder = new StringBuilder();
+
+            foreach (var ch in normalized)
+            {
+                var category = CharUnicodeInfo.GetUnicodeCategory(ch);
+                if (category != UnicodeCategory.NonSpacingMark)
+                {
+                    builder.Append(ch);
+                }
+            }
+
+            return builder.ToString().Normalize(NormalizationForm.FormC);
         }
     }
 }

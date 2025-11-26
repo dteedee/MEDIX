@@ -150,11 +150,158 @@ export default function ReportsAndAnalytics() {
   };
 
   const handleExportReport = () => {
-    showToast('Đang xuất báo cáo...', 'info');
-    // Mock export - replace with actual export functionality
-    setTimeout(() => {
-      showToast('Xuất báo cáo thành công!', 'success');
-    }, 2000);
+    try {
+      showToast('Đang xuất báo cáo...', 'info');
+      
+      const currentDate = new Date().toISOString().split('T')[0];
+      const dateTime = new Date().toLocaleString('vi-VN');
+      
+      // Tạo nội dung CSV với nhiều sections
+      let csvContent = '\uFEFF'; // BOM để hỗ trợ UTF-8
+      
+      // Header báo cáo
+      csvContent += `BÁO CÁO & THỐNG KÊ - MEDIX\n`;
+      csvContent += `Ngày xuất: ${dateTime}\n`;
+      csvContent += `Năm: ${selectedYear}\n`;
+      csvContent += `\n`;
+      
+      // Section 1: Tổng quan Metrics
+      csvContent += `=== TỔNG QUAN METRICS ===\n`;
+      csvContent += `Chỉ số,Giá trị,Tăng trưởng (%)\n`;
+      
+      if (summary) {
+        const patientCountValue = patientCount !== null 
+          ? patientCount
+          : Math.max(0, summary.users.total - summary.doctors.total);
+        
+        csvContent += `"Tổng bệnh nhân","${formatNumber(patientCountValue)}","${summary.users.growth > 0 ? '+' : ''}${summary.users.growth.toFixed(1)}%"\n`;
+        csvContent += `"Tổng bác sĩ","${formatNumber(summary.doctors.total)}","${summary.doctors.growth > 0 ? '+' : ''}${summary.doctors.growth.toFixed(1)}%"\n`;
+        csvContent += `"Tổng lịch hẹn","${formatNumber(summary.appointments.total)}","${summary.appointments.growth > 0 ? '+' : ''}${summary.appointments.growth.toFixed(1)}%"\n`;
+        csvContent += `"Tổng doanh thu","${formatCurrency(summary.revenue.total)} (${summary.revenue.total.toLocaleString('vi-VN')} VND)","${summary.revenue.growth > 0 ? '+' : ''}${summary.revenue.growth.toFixed(1)}%"\n`;
+      }
+      
+      csvContent += `\n`;
+      
+      // Section 2: Metrics bổ sung
+      csvContent += `=== METRICS BỔ SUNG ===\n`;
+      csvContent += `Chỉ số,Giá trị,Chi tiết\n`;
+      
+      // Tỷ lệ hoàn thành
+      const completionRate = appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.completed !== undefined
+        ? (((appointmentStats.completed || 0) / appointmentStats.totalAppointments) * 100).toFixed(1)
+        : '0.0';
+      const completionDetail = appointmentStats && appointmentStats.completed !== undefined && appointmentStats.totalAppointments !== undefined
+        ? `${(appointmentStats.completed || 0).toLocaleString('vi-VN')} / ${(appointmentStats.totalAppointments || 0).toLocaleString('vi-VN')} lịch hẹn`
+        : 'Lịch hẹn đã hoàn thành';
+      csvContent += `"Tỷ lệ hoàn thành","${completionRate}%","${completionDetail}"\n`;
+      
+      // Tỷ lệ hủy
+      const cancellationRate = appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.cancelledByPatient !== undefined && appointmentStats.cancelledByDoctor !== undefined
+        ? ((((appointmentStats.cancelledByPatient || 0) + (appointmentStats.cancelledByDoctor || 0)) / appointmentStats.totalAppointments) * 100).toFixed(1)
+        : '0.0';
+      const cancellationDetail = appointmentStats && appointmentStats.cancelledByPatient !== undefined && appointmentStats.cancelledByDoctor !== undefined
+        ? `${((appointmentStats.cancelledByPatient || 0) + (appointmentStats.cancelledByDoctor || 0)).toLocaleString('vi-VN')} lịch hẹn bị hủy`
+        : 'Lịch hẹn bị hủy';
+      csvContent += `"Tỷ lệ hủy","${cancellationRate}%","${cancellationDetail}"\n`;
+      
+      // Đánh giá trung bình
+      const avgRating = topRatedDoctors.length > 0
+        ? (topRatedDoctors.reduce((sum, d) => sum + d.averageRating, 0) / topRatedDoctors.length).toFixed(1)
+        : '0.0';
+      const totalReviews = topRatedDoctors.reduce((sum, d) => sum + d.reviewCount, 0);
+      csvContent += `"Đánh giá trung bình","${avgRating}","${totalReviews} đánh giá"\n`;
+      
+      // Tỷ lệ đặt lại lịch
+      const rescheduleRate = appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.BeforeAppoiment !== undefined
+        ? (((appointmentStats.BeforeAppoiment || 0) / appointmentStats.totalAppointments) * 100).toFixed(1)
+        : '0.0';
+      const rescheduleDetail = appointmentStats && appointmentStats.BeforeAppoiment !== undefined
+        ? `${(appointmentStats.BeforeAppoiment || 0).toLocaleString('vi-VN')} lịch hẹn được đặt lại`
+        : 'Lịch hẹn được đặt lại';
+      csvContent += `"Tỷ lệ đặt lại lịch","${rescheduleRate}%","${rescheduleDetail}"\n`;
+      
+      csvContent += `\n`;
+      
+      // Section 3: Top Rated Doctors
+      csvContent += `=== TOP ${topRatedDoctors.length} BÁC SĨ ĐƯỢC ĐÁNH GIÁ CAO NHẤT ===\n`;
+      csvContent += `Hạng,Tên bác sĩ,Chuyên khoa,Kinh nghiệm (năm),Đánh giá trung bình,Số đánh giá,Ca đã thực hiện,Ca thành công\n`;
+      
+      topRatedDoctors.forEach((doctor, index) => {
+        const completedAppts = doctor.completedAppointments !== undefined 
+          ? doctor.completedAppointments
+          : doctor.totalAppointments !== undefined
+          ? doctor.totalAppointments
+          : 0;
+        const successfulAppts = doctor.successfulAppointments !== undefined 
+          ? doctor.successfulAppointments
+          : doctor.successRate !== undefined && doctor.completedAppointments !== undefined
+          ? Math.round((doctor.successRate / 100) * doctor.completedAppointments)
+          : 0;
+        
+        csvContent += `"${index + 1}","${doctor.doctorName || ''}","${doctor.specialization || ''}","${doctor.experienceYears || 0}","${doctor.formattedRating || '0.0'}","${doctor.reviewCount || 0}","${completedAppts}","${successfulAppts}"\n`;
+      });
+      
+      csvContent += `\n`;
+      
+      // Section 4: Chuyên khoa phổ biến
+      csvContent += `=== CHUYÊN KHOA PHỔ BIẾN ===\n`;
+      csvContent += `Hạng,Tên chuyên khoa,Số lượng bác sĩ,Tỷ lệ (%)\n`;
+      
+      specializations
+        .filter(spec => spec.doctorCount > 0)
+        .sort((a, b) => b.doctorCount - a.doctorCount)
+        .forEach((specialty, index) => {
+          csvContent += `"${index + 1}","${specialty.name}","${specialty.doctorCount}","${specialty.percentage.toFixed(1)}"\n`;
+        });
+      
+      csvContent += `\n`;
+      
+      // Section 5: Xu hướng lịch hẹn theo tháng
+      if (appointmentTrends && appointmentTrends.monthly.length > 0) {
+        csvContent += `=== XU HƯỚNG LỊCH HẸN THEO THÁNG (NĂM ${selectedYear}) ===\n`;
+        csvContent += `Tháng,Số lịch hẹn,Doanh thu (VND)\n`;
+        
+        appointmentTrends.monthly.forEach(trend => {
+          const monthName = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
+                            'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'][trend.month - 1];
+          csvContent += `"${monthName}","${trend.appointmentCount}","${trend.totalRevenue.toLocaleString('vi-VN')} VND"\n`;
+        });
+        
+        csvContent += `"Tổng cộng","${appointmentTrends.totalAppointments}","${appointmentTrends.totalRevenue.toLocaleString('vi-VN')} VND"\n`;
+        csvContent += `\n`;
+      }
+      
+      // Section 6: Tăng trưởng người dùng theo tháng
+      if (userGrowth && userGrowth.monthly.length > 0) {
+        csvContent += `=== TĂNG TRƯỞNG NGƯỜI DÙNG THEO THÁNG (NĂM ${selectedYear}) ===\n`;
+        csvContent += `Tháng,Người dùng mới,Bác sĩ mới\n`;
+        
+        userGrowth.monthly.forEach(growth => {
+          const monthName = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
+                            'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'][growth.month - 1];
+          csvContent += `"${monthName}","${growth.newUsers}","${growth.newDoctors}"\n`;
+        });
+        
+        csvContent += `"Tổng cộng","${userGrowth.totalNewUsers}","${userGrowth.totalNewDoctors}"\n`;
+      }
+      
+      // Tạo file và download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `bao-cao-thong-ke-${currentDate}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      showToast('Đã xuất báo cáo CSV thành công!', 'success');
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      showToast('Không thể xuất báo cáo. Vui lòng thử lại.', 'error');
+    }
   };
 
   if (loading) {

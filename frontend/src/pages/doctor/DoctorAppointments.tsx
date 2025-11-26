@@ -704,56 +704,60 @@ const DoctorAppointments: React.FC = () => {
                         <button 
                           className={styles.completeBtn}
                           onClick={async () => {
-                            // Chỉ kiểm tra dựa trên statusCode, không kiểm tra thời gian
-                            try {
-                              await appointmentService.updateStatus(appointment.id, 'OnProgressing');
-                              showToast('Đã bắt đầu ca khám!', 'success');
-                              // Gọi lại API lấy danh sách mới
-                              const now = new Date();
-                              const startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-                              const endDate = new Date(now.getFullYear(), now.getMonth() + 3, 0);
-                              const startDateStr = startDate.toISOString().split('T')[0];
-                              const endDateStr = endDate.toISOString().split('T')[0];
-                              const data = await appointmentService.getMyAppointmentsByDateRange(startDateStr, endDateStr);
-                              const transformedData = data.map(apt => {
-                                // Converter string ISO para Date object (tự động xử lý timezone)
-                                const startDate = new Date(apt.appointmentStartTime);
-                                
-                                // Chuyển sang timezone Việt Nam (UTC+7)
-                                const vietnamTime = new Date(startDate.getTime() + (7 * 60 * 60 * 1000));
-                                
-                                // Lấy data theo Việt Nam
-                                const year = vietnamTime.getUTCFullYear();
-                                const month = (vietnamTime.getUTCMonth() + 1).toString().padStart(2, '0');
-                                const day = vietnamTime.getUTCDate().toString().padStart(2, '0');
-                                const datePart = `${year}-${month}-${day}`;
-                                
-                                // Lấy giờ phút theo Việt Nam
-                                const hours = vietnamTime.getUTCHours().toString().padStart(2, '0');
-                                const minutes = vietnamTime.getUTCMinutes().toString().padStart(2, '0');
-                                
-                                return {
-                                  id: apt.id,
-                                  patientName: apt.patientName,
-                                  date: datePart,
-                                  time: `${hours}:${minutes}`,
-                                  fee: apt.consultationFee,
-                                  avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.patientName)}&background=667eea&color=fff`,
-                                  patientID: apt.patientID,
-                                  appointmentStartTime: apt.appointmentStartTime,
-                                  appointmentEndTime: apt.appointmentEndTime,
-                                  statusCode: apt.statusCode,
-                                  statusDisplayName: apt.statusCode === 'OnProgressing' ? 'Đang khám' : apt.statusDisplayName,
-                                  paymentStatusCode: apt.paymentStatusCode,
-                                  totalAmount: apt.totalAmount,
-                                  medicalInfo: apt.medicalInfo,
-                                };
-                              });
-                              setAppointments(transformedData);
-                            } catch (error) {
-                              showToast('Có lỗi xảy ra!', 'error');
+                            // Kiểm tra điều kiện thời gian và statusCode
+                            const now = new Date();
+                            const startTime = appointment.appointmentStartTime ? new Date(appointment.appointmentStartTime) : null;
+                            const endTime = appointment.appointmentEndTime ? new Date(appointment.appointmentEndTime) : null;
+                            if (
+                              appointment.statusCode === 'BeforeAppoiment' &&
+                              startTime && endTime &&
+                              now >= startTime && now <= endTime
+                            ) {
+                              try {
+                                await appointmentService.updateStatus(appointment.id, 'OnProgressing');
+                                showToast('Đã bắt đầu ca khám!', 'success');
+                                // Gọi lại API lấy danh sách mới
+                                const reloadNow = new Date();
+                                const reloadStartDate = new Date(reloadNow.getFullYear(), reloadNow.getMonth() - 3, 1);
+                                const reloadEndDate = new Date(reloadNow.getFullYear(), reloadNow.getMonth() + 3, 0);
+                                const reloadStartDateStr = reloadStartDate.toISOString().split('T')[0];
+                                const reloadEndDateStr = reloadEndDate.toISOString().split('T')[0];
+                                const data = await appointmentService.getMyAppointmentsByDateRange(reloadStartDateStr, reloadEndDateStr);
+                                const transformedData = data.map(apt => {
+                                  const startDate = new Date(apt.appointmentStartTime);
+                                  const vietnamTime = new Date(startDate.getTime() + (7 * 60 * 60 * 1000));
+                                  const year = vietnamTime.getUTCFullYear();
+                                  const month = (vietnamTime.getUTCMonth() + 1).toString().padStart(2, '0');
+                                  const day = vietnamTime.getUTCDate().toString().padStart(2, '0');
+                                  const datePart = `${year}-${month}-${day}`;
+                                  const hours = vietnamTime.getUTCHours().toString().padStart(2, '0');
+                                  const minutes = vietnamTime.getUTCMinutes().toString().padStart(2, '0');
+                                  return {
+                                    id: apt.id,
+                                    patientName: apt.patientName,
+                                    date: datePart,
+                                    time: `${hours}:${minutes}`,
+                                    fee: apt.consultationFee,
+                                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.patientName)}&background=667eea&color=fff`,
+                                    patientID: apt.patientID,
+                                    appointmentStartTime: apt.appointmentStartTime,
+                                    appointmentEndTime: apt.appointmentEndTime,
+                                    statusCode: apt.statusCode,
+                                    statusDisplayName: apt.statusCode === 'OnProgressing' ? 'Đang khám' : apt.statusDisplayName,
+                                    paymentStatusCode: apt.paymentStatusCode,
+                                    totalAmount: apt.totalAmount,
+                                    medicalInfo: apt.medicalInfo,
+                                  };
+                                });
+                                setAppointments(transformedData);
+                              } catch (error) {
+                                showToast('Có lỗi xảy ra!', 'error');
+                              }
+                            } else {
+                              showToast('Chỉ được bắt đầu ca khám trong khung giờ đã đặt!', 'warning');
                             }
                           }}
+                          // Luôn cho phép bấm
                         >
                           <i className="bi bi-play-circle"></i>
                           Bắt đầu ca khám
@@ -898,18 +902,7 @@ const DoctorAppointments: React.FC = () => {
                       <i className="bi bi-file-text"></i>
                       Xem EMR
                     </button>
-                    {selectedAppointment.statusCode === 'OnProgressing' && (
-                      <button 
-                        className={styles.modalCompleteBtn}
-                        onClick={() => {
-                          setShowDetailModal(false);
-                          setShowConfirmCompleteModal(true);
-                        }}
-                      >
-                        <i className="bi bi-check-circle"></i>
-                        Kết thúc ca khám
-                      </button>
-                    )}
+               
                   </>
                 )}
               </div>

@@ -1,4 +1,6 @@
-﻿using Medix.API.Models.Entities;
+﻿using Medix.API.Business.Helper;
+using Medix.API.Models.Entities;
+using System.Text.Json.Serialization;
 
 namespace Medix.API.Models.DTOs.Doctor
 {
@@ -34,7 +36,9 @@ namespace Medix.API.Models.DTOs.Doctor
     }
     public class AppointmentBookedDto
     {
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime? StartTime { get; set; }
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime? EndTime { get; set; }
     }
     public class DoctorScheduleDto

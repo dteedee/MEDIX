@@ -680,40 +680,42 @@ const MedicalRecordDetails: React.FC = () => {
           <br />
           <p>{user?.fullName}</p>
         </div>
-        {isEditable ? (
-          <div className="button-group">
-            <button type="submit" className="btn-submit" disabled={isSubmitting} >
-              {isSubmitting ? 'Đang lưu...' : 'Hoàn tất & Lưu hồ sơ'}
-            </button>
-            {showActionButtons && (
-              <>
-                <button 
-                  type="button" 
-                  className="btn-cancel" 
-                  onClick={handleCancelAppointment}
-                  disabled={isSubmitting || !canCancelAppointment}
-                  title={!canCancelAppointment ? 'Chỉ có thể hủy trong vòng 30 phút sau khi bắt đầu ca khám' : ''}
-                >
-                  Hủy lịch khám
-                </button>
-                <button 
-                  type="button" 
-                  className="btn-complete" 
-                  onClick={handleCompleteAppointment}
-                  disabled={isSubmitting || !canComplete}
-                  title={!canComplete ? 'Có thể hoàn thành từ 5 phút trước đến 10 phút sau khi kết thúc ca khám' : ''}
-                >
-                  Hoàn thành
-                </button>
-              </>
-            )}
-          </div>
-        ) : (
-          <button type="button" className="btn-submit" onClick={() => navigate(-1)}>
+        <div className="button-group">
+          <button type="button" className="btn-secondary" onClick={() => navigate(-1)}>
             Quay lại
           </button>
-        )}
+          {isEditable && (
+            <>
+              <button type="submit" className="btn-submit" disabled={isSubmitting} >
+                {isSubmitting ? 'Đang lưu...' : 'Hoàn tất & Lưu hồ sơ'}
+              </button>
+              {showActionButtons && (
+                <>
+                  <button 
+                    type="button" 
+                    className="btn-cancel" 
+                    onClick={handleCancelAppointment}
+                    disabled={isSubmitting || !canCancelAppointment}
+                    title={!canCancelAppointment ? 'Chỉ có thể hủy trong vòng 30 phút sau khi bắt đầu ca khám' : ''}
+                  >
+                    Hủy lịch khám
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn-complete" 
+                    onClick={handleCompleteAppointment}
+                    disabled={isSubmitting || !canComplete}
+                    title={!canComplete ? 'Có thể hoàn thành từ 5 phút trước đến 10 phút sau khi kết thúc ca khám' : ''}
+                  >
+                    Hoàn thành
+                  </button>
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
+     
     </form>
   );
 };

@@ -167,7 +167,7 @@ namespace Medix.API.Business.Services.Classification
                         ScheduledDate = scheduledTime,
                         IsRecurring = false,
                         IsCompleted = false,
-                        RelatedAppointmentId = null,
+                        RelatedAppointmentId = app.Result.Id,
                         CreatedAt = now
                     };
 

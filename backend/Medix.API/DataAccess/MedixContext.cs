@@ -1356,6 +1356,17 @@ public partial class MedixContext : DbContext
                             .Where(p => p.IsModified && p.OriginalValue?.ToString() != p.CurrentValue?.ToString())
                             .ToList();
 
+                        // Bỏ qua việc ghi log nếu các thay đổi chỉ liên quan đến ViewCount và/hoặc UpdatedAt trên HealthArticle
+                        if (entry.Entity is HealthArticle)
+                        {
+                            var nonTrackingProperties = new HashSet<string> { "ViewCount", "UpdatedAt", "UpdatedBy" };
+                            var significantChanges = changedProperties.Where(p => !nonTrackingProperties.Contains(p.Metadata.Name)).ToList();
+                            if (!significantChanges.Any())
+                            {
+                                continue; // Bỏ qua việc tạo log nếu không có thay đổi nào quan trọng
+                            }
+                        }
+
                         if (!changedProperties.Any()) continue; // Bỏ qua nếu không có thay đổi thực sự
 
                         var oldProps = new Dictionary<string, object?>();

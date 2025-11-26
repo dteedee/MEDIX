@@ -9,5 +9,9 @@ namespace Medix.API.Business.Interfaces.Classification
         Task Upgrade(Guid userId, Guid serviceTierId);
         Task RenewSubscription(Guid subscriptionId);
         Task Unsubscribe(Guid userId, Guid serviceTierId);
+        Task<List<DoctorServiceTierDetailDto>> GetAllServiceTiers();
+        Task UpdateServiceTier(UpdateServiceTierRequest request);
+        Task<DoctorServiceTierDetailDto?> GetServiceTierDetail(Guid serviceTierId);
+
     }
 }

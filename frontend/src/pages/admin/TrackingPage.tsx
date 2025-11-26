@@ -283,6 +283,8 @@ export default function TrackingPage() {
     LikeCount: 'Lượt thích',
     CoverImageUrl: 'URL ảnh bìa',
     MetaTitle: 'Tiêu đề SEO',
+    MedicalHistory: 'Tiền sử bệnh',
+    Token: 'Mã đăng nhập',
   };
 
   const getFriendlyFieldName = (key: string) => {
@@ -463,10 +465,12 @@ export default function TrackingPage() {
     HealthArticle: 'Bài viết sức khỏe',
     DoctorSchedule: 'Lịch khám của bác sĩ',
     Appointment: 'Lịch hẹn',
+    MedicalHistory: 'Hồ sơ bệnh án',
     Patient: 'Hồ sơ bệnh nhân',
     Doctor: 'Hồ sơ bác sĩ',
     Notification: 'Thông báo',
     SystemConfiguration: 'Cấu hình hệ thống',
+    MedicalRecord: 'Hồ sơ bệnh án',
     BackupJob: 'Bản sao lưu',
     Feedback: 'Phản hồi người dùng',
   };
@@ -487,8 +491,7 @@ export default function TrackingPage() {
     const actor = log.userName || 'Hệ thống';
     const actionVerb = actionVerbMap[log.displayActionType] || 'đã thao tác trên';
     if (log.displayActionType === 'LOGIN') {
-      const ipText = log.ipAddress ? ` (IP: ${log.ipAddress})` : '';
-      return `${actor} đã đăng nhập vào hệ thống${ipText}.`;
+      
     }
     const friendlyEntity =
       log.entityType === 'RefreshToken'
@@ -698,7 +701,6 @@ export default function TrackingPage() {
                           <span className={`${styles.actionBadge} ${getActionBadgeStyle(log.displayActionType)}`}>
                             {getFriendlyActionLabel(log.displayActionType)}
                           </span>
-                          <span className={styles.actionHint}>{log.displayActionType}</span>
                         </div>
                       </td>
                       <td>
@@ -712,19 +714,14 @@ export default function TrackingPage() {
                         <p className={styles.actionDescription}>{getActionDescription(log)}</p>
                         <div className={styles.descriptionMeta}>
                           <span className={styles.metaItem}>
-                            <i className="bi bi-clock-history"></i>
-                            {formatTimestamp(log.timestamp)}
+                          
                           </span>
                           {log.ipAddress && (
                             <span className={styles.metaItem}>
-                              <i className="bi bi-globe-asia-australia"></i>
-                              IP: {log.ipAddress}
+                             
                             </span>
                           )}
-                          <span className={styles.metaItem}>
-                            <i className="bi bi-hash"></i>
-                            Log #{log.id}
-                          </span>
+                         
                         </div>
                       </td>
                       <td>
@@ -818,12 +815,7 @@ export default function TrackingPage() {
                       <i className="bi bi-clock-history"></i>
                       {formatTimestamp(viewingLog.timestamp)}
                     </span>
-                    {viewingLog.ipAddress && (
-                      <span className={styles.infoPill}>
-                        <i className="bi bi-globe2"></i>
-                        IP: {viewingLog.ipAddress}
-                      </span>
-                    )}
+                    
                   </div>
                 </div>
               </div>

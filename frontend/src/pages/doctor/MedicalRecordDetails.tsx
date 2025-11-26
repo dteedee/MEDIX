@@ -188,11 +188,11 @@ const MedicalRecordDetails: React.FC = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         setIsSubmitting(true);
-        try {
+        try {          
           const payload = {
             ...medicalRecord,
-            updatePatientMedicalHistory: true, // Luôn cập nhật tiền sử bệnh khi có chẩn đoán
-            newAllergy: newAllergy.trim(), // Gửi dị ứng mới nếu có
+            // Không cập nhật tiền sử bệnh ở bước này
+            updatePatientMedicalHistory: false, 
           };
 
           await medicalRecordService.updateMedicalRecord(medicalRecord.id, payload);
@@ -341,8 +341,17 @@ const MedicalRecordDetails: React.FC = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         setIsSubmitting(true);
-        try {
-          // Chama a API UpdateStatus com status "Completed"
+        try {          
+          // 1. Gửi yêu cầu cập nhật hồ sơ lần cuối với cờ updatePatientMedicalHistory = true
+          // để backend cộng dồn chẩn đoán vào tiền sử bệnh của bệnh nhân.
+          const finalPayload = {
+            ...medicalRecord,
+            updatePatientMedicalHistory: true,
+            newAllergy: newAllergy.trim(),
+          };
+          await medicalRecordService.updateMedicalRecord(medicalRecord.id, finalPayload);
+
+          // 2. Sau khi lưu thành công, cập nhật trạng thái cuộc hẹn thành "Completed"
           await appointmentService.updateStatus(medicalRecord.appointmentId, 'Completed');
           
           Swal.fire({
@@ -519,7 +528,7 @@ const MedicalRecordDetails: React.FC = () => {
         <h3 className="section-title">II. LÝ DO VÀO VIỆN VÀ BỆNH SỬ</h3>
         <div className="section-grid">
           <div className="form-column">
-            <label className="form-label">Lý do khám</label>
+            <label className="form-label">*Lý do khám</label>
             <textarea
               name="chiefComplaint"
               className={`form-textarea ${fieldErrors.chiefComplaint ? 'input-error' : ''}`}
@@ -583,7 +592,7 @@ const MedicalRecordDetails: React.FC = () => {
         <h3 className="section-title">IV. CHẨN ĐOÁN VÀ ĐIỀU TRỊ</h3>
         <div className="section-grid">
           <div className="form-column">
-            <label className="form-label">Chẩn đoán chính</label>
+            <label className="form-label">*Chẩn đoán chính</label>
             <textarea
               name="diagnosis"
               className={`form-textarea ${fieldErrors.diagnosis ? 'input-error' : ''}`}
@@ -611,7 +620,7 @@ const MedicalRecordDetails: React.FC = () => {
               rows={3} />
           </div>
           <div className="form-column full-width">
-            <label className="form-label">Kế hoạch điều trị</label>
+            <label className="form-label">*Kế hoạch điều trị</label>
             <textarea
               name="treatmentPlan"
               className={`form-textarea ${fieldErrors.treatmentPlan ? 'input-error' : ''}`}

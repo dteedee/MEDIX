@@ -4,8 +4,7 @@ import { Calendar } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import styles from '../../styles/manager/ServicePackageManagement.module.css'
 import { servicePackageService } from '../../services/servicePackageService'
-import { ServicePackageModel, ServicePackageUpdateRequest } from '../../types/service-package.types'
-
+import { DoctorServiceTier, DoctorServiceTierUpdateRequest } from '../../types/doctor-service-tier.types'
 // SVG Icons for actions
 const ViewIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -28,28 +27,28 @@ const SortIcon = ({ direction }: { direction?: 'asc' | 'desc' }) => (
   </svg>
 );
 
-type ServicePackage = ServicePackageModel;
-type SortableFields = 'name' | 'monthlyFee' | 'displayOrder' | 'isActive' | 'createdAt';
+type ServiceTier = DoctorServiceTier;
+type SortableFields = 'name' | 'monthlyPrice' | 'consultationFeeMultiplier' | 'maxDailyAppointments';
 
 const MAX_FETCH_LIMIT = 50;
-const NAME_CHAR_LIMIT = 225;
+const DESCRIPTION_CHAR_LIMIT = 500;
 
 export default function ServicePackageManagement() {
-  const [packages, setPackages] = useState<ServicePackage[]>([]);
+  const [packages, setPackages] = useState<ServiceTier[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState<SortableFields>('createdAt');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortField, setSortField] = useState<SortableFields>('monthlyPrice');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [viewPackage, setViewPackage] = useState<ServicePackage | null>(null);
-  const [editPackage, setEditPackage] = useState<ServicePackage | null>(null);
+  const [viewPackage, setViewPackage] = useState<ServiceTier | null>(null);
+  const [editPackage, setEditPackage] = useState<ServiceTier | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editForm, setEditForm] = useState<ServicePackageUpdateRequest>({ name: '', monthlyFee: 0 });
-  const [formErrors, setFormErrors] = useState<{ name?: string; monthlyFee?: string }>({});
+  const [editForm, setEditForm] = useState<DoctorServiceTierUpdateRequest>({ description: '', monthlyPrice: 0 });
+  const [formErrors, setFormErrors] = useState<{ description?: string; monthlyPrice?: string }>({});
   const [saving, setSaving] = useState(false);
   const { showToast } = useToast();
 
@@ -57,7 +56,7 @@ export default function ServicePackageManagement() {
     setLoading(true);
     setFetchError(null);
     try {
-      const data = await servicePackageService.getTop(MAX_FETCH_LIMIT);
+      const data = await servicePackageService.getAllTiers();
       setPackages(data);
     } catch (error) {
       console.error('Failed to load service packages', error);
@@ -100,10 +99,10 @@ export default function ServicePackageManagement() {
     setCurrentPage(1);
   };
 
-  const handleViewDetails = async (pkg: ServicePackage) => {
+  const handleViewDetails = async (pkg: ServiceTier) => {
     setDetailLoading(true);
     try {
-      const latest = await servicePackageService.getById(pkg.id);
+      const latest = await servicePackageService.getTierById(pkg.serviceTierId);
       setViewPackage(latest);
       setShowDetails(true);
     } catch (error) {
@@ -123,12 +122,12 @@ export default function ServicePackageManagement() {
     setViewPackage(null);
   };
 
-  const handleOpenEdit = async (pkg: ServicePackage) => {
+  const handleOpenEdit = async (pkg: ServiceTier) => {
     setDetailLoading(true);
     try {
-      const latest = await servicePackageService.getById(pkg.id);
+      const latest = await servicePackageService.getTierById(pkg.serviceTierId);
       setEditPackage(latest);
-      setEditForm({ name: latest.name, monthlyFee: latest.monthlyFee });
+      setEditForm({ description: latest.description, monthlyPrice: latest.monthlyPrice });
       setFormErrors({});
       setShowEditModal(true);
     } catch (error) {
@@ -146,37 +145,37 @@ export default function ServicePackageManagement() {
   const handleCloseEdit = () => {
     setShowEditModal(false);
     setEditPackage(null);
-    setEditForm({ name: '', monthlyFee: 0 });
+    setEditForm({ description: '', monthlyPrice: 0 });
     setFormErrors({});
   };
 
-  const handleEditChange = (field: keyof ServicePackageUpdateRequest, value: string) => {
-    if (field === 'name') {
-      const truncated = value.slice(0, NAME_CHAR_LIMIT);
-      setEditForm(prev => ({ ...prev, name: truncated }));
-      if (formErrors.name) {
-        setFormErrors(prev => ({ ...prev, name: undefined }));
+  const handleEditChange = (field: keyof DoctorServiceTierUpdateRequest, value: string) => {
+    if (field === 'description') {
+      const truncated = value.slice(0, DESCRIPTION_CHAR_LIMIT);
+      setEditForm((prev: DoctorServiceTierUpdateRequest) => ({ ...prev, description: truncated }));
+      if (formErrors.description) {
+        setFormErrors((prev: any) => ({ ...prev, description: undefined }));
       }
       return;
     }
 
-    if (field === 'monthlyFee') {
+    if (field === 'monthlyPrice') {
       const sanitized = value.replace(/[^0-9]/g, '');
-      setEditForm(prev => ({ ...prev, monthlyFee: sanitized ? Number(sanitized) : 0 }));
-      if (formErrors.monthlyFee) {
-        setFormErrors(prev => ({ ...prev, monthlyFee: undefined }));
+      setEditForm((prev: DoctorServiceTierUpdateRequest) => ({ ...prev, monthlyPrice: sanitized ? Number(sanitized) : 0 }));
+      if (formErrors.monthlyPrice) {
+        setFormErrors((prev: any) => ({ ...prev, monthlyPrice: undefined }));
       }
       return;
     }
   };
 
   const validateEditForm = () => {
-    const errors: { name?: string; monthlyFee?: string } = {};
-    if (!editForm.name.trim()) {
-      errors.name = 'Tên gói không được bỏ trống';
+    const errors: { description?: string; monthlyPrice?: string } = {};
+    if (!editForm.description.trim()) {
+      errors.description = 'Mô tả không được bỏ trống';
     }
-    if (editForm.monthlyFee <= 0) {
-      errors.monthlyFee = 'Phí hàng tháng phải là số lớn hơn 0 và chỉ gồm chữ số';
+    if (editForm.monthlyPrice < 0) {
+      errors.monthlyPrice = 'Phí hàng tháng phải là số không âm.';
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -188,18 +187,13 @@ export default function ServicePackageManagement() {
 
     setSaving(true);
     try {
-      const updated = await servicePackageService.updateBasicInfo(editPackage.id, {
-        name: editForm.name.trim(),
-        monthlyFee: editForm.monthlyFee,
+      await servicePackageService.updateTier(editPackage.serviceTierId, {
+        description: editForm.description.trim(),
+        monthlyPrice: editForm.monthlyPrice,
       });
 
-      setEditPackage(updated);
-      setEditForm({ name: updated.name, monthlyFee: updated.monthlyFee });
-      setPackages(prev => prev.map(p => (p.id === updated.id ? updated : p)));
-      if (viewPackage && viewPackage.id === updated.id) {
-        setViewPackage(updated);
-      }
       showToast('Cập nhật gói dịch vụ thành công', 'success');
+      await loadPackages(); // Tải lại toàn bộ danh sách
       handleCloseEdit();
     } catch (error) {
       console.error('Failed to update service package', error);
@@ -215,7 +209,7 @@ export default function ServicePackageManagement() {
 
   const hasChanges =
     !!editPackage &&
-    (editForm.name.trim() !== editPackage.name || editForm.monthlyFee !== editPackage.monthlyFee);
+    (editForm.description.trim() !== editPackage.description || editForm.monthlyPrice !== editPackage.monthlyPrice);
 
   const filteredAndSortedPackages = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
@@ -223,9 +217,8 @@ export default function ServicePackageManagement() {
       if (!keyword) return true;
       const source = [
         pkg.name,
-        pkg.description ?? '',
-        pkg.featuresList.join(' '),
-        pkg.displayOrder.toString(),
+        pkg.description,
+        pkg.monthlyPrice.toString(),
       ]
         .join(' ')
         .toLowerCase();
@@ -236,13 +229,7 @@ export default function ServicePackageManagement() {
       let aValue: any = a[sortField];
       let bValue: any = b[sortField];
 
-      if (sortField === 'createdAt') {
-        aValue = new Date(aValue).getTime();
-        bValue = new Date(bValue).getTime();
-      } else if (sortField === 'isActive') {
-        aValue = a.isActive ? 1 : 0;
-        bValue = b.isActive ? 1 : 0;
-      } else if (typeof aValue === 'string') {
+      if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = (bValue as string).toLowerCase();
       }
@@ -272,31 +259,29 @@ export default function ServicePackageManagement() {
     }).format(amount);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   const getStatusBadge = (isActive: boolean) => {
     return (
       <span className={`${styles.statusBadge} ${isActive ? styles.statusActive : styles.statusInactive}`}>
-        {isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
+        <span className={styles.statusDot}></span>
+        {isActive ? 'Hoạt động' : 'Không hoạt động'}
       </span>
     );
   };
 
-  const renderFeaturesPreview = (pkg: ServicePackage) => {
-    if (!pkg.featuresList.length) {
+  const renderFeaturesPreview = (pkg: ServiceTier) => {
+    if (!pkg.featuresList?.length) {
       return <span className={styles.emptyFeature}>Chưa cấu hình</span>;
     }
+    let features = [];
+    try {
+      features = JSON.parse(pkg.features);
+    } catch (e) {
+      return <span className={styles.emptyFeature}>Lỗi định dạng</span>;
+    }
 
-    const preview = pkg.featuresList.slice(0, 2);
-    const remaining = pkg.featuresList.length - preview.length;
+    if (!Array.isArray(features) || features.length === 0) return <span className={styles.emptyFeature}>Chưa cấu hình</span>;
+    const preview = features.slice(0, 2);
+    const remaining = features.length - preview.length;
 
     return (
       <div className={styles.featurePills}>
@@ -310,8 +295,8 @@ export default function ServicePackageManagement() {
     );
   };
 
-  const getDescriptionPreview = (pkg: ServicePackage) => {
-    const description = (pkg.description ?? '').trim();
+  const getDescriptionPreview = (pkg: ServiceTier) => {
+    const description = pkg.description.trim();
     if (!description) return 'Chưa có mô tả';
     return description.length > 50 ? `${description.substring(0, 50)}...` : description;
   };
@@ -353,7 +338,7 @@ export default function ServicePackageManagement() {
               <i className="bi bi-box-seam" style={{ fontSize: '28px' }}></i>
             </div>
             <div>
-              <h1 className={styles.title}>Gói dịch vụ</h1>
+              <h1 className={styles.title}>Gói Dịch Vụ Bác Sĩ</h1>
               <p className={styles.subtitle}>Danh sách gói đang cung cấp trong hệ thống</p>
             </div>
           </div>
@@ -431,28 +416,23 @@ export default function ServicePackageManagement() {
                       <SortIcon direction={sortField === 'name' ? sortDirection : undefined} />
                     </th>
                     <th>Mô tả</th>
-                    <th className={styles.sortable} onClick={() => handleSort('monthlyFee')}>
+                    <th className={styles.sortable} onClick={() => handleSort('monthlyPrice')}>
                       Phí hàng tháng
-                      <SortIcon direction={sortField === 'monthlyFee' ? sortDirection : undefined} />
+                      <SortIcon direction={sortField === 'monthlyPrice' ? sortDirection : undefined} />
                     </th>
-                    <th>Tính năng chính</th>
-                    <th className={styles.sortable} onClick={() => handleSort('displayOrder')}>
-                      Thứ tự hiển thị
-                      <SortIcon direction={sortField === 'displayOrder' ? sortDirection : undefined} />
+                    <th className={styles.sortable} onClick={() => handleSort('consultationFeeMultiplier')}>
+                      Hệ số phí khám
+                      <SortIcon direction={sortField === 'consultationFeeMultiplier' ? sortDirection : undefined} />
                     </th>
-                    <th className={styles.sortable} onClick={() => handleSort('isActive')}>
-                      Trạng thái
-                      <SortIcon direction={sortField === 'isActive' ? sortDirection : undefined} />
-                    </th>
-                    <th className={styles.sortable} onClick={() => handleSort('createdAt')}>
-                      Ngày tạo
-                      <SortIcon direction={sortField === 'createdAt' ? sortDirection : undefined} />
+                    <th className={styles.sortable} onClick={() => handleSort('maxDailyAppointments')}>
+                      Lịch hẹn tối đa/ngày
+                      <SortIcon direction={sortField === 'maxDailyAppointments' ? sortDirection : undefined} />
                     </th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedPackages.map((pkg, index) => {
+                  {paginatedPackages.map((pkg: ServiceTier, index: number) => {
                     const rowNumber = startIndex + index + 1;
                     return (
                     <tr key={pkg.id} className={styles.tableRow}>
@@ -466,20 +446,20 @@ export default function ServicePackageManagement() {
                       </td>
                       <td>
                         <div className={styles.descriptionCell}>
-                          <span className={styles.descriptionText}>
+                          <span className={styles.descriptionText} title={pkg.description}>
                             {getDescriptionPreview(pkg)}
                           </span>
                         </div>
                       </td>
                       <td>
-                        <span className={styles.priceText}>{formatCurrency(pkg.monthlyFee)}</span>
+                        <span className={styles.priceText}>{formatCurrency(pkg.monthlyPrice)}</span>
                       </td>
-                      <td>{renderFeaturesPreview(pkg)}</td>
                       <td>
-                        <span className={styles.displayOrderText}>{pkg.displayOrder}</span>
+                        <span className={styles.multiplierBadge}>x{pkg.consultationFeeMultiplier}</span>
                       </td>
-                      <td>{getStatusBadge(pkg.isActive)}</td>
-                      <td>{formatDate(pkg.createdAt)}</td>
+                      <td>
+                        <span className={styles.appointmentBadge}>{pkg.maxDailyAppointments}</span>
+                      </td>
                       <td>
                         <div className={styles.actionButtons}>
                           <button
@@ -573,23 +553,21 @@ export default function ServicePackageManagement() {
             <div className={styles.modalBody}>
               <div className={styles.packageDetails}>
                 <div className={styles.packageHeader}>
-                  <h4>{viewPackage.name}</h4>
-                  <span className={styles.orderBadge}>Display #{viewPackage.displayOrder}</span>
+                  <h4>{viewPackage.name}</h4>                  
                 </div>
                 <div className={styles.packageInfo}>
                   <p><strong>Mô tả:</strong> {viewPackage.description || 'Chưa có mô tả'}</p>
-                  <p><strong>Phí hàng tháng:</strong> {formatCurrency(viewPackage.monthlyFee)}</p>
-                  <p><strong>Thứ tự hiển thị:</strong> {viewPackage.displayOrder}</p>
-                  <p><strong>Trạng thái:</strong> {getStatusBadge(viewPackage.isActive)}</p>
-                  <p><strong>Ngày tạo:</strong> {formatDate(viewPackage.createdAt)}</p>
+                  <p><strong>Phí hàng tháng:</strong> {formatCurrency(viewPackage.monthlyPrice)}</p>
+                  <p><strong>Hệ số phí khám:</strong> x{viewPackage.consultationFeeMultiplier}</p>
+                  <p><strong>Lịch hẹn tối đa/ngày:</strong> {viewPackage.maxDailyAppointments}</p>
                 </div>
                 <div className={styles.featuresSection}>
                   <h5>Tính năng:</h5>
                   <ul className={styles.featuresList}>
-                    {viewPackage.featuresList.length === 0 && (
+                    {viewPackage.featuresList?.length === 0 && (
                       <li className={styles.featureItemMuted}>Chưa cấu hình tính năng</li>
                     )}
-                    {viewPackage.featuresList.map((feature, index) => (
+                    {JSON.parse(viewPackage.features).map((feature: string, index: number) => (
                       <li key={index} className={styles.featureItem}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20,6 9,17 4,12"></polyline>
@@ -621,35 +599,34 @@ export default function ServicePackageManagement() {
             <div className={styles.modalBody}>
               <div className={styles.packageDetails}>
                 <div className={styles.packageHeader}>
-                  <h4>{editPackage.name}</h4>
-                  <span className={styles.orderBadge}>Display #{editPackage.displayOrder}</span>
+                  <h4>{editPackage.name}</h4>                  
                 </div>
                 <div className={styles.packageInfo}>
                   <label className={styles.editField}>
-                    <span>Tên gói</span>
-                    <input
-                      type="text"
-                      maxLength={NAME_CHAR_LIMIT}
-                      value={editForm.name}
-                      onChange={(e) => handleEditChange('name', e.target.value)}
-                      className={formErrors.name ? styles.inputError : ''}
+                    <span>Mô tả</span>
+                    <textarea
+                      rows={4}
+                      maxLength={DESCRIPTION_CHAR_LIMIT}
+                      value={editForm.description}
+                      onChange={(e) => handleEditChange('description', e.target.value)}
+                      className={formErrors.description ? styles.inputError : ''}
                     />
                     <span className={styles.charCount}>
-                      {editForm.name.length}/{NAME_CHAR_LIMIT}
+                      {editForm.description.length}/{DESCRIPTION_CHAR_LIMIT}
                     </span>
-                    {formErrors.name && <span className={styles.errorText}>{formErrors.name}</span>}
+                    {formErrors.description && <span className={styles.errorText}>{formErrors.description}</span>}
                   </label>
                   <label className={styles.editField}>
                     <span>Phí hàng tháng (VND)</span>
                     <input
                       type="text"
                       inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={editForm.monthlyFee ? editForm.monthlyFee.toString() : ''}
-                      onChange={(e) => handleEditChange('monthlyFee', e.target.value)}
-                      className={formErrors.monthlyFee ? styles.inputError : ''}
+                      pattern="[0-9]*"                      
+                      value={editForm.monthlyPrice ? editForm.monthlyPrice.toString() : ''}
+                      onChange={(e) => handleEditChange('monthlyPrice', e.target.value)}
+                      className={formErrors.monthlyPrice ? styles.inputError : ''}
                     />
-                    {formErrors.monthlyFee && <span className={styles.errorText}>{formErrors.monthlyFee}</span>}
+                    {formErrors.monthlyPrice && <span className={styles.errorText}>{formErrors.monthlyPrice}</span>}
                   </label>
                 </div>
               </div>

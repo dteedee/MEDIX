@@ -1,38 +1,43 @@
 import { apiClient } from '../lib/apiClient';
-import { ServicePackageDto, ServicePackageModel, ServicePackageUpdateRequest } from '../types/service-package.types';
+import { DoctorServiceTier, DoctorServiceTierUpdateRequest } from '../types/doctor-service-tier.types';
 
-const BASE = '/ServicePackage';
-
-const toModel = (dto: ServicePackageDto): ServicePackageModel => {
-  const rawFeatures = dto.features ?? '';
-  const featuresList = rawFeatures
-    .split(/[\r\n;,]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+const toModel = (dto: DoctorServiceTier): DoctorServiceTier => {
+  let featuresList: string[] = [];
+  try {
+    featuresList = JSON.parse(dto.features || '[]');
+    if (!Array.isArray(featuresList)) {
+      featuresList = []; // Đảm bảo luôn là mảng
+    }
+  } catch (e) {
+    console.error('Failed to parse features JSON string:', dto.features, e);
+    featuresList = [];
+  }
 
   return {
     ...dto,
+    id: dto.serviceTierId, // Thêm id để tương thích với các component cũ
     featuresList,
   };
 };
 
 export const servicePackageService = {
-  async getTop(limit = 10): Promise<ServicePackageModel[]> {
-    const response = await apiClient.get<ServicePackageDto[]>(`${BASE}/top`, {
-      params: { limit },
-    });
+  async getAllTiers(): Promise<DoctorServiceTier[]> {
+    const response = await apiClient.get<DoctorServiceTier[]>('/DoctorServiceTier/all');
     const data = Array.isArray(response.data) ? response.data : [];
     return data.map(toModel);
   },
 
-  async getById(id: string): Promise<ServicePackageModel> {
-    const response = await apiClient.get<ServicePackageDto>(`${BASE}/${id}`);
+  async getTierById(id: string): Promise<DoctorServiceTier> {
+    const response = await apiClient.get<DoctorServiceTier>(`/DoctorServiceTier/${id}`);
     return toModel(response.data);
   },
 
-  async updateBasicInfo(id: string, payload: ServicePackageUpdateRequest): Promise<ServicePackageModel> {
-    const response = await apiClient.put<ServicePackageDto>(`${BASE}/${id}/basic-info`, payload);
+  async updateTier(id: string, payload: DoctorServiceTierUpdateRequest): Promise<DoctorServiceTier> {
+    const updatePayload = {
+      serviceTierId: id,
+      ...payload,
+    };
+    const response = await apiClient.put<DoctorServiceTier>('/DoctorServiceTier/update', updatePayload);
     return toModel(response.data);
   },
 };
-

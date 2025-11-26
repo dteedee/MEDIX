@@ -1,5 +1,6 @@
 ﻿using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Exceptions;
+using Medix.API.Models.DTOs.Doctor;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -85,6 +86,61 @@ namespace Medix.API.Presentation.Controller.Classification
                 return StatusCode(500);
             }
         }
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllServiceTiers()
+        {
+            try
+            {
+                var tiers = await _doctorServiceTierService.GetAllServiceTiers();
+
+                return Ok(tiers);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch service tiers");
+                return StatusCode(500);
+            }
+        }
+
+        [HttpPut("update")]
+        public async Task<IActionResult> UpdateTier([FromBody] UpdateServiceTierRequest request)
+        {
+            try
+            {
+                await _doctorServiceTierService.UpdateServiceTier(request);
+                return Ok(new { Message = "Service tier updated successfully" });
+            }
+            catch (MedixException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update service tier");
+                return StatusCode(500);
+            }
+        }
+
+        [HttpGet("{id:guid}")]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            try
+            {
+                var result = await _doctorServiceTierService.GetServiceTierDetail(id);
+
+                if (result == null)
+                    return NotFound(new { Message = "Service tier not found" });
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get service tier detail");
+                return StatusCode(500);
+            }
+        }
+
+
 
         [HttpPut("unsubscribe")]
         [Authorize(Roles = "Doctor")]
@@ -114,4 +170,5 @@ namespace Medix.API.Presentation.Controller.Classification
     {
         public Guid ServiceTierId { get; set; }
     }
+
 }

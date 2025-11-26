@@ -30,6 +30,45 @@ const STATUS_LABELS: Record<StatusFilter, string> = {
   Rejected: 'Đã từ chối',
 };
 
+const BANKS = [
+  { name: 'Ngân hàng TMCP Ngoại thương Việt Nam', bin: '970436', shortName: 'Vietcombank', code: 'VCB', logo: 'https://api.vietqr.io/img/VCB.png' },
+  { name: 'Ngân hàng Nông nghiệp và Phát triển Nông thôn Việt Nam', bin: '970405', shortName: 'Agribank', code: 'VBA', logo: 'https://api.vietqr.io/img/VBA.png' },
+  { name: 'Ngân hàng TMCP Công Thương Việt Nam', bin: '970415', shortName: 'VietinBank', code: 'CTG', logo: 'https://api.vietqr.io/img/CTG.png' },
+  { name: 'Ngân hàng Đầu tư và Phát triển Việt Nam', bin: '970418', shortName: 'BIDV', code: 'BID', logo: 'https://api.vietqr.io/img/BIDV.png' },
+  { name: 'Ngân hàng TMCP Á Châu', bin: '970416', shortName: 'ACB', code: 'ACB', logo: 'https://api.vietqr.io/img/ACB.png' },
+  { name: 'Ngân hàng TMCP Kỹ Thương Việt Nam', bin: '970407', shortName: 'Techcombank', code: 'TCB', logo: 'https://api.vietqr.io/img/TCB.png' },
+  { name: 'Ngân hàng TMCP Việt Nam Thịnh Vượng', bin: '970432', shortName: 'VPBank', code: 'VPB', logo: 'https://api.vietqr.io/img/VPB.png' },
+  { name: 'Ngân hàng TMCP Phương Đông', bin: '970448', shortName: 'OCB', code: 'OCB', logo: 'https://api.vietqr.io/img/OCB.png' },
+  { name: 'Ngân hàng TMCP Bưu Điện Liên Việt', bin: '970449', shortName: 'LienVietPostBank', code: 'LPB', logo: 'https://api.vietqr.io/img/LPB.png' },
+  { name: 'Ngân hàng TMCP Sài Gòn - Hà Nội', bin: '970443', shortName: 'SHB', code: 'SHB', logo: 'https://api.vietqr.io/img/SHB.png' },
+  { name: 'Ngân hàng TMCP Tiên Phong', bin: '970423', shortName: 'TPBank', code: 'TPB', logo: 'https://api.vietqr.io/img/TPB.png' },
+  { name: 'Ngân hàng TMCP Đông Nam Á', bin: '970440', shortName: 'SeABank', code: 'SEA', logo: 'https://api.vietqr.io/img/SEAB.png' },
+  { name: 'Ngân hàng TMCP Quân Đội', bin: '970422', shortName: 'MB', code: 'MBB', logo: 'https://api.vietqr.io/img/MB.png' },
+  { name: 'Ngân hàng TMCP Hàng Hải', bin: '970426', shortName: 'MSB', code: 'MSB', logo: 'https://api.vietqr.io/img/MSB.png' },
+  { name: 'Ngân hàng TMCP Quốc tế Việt Nam', bin: '970441', shortName: 'VIB', code: 'VIB', logo: 'https://api.vietqr.io/img/VIB.png' },
+  { name: 'Ngân hàng TMCP Quốc Dân', bin: '970419', shortName: 'NCB', code: 'NCB', logo: 'https://api.vietqr.io/img/NCB.png' },
+  { name: 'Ngân hàng TMCP Xăng dầu Petrolimex', bin: '970430', shortName: 'PGBank', code: 'PGB', logo: 'https://api.vietqr.io/img/PGB.png' },
+  { name: 'Ngân hàng TNHH Một Thành Viên Xây Dựng Việt Nam', bin: '970444', shortName: 'CB', code: 'CBB', logo: 'https://api.vietqr.io/img/CBB.png' },
+  { name: 'Ngân hàng TMCP Sài Gòn', bin: '970429', shortName: 'SCB', code: 'SCB', logo: 'https://api.vietqr.io/img/SCB.png' },
+  { name: 'Ngân hàng TMCP Xuất Nhập khẩu Việt Nam', bin: '970431', shortName: 'Eximbank', code: 'EIB', logo: 'https://api.vietqr.io/img/EIB.png' },
+  { name: 'Ngân hàng TMCP An Bình', bin: '970425', shortName: 'ABBANK', code: 'ABB', logo: 'https://api.vietqr.io/img/ABB.png' },
+  { name: 'Ngân hàng TMCP Bản Việt', bin: '970427', shortName: 'VietCapitalBank', code: 'VCB', logo: 'https://api.vietqr.io/img/VCB.png' },
+  { name: 'Ngân hàng TMCP Việt Á', bin: '970433', shortName: 'VietABank', code: 'VAB', logo: 'https://api.vietqr.io/img/VAB.png' },
+  { name: 'Ngân hàng TMCP Việt Nam Thương Tín', bin: '970434', shortName: 'VietBank', code: 'VTB', logo: 'https://api.vietqr.io/img/VTB.png' },
+  { name: 'Ngân hàng TMCP Phát triển Thành phố Hồ Chí Minh', bin: '970437', shortName: 'HDBank', code: 'HDB', logo: 'https://api.vietqr.io/img/HDB.png' },
+  { name: 'Ngân hàng TMCP Sài Gòn Thương Tín', bin: '970439', shortName: 'Sacombank', code: 'STB', logo: 'https://api.vietqr.io/img/STB.png' },
+  { name: 'Ngân hàng TMCP Bắc Á', bin: '970409', shortName: 'BacABank', code: 'BAB', logo: 'https://api.vietqr.io/img/BAB.png' },
+  { name: 'Ngân hàng TMCP Kiên Long', bin: '970452', shortName: 'KienLongBank', code: 'KLB', logo: 'https://api.vietqr.io/img/KLB.png' },
+  { name: 'Ngân hàng TMCP Đại Dương', bin: '970414', shortName: 'OceanBank', code: 'OCE', logo: 'https://api.vietqr.io/img/OCEANBANK.png' },
+  { name: 'Ngân hàng TMCP Dầu Khí Toàn Cầu', bin: '970438', shortName: 'GPBank', code: 'GPB', logo: 'https://api.vietqr.io/img/GPB.png' },
+  { name: 'Ngân hàng TMCP Đông Á', bin: '970406', shortName: 'DongABank', code: 'DAB', logo: 'https://api.vietqr.io/img/DAB.png' },
+  { name: 'Ngân hàng TNHH Một Thành Viên Standard Chartered', bin: '970410', shortName: 'Standard Chartered', code: 'SCB', logo: 'https://api.vietqr.io/img/SCB.png' },
+  { name: 'Ngân hàng TNHH Một Thành Viên Shinhan Việt Nam', bin: '970424', shortName: 'Shinhan Bank', code: 'SHB', logo: 'https://api.vietqr.io/img/SHB.png' },
+  { name: 'Ngân hàng TMCP Nam Á', bin: '970428', shortName: 'NamABank', code: 'NAB', logo: 'https://api.vietqr.io/img/NAB.png' },
+  { name: 'Ngân hàng KEB HANA - Chi nhánh TP.HCM', bin: '970466', shortName: 'KEB Hana Bank', code: 'KEB', logo: 'https://api.vietqr.io/img/KEBHANABANK.png' },
+  { name: 'Ngân hàng Industrial Bank of Korea - Chi nhánh TP.HCM', bin: '970456', shortName: 'IBK', code: 'IBK', logo: 'https://api.vietqr.io/img/IBK.png' }
+];
+
 const TransferTransactions: React.FC = () => {
   const [transactions, setTransactions] = useState<TransferTransactionDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +81,12 @@ const TransferTransactions: React.FC = () => {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<TransferTransactionDto | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+
+  const getBankNameByBin = (bin: string | null | undefined): string => {
+    if (!bin) return 'Không xác định';
+    const bank = BANKS.find(b => b.bin === bin);
+    return bank ? `${bank.shortName} - ${bank.name}` : bin;
+  };
 
   useEffect(() => {
     loadTransactions();
@@ -423,23 +468,23 @@ const TransferTransactions: React.FC = () => {
                       <td>
                         <div className={styles.transactionId}>
                           <span>#{txn.referenceCode || txn.id.substring(0, 8)}</span>
-                          <small>{txn.walletTransactionID}</small>
+                        
                         </div>
                       </td>
                       <td>
                         {txn.fromAccountNumber ? (
                           <div className={styles.accountInfo}>
                             <span className={styles.accountNumber}>{txn.fromAccountNumber}</span>
-                            <span className={styles.accountBank}>{txn.fromBin}</span>
+                            <span className={styles.accountBank}>{getBankNameByBin(txn.fromBin)}</span>
                           </div>
                         ) : (
-                          <span className={styles.noInfo}>Không xác định</span>
+                          <span className={styles.noInfo}>Medix</span>
                         )}
                       </td>
                       <td>
                         <div className={styles.accountInfo}>
                           <span className={styles.accountNumber}>{txn.toAccountNumber}</span>
-                          <span className={styles.accountBank}>{txn.toBin}</span>
+                          <span className={styles.accountBank}>{getBankNameByBin(txn.toBin)}</span>
                         </div>
                       </td>
                       <td>
@@ -501,11 +546,11 @@ const TransferTransactions: React.FC = () => {
               <div className={styles.detailGrid}>
                 <div>
                   <span>Người chuyển</span>
-                  <strong>{selectedTransaction.fromAccountNumber || 'Không có dữ liệu'}</strong>
+                  <strong>{selectedTransaction.fromAccountNumber || 'Medix'}</strong>
                 </div>
                 <div>
                   <span>Ngân hàng nguồn</span>
-                  <strong>{selectedTransaction.fromBin || 'Không xác định'}</strong>
+                  <strong>{getBankNameByBin(selectedTransaction.fromBin)}</strong>
                 </div>
                 <div>
                   <span>Người nhận</span>
@@ -513,7 +558,7 @@ const TransferTransactions: React.FC = () => {
                 </div>
                 <div>
                   <span>Ngân hàng nhận</span>
-                  <strong>{selectedTransaction.toBin}</strong>
+                  <strong>{getBankNameByBin(selectedTransaction.toBin)}</strong>
                 </div>
                 <div>
                   <span>Số tiền</span>
@@ -563,4 +608,4 @@ const TransferTransactions: React.FC = () => {
   );
 };
 
-export default TransferTransactions;
+export default TransferTransactions;  

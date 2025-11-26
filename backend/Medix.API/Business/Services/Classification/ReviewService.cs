@@ -69,7 +69,7 @@ namespace Medix.API.Business.Services.Classification
                 AppointmentId = dto.AppointmentId,
                 Rating = dto.Rating,
                 Comment = dto.Comment,
-                Status = "PUBLISHED",
+                Status = "Approved",
                 AdminResponse = "Cảm ơn bạn đã chia sẻ phản hồi với MEDIX!",
                 CreatedAt = DateTime.UtcNow
             };

@@ -687,7 +687,7 @@ const MedicalRecordDetails: React.FC = () => {
           {isEditable && (
             <>
               <button type="submit" className="btn-submit" disabled={isSubmitting} >
-                {isSubmitting ? 'Đang lưu...' : 'Hoàn tất & Lưu hồ sơ'}
+                {isSubmitting ? 'Đang lưu...' : 'Lưu hồ sơ'}
               </button>
               {showActionButtons && (
                 <>

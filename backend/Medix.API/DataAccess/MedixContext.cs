@@ -1275,6 +1275,37 @@ public partial class MedixContext : DbContext
             entity.Property(x => x.IsActive)
                   .HasDefaultValue(true);
         });
+
+        modelBuilder.Entity<EmailVerificationCode>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_EmailVerificationCodes");
+
+            entity.ToTable("EmailVerificationCodes");
+
+            // Id as identity (auto-increment)
+            entity.Property(e => e.Id)
+                .ValueGeneratedOnAdd()
+                .HasColumnName("Id");
+
+            entity.Property(e => e.Email)
+                .IsRequired()
+                .HasMaxLength(256);
+
+            entity.Property(e => e.Code)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.ExpirationTime)
+                .HasColumnType("datetime2(7)")
+                .IsRequired();
+
+            entity.Property(e => e.IsUsed)
+                .HasDefaultValue(false)
+                .IsRequired();
+
+            entity.HasIndex(e => e.Email, "IX_EmailVerificationCodes_Email");
+            entity.HasIndex(e => new { e.Email, e.Code }, "IX_EmailVerificationCodes_Email_Code");
+        });
         OnModelCreatingPartial(modelBuilder);
     }
 

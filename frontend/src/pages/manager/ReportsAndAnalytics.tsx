@@ -274,7 +274,7 @@ export default function ReportsAndAnalytics() {
       // Section 6: Tăng trưởng người dùng theo tháng
       if (userGrowth && userGrowth.monthly.length > 0) {
         csvContent += `=== TĂNG TRƯỞNG NGƯỜI DÙNG THEO THÁNG (NĂM ${selectedYear}) ===\n`;
-        csvContent += `Tháng,Người dùng mới,Bác sĩ mới\n`;
+        csvContent += `Tháng,Bệnh nhân mới,Bác sĩ mới\n`;
         
         userGrowth.monthly.forEach(growth => {
           const monthName = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
@@ -666,8 +666,8 @@ export default function ReportsAndAnalytics() {
           <div className={styles.chartsGrid}>
             {/* Top Specialties */}
             <div className={styles.chartCard}>
-              <div className={styles.chartHeader}>
-                <h3>Chuyên khoa phổ biến</h3>
+              <div className={styles.sectionHeader}>
+                <h2>Chuyên khoa phổ biến</h2>
                 <p>Phân bố số lượng bác sĩ theo chuyên khoa</p>
               </div>
               <div className={styles.chartContent}>
@@ -704,32 +704,42 @@ export default function ReportsAndAnalytics() {
 
             {/* Appointment Trends */}
             <div className={styles.chartCard}>
-              <div className={styles.chartHeader}>
-                <div>
-                  <h3>Xu hướng lịch hẹn</h3>
-                  <p>Biểu đồ lịch hẹn và doanh thu theo tháng</p>
+              <div className={styles.sectionHeader}>
+                <div className={styles.sectionHeaderTop}>
+                  <h2>Xu hướng lịch hẹn</h2>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className={styles.yearSelect}
+                  >
+                    <option value={2023}>2023</option>
+                    <option value={2024}>2024</option>
+                    <option value={2025}>2025</option>
+                  </select>
                 </div>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className={styles.yearSelect}
-                >
-                  <option value={2023}>2023</option>
-                  <option value={2024}>2024</option>
-                  <option value={2025}>2025</option>
-                </select>
+                <p>Biểu đồ lịch hẹn và doanh thu theo tháng</p>
               </div>
               <div className={styles.chartContent}>
                 {appointmentTrends && appointmentTrends.monthly.length > 0 ? (
                   <>
-                    <div className={styles.trendSummary}>
-                      <div className={styles.summaryItem}>
-                        <span className={styles.summaryLabel}>Tổng lịch hẹn:</span>
-                        <span className={styles.summaryValue}>{appointmentTrends.totalAppointments}</span>
+                    <div className={styles.summaryCardsGrid}>
+                      <div className={`${styles.summaryCard} ${styles.summaryCardPrimary}`}>
+                        <div className={styles.summaryCardIcon}>
+                          <i className="bi bi-calendar-check"></i>
+                        </div>
+                        <div className={styles.summaryCardContent}>
+                          <div className={styles.summaryCardLabel}>Tổng lịch hẹn</div>
+                          <div className={styles.summaryCardValue}>{appointmentTrends.totalAppointments.toLocaleString('vi-VN')}</div>
+                        </div>
                       </div>
-                      <div className={styles.summaryItem}>
-                        <span className={styles.summaryLabel}>Tổng doanh thu:</span>
-                        <span className={styles.summaryValue}>{formatCurrency(appointmentTrends.totalRevenue)}</span>
+                      <div className={`${styles.summaryCard} ${styles.summaryCardSecondary}`}>
+                        <div className={styles.summaryCardIcon}>
+                          <i className="bi bi-currency-dollar"></i>
+                        </div>
+                        <div className={styles.summaryCardContent}>
+                          <div className={styles.summaryCardLabel}>Tổng doanh thu</div>
+                          <div className={styles.summaryCardValue}>{formatCurrency(appointmentTrends.totalRevenue)}</div>
+                        </div>
                       </div>
                     </div>
                     <ResponsiveContainer width="100%" height={350}>
@@ -818,39 +828,49 @@ export default function ReportsAndAnalytics() {
 
             {/* User Growth */}
             <div className={styles.chartCard}>
-              <div className={styles.chartHeader}>
-                <div>
-                  <h3>Tăng trưởng người dùng</h3>
-                  <p>Số lượng người dùng và bác sĩ mới theo tháng</p>
+              <div className={styles.sectionHeader}>
+                <div className={styles.sectionHeaderTop}>
+                  <h2>Tăng trưởng người dùng</h2>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className={styles.yearSelect}
+                  >
+                    <option value={2023}>2023</option>
+                    <option value={2024}>2024</option>
+                    <option value={2025}>2025</option>
+                  </select>
                 </div>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className={styles.yearSelect}
-                >
-                  <option value={2023}>2023</option>
-                  <option value={2024}>2024</option>
-                  <option value={2025}>2025</option>
-                </select>
+                <p>Số lượng bệnh nhân và bác sĩ mới theo tháng</p>
               </div>
               <div className={styles.chartContent}>
                 {userGrowth && userGrowth.monthly.length > 0 ? (
                   <>
-                    <div className={styles.trendSummary}>
-                      <div className={styles.summaryItem}>
-                        <span className={styles.summaryLabel}>Tổng người dùng mới:</span>
-                        <span className={styles.summaryValue}>{userGrowth.totalNewUsers}</span>
+                    <div className={styles.summaryCardsGrid}>
+                      <div className={`${styles.summaryCard} ${styles.summaryCardGrowth1}`}>
+                        <div className={styles.summaryCardIcon}>
+                          <i className="bi bi-people"></i>
+                        </div>
+                        <div className={styles.summaryCardContent}>
+                          <div className={styles.summaryCardLabel}>Tổng bệnh nhân mới</div>
+                          <div className={styles.summaryCardValue}>{userGrowth.totalNewUsers.toLocaleString('vi-VN')}</div>
+                        </div>
                       </div>
-                      <div className={styles.summaryItem}>
-                        <span className={styles.summaryLabel}>Tổng bác sĩ mới:</span>
-                        <span className={styles.summaryValue}>{userGrowth.totalNewDoctors}</span>
+                      <div className={`${styles.summaryCard} ${styles.summaryCardGrowth2}`}>
+                        <div className={styles.summaryCardIcon}>
+                          <i className="bi bi-person-badge"></i>
+                        </div>
+                        <div className={styles.summaryCardContent}>
+                          <div className={styles.summaryCardLabel}>Tổng bác sĩ mới</div>
+                          <div className={styles.summaryCardValue}>{userGrowth.totalNewDoctors.toLocaleString('vi-VN')}</div>
+                        </div>
                       </div>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart 
                         data={userGrowth.monthly.map(growth => ({
                           month: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'][growth.month - 1],
-                          'Người dùng mới': growth.newUsers,  
+                          'Bệnh nhân mới': growth.newUsers,  
                           'Bác sĩ mới': growth.newDoctors
                         }))}
                         margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
@@ -862,7 +882,7 @@ export default function ReportsAndAnalytics() {
                         <Legend />
                         <Line 
                           type="monotone" 
-                          dataKey="Người dùng mới" 
+                          dataKey="Bệnh nhân mới" 
                           stroke="#3b82f6" 
                           strokeWidth={2}
                           activeDot={{ r: 8 }}

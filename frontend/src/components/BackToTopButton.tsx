@@ -23,7 +23,20 @@ const BackToTopButton: React.FC = () => {
       onClick={handleClick}
       aria-label="Back to top"
     >
-      <i className="fas fa-arrow-up"></i>
+      <svg
+        className={styles.icon}
+        viewBox="0 0 24 24"
+        role="presentation"
+        aria-hidden="true"
+      >
+        <path
+          d="M12 19V5M12 5l-6 6M12 5l6 6"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
     </button>
   );
 };

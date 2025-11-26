@@ -16,9 +16,10 @@
   transition: all 0.3s ease;
 }
 
-.backToTop i {
-  color: white;
-  font-size: 22px;
+.icon {
+  width: 22px;
+  height: 22px;
+  color: #ffffff;
   transition: transform 0.3s ease, color 0.3s ease;
 }
 
@@ -28,7 +29,7 @@
   box-shadow: 0 8px 22px rgba(0, 150, 255, 0.5);
 }
 
-.backToTop:hover i {
+.backToTop:hover .icon {
   transform: translateY(-2px);
 }
 
@@ -50,8 +51,9 @@
     right: 20px;
   }
 
-  .backToTop i {
-    font-size: 20px;
+  .icon {
+    width: 20px;
+    height: 20px;
   }
 }
 

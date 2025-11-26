@@ -375,6 +375,40 @@ export default function DoctorEvaluation({
           </div>
         </div>
 
+        <div className={`${styles.statCard} ${styles.statCard3b}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-exclamation-triangle-fill"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Hiệu suất kém</div>
+            <div className={styles.statValue}>{stats.needsImprovement}</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-arrow-down"></i>
+              <span>&lt; 60 điểm</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-exclamation-triangle-fill"></i>
+          </div>
+        </div>
+
+        <div className={`${styles.statCard} ${styles.statCard6}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-star-fill"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Đánh giá trung bình</div>
+            <div className={styles.statValue}>{stats.avgRating}/5.0</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-star-fill"></i>
+              <span>Tổng {stats.totalReviews} đánh giá</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-star-fill"></i>
+          </div>
+        </div>
+
         <div className={`${styles.statCard} ${styles.statCard4}`}>
           <div className={styles.statIcon}>
             <i className="bi bi-cash-coin"></i>
@@ -409,39 +443,6 @@ export default function DoctorEvaluation({
           </div>
         </div>
 
-        <div className={`${styles.statCard} ${styles.statCard6}`}>
-          <div className={styles.statIcon}>
-            <i className="bi bi-clipboard-check"></i>
-          </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Tổng số ca khám</div>
-            <div className={styles.statValue}>{stats.totalCases.toLocaleString('vi-VN')}</div>
-            <div className={styles.statTrend}>
-              <i className="bi bi-percent"></i>
-              <span>Tỷ lệ thành công: {stats.overallSuccessRate}%</span>
-            </div>
-          </div>
-          <div className={styles.statBg}>
-            <i className="bi bi-clipboard-check"></i>
-          </div>
-        </div>
-
-        <div className={`${styles.statCard} ${styles.statCard7}`}>
-          <div className={styles.statIcon}>
-            <i className="bi bi-chat-dots"></i>
-          </div>
-          <div className={styles.statContent}>
-            <div className={styles.statLabel}>Tổng đánh giá</div>
-            <div className={styles.statValue}>{stats.totalReviews.toLocaleString('vi-VN')}</div>
-            <div className={styles.statTrend}>
-              <i className="bi bi-people"></i>
-              <span>Từ {stats.total} bác sĩ</span>
-            </div>
-          </div>
-          <div className={styles.statBg}>
-            <i className="bi bi-chat-dots"></i>
-          </div>
-        </div>
 
         <div className={`${styles.statCard} ${styles.statCard8}`}>
           <div className={styles.statIcon}>
@@ -556,64 +557,64 @@ export default function DoctorEvaluation({
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th style={{ width: '50px' }}>STT</th>
-                  <th style={{ width: '60px' }}>Ảnh</th>
-                  <th onClick={() => handleSort('fullName')} className={styles.sortable} style={{ width: '140px' }}>
+                  <th style={{ width: '40px' }}>STT</th>
+                  <th style={{ width: '50px' }}>Ảnh</th>
+                  <th onClick={() => handleSort('fullName')} className={styles.sortable} style={{ width: '160px' }}>
                     Họ và tên
                     {sortConfig.key === 'fullName' && (
                       <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
-                  <th onClick={() => handleSort('specialization')} className={styles.sortable} style={{ width: '120px' }}>
+                  <th onClick={() => handleSort('specialization')} className={styles.sortable} style={{ width: '110px' }}>
                     Chuyên khoa
                     {sortConfig.key === 'specialization' && (
                       <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
-                  <th onClick={() => handleSort('education')} className={styles.sortable} style={{ width: '130px' }}>
-                    Trình độ học vấn
+                  <th onClick={() => handleSort('education')} className={styles.sortable} style={{ width: '110px' }}>
+                    Trình độ
                     {sortConfig.key === 'education' && (
                       <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
-                  <th onClick={() => handleSort('yearsOfExperience')} className={styles.sortable} style={{ width: '100px' }}>
+                  <th onClick={() => handleSort('yearsOfExperience')} className={styles.sortable} style={{ width: '90px' }}>
                     Kinh nghiệm
                     {sortConfig.key === 'yearsOfExperience' && (
                       <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
-                  <th onClick={() => handleSort('rating')} className={styles.sortable} style={{ width: '100px' }}>
+                  <th onClick={() => handleSort('rating')} className={styles.sortable} style={{ width: '90px' }}>
                     Đánh giá
                     {sortConfig.key === 'rating' && (
                       <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
-                  <th onClick={() => handleSort('reviewCount')} className={styles.sortable} style={{ width: '100px' }}>
+                  <th onClick={() => handleSort('reviewCount')} className={styles.sortable} style={{ width: '90px' }}>
                     Số đánh giá
                     {sortConfig.key === 'reviewCount' && (
                       <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
-                  <th onClick={() => handleSort('successRate')} className={styles.sortable} style={{ width: '120px' }}>
-                    Tỷ lệ thành công
+                  <th onClick={() => handleSort('successRate')} className={styles.sortable} style={{ width: '95px' }}>
+                    Tỷ lệ
                     {sortConfig.key === 'successRate' && (
                       <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
-                  <th onClick={() => handleSort('consultationFee')} className={styles.sortable} style={{ width: '100px' }}>
+                  <th onClick={() => handleSort('consultationFee')} className={styles.sortable} style={{ width: '95px' }}>
                     Giá khám
                     {sortConfig.key === 'consultationFee' && (
                       <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
-                  <th onClick={() => handleSort('performanceScore')} className={styles.sortable} style={{ width: '120px' }}>
-                    Điểm hiệu suất
+                  <th onClick={() => handleSort('performanceScore')} className={styles.sortable} style={{ width: '80px' }}>
+                    Điểm
                     {sortConfig.key === 'performanceScore' && (
                       <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
                   <th style={{ width: '200px' }}>Đề xuất</th>
-                  <th style={{ width: '80px', textAlign: 'center' }}>Thao tác</th>
+                  <th style={{ width: '70px', textAlign: 'center' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -678,21 +679,12 @@ export default function DoctorEvaluation({
                       </span>
                     </td>
                     <td className={styles.centerText}>
-                      <div className={styles.performanceIndicator}>
-                        <div 
-                          className={styles.performanceBar}
-                          style={{ 
-                            width: `${Math.min(doctor.performanceScore, 100)}%`,
-                            background: getPerformanceColor(doctor.performanceScore)
-                          }}
-                        ></div>
-                        <span 
-                          className={styles.performanceScore}
-                          style={{ color: getPerformanceColor(doctor.performanceScore) }}
-                        >
-                          {doctor.performanceScore}
-                        </span>
-                      </div>
+                      <span 
+                        className={styles.performanceScore}
+                        style={{ color: getPerformanceColor(doctor.performanceScore) }}
+                      >
+                        {doctor.performanceScore}
+                      </span>
                     </td>
                     <td>
                       <div className={styles.recommendation}>

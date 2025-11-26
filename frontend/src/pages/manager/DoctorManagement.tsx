@@ -500,18 +500,18 @@ export default function DoctorManagement() {
 
         <div className={`${styles.statCard} ${styles.statCard3}`}>
           <div className={styles.statIcon}>
-            <i className="bi bi-clock-history"></i>
+            <i className="bi bi-lock-fill"></i>
           </div>
           <div className={styles.statContent}>
-            <div className={styles.statLabel}>Chờ phê duyệt</div>
-            <div className={styles.statValue}>{stats.pendingCount}</div>
+            <div className={styles.statLabel}>Bị khóa</div>
+            <div className={styles.statValue}>{stats.inactiveDoctors}</div>
             <div className={styles.statTrend}>
-              <i className="bi bi-exclamation-circle"></i>
-              <span>{stats.pendingCount > 0 ? 'Cần xử lý ngay' : 'Không có'}</span>
+              <i className="bi bi-shield-x"></i>
+              <span>{stats.inactiveDoctors > 0 ? 'Tài khoản bị khóa' : 'Không có'}</span>
             </div>
           </div>
           <div className={styles.statBg}>
-            <i className="bi bi-clock-history"></i>
+            <i className="bi bi-lock-fill"></i>
           </div>
         </div>
 

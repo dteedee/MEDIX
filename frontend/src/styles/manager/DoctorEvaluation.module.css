@@ -14,8 +14,8 @@
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 12px;
+  margin-bottom: 20px;
   animation: fadeInUp 0.6s ease-out 0.2s both;
   width: 100%;
   box-sizing: border-box;
@@ -34,11 +34,11 @@
 
 .statCard {
   background: white;
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 14px;
+  padding: 16px;
   display: flex;
   align-items: flex-start;
-  gap: 14px;
+  gap: 12px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
@@ -85,6 +85,7 @@
 .statCard1 .statIcon { background: linear-gradient(135deg, #667eea, #764ba2); }
 .statCard2 .statIcon { background: linear-gradient(135deg, #10b981, #059669); }
 .statCard3 .statIcon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.statCard3b .statIcon { background: linear-gradient(135deg, #ef4444, #dc2626); }
 .statCard4 .statIcon { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
 .statCard5 .statIcon { background: linear-gradient(135deg, #ec4899, #db2777); }
 .statCard6 .statIcon { background: linear-gradient(135deg, #3b82f6, #2563eb); }
@@ -160,8 +161,8 @@
 /* Search Section */
 .searchSection {
   display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 16px;
   animation: fadeInUp 0.6s ease-out 0.3s both;
   width: 100%;
   box-sizing: border-box;
@@ -428,9 +429,9 @@
 }
 
 .table thead th {
-  padding: 14px 12px;
+  padding: 10px 8px;
   text-align: left;
-  font-size: 12px;
+  font-size: 11px;
   font-family: inherit;
   color: white;
   font-weight: 700;
@@ -491,8 +492,8 @@
 }
 
 .table tbody td {
-  padding: 12px;
-  font-size: 13px;
+  padding: 8px;
+  font-size: 12px;
   font-family: inherit;
   color: #4b5563;
 }
@@ -505,8 +506,8 @@
 
 /* Avatar */
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #e5e7eb;
@@ -538,9 +539,9 @@
 /* Specialty Badge */
 .specialtyBadge {
   display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 11px;
   font-weight: 600;
   background: #dbeafe;
   color: #1e40af;
@@ -554,9 +555,9 @@
 /* Education Badge */
 .educationBadge {
   display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 11px;
   font-weight: 600;
   background: #fce7f3;
   color: #9f1239;
@@ -570,9 +571,9 @@
 /* Experience Badge */
 .experienceBadge {
   display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 11px;
   font-weight: 600;
   background: #f3f4f6;
   color: #374151;
@@ -603,9 +604,9 @@
 
 .reviewCountBadge {
   display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 11px;
   font-weight: 600;
   background: #dbeafe;
   color: #1e40af;
@@ -620,9 +621,9 @@
 
 .successRateBadge {
   display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 11px;
   font-weight: 600;
   background: linear-gradient(135deg, #10b981, #059669);
   color: white;
@@ -635,35 +636,22 @@
 
 .consultationFeeBadge {
   display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 11px;
   font-weight: 600;
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
   color: white;
 }
 
-.performanceIndicator {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: center;
-}
-
-.performanceBar {
-  flex: 1;
-  height: 10px;
-  border-radius: 5px;
-  transition: width 0.3s ease;
-  max-width: 80px;
-  min-width: 40px;
-}
-
 .performanceScore {
   font-weight: 800;
-  font-size: 14px;
-  min-width: 35px;
+  font-size: 13px;
   text-align: center;
+  display: inline-block;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .recommendation {

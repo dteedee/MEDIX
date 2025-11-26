@@ -16,7 +16,9 @@ namespace Medix.API.DataAccess.Repositories.Classification
         public async Task<ManagerDashboardDto> GetDashboardAsync()
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
-            var dayOfWeek = (int)DateTime.Now.DayOfWeek;
+            // Convert .NET DayOfWeek (Sunday=0, Monday=1, ...) to our system (Monday=1, ..., Sunday=7)
+            var dotNetDayOfWeek = (int)DateTime.Now.DayOfWeek;
+            var dayOfWeek = dotNetDayOfWeek == 0 ? 7 : dotNetDayOfWeek;
 
             var dto = new ManagerDashboardDto();
 

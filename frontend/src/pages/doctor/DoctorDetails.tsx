@@ -260,14 +260,21 @@ function DoctorDetails() {
             const durationMinutes = Math.round((appointmentEnd.getTime() - appointmentStart.getTime()) / (1000 * 60));
             
             // Format datetime theo local timezone
-            const formatLocalDateTime = (date: Date): string => {
+            const formatToISOStringWithTimezone = (date: Date): string => {
+                const pad = (num: number) => num.toString().padStart(2, '0');
                 const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                const hours = String(date.getHours()).padStart(2, '0');
-                const minutes = String(date.getMinutes()).padStart(2, '0');
-                const seconds = String(date.getSeconds()).padStart(2, '0');
-                return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+                const month = pad(date.getMonth() + 1);
+                const day = pad(date.getDate());
+                const hours = pad(date.getHours());
+                const minutes = pad(date.getMinutes());
+                const seconds = pad(date.getSeconds());
+                
+                const timezoneOffset = -date.getTimezoneOffset();
+                const offsetSign = timezoneOffset >= 0 ? '+' : '-';
+                const offsetHours = pad(Math.floor(Math.abs(timezoneOffset) / 60));
+                const offsetMinutes = pad(Math.abs(timezoneOffset) % 60);
+
+                return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${offsetHours}:${offsetMinutes}`;
             };
             
             // Calculate fees
@@ -280,8 +287,8 @@ function DoctorDetails() {
             // Create appointment DTO
             const appointmentDto: CreateAppointmentDto = {
                 doctorId: profileData.doctorID,
-                appointmentStartTime: formatLocalDateTime(appointmentStart),
-                appointmentEndTime: formatLocalDateTime(appointmentEnd),
+                appointmentStartTime: formatToISOStringWithTimezone(appointmentStart),
+                appointmentEndTime: formatToISOStringWithTimezone(appointmentEnd),
                 durationMinutes: durationMinutes,
                 consultationFee: consultationFee,
                 platformFee: platformFee,

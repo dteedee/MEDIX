@@ -1,4 +1,6 @@
-﻿using Medix.API.Models.Enums;
+﻿using System.Text.Json.Serialization;
+using Medix.API.Business.Helper;
+using Medix.API.Models.Enums;
 
 namespace Medix.API.Models.DTOs.ApointmentDTO
 {
@@ -9,8 +11,9 @@ namespace Medix.API.Models.DTOs.ApointmentDTO
         public string? DoctorName { get; set; }
 
         public Guid? AISymptomAnalysisId { get; set; }
-
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime? AppointmentStartTime { get; set; }
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime? AppointmentEndTime { get; set; }
         public int? DurationMinutes { get; set; }
 

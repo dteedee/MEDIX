@@ -42,8 +42,11 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Where(r => r.Appointment.DoctorId == doctorId)
                 .AverageAsync(r => (double?)r.Rating) ?? 0;
 
+            // Convert .NET DayOfWeek (Sunday=0, Monday=1, ...) to our system (Monday=1, ..., Sunday=7)
+            var dotNetDayOfWeek = (int)today.DayOfWeek;
+            var backendDayOfWeek = dotNetDayOfWeek == 0 ? 7 : dotNetDayOfWeek;
             var regularSchedule = await _context.DoctorSchedules
-                .Where(s => s.DoctorId == doctorId && s.DayOfWeek == (int)today.DayOfWeek)
+                .Where(s => s.DoctorId == doctorId && s.DayOfWeek == backendDayOfWeek)
                 .Select(s => new
                 {
                     s.DayOfWeek,

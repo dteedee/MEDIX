@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using Medix.API.DataAccess.Interfaces.Classification;
+﻿﻿using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -230,6 +230,9 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return await _context.Appointments
                 .Include(a => a.Patient).ThenInclude(p => p.User)
                 .Include(a => a.Doctor).ThenInclude(d => d.User)
+                .Include(a => a.StatusCodeNavigation)
+                .Include(a => a.PaymentStatusCodeNavigation)
+                .Include(a => a.PaymentMethodCodeNavigation)
                 .Where(a => a.DoctorId == doctorId &&
                             a.AppointmentStartTime >= startDate &&
                             a.AppointmentStartTime < endDate &&
@@ -241,8 +244,9 @@ namespace Medix.API.DataAccess.Repositories.Classification
         public async Task<bool> HasFutureAppointmentsForDoctorOnDay(Guid doctorId, int dayOfWeek)
         {
             var today = DateTime.Today;
-            // DayOfWeek trong .NET là một enum (Sunday = 0, ..., Saturday = 6), khớp với giá trị int đầu vào.
-            var day = (DayOfWeek)dayOfWeek;
+            // Convert from our system (Monday=1, ..., Sunday=7) to .NET DayOfWeek (Sunday=0, Monday=1, ..., Saturday=6)
+            var dotNetDayOfWeek = dayOfWeek == 7 ? 0 : dayOfWeek; // Sunday (7) -> 0, Monday (1) -> 1, etc.
+            var day = (DayOfWeek)dotNetDayOfWeek;
             
             // Lọc trước các điều kiện có thể dịch sang SQL ở phía server
             var futureAppointments = await _context.Appointments

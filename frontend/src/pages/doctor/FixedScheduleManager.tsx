@@ -14,7 +14,7 @@ const daysOfWeek = [
   { value: 1, label: 'Thứ Hai' }, { value: 2, label: 'Thứ Ba' },
   { value: 3, label: 'Thứ Tư' }, { value: 4, label: 'Thứ Năm' },
   { value: 5, label: 'Thứ Sáu' }, { value: 6, label: 'Thứ Bảy' },
-  { value: 0, label: 'Chủ Nhật' },
+  { value: 7, label: 'Chủ Nhật' },
 ];
 
 const timeSlots = [

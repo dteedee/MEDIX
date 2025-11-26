@@ -45,8 +45,8 @@ namespace Medix.API.Business.Services.Classification
         // 🟢 Validate logic lịch trùng
         private static void ValidateScheduleTime(int dayOfWeek, TimeOnly start, TimeOnly end)
         {
-            if (dayOfWeek < 0 || dayOfWeek > 6)
-                throw new InvalidOperationException("Giá trị DayOfWeek không hợp lệ (0–6).");
+            if (dayOfWeek < 1 || dayOfWeek > 7)
+                throw new InvalidOperationException("Giá trị DayOfWeek không hợp lệ (1–7).");
 
             if (start >= end)
                 throw new InvalidOperationException("Giờ bắt đầu phải nhỏ hơn giờ kết thúc.");
@@ -93,7 +93,7 @@ namespace Medix.API.Business.Services.Classification
                 var doctor = await _doctorRepository.GetDoctorByIdAsync(dto.DoctorId);
                 if (doctor != null)
                 {
-                    var dayNames = new[] { "Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy" };
+                    var dayNames = new Dictionary<int, string> { { 1, "Thứ hai" }, { 2, "Thứ ba" }, { 3, "Thứ tư" }, { 4, "Thứ năm" }, { 5, "Thứ sáu" }, { 6, "Thứ bảy" }, { 7, "Chủ nhật" } };
                     var dayName = dayNames[dto.DayOfWeek];
                     var timeStr = $"{dto.StartTime:HH\\:mm} - {dto.EndTime:HH\\:mm}";
                     
@@ -160,7 +160,7 @@ namespace Medix.API.Business.Services.Classification
                 var doctor = await _doctorRepository.GetDoctorByIdAsync(existing.DoctorId);
                 if (doctor != null)
                 {
-                    var dayNames = new[] { "Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy" };
+                    var dayNames = new Dictionary<int, string> { { 1, "Thứ hai" }, { 2, "Thứ ba" }, { 3, "Thứ tư" }, { 4, "Thứ năm" }, { 5, "Thứ sáu" }, { 6, "Thứ bảy" }, { 7, "Chủ nhật" } };
                     var dayName = dayNames[dto.DayOfWeek];
                     var timeStr = $"{dto.StartTime:HH\\:mm} - {dto.EndTime:HH\\:mm}";
                     
@@ -208,7 +208,7 @@ namespace Medix.API.Business.Services.Classification
                 var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId);
                 if (doctor != null)
                 {
-                    var dayNames = new[] { "Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy" };
+                    var dayNames = new Dictionary<int, string> { { 1, "Thứ hai" }, { 2, "Thứ ba" }, { 3, "Thứ tư" }, { 4, "Thứ năm" }, { 5, "Thứ sáu" }, { 6, "Thứ bảy" }, { 7, "Chủ nhật" } };
                     var dayName = dayNames[dayOfWeek];
                     var timeStr = $"{startTime:HH\\:mm} - {endTime:HH\\:mm}";
                     
@@ -286,7 +286,7 @@ namespace Medix.API.Business.Services.Classification
                 var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId);
                 if (doctor != null)
                 {
-                    var dayNames = new[] { "Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy" };
+                    var dayNames = new Dictionary<int, string> { { 1, "Thứ hai" }, { 2, "Thứ ba" }, { 3, "Thứ tư" }, { 4, "Thứ năm" }, { 5, "Thứ sáu" }, { 6, "Thứ bảy" }, { 7, "Chủ nhật" } };
                     var dayName = dayNames[dto.DayOfWeek];
                     var timeStr = $"{dto.StartTime:HH\\:mm} - {dto.EndTime:HH\\:mm}";
                     

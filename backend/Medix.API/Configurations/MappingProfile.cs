@@ -65,11 +65,11 @@ namespace Medix.API.Configurations
                 .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
 
             CreateMap<Appointment, AppointmentDto>()
-            .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => src.Patient.User.FullName))
-            .ForMember(dest => dest.PatientEmail, opt => opt.MapFrom(src => src.Patient.User.Email))
-            .ForMember(dest => dest.DoctorName, opt => opt.MapFrom(src => src.Doctor.User.FullName))
-            .ForMember(dest => dest.StatusDisplayName, opt => opt.MapFrom(src => src.StatusCodeNavigation.DisplayName))
-            .ForMember(dest => dest.PaymentStatusName, opt => opt.MapFrom(src => src.PaymentStatusCodeNavigation.DisplayName))
+            .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => src.Patient != null && src.Patient.User != null ? src.Patient.User.FullName : null))
+            .ForMember(dest => dest.PatientEmail, opt => opt.MapFrom(src => src.Patient != null && src.Patient.User != null ? src.Patient.User.Email : null))
+            .ForMember(dest => dest.DoctorName, opt => opt.MapFrom(src => src.Doctor != null && src.Doctor.User != null ? src.Doctor.User.FullName : null))
+            .ForMember(dest => dest.StatusDisplayName, opt => opt.MapFrom(src => src.StatusCodeNavigation != null ? src.StatusCodeNavigation.DisplayName : null))
+            .ForMember(dest => dest.PaymentStatusName, opt => opt.MapFrom(src => src.PaymentStatusCodeNavigation != null ? src.PaymentStatusCodeNavigation.DisplayName : null))
             .ForMember(dest => dest.PaymentMethodName, opt => opt.MapFrom(src => src.PaymentMethodCodeNavigation != null
                 ? src.PaymentMethodCodeNavigation.DisplayName
                 : null));

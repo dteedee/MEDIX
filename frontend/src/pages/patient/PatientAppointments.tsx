@@ -96,14 +96,21 @@ export const PatientAppointments: React.FC = () => {
       const data = await appointmentService.getPatientAppointments();
       
       const transformedData: Appointment[] = data.map(apt => {
+        // Chuyển đổi chuỗi ISO sang đối tượng Date, đảm bảo múi giờ được xử lý đúng
         const startDate = new Date(apt.appointmentStartTime);
+        
+        // Lấy các thành phần ngày/tháng/năm từ đối tượng Date đã được chuyển đổi sang múi giờ local
+        const year = startDate.getFullYear();
+        const month = (startDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = startDate.getDate().toString().padStart(2, '0');
+        const datePart = `${year}-${month}-${day}`;
         
         return {
           id: apt.id,
           doctorName: apt.doctorName,
           doctorTitle: '',
           specialty: '',
-          date: startDate.toISOString().split('T')[0],
+          date: datePart, // Sử dụng ngày đã được tính toán đúng
           time: `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`,
           room: '',
           fee: apt.consultationFee,

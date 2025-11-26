@@ -477,7 +477,9 @@ namespace Medix.API.Business.Services.Classification
             // Chỉ kiểm tra khi là "Tăng ca" (OverrideType = true)
             if (overrideType)
             {
-                var dayOfWeek = (int)overrideDate.DayOfWeek; // Sunday = 0, Monday = 1, ...
+                // Convert .NET DayOfWeek (Sunday=0, Monday=1, ...) to our system (Monday=1, ..., Sunday=7)
+                var dotNetDayOfWeek = (int)overrideDate.DayOfWeek;
+                var dayOfWeek = dotNetDayOfWeek == 0 ? 7 : dotNetDayOfWeek; // Sunday (0) -> 7, Monday (1) -> 1, etc.
                 var fixedSchedules = await _doctorScheduleRepo.GetByDoctorAndDayAsync(doctorId, dayOfWeek);
 
                 var isOverlapWithFixed = fixedSchedules.Any(fs =>

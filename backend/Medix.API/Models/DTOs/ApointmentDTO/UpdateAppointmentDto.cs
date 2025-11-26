@@ -1,11 +1,15 @@
-﻿    namespace Medix.API.Models.DTOs.ApointmentDTO
-    {
+﻿using System.Text.Json.Serialization;
+using Medix.API.Business.Helper;
+
+namespace Medix.API.Models.DTOs.ApointmentDTO
+{
         public class UpdateAppointmentDto
         {
             public Guid Id { get; set; }
-
-            public DateTime? AppointmentStartTime { get; set; }
-            public DateTime? AppointmentEndTime { get; set; }
+        [JsonConverter(typeof(CustomDateTimeConverter))]
+        public DateTime? AppointmentStartTime { get; set; }
+        [JsonConverter(typeof(CustomDateTimeConverter))]
+        public DateTime? AppointmentEndTime { get; set; }
             public int? DurationMinutes { get; set; }
 
             public string? StatusCode { get; set; } = null!;

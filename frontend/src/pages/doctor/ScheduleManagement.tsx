@@ -27,6 +27,11 @@ const getLocalDateKey = (date: Date) => {
   return `${y}-${m}-${d}`;
 };
 
+// --- Helper: Convert JavaScript getDay() (0=Sunday, 1=Monday, ...) to backend format (1=Monday, ..., 7=Sunday) ---
+const convertDayOfWeek = (jsDayOfWeek: number): number => {
+  return jsDayOfWeek === 0 ? 7 : jsDayOfWeek;
+};
+
 type ViewMode = "month" | "week";
 
 // --- Modal Chi tiết ngày ---
@@ -386,7 +391,7 @@ const ScheduleManagement: React.FC = () => {
                 }
 
                 const dateKey = getLocalDateKey(date);
-                const dayOfWeek = date.getDay(); // 0=CN, 1=T2,...
+                const dayOfWeek = convertDayOfWeek(date.getDay()); // Convert to backend format (1=Monday, ..., 7=Sunday)
 
                 // Lấy lịch cố định và lịch linh hoạt cho ngày hiện tại
                 const fixedSchedules = schedulesByDay.get(dayOfWeek) || [];
@@ -487,7 +492,7 @@ const ScheduleManagement: React.FC = () => {
         formattedDate={getFormattedSelectedDate()}
         schedules={
           selectedDate
-            ? schedulesByDay.get(selectedDate.getDay()) || []
+            ? schedulesByDay.get(convertDayOfWeek(selectedDate.getDay())) || []
             : []
         }
         overrides={selectedDate ? overridesByDate.get(getLocalDateKey(selectedDate)) || [] : []}

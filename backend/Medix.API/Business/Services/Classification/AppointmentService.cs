@@ -4,6 +4,7 @@ using Humanizer;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess.Interfaces.Classification;
+using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.ApointmentDTO;
 using Medix.API.Models.DTOs.MedicalRecordDTO;
@@ -24,6 +25,7 @@ namespace Medix.API.Business.Services.Classification
         private readonly IWalletService walletService;
         private readonly IWalletTransactionService walletTransactionService;
         private readonly IDoctorRepository doctorRepository;
+        private readonly IPatientRepository patientRepository;
 
         private readonly IUserPromotionService userPromotionService;
         private readonly IReviewRepository reviewRepository;
@@ -31,7 +33,7 @@ namespace Medix.API.Business.Services.Classification
         private readonly IPromotionService promotionService;
         
 
-        public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService, IWalletTransactionService walletTransactionService, IWalletService walletService, IDoctorRepository doctorRepository, IUserPromotionService userPromotionService, IPromotionService promotionService, IReviewRepository reviewRepository)
+        public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService, IWalletTransactionService walletTransactionService, IWalletService walletService, IDoctorRepository doctorRepository, IPatientRepository patientRepository, IUserPromotionService userPromotionService, IPromotionService promotionService, IReviewRepository reviewRepository)
         {
             _repository = repository;
             _mapper = mapper;
@@ -40,6 +42,7 @@ namespace Medix.API.Business.Services.Classification
             this.walletTransactionService = walletTransactionService;
             this.walletService = walletService;
             this.doctorRepository = doctorRepository;
+            this.patientRepository = patientRepository;
             this.userPromotionService = userPromotionService;
             this.promotionService = promotionService;
             this.reviewRepository = reviewRepository;
@@ -245,27 +248,52 @@ namespace Medix.API.Business.Services.Classification
             // 2. Lấy các lịch hẹn của bác sĩ trong khoảng thời gian đã cho
             //    Thêm 1 ngày vào endDate để bao gồm tất cả các cuộc hẹn trong ngày cuối cùng.
             var list = await _repository.GetByDoctorAndDateAsync(doctor.Id, startDate, endDate.AddDays(1));
-            var ResultLis = list.Select(x => new AppointmentDto
+            
+            // 3. Map sang DTO sử dụng AutoMapper - AutoMapper đã được cấu hình để map từ navigation properties
+            var dtos = _mapper.Map<List<AppointmentDto>>(list);
+            
+            // 4. Đảm bảo các trường được populate đúng cách từ navigation properties
+            //    Repository đã Include Patient.User và Doctor.User, nên có thể truy cập trực tiếp
+            var listList = list.ToList();
+            for (int i = 0; i < listList.Count && i < dtos.Count; i++)
             {
-                Id = x.Id,
-                PatientID = x.PatientId,
-                DoctorID = x.DoctorId,
-                AppointmentStartTime = x.AppointmentStartTime,
-                AppointmentEndTime = x.AppointmentEndTime,
-                DurationMinutes = x.DurationMinutes,
-                StatusCode = x.StatusCode,
-                ConsultationFee = x.ConsultationFee,
-                PlatformFee = x.PlatformFee,
-                DiscountAmount = x.DiscountAmount,
-                TotalAmount = x.TotalAmount,
-                PaymentStatusCode = x.PaymentStatusCode,
-                PaymentMethodCode = x.PaymentMethodCode,
-                MedicalInfo = x.MedicalInfo,
-                CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt
-            }).ToList() ;
-            // 3. Map sang DTO
-            return ResultLis;
+                var appointment = listList[i];
+                var dto = dtos[i];
+                
+                // Lấy PatientName và PatientEmail từ Patient.User nếu chưa được map
+                if (appointment.Patient != null && appointment.Patient.User != null)
+                {
+                    if (string.IsNullOrEmpty(dto.PatientName))
+                        dto.PatientName = appointment.Patient.User.FullName ?? string.Empty;
+                    if (string.IsNullOrEmpty(dto.PatientEmail))
+                        dto.PatientEmail = appointment.Patient.User.Email ?? string.Empty;
+                }
+                
+                // Lấy DoctorName từ Doctor.User nếu chưa được map
+                if (appointment.Doctor != null && appointment.Doctor.User != null)
+                {
+                    if (string.IsNullOrEmpty(dto.DoctorName))
+                        dto.DoctorName = appointment.Doctor.User.FullName ?? string.Empty;
+                }
+
+                // Populate StatusDisplayName, PaymentStatusName, PaymentMethodName từ navigation properties
+                if (appointment.StatusCodeNavigation != null && string.IsNullOrEmpty(dto.StatusDisplayName))
+                {
+                    dto.StatusDisplayName = appointment.StatusCodeNavigation.DisplayName ?? string.Empty;
+                }
+                
+                if (appointment.PaymentStatusCodeNavigation != null && string.IsNullOrEmpty(dto.PaymentStatusName))
+                {
+                    dto.PaymentStatusName = appointment.PaymentStatusCodeNavigation.DisplayName ?? string.Empty;
+                }
+                
+                if (appointment.PaymentMethodCodeNavigation != null && string.IsNullOrEmpty(dto.PaymentMethodName))
+                {
+                    dto.PaymentMethodName = appointment.PaymentMethodCodeNavigation.DisplayName ?? string.Empty;
+                }
+            }
+            
+            return dtos;
         }
 
         public async Task<bool> IsDoctorBusyAsync(Guid doctorId, DateTime appointmentStartTime, DateTime appointmentEndTime)

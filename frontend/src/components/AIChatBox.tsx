@@ -308,7 +308,7 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
         {/* Messages Area */}
         <div className={styles.messagesArea}>
 
-          {messages.length > 1 && messages.map((message) => (
+          {messages.map((message) => (
             <div
               key={message.id}
               className={`${styles.message} ${message.sender === 'user' ? styles.userMessage : styles.aiMessage}`}

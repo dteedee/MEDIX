@@ -28,6 +28,16 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return await _context.DoctorServiceTiers
                 .FirstOrDefaultAsync(t => t.Name == name);
         }
+        public async Task<List<DoctorServiceTier>> GetAllAsync()
+        {
+            return await _context.DoctorServiceTiers.ToListAsync();
+        }
+
+        public async Task UpdateAsync(DoctorServiceTier tier)
+        {
+            _context.DoctorServiceTiers.Update(tier);
+            await _context.SaveChangesAsync();
+        }
 
         public async Task<DoctorServiceTier?> GetByIdAsync(Guid id)
             => await _context.DoctorServiceTiers.FirstOrDefaultAsync(t => t.Id == id);

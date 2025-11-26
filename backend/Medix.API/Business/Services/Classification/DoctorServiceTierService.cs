@@ -311,5 +311,60 @@ namespace Medix.API.Business.Services.Classification
             doctor.ServiceTier = null;
             await _doctorRepository.UpdateDoctorAsync(doctor);
         }
+
+        public async Task<List<DoctorServiceTierDetailDto>> GetAllServiceTiers()
+        {
+            var list = await _serviceTierRepository.GetAllAsync();
+
+            return list.Select(st => new DoctorServiceTierDetailDto
+            {
+                ServiceTierId = st.Id,
+                Name = st.Name,
+                Description = st.Description,
+                ConsultationFeeMultiplier = st.ConsultationFeeMultiplier,
+                PriorityBoost = st.PriorityBoost,
+                MaxDailyAppointments = st.MaxDailyAppointments,
+                Features = st.Features,
+                MonthlyPrice = st.MonthlyPrice,
+                IsActive = st.IsActive
+            }).ToList();
+        }
+        public async Task UpdateServiceTier(UpdateServiceTierRequest request)
+        {
+            var tier = await _serviceTierRepository.GetByIdAsync(request.ServiceTierId);
+
+            if (tier == null)
+            {
+                throw new MedixException("Service tier not found");
+            }
+
+            tier.Description = request.Description;
+            tier.MonthlyPrice = request.MonthlyPrice;
+
+            await _serviceTierRepository.UpdateAsync(tier);
+        }
+        public async Task<DoctorServiceTierDetailDto?> GetServiceTierDetail(Guid serviceTierId)
+        {
+            var tier = await _serviceTierRepository.GetByIdAsync(serviceTierId);
+
+            if (tier == null)
+                return null;
+
+            return new DoctorServiceTierDetailDto
+            {
+                ServiceTierId = tier.Id,
+                Name = tier.Name,
+                Description = tier.Description,
+                ConsultationFeeMultiplier = tier.ConsultationFeeMultiplier,
+                PriorityBoost = tier.PriorityBoost,
+                MaxDailyAppointments = tier.MaxDailyAppointments,
+                Features = tier.Features,
+                MonthlyPrice = tier.MonthlyPrice,
+                IsActive = tier.IsActive
+            };
+        }
+
+
+
     }
 }

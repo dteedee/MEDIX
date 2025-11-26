@@ -22,12 +22,19 @@ namespace Medix.API.Business.Services.Classification
 
         /// <summary>
         /// Generate response using LLM with context
-        /// Supports OpenAI API or rule-based fallback
+        /// Supports Gemini API, OpenAI API or rule-based fallback
         /// </summary>
         public async Task<string> GenerateResponseAsync(string userMessage, string? context = null, List<ChatMessage>? conversationHistory = null)
         {
             try
             {
+                // Prefer Gemini if configured
+                var geminiApiKey = _configuration["Gemini:ApiKey"];
+                if (!string.IsNullOrEmpty(geminiApiKey))
+                {
+                    return await CallGeminiAsync(userMessage, context, conversationHistory);
+                }
+
                 // Try to use OpenAI API if configured
                 var openAiApiKey = _configuration["OpenAI:ApiKey"];
                 if (!string.IsNullOrEmpty(openAiApiKey))
@@ -54,6 +61,13 @@ namespace Medix.API.Business.Services.Classification
             
             try
             {
+                // Prefer Gemini if available
+                var geminiApiKey = _configuration["Gemini:ApiKey"];
+                if (!string.IsNullOrEmpty(geminiApiKey))
+                {
+                    return await CallGeminiForSymptomAnalysisAsync(symptoms, additionalInfo, context);
+                }
+
                 // Try OpenAI API if configured
                 var openAiApiKey = _configuration["OpenAI:ApiKey"];
                 if (!string.IsNullOrEmpty(openAiApiKey))
@@ -63,7 +77,7 @@ namespace Medix.API.Business.Services.Classification
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "OpenAI API call failed, using rule-based analysis");
+                _logger.LogWarning(ex, "LLM API call failed, using rule-based analysis");
             }
 
             // Enhanced rule-based analysis with comprehensive medical knowledge
@@ -218,6 +232,101 @@ namespace Medix.API.Business.Services.Classification
             var response = await CallOpenAIAsync(prompt, context, null);
             
             // Parse structured response from OpenAI
+            return ParseSymptomAnalysisResponse(response, symptoms);
+        }
+
+        private async Task<string> CallGeminiAsync(string userMessage, string? context, List<ChatMessage>? conversationHistory)
+        {
+            var apiKey = _configuration["Gemini:ApiKey"] ?? throw new InvalidOperationException("Gemini API key is missing.");
+            var model = _configuration["Gemini:Model"] ?? "gemini-1.5-flash";
+            var apiUrl = _configuration["Gemini:ApiUrl"];
+            var baseUrl = string.IsNullOrWhiteSpace(apiUrl)
+                ? $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+                : apiUrl;
+            var requestUrl = baseUrl.Contains("?") ? $"{baseUrl}&key={apiKey}" : $"{baseUrl}?key={apiKey}";
+
+            var systemPrompt = BuildSystemPrompt(context);
+            var contents = new List<object>
+            {
+                new
+                {
+                    role = "user",
+                    parts = new[]
+                    {
+                        new { text = systemPrompt }
+                    }
+                }
+            };
+
+            if (conversationHistory != null)
+            {
+                foreach (var msg in conversationHistory)
+                {
+                    var role = msg.Role.Equals("assistant", StringComparison.OrdinalIgnoreCase) ? "model" : "user";
+                    contents.Add(new
+                    {
+                        role,
+                        parts = new[]
+                        {
+                            new { text = msg.Content }
+                        }
+                    });
+                }
+            }
+
+            contents.Add(new
+            {
+                role = "user",
+                parts = new[]
+                {
+                    new { text = userMessage }
+                }
+            });
+
+            var requestBody = new
+            {
+                contents,
+                generationConfig = new
+                {
+                    temperature = 0.7,
+                    maxOutputTokens = 1024
+                }
+            };
+
+            var json = JsonSerializer.Serialize(requestBody);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            _httpClient.DefaultRequestHeaders.Clear();
+
+            var response = await _httpClient.PostAsync(requestUrl, content);
+            response.EnsureSuccessStatusCode();
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var responseObj = JsonSerializer.Deserialize<JsonElement>(responseJson);
+
+            if (responseObj.TryGetProperty("candidates", out var candidates) &&
+                candidates.GetArrayLength() > 0)
+            {
+                var candidate = candidates[0];
+                if (candidate.TryGetProperty("content", out var contentNode) &&
+                    contentNode.TryGetProperty("parts", out var parts) &&
+                    parts.GetArrayLength() > 0)
+                {
+                    var part = parts[0];
+                    if (part.TryGetProperty("text", out var textNode))
+                    {
+                        return textNode.GetString() ?? string.Empty;
+                    }
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private async Task<SymptomAnalysisResult> CallGeminiForSymptomAnalysisAsync(List<string> symptoms, string? additionalInfo, string? context)
+        {
+            var prompt = BuildSymptomAnalysisPrompt(symptoms, additionalInfo, context);
+            var response = await CallGeminiAsync(prompt, context, null);
             return ParseSymptomAnalysisResponse(response, symptoms);
         }
 

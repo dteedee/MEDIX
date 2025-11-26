@@ -1223,6 +1223,8 @@
 /* Top Rated Section */
 .topRatedSection {
   margin-bottom: 32px;
+  overflow: visible;
+  position: relative;
 }
 
 .sectionHeader {
@@ -1273,29 +1275,30 @@
 .topRatedGrid {
   display: flex;
   justify-content: center;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 24px;
   background: white;
-  padding: 60px 24px 40px;
+  padding: 100px 24px 32px;
   border-radius: 0 0 12px 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   flex-wrap: wrap;
+  overflow: visible;
+  position: relative;
 }
 
 .topRatedCard {
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border: 2px solid #e5e7eb;
   border-radius: 20px;
-  padding: 32px 20px 60px;
+  padding: 32px 20px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
   position: relative;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: visible;
-  flex: 0 0 260px;
-  min-height: 400px;
+  flex: 0 0 280px;
+  min-height: 480px;
   box-shadow: 
     0 4px 14px rgba(0, 0, 0, 0.08),
     0 2px 8px rgba(102, 126, 234, 0.05);
@@ -1303,197 +1306,215 @@
 }
 
 .topRatedCard:hover {
-  transform: translateY(-12px) scale(1.03);
+  transform: translateY(-8px) scale(1.02);
   box-shadow: 
-    0 20px 50px rgba(0, 0, 0, 0.15),
-    0 8px 24px rgba(102, 126, 234, 0.2);
+    0 16px 40px rgba(0, 0, 0, 0.12),
+    0 6px 20px rgba(102, 126, 234, 0.15);
   border-color: rgba(102, 126, 234, 0.3);
   background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
 }
 
 .topRatedCard:hover .doctorAvatar {
-  transform: scale(1.1);
+  transform: scale(1.08);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
-.topRatedCard:hover .laurelBadge {
-  transform: translateX(-50%) translateY(-5px) scale(1.1);
-}
 
 /* Podium Heights - 1st place is tallest */
 .topRatedCard.rank1 {
   order: 2;
-  margin-bottom: 60px;
   border-color: rgba(255, 215, 0, 0.4);
-  background: linear-gradient(180deg, #fffef5 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #fffef5 0%, #ffffff 100%);
 }
 
 .topRatedCard.rank1:hover {
   border-color: rgba(255, 215, 0, 0.6);
-  box-shadow: 0 8px 24px rgba(255, 215, 0, 0.2);
+  box-shadow: 
+    0 16px 40px rgba(0, 0, 0, 0.12),
+    0 6px 20px rgba(255, 215, 0, 0.25);
 }
 
 .topRatedCard.rank2 {
   order: 1;
-  margin-bottom: 20px;
   border-color: rgba(192, 192, 192, 0.4);
-  background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
 }
 
 .topRatedCard.rank2:hover {
   border-color: rgba(192, 192, 192, 0.6);
-  box-shadow: 0 8px 24px rgba(192, 192, 192, 0.2);
+  box-shadow: 
+    0 16px 40px rgba(0, 0, 0, 0.12),
+    0 6px 20px rgba(192, 192, 192, 0.25);
 }
 
 .topRatedCard.rank3 {
   order: 3;
-  margin-bottom: 0px;
   border-color: rgba(205, 127, 50, 0.4);
-  background: linear-gradient(180deg, #fffaf5 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #fffaf5 0%, #ffffff 100%);
 }
 
 .topRatedCard.rank3:hover {
   border-color: rgba(205, 127, 50, 0.6);
-  box-shadow: 0 8px 24px rgba(205, 127, 50, 0.2);
+  box-shadow: 
+    0 16px 40px rgba(0, 0, 0, 0.12),
+    0 6px 20px rgba(205, 127, 50, 0.25);
 }
 
-/* Podium Base */
-.topRatedCard::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  border-radius: 8px 8px 0 0;
-  z-index: -1;
-  transition: all 0.3s ease;
-  border: 3px solid;
-  border-bottom: none;
-}
-
-.topRatedCard.rank1::after {
-  height: 80px;
-  background: linear-gradient(180deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.3) 100%);
-  border-color: #ffd700;
-  box-shadow: 0 -4px 16px rgba(255, 215, 0, 0.3);
-}
-
-.topRatedCard.rank2::after {
-  height: 50px;
-  background: linear-gradient(180deg, rgba(192, 192, 192, 0.1) 0%, rgba(192, 192, 192, 0.3) 100%);
-  border-color: #c0c0c0;
-  box-shadow: 0 -4px 16px rgba(192, 192, 192, 0.3);
-}
-
-.topRatedCard.rank3::after {
-  height: 30px;
-  background: linear-gradient(180deg, rgba(205, 127, 50, 0.1) 0%, rgba(205, 127, 50, 0.3) 100%);
-  border-color: #cd7f32;
-  box-shadow: 0 -4px 16px rgba(205, 127, 50, 0.3);
-}
-
-.topRatedCard:hover::after {
-  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
-}
+/* Podium Base - Removed to fix hover issue */
 
 /* Podium Rank Number - Removed, replaced with doctor stats */
 
-/* Laurel Badge */
-.laurelBadge {
+/* Champion Badge - Trophy Only */
+.championBadge {
   position: absolute;
-  top: -40px;
+  top: -50px;
   left: 50%;
   transform: translateX(-50%);
-  width: 100px;
-  height: 100px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  z-index: 100;
+  pointer-events: none;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 10;
 }
 
-.laurelWreath {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  color: #2d3748;
-}
-
-.rank1 .laurelWreath {
-  color: #ffd700;
-}
-
-.rank2 .laurelWreath {
-  color: #c0c0c0;
-}
-
-.rank3 .laurelWreath {
-  color: #cd7f32;
-}
-
-.crown {
-  position: absolute;
-  top: 8px;
-  width: 24px;
-  height: 24px;
-  color: inherit;
-}
-
-.rank1 .crown {
-  color: #ffd700;
-}
-
-.rank2 .crown {
-  color: #c0c0c0;
-}
-
-.rank3 .crown {
-  color: #cd7f32;
-}
-
-.rankText {
-  position: relative;
+.trophyIcon {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: white;
-  border-radius: 50%;
-  width: 60px;
-  height: 60px;
-  border: 3px solid;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 72px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.rank1 .rankText {
-  border-color: #ffd700;
-  color: #ffd700;
-}
-
-.rank2 .rankText {
-  border-color: #c0c0c0;
-  color: #c0c0c0;
-}
-
-.rank3 .rankText {
-  border-color: #cd7f32;
-  color: #cd7f32;
-}
-
-.bestLabel {
-  font-size: 10px;
-  font-weight: 700;
+/* Top Rank Badge - Between Trophy and Avatar */
+.topRankBadge {
+  position: absolute;
+  top: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 101;
+  pointer-events: none;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 800;
   letter-spacing: 0.5px;
-  line-height: 1;
+  text-transform: uppercase;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    0 1px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
-.rankNumber {
-  font-size: 24px;
-  font-weight: 900;
-  line-height: 1;
+.topRankText {
+  display: inline-block;
+  line-height: 1.2;
 }
+
+/* Rank 1 - Gold */
+.rank1 .trophyIcon {
+  color: #ffd700;
+  filter: 
+    drop-shadow(0 0 18px rgba(255, 215, 0, 0.7))
+    drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+  animation: goldTrophyGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes goldTrophyGlow {
+  0%, 100% {
+    filter: 
+      drop-shadow(0 0 18px rgba(255, 215, 0, 0.7))
+      drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+  }
+  50% {
+    filter: 
+      drop-shadow(0 0 26px rgba(255, 215, 0, 0.95))
+      drop-shadow(0 0 34px rgba(255, 215, 0, 0.5))
+      drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+  }
+}
+
+.rank1 .topRankBadge {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: #8b6914;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 
+    0 0 16px rgba(255, 215, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    inset 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+.rank1 .topRankText {
+  text-shadow: 
+    0 1px 2px rgba(255, 255, 255, 0.6),
+    0 0 6px rgba(255, 215, 0, 0.4);
+}
+
+/* Rank 2 - Silver */
+.rank2 .trophyIcon {
+  color: #c0c0c0;
+  filter: 
+    drop-shadow(0 0 14px rgba(192, 192, 192, 0.6))
+    drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+}
+
+.rank2 .topRankBadge {
+  background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+  color: #5a5a5a;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 
+    0 0 12px rgba(192, 192, 192, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    inset 0 0 8px rgba(255, 255, 255, 0.4);
+}
+
+.rank2 .topRankText {
+  text-shadow: 
+    0 1px 2px rgba(255, 255, 255, 0.7),
+    0 0 5px rgba(192, 192, 192, 0.3);
+}
+
+/* Rank 3 - Bronze */
+.rank3 .trophyIcon {
+  color: #cd7f32;
+  filter: 
+    drop-shadow(0 0 14px rgba(205, 127, 50, 0.6))
+    drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+}
+
+.rank3 .topRankBadge {
+  background: linear-gradient(135deg, #cd7f32 0%, #e6a052 100%);
+  color: #6b4513;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 
+    0 0 12px rgba(205, 127, 50, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    inset 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+.rank3 .topRankText {
+  text-shadow: 
+    0 1px 2px rgba(255, 255, 255, 0.6),
+    0 0 5px rgba(205, 127, 50, 0.3);
+}
+
+/* Hover effects */
+.topRatedCard:hover .championBadge {
+  transform: translateX(-50%) translateY(-10px) scale(1.08);
+}
+
+.topRatedCard.rank1:hover .trophyIcon {
+  animation: goldTrophyGlow 1.5s ease-in-out infinite;
+  filter: 
+    drop-shadow(0 0 30px rgba(255, 215, 0, 0.95))
+    drop-shadow(0 0 38px rgba(255, 215, 0, 0.6))
+    drop-shadow(0 6px 18px rgba(0, 0, 0, 0.35));
+}
+
+.topRatedCard:hover .topRankBadge {
+  transform: translateX(-50%) translateY(-2px) scale(1.05);
+}
+
+
 
 .doctorAvatar {
   width: 100px;
@@ -1503,8 +1524,9 @@
   border: 4px solid;
   background: white;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  margin-top: 40px;
+  margin-top: 50px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .rank1 .doctorAvatar {
@@ -1543,41 +1565,38 @@
 }
 
 .doctorName {
-  margin: 0 0 6px 0;
+  margin: 0 0 8px 0;
   font-size: 1.125rem;
   font-weight: 700;
   color: #111827;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.doctorDegree {
-  font-size: 0.9rem;
-  color: #667eea;
-  font-weight: 600;
+  text-align: center;
+  line-height: 1.4;
 }
 
 .doctorSpecialty {
-  margin: 0 0 6px 0;
+  margin: 0 0 8px 0;
   font-size: 14px;
-  color: #6b7280;
-  font-weight: 500;
+  color: #667eea;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.4;
 }
 
 .doctorExperience {
-  margin: 0 0 12px 0;
-  font-size: 12px;
-  color: #9ca3af;
+  margin: 0 0 16px 0;
+  font-size: 13px;
+  color: #6b7280;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
 }
 
 .doctorExperience i {
-  font-size: 11px;
+  font-size: 12px;
+  color: #667eea;
 }
 
 .ratingInfo {
@@ -1621,6 +1640,8 @@
   padding-top: 16px;
   border-top: 1px solid #e9ecef;
   margin-top: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .statCompactItem {
@@ -1634,12 +1655,15 @@
   border-radius: 10px;
   border: 1px solid #e5e7eb;
   transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
 }
 
 .statCompactItem:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border-color: rgba(102, 126, 234, 0.2);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .statCompactIcon {
@@ -1737,8 +1761,19 @@
   .topRatedCard.rank1,
   .topRatedCard.rank2,
   .topRatedCard.rank3 {
-    margin-bottom: 20px;
     order: initial;
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  
+  .topRatedGrid {
+    padding: 40px 16px 24px;
+  }
+  
+  .topRatedCard {
+    min-height: auto;
+    padding: 24px 16px 20px;
   }
 
   .trendChart,

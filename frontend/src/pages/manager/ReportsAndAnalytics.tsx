@@ -3,6 +3,7 @@ import { Calendar } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import dashboardService from '../../services/dashboardService'
 import { managerDashboardService, AppointmentStats } from '../../services/managerDashboardService'
+import DoctorService from '../../services/doctorService'
 import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto, ManagerDashboardSummaryDto, TopRatedDoctorDto } from '../../types/dashboard.types'
 import styles from '../../styles/manager/ReportsAndAnalytics.module.css'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
@@ -19,6 +20,7 @@ export default function ReportsAndAnalytics() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedPeriod, setSelectedPeriod] = useState('30days');
   const [selectedReport, setSelectedReport] = useState('overview');
+  const [educationTypes, setEducationTypes] = useState<any[]>([]);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -27,8 +29,13 @@ export default function ReportsAndAnalytics() {
     loadSpecializations();
     loadAppointmentTrends();  
     loadUserGrowth();
-    loadTopRatedDoctors();
+    loadEducationTypes();
   }, [selectedPeriod, selectedYear]);
+  
+  useEffect(() => {
+    // Load top rated doctors when education types are ready or when period/year changes
+    loadTopRatedDoctors();
+  }, [educationTypes, selectedPeriod, selectedYear]);
 
   useEffect(() => {
     if (summary) {
@@ -106,10 +113,62 @@ export default function ReportsAndAnalytics() {
     }
   };
 
+  const loadEducationTypes = async () => {
+    try {
+      const data = await DoctorService.getEducationTypes();
+      setEducationTypes(data);
+    } catch (error) {
+      console.error('Error loading education types:', error);
+    }
+  };
+
+  const getEducationLabel = (educationCode?: string): string | undefined => {
+    if (!educationCode) return undefined;
+    const educationType = educationTypes.find((et: any) => et.code === educationCode);
+    return educationType ? educationType.description : educationCode;
+  };
+
   const loadTopRatedDoctors = async () => {
     try {
       const data = await dashboardService.getTopRatedDoctors(3);
-      setTopRatedDoctors(data);
+      
+      // Fetch thêm thông tin chi tiết từ DoctorService nếu thiếu degree hoặc experienceYears
+      const enrichedData = await Promise.all(
+        data.map(async (doctor) => {
+          // Nếu đã có đầy đủ thông tin, chỉ cần map degree nếu là code
+          if (doctor.degree && doctor.experienceYears) {
+            const degreeLabel = getEducationLabel(doctor.degree);
+            return {
+              ...doctor,
+              degree: degreeLabel || doctor.degree,
+            };
+          }
+          
+          try {
+            // Fetch thông tin chi tiết từ DoctorService
+            const doctorDetail = await DoctorService.getById(doctor.doctorId);
+            
+            // Map education code sang description
+            const degreeLabel = getEducationLabel(doctorDetail.education);
+            
+            return {
+              ...doctor,
+              degree: doctor.degree || degreeLabel || doctorDetail.education || undefined,
+              experienceYears: doctor.experienceYears || doctorDetail.yearsOfExperience || undefined,
+            };
+          } catch (error) {
+            console.error(`Error fetching doctor details for ${doctor.doctorId}:`, error);
+            // Nếu lỗi, vẫn trả về dữ liệu gốc và map degree nếu có
+            const degreeLabel = doctor.degree ? getEducationLabel(doctor.degree) : undefined;
+            return {
+              ...doctor,
+              degree: degreeLabel || doctor.degree,
+            };
+          }
+        })
+      );
+      
+      setTopRatedDoctors(enrichedData);
     } catch (error) {
       console.error('Error loading top rated doctors:', error);
       showToast('Không thể tải dữ liệu bác sĩ được đánh giá cao', 'error');
@@ -546,31 +605,14 @@ export default function ReportsAndAnalytics() {
               {topRatedDoctors.length > 0 ? (
                 topRatedDoctors.map((doctor, index) => (
                   <div key={doctor.doctorId} className={`${styles.topRatedCard} ${styles[`rank${index + 1}`]}`}>
-                    <div className={styles.laurelBadge}>
-                      {/* Laurel Wreath */}
-                      <svg className={styles.laurelWreath} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                        {/* Left Laurel */}
-                        <path d="M25,70 Q20,60 20,50 Q20,40 25,30 Q20,35 15,40 Q10,45 10,50 Q10,55 15,60 Q20,65 25,70" fill="currentColor"/>
-                        <path d="M30,65 Q28,58 28,50 Q28,42 30,35 Q26,40 22,45 Q18,50 22,55 Q26,60 30,65" fill="currentColor"/>
-                        <path d="M35,60 Q34,56 34,50 Q34,44 35,40 Q32,44 29,48 Q26,52 29,56 Q32,60 35,60" fill="currentColor"/>
-                        
-                        {/* Right Laurel */}
-                        <path d="M75,70 Q80,60 80,50 Q80,40 75,30 Q80,35 85,40 Q90,45 90,50 Q90,55 85,60 Q80,65 75,70" fill="currentColor"/>
-                        <path d="M70,65 Q72,58 72,50 Q72,42 70,35 Q74,40 78,45 Q82,50 78,55 Q74,60 70,65" fill="currentColor"/>
-                        <path d="M65,60 Q66,56 66,50 Q66,44 65,40 Q68,44 71,48 Q74,52 71,56 Q68,60 65,60" fill="currentColor"/>
-                      </svg>
-                      
-                      {/* Crown */}
-                      <svg className={styles.crown} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-                        <path d="M12 2l2 6 6-2-4 6h8l-12 8-12-8h8l-4-6 6 2z"/>
-                        <rect x="3" y="18" width="18" height="3" rx="1"/>
-                      </svg>
-                      
-                      {/* Rank Text */}
-                      <div className={styles.rankText}>
-                        <div className={styles.bestLabel}>BEST</div>
-                        <div className={styles.rankNumber}>{index + 1}</div>
+                    <div className={styles.championBadge}>
+                      <div className={styles.trophyIcon}>
+                        <i className="bi bi-trophy-fill"></i>
                       </div>
+                    </div>
+                    
+                    <div className={styles.topRankBadge}>
+                      <span className={styles.topRankText}>TOP {index + 1}</span>
                     </div>
                     
                     <div className={styles.doctorAvatar}>
@@ -588,15 +630,14 @@ export default function ReportsAndAnalytics() {
                     
                     <div className={styles.doctorInfo}>
                       <h3 className={styles.doctorName}>
-                        {doctor.degree && <span className={styles.doctorDegree}>{doctor.degree}</span>}
                         {doctor.doctorName}
                       </h3>
-                      <p className={styles.doctorSpecialty}>{doctor.specialization}</p>
-                      {doctor.experienceYears && (
-                        <p className={styles.doctorExperience}>
-                          <i className="bi bi-briefcase"></i> {doctor.experienceYears} năm kinh nghiệm
-                        </p>
-                      )}
+                      <p className={styles.doctorSpecialty}>
+                        {doctor.degree ? `${doctor.degree} - ${doctor.specialization}` : doctor.specialization}
+                      </p>
+                      <p className={styles.doctorExperience}>
+                        <i className="bi bi-briefcase"></i> {doctor.experienceYears ? `${doctor.experienceYears} năm kinh nghiệm` : 'Chưa có thông tin'}
+                      </p>
                     </div>
                     
                     <div className={styles.ratingInfo}>
@@ -635,7 +676,7 @@ export default function ReportsAndAnalytics() {
                             ? doctor.totalAppointments.toLocaleString('vi-VN')
                             : '0'}
                         </div>
-                        <div className={styles.statCompactLabel}>Ca đã thực hiện</div>
+                        <div className={styles.statCompactLabel}>Ca thực hiện</div>
                       </div>
                       <div className={styles.statCompactItem}>
                         <div className={styles.statCompactIcon}>

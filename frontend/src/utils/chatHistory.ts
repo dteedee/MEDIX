@@ -3,6 +3,7 @@ import { AIChatMessage, StoredAIChatMessage } from '../types/aiChat';
 const CHAT_HISTORY_KEY = 'medix-ai-chat-history';
 
 const isBrowser = typeof window !== 'undefined';
+const getStorage = () => (isBrowser ? window.sessionStorage : null);
 
 const serializeMessages = (messages: AIChatMessage[]): StoredAIChatMessage[] =>
   messages.map(message => ({
@@ -17,12 +18,13 @@ const deserializeMessages = (messages: StoredAIChatMessage[]): AIChatMessage[] =
   }));
 
 export const getChatHistory = (): AIChatMessage[] => {
-  if (!isBrowser) {
+  const storage = getStorage();
+  if (!storage) {
     return [];
   }
 
   try {
-    const stored = window.localStorage.getItem(CHAT_HISTORY_KEY);
+    const stored = storage.getItem(CHAT_HISTORY_KEY);
     if (!stored) {
       return [];
     }
@@ -36,24 +38,26 @@ export const getChatHistory = (): AIChatMessage[] => {
 };
 
 export const saveChatHistory = (messages: AIChatMessage[]) => {
-  if (!isBrowser) {
+  const storage = getStorage();
+  if (!storage) {
     return;
   }
 
   try {
     const serializable = serializeMessages(messages);
-    window.localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(serializable));
+    storage.setItem(CHAT_HISTORY_KEY, JSON.stringify(serializable));
   } catch (error) {
     console.warn('Failed to save chat history', error);
   }
 };
 
 export const clearChatHistory = () => {
-  if (!isBrowser) {
+  const storage = getStorage();
+  if (!storage) {
     return;
   }
 
-  window.localStorage.removeItem(CHAT_HISTORY_KEY);
+  storage.removeItem(CHAT_HISTORY_KEY);
 };
 
 

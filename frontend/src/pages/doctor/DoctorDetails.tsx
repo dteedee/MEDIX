@@ -1913,6 +1913,19 @@ function DoctorDetails() {
                                                                             : `${appliedPromotion.discountValue.toLocaleString('vi-VN')}đ`}
                                                                     </p>
                                                                 </div>
+                                                                <button
+                                                                    type="button"
+                                                                    className={styles.removePromoButton}
+                                                                    style={{ marginTop: 8 }}
+                                                                    onClick={() => {
+                                                                        setAppliedPromotion(null);
+                                                                        setAppliedUserPromotion(null);
+                                                                        setPromotionCode('');
+                                                                        setPromotionError('');
+                                                                    }}
+                                                                >
+                                                                    Bỏ áp dụng mã khuyến mãi
+                                                                </button>
                                                             </div>
                                                         )}
                                                     </div>
@@ -2213,7 +2226,15 @@ function DoctorDetails() {
                     <div className={styles.successModal}>
                         <button 
                             className={styles.successCloseBtn}
-                            onClick={() => setShowSuccessModal(false)}
+                            onClick={() => {
+                                setShowSuccessModal(false);
+                                setIsCreatingPayment(false);
+                                // Ẩn slot vừa đặt khỏi availableTimeSlots
+                                if (selectedTimeSlot) {
+                                    setAvailableTimeSlots(prev => prev.filter(slot => slot.display !== selectedTimeSlot.display));
+                                }
+                                setSelectedTimeSlot(null);
+                            }}
                         >
                             <i className="bi bi-x-lg"></i>
                         </button>

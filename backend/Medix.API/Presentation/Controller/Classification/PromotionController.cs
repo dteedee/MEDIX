@@ -10,12 +10,13 @@ namespace Medix.API.Presentation.Controller.Classification
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles ="Manager")]
+   
     public class PromotionController : ControllerBase
     {
         private readonly IPromotionService _promotionService;
         private readonly MedixContext _context;
         private readonly IUserPromotionService userPromotionService;
+
 
         public PromotionController(IPromotionService promotionService, MedixContext context, IUserPromotionService userPromotionService)
         {
@@ -33,7 +34,7 @@ namespace Medix.API.Presentation.Controller.Classification
                 return NotFound();
             }
             if (promotion.EndDate < DateTime.UtcNow || !promotion.IsActive)
-            {
+                {
                 return BadRequest("Mã đã hết hạn sử dụng");
             }
             if (promotion.MaxUsage.HasValue && promotion.UsedCount >= promotion.MaxUsage.Value)
@@ -65,6 +66,7 @@ namespace Medix.API.Presentation.Controller.Classification
         // Create promotion
         [HttpPost]
         [Authorize] // add role if needed: [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> CreatePromotion([FromBody] PromotionDto promotionDto)
         {
             if (promotionDto == null)
@@ -152,6 +154,7 @@ namespace Medix.API.Presentation.Controller.Classification
         // Update promotion
         [HttpPut("{id:guid}")]
         [Authorize] // add role if needed: [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> UpdatePromotion(Guid id, [FromBody] PromotionDto promotionDto)
         {
             if (promotionDto == null)
@@ -189,7 +192,8 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpGet("getTarget")]
-        [Authorize]
+        [Authorize(Roles = "Manager")]
+
         public async Task<IActionResult> GetPromotionTargets()
         {
             try
@@ -212,7 +216,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpDelete("{id}")]
-        [Authorize]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> DeletePromotion(Guid id)
         {
             try

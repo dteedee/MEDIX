@@ -356,7 +356,7 @@ namespace Medix.API.Business.Services.Classification
 
             }).ToList();
 
-            profileDto.appointmentBookedDtos = appoint.Where(x =>x.StatusCode== "CancelledByPatient" ||x.StatusCode== "CancelledByDoctor"||x.StatusCode== "MissedByDoctor"||x.StatusCode== "MissedByPatient" || x.StatusCode== "BeforeAppoiment" || x.StatusCode == "OnProgressing" || x.StatusCode == "Completed" || x.StatusCode == "NoShow" || x.StatusCode == "Confirmed").Select(a => new AppointmentBookedDto
+            profileDto.appointmentBookedDtos = appoint.Where(x =>x.StatusCode== "CancelledByDoctor"||x.StatusCode== "MissedByDoctor"||x.StatusCode== "MissedByPatient" || x.StatusCode== "BeforeAppoiment" || x.StatusCode == "OnProgressing" || x.StatusCode == "Completed" || x.StatusCode == "NoShow" || x.StatusCode == "Confirmed").Select(a => new AppointmentBookedDto
             {
 
                 StartTime = a.AppointmentStartTime,

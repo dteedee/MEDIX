@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Calendar } from 'lucide-react';
 import { articleService } from '../../services/articleService';
 import { ArticleDTO } from '../../types/article.types';
 import { useToast } from '../../contexts/ToastContext';
@@ -454,13 +455,34 @@ export default function ArticleManagement() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Quản lý Bài viết</h1>
-          <p className={styles.subtitle}>Quản lý và xuất bản các bài viết sức khỏe</p>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <i className="bi bi-file-text" style={{ fontSize: '28px' }}></i>
+            </div>
+            <div>
+              <h1 className={styles.title}>Quản lý Bài viết</h1>
+              <p className={styles.subtitle}>Quản lý và xuất bản các bài viết sức khỏe</p>
+            </div>
+          </div>
         </div>
-        <button onClick={handleCreateNew} className={styles.btnCreate}>
-            <i className="bi bi-plus-lg"></i>
-          Tạo mới
-          </button>
+        <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <Calendar size={20} className={styles.dateIcon} />
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={styles.dateGlow}></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -572,6 +594,10 @@ export default function ArticleManagement() {
           {(filters.statusFilter !== 'all' || filters.categoryFilter || filters.dateFrom || filters.dateTo) && (
             <span className={styles.filterBadge}></span>
           )}
+          </button>
+          <button onClick={handleCreateNew} className={styles.btnCreate}>
+            <i className="bi bi-plus-lg"></i>
+            Tạo mới
           </button>
         </div>
 

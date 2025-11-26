@@ -276,52 +276,68 @@ const TransferTransactions: React.FC = () => {
 
 
       <div className={styles.summaryGrid}>
-        <div className={`${styles.summaryCard} ${styles.summaryCardPrimary}`}>
+        <div className={`${styles.summaryCard} ${styles.summaryCard1}`}>
+          <div className={styles.summaryCardIcon}>
+            <Wallet size={28} />
+          </div>
           <div className={styles.summaryCardContent}>
-            <div className={styles.summaryCardIcon}>
-              <Wallet size={20} />
-            </div>
-            <div>
-              <p>Tổng giao dịch</p>
-              <h3>{transactions.length}</h3>
+            <div className={styles.summaryCardLabel}>Tổng giao dịch</div>
+            <div className={styles.summaryCardValue}>{transactions.length}</div>
+            <div className={styles.summaryCardTrend}>
+              <i className="bi bi-arrow-up"></i>
               <span>Giá trị {formatCurrency(stats.totalAmount)}</span>
             </div>
           </div>
+          <div className={styles.summaryCardBg}>
+            <i className="bi bi-wallet2"></i>
+          </div>
         </div>
-        <div className={`${styles.summaryCard} ${styles.summaryCardWarning}`}>
+        <div className={`${styles.summaryCard} ${styles.summaryCard2}`}>
+          <div className={styles.summaryCardIcon}>
+            <AlertTriangle size={28} />
+          </div>
           <div className={styles.summaryCardContent}>
-            <div className={styles.summaryCardIcon}>
-              <AlertTriangle size={20} />
-            </div>
-            <div>
-              <p>Chờ xử lý</p>
-              <h3>{stats.counts.Pending}</h3>
+            <div className={styles.summaryCardLabel}>Chờ xử lý</div>
+            <div className={styles.summaryCardValue}>{stats.counts.Pending}</div>
+            <div className={styles.summaryCardTrend}>
+              <i className="bi bi-arrow-up"></i>
               <span>Khối lượng {formatCurrency(stats.amounts.Pending)}</span>
             </div>
           </div>
+          <div className={styles.summaryCardBg}>
+            <i className="bi bi-exclamation-triangle"></i>
+          </div>
         </div>
-        <div className={`${styles.summaryCard} ${styles.summaryCardSuccess}`}>
+        <div className={`${styles.summaryCard} ${styles.summaryCard3}`}>
+          <div className={styles.summaryCardIcon}>
+            <CheckCircle size={28} />
+          </div>
           <div className={styles.summaryCardContent}>
-            <div className={styles.summaryCardIcon}>
-              <CheckCircle size={20} />
-            </div>
-            <div>
-              <p>Đã chấp nhận</p>
-              <h3>{stats.counts.Accepted}</h3>
+            <div className={styles.summaryCardLabel}>Đã chấp nhận</div>
+            <div className={styles.summaryCardValue}>{stats.counts.Accepted}</div>
+            <div className={styles.summaryCardTrend}>
+              <i className="bi bi-arrow-up"></i>
               <span>{formatCurrency(stats.amounts.Accepted)}</span>
             </div>
           </div>
+          <div className={styles.summaryCardBg}>
+            <i className="bi bi-check-circle"></i>
+          </div>
         </div>
-        <div className={`${styles.summaryCard} ${styles.summaryCardNeutral}`}>
+        <div className={`${styles.summaryCard} ${styles.summaryCard4}`}>
+          <div className={styles.summaryCardIcon}>
+            <ArrowDownRight size={28} />
+          </div>
           <div className={styles.summaryCardContent}>
-            <div className={styles.summaryCardIcon}>
-              <ArrowDownRight size={20} />
-            </div>
-            <div>
-              <p>Đã từ chối</p>
-              <h3>{stats.counts.Rejected}</h3>
+            <div className={styles.summaryCardLabel}>Đã từ chối</div>
+            <div className={styles.summaryCardValue}>{stats.counts.Rejected}</div>
+            <div className={styles.summaryCardTrend}>
+              <i className="bi bi-arrow-down"></i>
               <span>{formatCurrency(stats.amounts.Rejected)}</span>
             </div>
+          </div>
+          <div className={styles.summaryCardBg}>
+            <i className="bi bi-x-circle"></i>
           </div>
         </div>
       </div>

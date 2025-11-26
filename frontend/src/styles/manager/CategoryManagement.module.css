@@ -777,7 +777,7 @@
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
-  font-family: monospace;
+  font-family: 'Be Vietnam Pro', sans-serif !important;
 }
 
 .descriptionCell {

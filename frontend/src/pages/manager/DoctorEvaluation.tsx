@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { Calendar } from 'lucide-react';
 import DoctorService from '../../services/doctorService';
 import { DoctorPerformanceDto } from '../../types/doctor.types';
 import { useToast } from '../../contexts/ToastContext';
@@ -279,6 +280,17 @@ export default function DoctorEvaluation({
     const educationRecommendations = doctorsWithMetrics.filter(d => 
       d.recommendationType === 'education' || d.recommendationType === 'both'
     ).length;
+    
+    // Additional metrics for manager evaluation
+    const totalCases = doctorsWithMetrics.reduce((sum, d) => sum + (d.totalCases || 0), 0);
+    const totalSuccessfulCases = doctorsWithMetrics.reduce((sum, d) => sum + (d.successfulCases || 0), 0);
+    const overallSuccessRate = totalCases > 0 
+      ? ((totalSuccessfulCases / totalCases) * 100).toFixed(1)
+      : '0.0';
+    const totalReviews = doctorsWithMetrics.reduce((sum, d) => sum + (d.reviewCount || 0), 0);
+    const avgConsultationFee = total > 0
+      ? Math.round(doctorsWithMetrics.reduce((sum, d) => sum + (d.consultationFee || 0), 0) / total)
+      : 0;
 
     return {
       total,
@@ -288,7 +300,12 @@ export default function DoctorEvaluation({
       avgScore,
       avgRating,
       salaryRecommendations,
-      educationRecommendations
+      educationRecommendations,
+      totalCases,
+      totalSuccessfulCases,
+      overallSuccessRate,
+      totalReviews,
+      avgConsultationFee
     };
   }, [doctorsWithMetrics]);
 
@@ -305,86 +322,169 @@ export default function DoctorEvaluation({
 
   return (
     <div className={styles.evaluationContainer}>
-      {/* Thống kê hiệu suất */}
-      <div className={styles.performanceStats}>
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: '#667eea' }}>
+      {/* Stats Cards */}
+      <div className={styles.statsGrid}>
+        <div className={`${styles.statCard} ${styles.statCard1}`}>
+          <div className={styles.statIcon}>
             <i className="bi bi-graph-up-arrow"></i>
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Điểm trung bình</div>
             <div className={styles.statValue}>{stats.avgScore}/100</div>
-            <div className={styles.statSubtext}>Đánh giá: {stats.avgRating}/5.0</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-star-fill"></i>
+              <span>Đánh giá: {stats.avgRating}/5.0</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-graph-up-arrow"></i>
           </div>
         </div>
 
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: '#10b981' }}>
+        <div className={`${styles.statCard} ${styles.statCard2}`}>
+          <div className={styles.statIcon}>
             <i className="bi bi-trophy-fill"></i>
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Hiệu suất xuất sắc</div>
             <div className={styles.statValue}>{stats.excellentPerformers}</div>
-            <div className={styles.statSubtext}>≥ 80 điểm</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-check-circle"></i>
+              <span>≥ 80 điểm</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-trophy-fill"></i>
           </div>
         </div>
 
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: '#f59e0b' }}>
+        <div className={`${styles.statCard} ${styles.statCard3}`}>
+          <div className={styles.statIcon}>
             <i className="bi bi-star-half"></i>
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Hiệu suất tốt</div>
             <div className={styles.statValue}>{stats.goodPerformers}</div>
-            <div className={styles.statSubtext}>60-79 điểm</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-arrow-up"></i>
+              <span>60-79 điểm</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-star-half"></i>
           </div>
         </div>
 
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: '#8b5cf6' }}>
+        <div className={`${styles.statCard} ${styles.statCard3b}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-exclamation-triangle-fill"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Hiệu suất kém</div>
+            <div className={styles.statValue}>{stats.needsImprovement}</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-arrow-down"></i>
+              <span>&lt; 60 điểm</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-exclamation-triangle-fill"></i>
+          </div>
+        </div>
+
+        <div className={`${styles.statCard} ${styles.statCard6}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-star-fill"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Đánh giá trung bình</div>
+            <div className={styles.statValue}>{stats.avgRating}/5.0</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-star-fill"></i>
+              <span>Tổng {stats.totalReviews} đánh giá</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-star-fill"></i>
+          </div>
+        </div>
+
+        <div className={`${styles.statCard} ${styles.statCard4}`}>
+          <div className={styles.statIcon}>
             <i className="bi bi-cash-coin"></i>
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Đề xuất tăng lương</div>
             <div className={styles.statValue}>{stats.salaryRecommendations}</div>
-            <div className={styles.statSubtext}>Ứng viên phù hợp</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-person-check"></i>
+              <span>Ứng viên phù hợp</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-cash-coin"></i>
           </div>
         </div>
 
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: '#ec4899' }}>
+        <div className={`${styles.statCard} ${styles.statCard5}`}>
+          <div className={styles.statIcon}>
             <i className="bi bi-mortarboard-fill"></i>
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Đề xuất nâng cấp học vấn</div>
             <div className={styles.statValue}>{stats.educationRecommendations}</div>
-            <div className={styles.statSubtext}>Ứng viên phù hợp</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-book"></i>
+              <span>Ứng viên phù hợp</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-mortarboard-fill"></i>
+          </div>
+        </div>
+
+
+        <div className={`${styles.statCard} ${styles.statCard8}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-currency-dollar"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Giá khám TB</div>
+            <div className={styles.statValue}>{stats.avgConsultationFee.toLocaleString('vi-VN')}₫</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-graph-up"></i>
+              <span>Trung bình hệ thống</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-currency-dollar"></i>
           </div>
         </div>
       </div>
 
-      {/* Thanh tìm kiếm và filter */}
+      {/* Search and Filter */}
       <div className={styles.searchSection}>
-        <div className={styles.searchBar}>
+        <div className={styles.searchWrapper}>
           <i className="bi bi-search"></i>
           <input
             type="text"
             placeholder="Tìm kiếm bác sĩ theo tên, email hoặc chuyên khoa..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className={styles.searchInput}
           />
           {searchTerm && (
-            <button onClick={() => setSearchTerm('')} className={styles.clearBtn}>
+            <button onClick={() => setSearchTerm('')} className={styles.clearSearch}>
               <i className="bi bi-x-lg"></i>
             </button>
           )}
         </div>
         <button
-          className={`${styles.filterBtn} ${showFilters ? styles.active : ''}`}
+          className={`${styles.btnFilter} ${showFilters ? styles.active : ''}`}
           onClick={() => setShowFilters(!showFilters)}
         >
-          <i className="bi bi-funnel-fill"></i>
-          Lọc
+          <i className="bi bi-funnel"></i>
+          Bộ lọc
           {(filterSpecialization !== 'all' || filterEducation !== 'all') && (
             <span className={styles.filterBadge}></span>
           )}
@@ -437,7 +537,7 @@ export default function DoctorEvaluation({
               className={styles.btnResetFilter}
             >
               <i className="bi bi-arrow-counterclockwise"></i>
-              Đặt lại
+              Đặt lại bộ lọc
             </button>
             <button 
               onClick={() => setShowFilters(false)} 
@@ -450,184 +550,180 @@ export default function DoctorEvaluation({
         </div>
       )}
 
-      {/* Bảng đánh giá */}
-      <div className={styles.tableContainer}>
-        <table className={styles.evaluationTable}>
-          <thead>
-            <tr>
-              <th style={{ width: '50px' }}>STT</th>
-              <th style={{ width: '70px' }}>Ảnh</th>
-              <th onClick={() => handleSort('fullName')} className={styles.sortable}>
-                Họ và tên
-                {sortConfig.key === 'fullName' && (
-                  <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
-                )}
-              </th>
-              <th onClick={() => handleSort('specialization')} className={styles.sortable}>
-                Chuyên khoa
-                {sortConfig.key === 'specialization' && (
-                  <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
-                )}
-              </th>
-              <th onClick={() => handleSort('education')} className={styles.sortable}>
-                Trình độ học vấn
-                {sortConfig.key === 'education' && (
-                  <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
-                )}
-              </th>
-              <th onClick={() => handleSort('yearsOfExperience')} className={styles.sortable}>
-                Kinh nghiệm
-                {sortConfig.key === 'yearsOfExperience' && (
-                  <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
-                )}
-              </th>
-              <th onClick={() => handleSort('rating')} className={styles.sortable}>
-                Đánh giá
-                {sortConfig.key === 'rating' && (
-                  <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
-                )}
-              </th>
-              <th onClick={() => handleSort('reviewCount')} className={styles.sortable}>
-                Số đánh giá
-                {sortConfig.key === 'reviewCount' && (
-                  <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
-                )}
-              </th>
-              <th onClick={() => handleSort('successRate')} className={styles.sortable}>
-                Tỷ lệ thành công
-                {sortConfig.key === 'successRate' && (
-                  <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
-                )}
-              </th>
-              <th onClick={() => handleSort('consultationFee')} className={styles.sortable}>
-                Giá khám
-                {sortConfig.key === 'consultationFee' && (
-                  <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
-                )}
-              </th>
-              <th onClick={() => handleSort('performanceScore')} className={styles.sortable}>
-                Điểm hiệu suất
-                {sortConfig.key === 'performanceScore' && (
-                  <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
-                )}
-              </th>
-              <th style={{ width: '300px' }}>Đề xuất</th>
-              <th style={{ width: '100px' }}>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedDoctors.length > 0 ? (
-              paginatedDoctors.map((doctor, index) => (
-                <tr key={doctor.id} className={styles.tableRow}>
-                  <td>{(currentPage - 1) * pageSize + index + 1}</td>
-                  <td>
-                    <img
-                      src={doctor.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.fullName)}&background=667eea&color=fff`}
-                      alt={doctor.fullName}
-                      className={styles.avatar}
-                    />
-                  </td>
-                  <td>
-                    <div className={styles.doctorInfo}>
-                      <span className={styles.doctorName}>{doctor.fullName}</span>
-                      <span className={styles.doctorEmail}>{doctor.email}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={styles.specialtyBadge}>{doctor.specialization}</span>
-                  </td>
-                  <td>
-                    <span className={styles.educationBadge}>
-                      {getEducationLabel(doctor.education)}
-                    </span>
-                  </td>
-                  <td className={styles.centerText}>
-                    <span className={styles.experienceBadge}>
-                      {doctor.yearsOfExperience || 0} năm
-                    </span>
-                  </td>
-                  <td className={styles.centerText}>
-                    <div className={styles.ratingDisplay}>
-                      <i className="bi bi-star-fill" style={{ color: '#fbbf24' }}></i>
-                      <span className={styles.ratingValue}>{(doctor.rating || 0).toFixed(1)}</span>
-                    </div>
-                  </td>
-                  <td className={styles.centerText}>
-                    <span className={styles.reviewCountBadge}>
-                      {doctor.reviewCount || 0}
-                    </span>
-                  </td>
-                  <td className={styles.centerText}>
-                    <div className={styles.successRateDisplay}>
-                      <span className={styles.successRateBadge}>
-                        {doctor.formattedSuccessRate || '0%'}
+      {/* Table */}
+      <div className={styles.tableCard}>
+        {paginatedDoctors.length > 0 ? (
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th style={{ width: '40px' }}>STT</th>
+                  <th style={{ width: '50px' }}>Ảnh</th>
+                  <th onClick={() => handleSort('fullName')} className={styles.sortable} style={{ width: '160px' }}>
+                    Họ và tên
+                    {sortConfig.key === 'fullName' && (
+                      <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('specialization')} className={styles.sortable} style={{ width: '110px' }}>
+                    Chuyên khoa
+                    {sortConfig.key === 'specialization' && (
+                      <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('education')} className={styles.sortable} style={{ width: '110px' }}>
+                    Trình độ
+                    {sortConfig.key === 'education' && (
+                      <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('yearsOfExperience')} className={styles.sortable} style={{ width: '90px' }}>
+                    Kinh nghiệm
+                    {sortConfig.key === 'yearsOfExperience' && (
+                      <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('rating')} className={styles.sortable} style={{ width: '90px' }}>
+                    Đánh giá
+                    {sortConfig.key === 'rating' && (
+                      <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('reviewCount')} className={styles.sortable} style={{ width: '90px' }}>
+                    Số đánh giá
+                    {sortConfig.key === 'reviewCount' && (
+                      <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('successRate')} className={styles.sortable} style={{ width: '95px' }}>
+                    Tỷ lệ
+                    {sortConfig.key === 'successRate' && (
+                      <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('consultationFee')} className={styles.sortable} style={{ width: '95px' }}>
+                    Giá khám
+                    {sortConfig.key === 'consultationFee' && (
+                      <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th onClick={() => handleSort('performanceScore')} className={styles.sortable} style={{ width: '80px' }}>
+                    Điểm
+                    {sortConfig.key === 'performanceScore' && (
+                      <i className={`bi bi-arrow-${sortConfig.direction === 'asc' ? 'up' : 'down'}`}></i>
+                    )}
+                  </th>
+                  <th style={{ width: '200px' }}>Đề xuất</th>
+                  <th style={{ width: '70px', textAlign: 'center' }}>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedDoctors.map((doctor, index) => (
+                  <tr key={doctor.id} className={styles.tableRow}>
+                    <td className={styles.indexCell}>
+                      {(currentPage - 1) * pageSize + index + 1}
+                    </td>
+                    <td>
+                      <img
+                        src={doctor.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.fullName)}&background=667eea&color=fff`}
+                        alt={doctor.fullName}
+                        className={styles.avatar}
+                      />
+                    </td>
+                    <td>
+                      <div className={styles.doctorInfo}>
+                        <span className={styles.doctorName}>{doctor.fullName}</span>
+                        <span className={styles.doctorEmail}>{doctor.email}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={styles.specialtyBadge}>{doctor.specialization}</span>
+                    </td>
+                    <td>
+                      <span className={styles.educationBadge}>
+                        {getEducationLabel(doctor.education)}
                       </span>
-                      <span className={styles.casesInfo}>
-                        ({doctor.successfulCases || 0}/{doctor.totalCases || 0})
+                    </td>
+                    <td className={styles.centerText}>
+                      <span className={styles.experienceBadge}>
+                        {doctor.yearsOfExperience || 0} năm
                       </span>
-                    </div>
-                  </td>
-                  <td className={styles.centerText}>
-                    <span className={styles.consultationFeeBadge}>
-                      {(doctor.consultationFee || 0).toLocaleString('vi-VN')} ₫
-                    </span>
-                  </td>
-                  <td className={styles.centerText}>
-                    <div className={styles.performanceIndicator}>
-                      <div 
-                        className={styles.performanceBar}
-                        style={{ 
-                          width: `${doctor.performanceScore}%`,
-                          background: getPerformanceColor(doctor.performanceScore)
-                        }}
-                      ></div>
+                    </td>
+                    <td className={styles.centerText}>
+                      <div className={styles.ratingCell}>
+                        <span className={styles.ratingStars}>
+                          {'★'.repeat(Math.floor(doctor.rating || 0))}
+                          {'☆'.repeat(5 - Math.floor(doctor.rating || 0))}
+                        </span>
+                        <span className={styles.ratingValue}>{(doctor.rating || 0).toFixed(1)}</span>
+                      </div>
+                    </td>
+                    <td className={styles.centerText}>
+                      <span className={styles.reviewCountBadge}>
+                        {doctor.reviewCount || 0}
+                      </span>
+                    </td>
+                    <td className={styles.centerText}>
+                      <div className={styles.successRateDisplay}>
+                        <span className={styles.successRateBadge}>
+                          {doctor.formattedSuccessRate || '0%'}
+                        </span>
+                        <span className={styles.casesInfo}>
+                          ({doctor.successfulCases || 0}/{doctor.totalCases || 0})
+                        </span>
+                      </div>
+                    </td>
+                    <td className={styles.centerText}>
+                      <span className={styles.consultationFeeBadge}>
+                        {(doctor.consultationFee || 0).toLocaleString('vi-VN')} ₫
+                      </span>
+                    </td>
+                    <td className={styles.centerText}>
                       <span 
                         className={styles.performanceScore}
                         style={{ color: getPerformanceColor(doctor.performanceScore) }}
                       >
                         {doctor.performanceScore}
                       </span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className={styles.recommendation}>
-                      <span className={styles.recommendationIcon}>
-                        {getRecommendationIcon(doctor.recommendationType)}
-                      </span>
-                      <span className={styles.recommendationText}>
-                        {doctor.recommendation}
-                      </span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className={styles.actionButtons}>
-                      <button
-                        className={styles.detailsBtn}
-                        onClick={() => setSelectedDoctor(doctor)}
-                        title="Xem chi tiết"
-                      >
-                        <i className="bi bi-eye"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={13} className={styles.emptyState}>
-                  <i className="bi bi-inbox"></i>
-                  <p>Không tìm thấy bác sĩ nào</p>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                    </td>
+                    <td>
+                      <div className={styles.recommendation}>
+                        <span className={styles.recommendationIcon}>
+                          {getRecommendationIcon(doctor.recommendationType)}
+                        </span>
+                        <span className={styles.recommendationText}>
+                          {doctor.recommendation}
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className={styles.actions}>
+                        <button
+                          onClick={() => setSelectedDoctor(doctor)}
+                          title="Xem chi tiết"
+                          className={styles.actionBtn}
+                        >
+                          <i className="bi bi-eye"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className={styles.emptyState}>
+            <i className="bi bi-inbox"></i>
+            <p>Không tìm thấy bác sĩ nào</p>
+          </div>
+        )}
 
         {/* Pagination */}
         {filteredAndSortedDoctors.length > 0 && (
           <div className={styles.pagination}>
             <div className={styles.paginationInfo}>
-              Hiển thị {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredAndSortedDoctors.length)} trong tổng số {filteredAndSortedDoctors.length} bác sĩ
+              Hiển thị {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredAndSortedDoctors.length)} trong tổng số {filteredAndSortedDoctors.length} kết quả
             </div>
 
             <div className={styles.paginationControls}>
@@ -637,20 +733,17 @@ export default function DoctorEvaluation({
                   setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className={styles.pageSizeSelect}
               >
                 <option value={5}>5 / trang</option>
                 <option value={10}>10 / trang</option>
                 <option value={15}>15 / trang</option>
                 <option value={20}>20 / trang</option>
-                <option value={50}>50 / trang</option>
               </select>
 
               <div className={styles.paginationButtons}>
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
-                  className={styles.pageBtn}
                   title="Trang đầu"
                 >
                   <i className="bi bi-chevron-double-left"></i>
@@ -658,20 +751,18 @@ export default function DoctorEvaluation({
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className={styles.pageBtn}
                   title="Trang trước"
                 >
                   <i className="bi bi-chevron-left"></i>
                 </button>
 
                 <span className={styles.pageIndicator}>
-                  Trang {currentPage} / {totalPages || 1}
+                  {currentPage} / {totalPages || 1}
                 </span>
 
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className={styles.pageBtn}
                   title="Trang sau"
                 >
                   <i className="bi bi-chevron-right"></i>
@@ -679,7 +770,6 @@ export default function DoctorEvaluation({
                 <button
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages}
-                  className={styles.pageBtn}
                   title="Trang cuối"
                 >
                   <i className="bi bi-chevron-double-right"></i>
@@ -881,4 +971,3 @@ export default function DoctorEvaluation({
     </div>
   );
 }
-

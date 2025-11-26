@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useToast } from '../../contexts/ToastContext';
+import { Calendar } from 'lucide-react';
 import styles from '../../styles/admin/UserList.module.css';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
@@ -192,9 +193,33 @@ export default function CategoryList({ hideHeader = false, title = 'Quản lý D
     <div>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h2 className={styles.title}>{title}</h2>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <i className="bi bi-grid-3x3-gap" style={{ fontSize: '28px' }}></i>
+            </div>
+            <div>
+              <h1 className={styles.title}>{title}</h1>
+              <p className={styles.subtitle}>Quản lý và phân loại các danh mục bài viết trong hệ thống</p>
+            </div>
+          </div>
         </div>
         <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <Calendar size={20} className={styles.dateIcon} />
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={styles.dateGlow}></div>
+            </div>
+          </div>
           <button onClick={() => handleOpenForm(null)} className={styles.btnCreate}>
             <i className="bi bi-plus-lg"></i> Tạo mới
           </button>

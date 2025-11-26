@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Calendar } from 'lucide-react';
 import DoctorService from '../../services/doctorService';
 import DoctorRegistrationFormService from '../../services/doctorRegistrationFormService';
 import DoctorDegreeService from '../../services/doctorDegreeService';
@@ -60,7 +61,6 @@ export default function DoctorManagement() {
   const [reviewing, setReviewing] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
 
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -103,7 +103,6 @@ export default function DoctorManagement() {
     setLoading(true);
     try {
       await Promise.all([loadAllDoctors(), loadPendingDoctors(), loadDegrees()]);
-      setLastRefreshTime(new Date());
     } finally {
       setLoading(false);
     }
@@ -405,15 +404,33 @@ export default function DoctorManagement() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Quản lý Bác sĩ</h1>
-          <p className={styles.subtitle}>Quản lý và theo dõi tất cả bác sĩ trong hệ thống</p>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <i className="bi bi-person-badge" style={{ fontSize: '28px' }}></i>
+            </div>
+            <div>
+              <h1 className={styles.title}>Quản lý Bác sĩ</h1>
+              <p className={styles.subtitle}>Quản lý và theo dõi tất cả bác sĩ trong hệ thống</p>
+            </div>
+          </div>
         </div>
-        <div className={styles.headerActions}>
-          {lastRefreshTime && (
-            <p className={styles.lastUpdate} style={{ fontSize: '0.85rem', color: '#666' }}>
-              Cập nhật lần cuối: {lastRefreshTime.toLocaleTimeString('vi-VN')}
-            </p>
-          )}
+        <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <Calendar size={20} className={styles.dateIcon} />
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={styles.dateGlow}></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -483,18 +500,18 @@ export default function DoctorManagement() {
 
         <div className={`${styles.statCard} ${styles.statCard3}`}>
           <div className={styles.statIcon}>
-            <i className="bi bi-clock-history"></i>
+            <i className="bi bi-lock-fill"></i>
           </div>
           <div className={styles.statContent}>
-            <div className={styles.statLabel}>Chờ phê duyệt</div>
-            <div className={styles.statValue}>{stats.pendingCount}</div>
+            <div className={styles.statLabel}>Bị khóa</div>
+            <div className={styles.statValue}>{stats.inactiveDoctors}</div>
             <div className={styles.statTrend}>
-              <i className="bi bi-exclamation-circle"></i>
-              <span>{stats.pendingCount > 0 ? 'Cần xử lý ngay' : 'Không có'}</span>
+              <i className="bi bi-shield-x"></i>
+              <span>{stats.inactiveDoctors > 0 ? 'Tài khoản bị khóa' : 'Không có'}</span>
             </div>
           </div>
           <div className={styles.statBg}>
-            <i className="bi bi-clock-history"></i>
+            <i className="bi bi-lock-fill"></i>
           </div>
         </div>
 

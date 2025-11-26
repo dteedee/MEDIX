@@ -489,7 +489,7 @@
 
 .templateTextarea {
   min-height: 220px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif !important;
 }
 
 /* Responsive */

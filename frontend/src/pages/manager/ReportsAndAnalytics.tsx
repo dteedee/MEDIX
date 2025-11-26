@@ -1,29 +1,47 @@
 import React, { useState, useEffect } from 'react'
+import { Calendar } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import dashboardService from '../../services/dashboardService'
+import { managerDashboardService, AppointmentStats } from '../../services/managerDashboardService'
+import DoctorService from '../../services/doctorService'
 import { SpecializationDistributionDto, AppointmentTrendsDto, UserGrowthDto, ManagerDashboardSummaryDto, TopRatedDoctorDto } from '../../types/dashboard.types'
 import styles from '../../styles/manager/ReportsAndAnalytics.module.css'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 export default function ReportsAndAnalytics() {
   const [summary, setSummary] = useState<ManagerDashboardSummaryDto | null>(null);
+  const [appointmentStats, setAppointmentStats] = useState<AppointmentStats | null>(null);
   const [specializations, setSpecializations] = useState<SpecializationDistributionDto[]>([]);
   const [appointmentTrends, setAppointmentTrends] = useState<AppointmentTrendsDto | null>(null);
   const [userGrowth, setUserGrowth] = useState<UserGrowthDto | null>(null);
   const [topRatedDoctors, setTopRatedDoctors] = useState<TopRatedDoctorDto[]>([]);
+  const [patientCount, setPatientCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedPeriod, setSelectedPeriod] = useState('30days');
   const [selectedReport, setSelectedReport] = useState('overview');
+  const [educationTypes, setEducationTypes] = useState<any[]>([]);
   const { showToast } = useToast();
 
   useEffect(() => {
     loadSummary();
+    loadAppointmentStats();
     loadSpecializations();
     loadAppointmentTrends();  
     loadUserGrowth();
-    loadTopRatedDoctors();
+    loadEducationTypes();
   }, [selectedPeriod, selectedYear]);
+  
+  useEffect(() => {
+    // Load top rated doctors when education types are ready or when period/year changes
+    loadTopRatedDoctors();
+  }, [educationTypes, selectedPeriod, selectedYear]);
+
+  useEffect(() => {
+    if (summary) {
+      loadPatientCount();
+    }
+  }, [summary]);
 
   const loadSpecializations = async () => {
     try {
@@ -62,20 +80,95 @@ export default function ReportsAndAnalytics() {
     setLoading(true);
     try {
       const data = await dashboardService.getSummary();
-   
       setSummary(data);
       setLoading(false);
     } catch (error) {
-   
       showToast('Không thể tải dữ liệu tóm tắt', 'error');
       setLoading(false);
     }
   };
 
+  const loadAppointmentStats = async () => {
+    try {
+      const dashboardData = await managerDashboardService.getDashboardData();
+      setAppointmentStats(dashboardData.appointmentStats);
+    } catch (error) {
+      console.error('Error loading appointment stats:', error);
+      // Không hiển thị toast để tránh spam, vì đây là dữ liệu bổ sung
+    }
+  };
+
+  const loadPatientCount = async () => {
+    try {
+      // Tính số bệnh nhân = tổng users - tổng bác sĩ (vì users bao gồm cả bác sĩ, admin, manager, patient)
+      // Nếu có API riêng, sẽ thay thế logic này
+      if (summary) {
+        // Giả sử users.total bao gồm tất cả, trừ đi doctors để lấy số bệnh nhân
+        // (có thể còn admin/manager nhưng số lượng nhỏ)
+        const calculatedPatientCount = Math.max(0, summary.users.total - summary.doctors.total);
+        setPatientCount(calculatedPatientCount);
+      }
+    } catch (error) {
+      console.error('Error calculating patient count:', error);
+    }
+  };
+
+  const loadEducationTypes = async () => {
+    try {
+      const data = await DoctorService.getEducationTypes();
+      setEducationTypes(data);
+    } catch (error) {
+      console.error('Error loading education types:', error);
+    }
+  };
+
+  const getEducationLabel = (educationCode?: string): string | undefined => {
+    if (!educationCode) return undefined;
+    const educationType = educationTypes.find((et: any) => et.code === educationCode);
+    return educationType ? educationType.description : educationCode;
+  };
+
   const loadTopRatedDoctors = async () => {
     try {
       const data = await dashboardService.getTopRatedDoctors(3);
-      setTopRatedDoctors(data);
+      
+      // Fetch thêm thông tin chi tiết từ DoctorService nếu thiếu degree hoặc experienceYears
+      const enrichedData = await Promise.all(
+        data.map(async (doctor) => {
+          // Nếu đã có đầy đủ thông tin, chỉ cần map degree nếu là code
+          if (doctor.degree && doctor.experienceYears) {
+            const degreeLabel = getEducationLabel(doctor.degree);
+            return {
+              ...doctor,
+              degree: degreeLabel || doctor.degree,
+            };
+          }
+          
+          try {
+            // Fetch thông tin chi tiết từ DoctorService
+            const doctorDetail = await DoctorService.getById(doctor.doctorId);
+            
+            // Map education code sang description
+            const degreeLabel = getEducationLabel(doctorDetail.education);
+            
+            return {
+              ...doctor,
+              degree: doctor.degree || degreeLabel || doctorDetail.education || undefined,
+              experienceYears: doctor.experienceYears || doctorDetail.yearsOfExperience || undefined,
+            };
+          } catch (error) {
+            console.error(`Error fetching doctor details for ${doctor.doctorId}:`, error);
+            // Nếu lỗi, vẫn trả về dữ liệu gốc và map degree nếu có
+            const degreeLabel = doctor.degree ? getEducationLabel(doctor.degree) : undefined;
+            return {
+              ...doctor,
+              degree: degreeLabel || doctor.degree,
+            };
+          }
+        })
+      );
+      
+      setTopRatedDoctors(enrichedData);
     } catch (error) {
       console.error('Error loading top rated doctors:', error);
       showToast('Không thể tải dữ liệu bác sĩ được đánh giá cao', 'error');
@@ -116,11 +209,158 @@ export default function ReportsAndAnalytics() {
   };
 
   const handleExportReport = () => {
-    showToast('Đang xuất báo cáo...', 'info');
-    // Mock export - replace with actual export functionality
-    setTimeout(() => {
-      showToast('Xuất báo cáo thành công!', 'success');
-    }, 2000);
+    try {
+      showToast('Đang xuất báo cáo...', 'info');
+      
+      const currentDate = new Date().toISOString().split('T')[0];
+      const dateTime = new Date().toLocaleString('vi-VN');
+      
+      // Tạo nội dung CSV với nhiều sections
+      let csvContent = '\uFEFF'; // BOM để hỗ trợ UTF-8
+      
+      // Header báo cáo
+      csvContent += `BÁO CÁO & THỐNG KÊ - MEDIX\n`;
+      csvContent += `Ngày xuất: ${dateTime}\n`;
+      csvContent += `Năm: ${selectedYear}\n`;
+      csvContent += `\n`;
+      
+      // Section 1: Tổng quan Metrics
+      csvContent += `=== TỔNG QUAN METRICS ===\n`;
+      csvContent += `Chỉ số,Giá trị,Tăng trưởng (%)\n`;
+      
+      if (summary) {
+        const patientCountValue = patientCount !== null 
+          ? patientCount
+          : Math.max(0, summary.users.total - summary.doctors.total);
+        
+        csvContent += `"Tổng bệnh nhân","${formatNumber(patientCountValue)}","${summary.users.growth > 0 ? '+' : ''}${summary.users.growth.toFixed(1)}%"\n`;
+        csvContent += `"Tổng bác sĩ","${formatNumber(summary.doctors.total)}","${summary.doctors.growth > 0 ? '+' : ''}${summary.doctors.growth.toFixed(1)}%"\n`;
+        csvContent += `"Tổng lịch hẹn","${formatNumber(summary.appointments.total)}","${summary.appointments.growth > 0 ? '+' : ''}${summary.appointments.growth.toFixed(1)}%"\n`;
+        csvContent += `"Tổng doanh thu","${formatCurrency(summary.revenue.total)} (${summary.revenue.total.toLocaleString('vi-VN')} VND)","${summary.revenue.growth > 0 ? '+' : ''}${summary.revenue.growth.toFixed(1)}%"\n`;
+      }
+      
+      csvContent += `\n`;
+      
+      // Section 2: Metrics bổ sung
+      csvContent += `=== METRICS BỔ SUNG ===\n`;
+      csvContent += `Chỉ số,Giá trị,Chi tiết\n`;
+      
+      // Tỷ lệ hoàn thành
+      const completionRate = appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.completed !== undefined
+        ? (((appointmentStats.completed || 0) / appointmentStats.totalAppointments) * 100).toFixed(1)
+        : '0.0';
+      const completionDetail = appointmentStats && appointmentStats.completed !== undefined && appointmentStats.totalAppointments !== undefined
+        ? `${(appointmentStats.completed || 0).toLocaleString('vi-VN')} / ${(appointmentStats.totalAppointments || 0).toLocaleString('vi-VN')} lịch hẹn`
+        : 'Lịch hẹn đã hoàn thành';
+      csvContent += `"Tỷ lệ hoàn thành","${completionRate}%","${completionDetail}"\n`;
+      
+      // Tỷ lệ hủy
+      const cancellationRate = appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.cancelledByPatient !== undefined && appointmentStats.cancelledByDoctor !== undefined
+        ? ((((appointmentStats.cancelledByPatient || 0) + (appointmentStats.cancelledByDoctor || 0)) / appointmentStats.totalAppointments) * 100).toFixed(1)
+        : '0.0';
+      const cancellationDetail = appointmentStats && appointmentStats.cancelledByPatient !== undefined && appointmentStats.cancelledByDoctor !== undefined
+        ? `${((appointmentStats.cancelledByPatient || 0) + (appointmentStats.cancelledByDoctor || 0)).toLocaleString('vi-VN')} lịch hẹn bị hủy`
+        : 'Lịch hẹn bị hủy';
+      csvContent += `"Tỷ lệ hủy","${cancellationRate}%","${cancellationDetail}"\n`;
+      
+      // Đánh giá trung bình
+      const avgRating = topRatedDoctors.length > 0
+        ? (topRatedDoctors.reduce((sum, d) => sum + d.averageRating, 0) / topRatedDoctors.length).toFixed(1)
+        : '0.0';
+      const totalReviews = topRatedDoctors.reduce((sum, d) => sum + d.reviewCount, 0);
+      csvContent += `"Đánh giá trung bình","${avgRating}","${totalReviews} đánh giá"\n`;
+      
+      // Tỷ lệ đặt lại lịch
+      const rescheduleRate = appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.BeforeAppoiment !== undefined
+        ? (((appointmentStats.BeforeAppoiment || 0) / appointmentStats.totalAppointments) * 100).toFixed(1)
+        : '0.0';
+      const rescheduleDetail = appointmentStats && appointmentStats.BeforeAppoiment !== undefined
+        ? `${(appointmentStats.BeforeAppoiment || 0).toLocaleString('vi-VN')} lịch hẹn được đặt lại`
+        : 'Lịch hẹn được đặt lại';
+      csvContent += `"Tỷ lệ đặt lại lịch","${rescheduleRate}%","${rescheduleDetail}"\n`;
+      
+      csvContent += `\n`;
+      
+      // Section 3: Top Rated Doctors
+      csvContent += `=== TOP ${topRatedDoctors.length} BÁC SĨ ĐƯỢC ĐÁNH GIÁ CAO NHẤT ===\n`;
+      csvContent += `Hạng,Tên bác sĩ,Chuyên khoa,Kinh nghiệm (năm),Đánh giá trung bình,Số đánh giá,Ca đã thực hiện,Ca thành công\n`;
+      
+      topRatedDoctors.forEach((doctor, index) => {
+        const completedAppts = doctor.completedAppointments !== undefined 
+          ? doctor.completedAppointments
+          : doctor.totalAppointments !== undefined
+          ? doctor.totalAppointments
+          : 0;
+        const successfulAppts = doctor.successfulAppointments !== undefined 
+          ? doctor.successfulAppointments
+          : doctor.successRate !== undefined && doctor.completedAppointments !== undefined
+          ? Math.round((doctor.successRate / 100) * doctor.completedAppointments)
+          : 0;
+        
+        csvContent += `"${index + 1}","${doctor.doctorName || ''}","${doctor.specialization || ''}","${doctor.experienceYears || 0}","${doctor.formattedRating || '0.0'}","${doctor.reviewCount || 0}","${completedAppts}","${successfulAppts}"\n`;
+      });
+      
+      csvContent += `\n`;
+      
+      // Section 4: Chuyên khoa phổ biến
+      csvContent += `=== CHUYÊN KHOA PHỔ BIẾN ===\n`;
+      csvContent += `Hạng,Tên chuyên khoa,Số lượng bác sĩ,Tỷ lệ (%)\n`;
+      
+      specializations
+        .filter(spec => spec.doctorCount > 0)
+        .sort((a, b) => b.doctorCount - a.doctorCount)
+        .forEach((specialty, index) => {
+          csvContent += `"${index + 1}","${specialty.name}","${specialty.doctorCount}","${specialty.percentage.toFixed(1)}"\n`;
+        });
+      
+      csvContent += `\n`;
+      
+      // Section 5: Xu hướng lịch hẹn theo tháng
+      if (appointmentTrends && appointmentTrends.monthly.length > 0) {
+        csvContent += `=== XU HƯỚNG LỊCH HẸN THEO THÁNG (NĂM ${selectedYear}) ===\n`;
+        csvContent += `Tháng,Số lịch hẹn,Doanh thu (VND)\n`;
+        
+        appointmentTrends.monthly.forEach(trend => {
+          const monthName = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
+                            'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'][trend.month - 1];
+          csvContent += `"${monthName}","${trend.appointmentCount}","${trend.totalRevenue.toLocaleString('vi-VN')} VND"\n`;
+        });
+        
+        csvContent += `"Tổng cộng","${appointmentTrends.totalAppointments}","${appointmentTrends.totalRevenue.toLocaleString('vi-VN')} VND"\n`;
+        csvContent += `\n`;
+      }
+      
+      // Section 6: Tăng trưởng người dùng theo tháng
+      if (userGrowth && userGrowth.monthly.length > 0) {
+        csvContent += `=== TĂNG TRƯỞNG NGƯỜI DÙNG THEO THÁNG (NĂM ${selectedYear}) ===\n`;
+        csvContent += `Tháng,Bệnh nhân mới,Bác sĩ mới\n`;
+        
+        userGrowth.monthly.forEach(growth => {
+          const monthName = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
+                            'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'][growth.month - 1];
+          csvContent += `"${monthName}","${growth.newUsers}","${growth.newDoctors}"\n`;
+        });
+        
+        csvContent += `"Tổng cộng","${userGrowth.totalNewUsers}","${userGrowth.totalNewDoctors}"\n`;
+      }
+      
+      // Tạo file và download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `bao-cao-thong-ke-${currentDate}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      showToast('Đã xuất báo cáo CSV thành công!', 'success');
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      showToast('Không thể xuất báo cáo. Vui lòng thử lại.', 'error');
+    }
   };
 
   if (loading) {
@@ -150,12 +390,32 @@ export default function ReportsAndAnalytics() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Báo cáo & Thống kê</h1>
-          <p className={styles.subtitle}>Phân tích và theo dõi hiệu suất hệ thống</p>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <i className="bi bi-graph-up-arrow" style={{ fontSize: '28px' }}></i>
+            </div>
+            <div>
+              <h1 className={styles.title}>Báo cáo & Thống kê</h1>
+              <p className={styles.subtitle}>Phân tích và theo dõi hiệu suất hệ thống</p>
+            </div>
+          </div>
         </div>
         <div className={styles.headerRight}>
-          <div className={styles.periodSelector}>
-           
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <Calendar size={20} className={styles.dateIcon} />
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={styles.dateGlow}></div>
+            </div>
           </div>
           <button className={styles.exportButton} onClick={handleExportReport}>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -175,74 +435,161 @@ export default function ReportsAndAnalytics() {
         <>
           {/* Key Metrics */}
           <div className={styles.metricsGrid}>
+            {/* Hàng trên: Tổng bệnh nhân, Tổng bác sĩ */}
             <div className={`${styles.metricCard} ${styles.metricCard1}`}>
               <div className={styles.metricIcon}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
+                <i className="bi bi-people" style={{ fontSize: '28px' }}></i>
               </div>
               <div className={styles.metricContent}>
-                <div className={styles.metricLabel}>Tổng người dùng</div>
-                <div className={styles.metricValue}>{formatNumber(summary.users.total)}</div>
-                <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.users.growth) }}>
-                  {getGrowthIcon(summary.users.growth)}
+                <div className={styles.metricLabel}>Tổng bệnh nhân</div>
+                <div className={styles.metricValue}>
+                  {patientCount !== null 
+                    ? formatNumber(patientCount)
+                    : summary 
+                    ? formatNumber(Math.max(0, summary.users.total - summary.doctors.total))
+                    : '0'}
+                </div>
+                <div className={`${styles.metricGrowth} ${summary.users.growth < 0 ? styles.negative : ''}`}>
+                  <i className={`bi bi-arrow-${summary.users.growth >= 0 ? 'up' : 'down'}`}></i>
                   <span>{summary.users.growth > 0 ? '+' : ''}{summary.users.growth.toFixed(1)}% so với tháng trước</span>
                 </div>
+              </div>
+              <div className={styles.metricBg}>
+                <i className="bi bi-people"></i>
               </div>
             </div>
 
             <div className={`${styles.metricCard} ${styles.metricCard2}`}>
               <div className={styles.metricIcon}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
+                <i className="bi bi-person-badge" style={{ fontSize: '28px' }}></i>
               </div>
               <div className={styles.metricContent}>
                 <div className={styles.metricLabel}>Tổng bác sĩ</div>
                 <div className={styles.metricValue}>{formatNumber(summary.doctors.total)}</div>
-                <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.doctors.growth) }}>
-                  {getGrowthIcon(summary.doctors.growth)}
+                <div className={`${styles.metricGrowth} ${summary.doctors.growth < 0 ? styles.negative : ''}`}>
+                  <i className={`bi bi-arrow-${summary.doctors.growth >= 0 ? 'up' : 'down'}`}></i>
                   <span>{summary.doctors.growth > 0 ? '+' : ''}{summary.doctors.growth.toFixed(1)}% so với tháng trước</span>
                 </div>
               </div>
+              <div className={styles.metricBg}>
+                <i className="bi bi-person-badge"></i>
+              </div>
             </div>
 
+            {/* Hàng dưới: Tổng lịch hẹn, Tổng doanh thu */}
             <div className={`${styles.metricCard} ${styles.metricCard3}`}>
               <div className={styles.metricIcon}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
+                <i className="bi bi-calendar-check" style={{ fontSize: '28px' }}></i>
               </div>
               <div className={styles.metricContent}>
                 <div className={styles.metricLabel}>Tổng lịch hẹn</div>
                 <div className={styles.metricValue}>{formatNumber(summary.appointments.total)}</div>
-                <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.appointments.growth) }}>
-                  {getGrowthIcon(summary.appointments.growth)}
+                <div className={`${styles.metricGrowth} ${summary.appointments.growth < 0 ? styles.negative : ''}`}>
+                  <i className={`bi bi-arrow-${summary.appointments.growth >= 0 ? 'up' : 'down'}`}></i>
                   <span>{summary.appointments.growth > 0 ? '+' : ''}{summary.appointments.growth.toFixed(1)}% so với tháng trước</span>
                 </div>
+              </div>
+              <div className={styles.metricBg}>
+                <i className="bi bi-calendar-check"></i>
               </div>
             </div>
 
             <div className={`${styles.metricCard} ${styles.metricCard4}`}>
               <div className={styles.metricIcon}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="1" x2="12" y2="23"></line>
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
+                <i className="bi bi-currency-dollar" style={{ fontSize: '28px' }}></i>
               </div>
               <div className={styles.metricContent}>
                 <div className={styles.metricLabel}>Tổng doanh thu</div>
                 <div className={styles.metricValue}>{formatCurrency(summary.revenue.total)}</div>
-                <div className={styles.metricGrowth} style={{ color: getGrowthColor(summary.revenue.growth) }}>
-                  {getGrowthIcon(summary.revenue.growth)}
+                <div className={`${styles.metricGrowth} ${summary.revenue.growth < 0 ? styles.negative : ''}`}>
+                  <i className={`bi bi-arrow-${summary.revenue.growth >= 0 ? 'up' : 'down'}`}></i>
                   <span>{summary.revenue.growth > 0 ? '+' : ''}{summary.revenue.growth.toFixed(1)}% so với tháng trước</span>
+                </div>
+              </div>
+              <div className={styles.metricBg}>
+                <i className="bi bi-currency-dollar"></i>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Metrics */}
+          <div className={styles.additionalMetricsGrid}>
+            <div className={`${styles.additionalMetricCard} ${styles.additionalMetricCard1}`}>
+              <div className={styles.additionalMetricIcon}>
+                <i className="bi bi-check-circle" style={{ fontSize: '24px' }}></i>
+              </div>
+              <div className={styles.additionalMetricContent}>
+                <div className={styles.additionalMetricLabel}>Tỷ lệ hoàn thành</div>
+                <div className={styles.additionalMetricValue}>
+                  {appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.completed !== undefined
+                    ? (((appointmentStats.completed || 0) / appointmentStats.totalAppointments) * 100).toFixed(1)
+                    : summary && summary.appointments.total > 0
+                    ? '0.0'
+                    : '0'}%
+                </div>
+                <div className={styles.additionalMetricSubtext}>
+                  {appointmentStats && appointmentStats.completed !== undefined && appointmentStats.totalAppointments !== undefined
+                    ? `${(appointmentStats.completed || 0).toLocaleString('vi-VN')} / ${(appointmentStats.totalAppointments || 0).toLocaleString('vi-VN')} lịch hẹn`
+                    : 'Lịch hẹn đã hoàn thành'}
+                </div>
+              </div>
+            </div>
+
+            <div className={`${styles.additionalMetricCard} ${styles.additionalMetricCard2}`}>
+              <div className={styles.additionalMetricIcon}>
+                <i className="bi bi-x-circle" style={{ fontSize: '24px' }}></i>
+              </div>
+              <div className={styles.additionalMetricContent}>
+                <div className={styles.additionalMetricLabel}>Tỷ lệ hủy</div>
+                <div className={styles.additionalMetricValue}>
+                  {appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.cancelledByPatient !== undefined && appointmentStats.cancelledByDoctor !== undefined
+                    ? ((((appointmentStats.cancelledByPatient || 0) + (appointmentStats.cancelledByDoctor || 0)) / appointmentStats.totalAppointments) * 100).toFixed(1)
+                    : summary && summary.appointments.total > 0
+                    ? '0.0'
+                    : '0'}%
+                </div>
+                <div className={styles.additionalMetricSubtext}>
+                  {appointmentStats && appointmentStats.cancelledByPatient !== undefined && appointmentStats.cancelledByDoctor !== undefined
+                    ? `${((appointmentStats.cancelledByPatient || 0) + (appointmentStats.cancelledByDoctor || 0)).toLocaleString('vi-VN')} lịch hẹn bị hủy`
+                    : 'Lịch hẹn bị hủy'}
+                </div>
+              </div>
+            </div>
+
+            <div className={`${styles.additionalMetricCard} ${styles.additionalMetricCard3}`}>
+              <div className={styles.additionalMetricIcon}>
+                <i className="bi bi-star" style={{ fontSize: '24px' }}></i>
+              </div>
+              <div className={styles.additionalMetricContent}>
+                <div className={styles.additionalMetricLabel}>Đánh giá trung bình</div>
+                <div className={styles.additionalMetricValue}>
+                  {topRatedDoctors.length > 0
+                    ? (topRatedDoctors.reduce((sum, d) => sum + d.averageRating, 0) / topRatedDoctors.length).toFixed(1)
+                    : '0.0'}
+                </div>
+                <div className={styles.additionalMetricSubtext}>
+                  {topRatedDoctors.reduce((sum, d) => sum + d.reviewCount, 0)} đánh giá
+                </div>
+              </div>
+            </div>
+
+            <div className={`${styles.additionalMetricCard} ${styles.additionalMetricCard4}`}>
+              <div className={styles.additionalMetricIcon}>
+                <i className="bi bi-arrow-repeat" style={{ fontSize: '24px' }}></i>
+              </div>
+              <div className={styles.additionalMetricContent}>
+                <div className={styles.additionalMetricLabel}>Tỷ lệ đặt lại lịch</div>
+                <div className={styles.additionalMetricValue}>
+                  {appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.BeforeAppoiment !== undefined
+                    ? (((appointmentStats.BeforeAppoiment || 0) / appointmentStats.totalAppointments) * 100).toFixed(1)
+                    : summary && summary.appointments.total > 0
+                    ? '0.0'
+                    : '0'}%
+                </div>
+                <div className={styles.additionalMetricSubtext}>
+                  {appointmentStats && appointmentStats.BeforeAppoiment !== undefined
+                    ? `${(appointmentStats.BeforeAppoiment || 0).toLocaleString('vi-VN')} lịch hẹn được đặt lại`
+                    : 'Lịch hẹn được đặt lại'}
                 </div>
               </div>
             </div>
@@ -258,31 +605,14 @@ export default function ReportsAndAnalytics() {
               {topRatedDoctors.length > 0 ? (
                 topRatedDoctors.map((doctor, index) => (
                   <div key={doctor.doctorId} className={`${styles.topRatedCard} ${styles[`rank${index + 1}`]}`}>
-                    <div className={styles.laurelBadge}>
-                      {/* Laurel Wreath */}
-                      <svg className={styles.laurelWreath} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                        {/* Left Laurel */}
-                        <path d="M25,70 Q20,60 20,50 Q20,40 25,30 Q20,35 15,40 Q10,45 10,50 Q10,55 15,60 Q20,65 25,70" fill="currentColor"/>
-                        <path d="M30,65 Q28,58 28,50 Q28,42 30,35 Q26,40 22,45 Q18,50 22,55 Q26,60 30,65" fill="currentColor"/>
-                        <path d="M35,60 Q34,56 34,50 Q34,44 35,40 Q32,44 29,48 Q26,52 29,56 Q32,60 35,60" fill="currentColor"/>
-                        
-                        {/* Right Laurel */}
-                        <path d="M75,70 Q80,60 80,50 Q80,40 75,30 Q80,35 85,40 Q90,45 90,50 Q90,55 85,60 Q80,65 75,70" fill="currentColor"/>
-                        <path d="M70,65 Q72,58 72,50 Q72,42 70,35 Q74,40 78,45 Q82,50 78,55 Q74,60 70,65" fill="currentColor"/>
-                        <path d="M65,60 Q66,56 66,50 Q66,44 65,40 Q68,44 71,48 Q74,52 71,56 Q68,60 65,60" fill="currentColor"/>
-                      </svg>
-                      
-                      {/* Crown */}
-                      <svg className={styles.crown} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-                        <path d="M12 2l2 6 6-2-4 6h8l-12 8-12-8h8l-4-6 6 2z"/>
-                        <rect x="3" y="18" width="18" height="3" rx="1"/>
-                      </svg>
-                      
-                      {/* Rank Text */}
-                      <div className={styles.rankText}>
-                        <div className={styles.bestLabel}>BEST</div>
-                        <div className={styles.rankNumber}>{index + 1}</div>
+                    <div className={styles.championBadge}>
+                      <div className={styles.trophyIcon}>
+                        <i className="bi bi-trophy-fill"></i>
                       </div>
+                    </div>
+                    
+                    <div className={styles.topRankBadge}>
+                      <span className={styles.topRankText}>TOP {index + 1}</span>
                     </div>
                     
                     <div className={styles.doctorAvatar}>
@@ -299,8 +629,15 @@ export default function ReportsAndAnalytics() {
                     </div>
                     
                     <div className={styles.doctorInfo}>
-                      <h3 className={styles.doctorName}>{doctor.doctorName}</h3>
-                      <p className={styles.doctorSpecialty}>{doctor.specialization}</p>
+                      <h3 className={styles.doctorName}>
+                        {doctor.doctorName}
+                      </h3>
+                      <p className={styles.doctorSpecialty}>
+                        {doctor.degree ? `${doctor.degree} - ${doctor.specialization}` : doctor.specialization}
+                      </p>
+                      <p className={styles.doctorExperience}>
+                        <i className="bi bi-briefcase"></i> {doctor.experienceYears ? `${doctor.experienceYears} năm kinh nghiệm` : 'Chưa có thông tin'}
+                      </p>
                     </div>
                     
                     <div className={styles.ratingInfo}>
@@ -325,6 +662,36 @@ export default function ReportsAndAnalytics() {
                         <span className={styles.ratingCount}>({doctor.reviewCount} đánh giá)</span>
                       </div>
                     </div>
+
+                    {/* Thông tin số ca đã thực hiện và thành công - Compact design */}
+                    <div className={styles.doctorStatsCompact}>
+                      <div className={styles.statCompactItem}>
+                        <div className={styles.statCompactIcon}>
+                          <i className="bi bi-clipboard-check"></i>
+                        </div>
+                        <div className={styles.statCompactValue}>
+                          {doctor.completedAppointments !== undefined 
+                            ? doctor.completedAppointments.toLocaleString('vi-VN')
+                            : doctor.totalAppointments !== undefined
+                            ? doctor.totalAppointments.toLocaleString('vi-VN')
+                            : '0'}
+                        </div>
+                        <div className={styles.statCompactLabel}>Ca thực hiện</div>
+                      </div>
+                      <div className={styles.statCompactItem}>
+                        <div className={styles.statCompactIcon}>
+                          <i className="bi bi-check-circle"></i>
+                        </div>
+                        <div className={styles.statCompactValue}>
+                          {doctor.successfulAppointments !== undefined 
+                            ? doctor.successfulAppointments.toLocaleString('vi-VN')
+                            : doctor.successRate !== undefined && doctor.completedAppointments !== undefined
+                            ? Math.round((doctor.successRate / 100) * doctor.completedAppointments).toLocaleString('vi-VN')
+                            : '0'}
+                        </div>
+                        <div className={styles.statCompactLabel}>Ca thành công</div>
+                      </div>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -340,8 +707,8 @@ export default function ReportsAndAnalytics() {
           <div className={styles.chartsGrid}>
             {/* Top Specialties */}
             <div className={styles.chartCard}>
-              <div className={styles.chartHeader}>
-                <h3>Chuyên khoa phổ biến</h3>
+              <div className={styles.sectionHeader}>
+                <h2>Chuyên khoa phổ biến</h2>
                 <p>Phân bố số lượng bác sĩ theo chuyên khoa</p>
               </div>
               <div className={styles.chartContent}>
@@ -378,32 +745,42 @@ export default function ReportsAndAnalytics() {
 
             {/* Appointment Trends */}
             <div className={styles.chartCard}>
-              <div className={styles.chartHeader}>
-                <div>
-                  <h3>Xu hướng lịch hẹn</h3>
-                  <p>Biểu đồ lịch hẹn và doanh thu theo tháng</p>
+              <div className={styles.sectionHeader}>
+                <div className={styles.sectionHeaderTop}>
+                  <h2>Xu hướng lịch hẹn</h2>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className={styles.yearSelect}
+                  >
+                    <option value={2023}>2023</option>
+                    <option value={2024}>2024</option>
+                    <option value={2025}>2025</option>
+                  </select>
                 </div>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className={styles.yearSelect}
-                >
-                  <option value={2023}>2023</option>
-                  <option value={2024}>2024</option>
-                  <option value={2025}>2025</option>
-                </select>
+                <p>Biểu đồ lịch hẹn và doanh thu theo tháng</p>
               </div>
               <div className={styles.chartContent}>
                 {appointmentTrends && appointmentTrends.monthly.length > 0 ? (
                   <>
-                    <div className={styles.trendSummary}>
-                      <div className={styles.summaryItem}>
-                        <span className={styles.summaryLabel}>Tổng lịch hẹn:</span>
-                        <span className={styles.summaryValue}>{appointmentTrends.totalAppointments}</span>
+                    <div className={styles.summaryCardsGrid}>
+                      <div className={`${styles.summaryCard} ${styles.summaryCardPrimary}`}>
+                        <div className={styles.summaryCardIcon}>
+                          <i className="bi bi-calendar-check"></i>
+                        </div>
+                        <div className={styles.summaryCardContent}>
+                          <div className={styles.summaryCardLabel}>Tổng lịch hẹn</div>
+                          <div className={styles.summaryCardValue}>{appointmentTrends.totalAppointments.toLocaleString('vi-VN')}</div>
+                        </div>
                       </div>
-                      <div className={styles.summaryItem}>
-                        <span className={styles.summaryLabel}>Tổng doanh thu:</span>
-                        <span className={styles.summaryValue}>{formatCurrency(appointmentTrends.totalRevenue)}</span>
+                      <div className={`${styles.summaryCard} ${styles.summaryCardSecondary}`}>
+                        <div className={styles.summaryCardIcon}>
+                          <i className="bi bi-currency-dollar"></i>
+                        </div>
+                        <div className={styles.summaryCardContent}>
+                          <div className={styles.summaryCardLabel}>Tổng doanh thu</div>
+                          <div className={styles.summaryCardValue}>{formatCurrency(appointmentTrends.totalRevenue)}</div>
+                        </div>
                       </div>
                     </div>
                     <ResponsiveContainer width="100%" height={350}>
@@ -492,39 +869,49 @@ export default function ReportsAndAnalytics() {
 
             {/* User Growth */}
             <div className={styles.chartCard}>
-              <div className={styles.chartHeader}>
-                <div>
-                  <h3>Tăng trưởng người dùng</h3>
-                  <p>Số lượng người dùng và bác sĩ mới theo tháng</p>
+              <div className={styles.sectionHeader}>
+                <div className={styles.sectionHeaderTop}>
+                  <h2>Tăng trưởng người dùng</h2>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className={styles.yearSelect}
+                  >
+                    <option value={2023}>2023</option>
+                    <option value={2024}>2024</option>
+                    <option value={2025}>2025</option>
+                  </select>
                 </div>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className={styles.yearSelect}
-                >
-                  <option value={2023}>2023</option>
-                  <option value={2024}>2024</option>
-                  <option value={2025}>2025</option>
-                </select>
+                <p>Số lượng bệnh nhân và bác sĩ mới theo tháng</p>
               </div>
               <div className={styles.chartContent}>
                 {userGrowth && userGrowth.monthly.length > 0 ? (
                   <>
-                    <div className={styles.trendSummary}>
-                      <div className={styles.summaryItem}>
-                        <span className={styles.summaryLabel}>Tổng người dùng mới:</span>
-                        <span className={styles.summaryValue}>{userGrowth.totalNewUsers}</span>
+                    <div className={styles.summaryCardsGrid}>
+                      <div className={`${styles.summaryCard} ${styles.summaryCardGrowth1}`}>
+                        <div className={styles.summaryCardIcon}>
+                          <i className="bi bi-people"></i>
+                        </div>
+                        <div className={styles.summaryCardContent}>
+                          <div className={styles.summaryCardLabel}>Tổng bệnh nhân mới</div>
+                          <div className={styles.summaryCardValue}>{userGrowth.totalNewUsers.toLocaleString('vi-VN')}</div>
+                        </div>
                       </div>
-                      <div className={styles.summaryItem}>
-                        <span className={styles.summaryLabel}>Tổng bác sĩ mới:</span>
-                        <span className={styles.summaryValue}>{userGrowth.totalNewDoctors}</span>
+                      <div className={`${styles.summaryCard} ${styles.summaryCardGrowth2}`}>
+                        <div className={styles.summaryCardIcon}>
+                          <i className="bi bi-person-badge"></i>
+                        </div>
+                        <div className={styles.summaryCardContent}>
+                          <div className={styles.summaryCardLabel}>Tổng bác sĩ mới</div>
+                          <div className={styles.summaryCardValue}>{userGrowth.totalNewDoctors.toLocaleString('vi-VN')}</div>
+                        </div>
                       </div>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart 
                         data={userGrowth.monthly.map(growth => ({
                           month: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'][growth.month - 1],
-                          'Người dùng mới': growth.newUsers,  
+                          'Bệnh nhân mới': growth.newUsers,  
                           'Bác sĩ mới': growth.newDoctors
                         }))}
                         margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
@@ -536,7 +923,7 @@ export default function ReportsAndAnalytics() {
                         <Legend />
                         <Line 
                           type="monotone" 
-                          dataKey="Người dùng mới" 
+                          dataKey="Bệnh nhân mới" 
                           stroke="#3b82f6" 
                           strokeWidth={2}
                           activeDot={{ r: 8 }}

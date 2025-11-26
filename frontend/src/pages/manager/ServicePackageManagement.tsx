@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
+import { Calendar } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import styles from '../../styles/manager/ServicePackageManagement.module.css'
 import { servicePackageService } from '../../services/servicePackageService'
@@ -347,8 +348,33 @@ export default function ServicePackageManagement() {
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Gói dịch vụ</h1>
-          <p className={styles.subtitle}>Danh sách gói đang cung cấp trong hệ thống</p>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <i className="bi bi-box-seam" style={{ fontSize: '28px' }}></i>
+            </div>
+            <div>
+              <h1 className={styles.title}>Gói dịch vụ</h1>
+              <p className={styles.subtitle}>Danh sách gói đang cung cấp trong hệ thống</p>
+            </div>
+          </div>
+        </div>
+        <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <Calendar size={20} className={styles.dateIcon} />
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={styles.dateGlow}></div>
+            </div>
+          </div>
         </div>
       </div>
 

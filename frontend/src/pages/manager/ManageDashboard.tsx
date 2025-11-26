@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { Calendar } from 'lucide-react';
 import { FaStar, FaRegStar,
   FaUserMd, FaCalendarAlt, FaCalendarCheck, FaCalendarTimes,
   FaClock, FaUserClock, FaCheckCircle, FaTimesCircle, FaQuestionCircle, FaBan, FaRunning, FaUserInjured
@@ -156,15 +157,30 @@ export const ManageDashboard: React.FC = () => {
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Manager Dashboard</h1>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <i className="bi bi-speedometer2" style={{ fontSize: '28px' }}></i>
+            </div>
+            <div>
+              <h1 className={styles.title}>Manager Dashboard</h1>
+              <p className={styles.subtitle}>Tổng quan và quản lý hệ thống MEDIX</p>
+            </div>
+          </div>
         </div>
         <div className={styles.headerRight}>
           <div className={styles.dateTime}>
             <div className={styles.dateIconWrapper}>
-              <i className={`bi bi-calendar3 ${styles.dateIcon}`}></i>
+              <Calendar size={20} className={styles.dateIcon} />
             </div>
             <div className={styles.dateContent}>
-              <span className={styles.dateText}>{new Date().toLocaleDateString('vi-VN')}</span>
+              <span className={styles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
               <div className={styles.dateGlow}></div>
             </div>
           </div>

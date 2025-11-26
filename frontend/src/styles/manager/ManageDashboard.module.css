@@ -490,16 +490,45 @@
   flex-grow: 1;
 }
 
+.titleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.titleIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
 .title {
-  font-size: 1.75rem;
+  font-size: 28px;
   font-weight: 700;
-  color: #1a202c;
+  margin: 0 0 8px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #6b7280;
   margin: 0;
+  font-weight: 500;
 }
 
 .headerRight {
   display: flex;
   align-items: center;
+  gap: 16px;
 }
 
 .dateTime {

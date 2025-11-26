@@ -1,10 +1,11 @@
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import styles from '../styles/components/ChatbotBubble.module.css';
+import AIChatBox from './AIChatBox';
 
 const ChatbotBubble: React.FC = () => {
-  const navigate = useNavigate();
   const location = useLocation();
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Không hiển thị ở trang AI chẩn đoán
   if (location.pathname.includes('/ai-chat')) {
@@ -12,16 +13,21 @@ const ChatbotBubble: React.FC = () => {
   }
 
   const handleClick = () => {
-    // Navigate to AI chat page
-    // ProtectedRoute sẽ tự động redirect đến login nếu chưa đăng nhập
-    navigate('/app/ai-chat');
+    setIsChatOpen(true);
   };
 
   return (
-    <div className={styles.chatbotBubble} onClick={handleClick} title="Tư vấn AI sức khỏe">
-      <img src="/images/medix-logo-mirrored.jpg" alt="AI Chatbot" />
-      <div className={styles.statusIndicator}></div>
-    </div>
+    <>
+      <div 
+        className={`${styles.chatbotBubble} ${isChatOpen ? styles.active : ''}`} 
+        onClick={handleClick} 
+        title="Hỏi MEDIX AI"
+      >
+        <img src="/images/medix-logo-mirrored.jpg" alt="AI Chatbot" />
+        <div className={styles.statusIndicator}></div>
+      </div>
+      <AIChatBox isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+    </>
   );
 };
 

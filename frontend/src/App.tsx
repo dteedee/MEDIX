@@ -126,6 +126,9 @@ export function App() {
                   <Route path="/articles/:slug" element={<ArticleDetailPage />} />
                 </Route>
 
+                {/* ---------- AI Chat - Full page (no header/footer) ---------- */}
+                <Route path="/ai-chat" element={<AIChatBot />} />
+
                 {/* ---------- Change password route (Protected) ---------- */}
                 <Route path="/change-password" element={<ProtectedRoute><ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} /></ProtectedRoute>} />
 

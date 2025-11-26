@@ -128,6 +128,11 @@ namespace Medix.API.Configurations
             services.AddScoped<ISalaryService, SalaryService>();
             services.AddScoped<IUserPromotionService, UserPromotionService>();
             services.AddScoped<IBackupService, BackupService>();
+            services.AddScoped<IAIChatService, AIChatService>();
+            services.AddScoped<IRAGService, RAGService>();
+            services.AddScoped<ILLMService, LLMService>();
+            services.AddScoped<IOCRService, OCRService>();
+            services.AddHttpClient<LLMService>();
             services.AddScoped<SystemConfigurationSeeder>();
 
         }

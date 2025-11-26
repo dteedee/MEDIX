@@ -1,18 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styles from '../../styles/pages/AIChatBot.module.css';
-import aiChatService, { SymptomAnalysisResponse, EMRAnalysisResponse } from '../../services/aiChatService';
-import { AIChatMessage } from '../../types/aiChat';
-import { getChatHistory, saveChatHistory } from '../../utils/chatHistory';
+import styles from '../styles/components/AIChatBox.module.css';
+import aiChatService, { SymptomAnalysisResponse, EMRAnalysisResponse } from '../services/aiChatService';
+import { AIChatMessage } from '../types/aiChat';
+import { getChatHistory, saveChatHistory } from '../utils/chatHistory';
+
+interface AIChatBoxProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
 
 const createGreetingMessage = (): AIChatMessage => ({
   id: 'medix-greeting',
-  text: 'Xin chào! Tôi là Medix! Tôi có thể giúp bạn tư vấn sức khỏe, phân tích triệu chứng, hoặc trả lời các câu hỏi về hệ thống. Hãy cho tôi biết bạn cần hỗ trợ gì nhé!',
+  text: 'Xin chào! Tôi là Medix!',
   sender: 'ai',
   timestamp: new Date(),
 });
 
-export const AIChatBot: React.FC = () => {
+const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<AIChatMessage[]>(() => {
     const history = getChatHistory();
@@ -34,10 +39,10 @@ export const AIChatBot: React.FC = () => {
   ];
 
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (isOpen && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [messages, isOpen]);
 
   useEffect(() => {
     saveChatHistory(messages);
@@ -260,158 +265,172 @@ export const AIChatBot: React.FC = () => {
     );
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className={styles.chatPage}>
-      {/* Header */}
-      <div className={styles.chatHeader}>
-        <div className={styles.headerLeft}>
-          <div className={styles.avatarContainer}>
-            <img 
-              src="/images/medix-logo-mirrored.jpg" 
-              alt="MEDIX" 
-              className={styles.avatar}
-            />
-            <div className={styles.statusIndicator}></div>
+    <div className={styles.chatboxOverlay} onClick={onClose}>
+      <div className={styles.chatboxContainer} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className={styles.chatboxHeader}>
+          <div className={styles.headerLeft}>
+            <div className={styles.avatarContainer}>
+              <img 
+                src="/images/medix-logo-mirrored.jpg" 
+                alt="MEDIX" 
+                className={styles.avatar}
+              />
+              <div className={styles.statusIndicator}></div>
+            </div>
+            <div className={styles.headerInfo}>
+              <h3 className={styles.headerTitle}>MEDIX</h3>
+              <p className={styles.headerSubtitle}>Đang hoạt động</p>
+            </div>
           </div>
-          <div className={styles.headerInfo}>
-            <h1 className={styles.headerTitle}>MEDIX</h1>
-            <p className={styles.headerSubtitle}>Đang hoạt động</p>
+          <div className={styles.headerActions}>
+            <button 
+              className={styles.expandButton} 
+              onClick={() => navigate('/ai-chat')}
+              title="Phóng to"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+              </svg>
+            </button>
+            <button className={styles.closeButton} onClick={onClose}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
         </div>
-        <button 
-          className={styles.backButton} 
-          onClick={() => navigate(-1)}
-          title="Quay lại"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-        </button>
-      </div>
 
-      {/* Messages Area */}
-      <div className={styles.messagesArea}>
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`${styles.message} ${message.sender === 'user' ? styles.userMessage : styles.aiMessage}`}
-          >
-            {message.sender === 'ai' && (
+        {/* Messages Area */}
+        <div className={styles.messagesArea}>
+
+          {messages.length > 1 && messages.map((message) => (
+            <div
+              key={message.id}
+              className={`${styles.message} ${message.sender === 'user' ? styles.userMessage : styles.aiMessage}`}
+            >
+              {message.sender === 'ai' && (
+                <img 
+                  src="/images/medix-logo-mirrored.jpg" 
+                  alt="MEDIX" 
+                  className={styles.messageAvatar}
+                />
+              )}
+              <div className={styles.messageBubble}>
+                <div className={styles.messageText} dangerouslySetInnerHTML={{ __html: formatMessage(message.text) }} />
+                {message.data && message.type === 'symptom_analysis' && (
+                  <div className={styles.messageData}>
+                    {renderSymptomAnalysis(message.data)}
+                  </div>
+                )}
+                {message.data && message.type === 'emr_analysis' && (
+                  <div className={styles.messageData}>
+                    {renderEMRAnalysis(message.data)}
+                  </div>
+                )}
+                <div className={styles.messageTime}>
+                  {message.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {isLoading && (
+            <div className={`${styles.message} ${styles.aiMessage}`}>
               <img 
                 src="/images/medix-logo-mirrored.jpg" 
                 alt="MEDIX" 
                 className={styles.messageAvatar}
               />
-            )}
-            <div className={styles.messageBubble}>
-              <div className={styles.messageText} dangerouslySetInnerHTML={{ __html: formatMessage(message.text) }} />
-              {message.data && message.type === 'symptom_analysis' && (
-                <div className={styles.messageData}>
-                  {renderSymptomAnalysis(message.data)}
+              <div className={styles.messageBubble}>
+                <div className={styles.typingIndicator}>
+                  <span></span>
+                  <span></span>
+                  <span></span>
                 </div>
-              )}
-              {message.data && message.type === 'emr_analysis' && (
-                <div className={styles.messageData}>
-                  {renderEMRAnalysis(message.data)}
-                </div>
-              )}
-              <div className={styles.messageTime}>
-                {message.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
-          </div>
-        ))}
+          )}
 
-        {isLoading && (
-          <div className={`${styles.message} ${styles.aiMessage}`}>
-            <img 
-              src="/images/medix-logo-mirrored.jpg" 
-              alt="MEDIX" 
-              className={styles.messageAvatar}
-            />
-            <div className={styles.messageBubble}>
-              <div className={styles.typingIndicator}>
-                <span></span>
-                <span></span>
-                <span></span>
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* File Preview */}
+        {uploadedFiles.length > 0 && (
+          <div className={styles.filePreview}>
+            {uploadedFiles.map((file, index) => (
+              <div key={index} className={styles.fileItem}>
+                <span className={styles.fileName}>{file.name}</span>
+                <button 
+                  className={styles.removeFileButton}
+                  onClick={() => removeFile(index)}
+                >
+                  ×
+                </button>
               </div>
+            ))}
+          </div>
+        )}
+
+        {/* Quick Suggestions - Above input area */}
+        {messages.length === 1 && (
+          <div className={styles.quickSuggestions}>
+            <p className={styles.suggestionPrompt}>Gợi ý:</p>
+            <div className={styles.quickReplies}>
+              {quickReplies.map((reply, index) => (
+                <button
+                  key={index}
+                  className={styles.quickReplyButton}
+                  onClick={() => handleQuickReply(reply)}
+                >
+                  {reply}
+                </button>
+              ))}
             </div>
           </div>
         )}
 
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* File Preview */}
-      {uploadedFiles.length > 0 && (
-        <div className={styles.filePreview}>
-          {uploadedFiles.map((file, index) => (
-            <div key={index} className={styles.fileItem}>
-              <span className={styles.fileName}>{file.name}</span>
-              <button 
-                className={styles.removeFileButton}
-                onClick={() => removeFile(index)}
-              >
-                ×
-              </button>
-            </div>
-          ))}
+        {/* Input Area - At the bottom */}
+        <div className={styles.inputArea}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,application/pdf"
+            multiple
+            onChange={handleFileSelect}
+            className={styles.fileInput}
+            id="file-upload"
+          />
+          <label htmlFor="file-upload" className={styles.attachButton}>
+            📎
+          </label>
+          <textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Hãy đặt câu hỏi với Medix"
+            className={styles.textInput}
+            rows={1}
+          />
+          <button
+            onClick={() => handleSendMessage()}
+            disabled={(!inputText.trim() && uploadedFiles.length === 0) || isLoading}
+            className={styles.sendButton}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         </div>
-      )}
-
-      {/* Quick Suggestions - Above input area */}
-      {messages.length === 1 && (
-        <div className={styles.quickSuggestions}>
-          <p className={styles.suggestionPrompt}>Gợi ý nhanh:</p>
-          <div className={styles.quickReplies}>
-            {quickReplies.map((reply, index) => (
-              <button
-                key={index}
-                className={styles.quickReplyButton}
-                onClick={() => handleQuickReply(reply)}
-              >
-                {reply}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Input Area - At the bottom */}
-      <div className={styles.inputArea}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/jpg,image/png,application/pdf"
-          multiple
-          onChange={handleFileSelect}
-          className={styles.fileInput}
-          id="file-upload"
-        />
-        <label htmlFor="file-upload" className={styles.attachButton}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-          </svg>
-        </label>
-        <textarea
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Hãy đặt câu hỏi với Medix..."
-          className={styles.textInput}
-          rows={1}
-        />
-        <button
-          onClick={() => handleSendMessage()}
-          disabled={(!inputText.trim() && uploadedFiles.length === 0) || isLoading}
-          className={styles.sendButton}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
       </div>
     </div>
   );
 };
+
+export default AIChatBox;
+

@@ -752,8 +752,17 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
               <input
                 type="number"
                 name="displayOrder"
-                value={formData.displayOrder}
-                onChange={handleChange}
+                value={formData.displayOrder === 0 ? '' : formData.displayOrder}
+                onChange={e => {
+                  const value = e.target.value;
+                  const numValue = value === '' ? 0 : parseInt(value) || 0;
+                  setFormData(prev => ({ ...prev, displayOrder: numValue }));
+                  if (errors.displayOrder) {
+                    const newErrors = { ...errors };
+                    delete newErrors.displayOrder;
+                    setErrors(newErrors);
+                  }
+                }}
                 disabled={mode === 'view'}
                 className={`${styles.input} ${errors.displayOrder ? styles.inputError : ''}`}
                 placeholder="0"
@@ -796,72 +805,6 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
                   : 'Bài viết sẽ không hiển thị trên trang chủ'}
               </p>
             </div>
-          </div>
-        </div>
-
-        {/* SEO Settings - Đặt cuối cùng */}
-        <div style={{ 
-          padding: '20px', 
-          background: '#f0f9ff', 
-          borderRadius: '12px', 
-          border: '1px solid #bae6fd',
-          marginBottom: '20px'
-        }}>
-          <h3 style={{ 
-            fontSize: '16px', 
-            fontWeight: '600', 
-            color: '#374151', 
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <i className="bi bi-search" style={{ color: '#667eea' }}></i>
-            Tối ưu SEO (Tùy chọn)
-          </h3>
-          
-          <div id="form-group-metaTitle" className={styles.formGroup}>
-            <label className={styles.label}>
-              <i className="bi bi-tag-fill" style={{ marginRight: '8px', color: '#667eea' }}></i>
-              Meta Title
-            </label>
-            <input
-              type="text"
-              name="metaTitle"
-              value={formData.metaTitle}
-              onChange={handleChange}
-              disabled={mode === 'view'}
-              className={`${styles.input} ${errors.metaTitle ? styles.inputError : ''}`}
-              placeholder="Tiêu đề SEO (tối đa 60 ký tự)"
-              maxLength={60}
-            />
-            {errors.metaTitle && <p className={styles.errorText}>{errors.metaTitle}</p>}
-            <p className={styles.helpText}>
-              <i className="bi bi-lightbulb" style={{ marginRight: '4px' }}></i>
-              {formData.metaTitle.length}/60 ký tự. Để trống sẽ dùng tiêu đề bài viết.
-            </p>
-          </div>
-
-          <div id="form-group-metaDescription" className={styles.formGroup}>
-            <label className={styles.label}>
-              <i className="bi bi-file-text-fill" style={{ marginRight: '8px', color: '#667eea' }}></i>
-              Meta Description
-            </label>
-            <textarea
-              name="metaDescription"
-              value={formData.metaDescription}
-              onChange={handleChange}
-              disabled={mode === 'view'}
-              className={`${styles.textarea} ${errors.metaDescription ? styles.inputError : ''}`}
-              placeholder="Mô tả SEO (tối đa 160 ký tự)"
-              rows={3}
-              maxLength={160}
-            />
-            {errors.metaDescription && <p className={styles.errorText}>{errors.metaDescription}</p>}
-            <p className={styles.helpText}>
-              <i className="bi bi-lightbulb" style={{ marginRight: '4px' }}></i>
-              {formData.metaDescription.length}/160 ký tự. Mô tả ngắn gọn về bài viết cho công cụ tìm kiếm.
-            </p>
           </div>
         </div>
         

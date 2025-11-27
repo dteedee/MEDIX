@@ -1338,6 +1338,7 @@
   order: 1;
   border-color: rgba(192, 192, 192, 0.4);
   background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+  margin-top: 10px;
 }
 
 .topRatedCard.rank2:hover {

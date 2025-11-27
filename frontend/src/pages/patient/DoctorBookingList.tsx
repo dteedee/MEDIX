@@ -1096,38 +1096,6 @@ const DoctorBookingList: React.FC = () => {
 
             <div className={styles.filterGroup}>
               <label className={styles.filterLabel}>
-                <i className="bi bi-mortarboard-fill"></i>
-                Học vị
-              </label>
-              <select
-                value={selectedEducationCode}
-                onChange={(e) => {
-                  const newCode = e.target.value;
-                  setSelectedEducationCode(newCode);
-                  
-                  // Tự động chuyển sang tab học vị tương ứng
-                  if (newCode !== 'all') {
-                    const correspondingDegree = getDegreeFromEducationCode(newCode);
-                    if (correspondingDegree) {
-                      setActiveDegree(correspondingDegree);
-                    }
-                  }
-                  
-                  resetPagination();
-                }}
-                className={styles.filterSelect}
-              >
-                <option value="all">Tất cả học vị</option>
-                {educationTypes.map((education) => (
-                  <option key={education.code} value={education.code}>
-                    {education.description}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className={styles.filterGroup}>
-              <label className={styles.filterLabel}>
                 <i className="bi bi-hospital-fill"></i>
                 Chuyên khoa
               </label>

@@ -23,9 +23,15 @@ class ApiClient {
     // Request interceptor to add auth token
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        const token = this.getAccessToken();
-        if (token && config.headers) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // Don't add access token to refresh-token endpoint
+        const reqUrl = (config.url || '').toString();
+        const isRefreshTokenEndpoint = reqUrl.includes('/auth/refresh-token');
+        
+        if (!isRefreshTokenEndpoint) {
+          const token = this.getAccessToken();
+          if (token && config.headers) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
         }
         
         // If sending FormData, remove Content-Type header to let browser set it with boundary

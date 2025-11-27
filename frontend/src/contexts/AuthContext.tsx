@@ -86,9 +86,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
       
-      if (userData) {
-        // Try to restore user session
-        // apiClient will automatically handle token refresh if needed
+      // Check if access token is expired but we have refresh token
+      const tokenExpiration = localStorage.getItem('tokenExpiration');
+      const isTokenExpired = tokenExpiration && Date.now() >= parseInt(tokenExpiration);
+      
+      // If we have refresh token but access token is expired or missing, try to refresh
+      if (refreshToken && (!accessToken || isTokenExpired)) {
+        try {
+          // Try to refresh the token
+          const authResponse = await authService.refreshToken(refreshToken);
+          // Store new tokens
+          apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken);
+          // Restore user data
+          if (userData) {
+            await loadUserProfile();
+          }
+        } catch (refreshError) {
+          console.error('Failed to refresh token on initialization:', refreshError);
+          // If refresh fails, clear everything
+          apiClient.clearTokens();
+          localStorage.removeItem('userData');
+          localStorage.removeItem('currentUser');
+        }
+      } else if (userData && accessToken) {
+        // If we have both user data and valid access token, just restore user profile
         await loadUserProfile();
       }
     } catch (error) {

@@ -235,8 +235,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Include(a => a.PaymentMethodCodeNavigation)
                 .Where(a => a.DoctorId == doctorId &&
                             a.AppointmentStartTime >= startDate &&
-                            a.AppointmentStartTime < endDate &&
-                            a.TransactionId != null)
+                            a.AppointmentStartTime < endDate)
                 .OrderBy(a => a.AppointmentStartTime)
                 .ToListAsync();
         }

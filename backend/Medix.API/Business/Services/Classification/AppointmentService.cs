@@ -307,17 +307,17 @@ namespace Medix.API.Business.Services.Classification
 
 
         public async Task<List<AppointmentDto>> GetConflictingAppointmentsAsync(
-            Guid doctorId,
-            DateTime appointmentStartTime,
-            DateTime appointmentEndTime)
+    Guid doctorId,
+    DateTime appointmentStartTime,
+    DateTime appointmentEndTime)
         {
             // Lấy tất cả lịch hẹn của bác sĩ
             var allAppointments = await _repository.GetByDoctorAsync(doctorId);
 
-       var conflictingAppointments = allAppointments.Where(a =>
-    // ✅ Chỉ kiểm tra các lịch hẹn CHƯA bị hủy hoặc hoàn thành
-             a.StatusCode == "OnProgressing" &&
-  // ✅ Kiểm tra trùng thời gian (overlap)
+            var conflictingAppointments = allAppointments.Where(a =>
+   
+             a.StatusCode == "BeforeAppoiment" &&
+  
   appointmentStartTime < a.AppointmentEndTime &&
         appointmentEndTime > a.AppointmentStartTime
 ).ToList();

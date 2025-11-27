@@ -1458,7 +1458,7 @@ export const PatientRegister: React.FC = () => {
                       {passwordsMatch ? (
                         <span className="match-text success-text">✓ Mật khẩu khớp</span>
                       ) : (
-                        <span className="text-danger">✗ Mật khẩu không khớp</span>
+                        <span className="text-danger">✗ Vui lòng kiểm tra lại mật khẩu</span>
                       )}
                     </div>
                   )}

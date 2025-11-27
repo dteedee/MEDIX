@@ -2,7 +2,7 @@ import styles from '../../styles/public/header.module.css'
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { apiClient } from '../../lib/apiClient';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { NotificationMetadata } from '../../types/notification.types';
 import NotificationService from '../../services/notificationService';
@@ -18,8 +18,12 @@ export const Header: React.FC = () => {
     const { user, logout } = useAuth();
     const { language, t } = useLanguage();
     const navigate = useNavigate();
+    const location = useLocation();
     const userDropdownRef = useRef<HTMLDivElement>(null);
     const [loadingSettings, setLoadingSettings] = useState(true);
+    
+    // Check if we're on the homepage
+    const isHomePage = location.pathname === '/';
 
     useEffect(() => {
         // Only fetch if user is logged in
@@ -134,16 +138,20 @@ export const Header: React.FC = () => {
                         <small style={{ textTransform: 'uppercase' }}>{loadingSettings ? '...' : siteDescription}</small>
                     </a>
                 </div>
-                <div className={styles["search-bar"]}>
-                    <input type="text" placeholder={t('header.search.placeholder')} />
-                    <button>🔍</button>
-                </div>
+                {!isHomePage && (
+                    <div className={styles["search-bar"]}>
+                        <input type="text" placeholder={t('header.search.placeholder')} />
+                        <button>🔍</button>
+                    </div>
+                )}
                 <div className={styles["header-links"]}>
                     {user ? (
                         <>
-                            <div className={styles['language-selector']}>
-                                <LanguageSwitcher />
-                            </div>
+                            {!isHomePage && (
+                                <div className={styles['language-selector']}>
+                                    <LanguageSwitcher />
+                                </div>
+                            )}
 
                             {/* Notifications */}
                             <div className="dropdown" style={{ position: 'relative', display: 'inline-block' }}>
@@ -259,9 +267,11 @@ export const Header: React.FC = () => {
                                 </div>
                             </div>
                             
-                            <div className={styles['language-selector']}>
-                                <LanguageSwitcher />
-                            </div>
+                            {!isHomePage && (
+                                <div className={styles['language-selector']}>
+                                    <LanguageSwitcher />
+                                </div>
+                            )}
                         </>
                     )}
                 </div>

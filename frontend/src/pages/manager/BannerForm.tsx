@@ -357,9 +357,11 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
             </label>
             <input
               type="number"
-              value={formData.displayOrder}
+              value={formData.displayOrder === 0 ? '' : formData.displayOrder}
               onChange={e => {
-                setFormData(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }));
+                const value = e.target.value;
+                const numValue = value === '' ? 0 : parseInt(value) || 0;
+                setFormData(prev => ({ ...prev, displayOrder: numValue }));
                 if (errors.displayOrder) {
                   const newErrors = { ...errors };
                   delete newErrors.displayOrder;

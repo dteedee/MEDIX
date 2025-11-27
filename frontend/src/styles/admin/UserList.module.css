@@ -363,6 +363,30 @@
   .statCardLocked::before {
     background: linear-gradient(90deg, #ef4444, #f87171);
   }
+
+  .statCard4 {
+    animation: fadeInUp 0.6s ease-out 0.5s both;
+  }
+
+  .statCard4::before {
+    background: linear-gradient(90deg, #fa709a, #fee140);
+  }
+
+  .statCard5 {
+    animation: fadeInUp 0.6s ease-out 0.6s both;
+  }
+
+  .statCard5::before {
+    background: linear-gradient(90deg, #6a11cb, #2575fc);
+  }
+
+  .statCard6 {
+    animation: fadeInUp 0.6s ease-out 0.7s both;
+  }
+
+  .statCard6::before {
+    background: linear-gradient(90deg, #f46b45, #eea849);
+  }
   
   .statCard1 .statIcon { 
     background: linear-gradient(135deg, #667eea, #764ba2);
@@ -377,7 +401,18 @@
     background: linear-gradient(135deg, #ef4444, #f87171);
     animation: pulse 2s ease-in-out infinite 0.4s;
   }
-  .statCard4 .statIcon { background: linear-gradient(135deg, #fa709a, #fee140); }
+  .statCard4 .statIcon { 
+    background: linear-gradient(135deg, #fa709a, #fee140);
+    animation: pulse 2s ease-in-out infinite 0.6s;
+  }
+  .statCard5 .statIcon { 
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    animation: pulse 2s ease-in-out infinite 0.8s;
+  }
+  .statCard6 .statIcon { 
+    background: linear-gradient(135deg, #f46b45, #eea849);
+    animation: pulse 2s ease-in-out infinite 1s;
+  }
   
   .statIcon {
     width: 64px;

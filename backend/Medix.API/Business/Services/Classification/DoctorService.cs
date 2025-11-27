@@ -469,6 +469,7 @@ namespace Medix.API.Business.Services.Classification
                     doctorsQuery = doctorsQuery.Where(d => d.Specialization.Id == Guid.Parse(queryParams.SpecializationCode));
                 }
 
+          
                 // Áp dụng filter theo MinPrice nếu có
                 if (queryParams.MinPrice.HasValue)
                 {
@@ -487,7 +488,7 @@ namespace Medix.API.Business.Services.Classification
                 // Áp dụng pagination
                 var doctors = await doctorsQuery
                     .Skip((queryParams.PageNumber - 1) * queryParams.PageSize)
-                    .Take(queryParams.PageSize).Where(x=>x.IsAcceptingAppointments==true)
+                    .Take(queryParams.PageSize).Where(x=>x.IsAcceptingAppointments==true&&x.User.LockoutEnabled==false)
                     .Select(d => new DoctorBookinDto
                     {
                         userId = d.UserId,

@@ -164,6 +164,7 @@ namespace Medix.API.Business.Services.AI
             var aiSymptompAnalysis = new AISymptomAnalysis
             {
                 Id = Guid.NewGuid(),
+                Symptoms = string.Join(",", diagnosisModel.SymptomsProvided!),
                 SessionId = diagnosisModel.SessionId ?? Guid.NewGuid().ToString(),
                 IsGuestSession = userId == null,
                 PatientId = patient?.Id,
@@ -178,7 +179,7 @@ namespace Medix.API.Business.Services.AI
 
         private string GetSeverityLevelCode(string? severityLevel)
         {
-            return severityLevel?.ToLower() switch
+            return severityLevel?.Trim().ToLower() switch
             {
                 "thấp" => "Mild",
                 "trung bình" => "Moderate",

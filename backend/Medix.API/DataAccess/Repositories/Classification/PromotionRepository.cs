@@ -50,7 +50,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
         public async Task<bool> DeletePromotionAync(Guid id)
         {
-            // Load promotion with related user-promotions to avoid FK issues
             var existing = await _context.Promotions
                 .Include(p => p.UserPromotions)
                 .FirstOrDefaultAsync(p => p.Id == id);
@@ -58,7 +57,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
             if (existing == null)
                 return false;
 
-            // If there are related UserPromotions, remove them first (or consider soft-delete)
             if (existing.UserPromotions != null && existing.UserPromotions.Any())
             {
                 _context.UserPromotions.RemoveRange(existing.UserPromotions);

@@ -14,9 +14,6 @@
         public DateTime EndDate { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
-
-        // New DTO property to carry the promotion target audience to clients
-        // Example values: "All", "New", "VIP", "New,VIP"
         public string? ApplicableTargets { get; set; }
     }
 }

@@ -17,7 +17,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
         public async Task<IEnumerable<SpecializationDistributionDto>> GetDoctorCountBySpecializationAsync()
         {
-            // GroupJoin to compute counts server-side in a single query
             var query = _context.Specializations
                 .GroupJoin(
                     _context.Doctors,
@@ -58,7 +57,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
             
             if (entry.State == EntityState.Detached)
             {
-                // If detached, find the existing entity and update its properties
                 var existing = await _context.Specializations.FindAsync(specialization.Id);
                 if (existing != null)
                 {
@@ -68,13 +66,11 @@ namespace Medix.API.DataAccess.Repositories.Classification
                     existing.ImageUrl = specialization.ImageUrl;
                     existing.IsActive = specialization.IsActive;
                     existing.UpdatedAt = specialization.UpdatedAt;
-                    // CreatedAt should not be updated - it's already set on existing entity
                 }
             }
             else
             {
-                // Entity is already tracked, EF Core will detect changes automatically
-                // Just ensure CreatedAt is not modified
+
                 entry.Property(e => e.CreatedAt).IsModified = false;
             }
             

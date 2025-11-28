@@ -9,7 +9,6 @@ namespace Medix.API.Business.Validators
         {
             if (value is not string dobString || string.IsNullOrWhiteSpace(dobString))
             {
-                // Allow empty or null input — considered valid
                 return ValidationResult.Success;
             }
 
@@ -20,14 +19,13 @@ namespace Medix.API.Business.Validators
 
             var today = DateTime.Today;
 
-            // ✅ Explicit check for future date
             if (dob > today)
             {
                 return new ValidationResult($"Bạn phải đủ {25} tuổi để đăng ký", new[] { validationContext.MemberName });
             }
 
             var age = today.Year - dob.Year;
-            if (dob > today.AddYears(-age)) age--; // adjust if birthday hasn't occurred yet this year
+            if (dob > today.AddYears(-age)) age--; 
 
             if (age < 25)
             {

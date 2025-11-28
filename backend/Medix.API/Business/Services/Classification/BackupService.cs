@@ -1,12 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs;
-using Microsoft.Extensions.Logging;
 
 namespace Medix.API.Business.Services.Classification
 {

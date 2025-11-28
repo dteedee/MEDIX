@@ -2,24 +2,9 @@ namespace Medix.API.Business.Interfaces.Classification
 {
     public interface IRAGService
     {
-        /// <summary>
-        /// Search medical knowledge base using vector similarity
-        /// </summary>
         Task<List<MedicalKnowledgeChunk>> SearchMedicalKnowledgeAsync(string query, int topK = 5);
-
-        /// <summary>
-        /// Search doctor information using semantic search
-        /// </summary>
         Task<List<DoctorSearchResult>> SearchDoctorsSemanticAsync(string query, int topK = 10);
-
-        /// <summary>
-        /// Get context for symptom analysis
-        /// </summary>
         Task<string> GetSymptomAnalysisContextAsync(List<string> symptoms);
-
-        /// <summary>
-        /// Get treatment guidelines for a condition
-        /// </summary>
         Task<string?> GetTreatmentGuidelinesAsync(string condition);
     }
 

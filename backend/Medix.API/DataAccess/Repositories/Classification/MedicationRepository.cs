@@ -40,7 +40,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
             return await _context.MedicationDatabases
                 .Where(m => m.IsActive && m.MedicationName.ToLower().Contains(normalizedQuery))
-                .Take(limit) // Giới hạn 10 kết quả để tối ưu
+                .Take(limit) 
                 .AsNoTracking()
                 .ToListAsync();
         }

@@ -26,10 +26,6 @@ namespace Medix.API.Presentation.Controller.Classification
             _logger = logger;
             _cloudinaryService = cloudinaryService;
         }
-
-        /// <summary>
-        /// Lấy danh sách tất cả chuyên khoa (chỉ active)
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] bool activeOnly = true)
         {
@@ -46,7 +42,6 @@ namespace Medix.API.Presentation.Controller.Classification
                     specializations = await _specializationService.GetAllAsync();
                 }
 
-                // Get doctor count for each specialization
                 var distribution = await _specializationService.GetDoctorCountBySpecializationAsync();
                 var distributionDict = distribution.ToDictionary(d => d.Id, d => d.DoctorCount);
 
@@ -72,9 +67,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Lấy chi tiết chuyên khoa theo ID
-        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -87,7 +79,6 @@ namespace Medix.API.Presentation.Controller.Classification
                     return NotFound(new { Message = "Chuyên khoa không tồn tại." });
                 }
 
-                // Get doctor count
                 var distribution = await _specializationService.GetDoctorCountBySpecializationAsync();
                 var doctorCount = distribution.FirstOrDefault(d => d.Id == id)?.DoctorCount ?? 0;
 
@@ -99,9 +90,9 @@ namespace Medix.API.Presentation.Controller.Classification
                     Description = specialization.Description,
                     ImageUrl = specialization.ImageUrl,
                     DoctorCount = doctorCount,
-                    Overview = specialization.Description, // Có thể mở rộng thêm trường Overview riêng
-                    Services = null, // Có thể thêm trường Services vào entity sau
-                    Technology = null // Có thể thêm trường Technology vào entity sau
+                    Overview = specialization.Description, 
+                    Services = null, 
+                    Technology = null 
                 };
 
                 return Ok(result);
@@ -112,10 +103,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
         }
-
-        /// <summary>
-        /// Lấy chi tiết chuyên khoa theo Code
-        /// </summary>
         [HttpGet("code/{code}")]
         public async Task<IActionResult> GetByCode(string code)
         {
@@ -128,7 +115,6 @@ namespace Medix.API.Presentation.Controller.Classification
                     return NotFound(new { Message = "Chuyên khoa không tồn tại." });
                 }
 
-                // Get doctor count
                 var distribution = await _specializationService.GetDoctorCountBySpecializationAsync();
                 var doctorCount = distribution.FirstOrDefault(d => d.Id == specialization.Id)?.DoctorCount ?? 0;
 
@@ -154,15 +140,11 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Tạo chuyên khoa mới
-        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Create([FromForm] SpecializationCreateDto dto, IFormFile? imageFile)
         {
             try
             {
-                // Validate required fields
                 if (string.IsNullOrWhiteSpace(dto.Code))
                 {
                     return BadRequest(new { Message = "Mã chuyên khoa không được để trống." });
@@ -172,14 +154,12 @@ namespace Medix.API.Presentation.Controller.Classification
                     return BadRequest(new { Message = "Tên chuyên khoa không được để trống." });
                 }
 
-                // Check if code already exists
                 var existing = await _specializationService.GetByCodeAsync(dto.Code);
                 if (existing != null)
                 {
                     return BadRequest(new { Message = "Mã chuyên khoa đã tồn tại." });
                 }
 
-                // Upload image if provided
                 if (imageFile != null && imageFile.Length > 0)
                 {
                     var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile);
@@ -221,16 +201,11 @@ namespace Medix.API.Presentation.Controller.Classification
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
         }
-
-        /// <summary>
-        /// Cập nhật chuyên khoa
-        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromForm] SpecializationUpdateDto dto, IFormFile? imageFile)
         {
             try
             {
-                // Validate required fields
                 if (string.IsNullOrWhiteSpace(dto.Code))
                 {
                     return BadRequest(new { Message = "Mã chuyên khoa không được để trống." });
@@ -246,7 +221,6 @@ namespace Medix.API.Presentation.Controller.Classification
                     return NotFound(new { Message = "Chuyên khoa không tồn tại." });
                 }
 
-                // Check if code already exists (if changed)
                 if (specialization.Code != dto.Code)
                 {
                     var existing = await _specializationService.GetByCodeAsync(dto.Code);
@@ -256,13 +230,11 @@ namespace Medix.API.Presentation.Controller.Classification
                     }
                 }
 
-                // Upload image if provided
                 if (imageFile != null && imageFile.Length > 0)
                 {
                     var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile);
                     dto.ImageUrl = imageUrl;
                 }
-                // If no new file and ImageUrl is empty/null, keep existing imageUrl
                 else if (string.IsNullOrWhiteSpace(dto.ImageUrl))
                 {
                     dto.ImageUrl = specialization.ImageUrl;
@@ -271,13 +243,12 @@ namespace Medix.API.Presentation.Controller.Classification
                 specialization.Code = dto.Code;
                 specialization.Name = dto.Name;
                 specialization.Description = dto.Description;
-                specialization.ImageUrl = dto.ImageUrl ?? specialization.ImageUrl; // Keep existing if null
+                specialization.ImageUrl = dto.ImageUrl ?? specialization.ImageUrl; 
                 specialization.IsActive = dto.IsActive;
                 specialization.UpdatedAt = DateTime.UtcNow;
 
                 var updated = await _specializationService.UpdateAsync(specialization);
                 
-                // Get doctor count
                 var distribution = await _specializationService.GetDoctorCountBySpecializationAsync();
                 var doctorCount = distribution.FirstOrDefault(d => d.Id == id)?.DoctorCount ?? 0;
 
@@ -302,10 +273,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
         }
-
-        /// <summary>
-        /// Toggle trạng thái hoạt động của chuyên khoa (Lock/Unlock)
-        /// </summary>
         [HttpPatch("{id}/toggle-active")]
         public async Task<IActionResult> ToggleActive(Guid id)
         {

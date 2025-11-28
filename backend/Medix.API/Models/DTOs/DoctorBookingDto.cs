@@ -1,6 +1,5 @@
 ﻿namespace Medix.API.Models.DTOs
 {
-    // 1. LỚP CƠ SỞ (BASE CLASS) PHẢI ĐƯỢC ĐỊNH NGHĨA TRƯỚC
     public class PaginationParams
     {
         private const int MaxPageSize = 4;
@@ -13,7 +12,6 @@
         }
     }
 
-    // 2. LỚP KẾ THỪA (DERIVED CLASS) ĐỊNH NGHĨA SAU
     public class DoctorQueryParameters : PaginationParams
     {
         public string? EducationCode { get; set; }
@@ -22,7 +20,6 @@
         public decimal? MaxPrice { get; set; }
     }
 
-    // 3. CÁC LỚP KHÁC
     public class PaginatedListDto<T> where T : class
     {
         public List<T> Items { get; set; }
@@ -41,7 +38,6 @@
         }
     }
 
-    // 4. LỚP DOCTORBOOKINDTO (ĐỘC LẬP)
     public class DoctorBookinDto
     {
        
@@ -84,7 +80,6 @@
 
     }
 
-    // 5. LỚP SERVICETIER (ĐỘC LẬP - ĐÃ ĐƯỢC DI CHUYỂN RA NGOÀI)
     public class ServiceTierWithPaginatedDoctorsDto
     {
         public Guid Id { get; set; }

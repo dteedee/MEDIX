@@ -21,10 +21,6 @@ namespace Medix.API.Presentation.Controller.Classification
             _userPromotionService = userPromotionService;
             _logger = logger;
         }
-
-        /// <summary>
-        /// Gán promotion cho user
-        /// </summary>
         [HttpPost("assign")]
        
         public async Task<IActionResult> AssignPromotionToUser([FromBody] AssignPromotionRequest request)
@@ -57,9 +53,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Lấy promotion theo ID
-        /// </summary>
         [HttpGet("{id}")]
         [Authorize]
         public async Task<IActionResult> GetById(Guid id)
@@ -80,9 +73,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Lấy tất cả promotions của một user
-        /// </summary>
         [HttpGet("user/{userId}")]
         [Authorize]
         public async Task<IActionResult> GetByUserId(Guid userId)
@@ -99,9 +89,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Lấy các promotions còn hiệu lực của user
-        /// </summary>
         [HttpGet("user/{userId}/active")]
         [Authorize]
         public async Task<IActionResult> GetActivePromotions(Guid userId)
@@ -122,9 +109,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Lấy promotions của user hiện tại (từ token)
-        /// </summary>
         [HttpGet("my-promotions")]
         [Authorize]
         public async Task<IActionResult> GetMyPromotions()
@@ -147,9 +131,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Lấy active promotions của user hiện tại
-        /// </summary>
         [HttpGet("my-active-promotions")]
         [Authorize]
         public async Task<IActionResult> GetMyActivePromotions()
@@ -172,9 +153,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Sử dụng promotion
-        /// </summary>
         [HttpPost("{id}/use")]
         [Authorize]
         public async Task<IActionResult> UsePromotion(Guid id)
@@ -203,9 +181,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Deactivate promotion
-        /// </summary>
         [HttpPatch("{id}/deactivate")]
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> DeactivatePromotion(Guid id)
@@ -226,9 +201,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Kiểm tra promotion có hợp lệ cho user không
-        /// </summary>
         [HttpGet("validate")]
         [Authorize]
         public async Task<IActionResult> ValidatePromotion([FromQuery] Guid userId, [FromQuery] Guid promotionId)
@@ -294,7 +266,6 @@ namespace Medix.API.Presentation.Controller.Classification
     }
 
 
-    // DTO cho request assign promotion
     public class AssignPromotionRequest
     {
         public Guid UserId { get; set; }

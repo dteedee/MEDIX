@@ -22,14 +22,12 @@ namespace Medix.API.Business.Services.Classification
                 var totalDoctors = counts.Sum(c => c.DoctorCount);
                 if (totalDoctors == 0)
                 {
-                    // ensure Percentage = 0 when there are no doctors
                     counts.ForEach(c => c.Percentage = 0m);
                     return counts;
                 }
 
                 foreach (var c in counts)
                 {
-                    // compute percentage with one decimal precision
                     c.Percentage = Math.Round((decimal)c.DoctorCount * 100m / totalDoctors, 1);
                 }
 
@@ -77,7 +75,6 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<bool> DeleteAsync(Guid id)
         {
-            // TODO: Implement when repository method exists
             await Task.Delay(1);
             return false;
         }

@@ -63,9 +63,8 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        // Create promotion
         [HttpPost]
-        [Authorize] // add role if needed: [Authorize(Roles = "Admin")]
+        [Authorize] 
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> CreatePromotion([FromBody] PromotionDto promotionDto)
         {
@@ -80,15 +79,13 @@ namespace Medix.API.Presentation.Controller.Classification
                 if (string.IsNullOrWhiteSpace(promotionDto.Code))
                     return BadRequest("Promotion code is required.");
 
-                // Prevent duplicate codes
                 var exists = await _promotionService.PromotionCodeExistsAsync(promotionDto.Code);
                 if (exists)
                     return Conflict(new { message = "Promotion code already exists." });
 
                 var created = await _promotionService.CreatePromotionAsync(promotionDto);
 
-                // Try to read persisted Promotion entity to determine applicable targets.
-                // Use code (unique) to find the persisted row.
+  
                 var persisted = await _context.Promotions
                     .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.Code == created.Code);
@@ -97,7 +94,6 @@ namespace Medix.API.Presentation.Controller.Classification
 
                 if (persisted != null && !string.IsNullOrWhiteSpace(persisted.ApplicableTargets))
                 {
-                    // Expected format: comma separated tokens like "All", "New", "VIP"
                     var tokens = persisted.ApplicableTargets
                         .Split(',', StringSplitOptions.RemoveEmptyEntries)
                         .Select(t => t.Trim())
@@ -109,7 +105,6 @@ namespace Medix.API.Presentation.Controller.Classification
                     var applicableToVip = tokens.Any(t => string.Equals(t, "VIP", StringComparison.OrdinalIgnoreCase)
                                                           || string.Equals(t, "Vip", StringComparison.OrdinalIgnoreCase));
 
-                    // Optional: if token contains "NewDays:XX" parse it
                     var newDaysToken = tokens.FirstOrDefault(t => t.StartsWith("NewDays:", StringComparison.OrdinalIgnoreCase));
                     int newUserDays = 30;
                     if (newDaysToken != null)
@@ -119,7 +114,6 @@ namespace Medix.API.Presentation.Controller.Classification
                             newUserDays = Math.Max(1, parsedDays);
                     }
 
-                    // Call bulk assignment -- do not fail creation if assignment fails; catch exceptions separately.
                     try
                     {
                         var assigned = await userPromotionService.AssignPromotionToMultipleUsersAsync(
@@ -137,7 +131,6 @@ namespace Medix.API.Presentation.Controller.Classification
                     }
                 }
 
-                // Return created promotion and assignment summary
                 return Ok(new
                 {
                     promotion = created,
@@ -151,9 +144,8 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        // Update promotion
         [HttpPut("{id:guid}")]
-        [Authorize] // add role if needed: [Authorize(Roles = "Admin")]
+        [Authorize] 
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> UpdatePromotion(Guid id, [FromBody] PromotionDto promotionDto)
         {
@@ -165,16 +157,13 @@ namespace Medix.API.Presentation.Controller.Classification
 
             try
             {
-                // Ensure DTO carries the route id
                 promotionDto.Id = id;
 
-                // Verify promotion exists by id
                 var all = await _promotionService.GetAllPromotion();
                 var existing = all?.FirstOrDefault(p => p.Id == id);
                 if (existing == null)
                     return NotFound();
 
-                // If code changed, ensure new code isn't used by another promotion
                 if (!string.Equals(existing.Code, promotionDto.Code, StringComparison.OrdinalIgnoreCase))
                 {
                     var codeOwner = await _promotionService.GetPromotionByCodeAsync(promotionDto.Code ?? string.Empty);

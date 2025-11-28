@@ -34,10 +34,8 @@ namespace Medix.API.Presentation.Controllers.Classification
         [HttpGet("by-appointment/{appointmentId:guid}")]
         public async Task<IActionResult> GetByAppointment(Guid appointmentId)
         {
-            // 1️⃣ Thử lấy hồ sơ bệnh án hiện có
             var record = await _service.GetByAppointmentIdAsync(appointmentId);
 
-            // 2️⃣ Nếu chưa có thì tạo mới
             if (record == null)
             {
                 try
@@ -47,7 +45,7 @@ namespace Medix.API.Presentation.Controllers.Classification
                         AppointmentId = appointmentId,
                         ChiefComplaint = "",
                         PhysicalExamination = "",
-                        Diagnosis = "", // có thể để rỗng hoặc "Chưa xác định"
+                        Diagnosis = "", 
                         AssessmentNotes = "",
                         TreatmentPlan = "",
                         FollowUpInstructions = "",
@@ -65,13 +63,11 @@ namespace Medix.API.Presentation.Controllers.Classification
                 }
             }
 
-            // 3️⃣ Nếu đã có thì trả về hồ sơ hiện có
             return Ok(record);
         }
 
 
 
-        // 🔹 Tạo mới MedicalRecord (dành cho bệnh nhân chưa có hồ sơ)
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateOrUpdateMedicalRecordDto dto)
         {
@@ -86,7 +82,6 @@ namespace Medix.API.Presentation.Controllers.Classification
             );
         }
 
-        // 🔹 Cập nhật MedicalRecord (nếu đã có)
         [HttpPut]
         public async Task<IActionResult> Update([FromBody] CreateOrUpdateMedicalRecordDto dto)
         {

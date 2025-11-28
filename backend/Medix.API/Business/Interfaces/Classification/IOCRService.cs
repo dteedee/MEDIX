@@ -2,19 +2,8 @@ namespace Medix.API.Business.Interfaces.Classification
 {
     public interface IOCRService
     {
-        /// <summary>
-        /// Extract text from EMR image/PDF
-        /// </summary>
         Task<string> ExtractTextAsync(IFormFile file);
-
-        /// <summary>
-        /// Extract structured medical data from EMR
-        /// </summary>
         Task<EMRExtractedData> ExtractMedicalDataAsync(IFormFile file);
-
-        /// <summary>
-        /// Validate if file is a valid EMR document
-        /// </summary>
         Task<bool> ValidateEMRFileAsync(IFormFile file);
     }
 

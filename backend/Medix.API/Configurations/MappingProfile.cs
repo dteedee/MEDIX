@@ -74,11 +74,9 @@ namespace Medix.API.Configurations
                 ? src.PaymentMethodCodeNavigation.DisplayName
                 : null));
 
-            // ✅ DTO → Entity
             CreateMap<CreateAppointmentDto, Appointment>();
             CreateMap<UpdateAppointmentDto, Appointment>()
            .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
-            // ✅ CHỈ map khi source member KHÔNG null
             CreateMap<MedicalRecord, MedicalRecordDto>()
                .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => src.Appointment.Patient.User.FullName))
                .ForMember(dest => dest.DoctorName, opt => opt.MapFrom(src => src.Appointment.Doctor.User.FullName))
@@ -91,7 +89,6 @@ namespace Medix.API.Configurations
       .ForMember(dest => dest.AppointmentDate, opt => opt.MapFrom(src => src.Appointment.AppointmentStartTime))
 
       .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.Appointment.PatientId))
-      // --- Thông tin bệnh nhân ---
       .ForMember(dest => dest.MedicalRecordNumber, opt => opt.MapFrom(src => src.Appointment.Patient.MedicalRecordNumber))
       .ForMember(dest => dest.BloodTypeCode, opt => opt.MapFrom(src => src.Appointment.Patient.BloodTypeCode))
       .ForMember(dest => dest.Height, opt => opt.MapFrom(src => src.Appointment.Patient.Height))
@@ -102,14 +99,12 @@ namespace Medix.API.Configurations
        .ForMember(dest => dest.DoctorName,
         opt => opt.MapFrom(src => src.Appointment.Doctor.User.FullName))
 
-      // ✅ Thông tin từ bảng User
       .ForMember(dest => dest.GenderCode, opt => opt.MapFrom(src => src.Appointment.Patient.User.GenderCode))
       .ForMember(dest => dest.DateOfBirth, opt => opt.MapFrom(src => src.Appointment.Patient.User.DateOfBirth))
       .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Appointment.Patient.User.Address))
       .ForMember(dest => dest.IdentificationNumber, opt => opt.MapFrom(src => src.Appointment.Patient.User.IdentificationNumber))
       .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.Appointment.Patient.User.PhoneNumber))
 
-      // --- Đơn thuốc ---
       .ForMember(dest => dest.Prescriptions, opt => opt.MapFrom(src => src.Prescriptions));
 
 
@@ -119,7 +114,6 @@ namespace Medix.API.Configurations
                 .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
 
 
-            // --- ✅ Prescription ---
             CreateMap<Prescription, PrescriptionDto>()
      .ForMember(dest => dest.GenericName, opt => opt.MapFrom(src => src.Medication.GenericName))
      .ForMember(dest => dest.DosageForms, opt => opt.MapFrom(src => src.Medication.DosageForms))
@@ -165,7 +159,6 @@ namespace Medix.API.Configurations
 
             CreateMap<MedicationDatabase, MedicationDto>().ReverseMap();
 
-            // ✅ THÊM MAPPING CHO TÌM KIẾM THUỐC
             CreateMap<MedicationDatabase, MedicationSearchDto>()
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.MedicationName))
                 .ForMember(dest => dest.Dosage, opt => opt.MapFrom(src => src.DosageForms));

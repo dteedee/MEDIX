@@ -124,7 +124,6 @@ namespace Medix.API.Presentation.Controller.Classification
         {
             try
             {
-                // Validate count parameter
                 if (count <= 0 || count > 10)
                 {
                     return BadRequest(new { message = "Count phải từ 1 đến 10" });

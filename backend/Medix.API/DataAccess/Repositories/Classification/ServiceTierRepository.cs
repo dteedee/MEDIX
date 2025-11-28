@@ -18,8 +18,8 @@ namespace Medix.API.DataAccess.Repositories.Classification
         {
             return await _context.DoctorServiceTiers
                 .AsNoTracking()
-                .Where(t => t.IsActive) // Giả sử chỉ lấy tier đang hoạt động
-                .OrderBy(t => t.Name) // Luôn OrderBy khi lấy danh sách
+                .Where(t => t.IsActive) 
+                .OrderBy(t => t.Name) 
                 .ToListAsync();
         }
 

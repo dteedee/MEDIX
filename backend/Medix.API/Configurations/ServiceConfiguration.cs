@@ -13,7 +13,6 @@ using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.DataAccess.Repositories.Classification;
 using Medix.API.DataAccess.Repositories.UserManagement;
-//using Medix.API.Business.Job;
 
 namespace Medix.API.Configurations
 {
@@ -26,7 +25,6 @@ namespace Medix.API.Configurations
 
             RegisterBackgroundJobs(services);
 
-            // AutoMapper configuration - after all services
             services.AddAutoMapper(typeof(MappingProfile));
         }
 
@@ -85,7 +83,6 @@ namespace Medix.API.Configurations
             services.AddScoped<IContentCategoryService, ContentCategoryService>();
             services.AddScoped<IHealthArticleService, HealthArticleService>();
             services.AddScoped<ISiteBannerService, SiteBannerService>();
-            // DTO validators for checks that DataAnnotations can't handle (slug uniqueness, user existence, etc.)
             services.AddScoped<IDtoValidatorService, DtoValidatorService>();
             services.AddScoped<IDoctorService, DoctorService>();
             services.AddScoped<ISpecializationService, SpecializationService>();
@@ -150,7 +147,6 @@ namespace Medix.API.Configurations
 
         public static void RegisterHangfireJobs()
         {
-            //calculate salary
             RecurringJob.AddOrUpdate<ISalaryService>(
                 "salary-calculation",
                 service => service.CalculateSalary(Helpers.GetLastDayOfCurrentMonth()),

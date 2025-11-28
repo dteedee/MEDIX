@@ -150,7 +150,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 banner.DisplayOrder += 1;
             }
 
-            // Lưu ngay các thay đổi để đảm bảo không có conflict khi tạo banner mới
             if (conflictingBanners.Any())
             {
                 await _context.SaveChangesAsync();

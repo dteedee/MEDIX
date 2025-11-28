@@ -35,7 +35,6 @@ namespace Medix.API.Presentation.Controller.Classification
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<MedicationSearchDto>>> Search([FromQuery] string query)
         {
-            // Chỉ tìm kiếm khi query có ít nhất 2 ký tự để tối ưu
             if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
             {
                 return Ok(Enumerable.Empty<MedicationSearchDto>());
@@ -44,20 +43,12 @@ namespace Medix.API.Presentation.Controller.Classification
             var results = await _service.SearchAsync(query);
             return Ok(results);
         }
-
-        /// <summary>
-        /// Lấy tất cả thuốc (bao gồm cả inactive) - dành cho manager
-        /// </summary>
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<MedicationDto>>> GetAllIncludingInactive()
         {
             var meds = await _service.GetAllIncludingInactiveAsync();
             return Ok(meds);
         }
-
-        /// <summary>
-        /// Tạo thuốc mới
-        /// </summary>
         [HttpPost]
         public async Task<ActionResult<MedicationDto>> Create([FromBody] MedicationCreateDto dto)
         {
@@ -71,10 +62,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
         }
-
-        /// <summary>
-        /// Cập nhật thuốc
-        /// </summary>
         [HttpPut("{id}")]
         public async Task<ActionResult<MedicationDto>> Update(Guid id, [FromBody] MedicationUpdateDto dto)
         {
@@ -92,10 +79,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
         }
-
-        /// <summary>
-        /// Toggle trạng thái hoạt động (Lock/Unlock)
-        /// </summary>
         [HttpPatch("{id}/toggle-active")]
         public async Task<ActionResult> ToggleActive(Guid id)
         {

@@ -1,7 +1,5 @@
-﻿using Humanizer;
-using Medix.API.Models.DTOs.Doctor;
+﻿using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.DTOs.ReviewDTO;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Medix.API.Business.Interfaces.Classification
 {

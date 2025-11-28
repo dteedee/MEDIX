@@ -114,7 +114,6 @@ namespace Medix.API.Business.Services.Classification
 
             await _repo.AddAsync(entity);
 
-            // 🔄 Làm mới cache
             _cache.Remove("SystemConfigs_All");
             _cache.Remove($"SystemConfig_{request.ConfigKey}");
         }
@@ -140,7 +139,6 @@ namespace Medix.API.Business.Services.Classification
 
             if (string.Equals(entity.ConfigValue, newValue, StringComparison.Ordinal))
             {
-                // Không có thay đổi thực sự, bỏ qua để tránh tạo audit log rỗng
                 return;
             }
 
@@ -150,7 +148,6 @@ namespace Medix.API.Business.Services.Classification
 
             await _repo.UpdateAsync(entity);
 
-            // 🔄 Làm mới cache
             _cache.Remove("SystemConfigs_All");
             _cache.Remove($"SystemConfig_{key}");
         }
@@ -159,7 +156,6 @@ namespace Medix.API.Business.Services.Classification
         {
             await _repo.DeleteAsync(key);
 
-            // 🔄 Làm mới cache
             _cache.Remove("SystemConfigs_All");
             _cache.Remove($"SystemConfig_{key}");
         }
@@ -201,7 +197,6 @@ namespace Medix.API.Business.Services.Classification
         {
             var policy = await GetPasswordPolicyAsync();
 
-            // Only check minLength if it's greater than 0 (enabled)
             if (policy.MinLength > 0 && password.Length < policy.MinLength)
                 throw new InvalidOperationException($"Mật khẩu phải dài ít nhất {policy.MinLength} ký tự.");
 

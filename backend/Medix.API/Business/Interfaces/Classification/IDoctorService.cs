@@ -2,7 +2,6 @@ using Medix.API.Business.Helper;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
-using static Medix.API.Models.DTOs.DoctorBookinDto;
 
 namespace Medix.API.Business.Interfaces.Classification
 {

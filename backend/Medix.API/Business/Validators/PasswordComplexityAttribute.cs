@@ -8,7 +8,6 @@ namespace Medix.API.Business.Validators
         public override bool IsValid(object? value)
         {
             if (value is not string password) return false;
-            // Ít nh?t 1 ch? hoa, 1 ch? thu?ng, 1 s?, 1 ký t? d?c bi?t, t?i thi?u 6 ký t?
             var regex = new Regex(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$");
             return regex.IsMatch(password);
         }

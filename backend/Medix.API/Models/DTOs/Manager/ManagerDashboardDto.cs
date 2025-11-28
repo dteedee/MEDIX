@@ -59,12 +59,10 @@ namespace Medix.API.Models.DTOs.Manager
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
 
-        // Doctor Info
         public Guid DoctorId { get; set; }
         public string DoctorName { get; set; } = null!;
         public string Specialization { get; set; } = null!;
 
-        // Patient Info
         public Guid PatientId { get; set; }
         public string PatientName { get; set; } = null!;
 
@@ -80,16 +78,13 @@ namespace Medix.API.Models.DTOs.Manager
 
         public decimal TotalAmount { get; set; }
 
-        // Doctor
         public Guid DoctorId { get; set; }
         public string DoctorName { get; set; } = null!;
         public string Specialization { get; set; } = null!;
 
-        // Patient
         public Guid PatientId { get; set; }
         public string PatientName { get; set; } = null!;
 
-        // REVIEW
         public ReviewDto? Review { get; set; }
     }
 

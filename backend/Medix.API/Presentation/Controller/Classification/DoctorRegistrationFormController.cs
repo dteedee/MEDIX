@@ -159,7 +159,6 @@ namespace Medix.API.Presentation.Controller.Classification
 
                     foreach (var file in validFiles)
                     {
-                        // Check type
                         if (!allowedTypes.Contains(file!.ContentType.ToLower()))
                         {
                             prev.Add(new ValidationResult(
@@ -167,8 +166,7 @@ namespace Medix.API.Presentation.Controller.Classification
                                 ["IdentityCardImage"]));
                         }
 
-                        // ✅ Check size (≤ 1 MB)
-                        const long maxSize = 1 * 1024 * 1024; // 1 MB in bytes
+                        const long maxSize = 1 * 1024 * 1024; 
                         if (file.Length > maxSize)
                         {
                             prev.Add(new ValidationResult(

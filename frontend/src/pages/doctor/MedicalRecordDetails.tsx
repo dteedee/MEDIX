@@ -543,7 +543,7 @@ const MedicalRecordDetails: React.FC = () => {
             {fieldErrors.chiefComplaint && <p className="error-message">{fieldErrors.chiefComplaint}</p>}
           </div>
           <div className="form-column full-width">
-            <label className="form-label">Quá trình bệnh lý và diễn biến (Khám lâm sàng)</label>
+            <label className="form-label">*Quá trình bệnh lý và diễn biến (Khám lâm sàng)</label>
             <textarea
               name="physicalExamination"
               className={`form-textarea ${fieldErrors.physicalExamination ? 'input-error' : ''}`}

@@ -44,9 +44,6 @@ namespace Medix.API.Business.Services.UserManagement
             _configService = configurationService;
         }
 
-        // =====================
-        // 🔹 LOGIN
-        // =====================
         public async Task<AuthResponseDto> LoginAsync(LoginRequestDto loginRequest)
         {
             var identifier = loginRequest.Identifier?.Trim();
@@ -60,15 +57,12 @@ namespace Medix.API.Business.Services.UserManagement
                     user = await _userRepository.GetByUserNameAsync(identifier);
             }
 
-            // 1️⃣ User không tồn tại
             if (user == null)
                 throw new UnauthorizedException("Tên đăng nhập/Email hoặc mật khẩu không đúng");
 
-            // 2️⃣ Admin tự khóa → khóa vĩnh viễn
             if (user.LockoutEnabled)
                 throw new UnauthorizedException("Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ");
 
-            // 3️⃣ Kiểm tra khóa tạm thời (do nhập sai nhiều lần)
             if (user.LockoutEnd != null && user.LockoutEnd > DateTime.UtcNow)
             {
                 var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
@@ -80,19 +74,16 @@ namespace Medix.API.Business.Services.UserManagement
             }
 
 
-            // 4️⃣ Lấy cấu hình
             int? maxAttempts = await _configService.GetIntValueAsync("MaxFailedLoginAttempts");
             int? lockMinutes = await _configService.GetIntValueAsync("AccountLockoutDurationMinutes");
 
             int maxFailedAttempts = maxAttempts ?? 5;
             int lockDuration = lockMinutes ?? 15;
 
-            // 5️⃣ Mật khẩu sai → tăng đếm
             if (!BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash))
             {
                 user.AccessFailedCount++;
 
-                // Nếu vượt mức cho phép → khóa tạm thời
                 if (user.AccessFailedCount >= maxFailedAttempts)
                 {
                     user.LockoutEnd = DateTime.UtcNow.AddMinutes(lockDuration);
@@ -107,12 +98,10 @@ namespace Medix.API.Business.Services.UserManagement
                 throw new UnauthorizedException("Tên đăng nhập/Email hoặc mật khẩu không đúng");
             }
 
-            // 6️⃣ Đăng nhập thành công → reset trạng thái khóa
             user.AccessFailedCount = 0;
             user.LockoutEnd = null;
             await _userRepository.UpdateAsync(user);
 
-            // ======= Generate token như cũ =======
             var roleEntity = await _userRoleRepository.GetByIdAsync(user.Id);
             var roleCode = roleEntity?.RoleCode ?? user.Role ?? "Patient";
 
@@ -150,12 +139,8 @@ namespace Medix.API.Business.Services.UserManagement
         }
 
 
-        // =====================
-        // 🔹 REGISTER
-        // =====================
         public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto registerRequest)
         {
-            // Validate password theo cấu hình
             await _configService.ValidatePasswordAsync(registerRequest.Password);
 
             var existingUser = await _userRepository.GetByEmailAsync(registerRequest.Email);
@@ -215,9 +200,7 @@ namespace Medix.API.Business.Services.UserManagement
             };
         }
 
-        // =====================
-        // 🔹 REFRESH TOKEN
-        // =====================
+
         public async Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequestDto refreshTokenRequest)
         {
             var storedToken = await _context.RefreshTokens
@@ -269,9 +252,6 @@ namespace Medix.API.Business.Services.UserManagement
             };
         }
 
-        // =====================
-        // 🔹 GOOGLE LOGIN
-        // =====================
         public async Task<AuthResponseDto> LoginWithGoogleAsync(GoogleLoginRequestDto request)
         {
             var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken);
@@ -284,7 +264,7 @@ namespace Medix.API.Business.Services.UserManagement
                 var newUser = new User
                 {
                     Id = Guid.NewGuid(),
-                    UserName = $"temp_{Guid.NewGuid().ToString("N")[..8]}", // Tạo username tạm thời
+                    UserName = $"temp_{Guid.NewGuid().ToString("N")[..8]}", 
                     NormalizedUserName = $"TEMP_{Guid.NewGuid().ToString("N")[..8].ToUpper()}",
                     Email = email,
                     NormalizedEmail = email.ToUpperInvariant(),
@@ -301,7 +281,6 @@ namespace Medix.API.Business.Services.UserManagement
                 await _userRepository.CreateAsync(newUser);
                 await _userRoleRepository.AssignRole("Patient", newUser.Id);
 
-                // Tạo record Patient cho user mới
                 var newPatient = new Patient
                 {
                     Id = Guid.NewGuid(),
@@ -333,7 +312,6 @@ namespace Medix.API.Business.Services.UserManagement
                 existingUser.Role = roleEntity?.RoleCode ?? "Patient";
             }
 
-            // Kiểm tra tài khoản có bị khóa không (cho Google login)
             if (existingUser.LockoutEnabled)
             {
                 throw new UnauthorizedException("Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ");
@@ -373,9 +351,6 @@ namespace Medix.API.Business.Services.UserManagement
                 };
         }
 
-        // =====================
-        // 🔹 PASSWORD MANAGEMENT
-        // =====================
         public async Task<bool> ForgotPasswordAsync(ForgotPasswordRequestDto request)
         {
             try
@@ -383,14 +358,11 @@ namespace Medix.API.Business.Services.UserManagement
                 var user = await _userRepository.GetByEmailAsync(request.Email);
                 if (user == null) 
                 {
-                    // Return true even if user doesn't exist for security
                     return true;
                 }
 
-                // Generate 6-digit numeric code
                 var code = new Random().Next(100000, 999999).ToString();
 
-                // Save code in EmailVerificationCodes table
                 var entity = new Medix.API.Models.Entities.EmailVerificationCode
                 {
                     Email = request.Email,
@@ -402,16 +374,13 @@ namespace Medix.API.Business.Services.UserManagement
                 _context.EmailVerificationCodes.Add(entity);
                 await _context.SaveChangesAsync();
 
-                // Send code via email
                 var emailSent = await _emailService.SendForgotPasswordCodeAsync(user.Email, code);
                 
                 if (!emailSent)
                 {
-                    // Log warning but don't throw exception
                     Console.WriteLine($"Warning: Failed to send verification email to {user.Email}");
                 }
 
-                // TEMPORARY: Log code to console for testing (remove in production)
                 Console.WriteLine($"=== FORGOT PASSWORD CODE FOR {user.Email}: {code} ===");
 
                 return true;
@@ -420,16 +389,14 @@ namespace Medix.API.Business.Services.UserManagement
             {
                 Console.WriteLine($"Error in ForgotPasswordAsync: {ex.Message}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                throw; // Re-throw to be caught by controller
+                throw; 
             }
         }
 
         public async Task<bool> ResetPasswordAsync(ResetPasswordRequestDto request)
         {
-            // TEMPORARY: Skip database validation for testing
             Console.WriteLine($"=== RESET PASSWORD FOR {request.Email} WITH CODE {request.Code} ===");
 
-            // TODO: Uncomment when database is ready
             /*
             // Validate code stored in DB
             var codeEntity = await _context.EmailVerificationCodes
@@ -450,10 +417,9 @@ namespace Medix.API.Business.Services.UserManagement
             if (user == null) 
             {
                 Console.WriteLine($"User not found for email: {request.Email}");
-                return true; // Return true for security (don't reveal if user exists)
+                return true; 
             }
 
-            // Update password
             await _configService.ValidatePasswordAsync(request.Password);
 
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
@@ -462,7 +428,6 @@ namespace Medix.API.Business.Services.UserManagement
 
             Console.WriteLine($"Password reset successfully for user: {user.Email}");
 
-            // TODO: Uncomment when database is ready
             /*
             // Mark code as used
             codeEntity.IsUsed = true;
@@ -496,10 +461,6 @@ namespace Medix.API.Business.Services.UserManagement
             return true;
         }
 
-
-        // =====================
-        // 🔹 LOGOUT
-        // =====================
         public async Task<bool> LogoutAsync(Guid userId)
         {
             var tokens = _context.RefreshTokens.Where(r => r.UserId == userId);

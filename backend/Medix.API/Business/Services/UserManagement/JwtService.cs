@@ -24,13 +24,11 @@ namespace Medix.API.Business.Services.UserManagement
 
         public string GenerateAccessToken(User user, IList<string> roles)
         {
-            // 1. Lấy key
             var key = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)
             );
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            // 2. Claims
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -44,13 +42,11 @@ namespace Medix.API.Business.Services.UserManagement
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            // 3. Lấy expiry từ database
             var expiryMinutes = _systemConfig
                 .GetIntValueAsync("JWT_EXPIRY_MINUTES")
                 .GetAwaiter()
                 .GetResult() ?? 30; 
 
-            // 4. Tạo token
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
@@ -59,7 +55,6 @@ namespace Medix.API.Business.Services.UserManagement
                 signingCredentials: credentials
             );
 
-            // 5. Xuất chuỗi token
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 

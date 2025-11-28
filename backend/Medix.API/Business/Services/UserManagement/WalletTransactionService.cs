@@ -34,10 +34,8 @@ namespace Medix.API.Business.Services.UserManagement
                 CreatedAt = walletTransactionDto.CreatedAt ?? DateTime.UtcNow
             };
 
-            // await trả về entity đã lưu (không phải Task nữa)
             var saved = await walletTransactionRepository.CreateWalletTransactionAsync(trans);
 
-            // map entity -> DTO (dùng trực tiếp saved, không saved.Result)
             var resultDto = new WalletTransactionDto
             {
                 id = saved.Id,
@@ -58,18 +56,13 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<WalletTransactionDto?> GetWalletTransactionByOrderCodeAsync(long orderCode)
         {
-            // 1. Dùng 'await' để gọi repository và lấy về đối tượng Entity
             var trans = await walletTransactionRepository.GetWalletTransactionByOrderCodeAsync(orderCode);
 
-            // 2. Kiểm tra xem có tìm thấy Entity không
             if (trans == null)
             {
-                // Nếu không tìm thấy, trả về null
                 return null;
             }
 
-            // 3. Nếu tìm thấy, ánh xạ (map) dữ liệu từ Entity (WalletTransaction)
-            //    sang DTO (WalletTransactionDto)
             return new WalletTransactionDto
             {
                 id = trans.Id,
@@ -87,10 +80,8 @@ namespace Medix.API.Business.Services.UserManagement
             };
         }
 
-        // Trong WalletTransactionService
         public async Task<WalletTransactionDto?> UppdateWalletTrasactionAsync(WalletTransactionDto walletTransactionDto)
         {
-            // 1. Kiểm tra DTO đầu vào (Giữ nguyên)
             if (walletTransactionDto?.id == null)
             {
                 return null;
@@ -98,27 +89,23 @@ namespace Medix.API.Business.Services.UserManagement
 
             if (walletTransactionDto.id == null && walletTransactionDto.orderCode == null)
             {
-                return null; // Cần có ít nhất 1 trong 2: id hoặc orderCode
+                return null; 
             }
 
-            // 2. Tìm Entity theo thứ tự ưu tiên: Id trước, OrderCode sau
             WalletTransaction? transToUpdate = null;
 
             if (walletTransactionDto.id.HasValue)
             {
-                // Ưu tiên tìm theo Id nếu có
                 transToUpdate = await walletTransactionRepository.GetWalletTransactionByIdAsync(walletTransactionDto.id.Value);
             }
             else if (walletTransactionDto.orderCode.HasValue)
             {
-                // Nếu không có Id, tìm theo OrderCode
                 transToUpdate = await walletTransactionRepository.GetWalletTransactionByOrderCodeAsync(walletTransactionDto.orderCode.Value);
             }
 
-            // Kiểm tra xem có tìm thấy entity không
             if (transToUpdate == null)
             {
-                return null; // Không tìm thấy transaction
+                return null; 
             }
 
 
@@ -126,7 +113,7 @@ namespace Medix.API.Business.Services.UserManagement
             transToUpdate.TransactionTypeCode = walletTransactionDto.TransactionTypeCode ?? transToUpdate.TransactionTypeCode;
             transToUpdate.Amount = walletTransactionDto.Amount ?? transToUpdate.Amount;
             transToUpdate.BalanceBefore = walletTransactionDto.BalanceBefore ?? transToUpdate.BalanceBefore;
-            transToUpdate.BalanceAfter = walletTransactionDto.BalanceAfter; // Giữ nguyên nullability
+            transToUpdate.BalanceAfter = walletTransactionDto.BalanceAfter; 
             transToUpdate.Status = walletTransactionDto.Status ?? "Pending";
             transToUpdate.RelatedAppointmentId = walletTransactionDto.RelatedAppointmentId;
             transToUpdate.Description = walletTransactionDto.Description;
@@ -161,14 +148,12 @@ namespace Medix.API.Business.Services.UserManagement
         {
             try
             {
-                // Sử dụng repository để update trực tiếp mà không qua tracking
                 var transaction = await walletTransactionRepository.GetWalletTransactionByOrderCodeAsync(orderCode);
                 if (transaction == null)
                 {
                     return false;
                 }
 
-                // Update properties
                 transaction.Status = status;
                 if (balanceBefore.HasValue)
                     transaction.BalanceBefore = balanceBefore.Value;
@@ -177,7 +162,6 @@ namespace Medix.API.Business.Services.UserManagement
                 if (!string.IsNullOrEmpty(additionalDescription))
                     transaction.Description += additionalDescription;
 
-                // Update through repository
                 var updatedTransaction = await walletTransactionRepository.UpdateWalletTransactionAsync(transaction);
                 return updatedTransaction != null;
             }
@@ -191,16 +175,13 @@ namespace Medix.API.Business.Services.UserManagement
         {
             try
             {
-                // 1. Gọi repository để lấy danh sách transactions theo walletId
                 var transactions = await walletTransactionRepository.GetTransactionsByWalletIdAsync(walletId);
 
-                // 2. Kiểm tra nếu không có transaction nào
                 if (transactions == null || !transactions.Any())
                 {
                     return new List<WalletTransactionDto>();
                 }
 
-                // 3. Ánh xạ từ Entity list sang DTO list
                 var transactionDtos = transactions.Select(trans => new WalletTransactionDto
                 {
                     id = trans.Id,
@@ -221,7 +202,6 @@ namespace Medix.API.Business.Services.UserManagement
             }
             catch (Exception ex)
             {
-                // Log error nếu cần
                 Console.WriteLine($"Error getting transactions for wallet {walletId}: {ex.Message}");
                 return new List<WalletTransactionDto>();
             }

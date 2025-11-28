@@ -15,7 +15,7 @@ namespace Medix.API.Business.Services.Classification
         private readonly IAppointmentRepository _appointmentRepo;
         private readonly IMapper _mapper;
         private readonly IPatientHealthReminderService patientHealthReminderService; 
-        private readonly MedixContext _context; // 🩺 Thêm DbContext để update Patient
+        private readonly MedixContext _context; 
 
         public MedicalRecordService(
             IMedicalRecordRepository medicalRecordRepo,
@@ -49,7 +49,6 @@ namespace Medix.API.Business.Services.Classification
             if (appointment == null)
                 throw new InvalidOperationException("Appointment not found.");
 
-            // 🔹 Kiểm tra hồ sơ đã tồn tại cho cuộc hẹn này chưa
             var existingRecord = await _medicalRecordRepo.GetByAppointmentIdAsync(dto.AppointmentId);
             if (existingRecord != null)
                 throw new InvalidOperationException("Medical record already exists for this appointment.");
@@ -60,7 +59,6 @@ namespace Medix.API.Business.Services.Classification
             record.CreatedAt = DateTime.UtcNow;
             record.UpdatedAt = DateTime.UtcNow;
 
-            // 🔹 Thêm danh sách đơn thuốc nếu có
             if (dto.Prescriptions != null && dto.Prescriptions.Any())
             {
                 record.Prescriptions = dto.Prescriptions.Select(p => new Prescription
@@ -77,7 +75,6 @@ namespace Medix.API.Business.Services.Classification
 
             await _medicalRecordRepo.AddAsync(record);
 
-            // 🩺 Cập nhật tiền sử bệnh hoặc dị ứng nếu được chọn
             await UpdatePatientHistoryAndAllergiesAsync(appointment.PatientId, dto);
 
             return _mapper.Map<MedicalRecordDto>(record);
@@ -89,12 +86,10 @@ namespace Medix.API.Business.Services.Classification
             if (appointment == null)
                 throw new InvalidOperationException("Appointment not found.");
 
-            // 🔹 Tìm hồ sơ của chính cuộc hẹn này
             var existingRecord = await _medicalRecordRepo.GetByAppointmentIdAsync(dto.AppointmentId);
             if (existingRecord == null)
                 throw new InvalidOperationException("Medical record not found for this appointment.");
 
-            // --- Cập nhật nội dung ---
             existingRecord.ChiefComplaint = dto.ChiefComplaint;
             existingRecord.PhysicalExamination = dto.PhysicalExamination;
             existingRecord.Diagnosis = dto.Diagnosis;
@@ -104,7 +99,6 @@ namespace Medix.API.Business.Services.Classification
             existingRecord.DoctorNotes = dto.DoctorNotes;
             existingRecord.UpdatedAt = DateTime.UtcNow;
 
-            // --- Cập nhật đơn thuốc ---
             existingRecord.Prescriptions.Clear();
             if (dto.Prescriptions != null && dto.Prescriptions.Any())
             {
@@ -127,13 +121,11 @@ namespace Medix.API.Business.Services.Classification
 
             await _medicalRecordRepo.UpdateAsync(existingRecord);
 
-            // 🩺 Cập nhật tiền sử bệnh hoặc dị ứng nếu có yêu cầu
             await UpdatePatientHistoryAndAllergiesAsync(appointment.PatientId, dto);
 
             return _mapper.Map<MedicalRecordDto>(existingRecord);
         }
 
-        // 🔹 Hàm xử lý cập nhật tiền sử bệnh và dị ứng
         private async Task UpdatePatientHistoryAndAllergiesAsync(Guid patientId, CreateOrUpdateMedicalRecordDto dto)
         {
             var patient = await _context.Patients.FirstOrDefaultAsync(p => p.Id == patientId);
@@ -143,7 +135,6 @@ namespace Medix.API.Business.Services.Classification
 
             if (dto.UpdatePatientMedicalHistory && !string.IsNullOrWhiteSpace(dto.Diagnosis))
             {
-                // nối thêm nếu chưa có
                 if (string.IsNullOrWhiteSpace(patient.MedicalHistory))
                     patient.MedicalHistory = dto.Diagnosis;
                 else if (!patient.MedicalHistory.Contains(dto.Diagnosis, StringComparison.OrdinalIgnoreCase))

@@ -36,7 +36,6 @@ namespace Medix.API.Business.Services.Classification
         {
             var (articles, total) = await _healthArticleRepository.GetPagedAsync(page, pageSize);
 
-            // CHỈ trả về articles có ít nhất 1 category active
             var filteredArticles = articles.Where(a => a.Categories.Any(c => c.IsActive)).ToList();
 
             var data = filteredArticles.Select(a => new HealthArticlePublicDto
@@ -64,7 +63,7 @@ namespace Medix.API.Business.Services.Classification
                 UpdatedAt = a.UpdatedAt,
 
                 Categories = a.Categories
-                    .Where(c => c.IsActive) // CHỈ trả về categories đang active
+                    .Where(c => c.IsActive) 
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
                         Id = c.Id,
@@ -81,7 +80,6 @@ namespace Medix.API.Business.Services.Classification
         {
             var (articles, total) = await _healthArticleRepository.GetPublishedPagedAsync(page, pageSize);
 
-            // CHỈ trả về articles có ít nhất 1 category active
             var filteredArticles = articles.Where(a => a.Categories.Any(c => c.IsActive)).ToList();
 
             var data = filteredArticles.Select(a => new HealthArticlePublicDto
@@ -101,7 +99,7 @@ namespace Medix.API.Business.Services.Classification
                 UpdatedAt = a.UpdatedAt,
                 DisplayType = a.DisplayType,
                 Categories = a.Categories
-                    .Where(c => c.IsActive) // CHỈ trả về categories đang active
+                    .Where(c => c.IsActive) 
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
                         Id = c.Id,
@@ -121,7 +119,6 @@ namespace Medix.API.Business.Services.Classification
             if (article == null)
                 return null;
 
-            // CHỈ trả về nếu article có ít nhất 1 category active
             if (!article.Categories.Any(c => c.IsActive))
                 return null;
 
@@ -147,7 +144,7 @@ namespace Medix.API.Business.Services.Classification
                 CreatedAt = article.CreatedAt,
                 UpdatedAt = article.UpdatedAt,
                 Categories = article.Categories
-                    .Where(c => c.IsActive) // CHỈ trả về categories đang active
+                    .Where(c => c.IsActive) 
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
                         Id = c.Id,
@@ -165,7 +162,6 @@ namespace Medix.API.Business.Services.Classification
             if (article == null)
                 return null;
 
-            // CHỈ trả về nếu article có ít nhất 1 category active
             if (!article.Categories.Any(c => c.IsActive))
                 return null;
 
@@ -181,7 +177,7 @@ namespace Medix.API.Business.Services.Classification
                 MetaTitle = article.MetaTitle,
                 MetaDescription = article.MetaDescription,
                 StatusCode = article.StatusCode,
-                ViewCount = article.ViewCount, // Return the actual current count
+                ViewCount = article.ViewCount,
                 LikeCount = article.LikeCount,
                 PublishedAt = article.PublishedAt,
                 IsHomepageVisible = article.IsHomepageVisible,
@@ -191,7 +187,7 @@ namespace Medix.API.Business.Services.Classification
                 CreatedAt = article.CreatedAt,
                 UpdatedAt = article.UpdatedAt,
                 Categories = article.Categories
-                    .Where(c => c.IsActive) // CHỈ trả về categories đang active
+                    .Where(c => c.IsActive) 
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
                         Id = c.Id,
@@ -202,7 +198,6 @@ namespace Medix.API.Business.Services.Classification
             };
         }
 
-        // New method specifically for incrementing view count
         public async Task IncrementViewCountOnlyAsync(Guid articleId)
         {
             await _healthArticleRepository.IncrementViewCountAsync(articleId);
@@ -212,7 +207,6 @@ namespace Medix.API.Business.Services.Classification
         {
             var (articles, total) = await _healthArticleRepository.GetByCategoryAsync(categoryId, page, pageSize);
 
-            // CHỈ trả về articles có ít nhất 1 category active
             var filteredArticles = articles.Where(a => a.Categories.Any(c => c.IsActive)).ToList();
 
             var data = filteredArticles.Select(a => new HealthArticlePublicDto
@@ -232,7 +226,7 @@ namespace Medix.API.Business.Services.Classification
                 UpdatedAt = a.UpdatedAt,
                 DisplayType = a.DisplayType,
                 Categories = a.Categories
-                    .Where(c => c.IsActive) // CHỈ trả về categories đang active
+                    .Where(c => c.IsActive) 
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
                         Id = c.Id,
@@ -249,7 +243,6 @@ namespace Medix.API.Business.Services.Classification
         {
             var articles = await _healthArticleRepository.GetHomepageArticlesAsync(limit);
 
-            // CHỈ trả về articles có ít nhất 1 category active
             var filteredArticles = articles.Where(a => a.Categories.Any(c => c.IsActive));
 
             return filteredArticles.Select(a => new HealthArticlePublicDto
@@ -271,7 +264,7 @@ namespace Medix.API.Business.Services.Classification
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
                 Categories = a.Categories
-                    .Where(c => c.IsActive) // CHỈ trả về categories đang active
+                    .Where(c => c.IsActive) 
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
                         Id = c.Id,
@@ -286,7 +279,6 @@ namespace Medix.API.Business.Services.Classification
         {
             var articles = await _healthArticleRepository.SearchByNameAsync(name);
 
-            // CHỈ trả về articles có ít nhất 1 category active
             var filteredArticles = articles.Where(a => a.Categories.Any(c => c.IsActive));
 
             var data = filteredArticles.Select(a => new HealthArticlePublicDto
@@ -306,7 +298,7 @@ namespace Medix.API.Business.Services.Classification
                 UpdatedAt = a.UpdatedAt,
                 DisplayType = a.DisplayType,
                 Categories = a.Categories
-                    .Where(c => c.IsActive) // CHỈ trả về categories đang active
+                    .Where(c => c.IsActive) 
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
                         Id = c.Id,
@@ -361,13 +353,11 @@ namespace Medix.API.Business.Services.Classification
                 UpdatedAt = DateTime.UtcNow
             };
 
-            // Nếu bài viết được tạo với trạng thái Published, gán luôn ngày xuất bản
             if (article.StatusCode == "Published" && article.PublishedAt == null)
             {
                 article.PublishedAt = DateTime.UtcNow;
             }
 
-            // Validate categories - Bắt buộc phải có ít nhất 1 category
             if (createDto.CategoryIds == null || !createDto.CategoryIds.Any())
             {
                 throw new ValidationException(new Dictionary<string, string[]>
@@ -376,7 +366,6 @@ namespace Medix.API.Business.Services.Classification
                 });
             }
 
-            // Attach categories
             var distinctIds = createDto.CategoryIds.Distinct().ToList();
             var categories = await _contentCategoryRepository.GetAllActiveAsync();
             var matched = categories.Where(c => distinctIds.Contains(c.Id)).ToList();
@@ -390,7 +379,6 @@ namespace Medix.API.Business.Services.Classification
                 });
             }
 
-            // Validate tất cả categories phải active
             var inactiveCategories = matched.Where(c => !c.IsActive).ToList();
             if (inactiveCategories.Any())
             {
@@ -403,7 +391,6 @@ namespace Medix.API.Business.Services.Classification
             foreach (var cat in matched)
                 article.Categories.Add(cat);
 
-            // Tự động điều chỉnh thứ tự hiển thị: tăng các bài viết có DisplayOrder >= giá trị mới lên 1
             await _healthArticleRepository.IncrementDisplayOrderForConflictsAsync(createDto.DisplayOrder);
 
             await _healthArticleRepository.CreateAsync(article);
@@ -418,7 +405,6 @@ namespace Medix.API.Business.Services.Classification
             {
                 throw new NotFoundException("Article not found");
             }
-            // Normalize current vs new values and skip checks when unchanged to avoid false-positive duplicates
             string Normalize(string? s) => string.IsNullOrWhiteSpace(s) ? string.Empty : s.Trim().ToLowerInvariant();
 
             var currentTitleNorm = Normalize(article.Title);
@@ -460,13 +446,10 @@ namespace Medix.API.Business.Services.Classification
                 });
             }
 
-            // Ghi lại trạng thái cũ và DisplayOrder cũ trước khi map
             var oldStatusCode = article.StatusCode;
             var oldDisplayOrder = article.DisplayOrder;
             var newDisplayOrder = updateDto.DisplayOrder;
 
-            // Logic cập nhật PublishedAt an toàn
-            // Chỉ gán PublishedAt khi chuyển trạng thái sang "Published" lần đầu tiên.
             if (updateDto.StatusCode == "Published" && oldStatusCode != "Published")
             {
                 if (article.PublishedAt == null)
@@ -475,12 +458,10 @@ namespace Medix.API.Business.Services.Classification
                 }
             }
 
-            // Map các giá trị từ DTO vào entity
             _mapper.Map(updateDto, article);
 
             article.UpdatedAt = DateTime.UtcNow;
 
-            // Validate categories - Bắt buộc phải có ít nhất 1 category
             if (updateDto.CategoryIds == null || !updateDto.CategoryIds.Any())
             {
                 throw new ValidationException(new Dictionary<string, string[]>
@@ -489,7 +470,6 @@ namespace Medix.API.Business.Services.Classification
                 });
             }
 
-            // Update categories
             var distinctIds = updateDto.CategoryIds.Distinct().ToList();
             var categories = await _contentCategoryRepository.GetAllActiveAsync();
             var matched = categories.Where(c => distinctIds.Contains(c.Id)).ToList();
@@ -503,7 +483,6 @@ namespace Medix.API.Business.Services.Classification
                 });
             }
 
-            // Validate tất cả categories phải active
             var inactiveCategories = matched.Where(c => !c.IsActive).ToList();
             if (inactiveCategories.Any())
             {
@@ -513,13 +492,11 @@ namespace Medix.API.Business.Services.Classification
                 });
             }
 
-            // Replace article categories with requested set
             article.Categories.Clear();
             foreach (var cat in matched)
                 article.Categories.Add(cat);
 
-            // Nếu DisplayOrder thay đổi, điều chỉnh các bài viết khác có DisplayOrder >= giá trị mới
-            // (DisplayOrder đã được map từ updateDto vào article ở dòng _mapper.Map)
+  
             if (oldDisplayOrder != newDisplayOrder)
             {
                 await _healthArticleRepository.IncrementDisplayOrderForConflictsAsync(newDisplayOrder, id);
@@ -546,7 +523,6 @@ namespace Medix.API.Business.Services.Classification
             if (article == null)
                 return null;
 
-            // If user already liked, return current state (idempotent)
             var already = await _healthArticleRepository.HasUserLikedAsync(id, userId);
             if (!already)
             {
@@ -579,7 +555,7 @@ namespace Medix.API.Business.Services.Classification
                 CreatedAt = updated.CreatedAt,
                 UpdatedAt = updated.UpdatedAt,
                 Categories = updated.Categories
-                    .Where(c => c.IsActive) // CHỈ trả về categories đang active
+                    .Where(c => c.IsActive) 
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
                         Id = c.Id,
@@ -628,7 +604,7 @@ namespace Medix.API.Business.Services.Classification
                 CreatedAt = updated.CreatedAt,
                 UpdatedAt = updated.UpdatedAt,
                 Categories = updated.Categories
-                    .Where(c => c.IsActive) // CHỈ trả về categories đang active
+                    .Where(c => c.IsActive) 
                     .Select(c => new HealthArticlePublicDto.CategoryInfo
                     {
                         Id = c.Id,

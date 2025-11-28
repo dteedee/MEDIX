@@ -14,18 +14,12 @@ namespace Medix.API.Business.Services.Classification
             _logger = logger;
             _configuration = configuration;
         }
-
-        /// <summary>
-        /// Extract text from EMR image/PDF using enhanced pattern recognition
-        /// Supports integration with Google Vision API, Azure Form Recognizer, or Tesseract OCR
-        /// </summary>
         public async Task<string> ExtractTextAsync(IFormFile file)
         {
             _logger.LogInformation($"Extracting text from file: {file.FileName}, Size: {file.Length} bytes, Type: {file.ContentType}");
 
             try
             {
-                // Try to use configured OCR service
                 var ocrProvider = _configuration?["OCR:Provider"] ?? "none";
                 
                 switch (ocrProvider.ToLower())
@@ -37,7 +31,6 @@ namespace Medix.API.Business.Services.Classification
                     case "tesseract":
                         return await ExtractTextWithTesseractAsync(file);
                     default:
-                        // Enhanced pattern-based extraction for common EMR formats
                         return await ExtractTextWithPatternRecognitionAsync(file);
                 }
             }
@@ -48,10 +41,6 @@ namespace Medix.API.Business.Services.Classification
             }
         }
 
-        /// <summary>
-        /// Extract structured medical data from EMR using comprehensive parsing
-        /// Combines OCR text extraction with intelligent medical data parsing
-        /// </summary>
         public async Task<EMRExtractedData> ExtractMedicalDataAsync(IFormFile file)
         {
             var extractedText = await ExtractTextAsync(file);
@@ -64,7 +53,6 @@ namespace Medix.API.Business.Services.Classification
 
             var data = new EMRExtractedData();
 
-            // Enhanced parsing with multiple pattern matching
             data.PatientName = ExtractPatientName(extractedText);
             data.DateOfBirth = ExtractDateOfBirth(extractedText);
             data.Gender = ExtractGender(extractedText);
@@ -78,7 +66,6 @@ namespace Medix.API.Business.Services.Classification
             data.VisitDate = ExtractVisitDate(extractedText);
             data.Notes = ExtractNotes(extractedText);
 
-            // Validate and enhance extracted data
             ValidateAndEnhanceExtractedData(data, extractedText);
 
             _logger.LogInformation($"Extracted EMR data: Patient={data.PatientName}, Diagnoses={data.Diagnoses.Count}, Medications={data.Medications.Count}");
@@ -86,9 +73,6 @@ namespace Medix.API.Business.Services.Classification
             return data;
         }
 
-        /// <summary>
-        /// Validate EMR file with comprehensive checks
-        /// </summary>
         public async Task<bool> ValidateEMRFileAsync(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -97,7 +81,6 @@ namespace Medix.API.Business.Services.Classification
                 return false;
             }
 
-            // Validate file extension
             var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png", ".jfif" };
             var extension = Path.GetExtension(file.FileName).ToLower();
             
@@ -107,22 +90,19 @@ namespace Medix.API.Business.Services.Classification
                 return false;
             }
 
-            // Validate file size (max 10MB)
-            var maxSize = 10 * 1024 * 1024; // 10MB
+            var maxSize = 10 * 1024 * 1024;
             if (file.Length > maxSize)
             {
                 _logger.LogWarning($"File size exceeds limit: {file.Length} bytes");
                 return false;
             }
 
-            // Validate minimum file size (too small might be corrupted)
-            if (file.Length < 1024) // Less than 1KB
+            if (file.Length < 1024) 
             {
                 _logger.LogWarning("File size too small, might be corrupted");
                 return false;
             }
 
-            // Validate content type
             var allowedContentTypes = new[]
             {
                 "application/pdf",
@@ -135,10 +115,8 @@ namespace Medix.API.Business.Services.Classification
             if (!string.IsNullOrEmpty(file.ContentType) && !allowedContentTypes.Contains(file.ContentType.ToLower()))
             {
                 _logger.LogWarning($"Invalid content type: {file.ContentType}");
-                // Don't fail here, as content type might not be set correctly
             }
 
-            // Additional validation: Check file signature (magic numbers)
             var isValidSignature = await ValidateFileSignatureAsync(file);
             if (!isValidSignature)
             {
@@ -149,13 +127,6 @@ namespace Medix.API.Business.Services.Classification
             await Task.CompletedTask;
             return true;
         }
-
-        // OCR Service Implementation Methods
-
-        /// <summary>
-        /// Extract text using Google Cloud Vision API
-        /// Requires: Google.Cloud.Vision.V1 NuGet package and API credentials
-        /// </summary>
         private async Task<string> ExtractTextWithGoogleVisionAsync(IFormFile file)
         {
             try
@@ -167,13 +138,6 @@ namespace Medix.API.Business.Services.Classification
                     return await ExtractTextWithPatternRecognitionAsync(file);
                 }
 
-                // TODO: Implement actual Google Vision API call
-                // Example implementation:
-                // var client = ImageAnnotatorClient.Create();
-                // var image = Image.FromStream(await file.OpenReadStreamAsync());
-                // var response = await client.DetectTextAsync(image);
-                // return string.Join("\n", response.Select(t => t.Description));
-
                 _logger.LogInformation("Google Vision API integration placeholder - implement with actual API");
                 return await ExtractTextWithPatternRecognitionAsync(file);
             }
@@ -183,11 +147,6 @@ namespace Medix.API.Business.Services.Classification
                 return await ExtractTextWithPatternRecognitionAsync(file);
             }
         }
-
-        /// <summary>
-        /// Extract text using Azure Form Recognizer
-        /// Requires: Azure.AI.FormRecognizer NuGet package and Azure credentials
-        /// </summary>
         private async Task<string> ExtractTextWithAzureFormRecognizerAsync(IFormFile file)
         {
             try
@@ -201,13 +160,6 @@ namespace Medix.API.Business.Services.Classification
                     return await ExtractTextWithPatternRecognitionAsync(file);
                 }
 
-                // TODO: Implement actual Azure Form Recognizer call
-                // Example implementation:
-                // var client = new DocumentAnalysisClient(new Uri(endpoint), new AzureKeyCredential(apiKey));
-                // using var stream = file.OpenReadStream();
-                // var operation = await client.AnalyzeDocumentAsync(WaitUntil.Completed, "prebuilt-read", stream);
-                // return string.Join("\n", operation.Value.Content.Split('\n'));
-
                 _logger.LogInformation("Azure Form Recognizer integration placeholder - implement with actual API");
                 return await ExtractTextWithPatternRecognitionAsync(file);
             }
@@ -217,23 +169,11 @@ namespace Medix.API.Business.Services.Classification
                 return await ExtractTextWithPatternRecognitionAsync(file);
             }
         }
-
-        /// <summary>
-        /// Extract text using Tesseract OCR (offline)
-        /// Requires: Tesseract NuGet package and language data files
-        /// </summary>
         private async Task<string> ExtractTextWithTesseractAsync(IFormFile file)
         {
             try
             {
                 var tesseractDataPath = _configuration?["Tesseract:DataPath"] ?? "./tessdata";
-                
-                // TODO: Implement actual Tesseract OCR
-                // Example implementation:
-                // using var engine = new TesseractEngine(tesseractDataPath, "vie+eng", EngineMode.Default);
-                // using var img = Pix.LoadFromMemory(await ReadFileToBytesAsync(file));
-                // using var page = engine.Process(img);
-                // return page.GetText();
 
                 _logger.LogInformation("Tesseract OCR integration placeholder - implement with actual library");
                 return await ExtractTextWithPatternRecognitionAsync(file);
@@ -247,28 +187,23 @@ namespace Medix.API.Business.Services.Classification
 
         private async Task<string> ExtractTextWithPatternRecognitionAsync(IFormFile file)
         {
-            await Task.Delay(300); // Simulate processing
+            await Task.Delay(300);
 
-            // Enhanced pattern-based text extraction for common EMR formats
-            // This simulates OCR by recognizing common EMR patterns
             
             var fileName = file.FileName.ToLower();
             var fileExtension = Path.GetExtension(fileName);
 
-            // For PDF files, we would need a PDF parser
             if (fileExtension == ".pdf")
             {
                 return GenerateSimulatedEMRText("PDF");
             }
 
-            // For image files, simulate OCR extraction
             return GenerateSimulatedEMRText("IMAGE");
         }
 
         private string GenerateSimulatedEMRText(string fileType)
         {
-            // Generate realistic EMR text structure for testing
-            // In production, this would be actual OCR output
+
             var emrText = new StringBuilder();
             emrText.AppendLine("HỒ SƠ BỆNH ÁN");
             emrText.AppendLine("==============");
@@ -297,14 +232,12 @@ namespace Medix.API.Business.Services.Classification
                 await stream.ReadAsync(buffer, 0, 8);
                 stream.Position = 0;
 
-                // Check PDF signature
                 if (file.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                 {
-                    var pdfSignature = new byte[] { 0x25, 0x50, 0x44, 0x46 }; // %PDF
+                    var pdfSignature = new byte[] { 0x25, 0x50, 0x44, 0x46 };
                     return buffer.Take(4).SequenceEqual(pdfSignature);
                 }
 
-                // Check JPEG signature
                 if (file.FileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
                     file.FileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase))
                 {
@@ -312,19 +245,18 @@ namespace Medix.API.Business.Services.Classification
                     return buffer.Take(3).SequenceEqual(jpegSignature);
                 }
 
-                // Check PNG signature
                 if (file.FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
                 {
                     var pngSignature = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
                     return buffer.SequenceEqual(pngSignature);
                 }
 
-                return true; // If we can't validate, assume valid
+                return true; 
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Error validating file signature");
-                return true; // Don't fail validation on signature check error
+                return true; 
             }
         }
 
@@ -375,7 +307,6 @@ namespace Medix.API.Business.Services.Classification
 
         private void ValidateAndEnhanceExtractedData(EMRExtractedData data, string extractedText)
         {
-            // Validate and clean extracted data
             if (data.Diagnoses != null)
             {
                 data.Diagnoses = data.Diagnoses
@@ -391,7 +322,6 @@ namespace Medix.API.Business.Services.Classification
                     .ToList();
             }
 
-            // Enhance lab results with status if value is available
             if (data.LabResults != null)
             {
                 foreach (var result in data.LabResults)
@@ -406,15 +336,13 @@ namespace Medix.API.Business.Services.Classification
 
         private string? DetermineLabResultStatus(string testName, string value, string? referenceRange)
         {
-            // Simple status determination based on common lab values
-            // In production, use comprehensive medical reference ranges
+
             
             if (string.IsNullOrEmpty(value) || !double.TryParse(value, out var numericValue))
                 return null;
 
             var lowerTestName = testName.ToLower();
 
-            // Glucose normal range: 70-100 mg/dl
             if (lowerTestName.Contains("glucose"))
             {
                 if (numericValue < 70) return "low";
@@ -422,17 +350,15 @@ namespace Medix.API.Business.Services.Classification
                 return "normal";
             }
 
-            // Cholesterol normal: < 200 mg/dl
             if (lowerTestName.Contains("cholesterol"))
             {
                 if (numericValue > 200) return "high";
                 return "normal";
             }
 
-            return "normal"; // Default
+            return "normal"; 
         }
 
-        // Helper methods for parsing
         private string? ExtractPatientName(string text)
         {
             var patterns = new[]
@@ -502,23 +428,14 @@ namespace Medix.API.Business.Services.Classification
 
             return diagnoses.Distinct().ToList();
         }
-
-        /// <summary>
-        /// Extract medication information with enhanced pattern matching
-        /// Supports Vietnamese and English medication names
-        /// </summary>
         private List<MedicationInfo> ExtractMedications(string text)
         {
             var medications = new List<MedicationInfo>();
             
-            // Enhanced patterns for medication extraction
             var patterns = new[]
             {
-                // Pattern 1: "Tên thuốc - Liều lượng - Tần suất"
                 @"([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ][a-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s]+(?:viên|vi|tablet|tab|mg|ml)?)\s*[:\-]?\s*(\d+\s*(?:mg|ml|viên|vi)?)\s*(?:x\s*(\d+))?\s*(?:lần|times)?",
-                // Pattern 2: "Thuốc: Tên - Liều"
                 @"Thuốc[:\s]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ][^\n]+?)\s*[:\-]?\s*(\d+\s*(?:mg|ml|viên)?)",
-                // Pattern 3: English format "Medication Name - Dosage - Frequency"
                 @"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(\d+\s*(?:mg|ml|tablet|tab)?)\s*(?:x\s*(\d+))?\s*(?:times|per day)?"
             };
 
@@ -531,7 +448,6 @@ namespace Medix.API.Business.Services.Classification
                     var dosage = match.Groups[2].Success ? match.Groups[2].Value.Trim() : "";
                     var frequency = match.Groups[3].Success ? match.Groups[3].Value.Trim() : "1";
 
-                    // Validate medication name (should contain letters)
                     if (!string.IsNullOrEmpty(name) && name.Length > 2 && name.Any(char.IsLetter))
                     {
                         medications.Add(new MedicationInfo
@@ -539,13 +455,12 @@ namespace Medix.API.Business.Services.Classification
                             Name = name,
                             Dosage = dosage,
                             Frequency = frequency,
-                            Duration = ExtractDuration(text, name) // Try to extract duration if available
+                            Duration = ExtractDuration(text, name) 
                         });
                     }
                 }
             }
 
-            // Remove duplicates based on name similarity
             return medications
                 .GroupBy(m => m.Name.ToLower())
                 .Select(g => g.First())
@@ -554,20 +469,14 @@ namespace Medix.API.Business.Services.Classification
 
         private string? ExtractDuration(string text, string medicationName)
         {
-            // Try to find duration information near medication name
             var pattern = $@"{Regex.Escape(medicationName)}[^\n]*?(\d+\s*(?:ngày|tuần|tháng|days|weeks|months))";
             var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
             return match.Success ? match.Groups[1].Value.Trim() : null;
         }
-
-        /// <summary>
-        /// Extract lab results with comprehensive test patterns
-        /// </summary>
         private List<LabResult> ExtractLabResults(string text)
         {
             var results = new List<LabResult>();
             
-            // Comprehensive lab test patterns
             var patterns = new Dictionary<string, LabTestPattern>
             {
                 { 

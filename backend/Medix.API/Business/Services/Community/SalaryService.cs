@@ -52,7 +52,6 @@ namespace Medix.API.Business.Services.Community
                             .Sum();
                         var netSalary = salary * ((decimal)Constants.DoctorSalaryShare);
 
-                        //insert into doctor salary
                         var doctorSalary = new DoctorSalary
                         {
                             DoctorId = doctor.Id,
@@ -67,13 +66,11 @@ namespace Medix.API.Business.Services.Community
                         };
                         await _salaryRepository.CreateAsync(doctorSalary);
 
-                        //add to balance
                         if (!await _walletRepository.IncreaseWalletBalanceAsync(doctor.UserId, netSalary))
                         {
                             throw new Exception("Failed to increase balance");
                         };
 
-                        //add to wallet transaction
                         var wallet = await _walletRepository.GetWalletByUserIdAsync(doctor.UserId) 
                             ?? throw new Exception("Cant find wallet");
                         var walletTransaction = new WalletTransaction
@@ -88,7 +85,6 @@ namespace Medix.API.Business.Services.Community
                         };
                         await _walletTransactionRepository.CreateWalletTransactionAsync(walletTransaction);
 
-                        //commit
                         await transaction.CommitAsync();
                     }
                     catch (Exception ex)

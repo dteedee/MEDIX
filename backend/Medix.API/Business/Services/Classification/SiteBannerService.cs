@@ -27,10 +27,9 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<(int total, IEnumerable<SiteBannerDto> data)> GetPagedAsync(int page = 1, int pageSize = 10)
         {
-            // Nếu pageSize lớn (ví dụ: > 1000), coi như yêu cầu lấy tất cả
             if (pageSize > 1000)
             {
-                pageSize = int.MaxValue; // Lấy tất cả bản ghi
+                pageSize = int.MaxValue; 
             }
 
             var (banners, total) = await _siteBannerRepository.GetPagedAsync(page, pageSize);
@@ -110,11 +109,8 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<SiteBannerDto> CreateAsync(SiteBannerCreateDto createDto)
         {
-            // Validate using DtoValidatorService
             await _validator.ValidateSiteBannerCreateAsync(createDto);
 
-            // Tự động điều chỉnh thứ tự hiển thị: tăng các banner có DisplayOrder >= giá trị mới lên 1
-            // Phải gọi TRƯỚC khi tạo banner mới
             _logger?.LogInformation($"Điều chỉnh thứ tự hiển thị cho DisplayOrder = {createDto.DisplayOrder}");
             await _siteBannerRepository.IncrementDisplayOrderForConflictsAsync(createDto.DisplayOrder);
 
@@ -131,7 +127,6 @@ namespace Medix.API.Business.Services.Classification
                 CreatedAt = DateTime.UtcNow
             };
 
-            // CreateAsync sẽ gọi SaveChangesAsync, lưu banner mới
             _logger?.LogInformation($"Tạo banner mới với DisplayOrder = {banner.DisplayOrder}");
             await _siteBannerRepository.CreateAsync(banner);
 
@@ -146,21 +141,17 @@ namespace Medix.API.Business.Services.Classification
                 throw new NotFoundException("Banner not found");
             }
 
-            // Validate using DtoValidatorService
             await _validator.ValidateSiteBannerUpdateAsync(id, updateDto);
 
-            // Lưu DisplayOrder cũ để so sánh
             var oldDisplayOrder = banner.DisplayOrder;
             var newDisplayOrder = updateDto.DisplayOrder;
 
-            // Nếu DisplayOrder thay đổi và giá trị mới đã tồn tại, điều chỉnh các banner khác
             if (oldDisplayOrder != newDisplayOrder)
             {
                 await _siteBannerRepository.IncrementDisplayOrderForConflictsAsync(newDisplayOrder, id);
             }
 
             banner.BannerTitle = updateDto.BannerTitle;
-            // Only update the image URL if a new one is provided.
             if (!string.IsNullOrEmpty(updateDto.BannerImageUrl))
             {
                 banner.BannerImageUrl = updateDto.BannerImageUrl;
@@ -211,10 +202,10 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<List<SiteBanner>> GetHomePageBanners()
         {
-            var banners = await _siteBannerRepository.GetRunningBannersAsync(); // Lấy các banner đang hoạt động
-            return banners.OrderBy(b => b.DisplayOrder) // Sắp xếp theo thứ tự hiển thị tăng dần
-                          .ThenByDescending(b => b.CreatedAt) // Nếu trùng, sắp xếp theo ngày tạo giảm dần
-                          .ToList(); // Lấy tất cả banner đang hoạt động
+            var banners = await _siteBannerRepository.GetRunningBannersAsync(); 
+            return banners.OrderBy(b => b.DisplayOrder) 
+                          .ThenByDescending(b => b.CreatedAt) 
+                          .ToList(); 
         }
         public async Task<(int total, IEnumerable<SiteBannerDto> data)> SearchByNameAsync(string name, int page = 1, int pageSize = 10)
         {

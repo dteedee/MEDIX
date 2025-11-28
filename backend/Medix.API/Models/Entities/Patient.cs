@@ -22,6 +22,8 @@ public partial class Patient
 
     public string? Allergies { get; set; }
 
+    public string? DiseaseHistory { get; set; }
+
     public string? EmergencyContactName { get; set; }
 
     public string? EmergencyContactPhone { get; set; }

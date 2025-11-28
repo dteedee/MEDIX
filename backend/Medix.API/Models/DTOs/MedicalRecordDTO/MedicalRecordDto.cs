@@ -17,6 +17,7 @@ namespace Medix.API.Models.DTOs.MedicalRecordDTO
         public decimal? Weight { get; set; }
         public string? MedicalHistory { get; set; }
         public string? Allergies { get; set; }
+        public string? DiseaseHistory { get; set; }
 
         public string? GenderCode { get; set; }
         public DateOnly? DateOfBirth { get; set; }
@@ -81,6 +82,6 @@ namespace Medix.API.Models.DTOs.MedicalRecordDTO
         public bool UpdatePatientMedicalHistory { get; set; } = false;
         public string? NewAllergy { get; set; }
         public bool UpdatePatientAllergies { get; set; } = false;
-
+        public bool UpdatePatientDiseaseHistory { get; set; } = false;
     }
 }

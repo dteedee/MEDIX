@@ -95,6 +95,7 @@ namespace Medix.API.Configurations
       .ForMember(dest => dest.Weight, opt => opt.MapFrom(src => src.Appointment.Patient.Weight))
       .ForMember(dest => dest.MedicalHistory, opt => opt.MapFrom(src => src.Appointment.Patient.MedicalHistory))
       .ForMember(dest => dest.Allergies, opt => opt.MapFrom(src => src.Appointment.Patient.Allergies))
+      .ForMember(dest => dest.DiseaseHistory, opt => opt.MapFrom(src => src.Appointment.Patient.DiseaseHistory))
 
        .ForMember(dest => dest.DoctorName,
         opt => opt.MapFrom(src => src.Appointment.Doctor.User.FullName))

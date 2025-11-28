@@ -118,7 +118,24 @@ const MedicalRecordDetails: React.FC = () => {
 
   const handleFieldBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
     const { name, value } = e.target as { name: keyof MedicalRecord, value: string };
-    const error = validateField(name, value);
+    let processedValue = value;
+
+    if (name === 'diagnosis' && value) {
+      const diagnoses = value.split(',').map(d => d.trim()).filter(d => d !== '');
+      const uniqueDiagnosesMap = new Map<string, string>(); // Map lowercased diagnosis to its first-seen original case
+
+      for (const diagnosis of diagnoses) {
+        const lowerCaseDiagnosis = diagnosis.toLowerCase();
+        if (!uniqueDiagnosesMap.has(lowerCaseDiagnosis)) {
+          uniqueDiagnosesMap.set(lowerCaseDiagnosis, diagnosis);
+        }
+      }
+      processedValue = Array.from(uniqueDiagnosesMap.values()).join(', ');
+      handleUpdateField(name, processedValue); // Update the field with the cleaned value
+    }
+
+    // Validate the potentially processedValue (if diagnosis) or original value
+    const error = validateField(name, processedValue);
     setFieldErrors(prev => ({ ...prev, [name]: error }));
   };
 
@@ -175,44 +192,32 @@ const MedicalRecordDetails: React.FC = () => {
       return;
     }
 
-    // Thêm bước xác nhận trước khi kết thúc ca khám
-    Swal.fire({
-      title: 'Xác nhận kết thúc ca khám',
-      text: "Bạn có chắc chắn muốn hoàn tất và lưu hồ sơ không? Hành động này sẽ kết thúc ca khám.",
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Đồng ý',
-      cancelButtonText: 'Hủy bỏ'
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        setIsSubmitting(true);
-        try {          
-          const payload = {
-            ...medicalRecord,
-            // Không cập nhật tiền sử bệnh ở bước này
-            updatePatientMedicalHistory: false, 
-          };
+    // Lưu tạm thời (không cập nhật tiền sử bệnh, khám lâm sàng)
+    setIsSubmitting(true);
+    try {          
+      const payload = {
+        ...medicalRecord,
+        updatePatientMedicalHistory: false, // Chỉ lưu tạm thôi
+        updatePatientAllergies: false,
+        newAllergy: newAllergy.trim(),
+        updatePatientDiseaseHistory: false, // Chỉ lưu tạm thôi
+      };
+      await medicalRecordService.updateMedicalRecord(medicalRecord.id, payload);
 
-          await medicalRecordService.updateMedicalRecord(medicalRecord.id, payload);
-
-          Swal.fire({
-            title: 'Thành công!',
-            text: 'Hồ sơ bệnh án đã được cập nhật.',
-            icon: 'success',
-            confirmButtonText: 'OK'
-          }).then(() => {
-            navigate(-1); // Quay lại trang trước
-          });
-        } catch (err) {
-          console.error("Failed to update medical record:", err);
-          Swal.fire('Thất bại!', 'Không thể cập nhật hồ sơ. Vui lòng thử lại.', 'error');
-        } finally {
-          setIsSubmitting(false);
-        }
-      }
-    });
+      Swal.fire({
+        title: 'Thành công!',
+        text: 'Hồ sơ bệnh án đã được cập nhật.',
+        icon: 'success',
+        confirmButtonText: 'OK'
+      }).then(() => {
+        // Không navigate, giữ lại ở trang để người dùng có thể tiếp tục chỉnh sửa
+      });
+    } catch (err) {
+      console.error("Failed to update medical record:", err);
+      Swal.fire('Thất bại!', 'Không thể cập nhật hồ sơ. Vui lòng thử lại.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Função para cancelar a consulta (status: MissedByPatient)
@@ -342,12 +347,14 @@ const MedicalRecordDetails: React.FC = () => {
       if (result.isConfirmed) {
         setIsSubmitting(true);
         try {          
-          // 1. Gửi yêu cầu cập nhật hồ sơ lần cuối với cờ updatePatientMedicalHistory = true
+          // 1. Gửi yêu cầu cập nhật hồ sơ lần cuối với cọc updatePatientMedicalHistory = true
           // để backend cộng dồn chẩn đoán vào tiền sử bệnh của bệnh nhân.
           const finalPayload = {
             ...medicalRecord,
-            updatePatientMedicalHistory: true,
+            updatePatientMedicalHistory: true, // Lưu chẩn đoán vào DB
+            updatePatientAllergies: newAllergy.trim() !== '', // Cập nhật dị ứng nếu có
             newAllergy: newAllergy.trim(),
+            updatePatientDiseaseHistory: true, // Luôn set true, backend sẽ check dữ liệu
           };
           await medicalRecordService.updateMedicalRecord(medicalRecord.id, finalPayload);
 
@@ -360,6 +367,13 @@ const MedicalRecordDetails: React.FC = () => {
             icon: 'success',
             confirmButtonText: 'OK'
           }).then(() => {
+            setNewAllergy(''); // Reset dị ứng vừa nhập
+            // Reset medicalRecord để input xóa sạch
+            setMedicalRecord(prev => prev ? {
+              ...prev,
+              diagnosis: '',
+              physicalExamination: '',
+            } : null);
             navigate(-1);
           });
         } catch (err: any) {
@@ -570,6 +584,12 @@ const MedicalRecordDetails: React.FC = () => {
           <div className="form-column">
             <label className="form-label">Dị ứng</label>
             <p className="info-value-box">{medicalRecord.allergies || 'Không có'}</p>
+          </div>
+          <div className="form-column full-width">
+            <label className="form-label">Bệnh sử</label>
+            <div className="info-value-box" style={{ whiteSpace: 'pre-line', minHeight: '100px', maxHeight: '300px', overflowY: 'auto' }}>
+              {medicalRecord.diseaseHistory || 'Không có'}
+            </div>
           </div>
           {isEditable && (
             <div className="form-column full-width">

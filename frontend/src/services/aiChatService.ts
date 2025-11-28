@@ -1,5 +1,10 @@
 import { apiClient } from '../lib/apiClient';
 
+export interface PromptRequest {
+  guestToken?: string;
+  prompt: string;
+}
+
 export interface ChatMessage {
   id?: string;
   text: string;
@@ -44,14 +49,24 @@ export interface SymptomAnalysisResponse {
 
 export interface EMRUploadRequest {
   file: File;
-  patientInfo?: {
-    name?: string;
-    dateOfBirth?: string;
-    gender?: string;
-  };
+  guestToken?: string;
 }
 
 export interface EMRAnalysisResponse {
+  extractedData: {
+    patientName?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    diagnosis?: string[];
+    medications?: string[];
+    testResults?: any;
+    notes?: string;
+  };
+  summary: string;
+  recommendations: string[];
+}
+
+export interface EMRAnalysisResponseDto {
   extractedData: {
     patientName?: string;
     dateOfBirth?: string;
@@ -74,21 +89,32 @@ class AIChatService {
   /**
    * Send chat message to AI
    */
-  async sendMessage(message: string, conversationHistory?: ChatMessage[]): Promise<ChatMessage> {
-    try {
-      const response = await apiClient.post<ChatMessage>('/ai-chat/message', {
-        message,
-        conversationHistory: conversationHistory?.map(msg => ({
-          text: msg.text,
-          sender: msg.sender,
-          type: msg.type,
-        })),
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error('AI chat error:', error);
-      throw this.handleApiError(error);
-    }
+  // async sendMessage(message: string, conversationHistory?: ChatMessage[]): Promise<ChatMessage> {
+  //   try {
+  //     const response = await apiClient.post<ChatMessage>('/ai-chat/message', {
+  //       message,
+  //       conversationHistory: conversationHistory?.map(msg => ({
+  //         text: msg.text,
+  //         sender: msg.sender,
+  //         type: msg.type,
+  //       })),
+  //     });
+  //     return response.data;
+  //   } catch (error: any) {
+  //     console.error('AI chat error:', error);
+  //     throw this.handleApiError(error);
+  //   }
+  // }
+
+  async sendMessage(request: PromptRequest): Promise<string> {
+    const response = await apiClient.post<string>(
+      '/ai-chat/message',
+      request,
+      {
+        withCredentials: true // <-- this is the Axios equivalent of credentials: "include"
+      }
+    );
+    return response.data;
   }
 
   /**
@@ -110,15 +136,34 @@ class AIChatService {
   /**
    * Upload and analyze EMR file
    */
-  async uploadAndAnalyzeEMR(request: EMRUploadRequest): Promise<EMRAnalysisResponse> {
+  // async uploadAndAnalyzeEMR(request: EMRUploadRequest): Promise<EMRAnalysisResponse> {
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append('file', request.file);
+  //     if (request.guestToken) {
+  //       formData.append('guestToken', JSON.stringify(request.guestToken));
+  //     }
+
+  //     const response = await apiClient.postMultipart<EMRAnalysisResponse>(
+  //       '/ai-chat/analyze-emr',
+  //       formData
+  //     );
+  //     return response.data;
+  //   } catch (error: any) {
+  //     console.error('EMR analysis error:', error);
+  //     throw this.handleApiError(error);
+  //   }
+  // }
+
+  async uploadAndAnalyzeEMR(request: EMRUploadRequest): Promise<string> {
     try {
       const formData = new FormData();
       formData.append('file', request.file);
-      if (request.patientInfo) {
-        formData.append('patientInfo', JSON.stringify(request.patientInfo));
+      if (request.guestToken) {
+        formData.append('guestToken', JSON.stringify(request.guestToken));
       }
 
-      const response = await apiClient.postMultipart<EMRAnalysisResponse>(
+      const response = await apiClient.postMultipart<string>(
         '/ai-chat/analyze-emr',
         formData
       );

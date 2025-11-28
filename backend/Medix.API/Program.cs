@@ -1,3 +1,4 @@
+using Google.GenAI;
 using Hangfire;
 using Medix.API.Configurations;
 using Medix.API.DataAccess;
@@ -51,11 +52,18 @@ builder.Services.AddKeyedSingleton("TransferClient", (sp, key) =>
 // ================= CORS =================
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173") // replace with your frontend URL
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); // allow cookies/session
+    });
 });
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
+
 
 // ================= CONTROLLERS & JSON OPTIONS =================
 builder.Services.AddControllers()
@@ -141,6 +149,36 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+//config vertexAI
+builder.Services.AddSingleton(provider =>
+{
+    // Get the Project ID from your app settings (e.g., appsettings.json)
+    var configuration = provider.GetRequiredService<IConfiguration>();
+    var projectId = configuration["Vertex:ProjectId"];
+    var location = configuration["Vertex:Location"];
+
+    if (string.IsNullOrEmpty(projectId))
+    {
+        throw new InvalidOperationException("GcpProjectID configuration value is required for Vertex AI.");
+    }
+
+    // The Client uses ADC (set up in the Prerequisite step) for authentication.
+    return new Client(
+        project: projectId,
+        location: location,
+        vertexAI: true // Crucial flag to use the Vertex AI endpoint
+    );
+});
+
+//session
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 // ================= APPLICATION SERVICES =================
 // AutoMapper is already configured in ServiceConfiguration.cs
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
@@ -162,7 +200,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowAll");
+app.UseSession();
+
+app.UseCors("AllowFrontend");
 
 // Dùng để phục vụ các file tĩnh (vd: wwwroot)
 app.UseStaticFiles();

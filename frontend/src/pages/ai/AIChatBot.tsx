@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../../styles/pages/AIChatBot.module.css';
-import aiChatService, { SymptomAnalysisResponse, EMRAnalysisResponse } from '../../services/aiChatService';
+import aiChatService, { SymptomAnalysisResponse, EMRAnalysisResponse, PromptRequest } from '../../services/aiChatService';
 import { AIChatMessage } from '../../types/aiChat';
 import { getChatHistory, saveChatHistory } from '../../utils/chatHistory';
 
@@ -15,14 +15,17 @@ const createGreetingMessage = (): AIChatMessage => ({
 export const AIChatBot: React.FC = () => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<AIChatMessage[]>(() => {
-    const history = getChatHistory();
-    return history.length > 0 ? history : [createGreetingMessage()];
+    // const history = getChatHistory();
+    // return history.length > 0 ? history : [createGreetingMessage()];
+    return [createGreetingMessage()];
   });
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [guestToken, setGuestToken] = useState<string>("");
 
   const quickReplies = [
     'Khó ngủ',
@@ -32,6 +35,25 @@ export const AIChatBot: React.FC = () => {
     'Chóng mặt',
     'Buồn nôn',
   ];
+
+  useEffect(() => {
+    // Generate a new token every time the page loads
+    let token: string;
+
+    if (crypto.randomUUID) {
+      token = crypto.randomUUID(); // modern browsers
+    } else {
+      // fallback for older browsers
+      token = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    }
+
+    setGuestToken(token);
+    console.log("Generated guest token:", token);
+  }, []);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -71,15 +93,15 @@ export const AIChatBot: React.FC = () => {
         const file = uploadedFiles[0];
         const response = await aiChatService.uploadAndAnalyzeEMR({
           file,
+          guestToken,
         });
 
         const aiResponse: AIChatMessage = {
           id: (Date.now() + 1).toString(),
-          text: response.summary + '\n\n' + response.recommendations.join('\n'),
+          text: response,
           sender: 'ai',
           timestamp: new Date(),
-          type: 'emr_analysis',
-          data: response,
+          type: 'text',
         };
         setMessages(prev => [...prev, aiResponse]);
         setUploadedFiles([]);
@@ -100,73 +122,77 @@ export const AIChatBot: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Check if it's a symptom query
-      const symptomKeywords = ['đau', 'mệt', 'sốt', 'ho', 'khó', 'buồn', 'chóng', 'nóng', 'ngứa', 'triệu chứng'];
-      const isSymptomQuery = symptomKeywords.some(keyword => messageText.toLowerCase().includes(keyword));
+      //   // Check if it's a symptom query
+      //   const symptomKeywords = ['đau', 'mệt', 'sốt', 'ho', 'khó', 'buồn', 'chóng', 'nóng', 'ngứa', 'triệu chứng'];
+      //   const isSymptomQuery = symptomKeywords.some(keyword => messageText.toLowerCase().includes(keyword));
 
-      if (isSymptomQuery) {
-        // Extract symptoms (simplified - in production, use NLP)
-        const symptoms = messageText.split(/[,\n]/).map(s => s.trim()).filter(s => s.length > 0);
-        
-        const analysisResponse = await aiChatService.analyzeSymptoms({
-          symptoms: symptoms.slice(0, 10), // Limit to 10 symptoms
-          additionalInfo: messageText,
-        });
+      //   if (isSymptomQuery) {
+      //     // Extract symptoms (simplified - in production, use NLP)
+      //     const symptoms = messageText.split(/[,\n]/).map(s => s.trim()).filter(s => s.length > 0);
 
-        const severityText = analysisResponse.severity === 'mild' ? 'nhẹ' : 
-                            analysisResponse.severity === 'moderate' ? 'vừa' : 'nặng';
-        
-        let responseText = `**Đánh giá mức độ: ${severityText.toUpperCase()}**\n\n`;
-        responseText += `${analysisResponse.overview}\n\n`;
-        responseText += `**Các khả năng chẩn đoán:**\n`;
-        analysisResponse.possibleConditions.forEach((condition, index) => {
-          responseText += `${index + 1}. ${condition.condition} (${condition.probability}%)\n   ${condition.description}\n`;
-        });
+      //     const analysisResponse = await aiChatService.analyzeSymptoms({
+      //       symptoms: symptoms.slice(0, 10), // Limit to 10 symptoms
+      //       additionalInfo: messageText,
+      //     });
 
-        if (analysisResponse.homeTreatment) {
-          responseText += `\n**Hướng dẫn điều trị tại nhà:**\n`;
-          analysisResponse.homeTreatment.instructions.forEach(instruction => {
-            responseText += `• ${instruction}\n`;
-          });
-        }
+      //     const severityText = analysisResponse.severity === 'mild' ? 'nhẹ' : 
+      //                         analysisResponse.severity === 'moderate' ? 'vừa' : 'nặng';
 
-        if (analysisResponse.recommendedDoctors && analysisResponse.recommendedDoctors.length > 0) {
-          responseText += `\n**Bác sĩ được gợi ý:**\n`;
-          analysisResponse.recommendedDoctors.slice(0, 3).forEach((doctor, index) => {
-            responseText += `${index + 1}. ${doctor.name} - ${doctor.specialization}\n`;
-            responseText += `   Đánh giá: ${doctor.rating}/5.0 | Kinh nghiệm: ${doctor.experience} năm\n`;
-          });
-        }
+      //     let responseText = `**Đánh giá mức độ: ${severityText.toUpperCase()}**\n\n`;
+      //     responseText += `${analysisResponse.overview}\n\n`;
+      //     responseText += `**Các khả năng chẩn đoán:**\n`;
+      //     analysisResponse.possibleConditions.forEach((condition, index) => {
+      //       responseText += `${index + 1}. ${condition.condition} (${condition.probability}%)\n   ${condition.description}\n`;
+      //     });
 
-        const aiResponse: AIChatMessage = {
-          id: (Date.now() + 1).toString(),
-          text: responseText,
-          sender: 'ai',
-          timestamp: new Date(),
-          type: 'symptom_analysis',
-          data: analysisResponse,
-        };
-        setMessages(prev => [...prev, aiResponse]);
-      } else {
-        // Regular chat message
-        const conversationHistory = messages.map(msg => ({
-          text: msg.text,
-          sender: msg.sender,
-          type: msg.type,
-        }));
+      //     if (analysisResponse.homeTreatment) {
+      //       responseText += `\n**Hướng dẫn điều trị tại nhà:**\n`;
+      //       analysisResponse.homeTreatment.instructions.forEach(instruction => {
+      //         responseText += `• ${instruction}\n`;
+      //       });
+      //     }
 
-        const response = await aiChatService.sendMessage(messageText, conversationHistory);
-        
-        const aiResponse: AIChatMessage = {
-          id: response.id || (Date.now() + 1).toString(),
-          text: response.text,
-          sender: 'ai',
-          timestamp: new Date(response.timestamp || new Date()),
-          type: response.type as any,
-          data: response.data,
-        };
-        setMessages(prev => [...prev, aiResponse]);
-      }
+      //     if (analysisResponse.recommendedDoctors && analysisResponse.recommendedDoctors.length > 0) {
+      //       responseText += `\n**Bác sĩ được gợi ý:**\n`;
+      //       analysisResponse.recommendedDoctors.slice(0, 3).forEach((doctor, index) => {
+      //         responseText += `${index + 1}. ${doctor.name} - ${doctor.specialization}\n`;
+      //         responseText += `   Đánh giá: ${doctor.rating}/5.0 | Kinh nghiệm: ${doctor.experience} năm\n`;
+      //       });
+      //     }
+
+      //     const aiResponse: AIChatMessage = {
+      //       id: (Date.now() + 1).toString(),
+      //       text: responseText,
+      //       sender: 'ai',
+      //       timestamp: new Date(),
+      //       type: 'symptom_analysis',
+      //       data: analysisResponse,
+      //     };
+      //     setMessages(prev => [...prev, aiResponse]);
+      //   } else {
+      // Regular chat message
+      const conversationHistory = messages.map(msg => ({
+        text: msg.text,
+        sender: msg.sender,
+        type: msg.type,
+      }));
+
+      const promptRequest: PromptRequest = {
+        prompt: messageText,
+        guestToken: guestToken,
+      };
+
+      const response = await aiChatService.sendMessage(promptRequest);
+
+      const aiResponse: AIChatMessage = {
+        id: (Date.now() + 1).toString(),
+        text: response,
+        sender: 'ai',
+        timestamp: new Date(),
+        type: "text",
+        data: "response.data",
+      };
+      setMessages(prev => [...prev, aiResponse]);
     } catch (error: any) {
       const errorMessage: AIChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -266,9 +292,9 @@ export const AIChatBot: React.FC = () => {
       <div className={styles.chatHeader}>
         <div className={styles.headerLeft}>
           <div className={styles.avatarContainer}>
-            <img 
-              src="/images/medix-logo-mirrored.jpg" 
-              alt="MEDIX" 
+            <img
+              src="/images/medix-logo-mirrored.jpg"
+              alt="MEDIX"
               className={styles.avatar}
             />
             <div className={styles.statusIndicator}></div>
@@ -278,13 +304,13 @@ export const AIChatBot: React.FC = () => {
             <p className={styles.headerSubtitle}>Đang hoạt động</p>
           </div>
         </div>
-        <button 
-          className={styles.backButton} 
+        <button
+          className={styles.backButton}
           onClick={() => navigate(-1)}
           title="Quay lại"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
+            <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </button>
       </div>
@@ -297,9 +323,9 @@ export const AIChatBot: React.FC = () => {
             className={`${styles.message} ${message.sender === 'user' ? styles.userMessage : styles.aiMessage}`}
           >
             {message.sender === 'ai' && (
-              <img 
-                src="/images/medix-logo-mirrored.jpg" 
-                alt="MEDIX" 
+              <img
+                src="/images/medix-logo-mirrored.jpg"
+                alt="MEDIX"
                 className={styles.messageAvatar}
               />
             )}
@@ -324,9 +350,9 @@ export const AIChatBot: React.FC = () => {
 
         {isLoading && (
           <div className={`${styles.message} ${styles.aiMessage}`}>
-            <img 
-              src="/images/medix-logo-mirrored.jpg" 
-              alt="MEDIX" 
+            <img
+              src="/images/medix-logo-mirrored.jpg"
+              alt="MEDIX"
               className={styles.messageAvatar}
             />
             <div className={styles.messageBubble}>
@@ -348,7 +374,7 @@ export const AIChatBot: React.FC = () => {
           {uploadedFiles.map((file, index) => (
             <div key={index} className={styles.fileItem}>
               <span className={styles.fileName}>{file.name}</span>
-              <button 
+              <button
                 className={styles.removeFileButton}
                 onClick={() => removeFile(index)}
               >
@@ -407,8 +433,8 @@ export const AIChatBot: React.FC = () => {
           className={styles.sendButton}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
       </div>

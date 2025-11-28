@@ -2,9 +2,11 @@ using AutoMapper;
 using Hangfire;
 using Medix.API.BackgroundServices;
 using Medix.API.Business.Helper;
+using Medix.API.Business.Interfaces.AI;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.Community;
 using Medix.API.Business.Interfaces.UserManagement;
+using Medix.API.Business.Services.AI;
 using Medix.API.Business.Services.Classification;
 using Medix.API.Business.Services.Community;
 using Medix.API.Business.Services.UserManagement;
@@ -74,8 +76,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IAuditLogRepository, AuditLogRepository>();
             services.AddScoped<ISystemConfigurationRepository, SystemConfigurationRepository>();
             services.AddScoped<IUserPromotionRepository, UserPromotionRepository>();
-
-
+            services.AddScoped<IAISymptomAnalysisRepository, AISymptomAnalysisRepository>();
 
         }
 
@@ -135,6 +136,7 @@ namespace Medix.API.Configurations
             services.AddHttpClient<LLMService>();
             services.AddScoped<SystemConfigurationSeeder>();
 
+            services.AddScoped<IVertexAIService, VertexAIService>();
         }
 
 

@@ -165,7 +165,7 @@ namespace Medix.API.Business.Services.AI
             {
                 Id = Guid.NewGuid(),
                 Symptoms = string.Join(",", diagnosisModel.SymptomsProvided!),
-                SessionId = diagnosisModel.SessionId ?? Guid.NewGuid().ToString(),
+                SessionId = Guid.NewGuid().ToString(),
                 IsGuestSession = userId == null,
                 PatientId = patient?.Id,
                 SeverityLevelCode = GetSeverityLevelCode(diagnosisModel.SeverityCode),

@@ -52,7 +52,7 @@ namespace Medix.API.Business.Services.Community
                             .Sum();
                         var netSalary = salary * ((decimal)Constants.DoctorSalaryShare);
 
-                        var doctorSalary = new DoctorSalary
+                       if((bool)doctor.isSalaryDeduction)
                         {
                             netSalary = salary * ((decimal)Constants.DoctorSalaryShare) * 0.8m;
                         }// số thực về tài khoản bác sĩ
@@ -91,7 +91,7 @@ namespace Medix.API.Business.Services.Community
                             BalanceBefore = wallet.Balance,
                             BalanceAfter = wallet.Balance+netSalary ,
                             Status = "Completed",
-                            Description = "Paid for doctor salary",
+                            Description = "Thanh toán lương trong khoảng thời gian " +DateOnly.FromDateTime(Helpers.GetFirstDayOfMonth(date)).ToString() +" tới "+ DateOnly.FromDateTime(Helpers.GetLastDayOfMonth(date)).ToString(),
                         };
                         await _walletTransactionRepository.CreateWalletTransactionAsync(walletTransaction);
 

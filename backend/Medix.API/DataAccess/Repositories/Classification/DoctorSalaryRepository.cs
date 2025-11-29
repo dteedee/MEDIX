@@ -20,10 +20,19 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .ToListAsync();
 
         public async Task<bool> IsDoctorSalaryPaid(Guid doctorId, DateTime date)
-            => await _context.DoctorSalaries.AnyAsync(s =>
-                s.DoctorId == doctorId && 
-                (SameMonthAndYear(s.PeriodStartDate, date) || SameMonthAndYear(s.PeriodEndDate, date))
+        {
+            // compute the month range as local variables so EF Core treats them as parameters (translatable)
+            var monthStart = DateOnly.FromDateTime(new DateTime(date.Year, date.Month, 1));
+            var monthEnd = DateOnly.FromDateTime(new DateTime(date.Year, date.Month, DateTime.DaysInMonth(date.Year, date.Month)));
+
+            return await _context.DoctorSalaries.AnyAsync(s =>
+                s.DoctorId == doctorId &&
+                (
+                    (s.PeriodStartDate >= monthStart && s.PeriodStartDate <= monthEnd) ||
+                    (s.PeriodEndDate >= monthStart && s.PeriodEndDate <= monthEnd)
+                )
             );
+        }
 
         public async Task CreateAsync(DoctorSalary doctorSalary)
         {

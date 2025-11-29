@@ -533,12 +533,7 @@ const MedicalRecordDetails: React.FC = () => {
               name="chiefComplaint"
               className={`form-textarea ${fieldErrors.chiefComplaint ? 'input-error' : ''}`}
               value={medicalRecord.chiefComplaint || ''}
-              onClick={() => {
-                if (isBanned) showBannedPopup();
-              }}
-              onChange={handleFieldChange}
-              onBlur={handleFieldBlur}
-              disabled={!isEditable} // Vô hiệu hóa nếu không được phép chỉnh sửa
+              disabled={true}
               rows={3} ></textarea>
             {fieldErrors.chiefComplaint && <p className="error-message">{fieldErrors.chiefComplaint}</p>}
           </div>
@@ -548,13 +543,8 @@ const MedicalRecordDetails: React.FC = () => {
               name="physicalExamination"
               className={`form-textarea ${fieldErrors.physicalExamination ? 'input-error' : ''}`}
               value={medicalRecord.physicalExamination || ''}
-              onClick={() => {
-                if (isBanned) showBannedPopup();
-              }}
-              onChange={handleFieldChange}
-              onBlur={handleFieldBlur}
-              rows={5}
-              disabled={!isEditable} />
+              disabled={true}
+              rows={5} />
             {fieldErrors.physicalExamination && <p className="error-message">{fieldErrors.physicalExamination}</p>}
           </div>
         </div>

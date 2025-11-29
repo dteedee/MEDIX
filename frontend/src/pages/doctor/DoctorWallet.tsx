@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import doctorSalaryService from '../../services/doctorSalaryService';
-import { DoctorSalary } from '../../types/doctor.types';
 import { walletService } from '../../services/walletService';
 import { WalletDto, OrderCreateRequest, WalletTransactionDto, BankInfo, WithdrawalRequest, TransferTransactionCreateRequest } from '../../types/wallet.types';
 import styles from '../../styles/doctor/DoctorWallet.module.css';
@@ -53,7 +51,6 @@ export const DoctorWallet: React.FC = () => {
   const { user } = useAuth();
   const [wallet, setWallet] = useState<WalletDto | null>(null);
   const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
-  const [salaries, setSalaries] = useState<DoctorSalary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingTransactions, setLoadingTransactions] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,12 +103,8 @@ export const DoctorWallet: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const [walletData, salaryData] = await Promise.all([
-          walletService.getWalletByUserId().catch(() => null),
-          doctorSalaryService.getSalaries().catch(() => [])
-        ]);
+        const walletData = await walletService.getWalletByUserId().catch(() => null);
         setWallet(walletData);
-        setSalaries(salaryData);
         await fetchTransactions();
       } catch (err: any) {
         setError(err.message || 'Không thể tải thông tin ví');
@@ -538,10 +531,6 @@ export const DoctorWallet: React.FC = () => {
         return transaction.description || `Rút tiền từ ví${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
       
       case 'DoctorSalary':
-        const salary = salaries.find(s => s.id === transaction.relatedAppointmentId);
-        if (salary) {
-          return `Lương tháng ${formatDate(new Date(salary.periodStartDate))} - ${formatDate(new Date(salary.periodEndDate))}`;
-        }
         return transaction.description || `Lương bác sĩ${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
       
       case 'SystemCommission':
@@ -553,36 +542,13 @@ export const DoctorWallet: React.FC = () => {
     }
   };
 
-  const formatSalaryDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
   const allTransactions = useMemo(() => {
-    const salaryTransactions: WalletTransactionDto[] = salaries.map(salary => ({
-      id: salary.id,
-      walletId: '',
-      transactionTypeCode: 'DoctorSalary',
-      amount: salary.netSalary,
-      balanceAfter: 0,
-      description: `Lương tháng ${formatSalaryDate(salary.periodStartDate)} - ${formatSalaryDate(salary.periodEndDate)}`,
-      status: 'Completed',
-      transactionDate: salary.paidAt,
-      createdAt: salary.paidAt,
-      relatedAppointmentId: salary.id,
-      orderCode: 0
-    }));
-
-    return [...salaryTransactions, ...transactions].sort((a, b) => {
+    return [...transactions].sort((a, b) => {
       const dateA = a.transactionDate || a.createdAt || '';
       const dateB = b.transactionDate || b.createdAt || '';
       return new Date(dateB).getTime() - new Date(dateA).getTime();
     });
-  }, [salaries, transactions]);
+  }, [transactions]);
 
   const filteredTransactions = useMemo(() => {
     if (activeTab === 'all') {

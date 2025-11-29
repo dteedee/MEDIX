@@ -50,21 +50,29 @@ namespace Medix.API.Business.Services.Community
                         var salary = doctor.Appointments
                             .Select(a => a.TotalAmount)
                             .Sum();
-                        var netSalary = salary * ((decimal)Constants.DoctorSalaryShare);
-
-                        //insert into doctor salary
-                        var doctorSalary = new DoctorSalary
+                        decimal netSalary = 0;
+                        if (doctor.isSalaryDeduction == true)
                         {
-                            DoctorId = doctor.Id,
-                            PeriodStartDate = DateOnly.FromDateTime(Helpers.GetFirstDayOfMonth(date)),
-                            PeriodEndDate = DateOnly.FromDateTime(Helpers.GetLastDayOfMonth(date)),
-                            TotalAppointments = doctor.Appointments.Count(),
-                            TotalEarnings = salary,
-                            CommissionDeductions = salary - netSalary,
-                            NetSalary = netSalary,
-                            Status = "Paid",
-                            PaidAt = DateTime.UtcNow,
-                        };
+                            netSalary = salary * ((decimal)Constants.DoctorSalaryShare) * 0.8m;
+                        }// số thực về tài khoản bác sĩ
+                        else
+                        {
+                            netSalary = salary * ((decimal)Constants.DoctorSalaryShare);
+                        }
+
+                            //insert into doctor salary
+                            var doctorSalary = new DoctorSalary
+                            {
+                                DoctorId = doctor.Id,
+                                PeriodStartDate = DateOnly.FromDateTime(Helpers.GetFirstDayOfMonth(date)),
+                                PeriodEndDate = DateOnly.FromDateTime(Helpers.GetLastDayOfMonth(date)),
+                                TotalAppointments = doctor.Appointments.Count(),
+                                TotalEarnings = salary,
+                                CommissionDeductions = salary - netSalary,
+                                NetSalary = netSalary,
+                                Status = "Paid",
+                                PaidAt = DateTime.UtcNow,
+                            };
                         await _salaryRepository.CreateAsync(doctorSalary);
 
                         //add to balance
@@ -81,8 +89,8 @@ namespace Medix.API.Business.Services.Community
                             WalletId = wallet.Id,
                             TransactionTypeCode = "DoctorSalary",
                             Amount = netSalary,
-                            BalanceBefore = wallet.Balance - netSalary,
-                            BalanceAfter = wallet.Balance,
+                            BalanceBefore = wallet.Balance,
+                            BalanceAfter = wallet.Balance+netSalary ,
                             Status = "Completed",
                             Description = "Paid for doctor salary",
                         };

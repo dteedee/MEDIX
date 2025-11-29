@@ -12,6 +12,7 @@ import { MedicalRecordDto } from '../../types/medicalRecord.types';
 import { DoctorProfileDto } from '../../types/doctor.types';
 import { PatientHealthReminderDto } from '../../types/patient.types';
 import styles from '../../styles/patient/PatientDashboard.module.css';
+import ReminderCard from '../../components/ReminderCard';
 import { apiClient } from '../../lib/apiClient';
 import modalStyles from '../../styles/patient/PatientAppointments.module.css';
 
@@ -645,59 +646,27 @@ export const PatientDashboard: React.FC = () => {
                 )}
               </div>
             </div>
-            
             {reminders.length > 0 ? (
               <>
-                <div className={styles.reminderList}>
-                  {reminders.slice(0, 2).map((reminder, index) => {
-                    const now = new Date();
-                    const scheduledDate = reminder.scheduledDate ? new Date(reminder.scheduledDate) : now;
-                    const hoursUntil = Math.floor((scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60));
-                    
-                    return (
-                      <div 
-                        key={reminder.id || index} 
-                        className={styles.reminderItem}
-                        style={{ animationDelay: `${index * 0.1}s` }}
-                        onClick={() => {
-                          if (reminder.relatedAppointmentId) {
-                            navigate('/app/patient/appointments');
-                          }
-                        }}
-                      >
-                        <div className={styles.reminderContent}>
-                          <div className={styles.reminderHeader}>
-                            <div className={styles.reminderIconSmall}>
-                              <i className="bi bi-calendar-check"></i>
-                            </div>
-                            <div className={styles.reminderInfo}>
-                              <h5>{reminder.title || 'Nhắc nhở khám bệnh'}</h5>
-                              <p className={styles.reminderTime}>
-                                <i className="bi bi-clock"></i>
-                                {reminder.scheduledDate ? formatDate(reminder.scheduledDate) : 'Chưa xác định'}
-                              </p>
-                            </div>
-                          </div>
-                          {reminder.description && (
-                            <p className={styles.reminderDescription}>{reminder.description}</p>
-                          )}
-                          <div className={styles.reminderUrgency}>
-                            <i className={`bi ${hoursUntil <= 24 ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'}`}></i>
-                            <span style={{ color: hoursUntil <= 24 ? '#ff6b6b' : '#f59e0b' }}>
-                              {hoursUntil <= 0 
-                                ? 'Đã đến hạn' 
-                                : hoursUntil <= 24 
-                                ? `Còn ${hoursUntil} giờ` 
-                                : `Còn ${Math.floor(hoursUntil / 24)} ngày`
-                              }
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                
+                {reminders.slice(0, 2).map((reminder, index) => {
+                  const now = new Date();
+                  const scheduledDate = reminder.scheduledDate ? new Date(reminder.scheduledDate) : now;
+                  const hoursUntil = Math.floor((scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+                  const remaining = hoursUntil <= 0
+                    ? 'Đã đến hạn'
+                    : hoursUntil <= 24
+                    ? `Còn ${hoursUntil} giờ`
+                    : `Còn ${Math.floor(hoursUntil / 24)} ngày`;
+                  return (
+                    <ReminderCard
+                      key={reminder.id || index}
+                      date={reminder.scheduledDate ? formatDate(reminder.scheduledDate) : 'Chưa xác định'}
+                      time={reminder.scheduledDate ? formatTime(reminder.scheduledDate) : ''}
+                      message={reminder.description || ''}
+                      remaining={remaining}
+                    />
+                  );
+                })}
                 {reminders.length > 2 && (
                   <button 
                     className={styles.viewAllRemindersBtn}

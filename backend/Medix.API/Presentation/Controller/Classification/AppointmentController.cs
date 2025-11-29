@@ -1,4 +1,5 @@
-﻿using Medix.API.Application.Util;
+﻿using Hangfire;
+using Medix.API.Application.Util;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.Community;
 using Medix.API.Business.Interfaces.UserManagement;
@@ -205,10 +206,21 @@ namespace Medix.API.Presentation.Controllers
                 MedicalInfo = dto.Result.MedicalInfo,
             };
             updateDto.AppointmentStartTime = DateTime.UtcNow.AddHours(7);
-            updateDto.AppointmentEndTime = DateTime.UtcNow.AddHours(7).AddMinutes(1);
+            updateDto.AppointmentEndTime = DateTime.UtcNow.AddHours(7).AddMinutes(3);
+            var x = new PatientHealthReminder
+            {
+                Title = "Nhắc nhở lịch khám - 1 ngày trước",
+                Description = $"Bạn có một cuộc hẹn với bác sĩ vào ngày {updateDto.AppointmentStartTime:dd/MM/yyyy} lúc {updateDto.AppointmentStartTime:HH:mm}. Vui lòng đến đúng giờ.",
+                PatientId = (Guid)dto.Result.PatientID,
+                RelatedAppointmentId = dto.Result.Id,
+                ReminderTypeCode = "FollowUp",
+                ScheduledDate = DateTime.UtcNow.AddHours(7)
+            };
+            BackgroundJob.Schedule<IPatientHealthReminderService>(
+                   service => service.ExecuteSendReminderAsync(x),
+                  DateTime.Now);
 
-
-            var updated = await _service.UpdateAsync(updateDto);
+       var updated = await _service.UpdateAsync(updateDto);
             if (updated == null)
                 return NotFound();
 
@@ -266,6 +278,7 @@ namespace Medix.API.Presentation.Controllers
 
 
         [HttpPut("UpdateStatus/{id}/{status}")]
+        [Authorize(Roles ="Doctor")]
         public async Task<IActionResult> Status(Guid id, string status)
         {
           

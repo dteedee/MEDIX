@@ -85,10 +85,20 @@ export default function DoctorEvaluation({
       let recommendation = '';
       let recommendationType: 'salary' | 'education' | 'both' | 'none' = 'none';
       
-      if (performanceScore >= 80 && perfData.reviewCount >= 20) {
+      if (
+        performanceScore >= 80 &&
+        perfData.reviewCount >= 20 &&
+        perfData.averageRating > 4 &&
+        perfData.successRate > 0.75
+      ) {
         recommendation = 'Ứng viên xuất sắc cho tăng lương và nâng cấp trình độ học vấn';
         recommendationType = 'both';
-      } else if (performanceScore >= 70 && perfData.reviewCount >= 10) {
+      } else if (
+        performanceScore >= 70 &&
+        perfData.reviewCount >= 15 &&
+        perfData.successRate > 0.6 &&
+        perfData.averageRating > 3.5
+      ) {
         recommendation = 'Ứng viên cho tăng lương';
         recommendationType = 'salary';
       } else if (perfData.successRate >= 0.8 && perfData.averageRating >= 4.0) {

@@ -682,14 +682,14 @@ namespace Medix.API.Business.Services.Classification
         }
 
         // Updated: evaluate ALL doctors in DB (if count <= 0 return all; otherwise return top 'count')
-        public async Task<List<TopDoctorPerformanceDto>> GetTopDoctorsByPerformanceAsync( double ratingWeight = 0.7, double successWeight = 0.3)
+        public async Task<List<TopDoctorPerformanceDto>> GetTopDoctorsByPerformanceAsync( double ratingWeight = 0.6, double successWeight = 0.4)
         {
             // Normalize weights
             var weightSum = ratingWeight + successWeight;
             if (weightSum <= 0)
             {
-                ratingWeight = 0.7;
-                successWeight = 0.3;
+                ratingWeight = 0.6;
+                successWeight = 0.4;
                 weightSum = 1.0;
             }
             ratingWeight /= weightSum;
@@ -761,7 +761,7 @@ namespace Medix.API.Business.Services.Classification
                 });
             }
 
-            // Order by composite score desc then by review count desc
+       
             var ordered = results
                 .OrderByDescending(r => r.CompositeScore)
                 .ThenByDescending(r => r.ReviewCount);
@@ -772,42 +772,5 @@ namespace Medix.API.Business.Services.Classification
             return ordered.ToList();
         }
 
-
-        //public static string GetAcceptEmailBody(string newPassword, string fullName)
-        //{
-        //    return $@"
-        //        <p>Bác sĩ {fullName} thân mến,</p>
-        //        <p>Hồ sơ bác sĩ của bạn đã được phê duyệt thành công. Chúng tôi rất vui mừng được chào đón bạn đến với nền tảng Medix.</p>
-
-        //        <p>Vui lòng sử dụng mật khẩu dưới đây để đăng nhập vào hệ thống:</p>
-
-        //        <div style=""margin: 1em 0; padding: 1em; border-radius: 8px; background-color: #f0f4f8; border: 1px solid #d0d7de; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Segoe UI', sans-serif;"">
-        //          <label style=""display: block; font-weight: 600; font-size: 1.1em; color: #333; margin-bottom: 0.5em;"">
-        //            🔐 Mật khẩu đăng nhập:
-        //          </label>
-        //          <div style=""display: inline-block; padding: 0.75em 1.5em; font-size: 1.4em; font-weight: bold; color: #2c3e50; background-color: #ffffff; border: 2px solid #4da6ff; border-radius: 6px; letter-spacing: 2px;"">
-        //            {newPassword}
-        //          </div>
-        //        </div>
-
-        //        <p>Vui lòng đổi mật khẩu sau khi đăng nhập để đảm bảo bảo mật thông tin cá nhân.</p>
-        //        <p>Trân trọng,<br/>Đội ngũ Medix</p>
-        //    ";
-        //}
-
-        //private static string GetRejectEmailBody(string reason, string fullName)
-        //{
-        //    return $@"
-        //        <p>Bác sĩ {fullName} thân mến,</p>
-        //        <p>Chúng tôi rất tiếc phải thông báo rằng hồ sơ bác sĩ của bạn chưa được phê duyệt. Sau khi xem xét kỹ lưỡng, chúng tôi nhận thấy hồ sơ của bạn hiện chưa đáp ứng đầy đủ các tiêu chuẩn cần thiết.</p>
-
-        //        <p><strong>Lý do từ quản lý:</strong> {reason}</p>
-
-        //        <p>Nếu bạn có bất kỳ thắc mắc nào hoặc không hài lòng với quyết định này, xin vui lòng liên hệ với đội ngũ hỗ trợ của chúng tôi. Trong trường hợp bạn muốn thử lại, vui lòng tiến hành đăng ký lại để cập nhật thông tin và hoàn thiện hồ sơ.</p>
-
-        //        <p>Chân thành cảm ơn sự thông cảm của bạn.</p>
-        //        <p>Trân trọng,<br/>Đội ngũ Medix</p>
-        //    ";
-        //}
     }
 }

@@ -98,7 +98,7 @@ namespace Medix.API.Business.Services.Classification
         public async Task ExecuteSendReminderAsync(PatientHealthReminder healthReminder)
         {
             var x = await appointmentService.GetByIdAsync((Guid)healthReminder.RelatedAppointmentId);
-            if (x.StatusCode != "Completed") {
+            if (x.StatusCode == "CancelledByPatient") {
                 return; }
 
             await patientHealthReminderRepository.SendHealthReminderAsync(healthReminder);
@@ -226,12 +226,12 @@ namespace Medix.API.Business.Services.Classification
             return 0;
         }
 
-        public async Task<List<PatientHealthReminderDto>> getReminderswithPatientID(Guid patientId, string Code)
+        public async Task<List<PatientHealthReminderDto>> getReminderswithPatientID(Guid patientId)
         {
-            var reminders = await patientHealthReminderRepository.getReminderswithPatientID(patientId, Code);
+            var reminders = await patientHealthReminderRepository.getReminderswithPatientID(patientId);
 
 
-            var reminderDtos = reminders.Where(x=>x.ReminderTypeCode== Code).Select(r => new PatientHealthReminderDto
+            var reminderDtos = reminders.Select(r => new PatientHealthReminderDto
             {
                 Id = r.Id,
                 PatientId = r.PatientId,

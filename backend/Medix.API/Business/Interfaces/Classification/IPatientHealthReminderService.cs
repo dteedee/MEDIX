@@ -34,7 +34,7 @@ namespace Medix.API.Business.Interfaces.Classification
         /// <param name="healthReminder">Đối tượng nhắc nhở cần tạo.</param>
         /// <returns>Đối tượng PatientHealthReminder đã được tạo.</returns>
         Task<PatientHealthReminder> CreateHealthReminder(PatientHealthReminder healthReminder);
-        Task<List<PatientHealthReminderDto>> getReminderswithPatientID(Guid patientId, string Code);
+        Task<List<PatientHealthReminderDto>> getReminderswithPatientID(Guid patientId);
 
         Task<PatientHealthReminderDto> updateReminder(PatientHealthReminderDto reminder);
 

@@ -7,7 +7,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
 
         public Task<PatientHealthReminder> SendHealthReminderAsync(PatientHealthReminder reminder);
 
-        public Task<List<PatientHealthReminder>> getReminderswithPatientID(Guid patientId, string Code);
+        public Task<List<PatientHealthReminder>> getReminderswithPatientID(Guid patientId);
 
           public Task updateReminder(PatientHealthReminder reminder);
      

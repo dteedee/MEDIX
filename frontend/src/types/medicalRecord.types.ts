@@ -39,6 +39,7 @@ export interface MedicalRecord {
   weight?: number;
   medicalHistory?: string;
   allergies?: string;
+  diseaseHistory?: string;
   // Thêm các trường từ User
   genderCode?: string;
   dateOfBirth?: string;

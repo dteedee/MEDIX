@@ -19,30 +19,22 @@ namespace Medix.API.Business.Services.Classification
             _httpClient = httpClient;
             _knowledgeBase = new MedicalKnowledgeBase();
         }
-
-        /// <summary>
-        /// Generate response using LLM with context
-        /// Supports Gemini API, OpenAI API or rule-based fallback
-        /// </summary>
         public async Task<string> GenerateResponseAsync(string userMessage, string? context = null, List<ChatMessage>? conversationHistory = null)
         {
             try
             {
-                // Prefer Gemini if configured
                 var geminiApiKey = _configuration["Gemini:ApiKey"];
                 if (!string.IsNullOrEmpty(geminiApiKey))
                 {
                     return await CallGeminiAsync(userMessage, context, conversationHistory);
                 }
 
-                // Try to use OpenAI API if configured
                 var openAiApiKey = _configuration["OpenAI:ApiKey"];
                 if (!string.IsNullOrEmpty(openAiApiKey))
                 {
                     return await CallOpenAIAsync(userMessage, context, conversationHistory);
                 }
 
-                // Fallback to rule-based with enhanced medical knowledge
                 return await GenerateEnhancedRuleBasedResponseAsync(userMessage, context, conversationHistory);
             }
             catch (Exception ex)
@@ -51,24 +43,18 @@ namespace Medix.API.Business.Services.Classification
                 return await GenerateEnhancedRuleBasedResponseAsync(userMessage, context, conversationHistory);
             }
         }
-
-        /// <summary>
-        /// Analyze symptoms with medical reasoning using comprehensive medical knowledge
-        /// </summary>
         public async Task<SymptomAnalysisResult> AnalyzeSymptomsWithLLMAsync(List<string> symptoms, string? additionalInfo, string? context)
         {
             var prompt = BuildSymptomAnalysisPrompt(symptoms, additionalInfo, context);
             
             try
             {
-                // Prefer Gemini if available
                 var geminiApiKey = _configuration["Gemini:ApiKey"];
                 if (!string.IsNullOrEmpty(geminiApiKey))
                 {
                     return await CallGeminiForSymptomAnalysisAsync(symptoms, additionalInfo, context);
                 }
 
-                // Try OpenAI API if configured
                 var openAiApiKey = _configuration["OpenAI:ApiKey"];
                 if (!string.IsNullOrEmpty(openAiApiKey))
                 {
@@ -80,13 +66,8 @@ namespace Medix.API.Business.Services.Classification
                 _logger.LogWarning(ex, "LLM API call failed, using rule-based analysis");
             }
 
-            // Enhanced rule-based analysis with comprehensive medical knowledge
             return await AnalyzeSymptomsWithMedicalKnowledgeAsync(symptoms, additionalInfo, context);
         }
-
-        /// <summary>
-        /// Classify severity level using medical guidelines and risk assessment
-        /// </summary>
         public async Task<SeverityClassification> ClassifySeverityAsync(List<string> symptoms, Dictionary<string, object> patientInfo)
         {
             await Task.CompletedTask;
@@ -105,34 +86,25 @@ namespace Medix.API.Business.Services.Classification
                 UrgencyLevel = urgencyLevel
             };
         }
-
-        /// <summary>
-        /// Check if query is health-related with comprehensive keyword matching
-        /// </summary>
         public async Task<bool> IsHealthRelatedQueryAsync(string query)
         {
             await Task.CompletedTask;
 
             var lowerQuery = query.ToLower();
             
-            // Comprehensive health-related keywords
             var healthKeywords = new[]
             {
-                // Vietnamese
                 "bệnh", "triệu chứng", "đau", "sốt", "ho", "mệt", "khám", "bác sĩ", "thuốc",
                 "điều trị", "chẩn đoán", "sức khỏe", "y tế", "bệnh viện", "phòng khám",
                 "khám bệnh", "điều trị", "thuốc men", "bệnh án", "hồ sơ bệnh án",
                 "emr", "xét nghiệm", "chụp chiếu", "phẫu thuật", "phục hồi",
-                // English
                 "disease", "symptom", "pain", "fever", "cough", "doctor", "medicine", "treatment",
                 "diagnosis", "health", "medical", "hospital", "clinic", "patient", "illness"
             };
 
-            // Check direct keyword match
             if (healthKeywords.Any(keyword => lowerQuery.Contains(keyword)))
                 return true;
 
-            // Check for medical question patterns
             var questionPatterns = new[]
             {
                 @"(làm sao|như thế nào|tại sao|vì sao).*(bệnh|đau|sốt|ho|mệt)",
@@ -148,17 +120,12 @@ namespace Medix.API.Business.Services.Classification
 
             return false;
         }
-
-        /// <summary>
-        /// Extract structured information from unstructured text using pattern matching and NLP
-        /// </summary>
         public async Task<T> ExtractStructuredDataAsync<T>(string text, string schema) where T : class
         {
             await Task.CompletedTask;
 
             try
             {
-                // Try to parse as JSON first
                 if (schema.Contains("json", StringComparison.OrdinalIgnoreCase))
                 {
                     var jsonOptions = new JsonSerializerOptions
@@ -169,7 +136,6 @@ namespace Medix.API.Business.Services.Classification
                     return JsonSerializer.Deserialize<T>(text, jsonOptions) ?? Activator.CreateInstance<T>();
                 }
 
-                // Pattern-based extraction for common medical data structures
                 return ExtractByPattern<T>(text, schema);
             }
             catch (Exception ex)
@@ -179,7 +145,6 @@ namespace Medix.API.Business.Services.Classification
             }
         }
 
-        // Private helper methods
 
         private async Task<string> CallOpenAIAsync(string userMessage, string? context, List<ChatMessage>? conversationHistory)
         {
@@ -231,7 +196,6 @@ namespace Medix.API.Business.Services.Classification
             var prompt = BuildSymptomAnalysisPrompt(symptoms, additionalInfo, context);
             var response = await CallOpenAIAsync(prompt, context, null);
             
-            // Parse structured response from OpenAI
             return ParseSymptomAnalysisResponse(response, symptoms);
         }
 
@@ -332,11 +296,10 @@ namespace Medix.API.Business.Services.Classification
 
         private async Task<string> GenerateEnhancedRuleBasedResponseAsync(string userMessage, string? context, List<ChatMessage>? conversationHistory)
         {
-            await Task.Delay(100); // Simulate processing
+            await Task.Delay(100); 
 
             var lowerMessage = userMessage.ToLower();
             
-            // Enhanced greeting responses
             if (lowerMessage.Contains("xin chào") || lowerMessage.Contains("hello") || lowerMessage.Contains("chào"))
             {
                 return "Xin chào! Tôi là MEDIX AI, trợ lý y tế thông minh của bạn. " +
@@ -348,7 +311,6 @@ namespace Medix.API.Business.Services.Classification
                        "Bạn cần hỗ trợ gì hôm nay?";
             }
 
-            // Thank you responses
             if (lowerMessage.Contains("cảm ơn") || lowerMessage.Contains("thanks") || lowerMessage.Contains("thank"))
             {
                 return "Không có gì! Tôi luôn sẵn sàng hỗ trợ bạn. " +
@@ -356,20 +318,17 @@ namespace Medix.API.Business.Services.Classification
                        "Chúc bạn sức khỏe tốt! 💙";
             }
 
-            // Medical knowledge responses
             var medicalResponse = _knowledgeBase.GetResponseForQuery(lowerMessage);
             if (!string.IsNullOrEmpty(medicalResponse))
             {
                 return medicalResponse;
             }
 
-            // Context-aware responses
             if (!string.IsNullOrEmpty(context))
             {
                 return GenerateContextualResponse(userMessage, context);
             }
 
-            // Default helpful response
             return "Cảm ơn bạn đã chia sẻ. Tôi đang phân tích thông tin và sẽ đưa ra gợi ý phù hợp nhất. " +
                    "Bạn có thể mô tả chi tiết hơn về vấn đề sức khỏe của mình không?";
         }
@@ -434,7 +393,6 @@ namespace Medix.API.Business.Services.Classification
             
             if (history != null && history.Any())
             {
-                // Keep last 10 messages for context
                 var recentHistory = history.TakeLast(10).ToList();
                 messages.AddRange(recentHistory);
             }
@@ -476,7 +434,6 @@ namespace Medix.API.Business.Services.Classification
             var symptomText = string.Join(" ", symptoms).ToLower();
             var severityScore = 0;
 
-            // Critical symptoms (severe)
             var criticalSymptoms = new[]
             {
                 "khó thở", "thở gấp", "thở nhanh", "thở khò khè",
@@ -488,7 +445,6 @@ namespace Medix.API.Business.Services.Classification
                 "mất máu", "sốc", "shock"
             };
 
-            // Moderate symptoms
             var moderateSymptoms = new[]
             {
                 "đau đầu", "đau đầu dữ dội", "đau đầu kéo dài",
@@ -500,7 +456,6 @@ namespace Medix.API.Business.Services.Classification
                 "đau bụng", "đau dạ dày"
             };
 
-            // Count severity indicators
             foreach (var symptom in criticalSymptoms)
             {
                 if (symptomText.Contains(symptom))
@@ -517,14 +472,12 @@ namespace Medix.API.Business.Services.Classification
                 }
             }
 
-            // Check duration from patient info
             var duration = patientInfo.ContainsKey("duration") ? patientInfo["duration"]?.ToString()?.ToLower() : "";
             if (duration.Contains("ngày") || duration.Contains("tuần") || duration.Contains("tháng"))
             {
-                severityScore += 1; // Longer duration increases severity
+                severityScore += 1; 
             }
 
-            // Determine level
             if (severityScore >= 3)
                 return "severe";
             if (severityScore >= 1)
@@ -539,13 +492,12 @@ namespace Medix.API.Business.Services.Classification
             var symptomText = string.Join(" ", symptoms).ToLower();
             var allInfo = symptomText + " " + (additionalInfo?.ToLower() ?? "");
 
-            // Comprehensive condition mapping based on medical knowledge
             var conditionMap = _knowledgeBase.GetConditionsForSymptoms(symptoms);
 
             foreach (var condition in conditionMap)
             {
                 var matchScore = CalculateSymptomMatchScore(symptoms, condition.Symptoms);
-                if (matchScore > 0.3) // Minimum threshold
+                if (matchScore > 0.3) 
                 {
                     conditions.Add(new ConditionProbability
                     {
@@ -558,7 +510,6 @@ namespace Medix.API.Business.Services.Classification
                 }
             }
 
-            // If no conditions found, add generic recommendation
             if (!conditions.Any())
             {
                 conditions.Add(new ConditionProbability
@@ -590,35 +541,30 @@ namespace Medix.API.Business.Services.Classification
             var missing = new List<string>();
             var allText = string.Join(" ", symptoms).ToLower() + " " + (additionalInfo?.ToLower() ?? "");
 
-            // Check for duration
             if (!allText.Contains("thời gian") && !allText.Contains("bao lâu") && 
                 !allText.Contains("ngày") && !allText.Contains("tuần") && !allText.Contains("giờ"))
             {
                 missing.Add("Thời gian xuất hiện triệu chứng (bao lâu rồi?)");
             }
 
-            // Check for severity level
             if (!allText.Contains("mức độ") && !allText.Contains("nhẹ") && 
                 !allText.Contains("vừa") && !allText.Contains("nặng"))
             {
                 missing.Add("Mức độ nghiêm trọng của triệu chứng");
             }
 
-            // Check for location (for pain)
             if (allText.Contains("đau") && !allText.Contains("vị trí") && 
                 !allText.Contains("ở đâu") && !allText.Contains("chỗ nào"))
             {
                 missing.Add("Vị trí đau cụ thể");
             }
 
-            // Check for triggers
             if (!allText.Contains("khi nào") && !allText.Contains("lúc nào") && 
                 !allText.Contains("nguyên nhân"))
             {
                 missing.Add("Yếu tố khởi phát hoặc tình huống xuất hiện");
             }
 
-            // Check for associated symptoms
             if (symptoms.Count < 2)
             {
                 missing.Add("Các triệu chứng kèm theo khác (nếu có)");
@@ -686,7 +632,6 @@ namespace Medix.API.Business.Services.Classification
             var riskFactors = new List<string>();
             var symptomText = string.Join(" ", symptoms).ToLower();
 
-            // Critical risk factors
             if (symptomText.Contains("khó thở") || symptomText.Contains("thở gấp"))
             {
                 riskFactors.Add("Khó thở có thể là dấu hiệu của các bệnh lý nghiêm trọng về tim, phổi");
@@ -707,7 +652,6 @@ namespace Medix.API.Business.Services.Classification
                 riskFactors.Add("Sốt cao kéo dài có thể là dấu hiệu nhiễm trùng nặng");
             }
 
-            // Age-related risks (if available in patientInfo)
             if (patientInfo.ContainsKey("age"))
             {
                 var age = Convert.ToInt32(patientInfo["age"]);
@@ -748,7 +692,6 @@ namespace Medix.API.Business.Services.Classification
             var symptomCountScore = Math.Min(symptoms.Count / 5.0, 1.0) * 0.5;
             var completenessScore = 0.0;
 
-            // Check if patient info has key fields
             var hasDuration = patientInfo.ContainsKey("duration") && !string.IsNullOrEmpty(patientInfo["duration"]?.ToString());
             var hasSeverity = patientInfo.ContainsKey("severity") && !string.IsNullOrEmpty(patientInfo["severity"]?.ToString());
             var hasAdditionalInfo = patientInfo.ContainsKey("additionalInfo") && !string.IsNullOrEmpty(patientInfo["additionalInfo"]?.ToString());
@@ -788,15 +731,13 @@ namespace Medix.API.Business.Services.Classification
 
         private T ExtractByPattern<T>(string text, string schema) where T : class
         {
-            // Pattern-based extraction for common structures
-            // This is a simplified version - in production, use NLP/ML models
+
             
             var instance = Activator.CreateInstance<T>();
             var properties = typeof(T).GetProperties();
 
             foreach (var prop in properties)
             {
-                // Try to extract value based on property name
                 var pattern = $@"{prop.Name}[:\s]+([^\n]+)";
                 var match = System.Text.RegularExpressions.Regex.Match(text, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                 
@@ -817,8 +758,7 @@ namespace Medix.API.Business.Services.Classification
 
         private SymptomAnalysisResult ParseSymptomAnalysisResponse(string response, List<string> symptoms)
         {
-            // Parse OpenAI response into structured format
-            // This is a simplified parser - in production, use structured output from OpenAI
+
             
             return new SymptomAnalysisResult
             {
@@ -832,7 +772,6 @@ namespace Medix.API.Business.Services.Classification
         }
     }
 
-    // Medical Knowledge Base Helper Class
     internal class MedicalKnowledgeBase
     {
         private readonly Dictionary<string, string> _responses;

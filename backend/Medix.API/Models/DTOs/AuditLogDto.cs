@@ -10,7 +10,6 @@
         public DateTime Timestamp { get; set; }
         public string? IpAddress { get; set; }
 
-        // Dữ liệu thay đổi (optional)
         public object? OldValues { get; set; }
         public object? NewValues { get; set; }
     }

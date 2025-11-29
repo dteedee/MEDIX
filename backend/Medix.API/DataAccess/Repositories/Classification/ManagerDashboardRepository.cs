@@ -16,15 +16,11 @@ namespace Medix.API.DataAccess.Repositories.Classification
         public async Task<ManagerDashboardDto> GetDashboardAsync()
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
-            // Convert .NET DayOfWeek (Sunday=0, Monday=1, ...) to our system (Monday=1, ..., Sunday=7)
             var dotNetDayOfWeek = (int)DateTime.Now.DayOfWeek;
             var dayOfWeek = dotNetDayOfWeek == 0 ? 7 : dotNetDayOfWeek;
 
             var dto = new ManagerDashboardDto();
 
-            // ================================
-            // 1. LỊCH LÀM VIỆC BÁC SĨ HÔM NAY
-            // ================================
             var doctors = await _context.Doctors
                 .Include(d => d.User)
                 .Include(d => d.Specialization)
@@ -47,7 +43,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                     SpecializationName = doctor.Specialization.Name
                 };
 
-                // Schedule cố định
                 var doctorSchedules = schedules.Where(s => s.DoctorId == doctor.Id);
                 foreach (var s in doctorSchedules)
                 {
@@ -59,7 +54,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                     });
                 }
 
-                // Override (nghỉ phép / ca làm thêm)
                 var doctorOverrides = overrides.Where(o => o.DoctorId == doctor.Id);
                 foreach (var ovr in doctorOverrides)
                 {
@@ -76,9 +70,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 dto.DoctorsTodaySchedules.Add(doctorDto);
             }
 
-            // ================================
-            // 2. THỐNG KÊ LỊCH HẸN
-            // ================================
             var stats = await _context.Appointments.ToListAsync();
 
             dto.AppointmentStats = new AppointmentStatisticsDto
@@ -96,9 +87,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 TodayAppointmentsCount = stats.Count(a => a.AppointmentStartTime.Date == DateTime.Today)
             };
 
-            // ================================
-            // 3. LỊCH HẸN HÔM NAY
-            // ================================
             var todayAppointments = await _context.Appointments
                 .Where(a => a.AppointmentStartTime.Date == DateTime.Today)
                 .Include(a => a.Doctor).ThenInclude(d => d.User)

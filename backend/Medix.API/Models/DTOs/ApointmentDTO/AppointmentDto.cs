@@ -51,6 +51,6 @@ namespace Medix.API.Models.DTOs.ApointmentDTO
     public class CancelAppointmentRequest
     {
         public Guid AppointmentId { get; set; }
-        public string? CancellationReason { get; set; } // Optional
+        public string? CancellationReason { get; set; } 
     }
 }

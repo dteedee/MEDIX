@@ -1282,7 +1282,6 @@ public partial class MedixContext : DbContext
 
             entity.ToTable("EmailVerificationCodes");
 
-            // Id as identity (auto-increment)
             entity.Property(e => e.Id)
                 .ValueGeneratedOnAdd()
                 .HasColumnName("Id");
@@ -1335,14 +1334,12 @@ public partial class MedixContext : DbContext
                      || e.State == EntityState.Deleted)
             .ToList();
 
-        // Kiểm tra xem đây có phải là một hoạt động đăng nhập không (tạo mới RefreshToken)
         bool isLoginOperation = entries.Any(e => e.Entity is RefreshToken && e.State == EntityState.Added);
 
         foreach (var entry in entries)
         {
             var entityName = entry.Entity.GetType().Name;
 
-            // Skip tất cả bảng nhiều-nhiều
             if (entityName == "ArticleCategories"
                 || entityName == "HealthArticleContentCategory"
                 || entityName.EndsWith("CategoryMapping"))
@@ -1350,14 +1347,13 @@ public partial class MedixContext : DbContext
                 continue;
             }
 
-            // Nếu là hoạt động đăng nhập, bỏ qua việc ghi log cho hành động UPDATE User không cần thiết
             if (isLoginOperation && entry.Entity is User && entry.State == EntityState.Modified)
             {
                 continue;
             }
 
             if (entry.Entity is AuditLog)
-                continue; // tránh vòng lặp
+                continue; 
 
             var audit = new AuditLog
             {
@@ -1387,18 +1383,17 @@ public partial class MedixContext : DbContext
                             .Where(p => p.IsModified && p.OriginalValue?.ToString() != p.CurrentValue?.ToString())
                             .ToList();
 
-                        // Bỏ qua việc ghi log nếu các thay đổi chỉ liên quan đến ViewCount và/hoặc UpdatedAt trên HealthArticle
                         if (entry.Entity is HealthArticle)
                         {
                             var nonTrackingProperties = new HashSet<string> { "ViewCount", "UpdatedAt", "UpdatedBy" };
                             var significantChanges = changedProperties.Where(p => !nonTrackingProperties.Contains(p.Metadata.Name)).ToList();
                             if (!significantChanges.Any())
                             {
-                                continue; // Bỏ qua việc tạo log nếu không có thay đổi nào quan trọng
+                                continue;
                             }
                         }
 
-                        if (!changedProperties.Any()) continue; // Bỏ qua nếu không có thay đổi thực sự
+                        if (!changedProperties.Any()) continue; 
 
                         var oldProps = new Dictionary<string, object?>();
                         var newProps = new Dictionary<string, object?>();
@@ -1421,7 +1416,6 @@ public partial class MedixContext : DbContext
             }
             catch (Exception ex)
             {
-                // Nếu serialize bị lỗi, ghi tên entity để debug
                 Console.WriteLine($"[AuditLog Error] Cannot serialize {entityName}: {ex.Message}");
                 continue;
             }
@@ -1435,7 +1429,6 @@ public partial class MedixContext : DbContext
         }
     }
 
-    // Chỉ lấy các field an toàn: primitive / string / Guid / enum / decimal
     private Dictionary<string, object?> GetSafeProperties(object entity)
     {
         var dict = new Dictionary<string, object?>();
@@ -1448,7 +1441,6 @@ public partial class MedixContext : DbContext
 
             var type = value.GetType();
 
-            // Skip collection hoặc navigation property
             if (!(type.IsPrimitive || type == typeof(string) || type == typeof(Guid) || type.IsEnum || type == typeof(decimal)))
                 continue;
 
@@ -1458,7 +1450,6 @@ public partial class MedixContext : DbContext
         return dict;
     }
 
-    // Mask field nhạy cảm
     private object MaskIfSensitive(string propertyName, object value)
     {
         if (value == null) return null;

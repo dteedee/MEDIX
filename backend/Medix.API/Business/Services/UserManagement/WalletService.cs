@@ -27,10 +27,8 @@ namespace Medix.API.Business.Services.UserManagement
                 UpdatedAt = walletDTo.UpdatedAt
             };
 
-            // Đợi tạo ví hoàn tất
             var result = await _walletRepository.CreateWalletAsync(wallet);
 
-            // Trả về DTO
             WalletDTo resultDto = new WalletDTo
             {
                 Id = result.Id,
@@ -59,16 +57,13 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<WalletDTo?> GetWalletByIdAsync(Guid walletId)
         {
-            // 1. Gọi repository để lấy Wallet Entity
             var wallet = await _walletRepository.GetWalletByIdAsync(walletId);
 
-            // 2. Nếu không tìm thấy, trả về null
             if (wallet == null)
             {
                 return null;
             }
 
-            // 3. Nếu tìm thấy, ánh xạ từ Entity sang DTO
             return new WalletDTo
             {
                 Id = wallet.Id,

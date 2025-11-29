@@ -84,7 +84,6 @@ namespace Medix.API.Presentation.Controllers
             if (!Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized(new { message = "Invalid user ID in token" });
 
-            // 1️⃣ Kiểm tra xem bác sĩ có bận trong khoảng thời gian này không
             if (dto.DoctorId.HasValue && dto.AppointmentStartTime.HasValue && dto.AppointmentEndTime.HasValue)
             {
                 var isDoctorBusy = await _service.IsDoctorBusyAsync(
@@ -95,7 +94,6 @@ namespace Medix.API.Presentation.Controllers
 
                 if (isDoctorBusy)
                 {
-                    // Lấy danh sách các lịch hẹn bị trùng để thông báo chi tiết
 
                     return BadRequest(new
                     {
@@ -108,7 +106,6 @@ namespace Medix.API.Presentation.Controllers
             var user = await _userService.GetByIdAsync(userId);
             var doctor = await _doctorService.GetDoctorByIdAsync((Guid)dto.DoctorId);
 
-            // 2️⃣ Kiểm tra số dư ví
             var patient = await _patientService.GetByUserIdAsync(userId);
             var wallet = await _walletService.GetWalletByUserIdAsync(userId);
 
@@ -140,7 +137,6 @@ namespace Medix.API.Presentation.Controllers
             dto.TransactionID = transaction.id;
 
 
-            // 3️⃣ Tạo lịch hẹn
             var created = await _service.CreateAsync(dto);
             WalletTransaction.RelatedAppointmentId = created.Id;
 
@@ -326,7 +322,6 @@ namespace Medix.API.Presentation.Controllers
             return Ok(result);
         }
 
-        // 🔍 Tìm theo bệnh nhân
         [HttpGet("by-patient/{patientId}")]
         public async Task<IActionResult> GetByPatient(Guid patientId)
         {
@@ -334,7 +329,6 @@ namespace Medix.API.Presentation.Controllers
             return Ok(result);
         }
 
-        // 🔍 Tìm theo ngày
         [HttpGet("by-date/{date}")]
         public async Task<IActionResult> GetByDate(DateTime date)
         {
@@ -342,7 +336,6 @@ namespace Medix.API.Presentation.Controllers
             return Ok(result);
         }
         [HttpGet("my-day-appointments")]
-        //[Authorize(Roles = "Doctor")] 
         public async Task<IActionResult> GetAppointmentsForDoctorByDay([FromQuery] DateTime date)
         {
             try
@@ -417,13 +410,11 @@ namespace Medix.API.Presentation.Controllers
         [Authorize(Roles = "Patient")]
         public async Task<IActionResult> CancelAppointment([FromBody] CancelAppointmentRequest request)
         {
-            // 1️⃣ Validate input
             if (request?.AppointmentId == Guid.Empty)
             {
                 return BadRequest(new { message = "Invalid appointment ID" });
             }
 
-            // 2️⃣ Get user from token
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
             if (userIdClaim == null)
                 return Unauthorized(new { message = "User ID not found in token" });
@@ -431,27 +422,23 @@ namespace Medix.API.Presentation.Controllers
             if (!Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized(new { message = "Invalid user ID in token" });
 
-            // 3️⃣ Get patient info
             var patient = await _patientService.GetPatientByUserIdAsync(userId);
             if (patient == null)
             {
                 return NotFound(new { message = "Patient not found" });
             }
 
-            // 4️⃣ Get appointment
             var appointment = await _service.GetByIdAsync(request.AppointmentId);
             if (appointment == null)
             {
                 return NotFound(new { message = "Appointment not found" });
             }
 
-            // 5️⃣ Verify ownership
             if (appointment.PatientID != patient.Id)
             {
-                return Forbid(); // 403 - Patient không sở hữu appointment này
+                return Forbid(); 
             }
 
-            // 6️⃣ Check if appointment can be cancelled
             if (appointment.StatusCode == "Cancelled" ||
                 appointment.StatusCode == "CancelledByPatient" ||
                 appointment.StatusCode == "Completed")
@@ -459,18 +446,15 @@ namespace Medix.API.Presentation.Controllers
                 return BadRequest(new { message = $"Cannot cancel appointment with status: {appointment.StatusCode}" });
             }
 
-            // 7️⃣ Check if appointment is too close
             var timeUntilAppointment = appointment.AppointmentStartTime - DateTime.UtcNow;
             if (timeUntilAppointment.TotalHours < 2)
             {
                 return BadRequest(new { message = "Cannot cancel appointment less than 2 hours before scheduled time" });
             }
 
-            // 8️⃣ Calculate refund amount (configurable)
             var refundPercentageConfig = await _systemConfigurationService.GetValueAsync<decimal?>(PatientCancelRefundConfigKey);
             var refundPercentage = refundPercentageConfig ?? 0.80m;
 
-            // allow admins to store 0-100 or 0-1
             if (refundPercentage > 1m && refundPercentage <= 100m)
             {
                 refundPercentage /= 100m;
@@ -483,7 +467,6 @@ namespace Medix.API.Presentation.Controllers
             decimal cancellationFee = appointment.TotalAmount - refundAmount;
             string refundPercentageDisplay = $"{refundPercentage:P0}";
 
-            // 9️⃣ Update appointment status
             var updateAppointment = new UpdateAppointmentDto
             {
                 Id = request.AppointmentId,
@@ -492,7 +475,7 @@ namespace Medix.API.Presentation.Controllers
                 AppointmentEndTime = appointment.AppointmentEndTime,
                 TotalAmount = appointment.TotalAmount,
                 PaymentStatusCode = "Refunded",
-                RefundAmount = refundAmount, // ✅ 80% of total
+                RefundAmount = refundAmount,
                 RefundStatus = "Completed",
                 ConsultationFee = appointment.ConsultationFee,
                 DiscountAmount = appointment.DiscountAmount,
@@ -508,7 +491,6 @@ namespace Medix.API.Presentation.Controllers
                 return StatusCode(500, new { message = "Unable to cancel appointment" });
             }
 
-            // 🔟 Process refund if payment was made
             if (updateResult.PaymentStatusCode == "Refunded")
             {
                 var wallet = await _walletService.GetWalletByUserIdAsync(userId);
@@ -519,7 +501,6 @@ namespace Medix.API.Presentation.Controllers
 
                 try
                 {
-                    // Create refund transaction with configured amount
                     var walletTransaction = new WalletTransactionDto
                     {
                         Amount = refundAmount,
@@ -536,7 +517,6 @@ namespace Medix.API.Presentation.Controllers
 
                     var transaction = await walletTransactionService.createWalletTransactionAsync(walletTransaction);
 
-                    // Increase wallet balance with 80% refund
                     await _walletService.IncreaseWalletBalanceAsync(wallet.UserId, refundAmount);
 
                     return Ok(new
@@ -562,7 +542,6 @@ namespace Medix.API.Presentation.Controllers
                 }
             }
 
-            // ⚠️ No refund needed (appointment not paid yet)
             return Ok(new
             {
                 message = "Appointment cancelled successfully",

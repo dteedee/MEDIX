@@ -5,7 +5,6 @@ using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Exceptions;
 using AutoMapper;
 using Medix.API.Models.DTOs.Doctor;
-// using Medix.API.Business.Util; // Removed for performance
 
 namespace Medix.API.Business.Services.UserManagement
 {
@@ -46,7 +45,7 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<UserDto> RegisterUserAsync(RegisterRequestPatientDTO registerDto)
         {
-            string passwordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password); // Simple password hash
+            string passwordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password); 
 
             User user = new User
             {
@@ -62,7 +61,7 @@ namespace Medix.API.Business.Services.UserManagement
                 GenderCode = registerDto.GenderCode,
                 Status = 0,
                 IdentificationNumber = registerDto.IdentificationNumber,
-                Role = "Patient", // Gán vai trò mặc định là Patient
+                Role = "Patient", 
                 IsProfileCompleted = false,
                 CreatedAt = DateTime.UtcNow,
                 Address = registerDto.address,
@@ -74,7 +73,6 @@ namespace Medix.API.Business.Services.UserManagement
             };
            
             var savedUser = await _userRepository.CreateAsync(user);
-            // TODO: Fix when UserRoleRepository.CreateAsync is implemented
         
             await _userRoleRepository.AssignRole("Patient", savedUser.Id);
             return new UserDto
@@ -83,7 +81,7 @@ namespace Medix.API.Business.Services.UserManagement
                 Email = savedUser.Email,
                 FullName = savedUser.FullName,
                 PhoneNumber = savedUser.PhoneNumber,
-                Role = savedUser.Role, // Lấy vai trò từ đối tượng đã được lưu
+                Role = savedUser.Role, 
                 EmailConfirmed = savedUser.EmailConfirmed,
                 CreatedAt = savedUser.CreatedAt,
                 DateOfBirth = savedUser.DateOfBirth,
@@ -99,7 +97,6 @@ namespace Medix.API.Business.Services.UserManagement
             };
         }
 
-        // ... (các using và khai báo khác trong file UserService.cs)
 
         public async Task<UserGrowthDto> GetUserGrowthAsync(int year)
         {
@@ -127,7 +124,6 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<UserDto> CreateUserAsync(CreateUserDTO createUserDto, string password)
 {
-    // Validate input
     if (await _userRepository.GetByUserNameAsync(createUserDto.UserName) != null)
     {
         throw new MedixException("Username đã tồn tại.");
@@ -144,25 +140,24 @@ namespace Medix.API.Business.Services.UserManagement
         UserName = createUserDto.UserName,
         NormalizedUserName = createUserDto.UserName.ToUpperInvariant(),
         Email = createUserDto.Email,
-        FullName = createUserDto.UserName, // Use username as default FullName
+        FullName = createUserDto.UserName, 
         NormalizedEmail = createUserDto.Email.ToUpperInvariant(),
-        EmailConfirmed = true, // Tạm thời xác thực email luôn khi admin tạo
+        EmailConfirmed = true, 
         PhoneNumberConfirmed = false,
-        Status = 1, // Active
+        Status = 1, 
         IsProfileCompleted = false,
         LockoutEnabled = false,
         AccessFailedCount = 0,
         CreatedAt = DateTime.UtcNow,
-        PasswordHash = BCrypt.Net.BCrypt.HashPassword(password) // Băm mật khẩu tạm thời
+        PasswordHash = BCrypt.Net.BCrypt.HashPassword(password) 
     };
 
     var createdUser = await _userRepository.CreateAsync(user);
 
-    // Gán vai trò cho người dùng
     var userRole = new UserRole
     {
         UserId = createdUser.Id,
-        RoleCode = createUserDto.Role, // Lấy vai trò từ DTO
+        RoleCode = createUserDto.Role, 
         CreatedAt = DateTime.UtcNow
     };
     await _userRoleRepository.CreateAsync(userRole);
@@ -173,7 +168,6 @@ namespace Medix.API.Business.Services.UserManagement
     return userDto;
 }
 
-// ... (các phương thức khác trong file UserService.cs)
 
 
 
@@ -198,14 +192,11 @@ namespace Medix.API.Business.Services.UserManagement
             if (user == null)
                 throw new NotFoundException($"User with ID {id} not found");
 
-            // Kiểm tra nếu người dùng đang cố gắng tự khóa tài khoản của chính mình
             if (userUpdateDto.LockoutEnabled && !user.LockoutEnabled && user.Id == currentUserId)
             {
-                // Ngăn chặn hành động và ném ra ngoại lệ
                 throw new MedixException("Bạn không thể tự khóa tài khoản của chính mình.");
             }
 
-            // 1️⃣ Update basic info
             user.FullName = userUpdateDto.FullName;
             user.PhoneNumber = userUpdateDto.PhoneNumber;
             user.Address = userUpdateDto.Address;
@@ -220,7 +211,6 @@ namespace Medix.API.Business.Services.UserManagement
             user.AccessFailedCount = userUpdateDto.AccessFailedCount;
             user.UpdatedAt = DateTime.UtcNow;
 
-            // 2️⃣ Update role
             if (!string.IsNullOrWhiteSpace(userUpdateDto.Role))
             {
                 var role = await _userRoleRepository.GetRoleByDisplayNameAsync(userUpdateDto.Role);
@@ -236,13 +226,10 @@ namespace Medix.API.Business.Services.UserManagement
                 }
             }
 
-            // 3️⃣ Lưu lại user (chỉ cập nhật thông tin cá nhân, không đụng roles)
             await _userRepository.UpdateAsync(user);
 
-            // 4️⃣ Load lại user để lấy role mới
             var refreshedUser = await _userRepository.GetByIdAsync(id);
 
-            // 5️⃣ Map ra DTO
             return _mapper.Map<UserDto>(refreshedUser);
         }
 
@@ -255,7 +242,6 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<IEnumerable<UserDto>> GetAllAsync()
         {
-            // TODO: Fix when UserRepository.GetAllAsync is implemented
             var users = await _userRepository.GetAllAsync();
             return _mapper.Map<IEnumerable<UserDto>>(users);
         }
@@ -337,7 +323,7 @@ namespace Medix.API.Business.Services.UserManagement
             };
         }
 
-        public async Task<UserBasicInfoDto> UpdateUserBasicInfo(UpdateUserDto updateDto) //f54afdd6-4c49-4584-8fcd-5fd910653bf4
+        public async Task<UserBasicInfoDto> UpdateUserBasicInfo(UpdateUserDto updateDto) 
         {
             var user = await _userRepository.GetByIdAsync(updateDto.Id);
             if (user == null) throw new ArgumentException("Không tìm thấy người dùng");
@@ -399,8 +385,7 @@ namespace Medix.API.Business.Services.UserManagement
 
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
             user.UpdatedAt = DateTime.UtcNow;
-            // Tùy chọn: bạn có thể thêm logic để buộc người dùng đổi mật khẩu ở lần đăng nhập tiếp theo
-            // user.MustChangePassword = true;
+
 
             await _userRepository.UpdateAsync(user);
 

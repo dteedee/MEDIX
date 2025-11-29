@@ -11,7 +11,6 @@ using System.IO.Compression;
 
 namespace Medix.API.Business.Services.Community
 {
-    // Lớp mô phỏng cấu trúc kết quả trả về (nếu cần cho unit test hoặc môi trường dev)
     public class UploadError
     {
         public string? Message { get; set; }
@@ -41,7 +40,7 @@ namespace Medix.API.Business.Services.Community
             if (string.IsNullOrEmpty(cloudName) || string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
             {
                 _logger.LogWarning("Cloudinary credentials are missing. Running in simulation mode.");
-                return; // Không throw để có thể test trong local mà không có credentials
+                return; 
             }
 
             var account = new Account(cloudName, apiKey, apiSecret);
@@ -126,7 +125,7 @@ namespace Medix.API.Business.Services.Community
                 if (uploadResult.StatusCode != HttpStatusCode.OK)
                     throw new Exception(uploadResult.Error.Message);
 
-                return uploadResult.SecureUrl.ToString(); // or use .Url if you prefer http
+                return uploadResult.SecureUrl.ToString();
             }
             catch (Exception ex)
             {
@@ -142,7 +141,6 @@ namespace Medix.API.Business.Services.Community
                 if (file == null || file.Length == 0)
                     return string.Empty;
 
-                // Nếu Cloudinary chưa được cấu hình (local dev mode)
                 if (_cloudinary == null)
                 {
                     _logger.LogWarning("Cloudinary chưa cấu hình. Sử dụng placeholder URL.");
@@ -213,7 +211,6 @@ namespace Medix.API.Business.Services.Community
 
             memoryStream.Position = 0;
 
-            // Wrap into IFormFile-like object
             var zipFile = new FormFile(memoryStream, 0, memoryStream.Length, "archive", fileName ?? "archive.zip");
 
             return await UploadArchiveAsync(zipFile, "IdentityCardImages");

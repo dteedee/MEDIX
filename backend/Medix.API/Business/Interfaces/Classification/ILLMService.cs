@@ -2,29 +2,11 @@ namespace Medix.API.Business.Interfaces.Classification
 {
     public interface ILLMService
     {
-        /// <summary>
-        /// Generate response using LLM with context
-        /// </summary>
+
         Task<string> GenerateResponseAsync(string userMessage, string? context = null, List<ChatMessage>? conversationHistory = null);
-
-        /// <summary>
-        /// Analyze symptoms with medical reasoning
-        /// </summary>
         Task<SymptomAnalysisResult> AnalyzeSymptomsWithLLMAsync(List<string> symptoms, string? additionalInfo, string? context);
-
-        /// <summary>
-        /// Classify severity level using medical guidelines
-        /// </summary>
         Task<SeverityClassification> ClassifySeverityAsync(List<string> symptoms, Dictionary<string, object> patientInfo);
-
-        /// <summary>
-        /// Check if query is health-related (safety guardrail)
-        /// </summary>
         Task<bool> IsHealthRelatedQueryAsync(string query);
-
-        /// <summary>
-        /// Extract structured information from unstructured text
-        /// </summary>
         Task<T> ExtractStructuredDataAsync<T>(string text, string schema) where T : class;
     }
 

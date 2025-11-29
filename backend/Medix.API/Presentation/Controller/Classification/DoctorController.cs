@@ -69,11 +69,9 @@ namespace Medix.API.Presentation.Controller.Classification
                 if (req == null)
                     return BadRequest(new { Message = "Request body is required." });
 
-                // basic validation
                 if (req.ConsultationFee.HasValue && req.ConsultationFee.Value < 0)
                     return BadRequest(new { Message = "Consultation fee must be non-negative." });
 
-                // If caller is Doctor, ensure they update only their record
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
                 if (userIdClaim == null)
                     return Unauthorized(new { Message = "User ID not found in token" });
@@ -394,14 +392,13 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
         [HttpGet("{doctorId}/business-stats")]
-        [Authorize(Roles ="Manager")] // allow Manager or Doctor; controller will restrict doctor to own data
+        [Authorize(Roles ="Manager")] 
         public async Task<IActionResult> GetDoctorBusinessStats(Guid doctorId, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null)
         {
             try
             {
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
 
-                // If caller is a doctor (not manager), ensure they can only request their own stats
                 if (User.IsInRole("Doctor"))
                 {
                     if (userIdClaim == null)

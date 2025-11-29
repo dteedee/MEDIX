@@ -82,10 +82,6 @@ export default function AdminDashboard() {
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
-        const [dashboardData, auditLogsResponse] = await Promise.all([
-          adminDashboardService.getDashboardData(),
-          apiClient.get('/AuditLogs?page=1&pageSize=100')
-        ]);
         const data = await adminDashboardService.getDashboardData(); 
         setDashboardData(data);
         setError(null);
@@ -98,7 +94,6 @@ export default function AdminDashboard() {
     };
 
     fetchDashboardData();
-
   }, []);
 
   // Effect để chuẩn bị dữ liệu cho biểu đồ người dùng và biểu đồ hoạt động khi dashboardData hoặc userGrowthFilter thay đổi
@@ -215,57 +210,153 @@ export default function AdminDashboard() {
           {/* Stats Grid */}
           <div className={styles.statsGrid}>
             <div className={styles.statCard}>
-              <div className={`${styles.statCircle} ${styles.statCard1}`}>
-                <i className="bi bi-people-fill"></i>
-                <span className={styles.statValue}>{dashboardData?.summary.totalUsers}</span>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard1}`}>
+                  <i className="bi bi-people-fill"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-people-fill"></i>
+                </div>
               </div>
               <div className={styles.statInfo}>
                 <div className={styles.statLabel}>Tổng người dùng</div>
+                <div className={styles.statValue}>{dashboardData?.summary.totalUsers}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>{dashboardData?.growth.usersGrowthPercentage}% so với tháng trước</span>
+                  <span>+{dashboardData?.growth.usersGrowthPercentage}% so với tháng trước</span>
                 </div>
               </div>
             </div>
 
             <div className={styles.statCard}>
-              <div className={`${styles.statCircle} ${styles.statCard2}`}>
-                <i className="bi bi-hospital"></i>
-                <span className={styles.statValue}>{dashboardData?.summary.totalDoctors}</span>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard2}`}>
+                  <i className="bi bi-hospital"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-hospital"></i>
+                </div>
               </div>
               <div className={styles.statInfo}>
                 <div className={styles.statLabel}>Bác sĩ</div>
+                <div className={styles.statValue}>{dashboardData?.summary.totalDoctors}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>{dashboardData?.growth.doctorsGrowthPercentage}% so với tuần trước</span>
+                  <span>+{dashboardData?.growth.doctorsGrowthPercentage}% tuần trước</span>
                 </div>
               </div>
             </div>
 
             <div className={styles.statCard}>
-              <div className={`${styles.statCircle} ${styles.statCard3}`}>
-                <i className="bi bi-calendar-check"></i>
-                <span className={styles.statValue}>{dashboardData?.summary.todayAppointments}</span>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard3}`}>
+                  <i className="bi bi-person-heart"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-person-heart"></i>
+                </div>
+              </div>
+              <div className={styles.statInfo}>
+                <div className={styles.statLabel}>Bệnh nhân</div>
+                <div className={styles.statValue}>{dashboardData?.summary.totalPatients}</div>
+                <div className={styles.statTrend}>
+                  <i className="bi bi-graph-up"></i>
+                  <span>+{dashboardData?.growth.usersGrowthPercentage}% tháng trước</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard4}`}>
+                  <i className="bi bi-calendar-check"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-calendar-check"></i>
+                </div>
               </div>
               <div className={styles.statInfo}>
                 <div className={styles.statLabel}>Lịch hẹn hôm nay</div>
+                <div className={styles.statValue}>{dashboardData?.summary.todayAppointments}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>{dashboardData?.growth.todayAppointmentsGrowthPercentage}% so với hôm qua</span>
+                  <span>+{dashboardData?.growth.todayAppointmentsGrowthPercentage}% hôm qua</span>
                 </div>
               </div>
             </div>
 
             <div className={styles.statCard}>
-              <div className={`${styles.statCircle} ${styles.statCard4}`}>
-                <i className="bi bi-file-text"></i>
-                <span className={styles.statValue}>{dashboardData?.summary.totalHealthArticles}</span>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard5}`}>
+                  <i className="bi bi-calendar2-check"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-calendar2-check"></i>
+                </div>
+              </div>
+              <div className={styles.statInfo}>
+                <div className={styles.statLabel}>Tổng lịch hẹn</div>
+                <div className={styles.statValue}>{dashboardData?.summary.totalAppointments}</div>
+                <div className={styles.statTrend}>
+                  <i className="bi bi-graph-up"></i>
+                  <span>+{dashboardData?.growth.appointmentsGrowthPercentage}% tháng trước</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard6}`}>
+                  <i className="bi bi-file-text"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-file-text"></i>
+                </div>
               </div>
               <div className={styles.statInfo}>
                 <div className={styles.statLabel}>Bài viết</div>
+                <div className={styles.statValue}>{dashboardData?.summary.totalHealthArticles}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>{dashboardData?.growth.articlesGrowthPercentage}% so với tháng trước</span>
+                  <span>+{dashboardData?.growth.articlesGrowthPercentage}% tháng trước</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard7}`}>
+                  <i className="bi bi-currency-dollar"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-currency-dollar"></i>
+                </div>
+              </div>
+              <div className={styles.statInfo}>
+                <div className={styles.statLabel}>Doanh thu tháng</div>
+                <div className={styles.statValue}>{(dashboardData?.summary.monthRevenue || 0).toLocaleString('vi-VN')}₫</div>
+                <div className={styles.statTrend}>
+                  <i className="bi bi-graph-up"></i>
+                  <span>+{dashboardData?.growth.revenueGrowthPercentage}% tháng trước</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard8}`}>
+                  <i className="bi bi-star-fill"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-star-fill"></i>
+                </div>
+              </div>
+              <div className={styles.statInfo}>
+                <div className={styles.statLabel}>Đánh giá trung bình</div>
+                <div className={styles.statValue}>{(dashboardData?.summary.averageRating || 0).toFixed(1)}/5.0</div>
+                <div className={styles.statTrend}>
+                  <i className="bi bi-star"></i>
+                  <span>Từ {dashboardData?.summary.totalAppointments} lịch hẹn</span>
                 </div>
               </div>
             </div>

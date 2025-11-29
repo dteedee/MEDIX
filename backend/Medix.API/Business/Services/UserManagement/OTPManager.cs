@@ -9,7 +9,6 @@ namespace Medix.API.Business.Services.UserManagement
 
         static OTPManager()
         {
-            // Cleanup expired OTPs every 5 minutes
             _cleanupTimer = new Timer(CleanupExpiredOTPs, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
         }
 
@@ -23,19 +22,16 @@ namespace Medix.API.Business.Services.UserManagement
 
         public static string GenerateOTP(string email)
         {
-            // Generate 6-digit random code
             var random = new Random();
             var code = random.Next(100000, 999999).ToString();
 
-            // Remove any existing OTP for this email
             _otpStorage.TryRemove(email, out _);
 
-            // Store new OTP
             var otpData = new OTPData
             {
                 Code = code,
                 CreatedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(10), // 10 minutes expiry
+                ExpiresAt = DateTime.UtcNow.AddMinutes(10), 
                 IsUsed = false
             };
 
@@ -53,7 +49,6 @@ namespace Medix.API.Business.Services.UserManagement
                 return false;
             }
 
-            // Check if OTP is expired
             if (DateTime.UtcNow > otpData.ExpiresAt)
             {
                 Console.WriteLine($"=== OTP VERIFICATION FAILED FOR {email}: OTP expired (Expired at: {otpData.ExpiresAt:HH:mm:ss}) ===");
@@ -61,14 +56,12 @@ namespace Medix.API.Business.Services.UserManagement
                 return false;
             }
 
-            // Check if OTP is already used
             if (otpData.IsUsed)
             {
                 Console.WriteLine($"=== OTP VERIFICATION FAILED FOR {email}: OTP already used ===");
                 return false;
             }
 
-            // Check if code matches
             if (otpData.Code != code)
             {
                 Console.WriteLine($"=== OTP VERIFICATION FAILED FOR {email}: Invalid code (Expected: {otpData.Code}, Got: {code}) ===");

@@ -55,14 +55,12 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<PatientDTO?> GetByIdAsync(Guid id)
         {
-            // TODO: Implement when repository method exists
             await Task.Delay(1);
             return null;
         }
 
         public async Task<PatientDTO?> GetByUserIdAsync(Guid userId)
         {
-            // Gọi phương thức repository bạn đã cung cấp
             var patientEntity = await _patientRepository.GetPatientByUserIdAsync(userId);
 
             if (patientEntity == null)
@@ -70,7 +68,6 @@ namespace Medix.API.Business.Services.UserManagement
                 return null;
             }
 
-            // Map thủ công Entity -> DTO (Nên dùng AutoMapper)
             return new PatientDTO
             {
                 Id = patientEntity.Id,
@@ -115,14 +112,12 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<bool> DeleteAsync(Guid id)
         {
-            // TODO: Implement when repository method exists
             await Task.Delay(1);
             return false;
         }
 
         public async Task<IEnumerable<PatientDTO>> GetAllAsync()
         {
-            // TODO: Implement when repository method exists
             await Task.Delay(1);
             return new List<PatientDTO>();
         }

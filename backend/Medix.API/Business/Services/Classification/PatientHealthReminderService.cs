@@ -28,13 +28,11 @@ namespace Medix.API.Business.Services.Classification
         {
             var appointmentTime = createAppointment.AppointmentStartTime ;
        
-            // Nếu appointmentTime không hợp lệ thì trả về danh sách rỗng
             if (appointmentTime == DateTime.MinValue)
                 return new List<PatientHealthReminder>();
 
             var reminders = new List<PatientHealthReminder>();
 
-            // 1) Nhắc 1 ngày trước vào 08:00 sáng của ngày trước đó
             var dayBeforeAt8 = appointmentTime.Date.AddDays(-1).AddHours(8);
             reminders.Add(new PatientHealthReminder
             {
@@ -46,7 +44,6 @@ namespace Medix.API.Business.Services.Classification
                 ScheduledDate = dayBeforeAt8
             });
 
-            // 2) Nhắc 4 giờ trước start time
             var fourHoursBefore = appointmentTime.AddHours(-4);
             reminders.Add(new PatientHealthReminder
             {
@@ -58,7 +55,6 @@ namespace Medix.API.Business.Services.Classification
                 ScheduledDate = fourHoursBefore
             });
 
-            // 3) Nhắc 2 giờ trước start time
             var twoHoursBefore = appointmentTime.AddHours(-2);
             reminders.Add(new PatientHealthReminder
             {
@@ -70,7 +66,6 @@ namespace Medix.API.Business.Services.Classification
                 ScheduledDate = twoHoursBefore
             });
 
-            // Đặt lịch cho những reminder có thời gian > now
             foreach (var reminder in reminders)
             {
                 if (reminder.ScheduledDate > DateTime.Now)
@@ -119,7 +114,6 @@ namespace Medix.API.Business.Services.Classification
 
             foreach (var prescription in prescriptions)
             {
-                // Try to parse duration (fall back to 0 => skip)
                 int durationDays = 0;
                 try
                 {
@@ -131,11 +125,10 @@ namespace Medix.API.Business.Services.Classification
                 }
 
                 if (durationDays <= 0)
-                    continue; // skip invalid/unknown duration
+                    continue; 
 
-                // Start the first reminder the day after prescription.CreatedAt at 08:00
                 var startDate = prescription.CreatedAt.AddDays(1).Date;
-                var endDate = startDate.AddDays(durationDays - 1).Date; // inclusive
+                var endDate = startDate.AddDays(durationDays - 1).Date; 
 
                 var app = appointmentService.GetByIdAsync(prescription.MedicalRecord.AppointmentId);
                 var patientId = app.Result.PatientId;
@@ -148,7 +141,7 @@ namespace Medix.API.Business.Services.Classification
 
                 for (var current = startDate; current <= endDate; current = current.AddDays(1))
                 {
-                    var scheduledTime = current.AddHours(8); // 08:00 each day
+                    var scheduledTime = current.AddHours(8); 
 
                     var description = $"🔔 Nhắc nhở uống thuốc\n\n" +
                                       $"- Thuốc: {medicationName}\n" +
@@ -171,7 +164,6 @@ namespace Medix.API.Business.Services.Classification
                         CreatedAt = now
                     };
 
-                    // Schedule job: if scheduledTime is in the future -> schedule; otherwise enqueue immediately.
                     if (scheduledTime > now)
                     {
                         BackgroundJob.Schedule<IPatientHealthReminderService>(
@@ -200,7 +192,6 @@ namespace Medix.API.Business.Services.Classification
 
             duration = duration.ToLower().Trim();
 
-            // Pattern: "số đơn_vị" (VD: "7 ngày", "2 tuần")
             var match = Regex.Match(duration, @"(\d+)\s*(ngày|ngay|day|days|tuần|tuan|week|weeks|tháng|thang|month|months)");
 
             if (match.Success)
@@ -217,7 +208,6 @@ namespace Medix.API.Business.Services.Classification
                 };
             }
 
-            // Nếu chỉ là số thuần (giả sử là ngày)
             if (int.TryParse(duration, out int days))
             {
                 return days;
@@ -251,13 +241,11 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<PatientHealthReminderDto> updateReminder(PatientHealthReminderDto reminderDto)
         {
-            // Validate input
             if (reminderDto.Id == null || reminderDto.Id == Guid.Empty)
             {
                 throw new ArgumentException("Reminder ID là bắt buộc");
             }
 
-            // Map DTO sang Entity
             var reminder = new PatientHealthReminder
             {
                 Id = reminderDto.Id.Value,
@@ -274,10 +262,8 @@ namespace Medix.API.Business.Services.Classification
                 CreatedAt = reminderDto.CreatedAt ?? DateTime.Now
             };
 
-            // Cập nhật thông qua repository
             await patientHealthReminderRepository.updateReminder(reminder);
 
-            // Trả về DTO đã cập nhật
             return new PatientHealthReminderDto
             {
                 Id = reminder.Id,

@@ -6,7 +6,8 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import { MainLayout } from './components/layout/MainLayout';
 import { UserRole } from './types/common.types';
-import { MaintenanceNotice } from './components/MaintenanceNotice';
+import { MaintenanceRedirect } from './components/MaintenanceRedirect';
+import { MaintenancePage } from './pages/public/MaintenancePage';
 
 // Layout
 import { Header } from './components/layout/Header';
@@ -91,10 +92,11 @@ export function App() {
       <AuthProvider>
         <ToastProvider>
           <Router>
-            <MaintenanceNotice />
+            <MaintenanceRedirect />
             <div className="min-h-screen w-full flex flex-col">
               <Routes>
                 <Route path="/error/:code" element={<ErrorPageWrapper />} />
+                <Route path="/maintenance" element={<MaintenancePage />} />
 
                 {/* ---------- Public routes ---------- */}
                 <Route element={<AuthLayout />}>

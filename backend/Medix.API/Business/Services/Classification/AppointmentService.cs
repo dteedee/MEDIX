@@ -143,19 +143,15 @@ namespace Medix.API.Business.Services.Classification
             var existing = await _repository.GetByIdAsync(dto.Id);
             if (existing == null) return null;
 
-            // Update basic fields (apply dto values when provided)
             if (!string.IsNullOrWhiteSpace(dto.StatusCode)) existing.StatusCode = dto.StatusCode;
             if (!string.IsNullOrWhiteSpace(dto.PaymentStatusCode)) existing.PaymentStatusCode = dto.PaymentStatusCode;
             if (!string.IsNullOrWhiteSpace(dto.PaymentMethodCode)) existing.PaymentMethodCode = dto.PaymentMethodCode;
             if (!string.IsNullOrWhiteSpace(dto.MedicalInfo)) existing.MedicalInfo = dto.MedicalInfo;
 
-            // Date/times: only update when a meaningful value is passed
             if (dto.AppointmentStartTime != default) existing.AppointmentStartTime = (DateTime)dto.AppointmentStartTime;
             if (dto.AppointmentEndTime != default) existing.AppointmentEndTime = (DateTime)dto.AppointmentEndTime;
             existing.UpdatedAt = (DateTime)((dto.UpdatedAt != default) ? dto.UpdatedAt : DateTime.UtcNow);
 
-            // Numeric / money values - update when DTO provides a non-default value (DTOs often use nullable types;
-            // if your DTO uses nullable decimals/ints you can simplify to coalescing)
             if (dto.ConsultationFee != default) existing.ConsultationFee = (decimal)dto.ConsultationFee;
             if (dto.TotalAmount != default) existing.TotalAmount = (decimal)dto.TotalAmount;
             if (dto.PlatformFee != default) existing.PlatformFee = (decimal)dto.PlatformFee;
@@ -163,7 +159,6 @@ namespace Medix.API.Business.Services.Classification
             if (dto.DiscountAmount != default) existing.DiscountAmount = (decimal)dto.DiscountAmount;
             if (dto.DurationMinutes != default) existing.DurationMinutes = (int)dto.DurationMinutes;
 
-            // Persist appointment changes
             await _repository.UpdateAsync(existing);
             return _mapper.Map<AppointmentDto>(existing);
         }
@@ -188,7 +183,6 @@ namespace Medix.API.Business.Services.Classification
             var list = await _repository.GetByPatientAsync(patientId);
             var dtos = _mapper.Map<List<AppointmentDto>>(list);
 
-            // Collect appointment IDs for completed appointments
             var completedAppointmentIds = list
                 .Where(a => string.Equals(a.StatusCode, "Completed", StringComparison.OrdinalIgnoreCase))
                 .Select(a => a.Id)
@@ -196,12 +190,10 @@ namespace Medix.API.Business.Services.Classification
 
             if (completedAppointmentIds.Any())
             {
-                // Single DB call to fetch all reviews for those appointments (avoids concurrent DbContext usage)
                 var reviews = await reviewRepository.GetByAppointmentIdsAsync(completedAppointmentIds);
 
                 var reviewByAppointment = reviews.ToDictionary(r => r.AppointmentId, r => r);
 
-                // Populate DTOs
                 foreach (var dto in dtos.Where(d => string.Equals(d.StatusCode, "Completed", StringComparison.OrdinalIgnoreCase)))
                 {
                     if (reviewByAppointment.TryGetValue(dto.Id, out var review))
@@ -222,45 +214,32 @@ namespace Medix.API.Business.Services.Classification
         }
         public async Task<IEnumerable<AppointmentDto>> GetByDoctorUserAndDateAsync(Guid userId, DateTime date)
         {
-            // 1️⃣ Lấy Doctor tương ứng với UserId
             var doctor = await _repository.GetDoctorByUserIdAsync(userId);
             if (doctor == null)
                 throw new InvalidOperationException("Doctor not found for this user.");
 
-            // 2️⃣ Tính khoảng thời gian trong ngày
             var startDate = date.Date;
             var endDate = startDate.AddDays(1);
 
-            // 3️⃣ Lấy các lịch hẹn của bác sĩ trong ngày
             var list = await _repository.GetByDoctorAndDateAsync(doctor.Id, startDate, endDate);
 
-            // 4️⃣ Map sang DTO
             return _mapper.Map<IEnumerable<AppointmentDto>>(list);
         }
 
         public async Task<IEnumerable<AppointmentDto>> GetByDoctorUserAndDateRangeAsync(Guid userId, DateTime startDate, DateTime endDate)
         {
-            // 1. Lấy Doctor tương ứng với UserId
             var doctor = await _repository.GetDoctorByUserIdAsync(userId);
             if (doctor == null)
-                throw new InvalidOperationException("Doctor not found for this user.");
-
-            // 2. Lấy các lịch hẹn của bác sĩ trong khoảng thời gian đã cho
-            //    Thêm 1 ngày vào endDate để bao gồm tất cả các cuộc hẹn trong ngày cuối cùng.
+                throw new InvalidOperationException("Doctor not found for this user."); 
             var list = await _repository.GetByDoctorAndDateAsync(doctor.Id, startDate, endDate.AddDays(1));
             
-            // 3. Map sang DTO sử dụng AutoMapper - AutoMapper đã được cấu hình để map từ navigation properties
             var dtos = _mapper.Map<List<AppointmentDto>>(list);
-            
-            // 4. Đảm bảo các trường được populate đúng cách từ navigation properties
-            //    Repository đã Include Patient.User và Doctor.User, nên có thể truy cập trực tiếp
             var listList = list.ToList();
             for (int i = 0; i < listList.Count && i < dtos.Count; i++)
             {
                 var appointment = listList[i];
                 var dto = dtos[i];
                 
-                // Lấy PatientName và PatientEmail từ Patient.User nếu chưa được map
                 if (appointment.Patient != null && appointment.Patient.User != null)
                 {
                     if (string.IsNullOrEmpty(dto.PatientName))
@@ -269,14 +248,12 @@ namespace Medix.API.Business.Services.Classification
                         dto.PatientEmail = appointment.Patient.User.Email ?? string.Empty;
                 }
                 
-                // Lấy DoctorName từ Doctor.User nếu chưa được map
                 if (appointment.Doctor != null && appointment.Doctor.User != null)
                 {
                     if (string.IsNullOrEmpty(dto.DoctorName))
                         dto.DoctorName = appointment.Doctor.User.FullName ?? string.Empty;
                 }
 
-                // Populate StatusDisplayName, PaymentStatusName, PaymentMethodName từ navigation properties
                 if (appointment.StatusCodeNavigation != null && string.IsNullOrEmpty(dto.StatusDisplayName))
                 {
                     dto.StatusDisplayName = appointment.StatusCodeNavigation.DisplayName ?? string.Empty;
@@ -298,10 +275,8 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<bool> IsDoctorBusyAsync(Guid doctorId, DateTime appointmentStartTime, DateTime appointmentEndTime)
         {
-            // Lấy tất cả lịch hẹn của bác sĩ trong khoảng thời gian này
             var conflictingAppointments = await GetConflictingAppointmentsAsync(doctorId, appointmentStartTime, appointmentEndTime);
 
-            // Nếu có bất kỳ lịch hẹn nào trùng thì bác sĩ đang bận
             return conflictingAppointments.Any();
         }
 
@@ -311,7 +286,6 @@ namespace Medix.API.Business.Services.Classification
     DateTime appointmentStartTime,
     DateTime appointmentEndTime)
         {
-            // Lấy tất cả lịch hẹn của bác sĩ
             var allAppointments = await _repository.GetByDoctorAsync(doctorId);
 
             var conflictingAppointments = allAppointments.Where(a =>
@@ -410,11 +384,9 @@ namespace Medix.API.Business.Services.Classification
                 await walletTransactionService.createWalletTransactionAsync(walletTransaction);
                 await walletService.IncreaseWalletBalanceAsync(appointment.Patient.User.Id, appointment.TotalAmount);
 
-                // Increase doctor missed case
                 doctor.TotalCaseMissPerWeek += 1;
                 await doctorRepository.UpdateDoctorAsync(doctor);
 
-                // Assign promotion to patient
                 var promotionForPatient = await promotionService.GetPromotionByCodeAsync("WELCOME50K");
                 if (promotionForPatient != null)
                 {

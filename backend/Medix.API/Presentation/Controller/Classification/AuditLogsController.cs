@@ -14,10 +14,6 @@ namespace Medix.API.Presentation.Controller.Classification
         {
             _service = service;
         }
-
-        /// <summary>
-        /// Lấy danh sách log có phân trang
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetPaged([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
@@ -28,10 +24,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 data = result.data
             });
         }
-
-        /// <summary>
-        /// Lấy chi tiết 1 log theo Id
-        /// </summary>
         [HttpGet("{id:long}")]
         public async Task<IActionResult> GetById(long id)
         {

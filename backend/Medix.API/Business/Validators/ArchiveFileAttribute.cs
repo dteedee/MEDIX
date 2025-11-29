@@ -11,13 +11,11 @@ namespace Medix.API.Business.Validators
             if (file == null || file.Length == 0)
                 return new ValidationResult("Vui lòng chọn một tệp ZIP hoặc RAR.", new[] { validationContext.MemberName });
 
-            // Check file size (max 3MB)
-            const long maxFileSize = 3 * 1024 * 1024; // 3MB in bytes
+            const long maxFileSize = 3 * 1024 * 1024; 
             Console.WriteLine(file.Length);
             if (file.Length > maxFileSize)
                 return new ValidationResult("Kích thước tệp không được vượt quá 3MB.", new[] { validationContext.MemberName });
 
-            // Check MIME type (may vary by browser)
             var allowedMimeTypes = new[] { "application/zip", "application/x-rar-compressed", "application/octet-stream" };
             var allowedExtensions = new[] { ".zip", ".rar" };
 

@@ -55,10 +55,8 @@ namespace Medix.API.Presentation.Controller.Classification
             }
             catch (InvalidOperationException ex)
             {
-                // Tạo thông báo khi cập nhật lịch linh hoạt thất bại
                 try
                 {
-                    // Lấy userId từ token để tạo thông báo
                     var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                                     ?? User.FindFirst("sub")?.Value;
                     if (userIdStr != null)
@@ -79,17 +77,14 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
                 catch
                 {
-                    // Ignore notification creation errors
                 }
                 
                 return BadRequest(new { Message = ex.Message });
             }
             catch (Exception ex)
             {
-                // Tạo thông báo khi cập nhật lịch linh hoạt thất bại
                 try
                 {
-                    // Lấy userId từ token để tạo thông báo
                     var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                                     ?? User.FindFirst("sub")?.Value;
                     if (userIdStr != null)
@@ -110,7 +105,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
                 catch
                 {
-                    // Ignore notification creation errors
                 }
                 
                 return StatusCode(500, new { Message = "Có lỗi xảy ra khi cập nhật ghi đè lịch.", Details = ex.Message });
@@ -136,12 +130,10 @@ namespace Medix.API.Presentation.Controller.Classification
             return Ok(result);
         }
         [HttpPost("my")]
-        //[Authorize(Roles = "Doctor")]
         public async Task<IActionResult> CreateForCurrentDoctor([FromBody] CreateDoctorScheduleOverrideDto dto)
         {
             try
             {
-                // 1️⃣ Lấy userId từ token
                 var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                                 ?? User.FindFirst("sub")?.Value;
 
@@ -150,13 +142,11 @@ namespace Medix.API.Presentation.Controller.Classification
 
                 var userId = Guid.Parse(userIdStr);
 
-                // 2️⃣ Gọi service
                 var result = await _service.CreateByDoctorUserAsync(dto, userId);
                 return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
             }
             catch (InvalidOperationException ex)
             {
-                // Tạo thông báo khi đăng ký lịch linh hoạt thất bại
                 try
                 {
                     var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
@@ -179,14 +169,12 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
                 catch
                 {
-                    // Ignore notification creation errors
                 }
                 
                 return BadRequest(new { Message = ex.Message });
             }
             catch (Exception ex)
             {
-                // Tạo thông báo khi đăng ký lịch linh hoạt thất bại
                 try
                 {
                     var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
@@ -209,7 +197,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
                 catch
                 {
-                    // Ignore notification creation errors
                 }
                 
                 return StatusCode(500, new { Message = "Có lỗi xảy ra khi tạo ghi đè lịch.", Details = ex.Message });
@@ -239,9 +226,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
 
-        // 🗑️ DELETE /api/doctor-schedule-overrides/my/{id}
         [HttpDelete("my/{id}")]
-        //[Authorize(Roles = "Doctor")]
         public async Task<IActionResult> DeleteForCurrentDoctor(Guid id)
         {
             try
@@ -257,7 +242,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 var success = await _service.DeleteByDoctorUserAsync(id, userId);
                 if (!success)
                 {
-                    // Tạo thông báo khi không tìm thấy lịch để xóa
                     try
                     {
                         var doctor = await _doctorService.GetDoctorByUserIdAsync(userId);
@@ -274,7 +258,6 @@ namespace Medix.API.Presentation.Controller.Classification
                     }
                     catch
                     {
-                        // Ignore notification creation errors
                     }
                     
                     return NotFound(new { Message = "Không tìm thấy ghi đè hoặc không có quyền xóa." });
@@ -284,7 +267,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
             catch (InvalidOperationException ex)
             {
-                // Tạo thông báo khi xóa lịch linh hoạt thất bại (do có lịch hẹn)
                 try
                 {
                     var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
@@ -307,14 +289,12 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
                 catch
                 {
-                    // Ignore notification creation errors
                 }
                 
                 return BadRequest(new { Message = ex.Message });
             }
             catch (Exception ex)
             {
-                // Tạo thông báo khi xóa lịch linh hoạt thất bại
                 try
                 {
                     var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
@@ -337,7 +317,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
                 catch
                 {
-                    // Ignore notification creation errors
                 }
                 
                 return StatusCode(500, new { Message = "Có lỗi xảy ra khi xóa ghi đè lịch.", Details = ex.Message });

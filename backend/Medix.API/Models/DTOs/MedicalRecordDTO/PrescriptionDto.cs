@@ -9,7 +9,6 @@
         public string? Duration { get; set; }
         public string? Instructions { get; set; }
 
-        // --- Thông tin bổ sung về thuốc ---
         public string? GenericName { get; set; }
         public string? DosageForms { get; set; }
         public string? CommonUses { get; set; }

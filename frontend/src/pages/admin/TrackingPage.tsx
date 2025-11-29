@@ -285,6 +285,9 @@ export default function TrackingPage() {
     MetaTitle: 'Tiêu đề SEO',
     MedicalHistory: 'Tiền sử bệnh',
     Token: 'Mã đăng nhập',
+    BeforeAppoiment: 'Trước lịch hẹn',
+    OnProgressing: 'Đang diễn ra',
+    Completed: 'Đã hoàn thành',
   };
 
   const getFriendlyFieldName = (key: string) => {
@@ -301,7 +304,17 @@ export default function TrackingPage() {
   // Chuyển đổi giá trị sang dạng dễ hiểu
   const getFriendlyValue = (key: string, value: any): string => {
     if (value === null || value === undefined) return 'Không có';
-    
+
+    // Xử lý trạng thái tiếng Việt cho các giá trị đặc biệt
+    const statusViMap: Record<string, string> = {
+      BeforeAppoiment: 'Trước lịch hẹn',
+      OnProgressing: 'Đang diễn ra',
+      Completed: 'Đã hoàn thành',
+    };
+    if (typeof value === 'string' && statusViMap[value]) {
+      return statusViMap[value];
+    }
+
     const keyForCheck = key; // Sử dụng key gốc (PascalCase) để kiểm tra
 
     if (typeof value === 'boolean') {

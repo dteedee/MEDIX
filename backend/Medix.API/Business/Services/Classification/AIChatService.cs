@@ -1,16 +1,13 @@
+using System.Globalization;
+using System.Text;
 using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.AIChat;
-using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Globalization;
-using System.Text;
-using System.Globalization;
-using System.Text;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -67,7 +64,6 @@ namespace Medix.API.Business.Services.Classification
         {
             var message = request.Message.Trim();
 
-            // Safety guardrail: Check if query is health-related
             var isHealthRelated = await _llmService.IsHealthRelatedQueryAsync(message);
             if (!isHealthRelated)
             {
@@ -87,7 +83,6 @@ namespace Medix.API.Business.Services.Classification
             var lowerMessage = message.ToLower();
             var normalizedMessage = NormalizeText(lowerMessage);
 
-            // Check if it's a system query
             if (IsSystemQuery(lowerMessage, normalizedMessage))
             {
                 var queryResponse = await QuerySystemAsync(lowerMessage);
@@ -99,7 +94,6 @@ namespace Medix.API.Business.Services.Classification
                 };
             }
 
-            // Check if it's a symptom description
             if (IsSymptomQuery(lowerMessage, normalizedMessage))
             {
                 return new ChatResponseDto
@@ -114,17 +108,14 @@ namespace Medix.API.Business.Services.Classification
                 };
             }
 
-            // Use RAG to get medical knowledge context
             var knowledgeContext = await _ragService.GetSymptomAnalysisContextAsync(new List<string> { message });
             
-            // Build conversation history
             var conversationHistory = request.ConversationHistory?.Select(m => new ChatMessage
             {
                 Role = m.Sender == "user" ? "user" : "assistant",
                 Content = m.Text
             }).ToList();
 
-            // Generate response using LLM with RAG context
             var response = await _llmService.GenerateResponseAsync(message, knowledgeContext, conversationHistory);
 
             return new ChatResponseDto
@@ -138,16 +129,13 @@ namespace Medix.API.Business.Services.Classification
         {
             var symptoms = request.Symptoms.Select(s => s.ToLower()).ToList();
             
-            // Validate symptoms collection
             if (symptoms.Count < 1)
             {
                 throw new ArgumentException("Cần ít nhất một triệu chứng để phân tích");
             }
 
-            // Get RAG context for symptom analysis
             var context = await _ragService.GetSymptomAnalysisContextAsync(symptoms);
 
-            // Build patient info dictionary
             var patientInfo = new Dictionary<string, object>
             {
                 { "symptoms", symptoms },
@@ -155,13 +143,10 @@ namespace Medix.API.Business.Services.Classification
                 { "duration", request.Duration ?? "" }
             };
 
-            // Classify severity using LLM service
             var severityClassification = await _llmService.ClassifySeverityAsync(symptoms, patientInfo);
 
-            // Analyze symptoms with LLM
             var analysisResult = await _llmService.AnalyzeSymptomsWithLLMAsync(symptoms, request.AdditionalInfo, context);
 
-            // Check if more information is needed
             if (analysisResult.MissingInformation.Any())
             {
                 return new SymptomAnalysisResponseDto
@@ -186,7 +171,6 @@ namespace Medix.API.Business.Services.Classification
                 Disclaimer = "⚠️ Thông tin từ AI chỉ mang tính chất tham khảo, không thay thế việc khám và điều trị của bác sĩ chuyên khoa."
             };
 
-            // Add home treatment for mild cases
             if (analysisResult.Severity == "mild")
             {
                 var recommendedSpecialty = analysisResult.PossibleConditions.FirstOrDefault()?.RecommendedSpecialty;
@@ -203,11 +187,9 @@ namespace Medix.API.Business.Services.Classification
             }
             else
             {
-                // For moderate/severe, recommend specialty and doctors
                 response.RecommendedSpecialty = analysisResult.PossibleConditions.FirstOrDefault()?.RecommendedSpecialty 
                     ?? GetRecommendedSpecialty(symptoms);
                 
-                // Use semantic search for doctors
                 var doctorSearchResults = await _ragService.SearchDoctorsSemanticAsync(
                     string.Join(" ", symptoms) + " " + response.RecommendedSpecialty, 
                     5
@@ -216,7 +198,6 @@ namespace Medix.API.Business.Services.Classification
                 response.RecommendedDoctors = await GetRecommendedDoctorsAsync(symptoms, response.RecommendedSpecialty, doctorSearchResults);
             }
 
-            // Add urgency warning if needed
             if (severityClassification.RequiresImmediateAttention)
             {
                 response.Overview += "\n\n🚨 CẢNH BÁO: Triệu chứng này cần được đánh giá ngay lập tức. Vui lòng đến cơ sở y tế gần nhất hoặc gọi cấp cứu 115.";
@@ -227,17 +208,14 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<EMRAnalysisResponseDto> AnalyzeEMRAsync(IFormFile file, string? patientInfoJson)
         {
-            // Validate EMR file
             var isValid = await _ocrService.ValidateEMRFileAsync(file);
             if (!isValid)
             {
                 throw new ArgumentException("File không hợp lệ. Chỉ chấp nhận PDF, JPG, PNG và kích thước tối đa 10MB.");
             }
 
-            // Extract medical data using OCR
             var extractedData = await _ocrService.ExtractMedicalDataAsync(file);
 
-            // Build summary using LLM
             var summaryBuilder = new System.Text.StringBuilder();
             summaryBuilder.AppendLine("📄 Đã phân tích hồ sơ bệnh án của bạn:");
             
@@ -259,7 +237,6 @@ namespace Medix.API.Business.Services.Classification
                 summaryBuilder.AppendLine($"• Kết quả xét nghiệm: {extractedData.LabResults.Count} chỉ số");
             }
 
-            // Generate recommendations
             var recommendations = new List<string>
             {
                 "Đặt lịch khám với bác sĩ chuyên khoa để được tư vấn chi tiết",
@@ -314,7 +291,6 @@ namespace Medix.API.Business.Services.Classification
             var mentionsArticle = lowerQuery.Contains("bài viết") || lowerQuery.Contains("bài báo") || lowerQuery.Contains("tin tức") || lowerQuery.Contains("article") ||
                                   normalizedQuery.Contains("bai viet") || normalizedQuery.Contains("bai bao") || normalizedQuery.Contains("tin tuc") || normalizedQuery.Contains("article");
 
-            // Specializations
             if (mentionsSpecialty && mentionsCount)
             {
                 var allSpecializations = await _specializationRepository.GetAllAsync();
@@ -348,7 +324,6 @@ namespace Medix.API.Business.Services.Classification
                 };
             }
 
-            // Service packages / pricing
             if (mentionsPackage && (mentionsPrice || !lowerQuery.Contains("bác sĩ")))
             {
                 var packages = await _servicePackageRepository.GetTopAsync(20);
@@ -389,7 +364,6 @@ namespace Medix.API.Business.Services.Classification
                 }
             }
 
-            // Doctor service tiers
             if (mentionsPackage && lowerQuery.Contains("bác sĩ"))
             {
                 var tiers = (await _serviceTierRepository.GetActiveTiersAsync()).ToList();
@@ -419,7 +393,6 @@ namespace Medix.API.Business.Services.Classification
                 }
             }
 
-            // Articles
             if (mentionsArticle)
             {
                 if (mentionsCount)
@@ -475,7 +448,6 @@ namespace Medix.API.Business.Services.Classification
                 }
             }
 
-            // Doctors by specialty
             if (lowerQuery.Contains("bác sĩ") && lowerQuery.Contains("khoa"))
             {
                 var specialtyName = ExtractSpecialtyName(lowerQuery);
@@ -503,7 +475,6 @@ namespace Medix.API.Business.Services.Classification
                 }
             }
 
-            // Count all doctors
             if (lowerQuery.Contains("bao nhiêu bác sĩ") || lowerQuery.Contains("số lượng bác sĩ"))
             {
                 var allDoctors = await _doctorRepository.GetAllAsync();
@@ -516,7 +487,6 @@ namespace Medix.API.Business.Services.Classification
                 };
             }
 
-            // Get doctor information
             if (lowerQuery.Contains("thông tin bác sĩ") || lowerQuery.Contains("bác sĩ"))
             {
                 var doctorName = ExtractDoctorName(lowerQuery);
@@ -546,7 +516,6 @@ namespace Medix.API.Business.Services.Classification
                 }
             }
 
-            // Default response
             return new SystemQueryResponseDto
             {
                 Answer = "Tôi có thể giúp bạn tìm kiếm thông tin về:\n\n" +
@@ -557,7 +526,6 @@ namespace Medix.API.Business.Services.Classification
             };
         }
 
-        // Helper methods
         private bool IsSystemQuery(string message, string normalizedMessage)
         {
             var systemKeywords = new[]
@@ -592,7 +560,6 @@ namespace Medix.API.Business.Services.Classification
 
         private string DetermineSeverity(List<string> symptoms, string? additionalInfo, string? duration)
         {
-            // Simple severity determination logic
             var severeKeywords = new[] { "khó thở", "đau ngực", "chảy máu", "ngất", "co giật", "sốt cao" };
             var moderateKeywords = new[] { "đau đầu", "mệt mỏi", "ho", "sốt", "buồn nôn" };
 
@@ -607,7 +574,6 @@ namespace Medix.API.Business.Services.Classification
 
         private List<PossibleConditionDto> GetPossibleConditions(List<string> symptoms)
         {
-            // Simplified condition mapping - in production, use ML model
             var conditions = new List<PossibleConditionDto>();
 
             if (symptoms.Any(s => s.Contains("đau đầu")))
@@ -642,7 +608,6 @@ namespace Medix.API.Business.Services.Classification
                 });
             }
 
-            // Default if no specific conditions found
             if (!conditions.Any())
             {
                 conditions.Add(new PossibleConditionDto
@@ -685,8 +650,7 @@ namespace Medix.API.Business.Services.Classification
 
         private List<string>? GetRecommendedMedications(List<string> symptoms)
         {
-            // In production, this would be more sophisticated
-            return null; // Should consult doctor before taking medications
+            return null; 
         }
 
         private List<string>? GetPrecautions(List<string> symptoms, List<string> riskFactors)
@@ -708,7 +672,6 @@ namespace Medix.API.Business.Services.Classification
 
         private string? GetRecommendedSpecialty(List<string> symptoms)
         {
-            // Map symptoms to specialties
             if (symptoms.Any(s => s.Contains("tim") || s.Contains("ngực")))
                 return "Tim mạch";
             if (symptoms.Any(s => s.Contains("đau đầu") || s.Contains("chóng mặt")))
@@ -725,7 +688,6 @@ namespace Medix.API.Business.Services.Classification
         {
             var doctors = new List<RecommendedDoctorDto>();
 
-            // Use semantic search results if available, otherwise fallback to regular search
             List<Models.DTOs.Doctor.DoctorDto> activeDoctors;
             
             if (semanticResults != null && semanticResults.Any())
@@ -733,7 +695,6 @@ namespace Medix.API.Business.Services.Classification
                 var semanticDoctorIds = semanticResults.Select(r => r.DoctorId).ToList();
                 var allDoctors = await _doctorRepository.GetAllAsync();
                 
-                // Get ratings for these doctors
                 var semanticReviews = await _reviewRepository.GetAllAsync();
                 var doctorRatings = semanticReviews
                     .Where(r => semanticDoctorIds.Contains(r.Appointment.DoctorId))
@@ -795,24 +756,19 @@ namespace Medix.API.Business.Services.Classification
             if (!activeDoctors.Any())
                 return null;
 
-            // Get service tier subscriptions and ratings using context
             var doctorIds = activeDoctors.Select(d => d.Id).ToList();
             
-            // Get subscriptions
             var subscriptions = await _context.ServiceTierSubscriptions
                 .Include(s => s.ServiceTier)
                 .Where(s => doctorIds.Contains(s.DoctorId) && s.EndDate > DateTime.UtcNow)
                 .ToListAsync();
 
-            // Get reviews
             var allReviews = await _reviewRepository.GetAllAsync();
             var reviews = allReviews.Where(r => doctorIds.Contains(r.Appointment.DoctorId)).ToList();
 
-            // Get appointments
             var allAppointments = await _appointmentRepository.GetAllAsync();
             var appointments = allAppointments.Where(a => doctorIds.Contains(a.DoctorId)).ToList();
 
-            // Calculate scores and sort
             var doctorScores = activeDoctors.Select(doctor =>
             {
                 var subscription = subscriptions.FirstOrDefault(s => s.DoctorId == doctor.Id);
@@ -820,7 +776,7 @@ namespace Medix.API.Business.Services.Classification
                 var doctorAppointments = appointments.Where(a => a.DoctorId == doctor.Id).ToList();
 
                 var tierScore = GetTierScore(subscription);
-                var rating = doctor.Rating; // Use rating from DoctorDto
+                var rating = doctor.Rating; 
                 var appointmentCount = doctorAppointments.Count;
 
                 return new
@@ -835,7 +791,6 @@ namespace Medix.API.Business.Services.Classification
 
             foreach (var item in doctorScores)
             {
-                // Get doctor entity with user for consultation fee
                 var doctorEntity = await _doctorRepository.GetDoctorByIdAsync(item.Doctor.Id);
                 var consultationFee = doctorEntity?.ConsultationFee ?? 0;
                 
@@ -878,7 +833,6 @@ namespace Medix.API.Business.Services.Classification
 
         private string ExtractSpecialtyName(string query)
         {
-            // Simple extraction - in production, use NLP
             var specialties = new[] { "tim mạch", "thần kinh", "tiêu hóa", "da liễu", "nội", "ngoại", "nhi", "sản" };
             var normalizedQuery = NormalizeText(query);
             var normalizedSpecialties = specialties.Select(NormalizeText).ToArray();
@@ -896,7 +850,6 @@ namespace Medix.API.Business.Services.Classification
 
         private string ExtractDoctorName(string query)
         {
-            // Simple extraction - in production, use NLP
             var normalizedQuery = NormalizeText(query);
             var parts = normalizedQuery.Split(new[] { "bac si", "thong tin" }, StringSplitOptions.RemoveEmptyEntries);
             return parts.Length > 1 ? parts[1].Trim() : string.Empty;

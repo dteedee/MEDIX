@@ -50,8 +50,9 @@ namespace Medix.API.Business.Services.Community
                         var salary = doctor.Appointments
                             .Select(a => a.TotalAmount)
                             .Sum();
-                        decimal netSalary = 0;
-                        if (doctor.isSalaryDeduction == true)
+                        var netSalary = salary * ((decimal)Constants.DoctorSalaryShare);
+
+                        var doctorSalary = new DoctorSalary
                         {
                             netSalary = salary * ((decimal)Constants.DoctorSalaryShare) * 0.8m;
                         }// số thực về tài khoản bác sĩ
@@ -75,13 +76,11 @@ namespace Medix.API.Business.Services.Community
                             };
                         await _salaryRepository.CreateAsync(doctorSalary);
 
-                        //add to balance
                         if (!await _walletRepository.IncreaseWalletBalanceAsync(doctor.UserId, netSalary))
                         {
                             throw new Exception("Failed to increase balance");
                         };
 
-                        //add to wallet transaction
                         var wallet = await _walletRepository.GetWalletByUserIdAsync(doctor.UserId) 
                             ?? throw new Exception("Cant find wallet");
                         var walletTransaction = new WalletTransaction
@@ -96,7 +95,6 @@ namespace Medix.API.Business.Services.Community
                         };
                         await _walletTransactionRepository.CreateWalletTransactionAsync(walletTransaction);
 
-                        //commit
                         await transaction.CommitAsync();
                     }
                     catch (Exception ex)

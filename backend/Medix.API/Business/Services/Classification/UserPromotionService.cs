@@ -21,7 +21,6 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<UserPromotionDto> AssignPromotionToUserAsync(Guid userId, Guid promotionId)
         {
-            // Kiểm tra xem promotion đã được gán cho user chưa
       
 
       
@@ -32,15 +31,13 @@ namespace Medix.API.Business.Services.Classification
                 PromotionId = promotionId,
                 UsedCount = 0,
                 IsActive = true,
-                ExpiryDate = DateTime.UtcNow.AddDays(30)  // ✅ Set ExpiryDate từ Promotion
+                ExpiryDate = DateTime.UtcNow.AddDays(30)  
             };
 
             var created = await _userPromotionRepository.CreateAsync(userPromotion);
 
-            // Load promotion details
             var result = await _userPromotionRepository.GetByIdAsync(created.Id);
 
-            // ✅ Schedule job để tự động deactivate khi hết hạn
             if (result != null && result.ExpiryDate > DateTime.UtcNow)
             {
                 BackgroundJob.Schedule<IUserPromotionService>(
@@ -86,7 +83,6 @@ namespace Medix.API.Business.Services.Classification
 
             var now = DateTime.UtcNow;
 
-            // Validate promotion
             if (!userPromotion.IsActive)
                 throw new InvalidOperationException("This promotion is not active.");
 
@@ -103,10 +99,8 @@ namespace Medix.API.Business.Services.Classification
                 userPromotion.UsedCount >= userPromotion.Promotion.MaxUsage.Value)
                 throw new InvalidOperationException("Usage limit reached for this promotion.");
 
-            // Increment usage count
             await _userPromotionRepository.IncrementUsageCountAsync(id);
 
-            // Reload to get updated data
             var updated = await _userPromotionRepository.GetByIdAsync(id);
 
             return MapToDto(updated!);
@@ -183,7 +177,6 @@ namespace Medix.API.Business.Services.Classification
             if (!applicableToAllUsers && !applicableToNewUsers && !applicableToVipUsers)
                 throw new InvalidOperationException("At least one target flag must be true.");
 
-            // Load all users once (includes roles)
             var allUsers = (await userRepository.GetAllAsync()).ToList();
 
             IEnumerable<User> targets;
@@ -224,7 +217,6 @@ namespace Medix.API.Business.Services.Classification
 
             foreach (var user in targets)
             {
-                // Skip if already assigned
                 var exists = await _userPromotionRepository.GetByUserIdAndPromotionIdAsync(user.Id, promotionId);
                 if (exists != null) continue;
 
@@ -235,7 +227,7 @@ namespace Medix.API.Business.Services.Classification
                     UsedCount = 0,
                     IsActive = true,
                     AssignedAt = DateTime.UtcNow,
-                    ExpiryDate = DateTime.UtcNow.AddDays(30) // fallback; ideally read from Promotion
+                    ExpiryDate = DateTime.UtcNow.AddDays(30) 
                 };
 
                 var created = await _userPromotionRepository.CreateAsync(userPromotion);
@@ -243,7 +235,6 @@ namespace Medix.API.Business.Services.Classification
 
                 if (loaded != null)
                 {
-                    // Schedule deactivation
                     if (loaded.ExpiryDate > DateTime.UtcNow)
                     {
                         BackgroundJob.Schedule<IUserPromotionService>(

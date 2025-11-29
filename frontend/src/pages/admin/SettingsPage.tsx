@@ -241,7 +241,12 @@ export default function SettingsPage() {
         retentionDays: parseInt(retentionRes.data?.configValue || '30', 10),
       });
 
-      setBackupList(backupFilesRes.data || []);
+      // Chỉ lấy bản sao lưu mới nhất (sắp xếp theo createdAt và lấy phần tử đầu tiên)
+      const backups: DatabaseBackupInfo[] = backupFilesRes.data || [];
+      const latestBackup = backups.length > 0 
+        ? [backups.sort((a: DatabaseBackupInfo, b: DatabaseBackupInfo) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]]
+        : [];
+      setBackupList(latestBackup);
     } catch (error) {
       console.error('Failed to fetch backup settings', error);
       showToast('Không thể tải cấu hình sao lưu.', 'error');
@@ -1314,7 +1319,7 @@ export default function SettingsPage() {
                   </button>
                 </div>
                 <div className={styles.settingItem}>
-                  <label>Danh sách bản sao lưu gần đây</label>
+                  <label>Bản sao lưu mới nhất</label>
                   {backupList.length === 0 ? (
                     <p className={styles.emptyState}>Chưa có bản sao lưu nào.</p>
                   ) : (

@@ -19,15 +19,12 @@ namespace Medix.API.Presentation.Controller
 
         }
 
-        // Controllers/DoctorGroupsController.cs (hoặc BookingController)
 
         [HttpGet("by-tier")]
         [ProducesResponseType(typeof(IEnumerable<ServiceTierWithPaginatedDoctorsDto>), 200)]
         public async Task<IActionResult> GetDoctorsGroupedByTier(
-            // THAY ĐỔI Ở ĐÂY:
             [FromQuery] DoctorQueryParameters queryParams)
         {
-            // Truyền tham số MỚI vào service
             var result = await _doctorService.GetGroupedDoctorsAsync(queryParams);
             return Ok(result);
         }

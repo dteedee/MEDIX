@@ -24,7 +24,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
             var lastWeekStart = weekStart.AddDays(-7);
             var lastWeekEnd = weekStart.AddDays(-1);
 
-            // Summary Statistics
             var totalUsers = await _context.Users.CountAsync();
             var activeUsers = await _context.Users.Where(u => u.Status == 1 && !u.LockoutEnabled).CountAsync();
             
@@ -58,7 +57,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
             var averageRating = await _context.Reviews
                 .AverageAsync(r => (double?)r.Rating) ?? 0;
 
-            // Growth Calculations
             var lastMonthUsers = await _context.Users
                 .Where(u => u.CreatedAt >= lastMonthStart && u.CreatedAt < monthStart)
                 .CountAsync();
@@ -113,7 +111,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 ? ((double)(currentMonthAppointments - lastMonthAppointments) / lastMonthAppointments) * 100 
                 : (currentMonthAppointments > 0 ? 100 : 0);
 
-            // User Growth (Last 30 days)
             var userGrowth = new List<AdminDashboardUserGrowthDto>();
             for (int i = 29; i >= 0; i--)
             {
@@ -139,7 +136,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 });
             }
 
-            // Appointment Trends (Last 12 months)
             var appointmentTrends = new List<AdminDashboardAppointmentTrendDto>();
             for (int i = 11; i >= 0; i--)
             {
@@ -170,7 +166,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 });
             }
 
-            // Revenue Trends (Last 12 months)
             var revenueTrends = new List<AdminDashboardRevenueTrendDto>();
             for (int i = 11; i >= 0; i--)
             {
@@ -202,10 +197,8 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 });
             }
 
-            // Recent Activities
             var recentActivities = new List<AdminDashboardRecentActivityDto>();
 
-            // Recent user registrations
             var recentUsers = await _context.Users
                 .OrderByDescending(u => u.CreatedAt)
                 .Take(5)
@@ -221,7 +214,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
             recentActivities.AddRange(recentUsers);
 
-            // Recent appointments
             var recentAppointments = await _context.Appointments
                 .Include(a => a.Doctor)
                     .ThenInclude(d => d.User)
@@ -241,7 +233,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
             recentActivities.AddRange(recentAppointments);
 
-            // Recent health articles
             var recentArticles = await _context.HealthArticles
                 .Include(a => a.Author)
                 .Where(a => a.StatusCode == "Published")
@@ -264,7 +255,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Take(10)
                 .ToList();
 
-            // Top Specialties
             var topSpecialties = await _context.Doctors
                 .Include(d => d.User)
                 .Include(d => d.Specialization)

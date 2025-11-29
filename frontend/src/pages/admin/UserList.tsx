@@ -19,6 +19,8 @@ interface UserStats {
   activeUsers: number;
   newUsersLast7Days: number;
   doctorCount: number;
+  patientCount: number;
+  managerCount: number;
   growthPercentageLast7Days: number;
 }
 
@@ -349,7 +351,7 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
   // Tính toán thống kê từ danh sách đã tải về
   const calculatedStats = useMemo(() => {
     if (allUsersForStats.length === 0) {
-      return { activeUsers: 0, newUsersLast7Days: 0, doctorCount: 0, growthPercentageLast7Days: 0, lockedUsersCount: 0 };
+      return { activeUsers: 0, newUsersLast7Days: 0, doctorCount: 0, patientCount: 0, managerCount: 0, growthPercentageLast7Days: 0, lockedUsersCount: 0 };
     }
 
     const sevenDaysAgo = new Date();
@@ -360,6 +362,8 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
     const activeUsers = allUsersForStats.filter(u => !isUserLocked(u)).length;
     const newUsersLast7Days = allUsersForStats.filter(u => u.createdAt && new Date(u.createdAt) >= sevenDaysAgo).length;
     const doctorCount = allUsersForStats.filter(u => u.role?.toUpperCase() === 'DOCTOR').length;
+    const patientCount = allUsersForStats.filter(u => u.role?.toUpperCase() === 'PATIENT').length;
+    const managerCount = allUsersForStats.filter(u => u.role?.toUpperCase() === 'OPERATIONS MANAGER' || u.role?.toUpperCase() === 'OPERATIONSMANAGER' || u.role?.toUpperCase() === 'MANAGER').length;
     const lockedUsersCount = allUsersForStats.filter(u => isUserLocked(u)).length;
     
     const previousWeekUsers = allUsersForStats.filter(u => u.createdAt && new Date(u.createdAt) >= fourteenDaysAgo && new Date(u.createdAt) < sevenDaysAgo).length;
@@ -367,7 +371,7 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
       ? Math.round(((newUsersLast7Days - previousWeekUsers) / previousWeekUsers) * 100) 
       : (newUsersLast7Days > 0 ? 100 : 0);
 
-    return { activeUsers, newUsersLast7Days, doctorCount, growthPercentageLast7Days: growthPercentage, lockedUsersCount };
+    return { activeUsers, newUsersLast7Days, doctorCount, patientCount, managerCount, growthPercentageLast7Days: growthPercentage, lockedUsersCount };
   }, [allUsersForStats]);
 
   const totalPages = Math.ceil(filteredUsers.length / filters.pageSize);
@@ -451,6 +455,40 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
           </div>
           <div className={styles.statBg}>
             <i className="bi bi-person-badge-fill"></i>
+          </div>
+        </div>
+
+        <div className={`${styles.statCard} ${styles.statCard5}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-person-heart"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Bệnh nhân</div>
+            <div className={styles.statValue}>{stats?.patientCount ?? calculatedStats.patientCount}</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-graph-up"></i>
+              <span>+2.1% tháng này</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-person-heart"></i>
+          </div>
+        </div>
+
+        <div className={`${styles.statCard} ${styles.statCard6}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-person-gear"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Quản lý</div>
+            <div className={styles.statValue}>{stats?.managerCount ?? calculatedStats.managerCount}</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-graph-up"></i>
+              <span>+0.8% tháng này</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-person-gear"></i>
           </div>
         </div>
       </div>

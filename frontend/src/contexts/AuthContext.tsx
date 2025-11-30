@@ -59,11 +59,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
     };
+
+    const handleTokenExpired = () => {
+      // Clear user state when token expires
+      setUser(null);
+      localStorage.removeItem('userData');
+      localStorage.removeItem('currentUser');
+    };
     
     window.addEventListener('authChanged', handleAuthChange);
+    window.addEventListener('authTokenExpired', handleTokenExpired);
     
     return () => {
       window.removeEventListener('authChanged', handleAuthChange);
+      window.removeEventListener('authTokenExpired', handleTokenExpired);
     };
   }, [user]);
 
@@ -86,7 +95,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (refreshToken && (!accessToken || isTokenExpired)) {
         try {
           const authResponse = await authService.refreshToken(refreshToken);
-          apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken);
+          // Store new tokens with expiresAt from backend
+          apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken, authResponse.expiresAt);
+          // Restore user data
           if (userData) {
             await loadUserProfile();
           }
@@ -128,7 +139,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       let finalUser = authResponse.user;
 
-      apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken);
+      // Store tokens immediately so subsequent API calls are authenticated
+      // Use expiresAt from backend response
+      apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken, authResponse.expiresAt);
 
       if (finalUser.role === UserRole.DOCTOR) {
         try {
@@ -165,7 +178,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const authResponse: AuthResponse = await authService.register(userData);
       
-      apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken);
+      // Store tokens with expiresAt from backend
+      apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken, authResponse.expiresAt);
       
       localStorage.setItem('userData', JSON.stringify(authResponse.user));
       localStorage.setItem('currentUser', JSON.stringify(authResponse.user));
@@ -184,7 +198,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const authResponse: AuthResponse = await authService.registerPatient(patientData);
       
-      apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken);
+      // Store tokens with expiresAt from backend
+      apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken, authResponse.expiresAt);
       
       localStorage.setItem('userData', JSON.stringify(authResponse.user));
       localStorage.setItem('currentUser', JSON.stringify(authResponse.user));

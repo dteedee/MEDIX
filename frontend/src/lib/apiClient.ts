@@ -69,6 +69,10 @@ class ApiClient {
               return this.client(originalRequest);
             }
           } catch (refreshError) {
+            // If refresh token fails, clear tokens and redirect to login
+            this.handleLogout();
+            // Dispatch event to notify AuthContext
+            window.dispatchEvent(new Event('authTokenExpired'));
             return Promise.reject(refreshError);
           }
         }
@@ -90,8 +94,14 @@ class ApiClient {
 
     this.refreshTokenPromise = this.refreshToken(refreshToken)
       .then((response) => {
-        this.setTokens(response.accessToken, response.refreshToken);
+        // Use expiresAt from backend response
+        this.setTokens(response.accessToken, response.refreshToken, response.expiresAt);
         return response.accessToken;
+      })
+      .catch((error) => {
+        // Clear tokens if refresh fails
+        this.clearTokens();
+        throw error;
       })
       .finally(() => {
         this.refreshTokenPromise = null;
@@ -117,7 +127,10 @@ class ApiClient {
     
     if (token && expiration) {
       const expirationTime = parseInt(expiration);
-      if (Date.now() >= expirationTime) {
+      // Add 5 second buffer to refresh token before it actually expires
+      const bufferTime = 5 * 1000; // 5 seconds
+      if (Date.now() >= (expirationTime - bufferTime)) {
+        // Token expired or about to expire, clear it
         this.clearAccessTokens();
         return null;
       }
@@ -130,11 +143,22 @@ class ApiClient {
     return localStorage.getItem('refreshToken');
   }
 
-  public setTokens(accessToken: string, refreshToken: string): void {
+  public setTokens(accessToken: string, refreshToken: string, expiresAt?: string): void {
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
-    const expirationTime = Date.now() + (30 * 60 * 1000);
-    localStorage.setItem('tokenExpiration', expirationTime.toString());
+    
+    // Use expiresAt from backend if provided, otherwise calculate from current time
+    if (expiresAt) {
+      // Parse ISO string from backend and convert to timestamp
+      const expirationTime = new Date(expiresAt).getTime();
+      // Add 30 second buffer to account for clock skew and network delay
+      const bufferTime = 30 * 1000; // 30 seconds
+      localStorage.setItem('tokenExpiration', (expirationTime - bufferTime).toString());
+    } else {
+      // Fallback: Set token expiration time (1 hour from now) if expiresAt not provided
+      const expirationTime = Date.now() + (60 * 60 * 1000); // 1 hour
+      localStorage.setItem('tokenExpiration', expirationTime.toString());
+    }
   }
 
     public clearAccessTokens(): void {

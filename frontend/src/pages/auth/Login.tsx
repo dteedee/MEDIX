@@ -105,7 +105,7 @@ const Login: React.FC = () => {
       setIsLoading(true);
       const idToken = response.credential;
       const auth = await authService.loginWithGoogle(idToken);
-      apiClient.setTokens(auth.accessToken, auth.refreshToken);
+      apiClient.setTokens(auth.accessToken, auth.refreshToken, auth.expiresAt);
       localStorage.setItem('userData', JSON.stringify(auth.user));
       localStorage.setItem('currentUser', JSON.stringify(auth.user));
       window.dispatchEvent(new Event('authChanged'));

@@ -8,6 +8,7 @@ using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.Wallet;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace Medix.API.Business.Services.UserManagement
 {
@@ -120,11 +121,15 @@ namespace Medix.API.Business.Services.UserManagement
             _context.RefreshTokens.Add(refreshEntity);
             await _context.SaveChangesAsync();
 
+            // Get actual token expiration time from configuration
+            var expiryMinutes = await _configService.GetIntValueAsync("JWT_EXPIRY_MINUTES") ?? 30;
+            var tokenExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
+
             return new AuthResponseDto
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddHours(1),
+                ExpiresAt = tokenExpiresAt,
                 User = new UserDto
                 {
                     Id = user.Id,
@@ -183,11 +188,15 @@ namespace Medix.API.Business.Services.UserManagement
 
             await _context.SaveChangesAsync();
 
+            // Get actual token expiration time from configuration
+            var expiryMinutes = await _configService.GetIntValueAsync("JWT_EXPIRY_MINUTES") ?? 30;
+            var tokenExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
+
             return new AuthResponseDto
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddHours(1),
+                ExpiresAt = tokenExpiresAt,
                 User = new UserDto
                 {
                     Id = user.Id,
@@ -203,53 +212,115 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequestDto refreshTokenRequest)
         {
-            var storedToken = await _context.RefreshTokens
-                .Include(r => r.User)
-                .FirstOrDefaultAsync(r => r.Token == refreshTokenRequest.RefreshToken);
+            const int maxRetries = 3;
+            int retryCount = 0;
 
-            if (storedToken == null || storedToken.ExpiresAt < DateTime.UtcNow)
+            while (retryCount < maxRetries)
             {
-                throw new UnauthorizedException("Refresh token không hợp lệ hoặc đã hết hạn");
+                try
+                {
+                    // Use transaction with serializable isolation to prevent concurrent access
+                    using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+                    try
+                    {
+                        // Load token with user - the transaction will lock the row
+                        var storedToken = await _context.RefreshTokens
+                            .Include(r => r.User)
+                            .FirstOrDefaultAsync(r => r.Token == refreshTokenRequest.RefreshToken);
+
+                        if (storedToken == null || storedToken.ExpiresAt < DateTime.UtcNow)
+                        {
+                            await transaction.RollbackAsync();
+                            throw new UnauthorizedException("Refresh token không hợp lệ hoặc đã hết hạn");
+                        }
+
+                        var user = storedToken.User;
+                        var roleEntity = await _userRoleRepository.GetByIdAsync(user.Id);
+                        var roleCode = roleEntity?.RoleCode ?? user.Role ?? "Patient";
+
+                        var newAccessToken = _jwtService.GenerateAccessToken(user, new List<string> { roleCode });
+                        var newRefreshToken = _jwtService.GenerateRefreshToken();
+
+                        // Remove old token
+                        _context.RefreshTokens.Remove(storedToken);
+
+                        // Add new token
+                        var newTokenEntity = new RefreshToken
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = user.Id,
+                            Token = newRefreshToken,
+                            CreatedAt = DateTime.UtcNow,
+                            ExpiresAt = DateTime.UtcNow.AddDays(7)
+                        };
+
+                        _context.RefreshTokens.Add(newTokenEntity);
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+
+                        // Get actual token expiration time from configuration
+                        var expiryMinutes = await _configService.GetIntValueAsync("JWT_EXPIRY_MINUTES") ?? 30;
+                        var tokenExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
+
+                        return new AuthResponseDto
+                        {
+                            AccessToken = newAccessToken,
+                            RefreshToken = newRefreshToken,
+                            ExpiresAt = tokenExpiresAt,
+                            User = new UserDto
+                            {
+                                Id = user.Id,
+                                Email = user.Email,
+                                FullName = user.FullName,
+                                Role = roleCode,
+                                EmailConfirmed = user.EmailConfirmed,
+                                CreatedAt = user.CreatedAt,
+                                UserName = user.UserName,
+                                IsTemporaryUsername = user.UserName.StartsWith("temp_")
+                            }
+                        };
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        await transaction.RollbackAsync();
+                        
+                        // Check if token was already used (another request succeeded)
+                        var tokenStillExists = await _context.RefreshTokens
+                            .AnyAsync(r => r.Token == refreshTokenRequest.RefreshToken);
+                        
+                        if (!tokenStillExists)
+                        {
+                            throw new UnauthorizedException("Refresh token đã được sử dụng. Vui lòng đăng nhập lại.");
+                        }
+                        
+                        retryCount++;
+                        
+                        if (retryCount >= maxRetries)
+                        {
+                            throw new UnauthorizedException("Không thể làm mới token. Vui lòng thử lại sau.");
+                        }
+                        
+                        // Wait a bit before retry (exponential backoff)
+                        await Task.Delay(100 * retryCount);
+                        continue;
+                    }
+                }
+                catch (UnauthorizedException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    if (retryCount >= maxRetries - 1)
+                    {
+                        throw;
+                    }
+                    retryCount++;
+                    await Task.Delay(100 * retryCount);
+                }
             }
 
-            var user = storedToken.User;
-            var roleEntity = await _userRoleRepository.GetByIdAsync(user.Id);
-            var roleCode = roleEntity?.RoleCode ?? user.Role ?? "Patient";
-
-            var newAccessToken = _jwtService.GenerateAccessToken(user, new List<string> { roleCode });
-            var newRefreshToken = _jwtService.GenerateRefreshToken();
-
-            _context.RefreshTokens.Remove(storedToken);
-
-            var newTokenEntity = new RefreshToken
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                Token = newRefreshToken,
-                CreatedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddDays(7)
-            };
-
-            _context.RefreshTokens.Add(newTokenEntity);
-            await _context.SaveChangesAsync();
-
-            return new AuthResponseDto
-            {
-                AccessToken = newAccessToken,
-                RefreshToken = newRefreshToken,
-                ExpiresAt = DateTime.UtcNow.AddHours(1),
-                User = new UserDto
-                {
-                    Id = user.Id,
-                    Email = user.Email,
-                    FullName = user.FullName,
-                    Role = roleCode,
-                    EmailConfirmed = user.EmailConfirmed,
-                    CreatedAt = user.CreatedAt,
-                    UserName = user.UserName,
-                    IsTemporaryUsername = user.UserName.StartsWith("temp_")
-                }
-            };
+            throw new UnauthorizedException("Không thể làm mới token. Vui lòng thử lại sau.");
         }
 
         public async Task<AuthResponseDto> LoginWithGoogleAsync(GoogleLoginRequestDto request)
@@ -332,11 +403,15 @@ namespace Medix.API.Business.Services.UserManagement
             _context.RefreshTokens.Add(refreshEntity);
             await _context.SaveChangesAsync();
 
+            // Get actual token expiration time from configuration
+            var expiryMinutes = await _configService.GetIntValueAsync("JWT_EXPIRY_MINUTES") ?? 30;
+            var tokenExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
+
                 return new AuthResponseDto
                 {
                     AccessToken = accessToken,
                     RefreshToken = refreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddHours(1),
+                    ExpiresAt = tokenExpiresAt,
                     User = new UserDto
                     {
                         Id = existingUser.Id,

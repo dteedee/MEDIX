@@ -1,9 +1,9 @@
 /* Container */
 .container {
-  padding: 24px;
-  max-width: 1600px;
+  padding: 32px;
+  max-width: 1800px;
   margin: 0 auto;
-  background: #f5f7fa;
+  background: #f8fafc;
   min-height: 100vh;
 }
 
@@ -12,24 +12,38 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding: 20px 24px;
-  background: white;
+  margin-bottom: 32px;
+  padding: 28px 32px;
+  background: #ffffff;
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  animation: fadeInDown 0.6s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .headerLeft h1 {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
   color: #1a202c;
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
 }
 
 .headerLeft p {
-  font-size: 15px;
-  color: #718096;
+  font-size: 14px;
+  color: #64748b;
   margin: 0;
+  font-weight: 400;
 }
 
 .headerRight {
@@ -42,15 +56,32 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
-  background: #f7fafc;
-  border-radius: 8px;
-  color: #4a5568;
-  font-weight: 500;
+  padding: 10px 16px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
 }
 
 .dateTime i {
   color: #667eea;
+  font-size: 16px;
+}
+
+.dateTime span {
+  color: #334155;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Stats Grid */
@@ -62,87 +93,204 @@
 }
 
 .statCard {
-  background: white;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  animation: fadeInUp 0.6s ease-out both;
 }
+
+.statCard:nth-child(1) { animation-delay: 0.05s; }
+.statCard:nth-child(2) { animation-delay: 0.1s; }
+.statCard:nth-child(3) { animation-delay: 0.15s; }
+.statCard:nth-child(4) { animation-delay: 0.2s; }
+.statCard:nth-child(5) { animation-delay: 0.25s; }
+.statCard:nth-child(6) { animation-delay: 0.3s; }
+.statCard:nth-child(7) { animation-delay: 0.35s; }
+.statCard:nth-child(8) { animation-delay: 0.4s; }
 
 .statCard:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-color: #cbd5e0;
 }
 
-.statCircle {
-  min-width: 70px;
-  height: 70px;
-  border-radius: 50%;
+.statIconWrapper {
+  position: relative;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+}
+
+.statIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: white !important;
+  font-size: 26px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
   position: relative;
+  z-index: 1;
 }
 
-.statCircle i {
-  font-size: 18px;
+.statIcon i {
+  color: white !important;
+  font-size: 26px !important;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.statCard1 {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.statCard:hover .statIcon {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
-.statCard2 {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: white;
+.statBg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 48px;
+  opacity: 0.08;
+  pointer-events: none;
+  color: currentColor;
+  z-index: 0;
 }
 
-.statCard3 {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  color: white;
+.statBg i {
+  opacity: 0.15;
 }
 
-.statCard4 {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-  color: white;
+.statIcon.statCard1 { 
+  background: #667eea !important;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.5) !important;
+}
+
+.statCard:hover .statIcon.statCard1 {
+  background: #5a67d8 !important;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
+}
+
+.statIcon.statCard2 { 
+  background: #f5576c !important;
+  box-shadow: 0 4px 15px rgba(245, 87, 108, 0.5) !important;
+}
+
+.statCard:hover .statIcon.statCard2 {
+  background: #e63950 !important;
+  box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6) !important;
+}
+
+.statIcon.statCard3 { 
+  background: #2575fc !important;
+  box-shadow: 0 4px 15px rgba(37, 117, 252, 0.5) !important;
+}
+
+.statCard:hover .statIcon.statCard3 {
+  background: #1a5edb !important;
+  box-shadow: 0 6px 20px rgba(37, 117, 252, 0.6) !important;
+}
+
+.statIcon.statCard4 { 
+  background: #00d4ff !important;
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.5) !important;
+}
+
+.statCard:hover .statIcon.statCard4 {
+  background: #00bae5 !important;
+  box-shadow: 0 6px 20px rgba(0, 212, 255, 0.6) !important;
+}
+
+.statIcon.statCard5 { 
+  background: #10b981 !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.5) !important;
+}
+
+.statCard:hover .statIcon.statCard5 {
+  background: #059669 !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6) !important;
+}
+
+.statIcon.statCard6 { 
+  background: #f59e0b !important;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.5) !important;
+}
+
+.statCard:hover .statIcon.statCard6 {
+  background: #d97706 !important;
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6) !important;
+}
+
+.statIcon.statCard7 { 
+  background: #f97316 !important;
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.5) !important;
+}
+
+.statCard:hover .statIcon.statCard7 {
+  background: #ea580c !important;
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.6) !important;
+}
+
+.statIcon.statCard8 { 
+  background: #fbbf24 !important;
+  box-shadow: 0 4px 15px rgba(251, 191, 36, 0.5) !important;
+}
+
+.statCard:hover .statIcon.statCard8 {
+  background: #f59e0b !important;
+  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.6) !important;
 }
 
 .statInfo {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .statLabel {
-  font-size: 13px;
-  color: #718096;
-  margin-bottom: 4px;
-  font-weight: 500;
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .statValue {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
-  line-height: 1;
+  color: #0f172a;
+  margin-bottom: 6px;
+  line-height: 1.2;
 }
 
 .statTrend {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #4a5568;
-  margin-top: 4px;
+  gap: 4px;
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .statTrend i {
-  font-size: 12px;
+  font-size: 11px;
+  color: #10b981;
 }
 
 /* Charts Grid */
@@ -154,10 +302,17 @@
 }
 
 .chartCard {
-  background: white;
-  border-radius: 16px;
+  background: #ffffff;
+  border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.6s ease-out 0.45s both;
+}
+
+.chartCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .chartHeader {
@@ -168,30 +323,31 @@
 }
 
 .chartHeader h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a202c;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
   margin: 0;
 }
 
 .chartActions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .chartBtn {
   padding: 6px 12px;
   border: 1px solid #e2e8f0;
   background: white;
-  border-radius: 6px;
-  font-size: 13px;
-  color: #4a5568;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #64748b;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-weight: 600;
 }
 
 .chartBtn:hover {
-  background: #f7fafc;
+  background: #f8fafc;
   border-color: #cbd5e0;
 }
 
@@ -208,57 +364,28 @@
   justify-content: center;
 }
 
-.chartPlaceholder {
-  text-align: center;
-  color: #a0aec0;
-}
-
-.chartPlaceholder i {
-  font-size: 48px;
-  margin-bottom: 16px;
-  display: block;
-}
-
-.chartPlaceholder p {
-  font-size: 16px;
-  margin: 0;
-}
-
 /* Activity Card */
 .activityCard {
-  background: white;
-  border-radius: 16px;
+  background: #ffffff;
+  border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  animation: fadeInUp 0.6s ease-out 0.5s both;
 }
 
 .activityHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .activityHeader h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a202c;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
   margin: 0;
-}
-
-.viewAllBtn {
-  padding: 6px 12px;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.viewAllBtn:hover {
-  background: #5a67d8;
 }
 
 .activityList {
@@ -272,50 +399,72 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: #f7fafc;
-  border-radius: 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
   transition: all 0.2s ease;
 }
 
 .activityItem:hover {
-  background: #edf2f7;
+  background: #f1f5f9;
+  border-color: #cbd5e0;
+  transform: translateX(4px);
 }
 
 .activityIcon {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  background: #667eea;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .activityContent {
   flex: 1;
+  min-width: 0;
 }
 
 .activityTitle {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1a202c;
-  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 2px;
 }
 
 .activityDesc {
-  font-size: 13px;
-  color: #4a5568;
-  margin-bottom: 4px;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 2px;
+  font-weight: 400;
 }
 
 .activityTime {
-  font-size: 12px;
-  color: #a0aec0;
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+/* Error State */
+.errorState {
+  padding: 40px;
+  text-align: center;
+  color: #e53e3e;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 /* Responsive */
+@media (max-width: 1400px) {
+  .statsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 @media (max-width: 1200px) {
   .statsGrid {
     grid-template-columns: repeat(2, 1fr);
@@ -332,17 +481,66 @@
   }
   
   .header {
-    padding: 16px;
+    padding: 20px;
     flex-direction: column;
     gap: 16px;
     text-align: center;
   }
+
+  .headerLeft h1 {
+    font-size: 24px;
+  }
   
   .statsGrid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .statCard {
+    padding: 20px;
+  }
+
+  .statIcon {
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
+  }
+
+  .statValue {
+    font-size: 24px;
   }
   
   .chartActions {
     flex-wrap: wrap;
+  }
+
+  .activityItem {
+    padding: 12px;
+  }
+
+  .activityIcon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerLeft h1 {
+    font-size: 20px;
+  }
+
+  .dateTime {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .statValue {
+    font-size: 20px;
+  }
+
+  .chartCard,
+  .activityCard {
+    padding: 20px;
   }
 }

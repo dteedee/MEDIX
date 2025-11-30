@@ -48,20 +48,19 @@ namespace Medix.API.Business.Services.UserManagement
                 MedicalHistory = savedPatient.MedicalHistory,
                 Allergies = savedPatient.Allergies,
                 EmergencyContactName = savedPatient.EmergencyContactName,
-                EmergencyContactPhone = savedPatient.EmergencyContactPhone
+                EmergencyContactPhone = savedPatient.EmergencyContactPhone,
+                
             };
         }
 
         public async Task<PatientDTO?> GetByIdAsync(Guid id)
         {
-            // TODO: Implement when repository method exists
             await Task.Delay(1);
             return null;
         }
 
         public async Task<PatientDTO?> GetByUserIdAsync(Guid userId)
         {
-            // Gọi phương thức repository bạn đã cung cấp
             var patientEntity = await _patientRepository.GetPatientByUserIdAsync(userId);
 
             if (patientEntity == null)
@@ -69,13 +68,13 @@ namespace Medix.API.Business.Services.UserManagement
                 return null;
             }
 
-            // Map thủ công Entity -> DTO (Nên dùng AutoMapper)
             return new PatientDTO
             {
                 Id = patientEntity.Id,
                 UserId = patientEntity.UserId,
                 EmergencyContactName = patientEntity.EmergencyContactName,
                 EmergencyContactPhone = patientEntity.EmergencyContactPhone
+               ,BloodTypeCode = patientEntity.BloodTypeCode
              
             };
         }
@@ -95,6 +94,7 @@ namespace Medix.API.Business.Services.UserManagement
             patientEntity.EmergencyContactPhone = patientDTO.EmergencyContactPhone;
             patientEntity.Allergies = patientDTO.Allergies;
             patientEntity.MedicalHistory = patientDTO.MedicalHistory;
+            patientEntity.BloodTypeCode = patientDTO.BloodTypeCode;
 
             var updatedEntity = await _patientRepository.UpdatePatientAsync(patientEntity);
 
@@ -103,22 +103,21 @@ namespace Medix.API.Business.Services.UserManagement
                 Id = updatedEntity.Id,
                 UserId = updatedEntity.UserId,
                 EmergencyContactName = updatedEntity.EmergencyContactName,
-                EmergencyContactPhone = updatedEntity.EmergencyContactPhone
-
+                EmergencyContactPhone = updatedEntity.EmergencyContactPhone,
+                BloodTypeCode =updatedEntity.BloodTypeCode
+                
 
             };
         }
 
         public async Task<bool> DeleteAsync(Guid id)
         {
-            // TODO: Implement when repository method exists
             await Task.Delay(1);
             return false;
         }
 
         public async Task<IEnumerable<PatientDTO>> GetAllAsync()
         {
-            // TODO: Implement when repository method exists
             await Task.Delay(1);
             return new List<PatientDTO>();
         }

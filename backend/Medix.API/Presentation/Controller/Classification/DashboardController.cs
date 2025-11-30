@@ -17,17 +17,21 @@ namespace Medix.API.Presentation.Controller.Classification
 
         private readonly IDoctorDashboardService _service;
         private readonly IAdminDashboardService _adminService;
+        private readonly IManagerDashboardService _managerService;
         private readonly ISpecializationService _specializationService;
         private readonly IAppointmentService appointmentService;
         private readonly IUserService _userService;
+        private readonly IReviewService _reviewService;
 
-        public DashboardController(IDoctorDashboardService service, ISpecializationService specializationService, IAppointmentService appointmentService, IUserService userService, IAdminDashboardService adminService)
+        public DashboardController(IDoctorDashboardService service, IAdminDashboardService adminService, IManagerDashboardService managerService, ISpecializationService specializationService, IAppointmentService appointmentService, IUserService userService, IReviewService reviewService)
         {
+            _service = service;
+            _adminService = adminService;
+            _managerService = managerService;
             _specializationService = specializationService;
             this.appointmentService = appointmentService;
             _userService = userService;
-            _service = service;
-            _adminService = adminService;
+            _reviewService = reviewService;
         }
 
         [HttpGet("doctor/{doctorId}")]
@@ -105,6 +109,41 @@ namespace Medix.API.Presentation.Controller.Classification
         {
             var result = await _adminService.GetDashboardAsync();
             return Ok(result);
+        }
+
+        [HttpGet("manager")]
+        [Authorize(Roles = "Manager,Admin")]
+        public async Task<IActionResult> GetManagerDashboard()
+        {
+            var result = await _managerService.GetDashboardAsync();
+            return Ok(result);
+        }
+
+
+        [HttpGet("top-doctors")]
+        public async Task<IActionResult> GetTopDoctorsByRating([FromQuery] int count = 3)
+        {
+            try
+            {
+                if (count <= 0 || count > 10)
+                {
+                    return BadRequest(new { message = "Count phải từ 1 đến 10" });
+                }
+
+                var topDoctors = await _reviewService.GetTopDoctorsByRatingAsync(count);
+
+                if (!topDoctors.Any())
+                {
+                    return Ok(topDoctors);
+                }
+
+               return Ok(topDoctors);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Có lỗi xảy ra khi lấy dữ liệu bác sĩ top", error = ex.Message });
+            }
         }
     }
 }

@@ -6,7 +6,6 @@ class ApiClient {
   private refreshTokenPromise: Promise<string> | null = null;
 
   constructor() {
-    // Use environment variable for API base URL, fallback to localhost for development
     const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5123/api';
     
     this.client = axios.create({
@@ -20,13 +19,22 @@ class ApiClient {
   }
 
   private setupInterceptors() {
-    // Request interceptor to add auth token
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        const token = this.getAccessToken();
-        if (token && config.headers) {
-          config.headers.Authorization = `Bearer ${token}`;
+        const reqUrl = (config.url || '').toString();
+        const isRefreshTokenEndpoint = reqUrl.includes('/auth/refresh-token');
+        
+        if (!isRefreshTokenEndpoint) {
+          const token = this.getAccessToken();
+          if (token && config.headers) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
         }
+        
+        if (config.data instanceof FormData) {
+          delete config.headers['Content-Type'];
+        }
+        
         return config;
       },
       (error) => {
@@ -34,7 +42,6 @@ class ApiClient {
       }
     );
 
-    // Response interceptor to handle token refresh
     this.client.interceptors.response.use(
       (response: AxiosResponse) => response,
       async (error) => {
@@ -47,12 +54,10 @@ class ApiClient {
           reqUrl.includes('/auth/refresh-token') ||
           reqUrl.includes('/auth/logout');
 
-        // If the failing request is an auth route (login/refresh) don't attempt refresh —
-        // let the caller receive the original 401 so UI can show the correct message.
         if (error.response?.status === 401 && !originalRequest._retry) {
           if (isAuthEndpoint) {
             this.handleLogout();
-            return Promise.reject(error); // propagate original 401/error to caller
+            return Promise.reject(error); 
           }
 
           originalRequest._retry = true;
@@ -64,8 +69,10 @@ class ApiClient {
               return this.client(originalRequest);
             }
           } catch (refreshError) {
+            // If refresh token fails, clear tokens and redirect to login
             this.handleLogout();
-            window.location.href = '/login';
+            // Dispatch event to notify AuthContext
+            window.dispatchEvent(new Event('authTokenExpired'));
             return Promise.reject(refreshError);
           }
         }
@@ -87,8 +94,14 @@ class ApiClient {
 
     this.refreshTokenPromise = this.refreshToken(refreshToken)
       .then((response) => {
-        this.setTokens(response.accessToken, response.refreshToken);
+        // Use expiresAt from backend response
+        this.setTokens(response.accessToken, response.refreshToken, response.expiresAt);
         return response.accessToken;
+      })
+      .catch((error) => {
+        // Clear tokens if refresh fails
+        this.clearTokens();
+        throw error;
       })
       .finally(() => {
         this.refreshTokenPromise = null;
@@ -108,17 +121,17 @@ class ApiClient {
     return this.getAccessToken();
   }
   
-  // Token management
   private getAccessToken(): string | null {
     const token = localStorage.getItem('accessToken');
     const expiration = localStorage.getItem('tokenExpiration');
     
-    // Check if token is expired
     if (token && expiration) {
       const expirationTime = parseInt(expiration);
-      if (Date.now() >= expirationTime) {
-        // Token expired, clear it
-        this.clearTokens();
+      // Add 5 second buffer to refresh token before it actually expires
+      const bufferTime = 5 * 1000; // 5 seconds
+      if (Date.now() >= (expirationTime - bufferTime)) {
+        // Token expired or about to expire, clear it
+        this.clearAccessTokens();
         return null;
       }
     }
@@ -130,12 +143,27 @@ class ApiClient {
     return localStorage.getItem('refreshToken');
   }
 
-  public setTokens(accessToken: string, refreshToken: string): void {
+  public setTokens(accessToken: string, refreshToken: string, expiresAt?: string): void {
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
-    // Set token expiration time (30 minutes from now)
-    const expirationTime = Date.now() + (30 * 60 * 1000); // 30 minutes
-    localStorage.setItem('tokenExpiration', expirationTime.toString());
+    
+    // Use expiresAt from backend if provided, otherwise calculate from current time
+    if (expiresAt) {
+      // Parse ISO string from backend and convert to timestamp
+      const expirationTime = new Date(expiresAt).getTime();
+      // Add 30 second buffer to account for clock skew and network delay
+      const bufferTime = 30 * 1000; // 30 seconds
+      localStorage.setItem('tokenExpiration', (expirationTime - bufferTime).toString());
+    } else {
+      // Fallback: Set token expiration time (1 hour from now) if expiresAt not provided
+      const expirationTime = Date.now() + (60 * 60 * 1000); // 1 hour
+      localStorage.setItem('tokenExpiration', expirationTime.toString());
+    }
+  }
+
+    public clearAccessTokens(): void {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('tokenExpiration');
   }
 
   public clearTokens(): void {
@@ -146,10 +174,8 @@ class ApiClient {
 
   private handleLogout(): void {
     this.clearTokens();
-    // Clear any user data from context/state
   }
 
-  // HTTP methods
   public get<T = any>(url: string, config?: any): Promise<AxiosResponse<T>> {
     return this.client.get<T>(url, config);
   }
@@ -161,8 +187,7 @@ class ApiClient {
   public postMultipart<T = any>(url: string, formData: FormData): Promise<AxiosResponse<T>> {
     return this.client.post<T>(url, formData, {
       headers: {
-        // Let Axios set the correct boundary automatically
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': undefined,
       },
     });
   }
@@ -174,8 +199,7 @@ class ApiClient {
   public putMultipart<T = any>(url: string, formData: FormData): Promise<AxiosResponse<T>> {
     return this.client.put<T>(url, formData, {
       headers: {
-        // Let Axios set the correct boundary automatically
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': undefined,
       },
     });
   }
@@ -189,5 +213,4 @@ class ApiClient {
   }
 }
 
-// Export singleton instance
 export const apiClient = new ApiClient();

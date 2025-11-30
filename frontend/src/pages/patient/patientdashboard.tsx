@@ -12,6 +12,8 @@ import { MedicalRecordDto } from '../../types/medicalRecord.types';
 import { DoctorProfileDto } from '../../types/doctor.types';
 import { PatientHealthReminderDto } from '../../types/patient.types';
 import styles from '../../styles/patient/PatientDashboard.module.css';
+import ReminderCard from '../../components/ReminderCard';
+import { apiClient } from '../../lib/apiClient';
 import modalStyles from '../../styles/patient/PatientAppointments.module.css';
 
 export const PatientDashboard: React.FC = () => {
@@ -26,6 +28,9 @@ export const PatientDashboard: React.FC = () => {
   const [loadingDoctors, setLoadingDoctors] = useState<Set<string>>(new Set());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [isMaintenance, setIsMaintenance] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,13 +52,29 @@ export const PatientDashboard: React.FC = () => {
         setMedicalRecords(medicalRecordsData);
         setReminders(remindersData);
       } catch (err: any) {
-        console.error('Error fetching data:', err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const checkMaintenanceMode = async () => {
+      try {
+        const response = await apiClient.get('/SystemConfiguration/MAINTENANCE_MODE');
+        if (response.data?.configValue?.toLowerCase() === 'true') {
+          setIsMaintenance(true);
+          const msgResponse = await apiClient.get('/SystemConfiguration/MAINTENANCE_MESSAGE');
+          setMaintenanceMessage(msgResponse.data?.configValue || 'Hệ thống đang được bảo trì để nâng cấp. Vui lòng quay lại sau.');
+        } else {
+          setIsMaintenance(false);
+        }
+      } catch (error) {
+      }
+    };
+    checkMaintenanceMode();
   }, []);
 
   const formatBalance = (balance: number, currency: string): string => {
@@ -253,7 +274,6 @@ export const PatientDashboard: React.FC = () => {
             return newMap;
           });
         } catch (err) {
-          console.error(`Error loading doctor profile for ${doctorID}:`, err);
         } finally {
           setLoadingDoctors(prev => {
             const newSet = new Set(prev);
@@ -269,6 +289,18 @@ export const PatientDashboard: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [upcomingAppointments]);
+
+  if (isMaintenance) {
+    return (
+      <div className={styles.maintenanceOverlay}>
+        <div className={styles.maintenanceBox}>
+          <i className="bi bi-tools"></i>
+          <h2>Hệ thống đang bảo trì</h2>
+          <p>{maintenanceMessage}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -321,7 +353,7 @@ export const PatientDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Stats */}
+      {/* Quick Stats - Improved Grid */}
       <div className={styles.quickStats}>
         <div className={styles.statCard} onClick={() => navigate('/app/patient/appointments')}>
           <div className={styles.statIconWrapper}>
@@ -389,9 +421,9 @@ export const PatientDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Improved Grid Layout */}
       <div className={styles.mainContent}>
-        {/* Left Column */}
+        {/* Left Column - Wider for better balance */}
         <div className={styles.leftColumn}>
           {/* Upcoming Appointments */}
           <div className={styles.sectionCard}>
@@ -500,7 +532,7 @@ export const PatientDashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Health Summary */}
+          {/* Health Summary - Enhanced */}
           <div className={styles.sectionCard}>
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle}>
@@ -545,12 +577,62 @@ export const PatientDashboard: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Recent Medical Records - Moved to left for better balance */}
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionTitle}>
+                <i className="bi bi-clock-history"></i>
+                <h2>Lịch sử khám gần đây</h2>
+              </div>
+              <button 
+                className={styles.viewAllLink}
+                onClick={() => navigate('/app/patient/emr-timeline')}
+              >
+                Xem tất cả
+                <i className="bi bi-arrow-right"></i>
+              </button>
+            </div>
+            
+            {medicalRecords.length > 0 ? (
+              <div className={styles.recordsList}>
+                {medicalRecords.slice(0, 3).map((record, index) => (
+                  <div 
+                    key={record.id} 
+                    className={styles.recordItem}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                    onClick={() => navigate('/app/patient/emr-timeline')}
+                  >
+                    <div className={styles.recordIcon}>
+                      <i className="bi bi-file-text"></i>
+                    </div>
+                    <div className={styles.recordInfo}>
+                      <h5>{record.diagnosis || record.chiefComplaint || 'Khám tổng quát'}</h5>
+                      <p>{record.doctor}</p>
+                      <span className={styles.recordDate}>
+                        <i className="bi bi-calendar3"></i>
+                        {formatDate(record.date)}
+                      </span>
+                    </div>
+                    <i className="bi bi-chevron-right"></i>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.emptyState}>
+                <div className={styles.emptyIcon}>
+                  <i className="bi bi-file-medical"></i>
+                </div>
+                <p>Chưa có hồ sơ bệnh án</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Right Column */}
+        {/* Right Column - Better organized */}
         <div className={styles.rightColumn}>
-          {/* Reminder Widget */}
-          <div className={styles.sectionCard} style={{ background: 'linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%)', border: '2px solid #ff6b6b' }}>
+          {/* Reminder Widget - Priority: Moved to top */}
+          <div className={`${styles.sectionCard} ${styles.reminderCardPriority}`} style={{ background: 'linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%)', border: '2px solid #ff6b6b' }}>
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle} style={{ color: '#ff6b6b' }}>
                 <i className="bi bi-bell-fill"></i>
@@ -560,59 +642,27 @@ export const PatientDashboard: React.FC = () => {
                 )}
               </div>
             </div>
-            
             {reminders.length > 0 ? (
               <>
-                <div className={styles.reminderList}>
-                  {reminders.slice(0, 2).map((reminder, index) => {
-                    const now = new Date();
-                    const scheduledDate = reminder.scheduledDate ? new Date(reminder.scheduledDate) : now;
-                    const hoursUntil = Math.floor((scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60));
-                    
-                    return (
-                      <div 
-                        key={reminder.id || index} 
-                        className={styles.reminderItem}
-                        style={{ animationDelay: `${index * 0.1}s` }}
-                        onClick={() => {
-                          if (reminder.relatedAppointmentId) {
-                            navigate('/app/patient/appointments');
-                          }
-                        }}
-                      >
-                        <div className={styles.reminderContent}>
-                          <div className={styles.reminderHeader}>
-                            <div className={styles.reminderIconSmall}>
-                              <i className="bi bi-calendar-check"></i>
-                            </div>
-                            <div className={styles.reminderInfo}>
-                              <h5>{reminder.title || 'Nhắc nhở khám bệnh'}</h5>
-                              <p className={styles.reminderTime}>
-                                <i className="bi bi-clock"></i>
-                                {reminder.scheduledDate ? formatDate(reminder.scheduledDate) : 'Chưa xác định'}
-                              </p>
-                            </div>
-                          </div>
-                          {reminder.description && (
-                            <p className={styles.reminderDescription}>{reminder.description}</p>
-                          )}
-                          <div className={styles.reminderUrgency}>
-                            <i className={`bi ${hoursUntil <= 24 ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'}`}></i>
-                            <span style={{ color: hoursUntil <= 24 ? '#ff6b6b' : '#f59e0b' }}>
-                              {hoursUntil <= 0 
-                                ? 'Đã đến hạn' 
-                                : hoursUntil <= 24 
-                                ? `Còn ${hoursUntil} giờ` 
-                                : `Còn ${Math.floor(hoursUntil / 24)} ngày`
-                              }
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                
+                {reminders.slice(0, 2).map((reminder, index) => {
+                  const now = new Date();
+                  const scheduledDate = reminder.scheduledDate ? new Date(reminder.scheduledDate) : now;
+                  const hoursUntil = Math.floor((scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+                  const remaining = hoursUntil <= 0
+                    ? 'Đã đến hạn'
+                    : hoursUntil <= 24
+                    ? `Còn ${hoursUntil} giờ`
+                    : `Còn ${Math.floor(hoursUntil / 24)} ngày`;
+                  return (
+                    <ReminderCard
+                      key={reminder.id || index}
+                      date={reminder.scheduledDate ? formatDate(reminder.scheduledDate) : 'Chưa xác định'}
+                      time={reminder.scheduledDate ? formatTime(reminder.scheduledDate) : ''}
+                      message={reminder.description || ''}
+                      remaining={remaining}
+                    />
+                  );
+                })}
                 {reminders.length > 2 && (
                   <button 
                     className={styles.viewAllRemindersBtn}
@@ -633,7 +683,7 @@ export const PatientDashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Quick Actions */}
+          {/* Quick Actions - Enhanced */}
           <div className={styles.sectionCard}>
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle}>
@@ -683,56 +733,6 @@ export const PatientDashboard: React.FC = () => {
                 <span>Nạp tiền</span>
               </button>
             </div>
-          </div>
-
-          {/* Recent Medical Records */}
-          <div className={styles.sectionCard}>
-            <div className={styles.sectionHeader}>
-              <div className={styles.sectionTitle}>
-                <i className="bi bi-clock-history"></i>
-                <h2>Lịch sử khám gần đây</h2>
-              </div>
-              <button 
-                className={styles.viewAllLink}
-                onClick={() => navigate('/app/patient/emr-timeline')}
-              >
-                Xem tất cả
-                <i className="bi bi-arrow-right"></i>
-              </button>
-            </div>
-            
-            {medicalRecords.length > 0 ? (
-              <div className={styles.recordsList}>
-                {medicalRecords.slice(0, 4).map((record, index) => (
-                  <div 
-                    key={record.id} 
-                    className={styles.recordItem}
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                    onClick={() => navigate('/app/patient/emr-timeline')}
-                  >
-                    <div className={styles.recordIcon}>
-                      <i className="bi bi-file-text"></i>
-                    </div>
-                    <div className={styles.recordInfo}>
-                      <h5>{record.diagnosis || record.chiefComplaint || 'Khám tổng quát'}</h5>
-                      <p>{record.doctor}</p>
-                      <span className={styles.recordDate}>
-                        <i className="bi bi-calendar3"></i>
-                        {formatDate(record.date)}
-                      </span>
-                    </div>
-                    <i className="bi bi-chevron-right"></i>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={styles.emptyState}>
-                <div className={styles.emptyIcon}>
-                  <i className="bi bi-file-medical"></i>
-                </div>
-                <p>Chưa có hồ sơ bệnh án</p>
-              </div>
-            )}
           </div>
 
           {/* AI Analysis Results */}

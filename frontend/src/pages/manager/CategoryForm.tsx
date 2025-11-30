@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext'; 
 import { categoryService } from '../../services/categoryService';
 import type { CategoryDTO, CreateCategoryRequest, UpdateCategoryRequest } from '../../types/category.types';
-import styles from '../../styles/admin/ArticleForm.module.css'; // Tái sử dụng style
+import styles from '../../styles/admin/ArticleForm.module.css'; 
 
 interface Props {
   category?: CategoryDTO | null;
@@ -14,29 +14,13 @@ interface Props {
 export default function CategoryForm({ category, mode, onSaved, onCancel }: Props) {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [allCategories, setAllCategories] = useState<CategoryDTO[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState({
     name: category?.name || '',
     slug: category?.slug || '',
     description: category?.description || '',
-    parentId: category?.parentId || null,
-  }); 
-  useEffect(() => {
-    // Lấy danh sách tất cả các danh mục để làm danh mục cha
-    const fetchAllCategories = async () => {
-      try {
-        const { items } = await categoryService.list(1, 9999, '');
-        // Loại bỏ danh mục hiện tại khỏi danh sách cha để tránh tự tham chiếu
-        setAllCategories(items.filter(c => c.id !== category?.id));
-      } catch (error) {
-        console.error("Failed to load categories for parent selection", error);
-        showToast('Không thể tải danh sách danh mục cha.', 'error');
-      }
-    };
-    fetchAllCategories();
-  }, [category?.id, showToast]);
+  });
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -58,7 +42,7 @@ export default function CategoryForm({ category, mode, onSaved, onCancel }: Prop
     try {
       const payload = {
         ...formData,
-        parentId: formData.parentId === 'null' || formData.parentId === '' ? null : formData.parentId,
+        parentId: null, // Không sử dụng danh mục cha
       };
 
       if (mode === 'create') {
@@ -154,25 +138,6 @@ export default function CategoryForm({ category, mode, onSaved, onCancel }: Prop
             rows={3}
             disabled={mode === 'view'}
           />
-        </div>
-
-        {/* Parent Category */}
-        <div className={styles.formGroup}>
-          <label className={styles.label}>Danh mục cha</label>
-          <select
-            name="parentId"
-            value={formData.parentId || 'null'}
-            onChange={handleChange}
-            className={styles.select}
-            disabled={mode === 'view'}
-          >
-            <option value="null">-- Không có --</option>
-            {allCategories.map(cat => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 

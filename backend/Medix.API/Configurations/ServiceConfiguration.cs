@@ -13,7 +13,6 @@ using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.DataAccess.Repositories.Classification;
 using Medix.API.DataAccess.Repositories.UserManagement;
-//using Medix.API.Business.Job;
 
 namespace Medix.API.Configurations
 {
@@ -26,7 +25,6 @@ namespace Medix.API.Configurations
 
             RegisterBackgroundJobs(services);
 
-            // AutoMapper configuration - after all services
             services.AddAutoMapper(typeof(MappingProfile));
         }
 
@@ -45,6 +43,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IArticleRepository, ArticleRepitory>();
             services.AddScoped<IReviewRepository, ReviewRepository>();
             services.AddScoped<IServiceTierRepository, ServiceTierRepository>();
+            services.AddScoped<IServicePackageRepository, ServicePackageRepository>();
             services.AddScoped<INotificationRepository, NotificationRepostiory>();
             services.AddScoped<IDoctorScheduleRepository, DoctorScheduleRepository>();
             services.AddScoped<IWalletRepository, WalletRepository>();
@@ -83,7 +82,6 @@ namespace Medix.API.Configurations
             services.AddScoped<IContentCategoryService, ContentCategoryService>();
             services.AddScoped<IHealthArticleService, HealthArticleService>();
             services.AddScoped<ISiteBannerService, SiteBannerService>();
-            // DTO validators for checks that DataAnnotations can't handle (slug uniqueness, user existence, etc.)
             services.AddScoped<IDtoValidatorService, DtoValidatorService>();
             services.AddScoped<IDoctorService, DoctorService>();
             services.AddScoped<ISpecializationService, SpecializationService>();
@@ -111,6 +109,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IDoctorRegistrationFormService, DoctorRegistrationFormService>();
             services.AddScoped<IDoctorSalaryService, DoctorSalaryService>();
             services.AddScoped<IDoctorServiceTierService, DoctorServiceTierService>();
+            services.AddScoped<IServicePackageService, ServicePackageService>();
             services.AddScoped<IDoctorDashboardService, DoctorDashboardService>();
             services.AddScoped<IAdminDashboardService, AdminDashboardService>();
             services.AddScoped<IPromotionService, PromotionService>();
@@ -124,6 +123,11 @@ namespace Medix.API.Configurations
             services.AddScoped<ISalaryService, SalaryService>();
             services.AddScoped<IUserPromotionService, UserPromotionService>();
             services.AddScoped<IBackupService, BackupService>();
+            services.AddScoped<IAIChatService, AIChatService>();
+            services.AddScoped<IRAGService, RAGService>();
+            services.AddScoped<ILLMService, LLMService>();
+            services.AddScoped<IOCRService, OCRService>();
+            services.AddHttpClient<LLMService>();
             services.AddScoped<SystemConfigurationSeeder>();
 
         }
@@ -141,7 +145,6 @@ namespace Medix.API.Configurations
 
         public static void RegisterHangfireJobs()
         {
-            //calculate salary
             RecurringJob.AddOrUpdate<ISalaryService>(
                 "salary-calculation",
                 service => service.CalculateSalary(Helpers.GetLastDayOfCurrentMonth()),

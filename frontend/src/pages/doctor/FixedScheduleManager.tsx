@@ -14,7 +14,7 @@ const daysOfWeek = [
   { value: 1, label: 'Thứ Hai' }, { value: 2, label: 'Thứ Ba' },
   { value: 3, label: 'Thứ Tư' }, { value: 4, label: 'Thứ Năm' },
   { value: 5, label: 'Thứ Sáu' }, { value: 6, label: 'Thứ Bảy' },
-  { value: 0, label: 'Chủ Nhật' },
+  { value: 7, label: 'Chủ Nhật' },
 ];
 
 const timeSlots = [
@@ -26,6 +26,7 @@ const timeSlots = [
   { label: 'Ca 6 (14:00 - 14:50)', startTime: '14:00', endTime: '14:50' },
   { label: 'Ca 7 (15:00 - 15:50)', startTime: '15:00', endTime: '15:50' },
   { label: 'Ca 8 (16:00 - 16:50)', startTime: '16:00', endTime: '16:50' },
+
 ];
 
 const getDayLabel = (dayValue: number) => daysOfWeek.find(d => d.value === dayValue)?.label || 'Không xác định';
@@ -127,15 +128,12 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
       setEditingScheduleId(null);
       setIsAdding(false);
     } catch (err: any) {
-      console.error("Error saving schedule:", err);
 
-      let errorMessage = 'Lưu lịch làm việc thất bại.'; // Fallback mặc định
+      let errorMessage = 'Lưu lịch làm việc thất bại.'; 
       if (err.response && err.response.data) {
         if (typeof err.response.data === 'string') {
-          // Xử lý trường hợp backend trả về chuỗi thuần túy
           errorMessage = err.response.data;
         } else if (typeof err.response.data === 'object') {
-          // Xử lý trường hợp backend trả về đối tượng JSON (ví dụ: ProblemDetails)
           errorMessage =
             err.response.data.detail ||
             err.response.data.message ||
@@ -160,7 +158,7 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
-      confirmButtonText: 'Vâng, xóa nó!',
+      confirmButtonText: 'Xóa',
       cancelButtonText: 'Hủy'
     });
 
@@ -170,15 +168,12 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
         Swal.fire('Đã xóa!', 'Lịch làm việc đã được xóa.', 'success');
         onRefresh();
       } catch (err: any) {
-        console.error("Error deleting schedule:", err);
 
-        let errorMessage = 'Xóa lịch làm việc thất bại.'; // Fallback mặc định
+        let errorMessage = 'Xóa lịch làm việc thất bại.'; 
         if (err.response && err.response.data) {
           if (typeof err.response.data === 'string') {
-            // Xử lý trường hợp backend trả về chuỗi thuần túy
             errorMessage = err.response.data;
           } else if (typeof err.response.data === 'object') {
-            // Xử lý trường hợp backend trả về đối tượng JSON
             errorMessage =
               err.response.data.detail ||
               err.response.data.message ||
@@ -280,8 +275,9 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
             <button onClick={() => {
               setIsAdding(true);
               setFormState({ dayOfWeek: selectedDay, startTime: timeSlots[0].startTime, endTime: timeSlots[0].endTime, isAvailable: true });
-            }} className="w-full mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-              Thêm ca làm việc cho {getDayLabel(selectedDay)} disabled={isBanned}
+            }} className="w-full mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            disabled={isBanned}>
+              Thêm ca làm việc cho {getDayLabel(selectedDay)}
             </button>
           )}
         </div>

@@ -59,12 +59,7 @@ namespace Medix.API.Presentation.Controller.Classification
                 return BadRequest(ex.Message);
             }
         }
-        // Một lớp DTO đơn giản để chứa UserId và Mô tả
-    
-        /// <summary>
-        /// Thực hiện hành động sau khi thanh toán. URL này cần được khai báo với VNPAY để API này hoạt đồng (ví dụ: http://localhost:1234/api/Vnpay/IpnAction)
-        /// </summary>
-        /// <returns></returns>
+
         [HttpGet("IpnAction")]
         public IActionResult IpnAction()
         {
@@ -75,11 +70,9 @@ namespace Medix.API.Presentation.Controller.Classification
                     var paymentResult = _vnpay.GetPaymentResult(Request.Query);
                     if (paymentResult.IsSuccess)
                     {
-                        // Thực hiện hành động nếu thanh toán thành công tại đây. Ví dụ: Cập nhật trạng thái đơn hàng trong cơ sở dữ liệu.
                         return Ok();
                     }
 
-                    // Thực hiện hành động nếu thanh toán thất bại tại đây. Ví dụ: Hủy đơn hàng.
                     return BadRequest("Thanh toán thất bại");
                 }
                 catch (Exception ex)
@@ -91,10 +84,6 @@ namespace Medix.API.Presentation.Controller.Classification
             return NotFound("Không tìm thấy thông tin thanh toán.");
         }
 
-        /// <summary>
-        /// Trả kết quả thanh toán về cho người dùng
-        /// </summary>
-        /// <returns></returns>
         [HttpGet("Callback")]
         public ActionResult<PaymentResult> Callback()
         {

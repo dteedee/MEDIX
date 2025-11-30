@@ -38,23 +38,8 @@ namespace Medix.API.Presentation.Controller.Classification
             return Ok(result);
         }
 
-        // ✅ Cập nhật toàn bộ lịch cho chính bác sĩ đang đăng nhập
-        //[HttpPut("me")]
-        //public async Task<IActionResult> UpdateMySchedules([FromBody] IEnumerable<UpdateDoctorScheduleDto> schedules)
-        //{
-        //    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-        //    if (userIdClaim == null)
-        //        return Unauthorized(new { Message = "User ID not found in token" });
+ 
 
-        //    var doctor = await _doctorService.GetDoctorByUserIdAsync(Guid.Parse(userIdClaim.Value));
-        //    if (doctor == null)
-        //        return NotFound(new { Message = "Doctor not found for this user" });
-
-        //    var updated = await _scheduleService.UpdateByDoctorIdAsync(doctor.Id, schedules);
-        //    return Ok(updated);
-        //}
-
-        // ✅ Cập nhật một lịch cụ thể cho bác sĩ đang đăng nhập
         [HttpPut("me/{scheduleId}")]
         public async Task<IActionResult> UpdateMySchedule(Guid scheduleId, [FromBody] UpdateDoctorScheduleDto schedule)
         {
@@ -76,7 +61,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 var updated = await _scheduleService.UpdateSingleByDoctorIdAsync(doctor.Id, schedule);
                 if (updated == null)
                 {
-                    // Tạo thông báo khi không tìm thấy lịch để cập nhật
                     try
                     {
                         await _notificationService.CreateNotificationAsync(
@@ -89,7 +73,6 @@ namespace Medix.API.Presentation.Controller.Classification
                     }
                     catch
                     {
-                        // Ignore notification creation errors
                     }
                     
                     return NotFound(new { Message = "Schedule not found." });
@@ -99,7 +82,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
             catch (InvalidOperationException ex)
             {
-                // Tạo thông báo khi cập nhật lịch cố định thất bại
                 try
                 {
                     await _notificationService.CreateNotificationAsync(
@@ -112,14 +94,12 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
                 catch
                 {
-                    // Ignore notification creation errors
                 }
                 
                 return BadRequest(new { Message = ex.Message });
             }
             catch (Exception ex)
             {
-                // Tạo thông báo khi cập nhật lịch cố định thất bại
                 try
                 {
                     await _notificationService.CreateNotificationAsync(
@@ -132,7 +112,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
                 catch
                 {
-                    // Ignore notification creation errors
                 }
                 
                 return StatusCode(500, new { Message = "Có lỗi xảy ra khi cập nhật lịch làm việc.", Details = ex.Message });
@@ -157,7 +136,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
             catch (Exception ex)
             {
-                // Tạo thông báo khi đăng ký lịch thất bại
                 try
                 {
                     await _notificationService.CreateNotificationAsync(
@@ -170,7 +148,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
                 catch
                 {
-                    // Ignore notification creation errors
                 }
                 
                 return BadRequest(new { Message = ex.Message });
@@ -194,7 +171,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
             catch (InvalidOperationException ex)
             {
-                // Tạo thông báo khi xóa lịch cố định thất bại
                 try
                 {
                     await _notificationService.CreateNotificationAsync(
@@ -207,14 +183,12 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
                 catch
                 {
-                    // Ignore notification creation errors
                 }
                 
                 return BadRequest(new { Message = ex.Message });
             }
             catch (Exception ex)
             {
-                // Tạo thông báo khi xóa lịch cố định thất bại
                 try
                 {
                     await _notificationService.CreateNotificationAsync(
@@ -227,7 +201,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 }
                 catch
                 {
-                    // Ignore notification creation errors
                 }
                 
                 return StatusCode(500, new { Message = "Có lỗi xảy ra khi xóa lịch làm việc.", Details = ex.Message });

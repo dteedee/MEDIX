@@ -48,7 +48,6 @@ interface AuditLog {
   newValues: string | null;
 }
 
-// Interface cho dữ liệu tăng trưởng người dùng
 interface UserGrowthItem {
   period: string;
   users: number;
@@ -56,39 +55,31 @@ interface UserGrowthItem {
   patients: number;
 }
 
-// You can expand this interface with other properties from your JSON if needed
 interface DashboardData {
   summary: DashboardSummary;
   growth: DashboardGrowth;
   recentActivities: RecentActivity[];
   userGrowth: UserGrowthItem[];
   auditLogs: AuditLog[];
-  // Thêm các trường khác nếu cần: appointmentTrends, revenueTrends, topSpecialties
 }
 
 export default function AdminDashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // State lưu trữ dữ liệu đã được lọc và định dạng cho biểu đồ tăng trưởng người dùng
   const [userGrowthChartData, setUserGrowthChartData] = useState<UserGrowthItem[]>([]);
-    // State lưu trữ bộ lọc thời gian cho biểu đồ tăng trưởng người dùng (7, 30, hoặc 90 ngày)
-  const [userGrowthFilter, setUserGrowthFilter] = useState<number>(30); // 7, 30, or 90 days
+  const [userGrowthFilter, setUserGrowthFilter] = useState<number>(30);
+  const [activityFilter, setActivityFilter] = useState<'today' | 'week'>('today');
   const [activityChartData, setActivityChartData] = useState<{ name: string; value: number }[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
-        const [dashboardData, auditLogsResponse] = await Promise.all([
-          adminDashboardService.getDashboardData(),
-          apiClient.get('/AuditLogs?page=1&pageSize=100')
-        ]);
         const data = await adminDashboardService.getDashboardData(); 
         setDashboardData(data);
         setError(null);
       } catch (err) {
-        console.error("Error fetching dashboard data:", err);
         setError("Không thể tải dữ liệu dashboard. Vui lòng thử lại.");
       } finally {
         setIsLoading(false);
@@ -96,30 +87,20 @@ export default function AdminDashboard() {
     };
 
     fetchDashboardData();
-
   }, []);
 
-  // Effect để chuẩn bị dữ liệu cho biểu đồ người dùng và biểu đồ hoạt động khi dashboardData hoặc userGrowthFilter thay đổi
   useEffect(() => { 
-    // Đảm bảo có dữ liệu dashboard trước khi xử lý
     if (!dashboardData?.userGrowth) return;
 
     const today = new Date();
     const currentYear = today.getFullYear();
 
 
-    // Lọc dữ liệu tăng trưởng người dùng dựa trên userGrowthFilter
     const filteredData = dashboardData.userGrowth.filter(item => {
       const [month, day] = item.period.split('/').map(Number);
-      // Giả định năm hiện tại. Lưu ý: tháng trong JS Date là 0-indexed.
       const itemDate = new Date(currentYear, month - 1, day);
 
-      // Xử lý trường hợp chuyển giao năm:
-      // Nếu ngày của itemDate lớn hơn ngày hiện tại (ví dụ: hôm nay là 11/2025, item là 12/2025),
-      // thì có thể item đó thuộc về năm trước (12/2024).
-      // Điều chỉnh năm của itemDate để tính toán khoảng thời gian chính xác.
       if (itemDate > today) {
-        // Giảm năm của itemDate đi 1 để so sánh đúng
         itemDate.setFullYear(currentYear - 1);
       }
 
@@ -129,14 +110,35 @@ export default function AdminDashboard() {
       return diffDays <= userGrowthFilter;
     });
 
-    // Cập nhật state dữ liệu cho biểu đồ tăng trưởng người dùng
-    setUserGrowthChartData(filteredData);
+    const formattedChartData = filteredData.map(item => {
+      const parts = item.period.split('/');
+      return {
+        ...item,
+        period: `${parts[1]}/${parts[0]}`
+      };
+    });
+    setUserGrowthChartData(formattedChartData);
 
 
-    // Chuẩn bị dữ liệu cho biểu đồ hoạt động hệ thống
-    if (dashboardData?.recentActivities) {
-      // Đếm số lượng của mỗi loại hoạt động
-      const activityCounts = dashboardData.recentActivities.reduce((acc, activity) => {
+    if (dashboardData?.recentActivities) { 
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - today.getDay()); // Giả sử tuần bắt đầu từ Chủ nhật
+
+      const filteredActivities = dashboardData.recentActivities.filter(activity => {
+        const activityDate = new Date(activity.createdAt);
+        if (activityFilter === 'today') {
+          return activityDate >= today;
+        }
+        if (activityFilter === 'week') {
+          return activityDate >= startOfWeek;
+        }
+        return true;
+      });
+
+
+      const activityCounts = filteredActivities.reduce((acc, activity) => {
         acc[activity.activityType] = (acc[activity.activityType] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
@@ -144,21 +146,19 @@ export default function AdminDashboard() {
       const activityMapping: Record<string, string> = {
         USER_REGISTRATION: 'Đăng ký mới',
         APPOINTMENT_CREATED: 'Tạo lịch hẹn',
-        ARTICLE_PUBLISHED: 'Xuất bản bài viết',
+        ARTICLE_PUBLISHED: 'Tạo bài viết',
       };
 
-      // Chuyển đổi dữ liệu đếm thành định dạng phù hợp cho PieChart
       const chartData = Object.entries(activityCounts).map(([type, count]) => ({
         name: activityMapping[type] || type,
         value: count,
       }));
 
-      // Cập nhật state dữ liệu cho biểu đồ hoạt động
       setActivityChartData(chartData);
     }
 
 
-  }, [dashboardData, userGrowthFilter]);
+  }, [dashboardData, userGrowthFilter, activityFilter]);
 
   if (isLoading) {
     return <PageLoader />;
@@ -187,63 +187,158 @@ export default function AdminDashboard() {
           {/* Stats Grid */}
           <div className={styles.statsGrid}>
             <div className={styles.statCard}>
-              <div className={`${styles.statCircle} ${styles.statCard1}`}>
-                <i className="bi bi-people-fill"></i>
-                <span className={styles.statValue}>{dashboardData?.summary.totalUsers}</span>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard1}`}>
+                  <i className="bi bi-people-fill"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-people-fill"></i>
+                </div>
               </div>
               <div className={styles.statInfo}>
                 <div className={styles.statLabel}>Tổng người dùng</div>
+                <div className={styles.statValue}>{dashboardData?.summary.totalUsers}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>{dashboardData?.growth.usersGrowthPercentage}%</span>
+                  <span>+{dashboardData?.growth.usersGrowthPercentage}% so với tháng trước</span>
                 </div>
               </div>
             </div>
 
             <div className={styles.statCard}>
-              <div className={`${styles.statCircle} ${styles.statCard2}`}>
-                <i className="bi bi-hospital"></i>
-                <span className={styles.statValue}>{dashboardData?.summary.totalDoctors}</span>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard2}`}>
+                  <i className="bi bi-hospital"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-hospital"></i>
+                </div>
               </div>
               <div className={styles.statInfo}>
                 <div className={styles.statLabel}>Bác sĩ</div>
+                <div className={styles.statValue}>{dashboardData?.summary.totalDoctors}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>{dashboardData?.growth.doctorsGrowthPercentage}%</span>
+                  <span>+{dashboardData?.growth.doctorsGrowthPercentage}% tuần trước</span>
                 </div>
               </div>
             </div>
 
             <div className={styles.statCard}>
-              <div className={`${styles.statCircle} ${styles.statCard3}`}>
-                <i className="bi bi-calendar-check"></i>
-                <span className={styles.statValue}>{dashboardData?.summary.todayAppointments}</span>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard3}`}>
+                  <i className="bi bi-person-heart"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-person-heart"></i>
+                </div>
+              </div>
+              <div className={styles.statInfo}>
+                <div className={styles.statLabel}>Bệnh nhân</div>
+                <div className={styles.statValue}>{dashboardData?.summary.totalPatients}</div>
+                <div className={styles.statTrend}>
+                  <i className="bi bi-graph-up"></i>
+                  <span>+{dashboardData?.growth.usersGrowthPercentage}% tháng trước</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard4}`}>
+                  <i className="bi bi-calendar-check"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-calendar-check"></i>
+                </div>
               </div>
               <div className={styles.statInfo}>
                 <div className={styles.statLabel}>Lịch hẹn hôm nay</div>
+                <div className={styles.statValue}>{dashboardData?.summary.todayAppointments}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>{dashboardData?.growth.todayAppointmentsGrowthPercentage}%</span>
+                  <span>+{dashboardData?.growth.todayAppointmentsGrowthPercentage}% hôm qua</span>
                 </div>
               </div>
             </div>
 
             <div className={styles.statCard}>
-              <div className={`${styles.statCircle} ${styles.statCard4}`}>
-                <i className="bi bi-file-text"></i>
-                <span className={styles.statValue}>{dashboardData?.summary.totalHealthArticles}</span>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard5}`}>
+                  <i className="bi bi-calendar2-check"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-calendar2-check"></i>
+                </div>
+              </div>
+              <div className={styles.statInfo}>
+                <div className={styles.statLabel}>Tổng lịch hẹn</div>
+                <div className={styles.statValue}>{dashboardData?.summary.totalAppointments}</div>
+                <div className={styles.statTrend}>
+                  <i className="bi bi-graph-up"></i>
+                  <span>+{dashboardData?.growth.appointmentsGrowthPercentage}% tháng trước</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard6}`}>
+                  <i className="bi bi-file-text"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-file-text"></i>
+                </div>
               </div>
               <div className={styles.statInfo}>
                 <div className={styles.statLabel}>Bài viết</div>
+                <div className={styles.statValue}>{dashboardData?.summary.totalHealthArticles}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>{dashboardData?.growth.articlesGrowthPercentage}%</span>
+                  <span>+{dashboardData?.growth.articlesGrowthPercentage}% tháng trước</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard7}`}>
+                  <i className="bi bi-currency-dollar"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-currency-dollar"></i>
+                </div>
+              </div>
+              <div className={styles.statInfo}>
+                <div className={styles.statLabel}>Doanh thu tháng</div>
+                <div className={styles.statValue}>{(dashboardData?.summary.monthRevenue || 0).toLocaleString('vi-VN')}₫</div>
+                <div className={styles.statTrend}>
+                  <i className="bi bi-graph-up"></i>
+                  <span>+{dashboardData?.growth.revenueGrowthPercentage}% tháng trước</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statIconWrapper}>
+                <div className={`${styles.statIcon} ${styles.statCard8}`}>
+                  <i className="bi bi-star-fill"></i>
+                </div>
+                <div className={styles.statBg}>
+                  <i className="bi bi-star-fill"></i>
+                </div>
+              </div>
+              <div className={styles.statInfo}>
+                <div className={styles.statLabel}>Đánh giá trung bình</div>
+                <div className={styles.statValue}>{(dashboardData?.summary.averageRating || 0).toFixed(1)}/5.0</div>
+                <div className={styles.statTrend}>
+                  <i className="bi bi-star"></i>
+                  <span>Từ {dashboardData?.summary.totalAppointments} lịch hẹn</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Charts Section */}
           <div className={styles.chartsGrid}>
             <div className={styles.chartCard}>
               <div className={styles.chartHeader}>
@@ -289,7 +384,16 @@ export default function AdminDashboard() {
               <div className={styles.chartHeader}>
                 <h3>Phân bổ hoạt động</h3>
                 <div className={styles.chartActions}>
-                  <button className={`${styles.chartBtn} ${styles.active}`}>Gần đây</button>
+                  <button 
+                    className={`${styles.chartBtn} ${activityFilter === 'today' ? styles.active : ''}`}
+                    onClick={() => setActivityFilter('today')}
+                  >
+                    Hôm nay
+                  </button>
+                  <button 
+                    className={`${styles.chartBtn} ${activityFilter === 'week' ? styles.active : ''}`}
+                    onClick={() => setActivityFilter('week')}
+                  >Tuần này</button>
                 </div>
               </div>
               <div className={styles.chartContent} style={{ width: '100%', height: 300 }}>
@@ -301,15 +405,13 @@ export default function AdminDashboard() {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      outerRadius={90} // Thu nhỏ bán kính lại 25% (120 * 0.75 = 90)
-                      labelLine={false} // Tắt đường kẻ nối từ miếng bánh ra nhãn
+                      outerRadius={90}
+                      labelLine={false}
                       label={({ cx, cy, midAngle, innerRadius, outerRadius, value, percent }) => {
-                        // Kiểm tra các giá trị có tồn tại không để tránh lỗi TypeScript
                         if (percent === undefined || midAngle === undefined || innerRadius === undefined || outerRadius === undefined) return null;
-                        if (percent < 0.07) return null; // Chỉ hiển thị nhãn nếu phần trăm đủ lớn để tránh chồng chéo
+                        if (percent < 0.07) return null;
 
                         const RADIAN = Math.PI / 180;
-                        // Tính toán vị trí của nhãn bên trong miếng bánh
                         const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                         const x = cx + radius * Math.cos(-midAngle * RADIAN);
                         const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -333,17 +435,14 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Recent Activity */}
           <div className={styles.activityCard}>
             <div className={styles.activityHeader}>
               <h3>Hoạt động gần đây</h3>
-              <button className={styles.viewAllBtn}>Xem tất cả</button>
             </div>
             <div className={styles.activityList}>
             {dashboardData?.recentActivities.slice(0, 5).map((activity: RecentActivity, index: number) => (
                 <div className={styles.activityItem} key={index}>
                   <div className={styles.activityIcon}>
-                    {/* Thay đổi icon dựa trên activityType */}
                     {activity.activityType === 'USER_REGISTRATION' && <i className="bi bi-person-plus"></i>} 
                     {activity.activityType === 'APPOINTMENT_CREATED' && <i className="bi bi-calendar-plus"></i>}
                     {activity.activityType === 'ARTICLE_PUBLISHED' && <i className="bi bi-file-plus"></i>}

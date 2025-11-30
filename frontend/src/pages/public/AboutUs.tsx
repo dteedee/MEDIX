@@ -4,6 +4,8 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { apiClient } from '../../lib/apiClient';
 import styles from '../../styles/public/about.module.css';
 import homeStyles from '../../styles/public/home.module.css';
+import ChatbotBubble from '../../components/ChatbotBubble';
+import BackToTopButton from '../../components/BackToTopButton';
 
 interface SystemSettings {
   siteName?: string;
@@ -40,7 +42,6 @@ const AboutUs: React.FC = () => {
           contactAddress: addressRes.data.configValue,
         });
       } catch (error) {
-        console.error("Failed to fetch settings for About Us page:", error);
       } finally {
         setLoading(false);
       }
@@ -250,6 +251,8 @@ const AboutUs: React.FC = () => {
           </div>
         </div>
       </div>
+      <BackToTopButton />
+      <ChatbotBubble />
     </>
   );
 };

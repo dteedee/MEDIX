@@ -27,7 +27,7 @@ namespace Medix.API.Presentation.Controller.Classification
         [HttpGet("getReminder")]
         [Authorize(Roles = "Patient,Doctor")]
         
-        public async Task<IActionResult> GetRemindersWithPatientID([FromQuery]string code)
+        public async Task<IActionResult> GetRemindersWithPatientID()
         {
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
@@ -38,7 +38,7 @@ namespace Medix.API.Presentation.Controller.Classification
                 return Unauthorized(new { message = "Invalid user ID in token" });
             var patientId = await patientService.GetByUserIdAsync(userId);
 
-            var reminders = await _patientHealthReminderService.getReminderswithPatientID(patientId.Id, code);
+            var reminders = await _patientHealthReminderService.getReminderswithPatientID(patientId.Id);
             return Ok(reminders);
         }
 

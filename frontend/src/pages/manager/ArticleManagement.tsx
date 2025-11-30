@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Calendar } from 'lucide-react';
 import { articleService } from '../../services/articleService';
 import { ArticleDTO } from '../../types/article.types';
 import { useToast } from '../../contexts/ToastContext';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import ArticleForm from './ArticleForm';
+import { categoryService } from '../../services/categoryService';
+import { CategoryDTO } from '../../types/category.types';
 import styles from '../../styles/admin/ArticleManagement.module.css';
 
 interface ArticleListFilters {
@@ -13,6 +16,7 @@ interface ArticleListFilters {
   pageSize: number;
   search: string;
   statusFilter: 'all' | 'published' | 'draft';
+  categoryFilter: string; 
   dateFrom: string;
   dateTo: string;
   sortBy: string;
@@ -26,13 +30,13 @@ const getInitialState = (): ArticleListFilters => {
       return JSON.parse(savedState);
     }
   } catch (e) {
-    console.error("Failed to parse articleListState from localStorage", e);
   }
   return {
     page: 1,
     pageSize: 10,
     search: '',
     statusFilter: 'all',
+    categoryFilter: '',
     dateFrom: '',
     dateTo: '',
     sortBy: 'displayOrder',
@@ -44,6 +48,7 @@ export default function ArticleManagement() {
   const [allArticles, setAllArticles] = useState<ArticleDTO[]>([]);
   const [total, setTotal] = useState<number | undefined>(undefined);
   const [statuses, setStatuses] = useState<Array<{ code: string; displayName: string }>>([]);
+  const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [filters, setFilters] = useState<ArticleListFilters>(getInitialState);
   const [loading, setLoading] = useState(true);
   const [viewing, setViewing] = useState<ArticleDTO | null>(null);
@@ -119,7 +124,7 @@ export default function ArticleManagement() {
 
     // Draft articles: similar logic
     const draftNow = allArticles.filter(a => a.statusCode?.toUpperCase() === 'DRAFT').length;
-    const draftLastWeek = existingLastWeek.filter(a => a.statusCode === 'Draft').length;
+    const draftLastWeek = existingLastWeek.filter(a => a.statusCode?.toUpperCase() === 'DRAFT').length;
     const draftChange = draftLastWeek > 0
       ? ((draftNow - draftLastWeek) / draftLastWeek) * 100
       : (draftNow > 0 ? 100 : 0);
@@ -136,16 +141,21 @@ export default function ArticleManagement() {
   const load = async () => {
     setLoading(true);
     try {
-      console.log('Loading articles...');
       const articles = await articleService.getAll();
-      console.log('Loaded articles:', articles);
       setAllArticles(articles || []);
       setTotal(articles?.length);
     } catch (error) {
-      console.error('Error loading articles:', error);
       showToast('Không thể tải danh sách bài viết', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const { items } = await categoryService.list(1, 9999);
+      setCategories(items.filter(cat => cat.isActive) || []);
+    } catch (error) {
     }
   };
 
@@ -155,12 +165,12 @@ export default function ArticleManagement() {
 
   useEffect(() => {
     load();
+    loadCategories();
     const fetchStatuses = async () => {
       try {
         const fetchedStatuses = await articleService.getStatuses();
         setStatuses(fetchedStatuses);
       } catch (error) {
-        console.error('Failed to fetch article statuses:', error);
         showToast('Không thể tải danh sách trạng thái bài viết.', 'error');
       }
     };
@@ -193,13 +203,7 @@ export default function ArticleManagement() {
     const isBeingLocked = action === 'lock';
     const actionText = isBeingLocked ? 'chuyển thành bản nháp' : 'xuất bản';
 
-    console.log('Confirming status change:', {
-      articleId: currentArticle.id,
-      title: currentArticle.title,
-      currentStatusCode: currentArticle.statusCode,
-      isBeingLocked,
-      action
-    });
+ 
 
     setConfirmationDialog({ isOpen: false, article: null, action: null });
     showToast(`Đang ${actionText} bài viết "${currentArticle.title}"...`, 'info');
@@ -226,21 +230,13 @@ export default function ArticleManagement() {
         categoryIds: currentArticle.categoryIds || [],
       };
 
-      console.log('Updating article status:', {
-        id: currentArticle.id,
-        newStatusCode,
-        payload: updatePayload
-      });
+   
 
       await articleService.update(currentArticle.id, updatePayload);
-      console.log('Status update successful');
       showToast(`Đã ${actionText} bài viết thành công.`, 'success');
       
-      // Reload data
-      console.log('Reloading articles after lock/unlock...');
       await load();
     } catch (error: any) {
-      console.error('Error locking/unlocking article:', error);
       const message = error?.response?.data?.message || error?.message || 'Không thể cập nhật trạng thái bài viết.';
       showToast(message, 'error');
     } finally {
@@ -283,22 +279,16 @@ export default function ArticleManagement() {
   const handleSaveRequest = async (formData: any) => {
     try {
       if (editing) {
-        console.log('Updating article with ID:', editing.id);
-        console.log('Update payload:', formData);
         await articleService.update(editing.id, formData);
-        console.log('Update successful');
         showToast('Cập nhật bài viết thành công!', 'success');
         setEditing(null);
       } else if (creating) {
-        console.log('Creating new article with payload:', formData);
         await articleService.create(formData);
         showToast('Tạo bài viết thành công!', 'success');
         setCreating(false);
       }
       await load();
     } catch (error: any) {
-      console.error('Error saving article:', error);
-      // Ném lại lỗi để component ArticleForm có thể bắt và hiển thị lỗi inline
       throw error;
     }
   };
@@ -307,6 +297,7 @@ export default function ArticleManagement() {
     setFilters({
       ...filters,
       statusFilter: 'all',
+      categoryFilter: '',
       dateFrom: '',
       dateTo: '',
     });
@@ -329,6 +320,10 @@ export default function ArticleManagement() {
       const okStatus = filters.statusFilter === 'all' || 
         (filters.statusFilter === 'published' ? a.statusCode?.toUpperCase() === 'PUBLISHED' : 
          filters.statusFilter === 'draft' ? a.statusCode?.toUpperCase() === 'DRAFT' : true);
+
+      // Filter by category
+      const okCategory = !filters.categoryFilter || 
+        (a.categoryIds && a.categoryIds.includes(filters.categoryFilter));
 
       let okDate = true;
       if (from || to) {
@@ -381,7 +376,22 @@ export default function ArticleManagement() {
     }
 
     const statusInfo = statuses.find(s => s.code.toUpperCase() === statusCode.toUpperCase());
-    const displayName = statusInfo ? statusInfo.displayName : statusCode; // Fallback to code if not found
+    
+    // Đảm bảo luôn hiển thị tiếng Việt
+    let displayName = statusInfo ? statusInfo.displayName : '';
+    if (!displayName) {
+      // Fallback: map trực tiếp sang tiếng Việt
+      switch (statusCode.toUpperCase()) {
+        case 'PUBLISHED':
+          displayName = 'Xuất bản';
+          break;
+        case 'DRAFT':
+          displayName = 'Bản nháp';
+          break;
+        default:
+          displayName = statusCode; // Fallback cuối cùng
+      }
+    }
 
     let statusClass = styles.statusDefault; // Default color
     let iconClass = 'bi bi-question-circle';
@@ -394,10 +404,6 @@ export default function ArticleManagement() {
       case 'DRAFT':
         statusClass = styles.statusInactive;
         iconClass = 'bi bi-file-text';
-        break;
-      case 'ARCHIVE':
-        statusClass = styles.statusArchived;
-        iconClass = 'bi bi-archive-fill';
         break;
       case 'ANHAI': // Example for custom status
         statusClass = styles.statusCustom;
@@ -422,13 +428,34 @@ export default function ArticleManagement() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Quản lý Bài viết</h1>
-          <p className={styles.subtitle}>Quản lý và xuất bản các bài viết sức khỏe</p>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <i className="bi bi-file-text" style={{ fontSize: '28px' }}></i>
+            </div>
+            <div>
+              <h1 className={styles.title}>Quản lý Bài viết</h1>
+              <p className={styles.subtitle}>Quản lý và xuất bản các bài viết sức khỏe</p>
+            </div>
+          </div>
         </div>
-        <button onClick={handleCreateNew} className={styles.btnCreate}>
-            <i className="bi bi-plus-lg"></i>
-          Tạo mới
-          </button>
+        <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <Calendar size={20} className={styles.dateIcon} />
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={styles.dateGlow}></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -485,7 +512,7 @@ export default function ArticleManagement() {
 
         <div className={`${styles.statCard} ${styles.statCard3}`}>
           <div className={styles.statIcon}>
-            <i className="bi bi-pause-circle-fill"></i>
+            <i className="bi bi-file-text"></i>
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Bản nháp</div>
@@ -505,7 +532,7 @@ export default function ArticleManagement() {
             </div>
           </div>
           <div className={styles.statBg}>
-            <i className="bi bi-pause-circle-fill"></i>
+            <i className="bi bi-file-text"></i>
           </div>
         </div>
       </div>
@@ -537,9 +564,13 @@ export default function ArticleManagement() {
           >
             <i className="bi bi-funnel"></i>
             Bộ lọc
-          {(filters.statusFilter !== 'all' || filters.dateFrom || filters.dateTo) && (
+          {(filters.statusFilter !== 'all' || filters.categoryFilter || filters.dateFrom || filters.dateTo) && (
             <span className={styles.filterBadge}></span>
           )}
+          </button>
+          <button onClick={handleCreateNew} className={styles.btnCreate}>
+            <i className="bi bi-plus-lg"></i>
+            Tạo mới
           </button>
         </div>
 
@@ -554,10 +585,23 @@ export default function ArticleManagement() {
               </label>
               <select value={filters.statusFilter} onChange={e => handleFilterChange('statusFilter', e.target.value)}>
                 <option value="all">Tất cả trạng thái</option>
-                <option value="published">Đã xuất bản</option>
+                <option value="published">Xuất bản</option>
                 <option value="draft">Bản nháp</option>
                 </select>
               </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-tags"></i>
+                Danh mục
+              </label>
+              <select value={filters.categoryFilter} onChange={e => handleFilterChange('categoryFilter', e.target.value)}>
+                <option value="">Tất cả danh mục</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
 
             <div className={styles.filterItem}>
               <label>
@@ -616,6 +660,7 @@ export default function ArticleManagement() {
                       <i className={`bi bi-arrow-${filters.sortDirection === 'asc' ? 'up' : 'down'}`}></i>
                     )}
                   </th>
+                  <th>Danh mục</th>
                   <th>Ảnh</th>
                   <th onClick={() => handleSort('displayOrder')} className={styles.sortable}>
                     Thứ tự
@@ -654,6 +699,24 @@ export default function ArticleManagement() {
                       <div className={styles.titleCell} title={article.title}>
                         {article.title || 'Chưa có tiêu đề'}
                       </div>
+                    </td>
+                    <td className={styles.categoryCell}>
+                      {article.categories && article.categories.length > 0 ? (
+                        <div className={styles.categoryTags}>
+                          {article.categories.slice(0, 2).map((cat) => (
+                            <span key={cat.id} className={styles.categoryTag} title={cat.name}>
+                              {cat.name}
+                            </span>
+                          ))}
+                          {article.categories.length > 2 && (
+                            <span className={styles.categoryTagMore} title={article.categories.slice(2).map(c => c.name).join(', ')}>
+                              +{article.categories.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className={styles.noCategory}>Chưa có</span>
+                      )}
                     </td>
                     <td className={styles.imageCell}>
                       {article.thumbnailUrl || article.coverImageUrl ? (

@@ -56,9 +56,26 @@ export const PatientAppointments: React.FC = () => {
     timeRange: 'all',
     search: ''
   });
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [doctorProfiles, setDoctorProfiles] = useState<Map<string, DoctorProfileDto>>(new Map());
   const [loadingDoctors, setLoadingDoctors] = useState<Set<string>>(new Set());
   const [refundPercentage, setRefundPercentage] = useState(80);
+
+  // Map statusCode sang tiếng Việt - đồng bộ với DoctorAppointments
+  const statusDisplayNameMap: Record<string, string> = {
+    'BeforeAppoiment': 'Trước giờ khám',
+    'CancelledByDoctor': 'Bác sĩ hủy',
+    'CancelledByPatient': 'Bệnh nhân hủy',
+    'Completed': 'Hoàn thành',
+    'Confirmed': 'Đã xác nhận',
+    'MissedByDoctor': 'Bác sĩ vắng mặt',
+    'MissedByPatient': 'Bệnh nhân vắng mặt',
+    'NoShow': 'Không đến',
+    'OnProgressing': 'Đang khám',
+    'PendingConfirmation': 'Chờ xác nhận',
+  };
 
   const calculateRefundAmount = (appointment: Appointment | null) => {
     if (!appointment) return 0;
@@ -79,14 +96,21 @@ export const PatientAppointments: React.FC = () => {
       const data = await appointmentService.getPatientAppointments();
       
       const transformedData: Appointment[] = data.map(apt => {
+        // Chuyển đổi chuỗi ISO sang đối tượng Date, đảm bảo múi giờ được xử lý đúng
         const startDate = new Date(apt.appointmentStartTime);
+        
+        // Lấy các thành phần ngày/tháng/năm từ đối tượng Date đã được chuyển đổi sang múi giờ local
+        const year = startDate.getFullYear();
+        const month = (startDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = startDate.getDate().toString().padStart(2, '0');
+        const datePart = `${year}-${month}-${day}`;
         
         return {
           id: apt.id,
           doctorName: apt.doctorName,
           doctorTitle: '',
           specialty: '',
-          date: startDate.toISOString().split('T')[0],
+          date: datePart, // Sử dụng ngày đã được tính toán đúng
           time: `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`,
           room: '',
           fee: apt.consultationFee,
@@ -107,7 +131,6 @@ export const PatientAppointments: React.FC = () => {
       setAppointments(transformedData);
       setFilteredAppointments(transformedData);
     } catch (err: any) {
-      console.error('Error loading appointments:', err);
       setError(err.response?.data?.message || 'Não thể tải danh sách lịch hẹn');
     } finally {
       setLoading(false);
@@ -130,7 +153,6 @@ export const PatientAppointments: React.FC = () => {
           setRefundPercentage(Math.min(100, Math.max(0, Math.round(normalized))));
         }
       } catch (error) {
-        console.error('Failed to fetch refund configuration', error);
       }
     };
 
@@ -158,7 +180,6 @@ export const PatientAppointments: React.FC = () => {
             return newMap;
           });
         } catch (err) {
-          console.error(`Error loading doctor profile for ${doctorID}:`, err);
         } finally {
           setLoadingDoctors(prev => {
             const newSet = new Set(prev);
@@ -243,7 +264,26 @@ export const PatientAppointments: React.FC = () => {
       );
     }
 
-    if (filters.timeRange !== 'all') {
+    // Filter by date range if provided
+    if (dateFrom || dateTo) {
+      filtered = filtered.filter(apt => {
+        const aptDate = new Date(apt.date);
+        if (dateFrom && dateTo) {
+          const fromDate = new Date(dateFrom);
+          const toDate = new Date(dateTo);
+          toDate.setHours(23, 59, 59, 999); // Include entire end date
+          return aptDate >= fromDate && aptDate <= toDate;
+        } else if (dateFrom) {
+          const fromDate = new Date(dateFrom);
+          return aptDate >= fromDate;
+        } else if (dateTo) {
+          const toDate = new Date(dateTo);
+          toDate.setHours(23, 59, 59, 999);
+          return aptDate <= toDate;
+        }
+        return true;
+      });
+    } else if (filters.timeRange !== 'all') {
       const now = new Date();
       filtered = filtered.filter(apt => {
         const aptDate = new Date(apt.date);
@@ -263,7 +303,7 @@ export const PatientAppointments: React.FC = () => {
     filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     setFilteredAppointments(filtered);
-  }, [filters, appointmentsWithDoctorInfo]);
+  }, [filters, appointmentsWithDoctorInfo, dateFrom, dateTo]);
 
   const handleCancelAppointment = async () => {
     if (!selectedAppointment) return;
@@ -288,7 +328,6 @@ export const PatientAppointments: React.FC = () => {
       });
       setShowSuccessModal(true);
     } catch (error: any) {
-      console.error('Error cancelling appointment:', error);
       alert(error.response?.data?.message || 'Không thể hủy lịch hẹn. Vui lòng thử lại.');
     } finally {
       setIsCancelling(false);
@@ -315,14 +354,11 @@ export const PatientAppointments: React.FC = () => {
       setHoverRating(0);
       setReviewComment('');
 
-      // Mostrar mensagem de sucesso
       alert('Cảm ơn bạn đã đánh giá! Đánh giá của bạn đã được gửi thành công.');
       
-      // Recarregar a lista de appointments para atualizar o status
       await loadAppointments();
       
     } catch (error: any) {
-      console.error('Error submitting review:', error);
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.title ||
                           'Không thể gửi đánh giá. Vui lòng thử lại.';
@@ -363,61 +399,65 @@ export const PatientAppointments: React.FC = () => {
     }).format(amount);
   };
 
-  const getStatusConfig = (statusCode: string, startTime?: string, endTime?: string) => {
-    const currentTime = new Date();
-    const appointmentStartTime = startTime ? new Date(startTime) : null;
-    const appointmentEndTime = endTime ? new Date(endTime) : null;
-
-    // ✅ 1. Trạng thái cố định - Completed
-    if (statusCode === 'Completed') {
-      return { 
-        label: 'Hoàn thành', 
+  const getStatusConfig = (statusCode: string) => {
+    // Retorna configuração baseada APENAS no statusCode - NÃO verifica tempo
+    const config: Record<string, { label: string; icon: string; color: string }> = {
+      'OnProgressing': { 
+        label: statusDisplayNameMap[statusCode] || 'Đang khám', 
+        icon: 'bi-arrow-repeat',
+        color: '#f59e0b'
+      },
+      'BeforeAppoiment': { 
+        label: statusDisplayNameMap[statusCode] || 'Trước giờ khám', 
+        icon: 'bi-calendar-check',
+        color: '#3b82f6'
+      },
+      'Completed': { 
+        label: statusDisplayNameMap[statusCode] || 'Hoàn thành', 
         icon: 'bi-check-circle-fill',
         color: '#10b981'
-      };
-    }
-    
-    // ✅ 2. Trạng thái hủy
-    if (statusCode === 'CancelledByPatient' || 
-        statusCode === 'CancelledByDoctor' || 
-        statusCode === 'MissedByDoctor' || 
-        statusCode === 'NoShow') {
-      return { 
-        label: 'Đã hủy', 
-        icon: 'bi-x-circle-fill',
+      },
+      'CancelledByPatient': { 
+        label: statusDisplayNameMap[statusCode] || 'Bệnh nhân hủy', 
+        icon: 'bi-x-circle',
         color: '#ef4444'
-      };
-    }
-
-    // ✅ 3. Xác định trạng thái theo thời gian
-    if (appointmentStartTime && appointmentEndTime) {
-      if (currentTime >= appointmentStartTime && currentTime <= appointmentEndTime) {
-        return { 
-          label: 'Đang diễn ra', 
-          icon: 'bi-clock-history',
-          color: '#3b82f6'
-        };
-      } else if (currentTime < appointmentStartTime) {
-        return { 
-          label: 'Sắp diễn ra', 
-          icon: 'bi-clock-history',
-          color: '#f59e0b'
-        };
-      } else if (currentTime > appointmentEndTime) {
-        // ✅ Lịch đã qua => coi như "Hoàn thành"
-        return { 
-          label: 'Hoàn thành', 
-          icon: 'bi-check-circle-fill',
-          color: '#10b981'
-        };
+      },
+      'CancelledByDoctor': { 
+        label: statusDisplayNameMap[statusCode] || 'Bác sĩ hủy', 
+        icon: 'bi-x-circle',
+        color: '#ef4444'
+      },
+      'MissedByPatient': { 
+        label: statusDisplayNameMap[statusCode] || 'Bệnh nhân vắng mặt', 
+        icon: 'bi-exclamation-circle',
+        color: '#f59e0b'
+      },
+      'MissedByDoctor': { 
+        label: statusDisplayNameMap[statusCode] || 'Bác sĩ vắng mặt', 
+        icon: 'bi-exclamation-circle',
+        color: '#f59e0b'
+      },
+      'NoShow': { 
+        label: statusDisplayNameMap[statusCode] || 'Không đến', 
+        icon: 'bi-question-circle',
+        color: '#6b7280'
+      },
+      'PendingConfirmation': { 
+        label: statusDisplayNameMap[statusCode] || 'Chờ xác nhận', 
+        icon: 'bi-clock-history',
+        color: '#8b5cf6'
+      },
+      'Confirmed': { 
+        label: statusDisplayNameMap[statusCode] || 'Đã xác nhận', 
+        icon: 'bi-check2-circle',
+        color: '#10b981'
       }
-    }
+    };
 
-    // ✅ 4. Mặc định
-    return { 
-      label: 'Sắp diễn ra', 
-      icon: 'bi-clock-history',
-      color: '#f59e0b'
+    return config[statusCode] || { 
+      label: statusCode, 
+      icon: 'bi-info-circle',
+      color: '#6b7280'
     };
   };
 
@@ -556,42 +596,94 @@ export const PatientAppointments: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters Section */}
-      <div className={styles.filtersSection}>
+      {/* Search and Filter Section */}
+      <div className={styles.searchFilterSection}>
         <div className={styles.searchBox}>
-            <i className="bi bi-search"></i>
-            <input
-              type="text"
-            placeholder="Tìm kiếm bác sĩ, chuyên khoa..."
+          <i className="bi bi-search"></i>
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tiêu đề..."
             value={filters.search}
             onChange={(e) => setFilters({...filters, search: e.target.value})}
           />
         </div>
 
-        <div className={styles.filterButtons}>
-                <select 
-                  value={filters.status} 
-                  onChange={(e) => setFilters({...filters, status: e.target.value})}
-            className={styles.filterSelect}
-                >
-            <option value="all">Tất cả trạng thái</option>
-                  <option value="upcoming">Sắp diễn ra</option>
-            <option value="completed">Hoàn thành</option>
-                  <option value="cancelled">Đã hủy</option>
-                </select>
-
-                <select 
-            value={filters.timeRange} 
-            onChange={(e) => setFilters({...filters, timeRange: e.target.value})}
-            className={styles.filterSelect}
-                >
-            <option value="all">Tất cả thời gian</option>
-                  <option value="today">Hôm nay</option>
-                  <option value="week">Tuần này</option>
-                  <option value="month">Tháng này</option>
-                </select>
-              </div>
+        <button 
+          className={`${styles.filterToggleBtn} ${showFilterPanel ? styles.active : ''}`}
+          onClick={() => setShowFilterPanel(!showFilterPanel)}
+        >
+          <i className="bi bi-funnel"></i>
+          Bộ lọc
+        </button>
       </div>
+
+      {/* Advanced Filter Panel */}
+      {showFilterPanel && (
+        <div className={styles.filterPanel}>
+          <div className={styles.filterGrid}>
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-toggle-on"></i>
+                Trạng thái
+              </label>
+              <select 
+                value={filters.status} 
+                onChange={(e) => setFilters({...filters, status: e.target.value})}
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="upcoming">Sắp diễn ra</option>
+                <option value="completed">Hoàn thành</option>
+                <option value="cancelled">Đã hủy</option>
+              </select>
+            </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-calendar-event"></i>
+                Từ ngày
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </div>
+
+            <div className={styles.filterItem}>
+              <label>
+                <i className="bi bi-calendar-check"></i>
+                Đến ngày
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className={styles.filterActions}>
+            <button 
+              className={styles.resetFilterBtn}
+              onClick={() => {
+                setFilters({ status: 'all', timeRange: 'all', search: '' });
+                setDateFrom('');
+                setDateTo('');
+              }}
+            >
+              <i className="bi bi-arrow-counterclockwise"></i>
+              Đặt lại bộ lọc
+            </button>
+            <button 
+              className={styles.applyFilterBtn}
+              onClick={() => setShowFilterPanel(false)}
+            >
+              <i className="bi bi-check2"></i>
+              Áp dụng
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Appointments List */}
         {filteredAppointments.length === 0 ? (
@@ -607,11 +699,7 @@ export const PatientAppointments: React.FC = () => {
           {filteredAppointments.map((appointment) => {
             // Get the appointment with doctor info
             const appointmentWithInfo = appointmentsWithDoctorInfo.find(apt => apt.id === appointment.id) || appointment;
-            const statusConfig = getStatusConfig(
-              appointmentWithInfo.statusCode || '',
-              appointmentWithInfo.appointmentStartTime,
-              appointmentWithInfo.appointmentEndTime
-            );
+            const statusConfig = getStatusConfig(appointmentWithInfo.statusCode || '');
             
             return (
             <div 
@@ -683,11 +771,7 @@ export const PatientAppointments: React.FC = () => {
             </div>
 
                 <div className={styles.cardFooter} onClick={(e) => e.stopPropagation()}>
-                  {appointmentWithInfo.statusCode !== 'Completed' && 
-                   appointmentWithInfo.statusCode !== 'CancelledByPatient' && 
-                   appointmentWithInfo.statusCode !== 'CancelledByDoctor' && 
-                   appointmentWithInfo.statusCode !== 'MissedByDoctor' && 
-                   appointmentWithInfo.statusCode !== 'NoShow' && (
+                  {appointmentWithInfo.statusCode === 'BeforeAppoiment' && (
                     <div className={styles.footerActions}>
               <button 
                         className={styles.viewInfoBtn}
@@ -788,14 +872,14 @@ export const PatientAppointments: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className={styles.modalStatus} style={{ background: getStatusConfig(selectedAppointment.statusCode || '', selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime).color }}>
-                <i className={getStatusConfig(selectedAppointment.statusCode || '', selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime).icon}></i>
-                {getStatusConfig(selectedAppointment.statusCode || '', selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime).label}
+              <div className={styles.modalStatus} style={{ background: getStatusConfig(selectedAppointment.statusCode || '').color }}>
+                <i className={getStatusConfig(selectedAppointment.statusCode || '').icon}></i>
+                {getStatusConfig(selectedAppointment.statusCode || '').label}
                 </div>
               </div>
 
             <div className={styles.modalBody}>
-              <div className={styles.detailSection}>
+              <div className={styles.detailSection}>    
                 <h4 className={styles.sectionTitle}>
                   <i className="bi bi-calendar-event"></i>
                   Thông tin lịch hẹn
@@ -856,11 +940,7 @@ export const PatientAppointments: React.FC = () => {
             </div>
             
             <div className={styles.modalFooter}>
-              {selectedAppointment.statusCode !== 'Completed' && 
-               selectedAppointment.statusCode !== 'CancelledByPatient' && 
-               selectedAppointment.statusCode !== 'CancelledByDoctor' && 
-               selectedAppointment.statusCode !== 'MissedByDoctor' && 
-               selectedAppointment.statusCode !== 'NoShow' && (
+              {selectedAppointment.statusCode === 'BeforeAppoiment' && (
                 <button 
                   className={styles.modalCancelBtn}
                   onClick={() => {

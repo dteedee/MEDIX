@@ -6,7 +6,8 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import { MainLayout } from './components/layout/MainLayout';
 import { UserRole } from './types/common.types';
-import { MaintenanceNotice } from './components/MaintenanceNotice';
+import { MaintenanceRedirect } from './components/MaintenanceRedirect';
+import { MaintenancePage } from './pages/public/MaintenancePage';
 
 // Layout
 import { Header } from './components/layout/Header';
@@ -77,8 +78,13 @@ import ErrorPageWrapper from './pages/error/ErrorPageWrapper';
 import PrivacyPolicy from './pages/public/PrivacyPolicy';
 import TermsOfService from './pages/public/TermsOfService';
 import AboutUs from './pages/public/AboutUs';
+
+// Specialty pages
+import SpecialtyListPage from './pages/public/SpecialtyListPage';
+import SpecialtyDetailPage from './pages/public/SpecialtyDetailPage';
 import EMRTimeline from './pages/patient/EMRTimeline';
 import CategoryList from './pages/manager/CategoryManagement';
+import CategoryManagementPage from './pages/manager/CategoryManagementPage';
 
 export function App() {
   return (
@@ -86,10 +92,11 @@ export function App() {
       <AuthProvider>
         <ToastProvider>
           <Router>
-            <MaintenanceNotice />
+            <MaintenanceRedirect />
             <div className="min-h-screen w-full flex flex-col">
               <Routes>
                 <Route path="/error/:code" element={<ErrorPageWrapper />} />
+                <Route path="/maintenance" element={<MaintenancePage />} />
 
                 {/* ---------- Public routes ---------- */}
                 <Route element={<AuthLayout />}>
@@ -110,6 +117,8 @@ export function App() {
                 <Route element={<PublicLayout />}>
                   <Route index element={<HomePage />} />
                   <Route path="/doctors" element={<DoctorBookingList />} />
+                  <Route path="/specialties" element={<SpecialtyListPage />} />
+                  <Route path="/specialties/:id" element={<SpecialtyDetailPage />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/about" element={<AboutUs />} />
@@ -118,6 +127,9 @@ export function App() {
                   {/* Public article detail */}
                   <Route path="/articles/:slug" element={<ArticleDetailPage />} />
                 </Route>
+
+                {/* ---------- AI Chat - Full page (no header/footer) ---------- */}
+                <Route path="/ai-chat" element={<AIChatBot />} />
 
                 {/* ---------- Change password route (Protected) ---------- */}
                 <Route path="/change-password" element={<ProtectedRoute><ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} /></ProtectedRoute>} />
@@ -158,7 +170,7 @@ export function App() {
                     <Route path="services" element={<ServicePackageManagement />} />
                     <Route path="commissions" element={<CommissionManagement />} />
                     <Route path="feedback" element={<FeedbackManagement />} />
-                    <Route path="categories" element={<CategoryList />} />
+                    <Route path="categories" element={<CategoryManagementPage />} />
                     
                     <Route path="transfer-transactions" element={<TransferTransactions />} />
                     <Route path="promotions" element={<PromotionManagement />} />

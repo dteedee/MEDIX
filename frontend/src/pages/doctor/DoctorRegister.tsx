@@ -3,7 +3,7 @@ import styles from '../../styles/doctor/doctor-register.module.css'
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 import { DoctorRegisterMetadata } from '../../types/doctor.types';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { PageLoader } from '../../components/ui';
 import DoctorRegistrationFormService from '../../services/doctorRegistrationFormService';
 
@@ -23,6 +23,120 @@ function DoctorRegister() {
         identityCardImages?: boolean,
     }>({});
 
+    const [dateOfBirthDisplay, setDateOfBirthDisplay] = useState('');
+
+    const formatDateForDisplay = (dateString: string): string => {
+        if (!dateString) return '';
+        
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            const [year, month, day] = dateString.split('-');
+            return `${day}/${month}/${year}`;
+        }
+        
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
+            return dateString;
+        }
+        
+        return dateString;
+    };
+
+    const validateDateValues = (day: string, month: string, year: string): { isValid: boolean; error?: string } => {
+        const dayNum = parseInt(day, 10);
+        const monthNum = parseInt(month, 10);
+        const yearNum = parseInt(year, 10);
+        
+        const currentYear = new Date().getFullYear();
+        if (yearNum < 1900 || yearNum > currentYear) {
+            return { isValid: false, error: `Năm phải từ 1900 đến ${currentYear}` };
+        }
+        
+        if (monthNum < 1 || monthNum > 12) {
+            return { isValid: false, error: 'Tháng phải từ 1 đến 12' };
+        }
+        
+        const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
+        if (dayNum < 1 || dayNum > daysInMonth) {
+            return { isValid: false, error: `Ngày không hợp lệ. Tháng ${monthNum} có tối đa ${daysInMonth} ngày` };
+        }
+        
+        const date = new Date(yearNum, monthNum - 1, dayNum);
+        if (date.getFullYear() !== yearNum || date.getMonth() !== monthNum - 1 || date.getDate() !== dayNum) {
+            return { isValid: false, error: 'Ngày tháng năm không hợp lệ' };
+        }
+        
+        return { isValid: true };
+    };
+
+    const parseDateInput = (input: string): { date: string; error?: string } => {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(input)) {
+            const [year, month, day] = input.split('-');
+            const validation = validateDateValues(day, month, year);
+            if (!validation.isValid) {
+                return { date: input, error: validation.error };
+            }
+            return { date: input };
+        }
+        
+        const ddmmyyyyMatch = input.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (ddmmyyyyMatch) {
+            const [, day, month, year] = ddmmyyyyMatch;
+            const validation = validateDateValues(day, month, year);
+            if (!validation.isValid) {
+                return { date: input, error: validation.error };
+            }
+            return { date: `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` };
+        }
+        
+        // Handle DD-MM-YYYY format
+        const ddmmyyyyDashMatch = input.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+        if (ddmmyyyyDashMatch) {
+            const [, day, month, year] = ddmmyyyyDashMatch;
+            const validation = validateDateValues(day, month, year);
+            if (!validation.isValid) {
+                return { date: input, error: validation.error };
+            }
+            return { date: `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` };
+        }
+        
+        // Handle DDMMYYYY format (8 digits)
+        const ddmmyyyyNoSepMatch = input.match(/^(\d{2})(\d{2})(\d{4})$/);
+        if (ddmmyyyyNoSepMatch) {
+            const [, day, month, year] = ddmmyyyyNoSepMatch;
+            const validation = validateDateValues(day, month, year);
+            if (!validation.isValid) {
+                return { date: input, error: validation.error };
+            }
+            return { date: `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` };
+        }
+        
+        // If format doesn't match, check if it's incomplete (user still typing)
+        if (input && !input.includes('/') && !input.includes('-') && input.length < 8) {
+            // User is still typing, don't validate yet
+            return { date: '' };
+        }
+        
+        // Invalid format
+        return { date: input, error: 'Định dạng ngày không hợp lệ. Vui lòng nhập theo định dạng: dd/mm/yyyy' };
+    };
+
+    // Helper function to format date input with mask DD/MM/YYYY
+    const formatDateInput = (value: string): string => {
+        // Remove all non-digit characters
+        const digits = value.replace(/\D/g, '');
+        
+        // Limit to 8 digits (DDMMYYYY)
+        const limitedDigits = digits.slice(0, 8);
+        
+        // Format as DD/MM/YYYY
+        if (limitedDigits.length <= 2) {
+            return limitedDigits;
+        } else if (limitedDigits.length <= 4) {
+            return `${limitedDigits.slice(0, 2)}/${limitedDigits.slice(2)}`;
+        } else {
+            return `${limitedDigits.slice(0, 2)}/${limitedDigits.slice(2, 4)}/${limitedDigits.slice(4)}`;
+        }
+    };
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -31,7 +145,6 @@ function DoctorRegister() {
                 const data = await DoctorRegistrationFormService.getMetadata();
                 setMetadata(data);
             } catch (error) {
-                console.error('Failed to fetch metadata:', error);
                 setErrorCode(500);
             } finally {
                 setPageLoading(false);
@@ -40,18 +153,32 @@ function DoctorRegister() {
         fetchMetadata();
     }, []);
 
+    // Sync dateOfBirthDisplay when formData.dob changes from external source
+    useEffect(() => {
+        if (formData.dob && /^\d{4}-\d{2}-\d{2}$/.test(formData.dob) && !dateOfBirthDisplay) {
+            // Only update if display is empty (to avoid overwriting user input)
+            setDateOfBirthDisplay(formatDateForDisplay(formData.dob));
+        } else if (!formData.dob && dateOfBirthDisplay) {
+            // Clear display when dob is cleared
+            setDateOfBirthDisplay('');
+        }
+    }, [formData.dob]);
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         const form = e.currentTarget;
-        const formData = new FormData(form);
+        const submitFormData = new FormData(form);
 
-        for (const [key, value] of formData.entries()) {
-            console.log(`${key}:`, value);
+        // Override dob with the parsed YYYY-MM-DD format from formData state
+        if (formData.dob) {
+            submitFormData.set('dob', formData.dob);
         }
-        console.log(formData);
 
-        const agreed = formData.get('agreeToTerms') === 'on'; // checkbox returns 'on' if checked
+        for (const [key, value] of submitFormData.entries()) {
+        }
+
+        const agreed = submitFormData.get('agreeToTerms') === 'on'; // checkbox returns 'on' if checked
 
         if (!agreed) {
             setErrors((prev: any) => ({
@@ -63,12 +190,11 @@ function DoctorRegister() {
         setErrors({});
         setLoading(true);
         try {
-            await DoctorRegistrationFormService.registerDoctor(formData);
+            await DoctorRegistrationFormService.registerDoctor(submitFormData);
             setLoading(false);
-            console.log('Registration successful');
             Swal.fire({
                 title: 'Đăng ký thành công!',
-                text: 'Bạn sẽ được chuyển về trang chủ',
+                text: 'Tài khoản của bạn đang chờ xác minh. Hệ thống sẽ tự động quay lại trang chủ.',
                 icon: 'success',
                 confirmButtonText: 'OK',
             }).then(() => {
@@ -76,17 +202,13 @@ function DoctorRegister() {
             });
         } catch (error: any) {
             setLoading(false);
-            console.error('Registration failed:', error);
 
             const status = error?.response?.status;
 
             if (status === 400 || status === 422) {
-                // Handle validation errors
                 const errorData = error.response.data;
                 setErrors(errorData.errors);
-                console.log(errorData.errors);
             } else {
-                // Fallback for other errors
                 setErrors({ general: 'Đã xảy ra lỗi. Vui lòng thử lại.' });
             }
         }
@@ -173,18 +295,43 @@ function DoctorRegister() {
 
             case 'dob':
                 if (!value) {
-                    newErrors.Dob = ['Vui lòng nhập ngày sinh']; // No error if left empty
+                    newErrors.Dob = ['Vui lòng nhập ngày sinh'];
                 } else {
-                    const birthYear = new Date(value).getFullYear();
-                    const currentYear = new Date().getFullYear();
-                    const age = currentYear - birthYear;
+                    // Validate date format and values
+                    const parsed = parseDateInput(value);
+                    if (parsed.error) {
+                        newErrors.Dob = [parsed.error];
+                    } else if (parsed.date) {
+                        // Check if date is valid YYYY-MM-DD format
+                        if (!/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
+                            newErrors.Dob = ['Ngày sinh không hợp lệ'];
+                        } else {
+                            const birthDate = new Date(parsed.date);
+                            const currentDate = new Date();
+                            const age = currentDate.getFullYear() - birthDate.getFullYear();
+                            const monthDiff = currentDate.getMonth() - birthDate.getMonth();
+                            const dayDiff = currentDate.getDate() - birthDate.getDate();
+                            
+                            // Calculate exact age
+                            let exactAge = age;
+                            if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+                                exactAge--;
+                            }
 
-                    if (age < 25) {
-                        newErrors.Dob = ['Bạn phải đủ 25 tuổi để đăng ký'];
-                    } else if (age > 150) {
-                        newErrors.Dob = ['Ngày sinh không hợp lệ'];
+                            if (isNaN(birthDate.getTime())) {
+                                newErrors.Dob = ['Ngày sinh không hợp lệ'];
+                            } else if (exactAge < 25) {
+                                newErrors.Dob = ['Bạn phải đủ 25 tuổi để đăng ký'];
+                            } else if (exactAge > 150) {
+                                newErrors.Dob = ['Ngày sinh không hợp lệ'];
+                            } else if (birthDate > currentDate) {
+                                newErrors.Dob = ['Ngày sinh không thể là ngày trong tương lai'];
+                            } else {
+                                newErrors.Dob = [];
+                            }
+                        }
                     } else {
-                        newErrors.Dob = [];
+                        newErrors.Dob = ['Vui lòng nhập đầy đủ ngày sinh'];
                     }
                 }
                 break;
@@ -203,7 +350,49 @@ function DoctorRegister() {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        //setFormData((prev: any) => ({ ...prev, [name]: value }));
+        
+        // Special handling for date of birth field
+        if (name === 'dob') {
+            // Format the display value as DD/MM/YYYY while typing
+            const formattedValue = formatDateInput(value);
+            
+            // Update display value immediately so user can see what they're typing
+            setDateOfBirthDisplay(formattedValue);
+            
+            // Parse to YYYY-MM-DD format for storage with validation
+            const parsed = parseDateInput(formattedValue);
+            
+            // Store the parsed date (YYYY-MM-DD) for backend, or empty if invalid/incomplete
+            const dateToStore = parsed.date && !parsed.error ? parsed.date : '';
+            setFormData((prev: any) => ({ ...prev, [name]: dateToStore }));
+            
+            // Validate with error message if any
+            if (parsed.error) {
+                setErrors((prev: any) => ({ 
+                    ...prev, 
+                    Dob: [parsed.error] 
+                }));
+            } else if (dateToStore) {
+                // Validate the date - validateField will set errors if invalid
+                validateField(name, dateToStore);
+            } else if (formattedValue.length >= 10 && formattedValue.includes('/')) {
+                // User has entered full format but it's invalid
+                setErrors((prev: any) => ({ 
+                    ...prev, 
+                    Dob: ['Định dạng ngày không hợp lệ. Vui lòng nhập theo định dạng: dd/mm/yyyy'] 
+                }));
+            } else {
+                // Clear error if user is still typing (less than 10 chars or incomplete)
+                setErrors((prev: any) => {
+                    const { Dob, ...rest } = prev;
+                    return rest;
+                });
+            }
+            return; // Early return for date processing
+        }
+        
+        // For other fields
+        setFormData((prev: any) => ({ ...prev, [name]: value }));
         validateField(name, value);
     };
 
@@ -461,7 +650,8 @@ function DoctorRegister() {
                                 </div>
                                 <div className={styles["form-group"]}>
                                     <label className={styles["form-label"]}>Ngày sinh <span className={styles["required"]}>*</span></label>
-                                    <input type="date"
+                                    <input 
+                                        type="text"
                                         className={`${styles["form-input"]} form-control ${errors.Dob?.[0]
                                             ? 'is-invalid'
                                             : formData.dob?.trim()
@@ -469,9 +659,11 @@ function DoctorRegister() {
                                                 : ''
                                             }`}
                                         onChange={handleChange}
-                                        placeholder="mm/dd/yyyy"
+                                        placeholder="dd/mm/yyyy"
                                         name='dob'
-                                        max="9999-12-31" />
+                                        value={dateOfBirthDisplay}
+                                        maxLength={10}
+                                    />
                                     {errors.Dob?.[0] && (
                                         <div className="text-danger">{errors.Dob[0]}</div>
                                     )}
@@ -748,7 +940,7 @@ function DoctorRegister() {
                             <div className={styles["checkbox-wrapper"]}>
                                 <input type="checkbox" id="terms" name='agreeToTerms' />
                                 <label htmlFor="terms" className={styles["terms-text"]}>
-                                    Tôi đồng ý <a href="#" className={styles["terms-link"]}>Điều khoản dịch vụ</a> và <a href="#" className={styles["terms-link"]}>Chính sách bảo mật</a> của MEDIX. Thông tin y tế của bạn được mã hóa
+                                    Tôi đồng ý <Link to="/terms" target="_blank" className={styles["terms-link"]}>Điều khoản dịch vụ</Link> và <Link to="/privacy" target="_blank" className={styles["terms-link"]}>Chính sách bảo mật</Link> của MEDIX. Thông tin y tế của bạn được mã hóa
                                     và tuân thủ chuẩn bảo mật y tế.
                                 </label>
                             </div>

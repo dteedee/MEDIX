@@ -58,18 +58,16 @@ namespace Medix.API.Presentation.Controller.UserManagement
             {
                 var verificationCode = new Random().Next(100000, 999999).ToString();
 
-                // Lưu vào database
                 var entity = new EmailVerificationCode
                 {
                     Email = email,
                     Code = verificationCode,
-                    ExpirationTime = DateTime.UtcNow.AddMinutes(10), // Hết hạn sau 10 phút
+                    ExpirationTime = DateTime.UtcNow.AddMinutes(10), 
                     IsUsed = false
                 };
                 _context.EmailVerificationCodes.Add(entity);
                 await _context.SaveChangesAsync();
 
-                // Gửi email
                 var result = await _emailService.SendVerificationCodeAsync(email, verificationCode);
                 return verificationCode;
             }
@@ -101,14 +99,12 @@ namespace Medix.API.Presentation.Controller.UserManagement
             if (codeEntity.ExpirationTime < DateTime.UtcNow)
                 return BadRequest(new { message = "Mã xác thực đã hết hạn" });
 
-            // Đánh dấu đã sử dụng (nếu muốn)
             codeEntity.IsUsed = true;
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Xác thực thành công" });
         }
 
-        // Request DTO
         public class xEmailCodeVerifyRequest
         {
             public string Email { get; set; }
@@ -135,7 +131,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 {
                     Email = email,
                     Code = newCode,
-                    ExpirationTime = DateTime.UtcNow.AddMinutes(10), // Hết hạn sau 10 phút
+                    ExpirationTime = DateTime.UtcNow.AddMinutes(10), 
                     IsUsed = false
                 };
                 _context.EmailVerificationCodes.Add(entity);

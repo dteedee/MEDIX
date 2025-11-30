@@ -53,6 +53,7 @@ export const PatientFinance: React.FC = () => {
   const [wallet, setWallet] = useState<WalletDto | null>(null);
   const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointmentMap, setAppointmentMap] = useState<Map<string, Appointment>>(new Map());
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingTransactions, setLoadingTransactions] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +94,6 @@ export const PatientFinance: React.FC = () => {
           setBanksWithLogos(updatedBanks);
         }
       } catch (err) {
-        console.error('Error fetching banks from API:', err);
         setBanksWithLogos(BANKS);
       }
     };
@@ -112,9 +112,14 @@ export const PatientFinance: React.FC = () => {
         ]);
         setWallet(walletData);
         setAppointments(appointmentsData);
+        // Create a map for quick lookup
+        const map = new Map<string, Appointment>();
+        appointmentsData.forEach(apt => {
+          map.set(apt.id, apt);
+        });
+        setAppointmentMap(map);
         await fetchTransactions();
       } catch (err: any) {
-        console.error('Error fetching wallet:', err);
         setError(err.message || 'Không thể tải thông tin ví');
       } finally {
         setLoading(false);
@@ -139,8 +144,20 @@ export const PatientFinance: React.FC = () => {
       setLoadingTransactions(true);
       const transactionData = await walletService.getTransactionsByWalletId();
       setTransactions(transactionData);
+      
+      // Reload appointments to ensure we have all appointment data for transactions
+      try {
+        const allAppointments = await appointmentService.getPatientAppointments();
+        setAppointments(allAppointments);
+        // Update appointment map
+        const map = new Map<string, Appointment>();
+        allAppointments.forEach(apt => {
+          map.set(apt.id, apt);
+        });
+        setAppointmentMap(map);
+      } catch (err) {
+      }
     } catch (err: any) {
-      console.error('Error fetching transactions:', err);
     } finally {
       setLoadingTransactions(false);
     }
@@ -302,7 +319,6 @@ export const PatientFinance: React.FC = () => {
       setWallet(walletData);
       await fetchTransactions();
     } catch (err: any) {
-      console.error('Error processing withdrawal:', err);
       
       let errorMessage = 'Có lỗi xảy ra khi rút tiền. Vui lòng thử lại.';
       
@@ -381,35 +397,283 @@ export const PatientFinance: React.FC = () => {
     return statusMap[status] || status;
   };
 
-  const formatTransactionDescription = (transaction: WalletTransactionDto): string => {
-    const appointment = transaction.relatedAppointmentId 
-      ? appointments.find(apt => apt.id === transaction.relatedAppointmentId)
-      : null;
-
-    const transactionDate = transaction.transactionDate 
-      ? new Date(transaction.transactionDate)
-      : null;
-
-    const formatDate = (date: Date) => {
-      return date.toLocaleDateString('vi-VN', {
+   // Helper function to remove trailing "0" from description - XÓA HOÀN TOÀN SỐ 0
+   const cleanDescription = (desc: any): string => {
+    if (!desc) return '';
+  
+    // Nếu BE trả về mảng -> join lại
+    if (Array.isArray(desc)) {
+      desc = desc.join(' ');
+    }
+  
+    desc = String(desc);
+    
+    // Nếu description chỉ là "0" hoặc chỉ chứa số 0, return empty
+    if (desc.trim() === '0' || /^0+$/.test(desc.trim())) {
+      return '';
+    }
+  
+    // Loại bỏ tất cả số "0" ở cuối một cách triệt để
+    let cleaned = desc.trim();
+    let maxIterations = 15;
+    let iterations = 0;
+    
+    while (iterations < maxIterations) {
+      const before = cleaned;
+      
+      // Xóa "0" sau "h" - ví dụ: "9h0", "10h00" -> "9h", "10h"
+      cleaned = cleaned.replace(/(\d+)h0+/gi, '$1h');
+      
+      // Xóa "0" sau dấu ngoặc đóng - ví dụ: ")0" -> ")"
+      cleaned = cleaned.replace(/\)0+/g, ')');
+      
+      // Xóa "0" sau chữ cái và dấu cách - ví dụ: "hẹn 0", "hẹn0" -> "hẹn"
+      cleaned = cleaned.replace(/([a-zA-ZÀ-ỹ])\s*0+(?=\s*$)/gi, '$1');
+      
+      // Xóa "0" đứng một mình ở cuối (có hoặc không có khoảng trắng trước)
+      cleaned = cleaned.replace(/\s+0+$/g, '');
+      cleaned = cleaned.replace(/\s*0+$/g, '');
+      
+      // Xóa tất cả "0" ở cuối dòng
+      cleaned = cleaned.replace(/0+$/g, '');
+      
+      // Trim lại
+      cleaned = cleaned.trim();
+      
+      // Nếu không thay đổi gì, dừng lại
+      if (cleaned === before) {
+        break;
+      }
+      
+      iterations++;
+    }
+  
+    // Kiểm tra cuối cùng: nếu còn "0" đơn lẻ ở cuối, xóa luôn
+    if (cleaned.endsWith(' 0')) {
+      cleaned = cleaned.substring(0, cleaned.length - 2).trim();
+    }
+    if (cleaned.endsWith('0') && cleaned.length > 1) {
+      const lastChar = cleaned[cleaned.length - 2];
+      // Chỉ xóa "0" nếu ký tự trước nó không phải là số
+      if (!/\d/.test(lastChar)) {
+        cleaned = cleaned.substring(0, cleaned.length - 1).trim();
+      }
+    }
+    
+    return cleaned;
+  };
+  // Helper function to format date and time from transaction date if appointment is not available
+  const formatTransactionDateTime = (transaction: WalletTransactionDto): { date: string | null; time: string | null } => {
+    const dateStr = transaction.transactionDate || transaction.createdAt;
+    if (!dateStr) {
+      return { date: null, time: null };
+    }
+    
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return { date: null, time: null };
+      }
+      
+      const formattedDate = date.toLocaleDateString('vi-VN', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
       });
-    };
+      
+      const hour = date.getHours();
+      const formattedTime = `ca ${hour}h`;
+      
+      return { date: formattedDate, time: formattedTime };
+    } catch (e) {
+      return { date: null, time: null };
+    }
+  };
+
+  // Helper function to format date and time from appointment
+  const formatAppointmentDateTime = (appointment: Appointment | null | undefined): { date: string | null; time: string | null } => {
+    if (!appointment || !appointment.appointmentStartTime) {
+      return { date: null, time: null };
+    }
+    
+    try {
+      const appointmentDate = new Date(appointment.appointmentStartTime);
+      if (isNaN(appointmentDate.getTime())) {
+        return { date: null, time: null };
+      }
+      
+      const date = appointmentDate.toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      
+      const hour = appointmentDate.getHours();
+      const time = `ca ${hour}h`;
+      
+      return { date, time };
+    } catch (e) {
+      return { date: null, time: null };
+    }
+  };
+
+  const formatTransactionDescription = (transaction: WalletTransactionDto): string => {
+    // Clean description ngay từ đầu để loại bỏ "0" từ backend - không mutate transaction
+    let originalDescription = transaction.description;
+    let cleanedDescription = originalDescription ? cleanDescription(originalDescription) : null;
+    // Nếu sau khi clean chỉ còn "0" hoặc rỗng, bỏ qua description gốc
+    if (cleanedDescription && (cleanedDescription.trim() === '0' || /^0+$/.test(cleanedDescription.trim()))) {
+      cleanedDescription = null;
+    }
+    
+    // Try to find appointment from map first, then from array
+    let appointment = transaction.relatedAppointmentId 
+      ? (appointmentMap.get(transaction.relatedAppointmentId) || appointments.find(apt => apt.id === transaction.relatedAppointmentId))
+      : null;
+    
+    if (!appointment && transaction.id) {
+      appointment = appointments.find(apt => apt.transactionId === transaction.id);
+    }
+
+    if (transaction.transactionTypeCode === 'AppointmentPayment') {
+     
+    }
 
     switch (transaction.transactionTypeCode) {
       case 'AppointmentPayment':
+        let doctorName: string | null = null;
+        
+        // First, try to get doctor name from appointment
         if (appointment) {
-          return `Thanh toán đặt lịch thành công cho bác sĩ ${appointment.doctorName} ngày ${formatDate(new Date(appointment.appointmentStartTime))}`;
+          const rawDoctorName = appointment.doctorName;
+         
+          
+          if (rawDoctorName) {
+            const trimmedName = rawDoctorName.trim();
+            if (trimmedName !== '' && 
+                trimmedName !== '0' && 
+                trimmedName !== 'O' && 
+                trimmedName.length > 0 &&
+                !/^\s*$/.test(trimmedName)) {
+              doctorName = trimmedName;
+            }
+          }
         }
-        return transaction.description || `Thanh toán cuộc hẹn${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
+        
+        if (!doctorName && cleanedDescription) {
+          let desc = cleanedDescription.trim();
+          
+          desc = desc.replace(/cuộc hẹn0$/i, 'cuộc hẹn').trim();
+          desc = desc.replace(/0+$/, '').trim();
+          
+          
+          const invalidPatterns = [
+            /bác sĩ\s*[0O]\b/i,           
+            /bác sĩ\s*$/i,                 
+            /cho\s+đặt\s+bác sĩ\s*[0O]\b/i, 
+            /cho\s+bác sĩ\s*[0O]\b/i       
+          ];
+          
+          const hasInvalidDoctor = invalidPatterns.some(pattern => pattern.test(desc));
+          
+          if (!hasInvalidDoctor && desc.includes('bác sĩ')) {
+            const doctorNameMatch = desc.match(/bác sĩ\s+([^0O\s][^\s]*(?:\s+[^0O\s][^\s]*)*?)(?:\s+ngày|\s*$|$)/i);
+            if (doctorNameMatch && doctorNameMatch[1]) {
+              const extractedName = doctorNameMatch[1].trim();
+              if (extractedName !== '' && extractedName !== '0' && extractedName !== 'O' && extractedName.length > 0) {
+                doctorName = extractedName;
+              }
+            }
+          }
+          
+          if (!doctorName) {
+            const altPatterns = [
+              /cho\s+đặt\s+bác sĩ\s+([A-Za-zÀ-ỹ\s]+?)(?:\s+ngày|$)/i,
+              /cho\s+bác sĩ\s+([A-Za-zÀ-ỹ\s]+?)(?:\s+ngày|$)/i,
+              /bác sĩ\s+([A-Za-zÀ-ỹ\s]+?)(?:\s+ngày|$)/i
+            ];
+            
+            for (const pattern of altPatterns) {
+              const match = desc.match(pattern);
+              if (match && match[1]) {
+                const extractedName = match[1].trim();
+                if (extractedName !== '' && extractedName !== '0' && extractedName !== 'O' && extractedName.length > 1) {
+                  doctorName = extractedName;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        
+        if (doctorName) {
+          const cleanDoctorName = cleanDescription(doctorName);
+          const { date, time } = formatAppointmentDateTime(appointment);
+          
+          let result = `Thanh toán cuộc hẹn với bác sĩ ${cleanDoctorName}`;
+          if (date) {
+            result += ` ngày ${date}`;
+          }
+          if (time) {
+            result += ` ${time}`;
+          }
+          
+          return cleanDescription(result);
+        }
+        
+     
+        
+        if (cleanedDescription && cleanedDescription.trim() !== '0' && !/^0+$/.test(cleanedDescription.trim())) {
+          let desc = cleanDescription(cleanedDescription);
+          if (!desc || desc.trim() === '0' || /^0+$/.test(desc.trim())) {
+          } else {
+            const doctorNameMatch = desc.match(/bác sĩ\s+([A-Za-zÀ-ỹ\s]+?)(?:\s+ngày|$)/i);
+            if (doctorNameMatch && doctorNameMatch[1]) {
+              const extractedName = cleanDescription(doctorNameMatch[1].trim());
+              if (extractedName && extractedName !== '0' && extractedName !== 'O' && extractedName.length > 1) {
+                const { date, time } = formatTransactionDateTime(transaction);
+                let result = `Thanh toán cuộc hẹn với bác sĩ ${extractedName}`;
+                if (date) {
+                  result += ` ngày ${date}`;
+                }
+                if (time) {
+                  result += ` ${time}`;
+                }
+                return cleanDescription(result);
+              }
+            }
+          }
+        }
+        
+        const { date, time } = formatTransactionDateTime(transaction);
+        let result = 'Thanh toán cuộc hẹn';
+        if (date) {
+          result += ` ngày ${date}`;
+        }
+        if (time) {
+          result += ` ${time}`;
+        }
+        return cleanDescription(result);
       
       case 'AppointmentRefund':
-        if (appointment) {
-          const refundPercent = transaction.description?.match(/(\d+)%/)?.[1] || '80';
-          const cancelFee = transaction.description?.match(/Phí hủy: ([\d.,]+)/)?.[1] || '';
-          let desc = `Hoàn tiền hủy lịch hẹn cho bác sĩ ${appointment.doctorName} ngày ${formatDate(new Date(appointment.appointmentStartTime))}`;
+        if (appointment && appointment.doctorName && appointment.doctorName.trim() !== '' && appointment.doctorName !== '0' && appointment.doctorName !== 'O') {
+          // Clean description first to remove trailing "0" or other artifacts
+          let cleanDesc = cleanedDescription || '';
+          
+          const refundPercent = cleanDesc.match(/(\d+)%/)?.[1] || '80';
+          const cancelFee = cleanDesc.match(/Phí hủy:\s*([\d.,]+)/)?.[1] || '';
+          // Clean doctor name to remove any trailing "0"
+          const cleanDoctorName = cleanDescription(appointment.doctorName.trim());
+          const { date, time } = formatAppointmentDateTime(appointment);
+          
+          let desc = `Hoàn lại tiền hủy lịch với bác sĩ ${cleanDoctorName}`;
+          if (date) {
+            desc += ` ngày ${date}`;
+          }
+          if (time) {
+            desc += ` ${time}`;
+          }
+          
           if (refundPercent) {
             desc += ` (${refundPercent}%`;
             if (cancelFee) {
@@ -417,30 +681,110 @@ export const PatientFinance: React.FC = () => {
             }
             desc += ')';
           }
-          return desc;
+          
+          // Ensure no trailing "0" in final description
+          return cleanDescription(desc);
         }
-        return transaction.description || `Hoàn tiền cuộc hẹn${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
+        // If appointment not found or doctorName is missing, check description
+        if (cleanedDescription && 
+            cleanedDescription.trim() !== '0' && 
+            !/^0+$/.test(cleanedDescription.trim()) &&
+            cleanedDescription.includes('bác sĩ')) {
+          // Clean description first
+          let cleanDesc = cleanDescription(cleanedDescription);
+          
+          // If cleaned description is empty or just "0", skip
+          if (!cleanDesc || cleanDesc.trim() === '0' || /^0+$/.test(cleanDesc.trim())) {
+            // Skip to fallback
+          } else if (cleanDesc.includes('bác sĩ 0') || cleanDesc.includes('bác sĩ0')) {
+            // Use transaction date/time as fallback
+            const { date, time } = formatTransactionDateTime(transaction);
+            let result = 'Hoàn lại tiền hủy lịch';
+            if (date) {
+              result += ` ngày ${date}`;
+            }
+            if (time) {
+              result += ` ${time}`;
+            }
+            return cleanDescription(result);
+          }
+          // Try to extract doctor name from description
+          const doctorNameMatch = cleanDesc.match(/bác sĩ\s+([^0O\s][^\s]*(?:\s+[^0O\s][^\s]*)*?)/i);
+          if (doctorNameMatch && doctorNameMatch[1]) {
+            const extractedName = cleanDescription(doctorNameMatch[1].trim());
+            if (extractedName !== '' && extractedName !== '0' && extractedName !== 'O') {
+              // Extract refund info if available
+              const refundPercent = cleanDesc.match(/(\d+)%/)?.[1] || '';
+              const cancelFee = cleanDesc.match(/Phí hủy:\s*([\d.,]+)/)?.[1] || '';
+              const { date, time } = formatAppointmentDateTime(appointment);
+              
+              let desc = `Hoàn lại tiền hủy lịch với bác sĩ ${extractedName}`;
+              if (date) {
+                desc += ` ngày ${date}`;
+              }
+              if (time) {
+                desc += ` ${time}`;
+              }
+              if (refundPercent) {
+                desc += ` (${refundPercent}%`;
+                if (cancelFee) {
+                  desc += ` - Phí hủy: ${cancelFee}`;
+                }
+                desc += ')';
+              }
+              return cleanDescription(desc);
+            }
+          }
+          // If we can't extract doctor name, try to use transaction date/time as fallback
+          const { date, time } = formatTransactionDateTime(transaction);
+          let result = 'Hoàn lại tiền hủy lịch';
+          if (date) {
+            result += ` ngày ${date}`;
+          }
+          if (time) {
+            result += ` ${time}`;
+          }
+          return cleanDescription(result);
+        }
+        // Fallback: use transaction date/time if available
+        const { date: refundDate, time: refundTime } = formatTransactionDateTime(transaction);
+        let desc = 'Hoàn lại tiền hủy lịch';
+        if (refundDate) {
+          desc += ` ngày ${refundDate}`;
+        }
+        if (refundTime) {
+          desc += ` ${refundTime}`;
+        }
+        return cleanDescription(desc);
       
       case 'Deposit':
-        if (transaction.description) {
+        if (cleanedDescription) {
           // Handle English descriptions like "Payment for order 123456"
-          if (transaction.description.toLowerCase().includes('payment for order')) {
-            const orderMatch = transaction.description.match(/order\s+(\d+)/i);
+          if (cleanedDescription.toLowerCase().includes('payment for order')) {
+            const orderMatch = cleanedDescription.match(/order\s+(\d+)/i);
             if (orderMatch) {
               return `Nạp tiền vào ví - Mã đơn: ${orderMatch[1]}`;
             }
-            return `Nạp tiền vào ví`;
+            return 'Nạp tiền vào ví';
           }
-          // If description is already in Vietnamese or doesn't match pattern, use it
-          return transaction.description;
+          // Remove date from description if it exists and clean trailing "0"
+          let desc = cleanedDescription.replace(/\s*ngày\s+\d{2}\/\d{2}\/\d{4,}/g, '').trim();
+          return cleanDescription(desc) || 'Nạp tiền vào ví';
         }
-        return `Nạp tiền vào ví${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
+        return 'Nạp tiền vào ví';
       
       case 'Withdrawal':
-        return transaction.description || `Rút tiền từ ví${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
+        // Remove date and trailing "0" from description if it exists
+        let withdrawalDesc = cleanedDescription ? cleanDescription(cleanedDescription) : '';
+        withdrawalDesc = withdrawalDesc.replace(/\s*ngày\s+\d{2}\/\d{2}\/\d{4,}/g, '').trim();
+        return cleanDescription(withdrawalDesc) || 'Rút tiền từ ví';
       
       default:
-        return transaction.description || 'Giao dịch';
+        // If description is just "0" or empty, return generic message
+        if (!cleanedDescription || cleanedDescription.trim() === '0' || /^0+$/.test(cleanedDescription.trim())) {
+          return 'Giao dịch';
+        }
+        return cleanDescription(cleanedDescription);
     }
   };
 
@@ -602,7 +946,6 @@ export const PatientFinance: React.FC = () => {
             timestamp: new Date().toISOString()
           }));
         } catch (storageError) {
-          console.warn('Failed to save order to localStorage:', storageError);
         }
         
         window.location.href = order.checkoutUrl;
@@ -610,7 +953,6 @@ export const PatientFinance: React.FC = () => {
         throw new Error('Không nhận được link thanh toán từ server');
       }
     } catch (err: any) {
-      console.error('Error processing deposit:', err);
       
       let errorMessage = 'Có lỗi xảy ra khi nạp tiền. Vui lòng thử lại.';
       
@@ -867,7 +1209,6 @@ export const PatientFinance: React.FC = () => {
                                   });
                                 }
                               } catch (e) {
-                                console.error('Error parsing date:', e);
                               }
                             }
                             return 'N/A';
@@ -876,7 +1217,7 @@ export const PatientFinance: React.FC = () => {
                       </div>
                     </div>
                     <div className={styles.transactionDescription}>
-                      {formatTransactionDescription(transaction)}
+                    {cleanDescription(formatTransactionDescription(transaction))}
                       {transaction.orderCode && transaction.orderCode !== 0 && !formatTransactionDescription(transaction).includes('Mã đơn:') && (
                         <span className={styles.orderCode}> • Mã đơn: {transaction.orderCode}</span>
                       )}

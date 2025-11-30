@@ -4,8 +4,8 @@ import { userAdminService } from '../../services/userService'
 import { UserDTO, UpdateUserRequest, CreateUserRequest } from '../../types/user.types'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../contexts/AuthContext'
-import UserDetails from './UserDetails' // Make sure this component can handle a possibly null user
-import UserForm from './UserForm' // Make sure this component can handle a possibly null user
+import UserDetails from './UserDetails' 
+import UserForm from './UserForm' 
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog'
 import styles from '../../styles/admin/UserList.module.css'
 
@@ -19,6 +19,8 @@ interface UserStats {
   activeUsers: number;
   newUsersLast7Days: number;
   doctorCount: number;
+  patientCount: number;
+  managerCount: number;
   growthPercentageLast7Days: number;
 }
 
@@ -26,7 +28,7 @@ interface UserListFilters {
   page: number;
   pageSize: number;
   search: string;
-  roleFilter: 'all' | 'ADMIN' | 'MANAGER' | 'DOCTOR' | 'PATIENT';
+  roleFilter: string;
   statusFilter: 'all' | 'locked' | 'unlocked';
   dateFrom: string;
   dateTo: string;
@@ -41,7 +43,6 @@ const getInitialState = (): UserListFilters => {
       return JSON.parse(savedState);
     }
   } catch (e) {
-    console.error("Failed to parse userListState from localStorage", e);
   }
   return {
     page: 1,
@@ -98,11 +99,7 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      // TODO: Backend và userAdminService.list cần được cập nhật để xử lý đầy đủ các bộ lọc.
-      // Tạm thời chỉ truyền các tham số được hỗ trợ để tránh lỗi.
-      // Khi backend sẵn sàng, bạn có thể truyền đầy đủ object `filters`.
-      // const response = await userAdminService.list(filters);
-      const response = await userAdminService.list(filters.page, filters.pageSize, filters.search);
+      const response = await userAdminService.list(1, 5000, '');
       setUsers(response.items || []);
       setTotal(response.total);
     } catch (error) {
@@ -110,8 +107,8 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
     } finally {
       setLoading(false);
     }
-  }, [filters, showToast]); // Dependency `filters` là đúng để load lại khi filter thay đổi
-
+  }, [filters, showToast]);
+  
   useEffect(() => {
     load();
   }, [load]);
@@ -120,22 +117,19 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
     const fetchRoles = async () => {
       try {
         const roles = await userAdminService.getRoles();
-        setRolesList(roles);
+        const filteredRoles = roles.filter(r => r.code.toLowerCase() !== 'admin');
+        setRolesList(filteredRoles);
       } catch (error) {
-        console.error("Failed to fetch roles:", error);        
         showToast('Không thể tải danh sách vai trò.', 'error');
       }
     };
 
     const fetchStats = async () => {
       try {
-        // Tải một lượng lớn người dùng (không phân trang) để tính toán thống kê phía client.
-        // Đây là giải pháp tạm thời khi chưa có API thống kê riêng.
-        const statsResponse = await userAdminService.list(1, 5000); // Lấy 5000 người dùng
+        const statsResponse = await userAdminService.list(1, 5000);
         setAllUsersForStats(statsResponse.items || []);
       } catch (error) {
         showToast('Không thể tải dữ liệu thống kê.', 'warning');
-        console.error("Failed to fetch stats:", error);
       }
     };
     fetchRoles();
@@ -162,7 +156,6 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
     const currentUser = users.find(u => u.id === userToUpdate.id) ?? userToUpdate;
     const currentlyLocked = isUserLocked(currentUser);
 
-    // Nếu trạng thái hiện tại giống với action muốn thực hiện thì không làm gì
     if (currentlyLocked === isBeingLocked) return;
 
     setConfirmationDialog({
@@ -186,20 +179,18 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
 
     try {
       const payload: UpdateUserRequest = {
-        role: currentUser.role,
+        ...currentUser,
         lockoutEnabled: isBeingLocked,
       };
       
-      // Nếu mở khóa thì clear lockoutEnd
       if (!isBeingLocked) {
-        (payload as any).lockoutEnd = null;
+        payload.lockoutEnd = null;
       }
 
       await userAdminService.update(currentUser.id, payload);
       showToast(`Đã ${actionText} tài khoản thành công.`, 'success');
-      await load(); // Tải lại dữ liệu sau khi cập nhật
+      await load();
     } catch (error: any) {
-      console.error('Lỗi khi cập nhật trạng thái:', error);
       const message = error?.response?.data?.message || error?.message || 'Không thể cập nhật trạng thái tài khoản.';
       showToast(message, 'error');
     } finally {
@@ -225,7 +216,6 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
       const fullUser = await userAdminService.get(userId);
       setViewing(fullUser);
     } catch (error) {
-      console.error("Failed to load user details:", error);
       showToast('Không thể tải chi tiết người dùng', 'error');
       setViewing(null);
     } finally {
@@ -238,10 +228,9 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
       showToast('Đang tạo người dùng mới...', 'info');
       await userAdminService.create(userData);
       showToast('Tạo người dùng thành công!', 'success');
-      setCreating(false); // Đóng modal
+      setCreating(false);
       await load();
     } catch (error: any) {
-      console.error('Failed to create user:', error);
       const message = error?.response?.data?.message || error?.message || 'Không thể tạo người dùng';
       showToast(message, 'error');
     }
@@ -254,10 +243,9 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
       showToast('Đang cập nhật thông tin người dùng...', 'info');
       await userAdminService.update(editing.id, userData);
       showToast('Cập nhật thành công!', 'success');
-      setEditing(null); // Đóng modal
+      setEditing(null);
       await load();
     } catch (error: any) {
-      console.error('Failed to update user:', error);
       const message = error?.response?.data?.message || error?.message || 'Không thể cập nhật người dùng';
       showToast(message, 'error');
     }
@@ -273,8 +261,40 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
     load();
   }
 
-  // Với phân trang phía server, `users` chính là danh sách đã được xử lý cho trang hiện tại.
-  const processedItems = users;
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const searchLower = filters.search.toLowerCase();
+      const nameMatch = user.fullName?.toLowerCase().includes(searchLower);
+      const emailMatch = user.email?.toLowerCase().includes(searchLower);
+  
+      const roleMatch = filters.roleFilter === 'all' || (
+        rolesList.find(r => r.code.toLowerCase() === filters.roleFilter.toLowerCase())
+          ?.displayName?.toLowerCase() === user.role?.toLowerCase()
+      );
+
+  
+      const userLocked = isUserLocked(user);
+      const statusMatch = filters.statusFilter === 'all' ||
+        (filters.statusFilter === 'locked' && userLocked) ||
+        (filters.statusFilter === 'unlocked' && !userLocked);
+  
+      const createdAt = user.createdAt ? new Date(user.createdAt) : null;
+      const dateFrom = filters.dateFrom ? new Date(filters.dateFrom) : null;
+      const dateTo = filters.dateTo ? new Date(filters.dateTo) : null;
+      if (dateFrom) dateFrom.setHours(0, 0, 0, 0);
+      if (dateTo) dateTo.setHours(23, 59, 59, 999);
+      const dateMatch = (!dateFrom || (createdAt && createdAt >= dateFrom)) &&
+                         (!dateTo || (createdAt && createdAt <= dateTo));
+  
+      return (nameMatch || emailMatch) && roleMatch && statusMatch && dateMatch;
+    }); 
+  }, [users, filters, rolesList]);
+
+  const processedItems = useMemo(() => {
+    const startIndex = (filters.page - 1) * filters.pageSize;
+    return filteredUsers.slice(startIndex, startIndex + filters.pageSize);
+
+  }, [users, filters]);
 
   const handleResetFilters = () => {
     setFilters({
@@ -286,10 +306,9 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
     });
   };
 
-  // Tính toán thống kê từ danh sách đã tải về
   const calculatedStats = useMemo(() => {
     if (allUsersForStats.length === 0) {
-      return { activeUsers: 0, newUsersLast7Days: 0, doctorCount: 0, growthPercentageLast7Days: 0, lockedUsersCount: 0 };
+      return { activeUsers: 0, newUsersLast7Days: 0, doctorCount: 0, patientCount: 0, managerCount: 0, growthPercentageLast7Days: 0, lockedUsersCount: 0 };
     }
 
     const sevenDaysAgo = new Date();
@@ -300,6 +319,8 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
     const activeUsers = allUsersForStats.filter(u => !isUserLocked(u)).length;
     const newUsersLast7Days = allUsersForStats.filter(u => u.createdAt && new Date(u.createdAt) >= sevenDaysAgo).length;
     const doctorCount = allUsersForStats.filter(u => u.role?.toUpperCase() === 'DOCTOR').length;
+    const patientCount = allUsersForStats.filter(u => u.role?.toUpperCase() === 'PATIENT').length;
+    const managerCount = allUsersForStats.filter(u => u.role?.toUpperCase() === 'OPERATIONS MANAGER' || u.role?.toUpperCase() === 'OPERATIONSMANAGER' || u.role?.toUpperCase() === 'MANAGER').length;
     const lockedUsersCount = allUsersForStats.filter(u => isUserLocked(u)).length;
     
     const previousWeekUsers = allUsersForStats.filter(u => u.createdAt && new Date(u.createdAt) >= fourteenDaysAgo && new Date(u.createdAt) < sevenDaysAgo).length;
@@ -307,14 +328,13 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
       ? Math.round(((newUsersLast7Days - previousWeekUsers) / previousWeekUsers) * 100) 
       : (newUsersLast7Days > 0 ? 100 : 0);
 
-    return { activeUsers, newUsersLast7Days, doctorCount, growthPercentageLast7Days: growthPercentage, lockedUsersCount };
+    return { activeUsers, newUsersLast7Days, doctorCount, patientCount, managerCount, growthPercentageLast7Days: growthPercentage, lockedUsersCount };
   }, [allUsersForStats]);
 
-  const totalPages = total ? Math.ceil(total / filters.pageSize) : 1;
+  const totalPages = Math.ceil(filteredUsers.length / filters.pageSize);
 
   return (
     <div className={styles.container}>
-      {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <h1 className={styles.title}>Quản lý Người dùng</h1>
@@ -326,7 +346,6 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
         </button>
       </div>
 
-      {/* Stats Cards */}
       <div className={styles.statsGrid}>
         <div className={`${styles.statCard} ${styles.statCard1}`}>
           <div className={styles.statIcon}>
@@ -393,9 +412,42 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
             <i className="bi bi-person-badge-fill"></i>
           </div>
         </div>
+
+        <div className={`${styles.statCard} ${styles.statCard5}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-person-heart"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Bệnh nhân</div>
+            <div className={styles.statValue}>{stats?.patientCount ?? calculatedStats.patientCount}</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-graph-up"></i>
+              <span>+2.1% tháng này</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-person-heart"></i>
+          </div>
+        </div>
+
+        <div className={`${styles.statCard} ${styles.statCard6}`}>
+          <div className={styles.statIcon}>
+            <i className="bi bi-person-gear"></i>
+          </div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Quản lý</div>
+            <div className={styles.statValue}>{stats?.managerCount ?? calculatedStats.managerCount}</div>
+            <div className={styles.statTrend}>
+              <i className="bi bi-graph-up"></i>
+              <span>+0.8% tháng này</span>
+            </div>
+          </div>
+          <div className={styles.statBg}>
+            <i className="bi bi-person-gear"></i>
+          </div>
+        </div>
       </div>
 
-      {/* Search and Filter */}
       <div className={styles.searchSection}>
         <div className={styles.searchWrapper}>
           <i className="bi bi-search"></i>
@@ -428,7 +480,6 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
         </button>
       </div>
 
-      {/* Advanced Filters */}
       {showFilters && (
         <div className={styles.filterPanel}>
           <div className={styles.filterGrid}>
@@ -438,7 +489,7 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
                 Vai trò
               </label>
               <select value={filters.roleFilter} onChange={e => handleFilterChange('roleFilter', e.target.value)}>
-                <option value="all">Tất cả</option>
+                <option value="all">Tất cả vai trò</option>
                 {rolesList.length === 0 && <option disabled>Đang tải...</option>}
                 {rolesList.map(r => (
                   <option key={r.code} value={r.code}>{r.displayName}</option>
@@ -496,7 +547,6 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
         </div>
       )}
 
-      {/* Table */}
       <div className={styles.tableCard}>
         {loading ? (
           <div className={styles.loading}>
@@ -599,11 +649,10 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
           </div>
         )}
 
-        {/* Pagination */}
         {processedItems.length > 0 && (
           <div className={styles.pagination}>
             <div className={styles.paginationInfo}>
-              Hiển thị {(filters.page - 1) * filters.pageSize + 1} - {Math.min(filters.page * filters.pageSize, total ?? 0)} trong tổng số {total ?? 0} kết quả
+              Hiển thị {(filters.page - 1) * filters.pageSize + 1} - {Math.min(filters.page * filters.pageSize, filteredUsers.length)} trong tổng số {filteredUsers.length} kết quả
             </div>
 
             <div className={styles.paginationControls}>
@@ -654,9 +703,16 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
         )}
       </div>
 
-      {/* Modals */}
       {viewing && (
-        <UserDetails user={viewing} onClose={() => setViewing(null)} isLoading={loadingDetails} />
+        <UserDetails 
+          user={viewing} 
+          onClose={() => setViewing(null)} 
+          isLoading={loadingDetails}
+          roles={rolesList}
+          role={
+            users.find(u => u.id === viewing.id)?.role || viewing.role
+          }
+        />
       )}
 
       {creating && (

@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Calendar } from 'lucide-react';
 import { bannerService } from '../../services/bannerService';
 import { BannerDTO, CreateBannerRequest, UpdateBannerRequest } from '../../types/banner.types';
 import { useToast } from '../../contexts/ToastContext';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 import BannerForm from './BannerForm';
-import styles from '../../styles/admin/BannerManagement.module.css';
+import styles from '../../styles/admin/ArticleManagement.module.css';
 
 interface BannerListFilters {
   page: number;
@@ -25,7 +26,6 @@ const getInitialState = (): BannerListFilters => {
       return JSON.parse(savedState);
     }
   } catch (e) {
-    console.error("Failed to parse bannerListState from localStorage", e);
   }
   return {
     page: 1,
@@ -133,14 +133,10 @@ export default function BannerManagement() {
   const load = async () => {
     setLoading(true);
     try {
-      console.log('Loading banners...');
       const banners = await bannerService.getAll({ page: 1, pageSize: 9999 });
-      console.log('Loaded banners:', banners);
-      console.log('Banners with isLocked field:', banners.map(b => ({ id: b.id, title: b.bannerTitle, isLocked: b.isLocked })));
       setAllBanners(banners || []);
       setTotal(banners?.length);
     } catch (error) {
-      console.error('Error loading banners:', error);
       showToast('Không thể tải danh sách banner', 'error');
     } finally {
       setLoading(false);
@@ -184,14 +180,7 @@ export default function BannerManagement() {
     const isBeingLocked = action === 'lock';
     const actionText = isBeingLocked ? 'khóa' : 'mở khóa';
 
-    console.log('Confirming status change:', {
-      bannerId: currentBanner.id,
-      title: currentBanner.bannerTitle,
-      currentIsActive: currentBanner.isActive,
-      isBeingLocked,
-      action
-    });
-
+  
     setConfirmationDialog({ isOpen: false, banner: null, action: null });
     showToast(`Đang ${actionText} banner "${currentBanner.bannerTitle}"...`, 'info');
 
@@ -200,7 +189,6 @@ export default function BannerManagement() {
     try {
       // Directly use the update service to toggle isActive status
       const newIsActive = !isBeingLocked;
-      console.log(`Using update service to set isActive to ${newIsActive} for banner:`, currentBanner.id);
 
       await bannerService.update(currentBanner.id, {
         isActive: newIsActive,
@@ -208,18 +196,14 @@ export default function BannerManagement() {
         displayOrder: currentBanner.displayOrder,
         bannerImageUrl: currentBanner.bannerImageUrl,
         bannerUrl: currentBanner.bannerUrl,
-        // Include other required fields if any, to prevent validation errors
         startDate: currentBanner.startDate ?? undefined,
         endDate: currentBanner.endDate ?? undefined,
       });
 
       showToast(`Đã ${actionText} banner thành công.`, 'success');
       
-      // Reload data
-      console.log('Reloading banners after lock/unlock...');
       await load();
     } catch (error: any) {
-      console.error('Error locking/unlocking banner:', error);
       const message = error?.response?.data?.message || error?.message || 'Không thể cập nhật trạng thái banner.';
       showToast(message, 'error');
     } finally {
@@ -362,13 +346,34 @@ export default function BannerManagement() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Quản lý Banner</h1>
-          <p className={styles.subtitle}>Quản lý và theo dõi các banner quảng cáo</p>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <i className="bi bi-image" style={{ fontSize: '28px' }}></i>
+            </div>
+            <div>
+              <h1 className={styles.title}>Quản lý Banner</h1>
+              <p className={styles.subtitle}>Quản lý và theo dõi các banner quảng cáo</p>
+            </div>
+          </div>
         </div>
-        <button onClick={handleCreateNew} className={styles.btnCreate}>
-          <i className="bi bi-plus-lg"></i>
-          Tạo mới
-        </button>
+        <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <Calendar size={20} className={styles.dateIcon} />
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={styles.dateGlow}></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -480,6 +485,10 @@ export default function BannerManagement() {
           {(filters.statusFilter !== 'all' || filters.dateFrom || filters.dateTo) && (
             <span className={styles.filterBadge}></span>
           )}
+        </button>
+        <button onClick={handleCreateNew} className={styles.btnCreate}>
+          <i className="bi bi-plus-lg"></i>
+          Tạo mới
         </button>
       </div>
 

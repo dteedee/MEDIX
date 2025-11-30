@@ -2,7 +2,7 @@ import styles from '../../styles/public/header.module.css'
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { apiClient } from '../../lib/apiClient';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { NotificationMetadata } from '../../types/notification.types';
 import NotificationService from '../../services/notificationService';
@@ -18,11 +18,14 @@ export const Header: React.FC = () => {
     const { user, logout } = useAuth();
     const { language, t } = useLanguage();
     const navigate = useNavigate();
+    const location = useLocation();
     const userDropdownRef = useRef<HTMLDivElement>(null);
     const [loadingSettings, setLoadingSettings] = useState(true);
+    
+    // Check if we're on the homepage
+    const isHomePage = location.pathname === '/';
 
     useEffect(() => {
-        // Only fetch if user is logged in
         if (!user) {
             return;
         }
@@ -32,13 +35,12 @@ export const Header: React.FC = () => {
                 const data = await NotificationService.getMetadata();
                 setNotificationMetadata(data);
             } catch (error) {
-                console.error('❌ Header - Failed to fetch metadata:', error);
+                
             }
         }
         fetchMetadata();
     }, [user?.id]);
 
-    // Fetch site settings
     useEffect(() => {
         const fetchSiteSettings = async () => {
             setLoadingSettings(true);
@@ -50,7 +52,7 @@ export const Header: React.FC = () => {
                 setSiteName(nameRes.data.configValue);
                 setSiteDescription(descRes.data.configValue);
             } catch (error) {
-                console.error('❌ Header - Failed to fetch site settings:', error);
+               
             } finally {
                 setLoadingSettings(false);
             }
@@ -58,7 +60,6 @@ export const Header: React.FC = () => {
         fetchSiteSettings();
     }, []);
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
@@ -85,7 +86,7 @@ export const Header: React.FC = () => {
             case 'Marketing':
                 return 'bi-megaphone';
             default:
-                return 'bi-info-circle'; // fallback icon
+                return 'bi-info-circle'; 
         }
     };
 
@@ -134,19 +135,23 @@ export const Header: React.FC = () => {
                         <small style={{ textTransform: 'uppercase' }}>{loadingSettings ? '...' : siteDescription}</small>
                     </a>
                 </div>
-                <div className={styles["search-bar"]}>
-                    <input type="text" placeholder={t('header.search.placeholder')} />
-                    <button>🔍</button>
-                </div>
+                {!isHomePage && (
+                    <div className={styles["search-bar"]}>
+                        <input type="text" placeholder={t('header.search.placeholder')} />
+                        <button>🔍</button>
+                    </div>
+                )}
                 <div className={styles["header-links"]}>
                     {user ? (
                         <>
-                            <div className={styles['language-selector']}>
-                                <LanguageSwitcher />
-                            </div>
+                            {!isHomePage && (
+                                <div className={styles['language-selector']}>
+                                    <LanguageSwitcher />
+                                </div>
+                            )}
 
                             {/* Notifications */}
-                            <div className="dropdown" style={{ position: 'relative', display: 'inline-block' }}>
+                            <div className="dropdown" style={{ position: 'relative', display: 'inline-block', zIndex: 10001 }}>
                                 <i
                                     className="bi bi-bell-fill fs-4"
                                     style={{ cursor: 'pointer' }}
@@ -164,13 +169,17 @@ export const Header: React.FC = () => {
                                             height: '10px',
                                             backgroundColor: 'red',
                                             borderRadius: '50%',
+                                            zIndex: 10002,
                                         }}
                                     ></span>
                                 )}
 
                                 <ul className="dropdown-menu dropdown-menu-start" style={{
                                     maxHeight: '500px',
-                                    overflowY: 'auto', width: '400px'
+                                    overflowY: 'auto', 
+                                    width: '400px',
+                                    zIndex: 10000,
+                                    position: 'absolute',
                                 }}>
                                     <li><h6 className="dropdown-header">{t('header.notifications')}</h6></li>
                                     {notificationMetadata?.notifications.map((notification) => (
@@ -195,16 +204,20 @@ export const Header: React.FC = () => {
                                 </ul>
                             </div>
 
-                            {/* User Avatar Dropdown */}
                             <div className={styles["user-dropdown"]} ref={userDropdownRef}>
                                 <div 
                                     className={styles["user-avatar-container"]}
                                     onClick={handleUserDropdownToggle}
                                 >
                                     <img
+                                        key={user.avatarUrl || 'avatar'} 
                                         src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || user.email || 'User')}&background=667eea&color=fff`}
                                         alt="User avatar"
                                         className={styles["user-avatar"]}
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || user.email || 'User')}&background=667eea&color=fff`;
+                                        }}
                                     />
                                     <div className={styles["user-info"]}>
                                         <div className={styles["user-name"]}>{user.fullName || 'Người dùng'}</div>
@@ -254,9 +267,11 @@ export const Header: React.FC = () => {
                                 </div>
                             </div>
                             
-                            <div className={styles['language-selector']}>
-                                <LanguageSwitcher />
-                            </div>
+                            {!isHomePage && (
+                                <div className={styles['language-selector']}>
+                                    <LanguageSwitcher />
+                                </div>
+                            )}
                         </>
                     )}
                 </div>

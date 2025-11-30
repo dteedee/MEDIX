@@ -6,6 +6,7 @@ using Medix.API.Models.DTOs.SiteBanner;
 using Medix.API.Models.Entities;
 using Medix.API.Business.Helper;
 using Medix.API.Business.Validators;
+using Microsoft.Extensions.Logging;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -14,20 +15,21 @@ namespace Medix.API.Business.Services.Classification
         private readonly ISiteBannerRepository _siteBannerRepository;
         private readonly IMapper _mapper;
         private readonly IDtoValidatorService _validator;
+        private readonly ILogger<SiteBannerService>? _logger;
 
-        public SiteBannerService(ISiteBannerRepository siteBannerRepository, IMapper mapper, IDtoValidatorService validator)
+        public SiteBannerService(ISiteBannerRepository siteBannerRepository, IMapper mapper, IDtoValidatorService validator, ILogger<SiteBannerService>? logger = null)
         {
             _siteBannerRepository = siteBannerRepository;
             _mapper = mapper;
             _validator = validator;
+            _logger = logger;
         }
 
         public async Task<(int total, IEnumerable<SiteBannerDto> data)> GetPagedAsync(int page = 1, int pageSize = 10)
         {
-            // Nếu pageSize lớn (ví dụ: > 1000), coi như yêu cầu lấy tất cả
             if (pageSize > 1000)
             {
-                pageSize = int.MaxValue; // Lấy tất cả bản ghi
+                pageSize = int.MaxValue; 
             }
 
             var (banners, total) = await _siteBannerRepository.GetPagedAsync(page, pageSize);
@@ -107,8 +109,10 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<SiteBannerDto> CreateAsync(SiteBannerCreateDto createDto)
         {
-            // Validate using DtoValidatorService
             await _validator.ValidateSiteBannerCreateAsync(createDto);
+
+            _logger?.LogInformation($"Điều chỉnh thứ tự hiển thị cho DisplayOrder = {createDto.DisplayOrder}");
+            await _siteBannerRepository.IncrementDisplayOrderForConflictsAsync(createDto.DisplayOrder);
 
             var banner = new SiteBanner
             {
@@ -123,6 +127,7 @@ namespace Medix.API.Business.Services.Classification
                 CreatedAt = DateTime.UtcNow
             };
 
+            _logger?.LogInformation($"Tạo banner mới với DisplayOrder = {banner.DisplayOrder}");
             await _siteBannerRepository.CreateAsync(banner);
 
             return await GetByIdAsync(banner.Id) ?? throw new MedixException("Failed to retrieve created banner");
@@ -136,11 +141,17 @@ namespace Medix.API.Business.Services.Classification
                 throw new NotFoundException("Banner not found");
             }
 
-            // Validate using DtoValidatorService
             await _validator.ValidateSiteBannerUpdateAsync(id, updateDto);
 
+            var oldDisplayOrder = banner.DisplayOrder;
+            var newDisplayOrder = updateDto.DisplayOrder;
+
+            if (oldDisplayOrder != newDisplayOrder)
+            {
+                await _siteBannerRepository.IncrementDisplayOrderForConflictsAsync(newDisplayOrder, id);
+            }
+
             banner.BannerTitle = updateDto.BannerTitle;
-            // Only update the image URL if a new one is provided.
             if (!string.IsNullOrEmpty(updateDto.BannerImageUrl))
             {
                 banner.BannerImageUrl = updateDto.BannerImageUrl;
@@ -191,10 +202,10 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<List<SiteBanner>> GetHomePageBanners()
         {
-            var banners = await _siteBannerRepository.GetRunningBannersAsync(); // Lấy các banner đang hoạt động
-            return banners.OrderBy(b => b.DisplayOrder) // Sắp xếp theo thứ tự hiển thị tăng dần
-                          .ThenByDescending(b => b.CreatedAt) // Nếu trùng, sắp xếp theo ngày tạo giảm dần
-                          .ToList(); // Lấy tất cả banner đang hoạt động
+            var banners = await _siteBannerRepository.GetRunningBannersAsync(); 
+            return banners.OrderBy(b => b.DisplayOrder) 
+                          .ThenByDescending(b => b.CreatedAt) 
+                          .ToList(); 
         }
         public async Task<(int total, IEnumerable<SiteBannerDto> data)> SearchByNameAsync(string name, int page = 1, int pageSize = 10)
         {

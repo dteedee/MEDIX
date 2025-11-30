@@ -13,10 +13,10 @@ namespace Medix.API.DataAccess.Repositories.Classification
             _context = context;
         }
 
-        public async Task<List<PatientHealthReminder>> getReminderswithPatientID(Guid patientId, string Code)
+        public async Task<List<PatientHealthReminder>> getReminderswithPatientID(Guid patientId)
         {
             return await _context.PatientHealthReminders
-                    .Where(r => r.PatientId == patientId && r.ReminderTypeCode == Code && r.IsCompleted == false)
+                    .Where(r => r.PatientId == patientId && r.IsCompleted == false)
                     .ToListAsync();
         }
 

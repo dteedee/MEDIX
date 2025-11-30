@@ -2,9 +2,9 @@
 {
     public class EducationWithPaginatedDoctorsDto
     {
-        public string EducationCode { get; set; } = string.Empty; // Từ DoctorDegree.Code
-        public string Education { get; set; } = string.Empty;     // Từ DoctorDegree.Name
-        public string? Description { get; set; }                 // Từ DoctorDegree.Description
+        public string EducationCode { get; set; } = string.Empty; 
+        public string Education { get; set; } = string.Empty;     
+        public string? Description { get; set; }                 
         public PaginatedListDto<DoctorBookinDto> Doctors { get; set; } = new(new List<DoctorBookinDto>(), 1, 10, 0);
     }
 }

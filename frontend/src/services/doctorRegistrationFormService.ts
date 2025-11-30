@@ -8,7 +8,6 @@ class DoctorRegistrationFormService {
     }
 
     async registerDoctor(payload: FormData): Promise<void> {
-        console.log('Payload:', payload);
         await apiClient.postMultipart<any>('/doctorRegistrationForm/register', payload);
     }
 

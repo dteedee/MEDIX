@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Calendar } from 'lucide-react';
 import DoctorService from '../../services/doctorService';
 import DoctorRegistrationFormService from '../../services/doctorRegistrationFormService';
 import DoctorDegreeService from '../../services/doctorDegreeService';
 import { useToast } from '../../contexts/ToastContext';
 import DoctorDetails from './DoctorDetails';
 import DoctorReviewModal from './DoctorReviewModal';
+import DoctorEvaluation from './DoctorEvaluation';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 import styles from '../../styles/manager/DoctorManagement.module.css';
 
@@ -32,7 +34,6 @@ const getInitialState = (): DoctorFilters => {
       return JSON.parse(savedState);
     }
   } catch (e) {
-    console.error("Failed to parse doctorListState", e);
   }
   return {
     page: 1,
@@ -48,7 +49,7 @@ const getInitialState = (): DoctorFilters => {
 };
 
 export default function DoctorManagement() {
-  const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'evaluation'>('all');
   const [allDoctors, setAllDoctors] = useState<any[]>([]);
   const [pendingDoctors, setPendingDoctors] = useState<any[]>([]);
   const [specializations, setSpecializations] = useState<string[]>([]);
@@ -59,7 +60,6 @@ export default function DoctorManagement() {
   const [reviewing, setReviewing] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
 
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -74,7 +74,6 @@ export default function DoctorManagement() {
       const uniqueSpecs = [...new Set(data.items.map((d: any) => d.specialization).filter(Boolean))];
       setSpecializations(uniqueSpecs);
     } catch (error) {
-      console.error("Failed to load doctors:", error);
       showToast('Không thể tải danh sách bác sĩ', 'error');
     }
   };
@@ -84,7 +83,6 @@ export default function DoctorManagement() {
       const data = await DoctorRegistrationFormService.getAll({ page: 1, pageSize: 10000, searchTerm: '' });
       setPendingDoctors(data.doctors || []);
     } catch (error) {
-      console.error("Failed to load pending doctors:", error);
       showToast('Không thể tải danh sách bác sĩ chờ duyệt', 'error');
     }
   };
@@ -94,7 +92,6 @@ export default function DoctorManagement() {
       const data = await DoctorDegreeService.getAll();
       setDegrees(data || []);
     } catch (error) {
-      console.error("Failed to load degrees:", error);
     }
   };
 
@@ -102,7 +99,6 @@ export default function DoctorManagement() {
     setLoading(true);
     try {
       await Promise.all([loadAllDoctors(), loadPendingDoctors(), loadDegrees()]);
-      setLastRefreshTime(new Date());
     } finally {
       setLoading(false);
     }
@@ -152,7 +148,6 @@ export default function DoctorManagement() {
         setViewing(fullDoctor);
       }
     } catch (error) {
-      console.error("Failed to load doctor details:", error);
       showToast('Không thể tải chi tiết bác sĩ', 'error');
     } finally {
       setLoadingDetails(false);
@@ -165,7 +160,6 @@ export default function DoctorManagement() {
       const fullDoctor = await DoctorRegistrationFormService.getDetails(doctor.id);
       setReviewing(fullDoctor);
     } catch (error) {
-      console.error("Failed to load doctor details:", error);
       showToast('Không thể tải chi tiết bác sĩ', 'error');
     } finally {
       setLoadingDetails(false);
@@ -180,7 +174,6 @@ export default function DoctorManagement() {
       setReviewing(null);
       await load();
     } catch (error: any) {
-      console.error('Review failed:', error);
       const message = error?.response?.data?.message || error?.message || 'Không thể xử lý hồ sơ';
       showToast(message, 'error');
     }
@@ -404,15 +397,33 @@ export default function DoctorManagement() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Quản lý Bác sĩ</h1>
-          <p className={styles.subtitle}>Quản lý và theo dõi tất cả bác sĩ trong hệ thống</p>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <i className="bi bi-person-badge" style={{ fontSize: '28px' }}></i>
+            </div>
+            <div>
+              <h1 className={styles.title}>Quản lý Bác sĩ</h1>
+              <p className={styles.subtitle}>Quản lý và theo dõi tất cả bác sĩ trong hệ thống</p>
+            </div>
+          </div>
         </div>
-        <div className={styles.headerActions}>
-          {lastRefreshTime && (
-            <p className={styles.lastUpdate} style={{ fontSize: '0.85rem', color: '#666' }}>
-              Cập nhật lần cuối: {lastRefreshTime.toLocaleTimeString('vi-VN')}
-            </p>
-          )}
+        <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <Calendar size={20} className={styles.dateIcon} />
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={styles.dateGlow}></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -433,6 +444,14 @@ export default function DoctorManagement() {
           <i className="bi bi-clock-history"></i>
           Chờ phê duyệt
           {stats.pendingCount > 0 && <span className={styles.tabBadgeAlert}>{stats.pendingCount}</span>}
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'evaluation' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('evaluation')}
+        >
+          <i className="bi bi-clipboard-data"></i>
+          Đánh giá bác sĩ
+          <span className={styles.tabBadge}>{stats.activeDoctors}</span>
         </button>
       </div>
 
@@ -474,18 +493,18 @@ export default function DoctorManagement() {
 
         <div className={`${styles.statCard} ${styles.statCard3}`}>
           <div className={styles.statIcon}>
-            <i className="bi bi-clock-history"></i>
+            <i className="bi bi-lock-fill"></i>
           </div>
           <div className={styles.statContent}>
-            <div className={styles.statLabel}>Chờ phê duyệt</div>
-            <div className={styles.statValue}>{stats.pendingCount}</div>
+            <div className={styles.statLabel}>Bị khóa</div>
+            <div className={styles.statValue}>{stats.inactiveDoctors}</div>
             <div className={styles.statTrend}>
-              <i className="bi bi-exclamation-circle"></i>
-              <span>{stats.pendingCount > 0 ? 'Cần xử lý ngay' : 'Không có'}</span>
+              <i className="bi bi-shield-x"></i>
+              <span>{stats.inactiveDoctors > 0 ? 'Tài khoản bị khóa' : 'Không có'}</span>
             </div>
           </div>
           <div className={styles.statBg}>
-            <i className="bi bi-clock-history"></i>
+            <i className="bi bi-lock-fill"></i>
           </div>
         </div>
 
@@ -507,8 +526,17 @@ export default function DoctorManagement() {
         </div>
       </div>
 
-      {/* Search and Filter */}
-      <div className={styles.searchSection}>
+      {/* Evaluation Tab Content */}
+      {activeTab === 'evaluation' ? (
+        <DoctorEvaluation 
+          doctors={allDoctors}
+          degrees={degrees}
+          onRefresh={load}
+        />
+      ) : (
+        <>
+          {/* Search and Filter */}
+          <div className={styles.searchSection}>
         <div className={styles.searchWrapper}>
           <i className="bi bi-search"></i>
           <input
@@ -896,6 +924,8 @@ export default function DoctorManagement() {
           onSubmit={handleReviewSubmit}
           isLoading={loadingDetails}
         />
+      )}
+        </>
       )}
     </div>
   );

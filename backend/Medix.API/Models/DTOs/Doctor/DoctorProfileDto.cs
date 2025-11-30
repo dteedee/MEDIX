@@ -1,4 +1,6 @@
-﻿using Medix.API.Models.Entities;
+﻿using Medix.API.Business.Helper;
+using Medix.API.Models.Entities;
+using System.Text.Json.Serialization;
 
 namespace Medix.API.Models.DTOs.Doctor
 {
@@ -28,10 +30,15 @@ namespace Medix.API.Models.DTOs.Doctor
         public int Rating { get; set; }
         public string? Comment { get; set; }
         public string? Date { get; set; }
+        public string? AdminResponse { get; set; }
+        public string? PatientName { get; set; }
+        public string? PatientAvatar { get; set; }
     }
     public class AppointmentBookedDto
     {
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime? StartTime { get; set; }
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime? EndTime { get; set; }
     }
     public class DoctorScheduleDto

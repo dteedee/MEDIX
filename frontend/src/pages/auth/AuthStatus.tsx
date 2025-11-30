@@ -11,7 +11,6 @@ const AuthStatus: React.FC = () => {
   useEffect(() => {
     const raw = localStorage.getItem('currentUser');
     if (!raw) {
-      // nếu không có user -> quay về homepage (chưa login)
       navigate('/');
       return;
     }
@@ -20,21 +19,17 @@ const AuthStatus: React.FC = () => {
     } catch {
       navigate('/');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogout = async () => {
     try {
-      await authService.logout(); // This already calls apiClient.clearTokens()
+      await authService.logout();
     } catch {
-      // ignore logout errors, still clear local data
       apiClient.clearTokens();
     } finally {
-      // Clear user data
       localStorage.removeItem('currentUser');
       localStorage.removeItem('userData');
       localStorage.removeItem('rememberEmail');
-      // Notify other components
       window.dispatchEvent(new Event('authChanged'));
       navigate('/');
     }
@@ -61,9 +56,3 @@ const AuthStatus: React.FC = () => {
 };
 
 export default AuthStatus;
-
-
-
-
-
-

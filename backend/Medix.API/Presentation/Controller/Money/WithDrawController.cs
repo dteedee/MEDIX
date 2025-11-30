@@ -59,7 +59,7 @@ namespace Medix.API.Presentation.Controller.Money
                     {
                         return NotFound();
                     }
-                    payout = payoutPage.Data[0]; // TODO: Handle case where multiple payouts exist with the same referenceId. Currently selecting the first one; consider filtering by status or date for accuracy.
+                    payout = payoutPage.Data[0]; 
                 }
                 else
                 {
@@ -159,7 +159,8 @@ namespace Medix.API.Presentation.Controller.Money
                 await _walletTransactionService.UppdateWalletTrasactionAsync(wallettransaction);
 
 
-                await _walletService.DecreaseWalletBalanceAsync(wallet.UserId, transferTransaction.Amount);
+           
+          
 
 
                 transferTransaction.Status = "Accepted";
@@ -229,26 +230,23 @@ namespace Medix.API.Presentation.Controller.Money
 
     try
     {
-        // ✅ Sửa: WalletTransaction status thành "Failed" thay vì "Completed"
         wallettransaction.Status = "Failed";
         wallettransaction.Description += "Bị từ chối";
         
         await _walletTransactionService.UppdateWalletTrasactionAsync(wallettransaction);
 
-        // ✅ Cập nhật TransferTransaction status thành "Rejected"
         transferTransaction.Status = "Rejected";
         transferTransaction.Description += "Bị từ chối";
         
         await _transferTransactionService.UpdateTransferTransactionAsync(transferTransaction);
-
-        // ✅ Sửa: Thêm dấu chấm phẩy và trả về thông tin chi tiết
-        return Ok(new 
+          await _walletService.IncreaseWalletBalanceAsync((Guid)wallet.UserId, transferTransaction.Amount);
+                return Ok(new 
         { 
             message = "Transfer rejected successfully",
             transferTransactionId = transferTransaction.Id,
             status = transferTransaction.Status,
             rejectedAt = DateTime.UtcNow
-        }); // ✅ Đã thêm dấu ;
+        }); 
     }
     catch (Exception ex)
     {

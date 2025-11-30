@@ -1,4 +1,5 @@
-﻿using Medix.API.Models.DTOs.ReviewDTO;
+﻿using Medix.API.Models.DTOs.Doctor;
+using Medix.API.Models.DTOs.ReviewDTO;
 
 namespace Medix.API.Business.Interfaces.Classification
 {
@@ -13,6 +14,12 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<List<ReviewDoctorDto>> GetAllAsync();
         Task<ReviewDoctorDto> UpdateStatusAsync(UpdateReviewStatusDto dto);
 
+        Task<List<TopDoctorDto>> GetTopDoctorsByRatingAsync(int count = 3);
+      
+        Task<List<TopDoctorPerformanceDto>> GetTopDoctorsByPerformanceAsync(int count = 10, double ratingWeight = 0.7, double successWeight = 0.3);
 
     }
+
+
+ 
 }

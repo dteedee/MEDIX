@@ -23,7 +23,6 @@ namespace Medix.API.Presentation.Middleware
             }
             catch (Exception ex)
             {
-                // Không log ở đây nữa, chuyển logic log vào HandleExceptionAsync
                 await HandleExceptionAsync(context, ex, _logger);
             }
         }
@@ -35,7 +34,6 @@ namespace Medix.API.Presentation.Middleware
             switch (exception)
             {
                 case ValidationException vex:
-                    // Log lỗi validation với chi tiết các trường
                     logger.LogWarning("Validation error occurred: {ValidationErrors}", JsonSerializer.Serialize(vex.Errors));
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     var payload = JsonSerializer.Serialize(new { message = "Một hoặc nhiều lỗi xác thực đã xảy ra.", errors = vex.Errors });
@@ -53,14 +51,11 @@ namespace Medix.API.Presentation.Middleware
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     await context.Response.WriteAsync(JsonSerializer.Serialize(new { message = mex.Message }));
                     return;
-                // THÊM CASE NÀY ĐỂ XỬ LÝ LỖI NGHIỆP VỤ
                 case InvalidOperationException ioe:
-                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest; // Lỗi nghiệp vụ là Bad Request (400)
-                    // Trả về trực tiếp message của exception, không cần gói trong JSON
+                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     await context.Response.WriteAsync(ioe.Message);
                     return;
                 default:
-                    // Log lỗi không xác định (lỗi 500)
                     logger.LogError(exception, "An unhandled exception has occurred.");
                     context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                     await context.Response.WriteAsync(JsonSerializer.Serialize(new { message = "Đã có lỗi không mong muốn xảy ra." }));

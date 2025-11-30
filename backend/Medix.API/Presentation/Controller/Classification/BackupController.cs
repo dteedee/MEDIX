@@ -19,10 +19,6 @@ namespace Medix.API.Presentation.Controller.Classification
             _backupService = backupService;
             _configService = configService;
         }
-
-        /// <summary>
-        /// Tạo backup thủ công
-        /// </summary>
         [HttpPost]
         public async Task<IActionResult> CreateBackup([FromBody] CreateBackupRequest? request = null)
         {
@@ -38,9 +34,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Lấy danh sách tất cả backups
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAllBackups()
         {
@@ -55,9 +48,7 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Lấy thông tin backup theo ID
-        /// </summary>
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetBackupById(Guid id)
         {
@@ -76,9 +67,7 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Restore từ backup
-        /// </summary>
+
         [HttpPost("restore")]
         public async Task<IActionResult> RestoreBackup([FromBody] RestoreBackupRequest request)
         {
@@ -101,9 +90,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Xóa backup
-        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBackup(Guid id)
         {
@@ -122,15 +108,11 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        /// <summary>
-        /// Cleanup old backups (theo retention days)
-        /// </summary>
         [HttpPost("cleanup")]
         public async Task<IActionResult> CleanupOldBackups()
         {
             try
             {
-                // Lấy retention days từ config
                 var retentionDays = await _configService.GetIntValueAsync("BACKUP_RETENTION_DAYS") ?? 30;
 
                 var deletedCount = await _backupService.CleanupOldBackupsAsync(retentionDays);

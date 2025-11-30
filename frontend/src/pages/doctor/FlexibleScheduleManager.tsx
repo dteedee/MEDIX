@@ -85,7 +85,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
-      confirmButtonText: 'Vâng, xóa nó!',
+      confirmButtonText: 'Xóa',
       cancelButtonText: 'Hủy'
     });
 
@@ -95,14 +95,12 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
         Swal.fire('Đã xóa!', 'Lịch linh hoạt đã được xóa.', 'success');
         onRefresh();
       } catch (err: any) {
-        console.error('Failed to delete override:', err);
-        let errorMessage = 'Không thể xóa lịch. Vui lòng thử lại.'; // Fallback
+        let errorMessage = 'Không thể xóa lịch. Vui lòng thử lại.'; 
 
         if (err.response && err.response.data) {
           if (typeof err.response.data === 'string') {
             errorMessage = err.response.data;
           } else if (typeof err.response.data === 'object') {
-            // Xử lý lỗi từ ProblemDetails của ASP.NET Core
             errorMessage = err.response.data.detail || err.response.data.title || JSON.stringify(err.response.data);
           }
         }
@@ -119,7 +117,6 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
 
   const processFormSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
-      // Chuyển đổi giá trị từ form (string) sang number
       const overrideTypeNumber = Number(data.overrideType);
 
       // --- VALIDATION: Ngăn đăng ký nghỉ quá gần ---
@@ -179,23 +176,31 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
       setIsFormVisible(false);
       setEditingOverride(null);
     } catch (err: any) {
-      console.error('Failed to save override:', err);
-      let errorMessage = 'Không thể lưu lịch. Vui lòng kiểm tra lại thông tin.'; // Fallback
+      let errorMessage = 'Không thể lưu lịch. Vui lòng kiểm tra lại thông tin.';
 
       if (err.response && err.response.data) {
         if (typeof err.response.data === 'string') {
           errorMessage = err.response.data;
+        } else if (typeof err.response.data === 'object' && err.response.data.message) {
+          // Trích xuất thông báo từ đối tượng JSON như { "message": "..." }
+          errorMessage = err.response.data.message;
         } else if (typeof err.response.data === 'object') {
-          // Xử lý lỗi từ ProblemDetails của ASP.NET Core
-          errorMessage = err.response.data.details || err.response.data.detail || err.response.data.title || JSON.stringify(err.response.data);
-          if (errorMessage.includes('Không thể cập nhật lịch ghi đè này vì đã có cuộc hẹn được đặt'))
-          {
+          // Fallback cho các đối tượng lỗi khác
+          errorMessage = JSON.stringify(err.response.data);
+        }
+
+        // Tái cấu trúc để xử lý các thông báo lỗi cụ thể một cách rõ ràng hơn
+        switch (true) {
+          case errorMessage.includes('Không thể cập nhật lịch ghi đè này vì đã có cuộc hẹn được đặt'):
             errorMessage = "Đã có cuộc hẹn trong khoảng thời gian này, không thể cập nhật!";
-          }
-          if (errorMessage.includes('Bạn đã có ghi đè trong khung giờ'))
-          {
+            break;
+          case errorMessage.includes('Bạn đã có ghi đè trong khung giờ'):
             errorMessage = "Khung giờ này đã tồn tại một lịch linh hoạt khác. Vui lòng chọn thời gian khác.";
-          }
+            break;
+          case errorMessage.includes('Lịch tăng ca không được phép trùng với lịch cố định đã có.'):
+            errorMessage = "Lịch tăng ca bạn chọn bị trùng với lịch làm việc cố định đã có. Vui lòng chọn một khung giờ khác.";
+            break;
+          // Có thể thêm các trường hợp lỗi khác ở đây trong tương lai
         }
       }
 

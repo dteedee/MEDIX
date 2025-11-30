@@ -12,7 +12,6 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ================= DATABASE CONFIGURATION =================
 builder.Services.ConfigureServices();
 builder.Services.AddDbContext<MedixContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
@@ -48,7 +47,6 @@ builder.Services.AddKeyedSingleton("TransferClient", (sp, key) =>
     });
 });
 
-// ================= CORS =================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -57,23 +55,19 @@ builder.Services.AddCors(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
 
-// ================= CONTROLLERS & JSON OPTIONS =================
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
     {
         o.JsonSerializerOptions.IncludeFields = true;
-        // Convert tất cả DateTime sang giờ Việt Nam (UTC+7) khi serialize
         o.JsonSerializerOptions.Converters.Add(new Medix.API.Infrastructure.VietnamTimeZoneJsonConverter());
         o.JsonSerializerOptions.Converters.Add(new Medix.API.Infrastructure.VietnamTimeZoneNullableJsonConverter());
     });
 
-// ================= JWT CONFIGURATION =================
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"];
 var jwtIssuer = jwtSection["Issuer"];
 var jwtAudience = jwtSection["Audience"];
 
-// Kiểm tra cấu hình JWT
 Console.WriteLine($"JWT Key present: {!string.IsNullOrWhiteSpace(jwtKey)}");
 Console.WriteLine($"JWT Issuer: {jwtIssuer}");
 Console.WriteLine($"JWT Audience: {jwtAudience}");
@@ -109,12 +103,10 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<UserContext>();
 
 
-// ================= SWAGGER =================
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Medix API", Version = "v1" });
 
-    // Add JWT bearer auth to Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -141,12 +133,9 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// ================= APPLICATION SERVICES =================
-// AutoMapper is already configured in ServiceConfiguration.cs
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.ConfigureServices();
 
-// ================= BUILD APP =================
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -155,7 +144,6 @@ using (var scope = app.Services.CreateScope())
     await seeder.SeedAsync();
 }
 
-// ================= MIDDLEWARE PIPELINE =================
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -164,25 +152,19 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowAll");
 
-// Dùng để phục vụ các file tĩnh (vd: wwwroot)
 app.UseStaticFiles();
 
-// Middleware xử lý exception toàn cục
 app.UseMiddleware<Medix.API.Presentation.Middleware.ExceptionHandlingMiddleware>();
 
-// Hangfire dashboard
 app.UseHangfireDashboard();
 
-//register hangfire jobs
 ServiceConfiguration.RegisterHangfireJobs();
 
-// Authentication + Authorization
 app.UseAuthentication();
 app.UseMiddleware<MaintenanceModeMiddleware>();
 app.UseAuthorization();
 app.UseMiddleware<AuditMiddleware>();
 
-// Map controllers
 app.MapControllers();
 
 app.Run();

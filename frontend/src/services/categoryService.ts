@@ -20,7 +20,6 @@ export const categoryService = {
     const r = await apiClient.get(url, { params });
     const data = r.data;
 
-    // Handle multiple response shapes from backend (direct array, or paged object)
     const rawItems = Array.isArray(data)
       ? data
       : data?.data ?? data?.item2 ?? [];
@@ -49,11 +48,8 @@ export const categoryService = {
     } catch (error: any) {
       if (error.response?.data?.errors) {
         const backendErrors = error.response.data.errors;
-        console.error("Lỗi validation từ backend khi tạo danh mục:", JSON.stringify(backendErrors, null, 2));
-        // Ném lại đối tượng lỗi đã được chia nhỏ để component có thể xử lý
         throw backendErrors;
       }
-      // Ném lại các lỗi khác (mạng, server 500, etc.)
       throw error;
     }
   },
@@ -64,7 +60,6 @@ export const categoryService = {
     } catch (error: any) {
       if (error.response?.data?.errors) {
         const backendErrors = error.response.data.errors;
-        console.error(`Lỗi validation từ backend khi cập nhật danh mục (ID: ${id}):`, JSON.stringify(backendErrors, null, 2));
         throw backendErrors;
       }
       throw error;
@@ -80,11 +75,7 @@ export const categoryService = {
     if (excludeId) {
       params.append('excludeId', excludeId)
     }
-    // This endpoint should be implemented in the backend.
-    // It is expected to return a 2xx status code if the value is unique,
-    // and a 4xx status code (e.g., 409 Conflict) if it's not.
-    // The `axios` call will automatically throw an error for 4xx/5xx responses,
-    // which is caught in the CategoryForm component.
+    
     await apiClient.get(`${BASE}/check-uniqueness`, { params })
   }
 }

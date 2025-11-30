@@ -47,7 +47,6 @@ export const DoctorProfile: React.FC = () => {
           phoneNumber: response.phoneNumber || '',
         });
       } catch (error: any) {
-        console.log('Failed to fetch user profile: ', error);
         setError('Đã có lỗi xảy ra. Vui lòng thử lại sau.');
       }
       setPageLoading(false);
@@ -66,7 +65,6 @@ export const DoctorProfile: React.FC = () => {
     setError(null);
     try {
       const response = await DoctorService.updateAvatar(formData);
-      console.log(response);
       const newUrl = response.avatarUrl;
 
       setData((prev) => ({
@@ -233,19 +231,16 @@ export const DoctorProfile: React.FC = () => {
           switch (status) {
             case 400:
               if (errorData?.errors) {
-                console.log('profileUpdate: ', errorData.errors);
                 setFieldErrors(errorData.errors);
               } else {
                 showToast('Yêu cầu không hợp lệ. Vui lòng kiểm tra lại thông tin.', 'error');
               }
               break;
             default:
-              console.error('Profile update error: ', error);
               showToast('Lỗi máy chủ. Vui lòng thử lại sau', 'error');
               break;
           }
         } else {
-          console.error('Profile update error: ', error);
           showToast('Không thể cập nhật thông tin', 'error');
         }
       } finally {

@@ -19,7 +19,6 @@ const monthNames = [
 ];
 const dayNames = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
-// --- Helper: chuẩn hóa ngày local thành dạng YYYY-MM-DD ---
 const getLocalDateKey = (date: Date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -27,9 +26,12 @@ const getLocalDateKey = (date: Date) => {
   return `${y}-${m}-${d}`;
 };
 
+const convertDayOfWeek = (jsDayOfWeek: number): number => {
+  return jsDayOfWeek === 0 ? 7 : jsDayOfWeek;
+};
+
 type ViewMode = "month" | "week";
 
-// --- Modal Chi tiết ngày ---
 interface DayDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -50,23 +52,18 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   onAddFlexibleSchedule
 }) => {
   const allSlots = useMemo(() => {
-    // Lấy tất cả lịch linh hoạt (cả tăng ca và nghỉ)
     const allOverrides = overrides.map(o => ({ ...o, type: "override" as const }));
 
-    // Lọc ra những ca cố định không bị "ghi đè" bởi một lịch "Nghỉ" (overrideType = false)
     const visibleFixedSlots = schedules.filter(fixedSlot => {
-      // Một ca cố định sẽ bị ẩn nếu nó trùng giờ với một lịch "Nghỉ" (overrideType = false)
       const isOverriddenByNghi = allOverrides.some(overrideSlot => 
-        !overrideSlot.overrideType && // Kiểm tra nếu là lịch "Nghỉ"
+        !overrideSlot.overrideType && 
         overrideSlot.startTime < fixedSlot.endTime && overrideSlot.endTime > fixedSlot.startTime
       );
       return !isOverriddenByNghi;
     }).map(s => ({ ...s, type: "fixed" as const }));
 
-    // Chỉ lấy các ca "Tăng ca" (overrideType = true) mà vẫn còn khả dụng (isAvailable = true)
     const visibleOverrideSlots = allOverrides.filter(o => o.overrideType && o.isAvailable);
 
-    // Gộp các ca cố định hợp lệ và tất cả các ca linh hoạt, sau đó sắp xếp
     return [...visibleFixedSlots, ...visibleOverrideSlots].sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [schedules, overrides]);
 
@@ -235,7 +232,6 @@ const ScheduleManagement: React.FC = () => {
 
       setViewData({ schedules: fixed, overrides, appointments });
     } catch (err) {
-      console.error(err);
       setError("Không thể tải dữ liệu lịch.");
     } finally {
       setIsLoading(false);
@@ -246,7 +242,6 @@ const ScheduleManagement: React.FC = () => {
     refreshAllData();
   }, [currentDate, viewMode, isAuthenticated, user?.id]);
 
-  // --- Map dữ liệu ---
   const { schedulesByDay, overridesByDate, appointmentsByDate } = useMemo(() => {
     const sMap = new Map<number, DoctorSchedule[]>();
     viewData.schedules.forEach(s => {
@@ -386,7 +381,7 @@ const ScheduleManagement: React.FC = () => {
                 }
 
                 const dateKey = getLocalDateKey(date);
-                const dayOfWeek = date.getDay(); // 0=CN, 1=T2,...
+                const dayOfWeek = convertDayOfWeek(date.getDay()); // Convert to backend format (1=Monday, ..., 7=Sunday)
 
                 // Lấy lịch cố định và lịch linh hoạt cho ngày hiện tại
                 const fixedSchedules = schedulesByDay.get(dayOfWeek) || [];
@@ -487,7 +482,7 @@ const ScheduleManagement: React.FC = () => {
         formattedDate={getFormattedSelectedDate()}
         schedules={
           selectedDate
-            ? schedulesByDay.get(selectedDate.getDay()) || []
+            ? schedulesByDay.get(convertDayOfWeek(selectedDate.getDay())) || []
             : []
         }
         overrides={selectedDate ? overridesByDate.get(getLocalDateKey(selectedDate)) || [] : []}

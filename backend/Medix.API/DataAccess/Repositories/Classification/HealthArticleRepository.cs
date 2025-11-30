@@ -194,7 +194,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
         public async Task AddLikeAsync(Guid articleId, Guid userId)
         {
-            // Prevent duplicate likes at DB level via unique index, but check first to avoid exception
             var existing = await _context.HealthArticleLikes.FirstOrDefaultAsync(l => l.ArticleId == articleId && l.UserId == userId);
             if (existing != null)
                 return;
@@ -209,7 +208,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
             _context.HealthArticleLikes.Add(like);
 
-            // also increment article LikeCount
             var article = await _context.HealthArticles.FindAsync(articleId);
             if (article != null)
                 article.LikeCount++;
@@ -230,6 +228,28 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 article.LikeCount--;
 
             await _context.SaveChangesAsync();
+        }
+
+        public async Task IncrementDisplayOrderForConflictsAsync(int displayOrder, Guid? excludeId = null)
+        {
+            var query = _context.HealthArticles
+                .Where(a => a.DisplayOrder >= displayOrder);
+
+            if (excludeId.HasValue)
+            {
+                query = query.Where(a => a.Id != excludeId.Value);
+            }
+
+            var conflictingArticles = await query.ToListAsync();
+            foreach (var article in conflictingArticles)
+            {
+                article.DisplayOrder += 1;
+            }
+
+            if (conflictingArticles.Any())
+            {
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

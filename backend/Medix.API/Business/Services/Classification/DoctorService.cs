@@ -26,6 +26,7 @@ namespace Medix.API.Business.Services.Classification
         private readonly IServiceTierRepository _serviceTierRepository;
         private readonly IAppointmentRepository _appointmentRepository;
 
+
         public DoctorService(IDoctorRepository doctorRepository, IUserRepository userRepository,
             MedixContext context, IReviewRepository reviewRepository, IServiceTierRepository serviceTierRepository, IServiceTierRepository serviceTierRepo, IDoctorScheduleRepository doctorScheduleRepository,
             IEmailService emailService, IDoctorScheduleOverrideRepository doctorScheduleOverrideRepository, IAppointmentService appointmentService, IAppointmentRepository appointmentRepository)
@@ -47,7 +48,122 @@ namespace Medix.API.Business.Services.Classification
         {
             return await _doctorRepository.GetHomePageDoctorsAsync();
         }
+        public async Task<bool> UpdateDoctorEducationAndFeeAsync(Guid doctorId, string? education, decimal? consultationFee)
+        {
+            var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId);
+            if (doctor == null)
+                return false;
 
+            var updated = false;
+
+            if (education != null && education != doctor.Education)
+            {
+                doctor.Education = education;
+                updated = true;
+            }
+
+            if (consultationFee.HasValue && consultationFee.Value != doctor.ConsultationFee)
+            {
+                if (consultationFee.Value < 0)
+                    throw new ArgumentException("Consultation fee must be non-negative", nameof(consultationFee));
+
+                doctor.ConsultationFee = consultationFee.Value;
+                updated = true;
+            }
+
+            if (!updated)
+                return true; 
+
+            doctor.UpdatedAt = DateTime.UtcNow;
+
+            var result = await _doctorRepository.UpdateDoctorAsync(doctor);
+            return result != null;
+        }
+
+
+        public async Task<DoctorBusinessStatsDto?> GetDoctorBusinessStatsAsync(Guid doctorId, DateTime? startDate = null, DateTime? endDate = null)
+        {
+            var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId);
+            if (doctor == null) return null;
+
+            var appointments = doctor.Appointments?.AsEnumerable() ?? (await _appointmentRepository.GetByDoctorAsync(doctorId));
+
+            if (startDate.HasValue)
+            {
+                var sd = startDate.Value.Date;
+                appointments = appointments.Where(a => a.AppointmentStartTime.Date >= sd);
+            }
+            if (endDate.HasValue)
+            {
+                var ed = endDate.Value.Date;
+                appointments = appointments.Where(a => a.AppointmentStartTime.Date <= ed);
+            }
+
+            var apptList = appointments.ToList();
+
+            var totalBookings = apptList.Select(a => a.PatientId).Distinct().Count();
+            var successfulStatuses = Constants.SuccessfulAppointmentStatusCode;
+            var successfulBookings = apptList.Count(a => successfulStatuses.Contains(a.StatusCode));
+            var totalCases = apptList.Count;
+            var successfulCases = apptList.Count(a => a.StatusCode == Constants.CompletedAppointmentStatusCode);
+            var revenue = apptList.Select(a => a.TotalAmount).DefaultIfEmpty(0m).Sum();
+
+            var salariesQuery = _context.DoctorSalaries.AsQueryable().Where(s => s.DoctorId == doctorId);
+
+            if (startDate.HasValue)
+            {
+                var sd = DateOnly.FromDateTime(startDate.Value.Date);
+                salariesQuery = salariesQuery.Where(s => s.PeriodEndDate >= sd);
+            }
+            if (endDate.HasValue)
+            {
+                var ed = DateOnly.FromDateTime(endDate.Value.Date);
+                salariesQuery = salariesQuery.Where(s => s.PeriodStartDate <= ed);
+            }
+
+            var salaries = await salariesQuery
+                .OrderByDescending(s => s.PaidAt)
+                .ToListAsync();
+
+            var salaryDtos = salaries.Select(s => new DoctorSalaryDto
+            {
+                Id = s.Id,
+                PeriodStartDate = s.PeriodStartDate,
+                PeriodEndDate = s.PeriodEndDate,
+                TotalAppointments = s.TotalAppointments,
+                TotalEarnings = s.TotalEarnings,
+                CommissionDeductions = s.CommissionDeductions,
+                NetSalary = s.NetSalary,
+                Status = s.Status,
+                PaidAt = s.PaidAt
+            }).ToList();
+
+            var totalSalary = salaryDtos.Sum(s => s.NetSalary);
+
+            var reviews = await _reviewRepository.GetReviewsByDoctorAsync(doctorId);
+            var avgRating = reviews.Any() ? Math.Round(reviews.Average(r => r.Rating), 2) : 0.0;
+            var totalReviews = reviews.Count;
+            var ratingByStar = new int[5];
+            foreach (var r in reviews)
+            {
+                if (r.Rating >= 1 && r.Rating <= 5)
+                    ratingByStar[r.Rating - 1]++;
+            }
+
+            var dto = new DoctorBusinessStatsDto
+            {      
+                TotalBookings = totalBookings,
+                SuccessfulBookings = successfulBookings,
+                TotalCases = totalCases,
+                SuccessfulCases = successfulCases,
+                Revenue = revenue,
+                TotalSalary = totalSalary,
+                AverageRating = avgRating,
+                TotalReviews = totalReviews
+            };
+
+            return dto;
+        }
         public async Task<bool> LicenseNumberExistsAsync(string licenseNumber) => await _doctorRepository.LicenseNumberExistsAsync(licenseNumber);
 
         //public async Task<DoctorProfileDto?> GetDoctorProfileByUserNameAsync(string userName)
@@ -114,12 +230,10 @@ namespace Medix.API.Business.Services.Classification
 
             foreach (var tier in tiers)
             {
-                // 3. Truyền toàn bộ queryParams xuống Repository
                 var (doctors, totalCount) = await _doctorRepository.GetPaginatedDoctorsByTierIdAsync(
                     tier.Id,
-                    queryParams); // <-- THAY ĐỔI Ở ĐÂY
+                    queryParams); 
 
-                // 4. Map sang DoctorBookinDto của bạn
                 var doctorDtos = doctors.Where(x=>x.IsAcceptingAppointments==true).Select(doc => new DoctorBookinDto
                 {
                     userId = doc.User.Id,
@@ -128,7 +242,7 @@ namespace Medix.API.Business.Services.Classification
                     specializationCode = doc.Specialization.Code,
                     specialization = doc.Specialization.Name,
                     educationcode = doc.Education,
-                    Education = DoctorDegree.GetDescription(doc.Education), // Giả sử bạn có lớp này
+                    Education = DoctorDegree.GetDescription(doc.Education),
                     Experience = doc.YearsOfExperience.ToString(),
                     price = doc.ConsultationFee,
                     bio = doc.Bio,
@@ -138,14 +252,12 @@ namespace Medix.API.Business.Services.Classification
 
                 }).ToList();
 
-                // 5. Tạo DTO phân trang
                 var paginatedDoctors = new PaginatedListDto<DoctorBookinDto>(
                     doctorDtos,
                     queryParams.PageNumber,
                     queryParams.PageSize,
                     totalCount);
 
-                // 6. Thêm vào kết quả
                 resultList.Add(new ServiceTierWithPaginatedDoctorsDto
                 {
                     Id = tier.Id,
@@ -200,6 +312,9 @@ namespace Medix.API.Business.Services.Classification
                     Rating = r.Rating,
                     Comment = r.Comment,
                     Date = r.CreatedAt.ToString("dd/MM/yyyy"),
+                    AdminResponse = r.AdminResponse,
+                    PatientName = r.Appointment?.Patient?.User?.FullName,
+                    PatientAvatar = r.Appointment?.Patient?.User?.AvatarUrl
                 })
                 .Take(4)
                 .ToList();
@@ -230,7 +345,7 @@ namespace Medix.API.Business.Services.Classification
 
             }).ToList();
 
-            profileDto.appointmentBookedDtos = appoint.Where(x => x.StatusCode == "OnProgressing" || x.StatusCode == "Completed" || x.StatusCode == "NoShow" || x.StatusCode == "Confirmed").Select(a => new AppointmentBookedDto
+            profileDto.appointmentBookedDtos = appoint.Where(x =>x.StatusCode== "CancelledByDoctor"||x.StatusCode== "MissedByDoctor"||x.StatusCode== "MissedByPatient" || x.StatusCode== "BeforeAppoiment" || x.StatusCode == "OnProgressing" || x.StatusCode == "Completed" || x.StatusCode == "NoShow" || x.StatusCode == "Confirmed").Select(a => new AppointmentBookedDto
             {
 
                 StartTime = a.AppointmentStartTime,
@@ -325,43 +440,37 @@ namespace Medix.API.Business.Services.Classification
         {
             var result = new List<EducationWithPaginatedDoctorsDto>();
 
-            // Lấy tất cả các DoctorDegree
             var educationTypes = DoctorDegree.List();
 
             foreach (var educationType in educationTypes)
             {
-                // Query doctors theo education code
                 var doctorsQuery = _context.Doctors
                     .Include(d => d.User)
                     .Include(d => d.Specialization)
                     .Include(d => d.ServiceTier)
                     .Where(d => d.Education == educationType.Code && d.User.Status == 1);
 
-                // Áp dụng filter theo SpecializationCode nếu có
                 if (!string.IsNullOrWhiteSpace(queryParams.SpecializationCode))
                 {
                     doctorsQuery = doctorsQuery.Where(d => d.Specialization.Id == Guid.Parse(queryParams.SpecializationCode));
                 }
 
-                // Áp dụng filter theo MinPrice nếu có
+          
                 if (queryParams.MinPrice.HasValue)
                 {
                     doctorsQuery = doctorsQuery.Where(d => d.ConsultationFee >= queryParams.MinPrice.Value);
                 }
 
-                // Áp dụng filter theo MaxPrice nếu có
                 if (queryParams.MaxPrice.HasValue)
                 {
                     doctorsQuery = doctorsQuery.Where(d => d.ConsultationFee <= queryParams.MaxPrice.Value);
                 }
 
-                // Đếm tổng số doctors
                 var totalCount = await doctorsQuery.CountAsync();
 
-                // Áp dụng pagination
                 var doctors = await doctorsQuery
                     .Skip((queryParams.PageNumber - 1) * queryParams.PageSize)
-                    .Take(queryParams.PageSize).Where(x=>x.IsAcceptingAppointments==true)
+                    .Take(queryParams.PageSize).Where(x=>x.IsAcceptingAppointments==true&&x.User.LockoutEnabled==false)
                     .Select(d => new DoctorBookinDto
                     {
                         userId = d.UserId,
@@ -383,7 +492,6 @@ namespace Medix.API.Business.Services.Classification
                     })
                     .ToListAsync();
 
-                // Tạo PaginatedListDto
                 var paginatedDoctors = new PaginatedListDto<DoctorBookinDto>(
                     doctors,
                     queryParams.PageNumber,
@@ -391,7 +499,6 @@ namespace Medix.API.Business.Services.Classification
                     totalCount
                 );
 
-                // Thêm vào kết quả
                 result.Add(new EducationWithPaginatedDoctorsDto
                 {
                     EducationCode = educationType.Code,
@@ -412,7 +519,6 @@ namespace Medix.API.Business.Services.Classification
         public async Task CheckAndBanDoctors()
         {
             var doctors = await _doctorRepository.GetAllAsync();
-            // Only operate on verified doctors
             var verifiedDoctors = doctors.Where(d => d.IsVerified).ToList();
 
             int salaryDeductionCount = 0;
@@ -421,7 +527,6 @@ namespace Medix.API.Business.Services.Classification
 
             foreach (var doctor in verifiedDoctors)
             {
-                // use one transaction per doctor so a failure for one doesn't affect others
                 using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
@@ -511,7 +616,6 @@ namespace Medix.API.Business.Services.Classification
             var doctors = await _doctorRepository.GetAllAsync();
             var now = DateTime.UtcNow;
 
-            // Doctors whose ban has ended (exclude "never banned" and permanent bans)
             var doctorsToUnban = doctors
                 .Where(d => d.EndDateBanned.HasValue
                             && d.EndDateBanned.Value < now
@@ -554,41 +658,89 @@ namespace Medix.API.Business.Services.Classification
             }
         }
 
-        //public static string GetAcceptEmailBody(string newPassword, string fullName)
-        //{
-        //    return $@"
-        //        <p>Bác sĩ {fullName} thân mến,</p>
-        //        <p>Hồ sơ bác sĩ của bạn đã được phê duyệt thành công. Chúng tôi rất vui mừng được chào đón bạn đến với nền tảng Medix.</p>
+        // Updated: evaluate ALL doctors in DB (if count <= 0 return all; otherwise return top 'count')
+        public async Task<List<TopDoctorPerformanceDto>> GetTopDoctorsByPerformanceAsync( double ratingWeight = 0.6, double successWeight = 0.4)
+        {
+            var weightSum = ratingWeight + successWeight;
+            if (weightSum <= 0)
+            {
+                ratingWeight = 0.6;
+                successWeight = 0.4;
+                weightSum = 1.0;
+            }
+            ratingWeight /= weightSum;
+            successWeight /= weightSum;
 
-        //        <p>Vui lòng sử dụng mật khẩu dưới đây để đăng nhập vào hệ thống:</p>
+            var doctors = await _doctorRepository.GetAllAsync();
 
-        //        <div style=""margin: 1em 0; padding: 1em; border-radius: 8px; background-color: #f0f4f8; border: 1px solid #d0d7de; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Segoe UI', sans-serif;"">
-        //          <label style=""display: block; font-weight: 600; font-size: 1.1em; color: #333; margin-bottom: 0.5em;"">
-        //            🔐 Mật khẩu đăng nhập:
-        //          </label>
-        //          <div style=""display: inline-block; padding: 0.75em 1.5em; font-size: 1.4em; font-weight: bold; color: #2c3e50; background-color: #ffffff; border: 2px solid #4da6ff; border-radius: 6px; letter-spacing: 2px;"">
-        //            {newPassword}
-        //          </div>
-        //        </div>
+            var reviews = await _reviewRepository.GetAllAsync();
+            var appointments = (await _appointmentRepository.GetAllAsync()).ToList();
 
-        //        <p>Vui lòng đổi mật khẩu sau khi đăng nhập để đảm bảo bảo mật thông tin cá nhân.</p>
-        //        <p>Trân trọng,<br/>Đội ngũ Medix</p>
-        //    ";
-        //}
+            var reviewsByDoctor = reviews
+                .Where(r => r.Appointment?.DoctorId != null)
+                .GroupBy(r => r.Appointment.DoctorId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => new
+                    {
+                        AvgRating = g.Any() ? g.Average(r => r.Rating) : 0.0,
+                        ReviewCount = g.Count()
+                    });
 
-        //private static string GetRejectEmailBody(string reason, string fullName)
-        //{
-        //    return $@"
-        //        <p>Bác sĩ {fullName} thân mến,</p>
-        //        <p>Chúng tôi rất tiếc phải thông báo rằng hồ sơ bác sĩ của bạn chưa được phê duyệt. Sau khi xem xét kỹ lưỡng, chúng tôi nhận thấy hồ sơ của bạn hiện chưa đáp ứng đầy đủ các tiêu chuẩn cần thiết.</p>
+            var successfulStatuses = Constants.SuccessfulAppointmentStatusCode;
+            var apptsByDoctor = appointments
+                .Where(a => a.DoctorId != Guid.Empty)
+                .GroupBy(a => a.DoctorId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => new
+                    {
+                        Total = g.Count(),
+                        Successful = g.Count(a => successfulStatuses.Contains(a.StatusCode))
+                    });
 
-        //        <p><strong>Lý do từ quản lý:</strong> {reason}</p>
+            var results = new List<TopDoctorPerformanceDto>(doctors.Count);
 
-        //        <p>Nếu bạn có bất kỳ thắc mắc nào hoặc không hài lòng với quyết định này, xin vui lòng liên hệ với đội ngũ hỗ trợ của chúng tôi. Trong trường hợp bạn muốn thử lại, vui lòng tiến hành đăng ký lại để cập nhật thông tin và hoàn thiện hồ sơ.</p>
+            foreach (var doc in doctors)
+            {
+                var did = doc.Id;
+                var avgRating = reviewsByDoctor.ContainsKey(did) ? reviewsByDoctor[did].AvgRating : 0.0;
+                var reviewCount = reviewsByDoctor.ContainsKey(did) ? reviewsByDoctor[did].ReviewCount : 0;
+                var totalCases = apptsByDoctor.ContainsKey(did) ? apptsByDoctor[did].Total : 0;
+                var successfulCases = apptsByDoctor.ContainsKey(did) ? apptsByDoctor[did].Successful : 0;
+                var successRate = totalCases > 0 ? (double)successfulCases / totalCases : 0.0;
 
-        //        <p>Chân thành cảm ơn sự thông cảm của bạn.</p>
-        //        <p>Trân trọng,<br/>Đội ngũ Medix</p>
-        //    ";
-        //}
+                var normRating = Math.Max(0.0, Math.Min(5.0, avgRating)) / 5.0;
+
+                var composite = (ratingWeight * normRating) + (successWeight * successRate);
+
+                results.Add(new TopDoctorPerformanceDto
+                {
+                    DoctorId = did,
+                    DoctorName = doc.User?.FullName ?? string.Empty,
+                    Specialization = doc.Specialization?.Name ?? string.Empty,
+                    AverageRating = Math.Round(avgRating, 2),
+                    ReviewCount = reviewCount,
+                    SuccessfulCases = successfulCases,
+                    TotalCases = totalCases,
+                    SuccessRate = Math.Round(successRate, 4),
+                    CompositeScore = Math.Round(composite, 4),
+                    ImageUrl = doc.User?.AvatarUrl,
+                    ConsultationFee = doc.ConsultationFee
+
+                });
+            }
+
+       
+            var ordered = results
+                .OrderByDescending(r => r.CompositeScore)
+                .ThenByDescending(r => r.ReviewCount);
+
+        
+           
+
+            return ordered.ToList();
+        }
+
     }
 }

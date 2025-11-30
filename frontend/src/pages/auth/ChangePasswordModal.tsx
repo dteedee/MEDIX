@@ -69,9 +69,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
           requireSpecial: requireSpecialRes.data.configValue.toLowerCase() === 'true',
         });
       } catch (err) {
-        console.error("Cannot load password policy", err);
         showToast("Không tải được chính sách mật khẩu, sẽ dùng chính sách mặc định.", "warning");
-        // Fallback to default policy
         setPolicy({ minLength: 8, requireUppercase: true, requireLowercase: true, requireDigit: true, requireSpecial: true });
       } finally {
         setPolicyLoading(false);
@@ -81,10 +79,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     loadPolicy();
   }, [isOpen, showToast]);
 
-  // Password validation functions
   const validatePassword = (password: string, currentPolicy: PasswordPolicy): string | null => {
     if (!password) return 'Mật khẩu không được để trống';
-    // Only check minLength if it's greater than 0 (enabled)
     if (currentPolicy.minLength > 0 && password.length < currentPolicy.minLength) {
       return `Mật khẩu phải có ít nhất ${currentPolicy.minLength} ký tự`;
     }
@@ -100,12 +96,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     return null;
   };
 
-  // Password handlers
   const handlePasswordChange = (field: string, value: string) => {
     setPasswordData(prev => ({ ...prev, [field]: value }));
 
-    // Chỉ xóa lỗi của trường đang được nhập.
-    // Ví dụ: khi nhập 'currentPassword', sẽ xóa lỗi 'CurrentPassword'.
     const fieldKey = field.charAt(0).toUpperCase() + field.slice(1);
     if (passwordErrors[fieldKey]) {
       setPasswordErrors(prev => ({ ...prev, [fieldKey]: '' }));
@@ -116,7 +109,6 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   const handlePasswordBlur = (field: string, value: string) => {
     let error = '';
 
-    // Only validate confirm password on blur, new password validation is shown in requirements
     if (field === 'confirmPassword') {
       error = validatePasswordMatch(passwordData.newPassword, value) || '';
     }
@@ -125,7 +117,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   };
 
   const handleChangePassword = async () => {
-    if (!policy) return; // Don't submit if policy is not loaded
+    if (!policy) return;
 
     const errors: Record<string, string> = {};
 
@@ -133,10 +125,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       errors.CurrentPassword = 'Mật khẩu hiện tại không được để trống';
     }
 
-    // Check if new password meets requirements
     const newPasswordError = validatePassword(passwordData.newPassword, policy);
     if (newPasswordError) {
-      // Don't add to errors, just return early
       setError('Mật khẩu mới chưa đáp ứng yêu cầu. Vui lòng kiểm tra danh sách yêu cầu bên dưới.');
       return;
     }
@@ -157,7 +147,6 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setError(null);
 
     try {
-      // Tạo payload với key viết hoa chữ cái đầu để khớp với DTO của backend
       const payload = {
         CurrentPassword: passwordData.currentPassword,
         NewPassword: passwordData.newPassword,
@@ -176,15 +165,13 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       const errorData = error.response?.data;
 
       if (status === 400) {
-        // Xử lý lỗi validation từ backend (thường là một object với key là tên trường)
         if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
           const serverErrors: Record<string, string> = {};
-          // Ví dụ: { CurrentPassword: ["Mật khẩu hiện tại không đúng"] }
           if (errorData.errors) {
              for (const key in errorData.errors) {
                 serverErrors[key] = errorData.errors[key][0];
              }
-          } else if (errorData.CurrentPassword) { // Fallback cho cấu trúc lỗi khác
+          } else if (errorData.CurrentPassword) {
              serverErrors.CurrentPassword = errorData.CurrentPassword[0];
           }
           setPasswordErrors(serverErrors);
@@ -192,7 +179,6 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
            setError(errorData?.message || 'Mật khẩu hiện tại không đúng.');
         }
       } else {
-        console.error('Password update error: ', error);
         showToast('Không thể đổi mật khẩu', 'error');
       }
     } finally {

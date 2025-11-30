@@ -27,15 +27,38 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .FirstOrDefaultAsync(m => m.Id == id);
         }
 
+        public async Task<IEnumerable<MedicationDatabase>> GetAllIncludingInactiveAsync()
+        {
+            return await _context.MedicationDatabases
+                .OrderBy(m => m.MedicationName)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<MedicationDatabase>> SearchAsync(string query, int limit = 10)
         {
             var normalizedQuery = query.ToLower();
 
             return await _context.MedicationDatabases
                 .Where(m => m.IsActive && m.MedicationName.ToLower().Contains(normalizedQuery))
-                .Take(limit) // Giới hạn 10 kết quả để tối ưu
+                .Take(limit) 
                 .AsNoTracking()
                 .ToListAsync();
+        }
+
+        public async Task<MedicationDatabase> CreateAsync(MedicationDatabase medication)
+        {
+            medication.Id = Guid.NewGuid();
+            medication.CreatedAt = DateTime.UtcNow;
+            _context.MedicationDatabases.Add(medication);
+            await _context.SaveChangesAsync();
+            return medication;
+        }
+
+        public async Task<MedicationDatabase> UpdateAsync(MedicationDatabase medication)
+        {
+            _context.MedicationDatabases.Update(medication);
+            await _context.SaveChangesAsync();
+            return medication;
         }
     }
 }

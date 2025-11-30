@@ -125,6 +125,8 @@ public partial class MedixContext : DbContext
     public virtual DbSet<NoticeSetup> NoticeSetups { get; set; }
     public virtual DbSet<UserPromotion> UserPromotions { get; set; }
 
+    public virtual DbSet<RefPromotionTarget> RefPromotionTargets { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AISymptomAnalysis>(entity =>
@@ -351,8 +353,11 @@ public partial class MedixContext : DbContext
             // ✅ Cấu hình cho các trường ban, miss và salary deduction
             entity.Property(e => e.TotalCaseMissPerWeek).HasDefaultValue(0);
             entity.Property(e => e.NextWeekMiss).HasDefaultValue(0);
-            entity.Property(e => e.isSalaryDeduction).HasDefaultValue(false); // ✅ Trường mới
+            entity.Property(e => e.isSalaryDeduction).HasDefaultValue(false);
             entity.Property(e => e.TotalBanned).HasDefaultValue(0);
+            entity.Property(e=>e.StartDateBanned).HasDefaultValue(null);
+            entity.Property(e=>e.EndDateBanned).HasDefaultValue(null);
+            
 
             entity.HasOne(d => d.ServiceTier).WithMany(p => p.Doctors)
                 .HasForeignKey(d => d.ServiceTierId)
@@ -768,6 +773,7 @@ public partial class MedixContext : DbContext
             entity.Property(e => e.DiscountValue).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(200);
+            entity.Property(e => e.ApplicableTargets);
         });
 
         modelBuilder.Entity<RefAppointmentStatus>(entity =>
@@ -1124,6 +1130,8 @@ public partial class MedixContext : DbContext
             // DateTime properties with defaults
             entity.Property(e => e.CreatedDate).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.UpdatedDate).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e=> e.CreatedBy).HasMaxLength(50);
+            entity.Property(e => e.UpdatedBy).HasMaxLength(50);
         });
 
         modelBuilder.Entity<WalletTransaction>(entity =>
@@ -1248,6 +1256,55 @@ public partial class MedixContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_UserPromotions_Promotion");
         });
+        modelBuilder.Entity<RefPromotionTarget>(entity =>
+        {
+            entity.ToTable("RefPromotionTargets");
+
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Name)
+                  .IsRequired()
+                  .HasMaxLength(200);
+
+            entity.Property(x => x.Description)
+                  .HasMaxLength(500);
+
+            entity.Property(x => x.Target)
+                  .IsRequired()
+                  .HasMaxLength(200);
+            entity.Property(x => x.IsActive)
+                  .HasDefaultValue(true);
+        });
+
+        modelBuilder.Entity<EmailVerificationCode>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_EmailVerificationCodes");
+
+            entity.ToTable("EmailVerificationCodes");
+
+            entity.Property(e => e.Id)
+                .ValueGeneratedOnAdd()
+                .HasColumnName("Id");
+
+            entity.Property(e => e.Email)
+                .IsRequired()
+                .HasMaxLength(256);
+
+            entity.Property(e => e.Code)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.ExpirationTime)
+                .HasColumnType("datetime2(7)")
+                .IsRequired();
+
+            entity.Property(e => e.IsUsed)
+                .HasDefaultValue(false)
+                .IsRequired();
+
+            entity.HasIndex(e => e.Email, "IX_EmailVerificationCodes_Email");
+            entity.HasIndex(e => new { e.Email, e.Code }, "IX_EmailVerificationCodes_Email_Code");
+        });
         OnModelCreatingPartial(modelBuilder);
     }
 
@@ -1277,14 +1334,12 @@ public partial class MedixContext : DbContext
                      || e.State == EntityState.Deleted)
             .ToList();
 
-        // Kiểm tra xem đây có phải là một hoạt động đăng nhập không (tạo mới RefreshToken)
         bool isLoginOperation = entries.Any(e => e.Entity is RefreshToken && e.State == EntityState.Added);
 
         foreach (var entry in entries)
         {
             var entityName = entry.Entity.GetType().Name;
 
-            // Skip tất cả bảng nhiều-nhiều
             if (entityName == "ArticleCategories"
                 || entityName == "HealthArticleContentCategory"
                 || entityName.EndsWith("CategoryMapping"))
@@ -1292,14 +1347,13 @@ public partial class MedixContext : DbContext
                 continue;
             }
 
-            // Nếu là hoạt động đăng nhập, bỏ qua việc ghi log cho hành động UPDATE User không cần thiết
             if (isLoginOperation && entry.Entity is User && entry.State == EntityState.Modified)
             {
                 continue;
             }
 
             if (entry.Entity is AuditLog)
-                continue; // tránh vòng lặp
+                continue; 
 
             var audit = new AuditLog
             {
@@ -1329,7 +1383,17 @@ public partial class MedixContext : DbContext
                             .Where(p => p.IsModified && p.OriginalValue?.ToString() != p.CurrentValue?.ToString())
                             .ToList();
 
-                        if (!changedProperties.Any()) continue; // Bỏ qua nếu không có thay đổi thực sự
+                        if (entry.Entity is HealthArticle)
+                        {
+                            var nonTrackingProperties = new HashSet<string> { "ViewCount", "UpdatedAt", "UpdatedBy" };
+                            var significantChanges = changedProperties.Where(p => !nonTrackingProperties.Contains(p.Metadata.Name)).ToList();
+                            if (!significantChanges.Any())
+                            {
+                                continue;
+                            }
+                        }
+
+                        if (!changedProperties.Any()) continue; 
 
                         var oldProps = new Dictionary<string, object?>();
                         var newProps = new Dictionary<string, object?>();
@@ -1352,7 +1416,6 @@ public partial class MedixContext : DbContext
             }
             catch (Exception ex)
             {
-                // Nếu serialize bị lỗi, ghi tên entity để debug
                 Console.WriteLine($"[AuditLog Error] Cannot serialize {entityName}: {ex.Message}");
                 continue;
             }
@@ -1366,7 +1429,6 @@ public partial class MedixContext : DbContext
         }
     }
 
-    // Chỉ lấy các field an toàn: primitive / string / Guid / enum / decimal
     private Dictionary<string, object?> GetSafeProperties(object entity)
     {
         var dict = new Dictionary<string, object?>();
@@ -1379,7 +1441,6 @@ public partial class MedixContext : DbContext
 
             var type = value.GetType();
 
-            // Skip collection hoặc navigation property
             if (!(type.IsPrimitive || type == typeof(string) || type == typeof(Guid) || type.IsEnum || type == typeof(decimal)))
                 continue;
 
@@ -1389,7 +1450,6 @@ public partial class MedixContext : DbContext
         return dict;
     }
 
-    // Mask field nhạy cảm
     private object MaskIfSensitive(string propertyName, object value)
     {
         if (value == null) return null;

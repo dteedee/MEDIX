@@ -37,51 +37,42 @@ namespace Medix.API.Business.Services.NewFolder
             var order = Orders.FirstOrDefault(o => o.Id == id);
             if (order == null) return false;
 
-            // Basic order information
             order.OrderCode = updatedOrder.OrderCode;
             order.TotalAmount = updatedOrder.TotalAmount;
             order.OrderDate = updatedOrder.OrderDate;
             order.Description = updatedOrder.Description;
             order.Items = updatedOrder.Items;
 
-            // Payment link related properties
             order.PaymentLinkId = updatedOrder.PaymentLinkId;
             order.QrCode = updatedOrder.QrCode;
             order.CheckoutUrl = updatedOrder.CheckoutUrl;
             order.Status = updatedOrder.Status;
 
-            // Amount tracking
             order.Amount = updatedOrder.Amount;
             order.AmountPaid = updatedOrder.AmountPaid;
             order.AmountRemaining = updatedOrder.AmountRemaining;
 
-            // Buyer information
             order.BuyerName = updatedOrder.BuyerName;
             order.BuyerCompanyName = updatedOrder.BuyerCompanyName;
             order.BuyerEmail = updatedOrder.BuyerEmail;
             order.BuyerPhone = updatedOrder.BuyerPhone;
             order.BuyerAddress = updatedOrder.BuyerAddress;
 
-            // Payment link details
             order.Bin = updatedOrder.Bin;
             order.AccountNumber = updatedOrder.AccountNumber;
             order.AccountName = updatedOrder.AccountName;
             order.Currency = updatedOrder.Currency;
 
-            // URLs
             order.ReturnUrl = updatedOrder.ReturnUrl;
             order.CancelUrl = updatedOrder.CancelUrl;
 
-            // Timestamps
             order.CreatedAt = updatedOrder.CreatedAt;
             order.CanceledAt = updatedOrder.CanceledAt;
             order.ExpiredAt = updatedOrder.ExpiredAt;
             order.LastTransactionUpdate = updatedOrder.LastTransactionUpdate;
 
-            // Cancellation
             order.CancellationReason = updatedOrder.CancellationReason;
 
-            // Invoice settings
             order.BuyerNotGetInvoice = updatedOrder.BuyerNotGetInvoice;
             order.TaxPercentage = updatedOrder.TaxPercentage;
 

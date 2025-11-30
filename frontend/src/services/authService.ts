@@ -1,4 +1,3 @@
-// src/services/authService.ts
 import { apiClient } from '../lib/apiClient';
 import {
   LoginRequest,
@@ -23,10 +22,8 @@ declare global {
 }
 
 export class AuthService {
-  // ===================== LOGIN =====================
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
-      // Map email field to identifier for backend compatibility
       const loginData = {
         identifier: credentials.email,
         password: credentials.password
@@ -38,13 +35,11 @@ export class AuthService {
     }
   }
 
-  // ===================== LOGIN WITH GOOGLE =====================
   async loginWithGoogle(idToken: string): Promise<AuthResponse> {
     try {
       const response = await apiClient.post<AuthResponse>('/auth/login-google', { idToken });
       return response.data;
     } catch (error: any) {
-      console.error('❌ Lỗi khi gọi /auth/login-google:', error?.response?.data || error);
       if (error?.response?.data?.message?.includes('JWT must consist')) {
         throw new Error('ID Token từ Google không hợp lệ. Kiểm tra Client ID hoặc cấu hình Google Console.');
       }
@@ -52,7 +47,6 @@ export class AuthService {
     }
   }
 
-  // ===================== REGISTER (GENERAL) =====================
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     try {
       const response = await apiClient.post<AuthResponse>('/auth/register', userData);
@@ -89,7 +83,6 @@ export class AuthService {
         },
       };
 
-      console.log('📤 Payload gửi lên backend:', JSON.stringify(payload, null, 2));
       const response = await apiClient.post<AuthResponse>('/register/registerPatient', payload);
       return response.data;
     } catch (error: any) {
@@ -97,7 +90,6 @@ export class AuthService {
     }
   }
 
-  // ===================== FORGOT PASSWORD =====================
   async sendForgotPasswordCode(email: string): Promise<string> {
     try {
       const response = await apiClient.post('/auth/sendForgotPasswordCode', email);
@@ -168,30 +160,25 @@ export class AuthService {
     }
   }
 
-  // ===================== LOGOUT =====================
   async logout(): Promise<void> {
     try {
       await apiClient.post('/auth/logout');
     } catch (error: any) {
-      console.error('Logout API error:', error);
     } finally {
       apiClient.clearTokens();
     }
   }
 
 
-  // ===================== GET BLOOD TYPES =====================
   async getBloodTypes(): Promise<BloodType[]> {
     try {
       const response = await apiClient.get<BloodType[]>('/register/getBloodTypes');
       return response.data;
     } catch (error: any) {
-      console.error('Get blood types error:', error);
       throw this.handleApiError(error);
     }
   }
 
-  // ===================== SEND EMAIL VERIFICATION =====================
   async sendEmailVerification(email: string): Promise<void> {
     try {
       await apiClient.post('/register/sendEmailVerified', JSON.stringify(email), {

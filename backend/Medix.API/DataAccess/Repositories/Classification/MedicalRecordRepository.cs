@@ -22,7 +22,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
         public async Task<MedicalRecord?> GetByPatientIdAsync(Guid patientId)
         {
-            // Truy vấn an toàn không cần lazy loading
             return await _context.MedicalRecords
                 .Include(r => r.Prescriptions)
                 .Include(r => r.Appointment)
@@ -64,10 +63,8 @@ namespace Medix.API.DataAccess.Repositories.Classification
             if (existing == null)
                 throw new InvalidOperationException("Medical record not found.");
 
-            // Cập nhật thông tin chính
             _context.Entry(existing).CurrentValues.SetValues(record);
 
-            // Cập nhật danh sách Prescriptions
             _context.Prescriptions.RemoveRange(existing.Prescriptions);
             await _context.Prescriptions.AddRangeAsync(record.Prescriptions);
 

@@ -4,6 +4,7 @@ using Humanizer;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess.Interfaces.Classification;
+using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.ApointmentDTO;
 using Medix.API.Models.DTOs.MedicalRecordDTO;
@@ -24,13 +25,15 @@ namespace Medix.API.Business.Services.Classification
         private readonly IWalletService walletService;
         private readonly IWalletTransactionService walletTransactionService;
         private readonly IDoctorRepository doctorRepository;
+        private readonly IPatientRepository patientRepository;
 
         private readonly IUserPromotionService userPromotionService;
         private readonly IReviewRepository reviewRepository;
 
         private readonly IPromotionService promotionService;
+        
 
-        public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService, IWalletTransactionService walletTransactionService, IWalletService walletService, IDoctorRepository doctorRepository, IUserPromotionService userPromotionService, IPromotionService promotionService, IReviewRepository reviewRepository)
+        public AppointmentService(IAppointmentRepository repository, IMapper mapper, IMedicalRecordService medicalRecordService, IWalletTransactionService walletTransactionService, IWalletService walletService, IDoctorRepository doctorRepository, IPatientRepository patientRepository, IUserPromotionService userPromotionService, IPromotionService promotionService, IReviewRepository reviewRepository)
         {
             _repository = repository;
             _mapper = mapper;
@@ -39,6 +42,7 @@ namespace Medix.API.Business.Services.Classification
             this.walletTransactionService = walletTransactionService;
             this.walletService = walletService;
             this.doctorRepository = doctorRepository;
+            this.patientRepository = patientRepository;
             this.userPromotionService = userPromotionService;
             this.promotionService = promotionService;
             this.reviewRepository = reviewRepository;
@@ -76,7 +80,27 @@ namespace Medix.API.Business.Services.Classification
         public async Task<AppointmentDto?> GetByIdAsync(Guid id)
         {
             var entity = await _repository.GetByIdAsync(id);
-            return entity == null ? null : _mapper.Map<AppointmentDto>(entity);
+            var result = new AppointmentDto
+            {AppointmentEndTime = entity.AppointmentEndTime,
+                AppointmentStartTime = entity.AppointmentStartTime,
+                CreatedAt = entity.CreatedAt,
+                UpdatedAt = entity.UpdatedAt,
+                DiscountAmount = entity.DiscountAmount,
+                DurationMinutes = entity.DurationMinutes,
+                Id = entity.Id,
+                ConsultationFee = entity.ConsultationFee,
+                DoctorID = entity.DoctorId,
+                MedicalInfo = entity.MedicalInfo,
+                PatientID = entity.PatientId,
+                PaymentMethodCode = entity.PaymentMethodCode,
+                PaymentStatusCode = entity.PaymentStatusCode,
+                PlatformFee = entity.PlatformFee,
+                RefundAmount = entity.RefundAmount,
+                StatusCode = entity.StatusCode,
+                TotalAmount = entity.TotalAmount
+
+            };
+            return result;
         }
 
         public async Task<AppointmentDto> CreateAsync(CreateAppointmentDto dto)
@@ -119,9 +143,22 @@ namespace Medix.API.Business.Services.Classification
             var existing = await _repository.GetByIdAsync(dto.Id);
             if (existing == null) return null;
 
-            _mapper.Map(dto, existing);
-            existing.UpdatedAt = DateTime.UtcNow;
-        
+            if (!string.IsNullOrWhiteSpace(dto.StatusCode)) existing.StatusCode = dto.StatusCode;
+            if (!string.IsNullOrWhiteSpace(dto.PaymentStatusCode)) existing.PaymentStatusCode = dto.PaymentStatusCode;
+            if (!string.IsNullOrWhiteSpace(dto.PaymentMethodCode)) existing.PaymentMethodCode = dto.PaymentMethodCode;
+            if (!string.IsNullOrWhiteSpace(dto.MedicalInfo)) existing.MedicalInfo = dto.MedicalInfo;
+
+            if (dto.AppointmentStartTime != default) existing.AppointmentStartTime = (DateTime)dto.AppointmentStartTime;
+            if (dto.AppointmentEndTime != default) existing.AppointmentEndTime = (DateTime)dto.AppointmentEndTime;
+            existing.UpdatedAt = (DateTime)((dto.UpdatedAt != default) ? dto.UpdatedAt : DateTime.UtcNow);
+
+            if (dto.ConsultationFee != default) existing.ConsultationFee = (decimal)dto.ConsultationFee;
+            if (dto.TotalAmount != default) existing.TotalAmount = (decimal)dto.TotalAmount;
+            if (dto.PlatformFee != default) existing.PlatformFee = (decimal)dto.PlatformFee;
+            if (dto.RefundAmount != default) existing.RefundAmount = dto.RefundAmount;
+            if (dto.DiscountAmount != default) existing.DiscountAmount = (decimal)dto.DiscountAmount;
+            if (dto.DurationMinutes != default) existing.DurationMinutes = (int)dto.DurationMinutes;
+
             await _repository.UpdateAsync(existing);
             return _mapper.Map<AppointmentDto>(existing);
         }
@@ -146,7 +183,6 @@ namespace Medix.API.Business.Services.Classification
             var list = await _repository.GetByPatientAsync(patientId);
             var dtos = _mapper.Map<List<AppointmentDto>>(list);
 
-            // Collect appointment IDs for completed appointments
             var completedAppointmentIds = list
                 .Where(a => string.Equals(a.StatusCode, "Completed", StringComparison.OrdinalIgnoreCase))
                 .Select(a => a.Id)
@@ -154,12 +190,10 @@ namespace Medix.API.Business.Services.Classification
 
             if (completedAppointmentIds.Any())
             {
-                // Single DB call to fetch all reviews for those appointments (avoids concurrent DbContext usage)
                 var reviews = await reviewRepository.GetByAppointmentIdsAsync(completedAppointmentIds);
 
                 var reviewByAppointment = reviews.ToDictionary(r => r.AppointmentId, r => r);
 
-                // Populate DTOs
                 foreach (var dto in dtos.Where(d => string.Equals(d.StatusCode, "Completed", StringComparison.OrdinalIgnoreCase)))
                 {
                     if (reviewByAppointment.TryGetValue(dto.Id, out var review))
@@ -180,59 +214,84 @@ namespace Medix.API.Business.Services.Classification
         }
         public async Task<IEnumerable<AppointmentDto>> GetByDoctorUserAndDateAsync(Guid userId, DateTime date)
         {
-            // 1️⃣ Lấy Doctor tương ứng với UserId
             var doctor = await _repository.GetDoctorByUserIdAsync(userId);
             if (doctor == null)
                 throw new InvalidOperationException("Doctor not found for this user.");
 
-            // 2️⃣ Tính khoảng thời gian trong ngày
             var startDate = date.Date;
             var endDate = startDate.AddDays(1);
 
-            // 3️⃣ Lấy các lịch hẹn của bác sĩ trong ngày
             var list = await _repository.GetByDoctorAndDateAsync(doctor.Id, startDate, endDate);
 
-            // 4️⃣ Map sang DTO
             return _mapper.Map<IEnumerable<AppointmentDto>>(list);
         }
 
         public async Task<IEnumerable<AppointmentDto>> GetByDoctorUserAndDateRangeAsync(Guid userId, DateTime startDate, DateTime endDate)
         {
-            // 1. Lấy Doctor tương ứng với UserId
             var doctor = await _repository.GetDoctorByUserIdAsync(userId);
             if (doctor == null)
-                throw new InvalidOperationException("Doctor not found for this user.");
-
-            // 2. Lấy các lịch hẹn của bác sĩ trong khoảng thời gian đã cho
-            //    Thêm 1 ngày vào endDate để bao gồm tất cả các cuộc hẹn trong ngày cuối cùng.
+                throw new InvalidOperationException("Doctor not found for this user."); 
             var list = await _repository.GetByDoctorAndDateAsync(doctor.Id, startDate, endDate.AddDays(1));
+            
+            var dtos = _mapper.Map<List<AppointmentDto>>(list);
+            var listList = list.ToList();
+            for (int i = 0; i < listList.Count && i < dtos.Count; i++)
+            {
+                var appointment = listList[i];
+                var dto = dtos[i];
+                
+                if (appointment.Patient != null && appointment.Patient.User != null)
+                {
+                    if (string.IsNullOrEmpty(dto.PatientName))
+                        dto.PatientName = appointment.Patient.User.FullName ?? string.Empty;
+                    if (string.IsNullOrEmpty(dto.PatientEmail))
+                        dto.PatientEmail = appointment.Patient.User.Email ?? string.Empty;
+                }
+                
+                if (appointment.Doctor != null && appointment.Doctor.User != null)
+                {
+                    if (string.IsNullOrEmpty(dto.DoctorName))
+                        dto.DoctorName = appointment.Doctor.User.FullName ?? string.Empty;
+                }
 
-            // 3. Map sang DTO
-            return _mapper.Map<IEnumerable<AppointmentDto>>(list);
+                if (appointment.StatusCodeNavigation != null && string.IsNullOrEmpty(dto.StatusDisplayName))
+                {
+                    dto.StatusDisplayName = appointment.StatusCodeNavigation.DisplayName ?? string.Empty;
+                }
+                
+                if (appointment.PaymentStatusCodeNavigation != null && string.IsNullOrEmpty(dto.PaymentStatusName))
+                {
+                    dto.PaymentStatusName = appointment.PaymentStatusCodeNavigation.DisplayName ?? string.Empty;
+                }
+                
+                if (appointment.PaymentMethodCodeNavigation != null && string.IsNullOrEmpty(dto.PaymentMethodName))
+                {
+                    dto.PaymentMethodName = appointment.PaymentMethodCodeNavigation.DisplayName ?? string.Empty;
+                }
+            }
+            
+            return dtos;
         }
 
         public async Task<bool> IsDoctorBusyAsync(Guid doctorId, DateTime appointmentStartTime, DateTime appointmentEndTime)
         {
-            // Lấy tất cả lịch hẹn của bác sĩ trong khoảng thời gian này
             var conflictingAppointments = await GetConflictingAppointmentsAsync(doctorId, appointmentStartTime, appointmentEndTime);
 
-            // Nếu có bất kỳ lịch hẹn nào trùng thì bác sĩ đang bận
             return conflictingAppointments.Any();
         }
 
 
         public async Task<List<AppointmentDto>> GetConflictingAppointmentsAsync(
-            Guid doctorId,
-            DateTime appointmentStartTime,
-            DateTime appointmentEndTime)
+    Guid doctorId,
+    DateTime appointmentStartTime,
+    DateTime appointmentEndTime)
         {
-            // Lấy tất cả lịch hẹn của bác sĩ
             var allAppointments = await _repository.GetByDoctorAsync(doctorId);
 
-       var conflictingAppointments = allAppointments.Where(a =>
-    // ✅ Chỉ kiểm tra các lịch hẹn CHƯA bị hủy hoặc hoàn thành
-             a.StatusCode == "OnProgressing" &&
-  // ✅ Kiểm tra trùng thời gian (overlap)
+            var conflictingAppointments = allAppointments.Where(a =>
+   
+             a.StatusCode == "BeforeAppoiment" &&
+  
   appointmentStartTime < a.AppointmentEndTime &&
         appointmentEndTime > a.AppointmentStartTime
 ).ToList();
@@ -284,7 +343,7 @@ namespace Medix.API.Business.Services.Classification
             }
 
 
-            if (!hasEnoughMedicalRecord && appointment.StatusCode != "Completed")
+            if (!hasEnoughMedicalRecord && (appointment.StatusCode == "BeforeAppoiment"||appointment.StatusCode== "OnProgressing"))
             {
                 var updateDto = new UpdateAppointmentDto
                 {
@@ -325,11 +384,9 @@ namespace Medix.API.Business.Services.Classification
                 await walletTransactionService.createWalletTransactionAsync(walletTransaction);
                 await walletService.IncreaseWalletBalanceAsync(appointment.Patient.User.Id, appointment.TotalAmount);
 
-                // Increase doctor missed case
                 doctor.TotalCaseMissPerWeek += 1;
                 await doctorRepository.UpdateDoctorAsync(doctor);
 
-                // Assign promotion to patient
                 var promotionForPatient = await promotionService.GetPromotionByCodeAsync("WELCOME50K");
                 if (promotionForPatient != null)
                 {

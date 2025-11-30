@@ -20,11 +20,9 @@ export interface CreateReviewResponse {
 
 const getReviewsForCurrentDoctor = async (): Promise<DoctorReview[]> => {
   try {
-    // API sẽ tự xác định bác sĩ dựa trên token xác thực
     const response = await apiClient.get<DoctorReview[]>('/Review/me');
     return response.data;
   } catch (error) {
-    console.error('Error fetching reviews for doctor:', error);
     throw error;
   }
 };
@@ -34,12 +32,21 @@ const createReview = async (dto: CreateReviewDto): Promise<CreateReviewResponse>
     const response = await apiClient.post<CreateReviewResponse>('/Review', dto);
     return response.data;
   } catch (error) {
-    console.error('Error creating review:', error);
+    throw error;
+  }
+};
+
+const getAllReviews = async (): Promise<DoctorReview[]> => {
+  try {
+    const response = await apiClient.get<DoctorReview[]>('/Review');
+    return response.data;
+  } catch (error) {
     throw error;
   }
 };
 
 export const reviewService = {
   getReviewsForCurrentDoctor,
+  getAllReviews,
   createReview,
 };

@@ -8,6 +8,8 @@ import type { ArticleDTO } from '../../types/article.types';
 import type { CategoryDTO } from '../../types/category.types';
 import Pagination from '../../components/layout/Pagination';
 import { useLanguage } from '../../contexts/LanguageContext';
+import ChatbotBubble from '../../components/ChatbotBubble';
+import BackToTopButton from '../../components/BackToTopButton';
 
 function scrollToTop() {
   window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
@@ -49,36 +51,48 @@ export default function ArticleReaderPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Load categories
   useEffect(() => {
     (async () => {
       try {
         const { items } = await categoryService.list(1, 9999);
-        setCategories(items);
+        setCategories(items.filter(cat => cat.isActive === true));
       } catch (err) {
-        console.error('Failed to load categories', err);
       }
     })();
   }, []);
 
-  // Fetch, filter bài hợp lệ và đếm badge sidebar + dữ liệu phân trang (client-side)
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const { items } = await articleService.list(1, 9999);
-        // Lọc đúng bài hợp lệ
-        const valid = items.filter(
-          a => String(a.statusCode).toLowerCase() === 'published' && Array.isArray(a.categoryIds) && a.categoryIds.length > 0
-        );
+        const [{ items: allCategories }, { items: allArticles }] = await Promise.all([
+          categoryService.list(1, 9999),
+          articleService.list(1, 9999)
+        ]);
+        
+        const activeCategories = allCategories.filter(cat => cat.isActive === true);
+        const activeCategoryIds = new Set(activeCategories.map(cat => cat.id));
+        
+        const valid = allArticles.filter(a => {
+          const isPublished = String(a.statusCode).toLowerCase() === 'published';
+          const hasActiveCategory = Array.isArray(a.categoryIds) && 
+            a.categoryIds.length > 0 && 
+            a.categoryIds.some(cid => activeCategoryIds.has(cid));
+          return isPublished && hasActiveCategory;
+        });
+        
         setValidArticles(valid);
         setTotalValid(valid.length);
-        // Đếm cho từng cat
+        
+        // Đếm cho từng category active (chỉ đếm articles có category đó)
         const catCounts: { [catId: string]: number } = {};
         for(const a of valid) {
           (a.categoryIds || []).forEach(cid => {
-            catCounts[cid] = (catCounts[cid] || 0) + 1;
-          })
+            // Chỉ đếm nếu category đó đang active
+            if (activeCategoryIds.has(cid)) {
+              catCounts[cid] = (catCounts[cid] || 0) + 1;
+            }
+          });
         }
         setCategoryCounts(catCounts);
       } catch {
@@ -433,6 +447,8 @@ export default function ArticleReaderPage() {
           )}
         </main>
       </div>
+      <BackToTopButton />
+      <ChatbotBubble />
     </div>
   );
 }

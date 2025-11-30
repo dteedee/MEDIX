@@ -1,6 +1,8 @@
+using Medix.API.Business.Helper;
+using Medix.API.Models.Enums;
 using System;
 using System.Collections.Generic;
-using Medix.API.Models.Enums;
+using System.Text.Json.Serialization;
 
 namespace Medix.API.Models.Entities;
 
@@ -13,9 +15,9 @@ public partial class Appointment
     public Guid DoctorId { get; set; }
 
     public Guid? AISymptomAnalysisId { get; set; }
-
+    [JsonConverter(typeof(CustomDateTimeConverter))]
     public DateTime AppointmentStartTime { get; set; }
-
+    [JsonConverter(typeof(CustomDateTimeConverter))]
     public DateTime AppointmentEndTime { get; set; }
 
     public int DurationMinutes { get; set; }

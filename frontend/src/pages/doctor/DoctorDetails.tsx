@@ -16,13 +16,20 @@ import DoctorRegistrationFormService from "../../services/doctorRegistrationForm
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useToast } from "../../contexts/ToastContext";
 
+const normalizeAdminResponse = (response?: string | null) => {
+    if (!response) return null;
+    const trimmed = response.trim();
+    if (/^thanks for your feedback!?$/i.test(trimmed)) {
+        return 'Cảm ơn bạn đã chia sẻ phản hồi với MEDIX!';
+    }
+    return response;
+};
+
 function DoctorDetails() {
     const { showToast } = useToast();
     const [profileData, setProfileData] = useState<DoctorProfileDto>();
     const [activeTabIndex, setActiveTabIndex] = useState(0);
     const [loading, setLoading] = useState(true);
-    
-    // Booking states
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);    
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<{
         display: string;
@@ -42,87 +49,60 @@ function DoctorDetails() {
     }>>([]);
     const [chiefComplaint, setChiefComplaint] = useState<string>('');
     const [historyOfPresentIllness, setHistoryOfPresentIllness] = useState<string>('');
-    
-    // Refs for scrolling
     const calendarSectionRef = useRef<HTMLDivElement>(null);
     const timeslotsSectionRef = useRef<HTMLDivElement>(null);
     const bookingConfirmationRef = useRef<HTMLDivElement>(null);
-    // Helper function to get available dates (only today and future dates)
-    // In Vietnam, week starts on Monday (1) and ends on Sunday (7)
-    // Rules:
-    // - If today is Sunday: show today + next week (Monday to Sunday) = 8 days
-    // - If today is Friday: show today + Saturday + Sunday + next week (Monday to Sunday) = 9 days
-    // - If today is Saturday: show today + Sunday + next week (Monday to Sunday) = 8 days
-    // - Other days: show from today to Sunday of this week
     const getAvailableDates = (): Date[] => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
-        // Convert to Monday-based week (Monday = 1, Sunday = 7)
         const dayOfWeek = convertDayOfWeek(today.getDay());
         const isSunday = dayOfWeek === 7;
         const isFriday = dayOfWeek === 5;
         const isSaturday = dayOfWeek === 6;
-        
         const dates: Date[] = [];
-        
         if (isSunday) {
-            // If today is Sunday: show today + next week (Monday to Sunday) = 8 days
-            // Add today (Sunday)
             dates.push(new Date(today));
-            
-            // Add next week (Monday to Sunday)
             const nextMonday = new Date(today);
-            nextMonday.setDate(today.getDate() + 1); // Next Monday
+            nextMonday.setDate(today.getDate() + 1); 
             for (let i = 0; i < 7; i++) {
                 const date = new Date(nextMonday);
                 date.setDate(nextMonday.getDate() + i);
                 dates.push(date);
             }
         } else if (isFriday) {
-            // If today is Friday: today + Saturday + Sunday + next week (Monday to Sunday) = 9 days
-            // Add today (Friday) and remaining days of this week (Saturday, Sunday)
-            for (let i = 0; i < 3; i++) { // Friday, Saturday, Sunday
+            for (let i = 0; i < 3; i++) { 
                 const date = new Date(today);
                 date.setDate(today.getDate() + i);
                 dates.push(date);
             }
-            
-            // Add next week (Monday to Sunday)
             const nextMonday = new Date(today);
-            nextMonday.setDate(today.getDate() + 3); // Skip to next Monday
+            nextMonday.setDate(today.getDate() + 3); 
             for (let i = 0; i < 7; i++) {
                 const date = new Date(nextMonday);
                 date.setDate(nextMonday.getDate() + i);
                 dates.push(date);
             }
         } else if (isSaturday) {
-            // If today is Saturday: show today + Sunday + next week (Monday to Sunday) = 8 days
-            // Add today (Saturday) and Sunday
             for (let i = 0; i < 2; i++) {
                 const date = new Date(today);
                 date.setDate(today.getDate() + i);
                 dates.push(date);
             }
-            
-            // Add next week (Monday to Sunday)
             const nextMonday = new Date(today);
-            nextMonday.setDate(today.getDate() + 2); // Skip to next Monday
+            nextMonday.setDate(today.getDate() + 2); 
             for (let i = 0; i < 7; i++) {
                 const date = new Date(nextMonday);
                 date.setDate(nextMonday.getDate() + i);
                 dates.push(date);
             }
         } else {
-            // Other days (Monday to Thursday): show from today to Sunday of this week
-            const daysUntilSunday = 8 - dayOfWeek; // Days until Sunday (inclusive)
+            const daysUntilSunday = 8 - dayOfWeek; 
             for (let i = 0; i < daysUntilSunday; i++) {
                 const date = new Date(today);
                 date.setDate(today.getDate() + i);
                 dates.push(date);
             }
         }
-        
         return dates;
     };
     const [showPaymentButton, setShowPaymentButton] = useState(false);
@@ -144,8 +124,6 @@ function DoctorDetails() {
     const location = useLocation();
     const { t } = useLanguage();
     const routeState = (location && (location as any).state) as { doctorId?: string; fullName?: string; userName?: string } | null;
-
-    // Sidebar filter states (reuse logic from DoctorBookingList)
     const [tiersData, setTiersData] = useState<ServiceTierWithPaginatedDoctorsDto[]>([]);
     const [specializations, setSpecializations] = useState<{ id: string; name: string }[]>([]);
     const [educationTypes, setEducationTypes] = useState<DoctorTypeDegreeDto[]>([]);
@@ -156,12 +134,9 @@ function DoctorDetails() {
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 3000000]);
     const [tempPriceRange, setTempPriceRange] = useState<[number, number]>([0, 3000000]);
     const [sidebarLoading, setSidebarLoading] = useState<boolean>(false);
-
     const initialSidebarLoadDoneRef = useRef(false);
     const isSidebarLoadingRef = useRef(false);
     const sidebarRequestIdRef = useRef<string | null>(null);
-
-    // Function to check if user is logged in
     const checkUserLogin = () => {
         const accessToken = localStorage.getItem('accessToken');
         const tokenExpiration = localStorage.getItem('tokenExpiration');
@@ -182,10 +157,14 @@ function DoctorDetails() {
         }
         return false;
     };
-
-    // Function to handle booking confirmation with login check
     const handleBookingConfirm = async () => {
         if (!profileData || !selectedDate || !selectedTimeSlot) return;
+        
+        // Validate "Lý do khám" field
+        if (!chiefComplaint || !chiefComplaint.trim()) {
+            showToast("Vui lòng nhập lý do khám trước khi đặt lịch hẹn.", 'warning');
+            return;
+        }
         
         if (!checkUserLogin()) {
             showToast("Bạn cần đăng nhập để đặt lịch hẹn với bác sĩ. Vui lòng đăng nhập để tiếp tục.", 'warning');
@@ -206,73 +185,64 @@ function DoctorDetails() {
                 return;
             }
         }
-        
-        // Show confirmation modal instead of creating appointment directly
         setShowConfirmModal(true);
     };
-
-    // Function to actually create the appointment after user confirms
     const handleConfirmedBooking = async () => {
         if (!profileData || !selectedDate || !selectedTimeSlot) return;
         
+        // Validate "Lý do khám" field again (double check)
+        if (!chiefComplaint || !chiefComplaint.trim()) {
+            showToast("Vui lòng nhập lý do khám trước khi đặt lịch hẹn.", 'warning');
+            setShowConfirmModal(false);
+            return;
+        }
+        
         // Close confirmation modal
         setShowConfirmModal(false);
-        
-        // Proceed to create appointment
         setIsCreatingPayment(true);
-        
         try {
-            // LẤY GIỜ TỪ DISPLAY STRING thay vì từ doctor schedule
             const displayTime = selectedTimeSlot.display;
             const timeParts = displayTime.split(' - ');
-            
             if (timeParts.length !== 2) {
                 showToast('Định dạng giờ không hợp lệ', 'error');
                 setIsCreatingPayment(false);
                 return;
             }
-            
             const [startTime, endTime] = timeParts;
-            
-            // Create DateTime from selected date and time
             const appointmentStart = new Date(selectedDate);
             const startTimeParts = startTime.trim().split(':');
             const startHour = parseInt(startTimeParts[0], 10);
             const startMinute = parseInt(startTimeParts[1], 10);
             appointmentStart.setHours(startHour, startMinute, 0, 0);
-            
             const appointmentEnd = new Date(selectedDate);
             const endTimeParts = endTime.trim().split(':');
             const endHour = parseInt(endTimeParts[0], 10);
             const endMinute = parseInt(endTimeParts[1], 10);
             appointmentEnd.setHours(endHour, endMinute, 0, 0);
-            
-            // Calculate duration in minutes
             const durationMinutes = Math.round((appointmentEnd.getTime() - appointmentStart.getTime()) / (1000 * 60));
-            
-            // Format datetime theo local timezone
-            const formatLocalDateTime = (date: Date): string => {
+            const formatToISOStringWithTimezone = (date: Date): string => {
+                const pad = (num: number) => num.toString().padStart(2, '0');
                 const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                const hours = String(date.getHours()).padStart(2, '0');
-                const minutes = String(date.getMinutes()).padStart(2, '0');
-                const seconds = String(date.getSeconds()).padStart(2, '0');
-                return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+                const month = pad(date.getMonth() + 1);
+                const day = pad(date.getDate());
+                const hours = pad(date.getHours());
+                const minutes = pad(date.getMinutes());
+                const seconds = pad(date.getSeconds());
+                const timezoneOffset = -date.getTimezoneOffset();
+                const offsetSign = timezoneOffset >= 0 ? '+' : '-';
+                const offsetHours = pad(Math.floor(Math.abs(timezoneOffset) / 60));
+                const offsetMinutes = pad(Math.abs(timezoneOffset) % 60);
+                return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${offsetHours}:${offsetMinutes}`;
             };
-            
-            // Calculate fees
             const consultationFee = profileData.consulationFee || 0;
             const finalPrice = calculateFinalPrice();
             const discountAmount = appliedPromotion ? (consultationFee - finalPrice) : 0;
-            const platformFee = 0; // Có thể tính theo % nếu cần
+            const platformFee = 0; 
             const totalAmount = finalPrice + platformFee;
-                
-            // Create appointment DTO
             const appointmentDto: CreateAppointmentDto = {
                 doctorId: profileData.doctorID,
-                appointmentStartTime: formatLocalDateTime(appointmentStart),
-                appointmentEndTime: formatLocalDateTime(appointmentEnd),
+                appointmentStartTime: formatToISOStringWithTimezone(appointmentStart),
+                appointmentEndTime: formatToISOStringWithTimezone(appointmentEnd),
                 durationMinutes: durationMinutes,
                 consultationFee: consultationFee,
                 platformFee: platformFee,
@@ -280,23 +250,13 @@ function DoctorDetails() {
                 totalAmount: totalAmount,
                 chiefComplaint: chiefComplaint.trim(),
                 historyOfPresentIllness: historyOfPresentIllness.trim() ? historyOfPresentIllness.trim() : undefined,
-                // If user selected from UserPromotion list, send UserPromotionID
-                // Otherwise, if they manually entered a code, send PromotionCode
                 userPromotionID: appliedUserPromotion?.id,
                 promotionCode: appliedUserPromotion ? undefined : (appliedPromotion ? promotionCode : undefined),
-                // Các field khác sẽ được set ở backend
             };
-            
-            // Call API
             const createdAppointment = await appointmentService.createAppointment(appointmentDto);
-            
-            // Success - show success modal instead of alert
             setShowSuccessModal(true);
-            
         } catch (error: any) {
-            
             let errorMessage = 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
-            
             if (error.response?.data?.message) {
                 errorMessage = error.response.data.message;
             } else if (error.response?.status === 400) {
@@ -305,14 +265,11 @@ function DoctorDetails() {
                 errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
                 navigate('/login');
             }
-            
             showToast(errorMessage, 'error');
         } finally {
             setIsCreatingPayment(false);
         }
     };
-
-    // Function to apply promotion code
     const handleApplyPromotion = async () => {
         if (!promotionCode.trim()) {
             setPromotionError('Vui lòng nhập mã khuyến mãi');
@@ -321,10 +278,8 @@ function DoctorDetails() {
 
         setIsCheckingPromotion(true);
         setPromotionError('');
-
         try {
             const promotion = await promotionService.getPromotionByCode(promotionCode.trim());
-            
             if (!promotion) {
                 const errorMessage = 'Mã khuyến mãi không tồn tại';
                 setPromotionError(errorMessage);
@@ -332,8 +287,6 @@ function DoctorDetails() {
                 setAppliedPromotion(null);
                 return;
             }
-
-            // Check if promotion is active
             if (!promotion.isActive) {
                 const errorMessage = 'Mã khuyến mãi đã hết hạn hoặc không còn hiệu lực';
                 setPromotionError(errorMessage);
@@ -341,12 +294,9 @@ function DoctorDetails() {
                 setAppliedPromotion(null);
                 return;
             }
-
-            // Check if promotion is within valid date range
             const now = new Date();
             const startDate = new Date(promotion.startDate);
             const endDate = new Date(promotion.endDate);
-
             if (now < startDate || now > endDate) {
                 const errorMessage = 'Mã khuyến mãi không trong thời gian sử dụng';
                 setPromotionError(errorMessage);
@@ -354,8 +304,6 @@ function DoctorDetails() {
                 setAppliedPromotion(null);
                 return;
             }
-
-            // Check if promotion has reached max usage
             if (promotion.maxUsage && promotion.usedCount >= promotion.maxUsage) {
                 const errorMessage = 'Mã khuyến mãi đã hết lượt sử dụng';
                 setPromotionError(errorMessage);
@@ -363,21 +311,16 @@ function DoctorDetails() {
                 setAppliedPromotion(null);
                 return;
             }
-
-            // Success - apply promotion
             setAppliedPromotion(promotion);
             setPromotionError('');
             showToast('Áp dụng mã khuyến mãi thành công!', 'success');
         } catch (error: any) {
             let errorMessage = 'Có lỗi xảy ra khi kiểm tra mã khuyến mãi';
-            
-            // Handle BadRequest (400) from backend
             if (error.response?.status === 400) {
                 errorMessage = error.response.data?.message || error.response.data || 'Mã khuyến mãi không hợp lệ';
             } else if (error.response?.status === 404) {
                 errorMessage = 'Mã khuyến mãi không tồn tại';
             }
-            
             setPromotionError(errorMessage);
             showToast(errorMessage, 'error');
             setAppliedPromotion(null);
@@ -385,8 +328,6 @@ function DoctorDetails() {
             setIsCheckingPromotion(false);
         }
     };
-
-    // Function to open promotion modal and fetch available promotions
     const handleOpenPromotionModal = async () => {
         setShowPromotionModal(true);
         setIsLoadingPromotions(true);
@@ -394,53 +335,33 @@ function DoctorDetails() {
 
         try {
             const userPromotions = await promotionService.getUserActivePromotions();
-            console.log('🎫 User promotions received:', userPromotions);
-            console.log('🎫 Promotions count:', userPromotions.length);
-            
-            if (userPromotions.length > 0) {
-                console.log('🎫 First promotion sample:', userPromotions[0]);
-            }
-            
-            // Backend already returns only active promotions (isValidNow = true)
-            // Just filter out any promotions without the promotion object
             const validPromotions = userPromotions.filter(up => {
                 if (!up.promotion) {
-                    console.warn('⚠️ UserPromotion without promotion object:', up);
                     return false;
                 }
-                console.log('✅ Valid promotion:', up.promotion.name, 'Code:', up.promotion.code);
                 return true;
             });
-            
-            console.log('✅ Valid promotions after filter:', validPromotions.length);
             setAvailablePromotions(validPromotions);
         } catch (error) {
-            console.error('❌ Error in handleOpenPromotionModal:', error);
             setAvailablePromotions([]);
         } finally {
             setIsLoadingPromotions(false);
         }
     };
-
-    // Function to select a promotion from the modal
     const handleSelectPromotion = (userPromotion: UserPromotionDto) => {
         if (!userPromotion.promotion) {
             setPromotionError('Mã khuyến mãi không hợp lệ');
             return;
         }
         setAppliedPromotion(userPromotion.promotion);
-        setAppliedUserPromotion(userPromotion); // Store the full UserPromotionDto
+        setAppliedUserPromotion(userPromotion); 
         setPromotionCode(userPromotion.promotion.code);
         setPromotionError('');
         setShowPromotionModal(false);
     };
-
-    // Function to calculate final price with promotion
     const calculateFinalPrice = (): number => {
         if (!profileData?.consulationFee) return 0;
-        
         const basePrice = Number(profileData.consulationFee);
-        
         if (!appliedPromotion) return basePrice;
 
         if (appliedPromotion.discountType === 'Percentage') {
@@ -452,63 +373,43 @@ function DoctorDetails() {
 
         return basePrice;
     };
-
-    // Function to create payment link using service
     const handleCreatePaymentLink = async () => {
         if (!profileData || !selectedDate || !selectedTimeSlot) return;
-        
         setIsCreatingPayment(true);
-        
         try {
             const finalPrice = calculateFinalPrice();
-            
-            // LẤY GIỜ TỪ DISPLAY STRING (hiển thị trên UI) thay vì từ doctor schedule
-            // Display format: "14:00 - 14:50"
             const displayTime = selectedTimeSlot.display;
-            
-            // Parse display string
             const timeParts = displayTime.split(' - ');
             if (timeParts.length !== 2) {
                 showToast('Định dạng giờ không hợp lệ', 'error');
                 setIsCreatingPayment(false);
                 return;
             }
-            
             const [startTime, endTime] = timeParts;
-            
-            // Create DateTime from selected date and time
             const year = selectedDate.getFullYear();
-            const month = selectedDate.getMonth(); // 0-indexed
+            const month = selectedDate.getMonth(); 
             const day = selectedDate.getDate();
             
             const appointmentStart = new Date(year, month, day);
             const startTimeParts = startTime.trim().split(':');
             const startHour = parseInt(startTimeParts[0], 10);
             const startMinute = parseInt(startTimeParts[1], 10);
-            
             if (isNaN(startHour) || isNaN(startMinute)) {
                 showToast(`Lỗi parse giờ bắt đầu: "${startTime}"`, 'error');
                 setIsCreatingPayment(false);
                 return;
             }
-            
             appointmentStart.setHours(startHour, startMinute, 0, 0);
-       
             const appointmentEnd = new Date(year, month, day);
             const endTimeParts = endTime.trim().split(':');
             const endHour = parseInt(endTimeParts[0], 10);
             const endMinute = parseInt(endTimeParts[1], 10);
-            
             if (isNaN(endHour) || isNaN(endMinute)) {
                 showToast(`Lỗi parse giờ kết thúc: "${endTime}"`, 'error');
                 setIsCreatingPayment(false);
                 return;
             }
-            
             appointmentEnd.setHours(endHour, endMinute, 0, 0);
-            
-            // Format datetime theo local timezone thay vì UTC
-            // Backend cần parse datetime này và hiểu đây là giờ địa phương (GMT+7)
             const formatLocalDateTime = (date: Date): string => {
                 const year = date.getFullYear();
                 const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -516,23 +417,19 @@ function DoctorDetails() {
                 const hours = String(date.getHours()).padStart(2, '0');
                 const minutes = String(date.getMinutes()).padStart(2, '0');
                 const seconds = String(date.getSeconds()).padStart(2, '0');
-                
-                // Format: "YYYY-MM-DDTHH:mm:ss" (ISO 8601 local time)
                 return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
             };
-            
             const appointmentStartStr = formatLocalDateTime(appointmentStart);
             const appointmentEndStr = formatLocalDateTime(appointmentEnd);
 
             const itemData = paymentService.createDoctorConsultationItem(
                 profileData.fullName,
                 finalPrice,
-                profileData.doctorID, // Truyền doctorId
-                appointmentStartStr, // Gửi local datetime
-                appointmentEndStr, // Gửi local datetime
-                appliedPromotion?.code // Truyền mã khuyến mãi nếu có
+                profileData.doctorID, 
+                appointmentStartStr, 
+                appointmentEndStr, 
+                appliedPromotion?.code 
             );
-
             const result = await paymentService.createPaymentLink(itemData);
 
             if (result.success && result.checkoutUrl) {
@@ -543,7 +440,6 @@ function DoctorDetails() {
         } catch (error) {
             showToast('Có lỗi xảy ra khi tạo link thanh toán. Vui lòng thử lại.', 'error');
         }
-        
         setIsCreatingPayment(false);
     };
 
@@ -551,7 +447,6 @@ function DoctorDetails() {
         return jsDayOfWeek === 0 ? 7 : jsDayOfWeek;
     };
 
-    // Helper function to format date as YYYY-MM-DD without timezone issues
     const formatDateString = (date: Date): string => {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -559,29 +454,20 @@ function DoctorDetails() {
         return `${year}-${month}-${day}`;
     };
 
-    // Helper function to normalize date strings from backend
     const normalizeDateString = (dateStr: string): string => {
-        // Handle different possible formats from backend
         if (dateStr.includes('T')) {
-            // If it's ISO format with time, extract just the date part
             return dateStr.split('T')[0];
         }
         return dateStr;
     };
 
-    // Helper function to check if two time slots overlap or match exactly
-    // This checks if ANY part of the time ranges overlap
     const isTimeSlotOverlap = (start1: string, end1: string, start2: string, end2: string): boolean => {
-        // Check if the slots overlap or are exactly the same
         return start1 < end2 && end1 > start2;
     };
-    
-    // Helper function to check if a time slot is completely within another time slot
     const isTimeSlotWithin = (innerStart: string, innerEnd: string, outerStart: string, outerEnd: string): boolean => {
         return innerStart >= outerStart && innerEnd <= outerEnd;
     };
 
-    // Get available time slots based on doctor's schedule and overrides
     const getAvailableTimeSlots = (date: Date): Array<{
         display: string;
         type: 'regular' | 'override';
@@ -591,44 +477,20 @@ function DoctorDetails() {
         endTime: string;
     }> => {
         if (!profileData?.schedules) return [];
-        
         const backendDayOfWeek = convertDayOfWeek(date.getDay());
         const dateString = formatDateString(date);
-        
         const now = new Date();
         const isToday = date.toDateString() === now.toDateString();
-        
-        // Get all overrides for this specific date
         const overridesForDate = profileData.scheduleOverride?.filter(override => {
             const normalizedOverrideDate = normalizeDateString(override.overrideDate);
             return normalizedOverrideDate === dateString;
         }) || [];
-        
-        // Separate overrides by type
-        // overrideType = true: Doctor works (add additional slots or modify existing)
-        // overrideType = false: Doctor doesn't work (hide specific DoctorSchedule slots)
-        // 
-        // Example scenarios:
-        // - DoctorSchedule: [08:00-08:50, 14:00-14:50, 16:00-16:50] on Monday
-        // - Override: 08:00-08:50 (overrideType: false, reason: "Nghỉ phép")
-        // - Result: Show only [14:00-14:50, 16:00-16:50] for this specific day
-        
-        // IMPORTANT: overrideType determines the behavior
-        // - overrideType = true: Doctor WORKS (add new slots or replace existing ones)
-        //   → Must also check isAvailable = true
-        // - overrideType = false: Doctor does NOT work (block/hide regular schedule slots)
-        //   → Ignore isAvailable value, always block the time slot
-        
         const workingOverrides = overridesForDate.filter(override => {
-            // Only add as working override if overrideType = true AND isAvailable = true
             const overrideTypeValue = override.overrideType === true || (override.overrideType as any) === 'true';
             const result = overrideTypeValue && override.isAvailable;
             return result;
         });
-        
         const nonWorkingOverrides = overridesForDate.filter(override => {
-            // If overrideType = false, doctor does NOT work regardless of isAvailable
-            // This blocks regular schedule slots from showing
             const overrideTypeValue = override.overrideType === false || 
                                      (override.overrideType as any) === 'false' || 
                                      override.overrideType === null ||
@@ -636,70 +498,30 @@ function DoctorDetails() {
                                      (override.overrideType as any) === 0;
             return overrideTypeValue;
         });
-         
-        // Get regular schedules for this day of week
         const regularSchedules = profileData.schedules.filter(schedule => 
             schedule.dayOfWeek === backendDayOfWeek && schedule.isAvailable
         );
-        
-        // Combine all time slots
         const allTimeSlots: Array<{
             startTime: string;
             endTime: string;
             type: 'regular' | 'override';
             reason?: string;
-            id?: string; // Add ID to distinguish slots
+            id?: string; 
         }> = [];
-        
-        // Add regular schedules first, but exclude those blocked by nonWorkingOverrides
         regularSchedules.forEach(schedule => {
             const startTime = schedule.startTime.slice(0, 5);
             const endTime = schedule.endTime.slice(0, 5);
-            
-            console.log('📅 Checking regular schedule:', { startTime, endTime });
-            
-            // Check if this specific DoctorSchedule time slot is blocked by overrideType = false
-            // overrideType = false means: Doctor does NOT work during this override time
-            // We need to hide ANY regular schedule that overlaps with the non-working override time
-            // 
-            // Example 1: Regular: 07:00-07:50, Override(false): 07:00-07:50 → HIDE (exact match)
-            // Example 2: Regular: 07:00-07:50, Override(false): 07:00-08:00 → HIDE (regular is within override)
-            // Example 3: Regular: 07:00-08:00, Override(false): 07:30-07:50 → HIDE (override overlaps with regular)
             const isBlockedByNonWorking = nonWorkingOverrides.some(override => {
                 const overrideStart = override.startTime.slice(0, 5);
                 const overrideEnd = override.endTime.slice(0, 5);
-                
-                // ANY overlap should block the regular schedule
                 const overlaps = isTimeSlotOverlap(startTime, endTime, overrideStart, overrideEnd);
-                
-                console.log('  🔍 Checking against non-working override:', { 
-                    overrideStart, 
-                    overrideEnd, 
-                    overlaps,
-                    overrideType: override.overrideType,
-                    reason: override.reason 
-                });
-                
                 return overlaps;
             });
-            
-            // Check if this regular schedule is replaced by any working override
-            // (overrideType = true can replace existing schedules with new times)
             const isReplacedByWorking = workingOverrides.some(override => {
                 const overrideStart = override.startTime.slice(0, 5);
                 const overrideEnd = override.endTime.slice(0, 5);
                 return isTimeSlotOverlap(startTime, endTime, overrideStart, overrideEnd);
             });
-            
-            console.log('  📊 Result:', { 
-                isBlockedByNonWorking, 
-                isReplacedByWorking, 
-                willBeAdded: !isBlockedByNonWorking && !isReplacedByWorking 
-            });
-            
-            // Only add DoctorSchedule time slot if:
-            // 1. Not blocked by overrideType = false (doctor doesn't work this specific slot)
-            // 2. Not replaced by overrideType = true (doctor works different time)
             if (!isBlockedByNonWorking && !isReplacedByWorking) {
                 allTimeSlots.push({
                     startTime,
@@ -709,11 +531,6 @@ function DoctorDetails() {
                 });
             }
         });
-        
-        // Add working override schedules (overrideType = true)
-        // These can be additional slots or replacements for regular slots
-        // Example: Add 18:00-18:50 (new slot) or replace 08:00-08:50 with 08:30-09:30
-        console.log('➕ Adding working overrides...');
         workingOverrides.forEach(override => {
             const startTime = override.startTime.slice(0, 5);
             const endTime = override.endTime.slice(0, 5);
@@ -726,13 +543,7 @@ function DoctorDetails() {
                 id: `override_${override.id}`
             });
         });
-        
-        // Sort by start time
         allTimeSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
-        
-        console.log('📋 Final time slots before filtering past times:', allTimeSlots);
-        
-        // Filter out past time slots if it's today
         const availableSlots = allTimeSlots.filter(slot => {
             if (isToday) {
                 const [startHour, startMinute] = slot.startTime.split(':').map(Number);
@@ -742,47 +553,21 @@ function DoctorDetails() {
             }
             return true;
         });
-        
-        // Filter out booked appointments
-        // Check if slot overlaps with any booked appointment on this specific date
         const bookedAppointments = profileData.appointmentBookedDtos || [];
         const availableSlotsNotBooked = availableSlots.filter(slot => {
-            // Check if any booked appointment overlaps with this slot on this date
             const isBooked = bookedAppointments.some(booked => {
                 if (!booked.startTime || !booked.endTime) return false;
-                
-                // Parse booked appointment datetime
                 const bookedStart = new Date(booked.startTime);
                 const bookedEnd = new Date(booked.endTime);
-                
-                // Check if booked appointment is on the same date
                 const bookedDateString = formatDateString(bookedStart);
                 if (bookedDateString !== dateString) return false;
-                
-                // Extract time from booked appointment (HH:mm format)
                 const bookedStartTime = `${String(bookedStart.getHours()).padStart(2, '0')}:${String(bookedStart.getMinutes()).padStart(2, '0')}`;
                 const bookedEndTime = `${String(bookedEnd.getHours()).padStart(2, '0')}:${String(bookedEnd.getMinutes()).padStart(2, '0')}`;
-                
-                // Check if slot overlaps with booked time
                 const overlaps = isTimeSlotOverlap(slot.startTime, slot.endTime, bookedStartTime, bookedEndTime);
-                
-                if (overlaps) {
-                    console.log('🚫 Slot blocked by booked appointment:', {
-                        slot: `${slot.startTime} - ${slot.endTime}`,
-                        booked: `${bookedStartTime} - ${bookedEndTime}`,
-                        date: bookedDateString
-                    });
-                }
-                
                 return overlaps;
             });
-            
             return !isBooked;
         });
-        
-        console.log('✅ Available slots after filtering booked appointments:', availableSlotsNotBooked.length);
-        
-        // Format time slots and return with metadata
         return availableSlotsNotBooked.map(slot => {
             return {
                 display: `${slot.startTime} - ${slot.endTime}`,
@@ -794,7 +579,6 @@ function DoctorDetails() {
             };
         });
     };
-
     const isDateAvailable = (date: Date): boolean => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -802,15 +586,7 @@ function DoctorDetails() {
         if (date < today) return false;
         
         if (!profileData?.schedules) return false;
-        
-        // Use getAvailableTimeSlots to check if there are any available (unbooked) time slots
-        // This function already filters out:
-        // - Past time slots (if today)
-        // - Booked appointments
-        // - Non-working overrides
         const availableSlots = getAvailableTimeSlots(date);
-        
-        // Date is only available if there are available (unbooked) time slots
         return availableSlots.length > 0;
     };
 
@@ -822,8 +598,6 @@ function DoctorDetails() {
         if (date) {
             const slots = getAvailableTimeSlots(date);
             setAvailableTimeSlots(slots);
-            
-            // Scroll to time slots section after a short delay to allow DOM update
             setTimeout(() => {
                 if (timeslotsSectionRef.current) {
                     timeslotsSectionRef.current.scrollIntoView({ 
@@ -848,8 +622,6 @@ function DoctorDetails() {
         setSelectedTimeSlot(slot);
         setShowPaymentButton(false);
         setIsCreatingPayment(false);
-        
-        // Scroll to booking confirmation section after a short delay to allow DOM update
         setTimeout(() => {
             if (bookingConfirmationRef.current) {
                 bookingConfirmationRef.current.scrollIntoView({ 
@@ -860,39 +632,27 @@ function DoctorDetails() {
         }, 100);
     };
 
-    // Calculate consultation duration from selected time slot
     const getConsultationDuration = (timeSlot: string, selectedDate?: Date): string => {
         if (!timeSlot || !profileData) return "30 phút";
-        
-        // timeSlot is now just the display string like "07:00 - 08:30"
         const [startTime, endTime] = timeSlot.split(' - ');
-        
         if (!startTime || !endTime) return "30 phút";
-        
-        // Find the corresponding slot metadata to check if it's override
         const slotMetadata = availableTimeSlots.find(slot => slot.display === timeSlot);
-        
         if (slotMetadata?.type === 'override' && selectedDate) {
-            // For override slots, get duration from database
             const dateString = formatDateString(selectedDate);
             const override = profileData.scheduleOverride?.find(override => {
                 const normalizedOverrideDate = normalizeDateString(override.overrideDate);
                 if (normalizedOverrideDate !== dateString) return false;
-                if (override.overrideType === false) return false; // Skip non-working overrides
-                
+                if (override.overrideType === false) return false; 
                 const overrideStart = override.startTime.slice(0, 5);
                 const overrideEnd = override.endTime.slice(0, 5);
                 return overrideStart === startTime && overrideEnd === endTime;
             });
             
             if (override) {
-                // Calculate duration from database times
                 const dbStart = new Date(`2000-01-01T${override.startTime}`);
                 const dbEnd = new Date(`2000-01-01T${override.endTime}`);
-                
                 const diffMs = dbEnd.getTime() - dbStart.getTime();
                 const diffMinutes = Math.round(diffMs / (1000 * 60));
-                
                 const hours = Math.floor(diffMinutes / 60);
                 const minutes = diffMinutes % 60;
                 
@@ -905,14 +665,10 @@ function DoctorDetails() {
                 }
             }
         }
-        
-        // For regular slots or if override not found, calculate from display time
         const start = new Date(`2000-01-01T${startTime}:00`);
         const end = new Date(`2000-01-01T${endTime}:00`);
-        
         const diffMs = end.getTime() - start.getTime();
         const diffMinutes = Math.round(diffMs / (1000 * 60));
-        
         const hours = Math.floor(diffMinutes / 60);
         const minutes = diffMinutes % 60;
         
@@ -951,12 +707,10 @@ function DoctorDetails() {
         );
     };
 
-    // Check for tab parameter in URL
     useEffect(() => {
         const tab = searchParams.get('tab');
         if (tab === 'booking') {
             setActiveTabIndex(1);
-            // Scroll to calendar section after a short delay to allow DOM update
             setTimeout(() => {
                 if (calendarSectionRef.current) {
                     calendarSectionRef.current.scrollIntoView({ 
@@ -968,7 +722,6 @@ function DoctorDetails() {
         }
     }, [searchParams]);
 
-    // Load metadata for filters
     useEffect(() => {
         const loadInitial = async () => {
             try {
@@ -979,7 +732,6 @@ function DoctorDetails() {
                 setSpecializations(metadata.specializations.map((s: any) => ({ id: s.id, name: s.name })));
                 setEducationTypes(eduTypes);
             } catch (e) {
-                console.error('Load metadata error:', e);
             } finally {
                 setMetadataLoading(false);
                 setEducationLoading(false);
@@ -1000,16 +752,12 @@ function DoctorDetails() {
         return data;
     }, []);
 
-    // Debounce temp price changes
     useEffect(() => {
         const t = setTimeout(() => setPriceRange(tempPriceRange), 400);
         return () => clearTimeout(t);
     }, [tempPriceRange]);
-
-    // Initial + reactive load for sidebar doctor data
     useEffect(() => {
         const doLoad = async () => {
-            // Avoid loading before profileData is ready (to determine relatedness)
             if (!profileData) return;
 
             if (isSidebarLoadingRef.current) return;
@@ -1023,7 +771,6 @@ function DoctorDetails() {
                     setTiersData(data);
                 }
             } catch (e) {
-                console.error('Load sidebar tiers error:', e);
             } finally {
                 if (sidebarRequestIdRef.current === reqId) {
                     setSidebarLoading(false);
@@ -1034,7 +781,6 @@ function DoctorDetails() {
             }
         };
         doLoad();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [profileData, selectedEducationCode, selectedSpecializationCode, priceRange]);
 
     const relatedDoctors = useMemo(() => {
@@ -1042,13 +788,11 @@ function DoctorDetails() {
         const all = tiersData.flatMap(t => t.doctors?.items || []);
         const currentId = (profileData as any)?.doctorID || (profileData as any)?.doctorId;
         const currentSpec = profileData.specialization;
-        // same specialization, exclude current, has price
         const list = all.filter(d => {
             const sameSpec = (d.specialization || '').toLowerCase() === (currentSpec || '').toLowerCase();
             const notSelf = d.doctorId !== currentId;
             return sameSpec && notSelf;
         });
-        // pick top 6
         return list.slice(0, 6);
     }, [profileData, tiersData]);
 
@@ -1059,12 +803,8 @@ function DoctorDetails() {
             try {
                 setLoading(true);
                 const data = await doctorService.getDoctorProfile(username);
-                console.log('📊 Profile Data:', data);
-          
-                
                 setProfileData(data);
             } catch (error) {
-                console.error('Failed to fetch profile data:', error);
             } finally {
                 setLoading(false);
             }
@@ -1147,10 +887,6 @@ function DoctorDetails() {
             </nav>
 
             <div className={styles.container}>
-                {/* Two-column layout is rendered below (sidebar + main content) */}
-                
-                {/* Sidebar (left) with Filters and Related Doctors AND Main content on the right are rendered below */}
-                {/* Sidebar (left) with Filters and Related Doctors */}
                 <div className={bookingStyles.mainLayout} style={{ marginTop: 24 }}>
                     <aside className={bookingStyles.filterSidebar}>
                         <div className={bookingStyles.sidebarHeader}>
@@ -1245,7 +981,6 @@ function DoctorDetails() {
                             </div>
                         </div>
 
-                        {/* Related Doctors in Sidebar */}
                         <div className={bookingStyles.sidebarHeader} style={{ marginTop: 16 }}>
                             <i className="bi bi-people"></i>
                             <h3>Bác sĩ liên quan</h3>
@@ -1305,7 +1040,6 @@ function DoctorDetails() {
                     </aside>
 
                     <div className={bookingStyles.mainContent}>
-                        {/* Hero Section - Doctor Profile Card */}
                         <div className={styles.heroSection}>
                             <div className={styles.doctorProfileCard}>
                                 <div className={styles.profileLeft}>
@@ -1421,7 +1155,6 @@ function DoctorDetails() {
                             </div>
                         </div>
 
-                        {/* Tabs Section */}
                         <div className={styles.tabsSection}>
                             <div className={styles.tabButtons}>
                                 <button
@@ -1435,7 +1168,6 @@ function DoctorDetails() {
                                     className={`${styles.tabButton} ${activeTabIndex === 1 ? styles.active : ''}`}
                                     onClick={() => {
                                         setActiveTabIndex(1);
-                                        // Scroll to calendar section after a short delay to allow DOM update
                                         setTimeout(() => {
                                             if (calendarSectionRef.current) {
                                                 calendarSectionRef.current.scrollIntoView({ 
@@ -1475,7 +1207,6 @@ function DoctorDetails() {
 
                                 {activeTabIndex === 1 && (
                                     <div className={styles.bookingTab}>
-                                        {/* Step 1: Select Date */}
                                         <div ref={calendarSectionRef} className={styles.calendarSection}>
                                             <div className={styles.sectionHeader}>
                                                 <div className={styles.sectionHeaderContent}>
@@ -1492,18 +1223,12 @@ function DoctorDetails() {
                                                     {(() => {
                                                         const availableDates = getAvailableDates();
                                                         if (availableDates.length === 0) return null;
-                                                        
-                                                        // Get the month name from the first date
                                                         const firstDate = availableDates[0];
                                                         const monthName = firstDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
-                                                        
-                                                        // Check if we have dates from two different months
                                                         const lastDate = availableDates[availableDates.length - 1];
                                                         const hasTwoMonths = firstDate.getMonth() !== lastDate.getMonth();
-                                                        
                                                         return (
                                                             <>
-                                                                {/* Month Header */}
                                                                 <div className={styles.calendarMonthHeader}>
                                                                     <h4 className={styles.calendarMonthTitle}>
                                                                         {hasTwoMonths 
@@ -1512,46 +1237,29 @@ function DoctorDetails() {
                                                                         }
                                                                     </h4>
                                                                 </div>
-                                                                
-                                                                {/* Weekday Headers */}
                                                                 <div className={styles.calendarWeekdays}>
                                                                     {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(day => (
                                                                         <div key={day} className={styles.weekdayHeader}>{day}</div>
                                                                     ))}
                                                                 </div>
-                                                                
-                                                                {/* Date Grid */}
                                                                 <div className={styles.calendarDatesGrid}>
                                                                     {(() => {
-                                                                        // Group dates by week: each week gets one row
-                                                                        // Calculate which week each date belongs to (week number from a reference point)
                                                                         const weekGroups: { [weekKey: string]: Date[] } = {};
-                                                                        
                                                                         availableDates.forEach(date => {
-                                                                            // Calculate the Monday of the week this date belongs to
                                                                             const dayOfWeek = convertDayOfWeek(date.getDay());
                                                                             const mondayOfWeek = new Date(date);
                                                                             mondayOfWeek.setDate(date.getDate() - (dayOfWeek - 1));
                                                                             mondayOfWeek.setHours(0, 0, 0, 0);
-                                                                            
-                                                                            // Use Monday's date as the week key
                                                                             const weekKey = mondayOfWeek.toISOString().split('T')[0];
-                                                                            
                                                                             if (!weekGroups[weekKey]) {
                                                                                 weekGroups[weekKey] = [];
                                                                             }
                                                                             weekGroups[weekKey].push(date);
                                                                         });
-                                                                        
-                                                                        // Sort weeks by their Monday date
                                                                         const sortedWeekKeys = Object.keys(weekGroups).sort();
-                                                                        
-                                                                        // Create rows for each week
                                                                         return sortedWeekKeys.map((weekKey, weekIndex) => {
                                                                             const weekDates = weekGroups[weekKey];
                                                                             const row: (Date | null)[] = new Array(7).fill(null);
-                                                                            
-                                                                            // Place each date in its correct column
                                                                             weekDates.forEach(date => {
                                                                                 const dayOfWeek = convertDayOfWeek(date.getDay());
                                                                                 const columnIndex = dayOfWeek - 1; // 0 = Monday, 6 = Sunday
@@ -1564,12 +1272,10 @@ function DoctorDetails() {
                                                                                         if (!date) {
                                                                                             return <div key={colIndex} className={styles.calendarDateCellEmpty}></div>;
                                                                                         }
-                                                                                        
                                                                                         const today = new Date();
                                                                                         today.setHours(0, 0, 0, 0);
                                                                                         const dateOnly = new Date(date);
                                                                                         dateOnly.setHours(0, 0, 0, 0);
-                                                                                        
                                                                                         const isToday = dateOnly.getTime() === today.getTime();
                                                                                         const isAvailable = isDateAvailable(date);
                                                                                         const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
@@ -1616,13 +1322,11 @@ function DoctorDetails() {
                                                     {availableTimeSlots.length > 0 ? (
                                                         <>
                                                             {(() => {
-                                                                // 分组时段：上午（< 12:00）和下午（>= 12:00）
                                                                 const morningSlots = availableTimeSlots.filter(slot => {
                                                                     let hour = 0;
                                                                     if (slot.startTime) {
                                                                         hour = parseInt(slot.startTime.split(':')[0], 10);
                                                                     } else if (slot.display) {
-                                                                        // 从 display 字符串中提取时间，例如 "07:00 - 07:50"
                                                                         const timeMatch = slot.display.match(/^(\d{1,2}):\d{2}/);
                                                                         if (timeMatch) {
                                                                             hour = parseInt(timeMatch[1], 10);
@@ -1635,7 +1339,6 @@ function DoctorDetails() {
                                                                     if (slot.startTime) {
                                                                         hour = parseInt(slot.startTime.split(':')[0], 10);
                                                                     } else if (slot.display) {
-                                                                        // 从 display 字符串中提取时间，例如 "07:00 - 07:50"
                                                                         const timeMatch = slot.display.match(/^(\d{1,2}):\d{2}/);
                                                                         if (timeMatch) {
                                                                             hour = parseInt(timeMatch[1], 10);
@@ -1643,10 +1346,8 @@ function DoctorDetails() {
                                                                     }
                                                                     return hour >= 12;
                                                                 });
-                                                                
                                                                 return (
                                                                     <>
-                                                                        {/* 上午时段 */}
                                                                         {morningSlots.length > 0 && (
                                                                             <div className={styles.timeSlotGroup}>
                                                                                 <div className={styles.timeSlotGroupHeader}>
@@ -1661,7 +1362,6 @@ function DoctorDetails() {
                                                                                 <div className={styles.timeslotsGrid}>
                                                                                     {morningSlots.map((slot, index) => {
                                                                                         const isSelected = selectedTimeSlot?.id === slot.id;
-                                                                                        
                                                                                         return (
                                                                                             <button
                                                                                                 key={index}
@@ -1684,8 +1384,6 @@ function DoctorDetails() {
                                                                                 </div>
                                                                             </div>
                                                                         )}
-                                                                        
-                                                                        {/* 下午时段 */}
                                                                         {afternoonSlots.length > 0 && (
                                                                             <div className={styles.timeSlotGroup}>
                                                                                 <div className={styles.timeSlotGroupHeader}>
@@ -1700,7 +1398,6 @@ function DoctorDetails() {
                                                                                 <div className={styles.timeslotsGrid}>
                                                                                     {afternoonSlots.map((slot, index) => {
                                                                                         const isSelected = selectedTimeSlot?.id === slot.id;
-                                                                                        
                                                                                         return (
                                                                                             <button
                                                                                                 key={index}
@@ -1739,8 +1436,6 @@ function DoctorDetails() {
                                                 </div>
                                             </div>
                                         )}
-                                        
-                                        {/* Step 3: Booking Information (only shown after date and time are selected) */}
                                         {selectedDate && selectedTimeSlot && (
                                             <div ref={bookingConfirmationRef} className={styles.bookingConfirmation}>
                                                 <div className={styles.bookingSummary}>
@@ -1870,16 +1565,12 @@ function DoctorDetails() {
                                                                 )}
                                                             </button>
                                                         </div>
-                                                        
-                                                        {/* Promotion Error */}
                                                         {promotionError && (
                                                             <div className={styles.promotionError}>
                                                                 <i className="bi bi-exclamation-circle"></i>
                                                                 <span>{promotionError}</span>
                                                             </div>
                                                         )}
-                                                        
-                                                        {/* Promotion Success */}
                                                         {appliedPromotion && (
                                                             <div className={styles.promotionSuccess}>
                                                                 <div className={styles.promotionSuccessHeader}>
@@ -1897,11 +1588,22 @@ function DoctorDetails() {
                                                                             : `${appliedPromotion.discountValue.toLocaleString('vi-VN')}đ`}
                                                                     </p>
                                                                 </div>
+                                                                <button
+                                                                    type="button"
+                                                                    className={styles.removePromoButton}
+                                                                    style={{ marginTop: 8 }}
+                                                                    onClick={() => {
+                                                                        setAppliedPromotion(null);
+                                                                        setAppliedUserPromotion(null);
+                                                                        setPromotionCode('');
+                                                                        setPromotionError('');
+                                                                    }}
+                                                                >
+                                                                    Bỏ áp dụng mã khuyến mãi
+                                                                </button>
                                                             </div>
                                                         )}
                                                     </div>
-                                                    
-                                                    {/* Chief Complaint and History */}
                                                     <div className={styles.medicalInfoSection}>
                                                         <h4 className={styles.medicalInfoTitle}>
                                                             <i className="bi bi-file-medical-fill"></i>
@@ -1945,8 +1647,6 @@ function DoctorDetails() {
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    
-                                                    {/* Final Price Display */}
                                                     {appliedPromotion && profileData.consulationFee && (
                                                         <div className={styles.finalPriceSection}>
                                                             <div className={styles.priceBreakdown}>
@@ -1975,7 +1675,7 @@ function DoctorDetails() {
                                                     <button 
                                                         className={styles.confirmButton} 
                                                         onClick={handleBookingConfirm}
-                                                        disabled={isCreatingPayment || !chiefComplaint.trim()}
+                                                        disabled={isCreatingPayment}
                                                     >
                                                         {isCreatingPayment ? (
                                                             <>
@@ -2034,14 +1734,25 @@ function DoctorDetails() {
                                             </h3>
                                             {profileData.reviews && profileData.reviews.length > 0 ? (
                                                 <div className={styles.reviewsList}>
-                                                    {profileData.reviews.map((review, index) => (
-                                                        <div className={styles.reviewCard} key={index}>
+                                                    {profileData.reviews.map((review, index) => {
+                                                        const adminResponse = normalizeAdminResponse(review.adminResponse);
+                                                        const patientDisplayName = review.patientName || (review as any).PatientName || 'Ẩn danh';
+                                                        const avatarSrc = review.patientAvatar || (review as any).PatientAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(patientDisplayName)}&background=667eea&color=fff&size=128&bold=true`;
+                                                        return (
+                                                            <div className={styles.reviewCard} key={index}>
                                                             <div className={styles.reviewHeader}>
                                                                 <div className={styles.reviewerAvatar}>
-                                                                    <i className="bi bi-person-circle"></i>
+                                                                    <img 
+                                                                        src={avatarSrc}
+                                                                        alt={patientDisplayName}
+                                                                        onError={(e) => {
+                                                                            const target = e.currentTarget;
+                                                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(patientDisplayName)}&background=667eea&color=fff&size=128&bold=true`;
+                                                                        }}
+                                                                    />
                                                                 </div>
                                                                 <div className={styles.reviewerInfo}>
-                                                                    <span className={styles.reviewerName}>Bệnh nhân</span>
+                                                                    <span className={styles.reviewerName}>{patientDisplayName}</span>
                                                                     <div className={styles.reviewRating}>
                                                                         {renderStars(review.rating)}
                                                                         <span className={styles.reviewDate}>{review.date}</span>
@@ -2049,8 +1760,15 @@ function DoctorDetails() {
                                                                 </div>
                                                             </div>
                                                             <p className={styles.reviewText}>{review.comment}</p>
-                                                        </div>
-                                                    ))}
+                                                            {adminResponse && (
+                                                                <div className={styles.adminReplyBlock}>
+                                                                    <span className={styles.adminReplyLabel}>Phản hồi từ MEDIX</span>
+                                                                    <p className={styles.adminReplyText}>{adminResponse}</p>
+                                                                </div>
+                                                            )}
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             ) : (
                                                 <div className={styles.noReviews}>
@@ -2066,8 +1784,6 @@ function DoctorDetails() {
                     </div>
                 </div>
             </div>
-            
-            {/* Confirmation Modal */}
             {showConfirmModal && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.confirmModal}>
@@ -2172,14 +1888,19 @@ function DoctorDetails() {
                     </div>
                 </div>
             )}
-            
-            {/* Success Modal */}
             {showSuccessModal && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.successModal}>
                         <button 
                             className={styles.successCloseBtn}
-                            onClick={() => setShowSuccessModal(false)}
+                            onClick={() => {
+                                setShowSuccessModal(false);
+                                setIsCreatingPayment(false);
+                                if (selectedTimeSlot) {
+                                    setAvailableTimeSlots(prev => prev.filter(slot => slot.display !== selectedTimeSlot.display));
+                                }
+                                setSelectedTimeSlot(null);
+                            }}
                         >
                             <i className="bi bi-x-lg"></i>
                         </button>
@@ -2223,8 +1944,6 @@ function DoctorDetails() {
                     </div>
                 </div>
             )}
-            
-            {/* Promotion Selection Modal */}
             {showPromotionModal && (
                 <div className={styles.modalOverlay} onClick={() => setShowPromotionModal(false)}>
                     <div className={styles.promotionModal} onClick={(e) => e.stopPropagation()}>
@@ -2257,7 +1976,6 @@ function DoctorDetails() {
                                     {availablePromotions.map((userPromotion) => {
                                         const promotion = userPromotion.promotion;
                                         if (!promotion) return null;
-                                        
                                         return (
                                             <div
                                                 key={userPromotion.id}
@@ -2321,7 +2039,6 @@ function DoctorDetails() {
                     </div>
                 </div>
             )}
-            
             <Footer />
         </div>
     );

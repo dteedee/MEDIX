@@ -18,7 +18,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
             var today = DateTime.Today;
             var monthStart = new DateTime(today.Year, today.Month, 1);
 
-            // Lấy thông tin user từ doctorId để truy vấn ví
             var doctorUser = await _context.Doctors
                 .AsNoTracking()
                 .Where(d => d.Id == doctorId)
@@ -42,8 +41,10 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Where(r => r.Appointment.DoctorId == doctorId)
                 .AverageAsync(r => (double?)r.Rating) ?? 0;
 
+            var dotNetDayOfWeek = (int)today.DayOfWeek;
+            var backendDayOfWeek = dotNetDayOfWeek == 0 ? 7 : dotNetDayOfWeek;
             var regularSchedule = await _context.DoctorSchedules
-                .Where(s => s.DoctorId == doctorId && s.DayOfWeek == (int)today.DayOfWeek)
+                .Where(s => s.DoctorId == doctorId && s.DayOfWeek == backendDayOfWeek)
                 .Select(s => new
                 {
                     s.DayOfWeek,

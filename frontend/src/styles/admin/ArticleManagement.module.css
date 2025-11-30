@@ -30,11 +30,28 @@
   .headerLeft {
     flex: 1;
   }
+
+  .titleWrapper {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .titleIcon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+  }
   
   .title {
-    font-size: 32px;
-    font-weight: 800;
-    color: #1f2937;
+    font-size: 28px;
+    font-weight: 700;
     margin: 0 0 8px 0;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     -webkit-background-clip: text;
@@ -43,9 +60,133 @@
   }
   
   .subtitle {
-    font-size: 15px;
+    font-size: 14px;
     color: #6b7280;
     margin: 0;
+    font-weight: 500;
+  }
+
+  .headerRight {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .dateTime {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 50%, #a5b4fc 100%);
+    border-radius: 16px;
+    border: 2px solid rgba(99, 102, 241, 0.3);
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 8px 24px rgba(99, 102, 241, 0.25),
+      0 4px 12px rgba(99, 102, 241, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    animation: datePulse 3s ease-in-out infinite;
+  }
+
+  .dateTime::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: dateShimmer 3s ease-in-out infinite;
+  }
+
+  .dateTime:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow:
+      0 12px 32px rgba(99, 102, 241, 0.35),
+      0 6px 16px rgba(99, 102, 241, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      0 0 20px rgba(99, 102, 241, 0.3);
+    border-color: rgba(99, 102, 241, 0.5);
+    background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 50%, #818cf8 100%);
+  }
+
+  .dateTime:active {
+    transform: translateY(-1px) scale(1);
+  }
+
+  .dateIconWrapper {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    animation: iconBounce 2s ease-in-out infinite;
+  }
+
+  .dateTime:hover .dateIconWrapper {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow:
+      0 6px 16px rgba(99, 102, 241, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .dateIcon {
+    color: #fff;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  }
+
+  .dateContent {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .dateText {
+    color: #4338ca;
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .dateGlow {
+    position: absolute;
+    inset: -10px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, transparent 70%);
+    opacity: 0.4;
+  }
+
+  @keyframes datePulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.01);
+    }
+  }
+
+  @keyframes dateShimmer {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(200%);
+    }
+  }
+
+  @keyframes iconBounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-2px);
+    }
   }
   
   .btnCreate {
@@ -652,6 +793,49 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  /* Category Cell */
+  .categoryCell {
+    padding: 12px;
+  }
+
+  .categoryTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .categoryTag {
+    display: inline-block;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%);
+    color: #667eea;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .categoryTagMore {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #f3f4f6;
+    color: #6b7280;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: help;
+  }
+
+  .noCategory {
+    color: #9ca3af;
+    font-style: italic;
+    font-size: 13px;
+  }
   
   /* Order Badge */
   .orderBadge {
@@ -796,19 +980,29 @@
   .actionLock {
     background: #fee2e2;
     color: #dc2626;
+    background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
+    color: white;
+    border-color: #ff758c;
   }
   
   .actionLock:hover {
     background: #fecaca;
+    background: linear-gradient(135deg, #ff6b81 0%, #ff6b81 100%);
+    box-shadow: 0 6px 16px rgba(255, 123, 179, 0.4);
   }
   
   .actionUnlock {
     background: #d1fae5;
     color: #059669;
+    background: linear-gradient(135deg, #48c6ef 0%, #6f86d6 100%);
+    color: white;
+    border-color: #48c6ef;
   }
   
   .actionUnlock:hover {
     background: #a7f3d0;
+    background: linear-gradient(135deg, #3a9fbf 0%, #5a6dab 100%);
+    box-shadow: 0 6px 16px rgba(72, 198, 239, 0.4);
   }
   
   .actionBtn:disabled {
@@ -1324,3 +1518,168 @@
       font-size: 16px;
     }
   }
+  /* =============================
+   OVERLAY
+============================= */
+.neo-ui-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(3px);
+  z-index: 2000;
+}
+
+/* =============================
+   MODAL WRAPPER
+============================= */
+.neo-ui-dialog {
+  width: 80%;
+  max-width: 900px;
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 26px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  animation: neoFadeIn 0.25s ease-out;
+}
+
+/* =============================
+   HEADER
+============================= */
+.neo-ui-header {
+  padding: 22px 28px;
+  background: linear-gradient(90deg, #5668f0, #8a5ce0);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.neo-ui-header-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+  color: white;
+}
+
+.neo-ui-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  font-size: 26px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.22);
+  transition: all 0.2s;
+  color: white;
+}
+
+.neo-ui-close-btn:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+/* =============================
+   BODY
+============================= */
+.neo-ui-content {
+  padding: 30px 34px;
+  overflow-y: auto;
+}
+
+.neo-ui-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 26px;
+  margin-bottom: 26px;
+}
+
+.neo-ui-field {
+  font-size: 15px;
+  color: #333;
+}
+
+.neo-ui-field strong {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: #555;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.neo-ui-comment-box {
+  margin-top: 20px;
+  background: #f5f5fc;
+  border-left: 4px solid #6f5bf0;
+  padding: 16px 18px;
+  border-radius: 12px;
+}
+
+.neo-ui-comment-box p {
+  margin-top: 6px;
+  line-height: 1.55;
+  color: #444;
+}
+
+.neo-ui-section-label {
+  margin: 22px 0 12px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.neo-ui-line {
+  border: none;
+  border-top: 1px solid #e5e4ed;
+  margin: 24px 0;
+}
+
+.neo-ui-stars {
+  font-size: 18px;
+  color: #ffb400;
+}
+
+.neo-ui-time {
+  font-weight: 500;
+  color: #444;
+}
+
+/* =============================
+   ANIMATION
+============================= */
+@keyframes neoFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.dateTime {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #f7fafc;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+}
+.headerRight {
+  display: flex;
+  align-items: center;
+}
+.headerLeft {
+  flex-grow: 1;
+}

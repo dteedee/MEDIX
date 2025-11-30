@@ -70,7 +70,6 @@ namespace Medix.API.Business.Services.Classification
                 throw new Exception("Doctor / Service tier can not be found");
             }
 
-            //if current service tier is higher than purchased tier, cancel
             if (doctor.ServiceTier == null)
             {
                 throw new Exception("Unexpected error");
@@ -80,29 +79,23 @@ namespace Medix.API.Business.Services.Classification
                 throw new MedixException("Gói dịch vụ hiện tại của bạn có giá trị cao hơn gói bạn muốn mua.");
             }
 
-            //if another subscription exists
             var currentSubscription = await _subscriptionsRepository.GetCurrentSubscriptionOfDoctorAsync(doctor.Id);
             if (currentSubscription != null)
             {
-                //if new subscription is of the same value
                 if (doctor.ServiceTier.PriorityBoost == serviceTier.PriorityBoost)
                 {
                     if (currentSubscription.Status != "Expired")
                     {
-                        //resume next month subscription at Cancelled
                         if (currentSubscription.Status == "Cancelled")
                         {
                             currentSubscription.Status = "Active";
                             await _subscriptionsRepository.UpdateSubscriptionAsync(currentSubscription);
                         }
-                        //no adding subscription add Cancelled / Active
                         return;
                     }
                 }
-                //bigger
                 else
                 {
-                    //deactivate the lower subscription
                     if (currentSubscription.Status == "Active")
                     {
                         currentSubscription.Status = "Cancelled";
@@ -116,15 +109,12 @@ namespace Medix.API.Business.Services.Classification
 
             try
             {
-                //update doctor table
                 doctor.ServiceTierId = serviceTierId;
                 doctor.ServiceTier = null;
                 await _doctorRepository.UpdateDoctorAsync(doctor);
 
-                //add to subscription table
                 var newSubscription = await CreateNewSubscription(doctor.Id, serviceTierId);
 
-                //decrease balance
                 var balance = await _walletRepository.GetWalletBalanceAsync(userId);
                 if (balance < serviceTier.MonthlyPrice)
                 {
@@ -135,7 +125,6 @@ namespace Medix.API.Business.Services.Classification
                 await transaction.CommitAsync();
                 committed = true;
 
-                //add to tranasction
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
                 var walletTransaction = new WalletTransaction
                 {
@@ -149,7 +138,6 @@ namespace Medix.API.Business.Services.Classification
                 };
                 await _walletTransactionRepository.CreateWalletTransactionAsync(walletTransaction);
 
-                //schedule next renewal
                 if (newSubscription != null)
                 {
                     BackgroundJob.Schedule<IDoctorServiceTierService>(
@@ -198,13 +186,11 @@ namespace Medix.API.Business.Services.Classification
                 {
                     if (currentSubscription.Status == "Active")
                     {
-                        //set current subcription to expired
                         currentSubscription.Status = "Expired";
                         await _subscriptionsRepository.UpdateSubscriptionAsync(currentSubscription);
                     }
                     else
                     {
-                        //update doctor table
                         doctor = await _doctorRepository.GetDoctorByIdAsync(currentSubscription.DoctorId);
                         if (doctor != null)
                         {
@@ -230,7 +216,6 @@ namespace Medix.API.Business.Services.Classification
                     throw new Exception($"Failed to get subscription with id = {subscriptionId}");
                 }
 
-                //decrease balance
                 var serviceTier = await _serviceTierRepository.GetByIdAsync(currentSubscription.ServiceTierId);
                 doctor = await _doctorRepository.GetDoctorByIdAsync(currentSubscription.DoctorId);
 
@@ -247,13 +232,11 @@ namespace Medix.API.Business.Services.Classification
                 }
                 await _walletRepository.DecreaseWalletBalanceAsync(doctor.User.Id, serviceTier.MonthlyPrice);
 
-                //create new subscription
                 var newSubscription = await CreateNewSubscription(currentSubscription.DoctorId, currentSubscription.ServiceTierId);
 
                 await transaction.CommitAsync();
                 committed = true;
 
-                //add transaction
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(doctor.User.Id);
                 var walletTransaction = new WalletTransaction
                 {
@@ -267,7 +250,6 @@ namespace Medix.API.Business.Services.Classification
                 };
                 await _walletTransactionRepository.CreateWalletTransactionAsync(walletTransaction);
 
-                // schedule next renewal
                 if (newSubscription != null)
                 {
                     BackgroundJob.Schedule<IDoctorServiceTierService>(
@@ -311,5 +293,60 @@ namespace Medix.API.Business.Services.Classification
             doctor.ServiceTier = null;
             await _doctorRepository.UpdateDoctorAsync(doctor);
         }
+
+        public async Task<List<DoctorServiceTierDetailDto>> GetAllServiceTiers()
+        {
+            var list = await _serviceTierRepository.GetAllAsync();
+
+            return list.Select(st => new DoctorServiceTierDetailDto
+            {
+                ServiceTierId = st.Id,
+                Name = st.Name,
+                Description = st.Description,
+                ConsultationFeeMultiplier = st.ConsultationFeeMultiplier,
+                PriorityBoost = st.PriorityBoost,
+                MaxDailyAppointments = st.MaxDailyAppointments,
+                Features = st.Features,
+                MonthlyPrice = st.MonthlyPrice,
+                IsActive = st.IsActive
+            }).ToList();
+        }
+        public async Task UpdateServiceTier(UpdateServiceTierRequest request)
+        {
+            var tier = await _serviceTierRepository.GetByIdAsync(request.ServiceTierId);
+
+            if (tier == null)
+            {
+                throw new MedixException("Service tier not found");
+            }
+
+            tier.Description = request.Description;
+            tier.MonthlyPrice = request.MonthlyPrice;
+
+            await _serviceTierRepository.UpdateAsync(tier);
+        }
+        public async Task<DoctorServiceTierDetailDto?> GetServiceTierDetail(Guid serviceTierId)
+        {
+            var tier = await _serviceTierRepository.GetByIdAsync(serviceTierId);
+
+            if (tier == null)
+                return null;
+
+            return new DoctorServiceTierDetailDto
+            {
+                ServiceTierId = tier.Id,
+                Name = tier.Name,
+                Description = tier.Description,
+                ConsultationFeeMultiplier = tier.ConsultationFeeMultiplier,
+                PriorityBoost = tier.PriorityBoost,
+                MaxDailyAppointments = tier.MaxDailyAppointments,
+                Features = tier.Features,
+                MonthlyPrice = tier.MonthlyPrice,
+                IsActive = tier.IsActive
+            };
+        }
+
+
+
     }
 }

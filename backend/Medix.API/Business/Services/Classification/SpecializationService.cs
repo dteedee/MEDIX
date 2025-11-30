@@ -22,14 +22,12 @@ namespace Medix.API.Business.Services.Classification
                 var totalDoctors = counts.Sum(c => c.DoctorCount);
                 if (totalDoctors == 0)
                 {
-                    // ensure Percentage = 0 when there are no doctors
                     counts.ForEach(c => c.Percentage = 0m);
                     return counts;
                 }
 
                 foreach (var c in counts)
                 {
-                    // compute percentage with one decimal precision
                     c.Percentage = Math.Round((decimal)c.DoctorCount * 100m / totalDoctors, 1);
                 }
 
@@ -50,30 +48,33 @@ namespace Medix.API.Business.Services.Classification
             return await _specializationRepository.GetAllAsync();
         }
 
+        public async Task<List<Specialization>> GetActiveAsync()
+        {
+            return await _specializationRepository.GetActiveAsync();
+        }
+
         public async Task<Specialization?> GetByIdAsync(Guid id)
         {
-            // TODO: Implement when repository method exists
-            await Task.Delay(1);
-            return null;
+            return await _specializationRepository.GetByIdAsync(id);
+        }
+
+        public async Task<Specialization?> GetByCodeAsync(string code)
+        {
+            return await _specializationRepository.GetByCodeAsync(code);
         }
 
         public async Task<Specialization> CreateAsync(Specialization specialization)
         {
-            // TODO: Implement when repository method exists
-            await Task.Delay(1);
-            throw new NotImplementedException("Chức năng tạo chuyên khoa chưa được triển khai");
+            return await _specializationRepository.CreateAsync(specialization);
         }
 
         public async Task<Specialization> UpdateAsync(Specialization specialization)
         {
-            // TODO: Implement when repository method exists
-            await Task.Delay(1);
-            throw new NotImplementedException("Chức năng cập nhật chuyên khoa chưa được triển khai");
+            return await _specializationRepository.UpdateAsync(specialization);
         }
 
         public async Task<bool> DeleteAsync(Guid id)
         {
-            // TODO: Implement when repository method exists
             await Task.Delay(1);
             return false;
         }

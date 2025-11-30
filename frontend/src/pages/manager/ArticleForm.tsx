@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { ArticleDTO } from '../../types/article.types';
 import { useToast } from '../../contexts/ToastContext';
 import { articleService } from '../../services/articleService';
-import { categoryService } from '../../services/categoryService'; // Import categoryService
-import { CategoryDTO } from '../../types/category.types'; // Import CategoryDTO
+import { categoryService } from '../../services/categoryService'; 
+import { CategoryDTO } from '../../types/category.types'; 
 import styles from '../../styles/admin/ArticleForm.module.css';
-import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
+import { useAuth } from '../../contexts/AuthContext'; 
 import { CKEditor } from '@ckeditor/ckeditor5-react';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 
@@ -20,7 +20,7 @@ interface Props {
 export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRequest }: Props) {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const { user } = useAuth(); // Get current user from AuthContext
+  const { user } = useAuth(); 
   const [statuses, setStatuses] = useState<Array<{ code: string; displayName: string }>>([]);
   const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -35,7 +35,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
     metaTitle: article?.metaTitle || '',
     metaDescription: article?.metaDescription || '',
     authorId: user?.id || '', // Use logged-in user ID
-    statusCode: article?.statusCode || 'DRAFT',
+    statusCode: article?.statusCode || 'Draft',
     categoryIds: article?.categoryIds || [],
   });
 
@@ -58,7 +58,7 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
         metaTitle: article.metaTitle || '',
         metaDescription: article.metaDescription || '',
         authorId: user?.id || '', // Use logged-in user ID
-        statusCode: article.statusCode || 'DRAFT',
+        statusCode: article.statusCode || 'Draft',
         categoryIds: article.categoryIds || [],
       });
       setThumbnailPreview(article.thumbnailUrl || '');
@@ -74,16 +74,15 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
         const fetchedStatuses = await articleService.getStatuses();
         setStatuses(fetchedStatuses);
 
-        // If in create mode and no article status is set, default to 'DRAFT'
+        // If in create mode and no article status is set, default to 'Draft'
         if (mode === 'create' && !formData.statusCode) {
-          setFormData(prev => ({ ...prev, statusCode: 'DRAFT' }));
+          setFormData(prev => ({ ...prev, statusCode: 'Draft' }));
         }
 
         // Fetch categories
         const fetchedCategories = await articleService.getCachedCategories(); // Use cached categories
         setCategories(fetchedCategories.items.filter((cat: CategoryDTO) => cat.isActive)); // Filter for active categories
       } catch (error) {
-        console.error('Error fetching statuses or categories:', error);
         showToast('Không thể tải dữ liệu trạng thái hoặc danh mục.', 'error');
       }
     };
@@ -172,7 +171,8 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
     setErrors(newErrors);
 
     if (hasErrors) {
-      const fieldOrder = ['title', 'slug', 'summary', 'content', 'thumbnailUrl', 'categoryIds', 'displayOrder', 'statusCode', 'metaTitle', 'metaDescription', 'coverImageUrl'];
+      // Thứ tự hợp lý: title -> slug -> summary -> categoryIds -> content -> thumbnailUrl -> statusCode -> displayOrder -> metaTitle -> metaDescription -> coverImageUrl
+      const fieldOrder = ['title', 'slug', 'summary', 'categoryIds', 'content', 'thumbnailUrl', 'statusCode', 'displayOrder', 'metaTitle', 'metaDescription', 'coverImageUrl'];
       const firstErrorField = fieldOrder.find(field => newErrors[field]);
       if (firstErrorField) {
         document.getElementById(`form-group-${firstErrorField}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -213,19 +213,12 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
       coverFile: coverFile || undefined,
     };
 
-    console.log('Form submission - Mode:', mode);
-    console.log('Form submission - FormData:', formData);
-    console.log('Form submission - Thumbnail preview:', thumbnailPreview);
-    console.log('Form submission - Cover preview:', coverPreview);
-    console.log('Form submission - Thumbnail file:', thumbnailFile);
-    console.log('Form submission - Cover file:', coverFile);
-    console.log('Form submission - Payload:', payload);
+   
 
     if (onSaveRequest) {
       try {
         await onSaveRequest(payload);
       } catch (error: any) {
-        console.error('Caught error in ArticleForm from onSaveRequest:', error);
         const backendErrors = error?.response?.data?.errors;
         if (backendErrors) {
           const newErrors: Record<string, string> = {};
@@ -249,19 +242,14 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
     setLoading(true);
     try {
       if (mode === 'create') {
-        console.log('Creating new article with payload:', payload);
         await articleService.create(payload);
         showToast('Tạo bài viết thành công!', 'success');
       } else if (article) {
-        console.log('Updating article with ID:', article.id);
-        console.log('Update payload:', payload);
         await articleService.update(article.id, payload);
-        console.log('Update successful');
         showToast('Cập nhật bài viết thành công!', 'success');
       }
       onSaved();
     } catch (error: any) {
-      console.error('Error saving article:', error);
       console.error('Error details:', {
         status: error?.response?.status,
         statusText: error?.response?.statusText,
@@ -449,6 +437,91 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
           {mode !== 'view' && <p className={styles.helpText}>{formData.summary.length}/255 ký tự</p>}
         </div>
 
+        {/* Categories - Required Field - Đặt sau Summary, trước Content */}
+        <div id="form-group-categoryIds" className={styles.formGroup}>
+          <label className={styles.label}>
+            <i className="bi bi-tags-fill" style={{ marginRight: '8px', color: '#667eea' }}></i>
+            Danh mục bài viết
+            <span className={styles.required}>*</span>
+          </label>
+          {categories.length > 0 ? (
+            <>
+              <div className={styles.checkboxGroup} style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gap: '12px',
+                padding: '16px',
+                background: '#f9fafb',
+                borderRadius: '8px',
+                border: errors.categoryIds ? '2px solid #dc2626' : '1px solid #e5e7eb',
+                maxHeight: '200px',
+                overflowY: 'auto'
+              }}>
+                {categories.map((category: CategoryDTO) => (
+                  <label 
+                    key={category.id} 
+                    className={styles.checkboxLabel}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '10px',
+                      background: isCategorySelected(category.id) ? '#e0e7ff' : 'white',
+                      borderRadius: '6px',
+                      border: isCategorySelected(category.id) ? '2px solid #667eea' : '1px solid #e5e7eb',
+                      cursor: mode === 'view' ? 'default' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      fontWeight: isCategorySelected(category.id) ? '600' : '400'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      name="categoryIds"
+                      value={category.id}
+                      checked={isCategorySelected(category.id)}
+                      onChange={handleCategoryChange}
+                      disabled={mode === 'view'}
+                      className={styles.checkboxInput}
+                      style={{
+                        marginRight: '10px',
+                        width: '18px',
+                        height: '18px',
+                        cursor: mode === 'view' ? 'default' : 'pointer'
+                      }}
+                    />
+                    <span style={{ flex: 1 }}>{category.name}</span>
+                    {isCategorySelected(category.id) && (
+                      <i className="bi bi-check-circle-fill" style={{ color: '#667eea', marginLeft: '8px' }}></i>
+                    )}
+                  </label>
+                ))}
+              </div>
+              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <small style={{ color: '#6b7280', fontSize: '13px' }}>
+                  <i className="bi bi-info-circle" style={{ marginRight: '4px' }}></i>
+                  Đã chọn: <strong style={{ color: '#667eea' }}>{formData.categoryIds.length}</strong> danh mục
+                </small>
+              </div>
+              {errors.categoryIds && (
+                <p className={styles.errorText} style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="bi bi-exclamation-circle-fill"></i>
+                  {errors.categoryIds}
+                </p>
+              )}
+            </>
+          ) : (
+            <div style={{
+              padding: '16px',
+              background: '#fef3c7',
+              borderRadius: '8px',
+              border: '1px solid #fde047',
+              color: '#92400e'
+            }}>
+              <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: '8px' }}></i>
+              Chưa có danh mục nào. Vui lòng tạo danh mục trước khi tạo bài viết.
+            </div>
+          )}
+        </div>
+
         {/* Content */}
         <div id="form-group-content" className={styles.formGroup}>
           <label className={styles.label}>
@@ -590,125 +663,137 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
           </div>
         </div>
 
-        {/* Display Settings */}
-        <div className={styles.gridTwoCols}>
-          <div id="form-group-displayType" className={styles.formGroup}>
-            <label className={styles.label}>
-              <i className="bi bi-collection"></i>
-              Loại hiển thị
-            </label>
-            <select
-              name="displayType"
-              value={formData.displayType}
-              onChange={handleChange}
-              disabled={mode === 'view'}
-              className={styles.select}
-            >
-              <option value="STANDARD">Tiêu chuẩn</option>
-              <option value="FEATURED">Nổi bật</option>
-            </select>
-            <p className={styles.helpText}>Chọn loại hiển thị cho bài viết</p>
-          </div>
-
-          <div id="form-group-displayOrder" className={styles.formGroup}>
-            <label className={styles.label}>
-              <i className="bi bi-sort-numeric-down"></i>
-              Thứ tự hiển thị
-            </label>
-            <input
-              type="number"
-              name="displayOrder"
-              value={formData.displayOrder}
-              onChange={handleChange}
-              disabled={mode === 'view'}
-              className={`${styles.input} ${errors.displayOrder ? styles.inputError : ''}`}
-              placeholder="0"
-              min="0"
-            />
-            {errors.displayOrder && <p className={styles.errorText}>{errors.displayOrder}</p>}
-            <p className={styles.helpText}>Số càng nhỏ, bài viết hiển thị trước</p>
-          </div>
-        </div>
-
-        {/* Homepage Visibility Toggle */}
-        <div id="form-group-isHomepageVisible" className={styles.formGroup}>
-          <label className={styles.label}>
-            <i className="bi bi-house-door"></i>
-            Hiển thị trên trang chủ
-          </label>
-          <div className={styles.toggleContainer}>
-            <label className={styles.toggleLabel}>
-              <input
-                type="checkbox"
-                checked={formData.isHomepageVisible}
-                onChange={e => setFormData(prev => ({ ...prev, isHomepageVisible: e.target.checked }))}
-                disabled={mode === 'view'}
-                className={styles.toggleInput}
-              />
-              <span className={`${styles.toggleSwitch} ${formData.isHomepageVisible ? styles.active : ''}`}>
-                <span className={styles.toggleSlider}></span>
-              </span>
-              <span className={styles.toggleText}>
-                {formData.isHomepageVisible ? 'Hiển thị' : 'Ẩn'}
-              </span>
-            </label>
-            <p className={styles.helpText}>
-              {formData.isHomepageVisible
-                ? 'Bài viết sẽ hiển thị trên trang chủ'
-                : 'Bài viết sẽ không hiển thị trên trang chủ'}
-            </p>
-          </div>
-        </div>
-
-        {/* Status */}
+        {/* Status - Đặt sau Images, trước Display Settings */}
         <div id="form-group-statusCode" className={styles.formGroup}>
           <label className={styles.label}>
-            <i className="bi bi-info-circle"></i>
+            <i className="bi bi-check-circle-fill" style={{ marginRight: '8px', color: '#667eea' }}></i>
             Trạng thái xuất bản
+            <span className={styles.required}>*</span>
           </label>
           <select
             name="statusCode"
             value={formData.statusCode}
             onChange={handleChange}
             disabled={mode === 'view'}
-            className={styles.select}
+            className={`${styles.select} ${errors.statusCode ? styles.inputError : ''}`}
           >
             {statuses.map(status => (
               <option key={status.code} value={status.code}>{status.displayName}</option>
             ))}
           </select>
           {errors.statusCode && <p className={styles.errorText}>{errors.statusCode}</p>}
-          <p className={styles.helpText}>Chọn trạng thái cho bài viết</p>
-          {mode === 'create' && !formData.statusCode && <p className={styles.errorText}>Trạng thái mặc định là Bản nháp</p>}
+          <p className={styles.helpText}>
+            <i className="bi bi-lightbulb" style={{ marginRight: '4px' }}></i>
+            Chọn trạng thái cho bài viết. "Bản nháp" để lưu nháp, "Xuất bản" để hiển thị công khai.
+          </p>
         </div>
 
-        {/* Categories */}
-        {categories.length > 0 && (
-          <div id="form-group-categoryIds" className={styles.formGroup}>
-            <label className={styles.label}>
-              <i className="bi bi-tags"></i>
-              Danh mục
-            </label>
-            <div className={styles.checkboxGroup}>
-              {categories.map((category: CategoryDTO) => (
-                <label key={category.id} className={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    name="categoryIds"
-                    value={category.id}
-                    checked={isCategorySelected(category.id)}
-                    onChange={handleCategoryChange}
-                    disabled={mode === 'view'}
-                    className={styles.checkboxInput}
-                  />
-                  {category.name}
-                </label>
-              ))}
-              {errors.categoryIds && <p className={styles.errorText}>{errors.categoryIds}</p>}
+        {/* Display Settings - Nhóm các cài đặt hiển thị lại với nhau */}
+        <div style={{ 
+          padding: '20px', 
+          background: '#f9fafb', 
+          borderRadius: '12px', 
+          border: '1px solid #e5e7eb',
+          marginBottom: '20px'
+        }}>
+          <h3 style={{ 
+            fontSize: '16px', 
+            fontWeight: '600', 
+            color: '#374151', 
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <i className="bi bi-gear-fill" style={{ color: '#667eea' }}></i>
+            Cài đặt hiển thị
+          </h3>
+          
+          <div className={styles.gridTwoCols}>
+            <div id="form-group-displayType" className={styles.formGroup}>
+              <label className={styles.label}>
+                <i className="bi bi-collection"></i>
+                Loại hiển thị
+              </label>
+              <select
+                name="displayType"
+                value={formData.displayType}
+                onChange={handleChange}
+                disabled={mode === 'view'}
+                className={styles.select}
+              >
+                <option value="STANDARD">Tiêu chuẩn</option>
+                <option value="FEATURED">Nổi bật</option>
+              </select>
+              <p className={styles.helpText}>
+                <i className="bi bi-lightbulb" style={{ marginRight: '4px' }}></i>
+                Chọn loại hiển thị cho bài viết
+              </p>
+            </div>
+
+            <div id="form-group-displayOrder" className={styles.formGroup}>
+              <label className={styles.label}>
+                <i className="bi bi-sort-numeric-down"></i>
+                Thứ tự hiển thị
+              </label>
+              <input
+                type="number"
+                name="displayOrder"
+                value={formData.displayOrder === 0 ? '' : formData.displayOrder}
+                onChange={e => {
+                  const value = e.target.value;
+                  const numValue = value === '' ? 0 : parseInt(value) || 0;
+                  setFormData(prev => ({ ...prev, displayOrder: numValue }));
+                  if (errors.displayOrder) {
+                    const newErrors = { ...errors };
+                    delete newErrors.displayOrder;
+                    setErrors(newErrors);
+                  }
+                }}
+                disabled={mode === 'view'}
+                className={`${styles.input} ${errors.displayOrder ? styles.inputError : ''}`}
+                placeholder="0"
+                min="0"
+              />
+              {errors.displayOrder && <p className={styles.errorText}>{errors.displayOrder}</p>}
+              <p className={styles.helpText}>
+                <i className="bi bi-lightbulb" style={{ marginRight: '4px' }}></i>
+                Số càng nhỏ, bài viết hiển thị trước
+              </p>
             </div>
           </div>
-        )}
 
+          {/* Homepage Visibility Toggle */}
+          <div id="form-group-isHomepageVisible" className={styles.formGroup} style={{ marginTop: '16px' }}>
+            <label className={styles.label}>
+              <i className="bi bi-house-door-fill"></i>
+              Hiển thị trên trang chủ
+            </label>
+            <div className={styles.toggleContainer}>
+              <label className={styles.toggleLabel}>
+                <input
+                  type="checkbox"
+                  checked={formData.isHomepageVisible}
+                  onChange={e => setFormData(prev => ({ ...prev, isHomepageVisible: e.target.checked }))}
+                  disabled={mode === 'view'}
+                  className={styles.toggleInput}
+                />
+                <span className={`${styles.toggleSwitch} ${formData.isHomepageVisible ? styles.active : ''}`}>
+                  <span className={styles.toggleSlider}></span>
+                </span>
+                <span className={styles.toggleText}>
+                  {formData.isHomepageVisible ? 'Hiển thị' : 'Ẩn'}
+                </span>
+              </label>
+              <p className={styles.helpText}>
+                <i className="bi bi-lightbulb" style={{ marginRight: '4px' }}></i>
+                {formData.isHomepageVisible
+                  ? 'Bài viết sẽ hiển thị trên trang chủ'
+                  : 'Bài viết sẽ không hiển thị trên trang chủ'}
+              </p>
+            </div>
+          </div>
+        </div>
         
         {/* View Mode Specific Fields */}
         {mode === 'view' && article && (

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using Medix.API.DataAccess.Interfaces.Classification;
+﻿﻿using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -21,19 +21,16 @@ namespace Medix.API.DataAccess.Repositories.Classification
             const string walletTransactionType = "AppointmentPayment";
             const string walletTransactionStatus = "Completed";
 
-            // base appointment query for the year (optionally scoped to doctor)
             var baseAppts = _context.Appointments
                 .AsNoTracking()
                 .Where(a => a.AppointmentStartTime.Year == year
                             && (doctorId == null || a.DoctorId == doctorId));
 
-            // 1) Appointment counts per month (all appointments in the year)
             var apptCounts = await baseAppts
                 .GroupBy(a => a.AppointmentStartTime.Month)
                 .Select(g => new { Month = g.Key, Count = g.Count() })
                 .ToListAsync();
 
-            // 2) Wallet transactions for the year (filtered by transaction type + status)
             var wtQuery = _context.WalletTransactions
                 .AsNoTracking()
                 .Where(wt =>
@@ -41,7 +38,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                     wt.Status == walletTransactionStatus &&
                     wt.TransactionDate.Year == year);
 
-            // If doctorId provided, join to appointments to ensure the wallet tx belongs to the doctor's appointment
             if (doctorId != null)
             {
                 wtQuery = wtQuery.Join(
@@ -53,13 +49,11 @@ namespace Medix.API.DataAccess.Repositories.Classification
                     .Select(x => x.Wallet);
             }
 
-            // wallet revenue grouped by transaction month
             var wtGrouped = await wtQuery
                 .GroupBy(wt => wt.TransactionDate.Month)
                 .Select(g => new { Month = g.Key, WalletRevenue = g.Sum(wt => (decimal?)wt.Amount) ?? 0m })
                 .ToListAsync();
 
-            // 3) Determine appointment IDs that already have wallet transactions (to avoid double counting)
             var relatedAppointmentIds = await _context.WalletTransactions
                 .AsNoTracking()
                 .Where(wt =>
@@ -71,7 +65,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Distinct()
                 .ToListAsync();
 
-            // If doctorId provided ensure we only consider appointment ids for that doctor
             if (doctorId != null && relatedAppointmentIds.Any())
             {
                 relatedAppointmentIds = await _context.Appointments
@@ -82,8 +75,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
                     .ToListAsync();
             }
 
-            // 4) Appointment revenue: sum appointment.TotalAmount for Completed+Paid appointments
-            //    but exclude appointments that already have wallet transactions (to avoid duplicate counting).
+          
             var apptRevenueQuery = baseAppts
                 .Where(a => a.StatusCode == appointmentStatus && a.PaymentStatusCode == appointmentPaymentStatus);
 
@@ -97,7 +89,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Select(g => new { Month = g.Key, AppointmentRevenue = g.Sum(a => (decimal?)a.TotalAmount) ?? 0m })
                 .ToListAsync();
 
-            // 5) Merge results into months 1..12
             var months = Enumerable.Range(1, 12)
                 .Select(m => new MonthlyAppointmentTrendDto
                 {
@@ -126,7 +117,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                     months[w.Month].WalletRevenue = w.WalletRevenue;
             }
 
-            // Optional: set TotalRevenue property if DTO exposes it (here MonthlyAppointmentTrendDto has TotalRevenue getter)
             return months.Values.OrderBy(m => m.Month).ToList();
         }
         public async Task<IEnumerable<Appointment>> GetAllAsync()
@@ -230,10 +220,12 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return await _context.Appointments
                 .Include(a => a.Patient).ThenInclude(p => p.User)
                 .Include(a => a.Doctor).ThenInclude(d => d.User)
+                .Include(a => a.StatusCodeNavigation)
+                .Include(a => a.PaymentStatusCodeNavigation)
+                .Include(a => a.PaymentMethodCodeNavigation)
                 .Where(a => a.DoctorId == doctorId &&
                             a.AppointmentStartTime >= startDate &&
-                            a.AppointmentStartTime < endDate &&
-                            a.TransactionId != null)
+                            a.AppointmentStartTime < endDate)
                 .OrderBy(a => a.AppointmentStartTime)
                 .ToListAsync();
         }
@@ -241,20 +233,18 @@ namespace Medix.API.DataAccess.Repositories.Classification
         public async Task<bool> HasFutureAppointmentsForDoctorOnDay(Guid doctorId, int dayOfWeek)
         {
             var today = DateTime.Today;
-            // DayOfWeek trong .NET là một enum (Sunday = 0, ..., Saturday = 6), khớp với giá trị int đầu vào.
-            var day = (DayOfWeek)dayOfWeek;
+            var dotNetDayOfWeek = dayOfWeek == 7 ? 0 : dayOfWeek; 
+            var day = (DayOfWeek)dotNetDayOfWeek;
             
-            // Lọc trước các điều kiện có thể dịch sang SQL ở phía server
             var futureAppointments = await _context.Appointments
                 .Where(a =>
                     a.DoctorId == doctorId &&
-                    a.AppointmentStartTime >= today && // Điều kiện này dịch được
-                    a.TransactionId != null) // Điều kiện này dịch được
-                .Select(a => a.AppointmentStartTime) // Chỉ lấy cột ngày giờ để giảm dữ liệu truyền tải
+                    a.AppointmentStartTime >= today && 
+                    a.TransactionId != null) 
+                .Select(a => a.AppointmentStartTime) 
                 .ToListAsync();
 
-            // Thực hiện kiểm tra DayOfWeek ở phía client (trong bộ nhớ)
-            // Vì dữ liệu đã được lọc trước nên thao tác này rất nhanh.
+
             return futureAppointments.Any(appointmentDate => appointmentDate.DayOfWeek == day);
         }
 

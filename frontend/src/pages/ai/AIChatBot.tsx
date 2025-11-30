@@ -1,55 +1,178 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import styles from '../../styles/pages/AIChatBot.module.css';
+import aiChatService, { SymptomAnalysisResponse, EMRAnalysisResponse } from '../../services/aiChatService';
+import { AIChatMessage } from '../../types/aiChat';
+import { getChatHistory, saveChatHistory } from '../../utils/chatHistory';
 
-interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'ai';
-  timestamp: Date;
-}
+const createGreetingMessage = (): AIChatMessage => ({
+  id: 'medix-greeting',
+  text: 'Xin chào! Tôi là Medix! Tôi có thể giúp bạn tư vấn sức khỏe, phân tích triệu chứng, hoặc trả lời các câu hỏi về hệ thống. Hãy cho tôi biết bạn cần hỗ trợ gì nhé!',
+  sender: 'ai',
+  timestamp: new Date(),
+});
 
 export const AIChatBot: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: 'Xin chào! Tôi là AI Assistant của Medix. Tôi có thể giúp bạn tư vấn sức khỏe ban đầu. Bạn có thể mô tả triệu chứng hoặc câu hỏi sức khỏe của mình.',
-      sender: 'ai',
-      timestamp: new Date(),
-    },
-  ]);
+  const navigate = useNavigate();
+  const [messages, setMessages] = useState<AIChatMessage[]>(() => {
+    const history = getChatHistory();
+    return history.length > 0 ? history : [createGreetingMessage()];
+  });
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSendMessage = async () => {
-    if (!inputText.trim()) return;
+  const quickReplies = [
+    'Khó ngủ',
+    'Mệt mỏi',
+    'Nóng trong',
+    'Đau đầu',
+    'Chóng mặt',
+    'Buồn nôn',
+  ];
 
-    const newUserMessage: Message = {
-      id: Date.now().toString(),
-      text: inputText,
-      sender: 'user',
-      timestamp: new Date(),
-    };
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
-    setMessages(prev => [...prev, newUserMessage]);
-    setInputText('');
+  useEffect(() => {
+    saveChatHistory(messages);
+  }, [messages]);
+
+  const handleQuickReply = (text: string) => {
+    setInputText(text);
+    handleSendMessage(text);
+  };
+
+  const handleSendMessage = async (text?: string) => {
+    const messageText = text || inputText.trim();
+    if (!messageText && uploadedFiles.length === 0) return;
+
+    if (messageText) {
+      const newUserMessage: AIChatMessage = {
+        id: Date.now().toString(),
+        text: messageText,
+        sender: 'user',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, newUserMessage]);
+      setInputText('');
+    }
+
+    if (uploadedFiles.length > 0) {
+      setIsLoading(true);
+      try {
+        const file = uploadedFiles[0];
+        const response = await aiChatService.uploadAndAnalyzeEMR({
+          file,
+        });
+
+        const aiResponse: AIChatMessage = {
+          id: (Date.now() + 1).toString(),
+          text: response.summary + '\n\n' + response.recommendations.join('\n'),
+          sender: 'ai',
+          timestamp: new Date(),
+          type: 'emr_analysis',
+          data: response,
+        };
+        setMessages(prev => [...prev, aiResponse]);
+        setUploadedFiles([]);
+      } catch (error: any) {
+        const errorMessage: AIChatMessage = {
+          id: (Date.now() + 1).toString(),
+          text: 'Xin lỗi, có lỗi xảy ra khi phân tích EMR. Vui lòng thử lại sau.',
+          sender: 'ai',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: `Cảm ơn bạn đã chia sẻ. Dựa trên thông tin "${inputText}", tôi khuyên bạn nên: 
-        
-1. Theo dõi các triệu chứng thêm 24-48 giờ
-2. Uống đủ nước và nghỉ ngơi
-3. Nếu triệu chứng không cải thiện hoặc trở nên nghiêm trọng hơn, hãy đặt lịch khám với bác sĩ
+    try {
+      const symptomKeywords = ['đau', 'mệt', 'sốt', 'ho', 'khó', 'buồn', 'chóng', 'nóng', 'ngứa', 'triệu chứng'];
+      const isSymptomQuery = symptomKeywords.some(keyword => messageText.toLowerCase().includes(keyword));
 
-⚠️ Lưu ý: Đây chỉ là tư vấn ban đầu, không thay thế việc khám bác sĩ chuyên khoa.`,
+      if (isSymptomQuery) {
+        const symptoms = messageText.split(/[,\n]/).map(s => s.trim()).filter(s => s.length > 0);
+        
+        const analysisResponse = await aiChatService.analyzeSymptoms({
+          symptoms: symptoms.slice(0, 10), 
+          additionalInfo: messageText,
+        });
+
+        const severityText = analysisResponse.severity === 'mild' ? 'nhẹ' : 
+                            analysisResponse.severity === 'moderate' ? 'vừa' : 'nặng';
+        
+        let responseText = `**Đánh giá mức độ: ${severityText.toUpperCase()}**\n\n`;
+        responseText += `${analysisResponse.overview}\n\n`;
+        responseText += `**Các khả năng chẩn đoán:**\n`;
+        analysisResponse.possibleConditions.forEach((condition, index) => {
+          responseText += `${index + 1}. ${condition.condition} (${condition.probability}%)\n   ${condition.description}\n`;
+        });
+
+        if (analysisResponse.homeTreatment) {
+          responseText += `\n**Hướng dẫn điều trị tại nhà:**\n`;
+          analysisResponse.homeTreatment.instructions.forEach(instruction => {
+            responseText += `• ${instruction}\n`;
+          });
+        }
+
+        if (analysisResponse.recommendedDoctors && analysisResponse.recommendedDoctors.length > 0) {
+          responseText += `\n**Bác sĩ được gợi ý:**\n`;
+          analysisResponse.recommendedDoctors.slice(0, 3).forEach((doctor, index) => {
+            responseText += `${index + 1}. ${doctor.name} - ${doctor.specialization}\n`;
+            responseText += `   Đánh giá: ${doctor.rating}/5.0 | Kinh nghiệm: ${doctor.experience} năm\n`;
+          });
+        }
+
+        const aiResponse: AIChatMessage = {
+          id: (Date.now() + 1).toString(),
+          text: responseText,
+          sender: 'ai',
+          timestamp: new Date(),
+          type: 'symptom_analysis',
+          data: analysisResponse,
+        };
+        setMessages(prev => [...prev, aiResponse]);
+      } else {
+        const conversationHistory = messages.map(msg => ({
+          text: msg.text,
+          sender: msg.sender,
+          type: msg.type,
+        }));
+
+        const response = await aiChatService.sendMessage(messageText, conversationHistory);
+        
+        const aiResponse: AIChatMessage = {
+          id: response.id || (Date.now() + 1).toString(),
+          text: response.text,
+          sender: 'ai',
+          timestamp: new Date(response.timestamp || new Date()),
+          type: response.type as any,
+          data: response.data,
+        };
+        setMessages(prev => [...prev, aiResponse]);
+      }
+    } catch (error: any) {
+      const errorMessage: AIChatMessage = {
+        id: (Date.now() + 1).toString(),
+        text: 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.',
         sender: 'ai',
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, aiResponse]);
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -59,77 +182,224 @@ export const AIChatBot: React.FC = () => {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles = files.filter(file => {
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+      return validTypes.includes(file.type);
+    });
+    setUploadedFiles(prev => [...prev, ...validFiles]);
+    if (e.target) {
+      e.target.value = '';
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatMessage = (text: string): string => {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br />')
+      .replace(/⚠️/g, '⚠️')
+      .replace(/🚨/g, '🚨');
+  };
+
+  const renderSymptomAnalysis = (data: SymptomAnalysisResponse) => {
+    return (
+      <div className={styles.symptomAnalysis}>
+        {data.possibleConditions && data.possibleConditions.length > 0 && (
+          <div className={styles.conditionsList}>
+            <h4>Khả năng chẩn đoán:</h4>
+            {data.possibleConditions.map((condition, index) => (
+              <div key={index} className={styles.conditionItem}>
+                <span className={styles.conditionName}>{condition.condition}</span>
+                <span className={styles.conditionProbability}>{condition.probability}%</span>
+                <p className={styles.conditionDescription}>{condition.description}</p>
+              </div>
+            ))}
+          </div>
+        )}
+        {data.recommendedDoctors && data.recommendedDoctors.length > 0 && (
+          <div className={styles.doctorsList}>
+            <h4>Bác sĩ được gợi ý:</h4>
+            {data.recommendedDoctors.map((doctor, index) => (
+              <div key={index} className={styles.doctorItem}>
+                <span className={styles.doctorName}>{doctor.name}</span>
+                <span className={styles.doctorSpecialty}>{doctor.specialization}</span>
+                <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderEMRAnalysis = (data: EMRAnalysisResponse) => {
+    return (
+      <div className={styles.emrAnalysis}>
+        {data.extractedData.diagnosis && data.extractedData.diagnosis.length > 0 && (
+          <div className={styles.emrSection}>
+            <strong>Chẩn đoán:</strong> {data.extractedData.diagnosis.join(', ')}
+          </div>
+        )}
+        {data.extractedData.medications && data.extractedData.medications.length > 0 && (
+          <div className={styles.emrSection}>
+            <strong>Thuốc:</strong> {data.extractedData.medications.join(', ')}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="max-w-4xl mx-auto h-screen flex flex-col bg-white">
-      {/* Header */}
-      <div className="bg-blue-600 text-white p-4 rounded-t-lg">
-        <h1 className="text-xl font-semibold">AI Tư vấn Sức khỏe</h1>
-        <p className="text-blue-100 text-sm">Hỗ trợ tư vấn sức khỏe ban đầu 24/7</p>
+    <div className={styles.chatPage}>
+      <div className={styles.chatHeader}>
+        <div className={styles.headerLeft}>
+          <div className={styles.avatarContainer}>
+            <img 
+              src="/images/medix-logo-mirrored.jpg" 
+              alt="MEDIX" 
+              className={styles.avatar}
+            />
+            <div className={styles.statusIndicator}></div>
+          </div>
+          <div className={styles.headerInfo}>
+            <h1 className={styles.headerTitle}>MEDIX</h1>
+            <p className={styles.headerSubtitle}>Đang hoạt động</p>
+          </div>
+        </div>
+        <button 
+          className={styles.backButton} 
+          onClick={() => navigate(-1)}
+          title="Quay lại"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      <div className={styles.messagesArea}>
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`${styles.message} ${message.sender === 'user' ? styles.userMessage : styles.aiMessage}`}
           >
-            <div
-              className={`max-w-3xl px-4 py-2 rounded-lg ${
-                message.sender === 'user'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-800 shadow-sm border'
-              }`}
-            >
-              <p className="whitespace-pre-wrap">{message.text}</p>
-              <p className={`text-xs mt-2 ${
-                message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
-              }`}>
-                {message.timestamp.toLocaleTimeString()}
-              </p>
+            {message.sender === 'ai' && (
+              <img 
+                src="/images/medix-logo-mirrored.jpg" 
+                alt="MEDIX" 
+                className={styles.messageAvatar}
+              />
+            )}
+            <div className={styles.messageBubble}>
+              <div className={styles.messageText} dangerouslySetInnerHTML={{ __html: formatMessage(message.text) }} />
+              {message.data && message.type === 'symptom_analysis' && (
+                <div className={styles.messageData}>
+                  {renderSymptomAnalysis(message.data)}
+                </div>
+              )}
+              {message.data && message.type === 'emr_analysis' && (
+                <div className={styles.messageData}>
+                  {renderEMRAnalysis(message.data)}
+                </div>
+              )}
+              <div className={styles.messageTime}>
+                {message.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+              </div>
             </div>
           </div>
         ))}
-        
+
         {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-white text-gray-800 shadow-sm border px-4 py-2 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-75"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-150"></div>
-                </div>
-                <span className="text-sm text-gray-500">AI đang suy nghĩ...</span>
+          <div className={`${styles.message} ${styles.aiMessage}`}>
+            <img 
+              src="/images/medix-logo-mirrored.jpg" 
+              alt="MEDIX" 
+              className={styles.messageAvatar}
+            />
+            <div className={styles.messageBubble}>
+              <div className={styles.typingIndicator}>
+                <span></span>
+                <span></span>
+                <span></span>
               </div>
             </div>
           </div>
         )}
+
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-4 border-t bg-white">
-        <div className="flex space-x-2">
-          <textarea
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Mô tả triệu chứng hoặc câu hỏi sức khỏe của bạn..."
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-            rows={2}
-          />
-          <button
-            onClick={handleSendMessage}
-            disabled={!inputText.trim() || isLoading}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Gửi
-          </button>
+      {uploadedFiles.length > 0 && (
+        <div className={styles.filePreview}>
+          {uploadedFiles.map((file, index) => (
+            <div key={index} className={styles.fileItem}>
+              <span className={styles.fileName}>{file.name}</span>
+              <button 
+                className={styles.removeFileButton}
+                onClick={() => removeFile(index)}
+              >
+                ×
+              </button>
+            </div>
+          ))}
         </div>
-        
-        <p className="text-xs text-gray-500 mt-2">
-          ⚠️ Thông tin từ AI chỉ mang tính chất tham khảo, không thay thế việc khám và điều trị của bác sĩ chuyên khoa.
-        </p>
+      )}
+
+      {messages.length === 1 && (
+        <div className={styles.quickSuggestions}>
+          <p className={styles.suggestionPrompt}>Gợi ý nhanh:</p>
+          <div className={styles.quickReplies}>
+            {quickReplies.map((reply, index) => (
+              <button
+                key={index}
+                className={styles.quickReplyButton}
+                onClick={() => handleQuickReply(reply)}
+              >
+                {reply}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className={styles.inputArea}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/jpg,image/png,application/pdf"
+          multiple
+          onChange={handleFileSelect}
+          className={styles.fileInput}
+          id="file-upload"
+        />
+        <label htmlFor="file-upload" className={styles.attachButton}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+          </svg>
+        </label>
+        <textarea
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Hãy đặt câu hỏi với Medix..."
+          className={styles.textInput}
+          rows={1}
+        />
+        <button
+          onClick={() => handleSendMessage()}
+          disabled={(!inputText.trim() && uploadedFiles.length === 0) || isLoading}
+          className={styles.sendButton}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
       </div>
     </div>
   );

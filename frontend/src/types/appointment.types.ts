@@ -22,6 +22,7 @@ export interface CreateAppointmentDto {
 export interface Appointment {
   id: string;
   patientName: string;
+  patientEmail?: string;
   doctorName: string;
   appointmentStartTime: string; // "YYYY-MM-DDTHH:mm:ss"
   appointmentEndTime: string;   // "YYYY-MM-DDTHH:mm:ss"

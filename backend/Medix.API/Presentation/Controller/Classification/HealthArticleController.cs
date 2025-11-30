@@ -47,13 +47,11 @@ namespace Medix.API.Presentation.Controller.Classification
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while getting published health articles. Page: {Page}, PageSize: {PageSize}", page, pageSize);
-                // Trả về lỗi 500 với thông điệp chung, chi tiết lỗi đã được ghi lại
                 return StatusCode(500, new { message = "An unexpected error occurred while fetching published articles." });
             }
         }
 
         [HttpGet("{id}")]
-        //[Authorize(Roles = "MANAGER")]
 
         public async Task<ActionResult> GetById(Guid id)
         {
@@ -64,7 +62,6 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpGet("slug/{slug}")]
-        //[Authorize(Roles = "MANAGER")]
 
         public async Task<ActionResult> GetBySlug(string slug)
         {
@@ -84,11 +81,18 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpGet("statuses")]
-        //[Authorize(Roles = "MANAGER")]
         public async Task<IActionResult> GetStatuses()
         {
             var statuses = await _statusRepository.GetActiveStatusesAsync();
-            var result = statuses.Select(s => new { s.Code, s.DisplayName });
+            var result = statuses
+                .Where(s => s.Code.ToUpper() == "PUBLISHED" || s.Code.ToUpper() == "DRAFT")
+                .Select(s => new { 
+                    Code = s.Code, 
+                    DisplayName = s.Code.ToUpper() == "PUBLISHED" ? "Xuất bản" : 
+                                  s.Code.ToUpper() == "DRAFT" ? "Bản nháp" : s.DisplayName 
+                })
+                .OrderBy(s => s.Code.ToUpper() == "DRAFT" ? 0 : 1) 
+                .ToList();
             return Ok(result);
         }
 
@@ -101,20 +105,17 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPost]
-        //[Authorize(Roles = "MANAGER")]
 
         public async Task<IActionResult> Create([FromForm] HealthArticleCreateDto model, IFormFile? thumbnailFile, IFormFile? coverFile)
         {
             try
             {
-                // Lấy ID của người dùng đang đăng nhập từ token
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
                 if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var authorId))
                 {
                     return Unauthorized(new { Message = "Không thể xác thực người dùng hoặc ID người dùng không hợp lệ." });
                 }
 
-                // Gán ID người dùng làm tác giả
                 model.AuthorId = authorId;
 
                 if (thumbnailFile != null)
@@ -136,7 +137,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
             catch (Medix.API.Exceptions.ValidationException)
             {
-                // Ném lại lỗi để ExceptionHandlingMiddleware xử lý
                 throw;
             }
             catch (Exception ex)
@@ -145,7 +145,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 if (ex.InnerException != null)
                     _logger.LogError("Inner exception: {0}", ex.InnerException.Message);
 
-                // Chỉ trả về lỗi 500 cho các lỗi không mong muốn
                 return StatusCode(500, new { message = "An unexpected error occurred while creating the article." });
             }
 
@@ -174,12 +173,10 @@ namespace Medix.API.Presentation.Controller.Classification
             }
             catch (Medix.API.Exceptions.ValidationException)
             {
-                // Ném lại lỗi để ExceptionHandlingMiddleware xử lý
                 throw;
             }
             catch (Medix.API.Exceptions.NotFoundException)
             {
-                // Ném lại lỗi để ExceptionHandlingMiddleware xử lý
                 throw;
             }
             catch (Exception ex)
@@ -188,7 +185,6 @@ namespace Medix.API.Presentation.Controller.Classification
                 if (ex.InnerException != null)
                     _logger.LogError("Inner exception: {0}", ex.InnerException.Message);
 
-                // Chỉ trả về lỗi 500 cho các lỗi không mong muốn
                 return StatusCode(500, new { message = "An unexpected error occurred while updating the article." });
             }
 
@@ -243,14 +239,12 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPost("{id}/view")]
-        [AllowAnonymous] // Allow anyone to trigger a view count
+        [AllowAnonymous] 
         public async Task<IActionResult> IncrementView(Guid id)
         {
-            // This endpoint now exists and will handle the view increment request
-            // It has a single responsibility: increment the view count.
+            
             await _healthArticleService.IncrementViewCountOnlyAsync(id);
 
-            // Return 200 OK to confirm the action was received.
             return Ok();
         }
     }

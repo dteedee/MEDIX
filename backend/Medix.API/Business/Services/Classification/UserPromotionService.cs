@@ -1,6 +1,7 @@
 ﻿using Hangfire;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
+using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -10,15 +11,16 @@ namespace Medix.API.Business.Services.Classification
     public class UserPromotionService : IUserPromotionService
     {
         private readonly IUserPromotionRepository _userPromotionRepository;
+        private readonly IUserRepository userRepository;
 
-        public UserPromotionService(IUserPromotionRepository userPromotionRepository)
+        public UserPromotionService(IUserPromotionRepository userPromotionRepository, IUserRepository userRepository)
         {
             _userPromotionRepository = userPromotionRepository;
+            this.userRepository = userRepository;
         }
 
         public async Task<UserPromotionDto> AssignPromotionToUserAsync(Guid userId, Guid promotionId)
         {
-            // Kiểm tra xem promotion đã được gán cho user chưa
       
 
       
@@ -29,15 +31,13 @@ namespace Medix.API.Business.Services.Classification
                 PromotionId = promotionId,
                 UsedCount = 0,
                 IsActive = true,
-                ExpiryDate = DateTime.UtcNow.AddDays(30)  // ✅ Set ExpiryDate từ Promotion
+                ExpiryDate = DateTime.UtcNow.AddDays(30)  
             };
 
             var created = await _userPromotionRepository.CreateAsync(userPromotion);
 
-            // Load promotion details
             var result = await _userPromotionRepository.GetByIdAsync(created.Id);
 
-            // ✅ Schedule job để tự động deactivate khi hết hạn
             if (result != null && result.ExpiryDate > DateTime.UtcNow)
             {
                 BackgroundJob.Schedule<IUserPromotionService>(
@@ -83,7 +83,6 @@ namespace Medix.API.Business.Services.Classification
 
             var now = DateTime.UtcNow;
 
-            // Validate promotion
             if (!userPromotion.IsActive)
                 throw new InvalidOperationException("This promotion is not active.");
 
@@ -100,10 +99,8 @@ namespace Medix.API.Business.Services.Classification
                 userPromotion.UsedCount >= userPromotion.Promotion.MaxUsage.Value)
                 throw new InvalidOperationException("Usage limit reached for this promotion.");
 
-            // Increment usage count
             await _userPromotionRepository.IncrementUsageCountAsync(id);
 
-            // Reload to get updated data
             var updated = await _userPromotionRepository.GetByIdAsync(id);
 
             return MapToDto(updated!);
@@ -149,7 +146,7 @@ namespace Medix.API.Business.Services.Classification
                 IsActive = userPromotion.IsActive,
                 AssignedAt = userPromotion.AssignedAt,
                 LastUsedAt = userPromotion.LastUsedAt,
-          
+                ExpiryDate = userPromotion.ExpiryDate,
                 Promotion = userPromotion.Promotion != null ? new PromotionDto
                 {
                     Id = userPromotion.Promotion.Id,
@@ -163,9 +160,93 @@ namespace Medix.API.Business.Services.Classification
                     StartDate = userPromotion.Promotion.StartDate,
                     EndDate = userPromotion.Promotion.EndDate,
                     IsActive = userPromotion.Promotion.IsActive,
-                    CreatedAt = userPromotion.Promotion.CreatedAt
+                    CreatedAt = userPromotion.Promotion.CreatedAt,
+                    // map new field
+                    ApplicableTargets = userPromotion.Promotion.ApplicableTargets
                 } : null
             };
+        }
+
+        public async Task<IEnumerable<UserPromotionDto>> AssignPromotionToMultipleUsersAsync(
+               Guid promotionId,
+               bool applicableToAllUsers,
+               bool applicableToNewUsers,
+               bool applicableToVipUsers,
+               int newUserDays = 30)
+        {
+            if (!applicableToAllUsers && !applicableToNewUsers && !applicableToVipUsers)
+                throw new InvalidOperationException("At least one target flag must be true.");
+
+            var allUsers = (await userRepository.GetAllAsync()).ToList();
+
+            IEnumerable<User> targets;
+
+            if (applicableToAllUsers)
+            {
+                targets = allUsers;
+            }
+            else
+            {
+                var set = new Dictionary<Guid, User>();
+
+                if (applicableToNewUsers)
+                {
+                    var cutoff = DateTime.UtcNow.AddDays(-Math.Max(1, newUserDays));
+                    foreach (var u in allUsers.Where(u => u.CreatedAt >= cutoff))
+                        set[u.Id] = u;
+                }
+
+                if (applicableToVipUsers)
+                {
+                    foreach (var u in allUsers.Where(u =>
+                        u.UserRoles != null &&
+                        u.UserRoles.Any(ur =>
+                            (ur.RoleCodeNavigation != null &&
+                             (string.Equals(ur.RoleCodeNavigation.Code, "VIP", StringComparison.OrdinalIgnoreCase) ||
+                              string.Equals(ur.RoleCodeNavigation.DisplayName, "VIP", StringComparison.OrdinalIgnoreCase)))
+                        )))
+                    {
+                        set[u.Id] = u;
+                    }
+                }
+                 
+                targets = set.Values;
+            }
+
+            var createdDtos = new List<UserPromotionDto>();
+
+            foreach (var user in targets)
+            {
+                var exists = await _userPromotionRepository.GetByUserIdAndPromotionIdAsync(user.Id, promotionId);
+                if (exists != null) continue;
+
+                var userPromotion = new UserPromotion
+                {
+                    UserId = user.Id,
+                    PromotionId = promotionId,
+                    UsedCount = 0,
+                    IsActive = true,
+                    AssignedAt = DateTime.UtcNow,
+                    ExpiryDate = DateTime.UtcNow.AddDays(30) 
+                };
+
+                var created = await _userPromotionRepository.CreateAsync(userPromotion);
+                var loaded = await _userPromotionRepository.GetByIdAsync(created.Id);
+
+                if (loaded != null)
+                {
+                    if (loaded.ExpiryDate > DateTime.UtcNow)
+                    {
+                        BackgroundJob.Schedule<IUserPromotionService>(
+                            svc => svc.DeactivatePromotionAsync(loaded.Id),
+                            loaded.ExpiryDate.AddSeconds(30));
+                    }
+
+                    createdDtos.Add(MapToDto(loaded));
+                }
+            }
+
+            return createdDtos;
         }
     }
 }

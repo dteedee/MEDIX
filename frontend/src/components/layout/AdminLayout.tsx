@@ -2,7 +2,6 @@ import React, { useState, createContext, useContext } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 
-// Create context for sidebar state
 interface SidebarContextType {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
@@ -22,7 +21,6 @@ const AdminLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   
-  // Determine current page based on pathname
   const getCurrentPage = () => {
     if (location.pathname.includes('/users')) return 'users';
     if (location.pathname.includes('/tracking')) return 'tracking';

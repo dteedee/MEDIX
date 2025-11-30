@@ -15,7 +15,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage = 'dashboard' }
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
@@ -42,7 +41,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentPage = 'dashboard' }
   const handleGoHome = () => {
     setShowUserMenu(false);
     navigate('/');
-    // Scroll to top when navigating to home
     window.scrollTo(0, 0);
   };
 

@@ -6,8 +6,12 @@
     background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 40%, #90caf9 100%);
     background-size: 200% 200%;
     position: relative;
-    overflow: hidden;
-    padding: 50px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 40px 20px;
+    min-height: 100vh;
+    width: 100%;
+    box-sizing: border-box;
     animation: gradientShift 15s ease infinite;
   }
 
@@ -104,6 +108,7 @@
     box-shadow: 0 12px 40px rgba(33,150,243,0.13);
     border: 1px solid rgba(33,150,243,0.10);
     animation: slideUp 0.6s ease-out;
+    margin: auto;
   }
   
   @keyframes slideUp {
@@ -129,6 +134,7 @@
     position: relative;
     overflow: hidden;
     animation: sectionGradient 10s ease infinite;
+    min-height: 100%;
   }
 
   @keyframes sectionGradient {
@@ -627,6 +633,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 100%;
   }
   
   .form-container {
@@ -813,37 +820,170 @@
     font-weight: 500;
   }
   
+  /* Google Sign In Container */
+  .google-signin-container {
+    margin-bottom: 28px;
+  }
+  
   /* Google Button Wrapper */
   .google-btn-wrapper {
     display: flex;
     justify-content: center;
-    margin-bottom: 24px;
+    margin-bottom: 0;
   }
   
-  /* Signup Link */
-  .signup-link {
+  /* Override Google button text to Vietnamese */
+  .google-btn-wrapper div[role="button"] span {
+    font-family: 'Be Vietnam Pro', sans-serif !important;
+  }
+  
+  /* Signup Section */
+  .signup-section {
     text-align: center;
+    margin-top: 24px;
+  }
+  
+  .signup-text {
     font-size: 14px;
     color: #6b7280;
+    margin-bottom: 16px;
+    font-weight: 500;
   }
   
-  .signup-link a {
-    color: #667eea;
+  /* Register Buttons Container */
+  .register-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .btn-register-patient,
+  .btn-register-doctor {
+    flex: 1;
+  }
+  
+  /* Register Button Base Styles */
+  .btn-register-patient,
+  .btn-register-doctor {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 15px;
     font-weight: 600;
     text-decoration: none;
-    transition: color 0.2s;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
   
-  .signup-link a:hover {
-    color: #1976d2;
-    text-decoration: underline;
+  .btn-register-patient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: #667eea;
+  }
+  
+  .btn-register-patient:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    color: white;
+  }
+  
+  .btn-register-doctor {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    border-color: #f5576c;
+  }
+  
+  .btn-register-doctor:hover {
+    background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);
+    color: white;
+  }
+  
+  .btn-register-patient i,
+  .btn-register-doctor i {
+    display: none;
+  }
+  
+  .btn-register-patient span,
+  .btn-register-doctor span {
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  
+  /* Giảm gap vì không có icon */
+  .btn-register-patient,
+  .btn-register-doctor {
+    gap: 0;
+    padding: 14px 16px;
+    white-space: nowrap;
   }
   
   /* Responsive Design */
-  @media (max-width: 1024px) {
+  
+  /* Màn hình lớn (Desktop) - 1200px trở lên */
+  @media (min-width: 1200px) {
+    .login-page {
+      padding: 60px 50px;
+    }
+    
+    .login-container {
+      max-width: 1200px;
+    }
+  }
+  
+  /* Màn hình vừa lớn (Large Desktop) - 1025px đến 1199px */
+  @media (min-width: 1025px) and (max-width: 1199px) {
+    .login-page {
+      padding: 50px 40px;
+    }
+    
+    .login-container {
+      max-width: 1100px;
+    }
+  }
+  
+  /* Màn hình vừa (Tablet Landscape) - 769px đến 1024px */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .login-page {
+      padding: 40px 30px;
+    }
+    
     .login-container {
       grid-template-columns: 1fr;
-      max-width: 500px;
+      max-width: 600px;
+    }
+  
+    .brand-section {
+      display: none;
+    }
+  
+    .form-section {
+      padding: 50px 40px;
+      min-height: auto;
+    }
+    
+    .brand-section {
+      min-height: auto;
+    }
+  }
+  
+  /* Màn hình nhỏ (Tablet Portrait) - 481px đến 768px */
+  @media (min-width: 481px) and (max-width: 768px) {
+    .login-page {
+      padding: 30px 20px;
+    }
+    
+    .login-container {
+      grid-template-columns: 1fr;
+      max-width: 550px;
+      border-radius: 20px;
     }
   
     .brand-section {
@@ -852,46 +992,120 @@
   
     .form-section {
       padding: 40px 30px;
+      min-height: auto;
     }
-  }
-  
-  @media (max-width: 640px) {
-    .login-page {
-      padding: 10px;
-    }
-  
-    .login-container {
-      border-radius: 20px;
-    }
-  
-    .form-section {
-      padding: 30px 24px;
-    }
-  
+    
     .form-header h2 {
       font-size: 28px;
     }
-  
-    .brand-heading {
-      font-size: 40px;
-    }
-  
-    .stat-number {
-      font-size: 28px;
-    }
   }
   
-  @media (max-width: 480px) {
+  /* Màn hình rất nhỏ (Mobile) - 320px đến 480px */
+  @media (min-width: 320px) and (max-width: 480px) {
+    .login-page {
+      padding: 20px 12px;
+    }
+    
+    .login-container {
+      grid-template-columns: 1fr;
+      max-width: 100%;
+      border-radius: 16px;
+    }
+  
+    .brand-section {
+      display: none;
+    }
+  
     .form-section {
-      padding: 24px 20px;
+      padding: 30px 20px;
+      min-height: auto;
     }
   
     .form-header h2 {
       font-size: 24px;
     }
+    
+    .form-header p {
+      font-size: 14px;
+    }
   
     .input-group input,
     .btn-login {
       padding: 12px 14px;
+      font-size: 14px;
+    }
+    
+    .input-group label {
+      font-size: 13px;
+    }
+    
+    .register-buttons {
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .btn-register-patient,
+    .btn-register-doctor {
+      padding: 12px 16px;
+      font-size: 14px;
+      flex: none;
+    }
+    
+    .btn-register-patient i,
+    .btn-register-doctor i {
+      font-size: 16px;
+    }
+    
+    .signup-text {
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+  }
+  
+  /* Màn hình cực nhỏ (Small Mobile) - dưới 320px */
+  @media (max-width: 319px) {
+    .login-page {
+      padding: 16px 8px;
+    }
+    
+    .login-container {
+      border-radius: 12px;
+    }
+    
+    .form-section {
+      padding: 24px 16px;
+      min-height: auto;
+    }
+    
+    .form-header h2 {
+      font-size: 22px;
+    }
+    
+    .input-group input,
+    .btn-login {
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    
+    .register-buttons {
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .btn-register-patient,
+    .btn-register-doctor {
+      padding: 11px 14px;
+      font-size: 13px;
+      flex: none;
+    }
+    
+    .btn-register-patient i,
+    .btn-register-doctor i {
+      font-size: 15px;
+    }
+    
+    .signup-text {
+      font-size: 12px;
+      margin-bottom: 10px;
     }
   }

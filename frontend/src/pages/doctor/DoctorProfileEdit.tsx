@@ -51,7 +51,6 @@ export default function DoctorProfileEdit() {
         try {
             const response = await DoctorService.updateAvatar(formData);
             setUploadImageLoading(false);
-            console.log(response);
             const newUrl = response.avatarUrl;
 
             setProfileDetails((prev) => ({
@@ -89,9 +88,7 @@ export default function DoctorProfileEdit() {
             try {
                 const data = await DoctorService.getDoctorProfileDetails();
                 setProfileDetails(data);
-                console.log(data);
             } catch (error: any) {
-                console.error('Failed to fetch profile details:', error);
                 setErrorCode(error?.response?.status ?? 500);
             } finally {
                 setPageLoading(false);
@@ -107,7 +104,6 @@ export default function DoctorProfileEdit() {
         const formData = new FormData(form);
 
         for (const [key, value] of formData.entries()) {
-            console.log(`${key}:`, value);
         }
 
         setErrors({});
@@ -147,17 +143,13 @@ export default function DoctorProfileEdit() {
                         break;
 
                     case 500:
-                        // Internal Server Error
                         setErrors({ general: 'Lỗi máy chủ. Vui lòng thử lại sau.' });
                         break;
 
                     default:
-                        // Other unexpected errors
                         setErrors({ general: 'Đã xảy ra lỗi. Vui lòng thử lại.' });
-                        console.error('Unhandled error status:', status, errorData);
                 }
             } else {
-                console.error('Non-Axios error:', error);
                 setErrors({ general: 'Lỗi không xác định. Vui lòng thử lại.' });
             }
         }
@@ -220,7 +212,7 @@ export default function DoctorProfileEdit() {
 
             case 'dob':
                 if (!value) {
-                    newErrors.birthdate = []; // No error if left empty
+                    newErrors.birthdate = []; 
                 } else {
                     const birthYear = new Date(value).getFullYear();
                     const currentYear = new Date().getFullYear();
@@ -268,7 +260,6 @@ export default function DoctorProfileEdit() {
     };
 
     const validateNumber = (input: string) => {
-        // Remove any non-digit characters
         return input.replace(/[^0-9]/g, '');
     };
 

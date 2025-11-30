@@ -8,15 +8,16 @@ export interface UserBasicInfo {
   email: string;
   phoneNumber: string | null;
   address: string | null;
-  dob: string | null; // ISO date string 'YYYY-MM-DD'
-  imageURL?: string | null; // Match backend DTO field name
-  identificationNumber?: string | null; // Số CMND/CCCD
+  dob: string | null; 
+  imageURL?: string | null; 
+  identificationNumber?: string | null; 
   createdAt: string;
-  medicalRecordNumber?: string | null; // Somente leitura
-  emergencyContactName?: string | null; // Editável
-  emergencyContactPhone?: string | null; // Editável
-  allergies?: string | null; // Match backend DTO field name
-  medicalHistory?: string | null; // Match backend DTO field name
+  medicalRecordNumber?: string | null; 
+  emergencyContactName?: string | null; 
+  emergencyContactPhone?: string | null; 
+  allergies?: string | null; 
+  medicalHistory?: string | null; 
+  bloodTypeCode?: string | null; 
 }
 
 export interface UpdateUserInfo {
@@ -31,23 +32,17 @@ export interface UpdateUserInfo {
   emergencyContactPhone?: string;
   medicalHistory?: string;
   allergies?: string;
+  imageURL?: string;
+  bloodTypeCode?: string; 
 }
 
 export const userService = {
   async getUserInfo(): Promise<UserBasicInfo> {
     try {
-      console.log('🔄 userService - Calling API: /user/getUserInfor');
       const response = await apiClient.get<UserBasicInfo>('/user/getUserInfor');
-      console.log('✅ userService - API response received:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('❌ userService - Error fetching user info:', error);
-      console.error('❌ userService - Error details:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message
-      });
+     
 
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
@@ -86,13 +81,16 @@ export const userService = {
       if (data.allergies !== undefined) {
         updateDto.allergies = data.allergies;
       }
+      if (data.imageURL !== undefined) {
+        updateDto.imageURL = data.imageURL;
+      }
+      if (data.bloodTypeCode !== undefined) {
+        updateDto.bloodTypeCode = data.bloodTypeCode;
+      }
 
       const response = await apiClient.put<UserBasicInfo>('/user/updateUserInfor', updateDto);
-      console.log('UpdateUserInfo - Request payload:', updateDto);
-      console.log('UpdateUserInfo - API response:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Error updating user info:', error);
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -109,21 +107,21 @@ export const userService = {
     try {
       const formData = new FormData();
       formData.append('file', imageFile);
-      console.log('Upload profile image:');
-      console.log('- File name:', imageFile.name);
-      console.log('- File type:', imageFile.type);
-      console.log('- File size:', imageFile.size);
-      const response = await apiClient.postMultipart<{ imageUrl: string }>('/user/uploadAvatar', formData);
-      console.log('Upload successful:', response.data);
-      return response.data;
+      
+      
+      // Chỉ gọi endpoint /user/uploadAvatar
+      const userResponse = await apiClient.postMultipart<{ imageUrl: string }>('/user/uploadAvatar', formData);
+      const imageUrl = userResponse.data.imageUrl;
+      return { imageUrl };
     } catch (error: any) {
-      console.error('Error uploading profile image:', error);
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
         throw new Error('Endpoint không tồn tại. Vui lòng kiểm tra backend API');
+      } else if (error.response?.status === 405) {
+        throw new Error('Lỗi 405: Phương thức không được phép. Endpoint upload ảnh có thể chưa được kích hoạt trong backend.');
       } else if (error.response?.status === 413) {
-        throw new Error('File quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB');
+        throw new Error('File quá lớn. Vui lòng chọn ảnh nhỏ hơn 10MB');
       } else if (error.response?.status === 400) {
         const responseData = error.response?.data;
         if (responseData?.errors) {
@@ -135,11 +133,9 @@ export const userService = {
               validationErrors.push(`${field}: ${messages}`);
             }
           }
-          console.log('Validation errors:', validationErrors);
           throw new Error(`Validation Error: ${validationErrors.join('; ')}`);
         }
         const backendMessage = responseData?.message || responseData?.title || 'File không hợp lệ';
-        console.log('Backend 400 error message:', backendMessage);
         throw new Error(`Backend Error: ${backendMessage}`);
       } else if (error.response?.status === 500) {
         throw new Error('Lỗi server khi upload ảnh. Vui lòng thử lại sau');

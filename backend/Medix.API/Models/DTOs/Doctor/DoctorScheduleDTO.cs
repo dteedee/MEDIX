@@ -18,7 +18,7 @@ namespace Medix.API.Models.DTOs.Doctor
         [Required]
         public Guid DoctorId { get; set; }
 
-        [Range(0, 6, ErrorMessage = "DayOfWeek phải nằm trong khoảng 0 (Chủ Nhật) đến 6 (Thứ Bảy).")]
+        [Range(1, 7, ErrorMessage = "DayOfWeek phải nằm trong khoảng 1 (Thứ Hai) đến 7 (Chủ Nhật).")]
         public int DayOfWeek { get; set; }
 
         [Required]
@@ -37,7 +37,7 @@ namespace Medix.API.Models.DTOs.Doctor
         [Required]
         public Guid DoctorId { get; set; }
 
-        [Range(0, 6, ErrorMessage = "DayOfWeek phải nằm trong khoảng 0 (Chủ Nhật) đến 6 (Thứ Bảy).")]
+        [Range(1, 7, ErrorMessage = "DayOfWeek phải nằm trong khoảng 1 (Thứ Hai) đến 7 (Chủ Nhật).")]
         public int DayOfWeek { get; set; }
 
         [Required]

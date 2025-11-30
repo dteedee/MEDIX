@@ -6,9 +6,7 @@ using Medix.API.Business.Services.Community;
 using Medix.API.DataAccess;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
-using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.Doctor;
-using Medix.API.Models.DTOs.Wallet;
 using Medix.API.Models.Entities;
 
 namespace Medix.API.Business.Services.Classification
@@ -145,7 +143,7 @@ namespace Medix.API.Business.Services.Classification
                     };
                     await _userRepository.CreateUserRoleAsync(userRole);
 
-                    var basicServiceTier = await _serviceTierRepository.GetServiceTierByNameAsync("Basic"); //Basic tier
+                    var basicServiceTier = await _serviceTierRepository.GetServiceTierByNameAsync("Basic"); 
                     if (basicServiceTier == null)
                     {
                         throw new Exception("Basic service tier not found in database");
@@ -156,7 +154,7 @@ namespace Medix.API.Business.Services.Classification
                         Id = Guid.NewGuid(),
                         UserId = userId,
                         SpecializationId = form.SpecializationId,
-                        ServiceTierId = basicServiceTier.Id, //Basic tier
+                        ServiceTierId = basicServiceTier.Id, 
                         LicenseNumber = form.LicenseNumber,
                         LicenseImageUrl = form.LicenseImageUrl,
                         DegreeFilesUrl = form.DegreeFilesUrl,
@@ -167,7 +165,7 @@ namespace Medix.API.Business.Services.Classification
                         AverageRating = 0,
                         TotalReviews = 0,
                         IsVerified = true,
-                        IsAcceptingAppointments = false
+                        IsAcceptingAppointments = true
                     };
                     await _doctorRepository.CreateDoctorAsync(doctor);
                     var wallet = new Wallet

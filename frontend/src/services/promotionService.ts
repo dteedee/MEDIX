@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { PromotionDto, UserPromotionDto } from "../types/promotion.types";
+import { PromotionDto, UserPromotionDto, PromotionTargetDto } from "../types/promotion.types";
 
 interface CreatePromotionDto {
     code: string;
@@ -11,6 +11,7 @@ interface CreatePromotionDto {
     startDate: string;
     endDate: string;
     isActive: boolean;
+    applicableTargets?: string;
 }
 
 interface UpdatePromotionDto {
@@ -23,6 +24,15 @@ interface UpdatePromotionDto {
     startDate: string;
     endDate: string;
     isActive: boolean;
+    applicableTargets?: string;
+}
+
+interface BulkAssignPromotionRequest {
+    promotionId: string;
+    applicableToAllUsers: boolean;
+    applicableToNewUsers: boolean;
+    applicableToVipUsers: boolean;
+    newUserDays?: number;
 }
 
 class PromotionService {
@@ -34,7 +44,6 @@ class PromotionService {
             if (error.response?.status === 404) {
                 return null;
             }
-            console.error('Get promotion by code error:', error);
             throw error;
         }
     }
@@ -44,7 +53,6 @@ class PromotionService {
             const response = await apiClient.get<PromotionDto[]>('/promotion/available');
             return response.data || [];
         } catch (error: any) {
-            console.error('Get available promotions error:', error);
             return [];
         }
     }
@@ -52,32 +60,22 @@ class PromotionService {
     async getUserActivePromotions(): Promise<UserPromotionDto[]> {
         try {
             const response = await apiClient.get<UserPromotionDto[]>('/UserPromotion/my-active-promotions');
-            console.log('📦 Response.data:', response.data);
-            console.log('📦 Is array?', Array.isArray(response.data));
-            console.log('📦 Length?', response.data?.length);
             
-            // Backend returns array directly: return Ok(result);
             if (Array.isArray(response.data)) {
-                console.log('✅ Returning promotions array:', response.data);
                 return response.data;
             }
             
-            console.warn('⚠️ Unexpected response structure, expected array but got:', typeof response.data);
             return [];
         } catch (error: any) {
-            console.error('❌ Get user active promotions error:', error);
-            console.error('❌ Error response:', error.response?.data);
             return [];
         }
     }
 
-    // Manager methods
     async getAllPromotions(): Promise<PromotionDto[]> {
         try {
             const response = await apiClient.get<PromotionDto[]>('/promotion/getAll');
             return response.data || [];
         } catch (error: any) {
-            console.error('Get all promotions error:', error);
             throw error;
         }
     }
@@ -87,17 +85,27 @@ class PromotionService {
             const response = await apiClient.get<PromotionDto>(`/promotion/${id}`);
             return response.data;
         } catch (error: any) {
-            console.error('Get promotion by id error:', error);
             throw error;
         }
     }
 
     async createPromotion(data: CreatePromotionDto): Promise<PromotionDto> {
         try {
-            const response = await apiClient.post<PromotionDto>('/promotion', data);
-            return response.data;
+            const response = await apiClient.post<any>('/promotion', data);
+            
+            let promotionData = response.data;
+            
+            if (response.data?.data) {
+                promotionData = response.data.data;
+            }
+            
+            if (response.data?.result) {
+                promotionData = response.data.result;
+            }
+            
+            
+            return promotionData;
         } catch (error: any) {
-            console.error('Create promotion error:', error);
             throw error;
         }
     }
@@ -107,7 +115,6 @@ class PromotionService {
             const response = await apiClient.put<PromotionDto>(`/promotion/${id}`, data);
             return response.data;
         } catch (error: any) {
-            console.error('Update promotion error:', error);
             throw error;
         }
     }
@@ -116,7 +123,6 @@ class PromotionService {
         try {
             await apiClient.delete(`/promotion/${id}`);
         } catch (error: any) {
-            console.error('Delete promotion error:', error);
             throw error;
         }
     }
@@ -126,8 +132,32 @@ class PromotionService {
             const response = await apiClient.get<boolean>(`/promotion/code-exists/${code}`);
             return response.data;
         } catch (error: any) {
-            console.error('Check promotion code exists error:', error);
             return false;
+        }
+    }
+
+    async assignPromotionBulk(request: BulkAssignPromotionRequest): Promise<any> {
+        try {
+            const payload = {
+                promotionId: request.promotionId,
+                applicableToAllUsers: request.applicableToAllUsers,
+                applicableToNewUsers: request.applicableToNewUsers,
+                applicableToVipUsers: request.applicableToVipUsers,
+                newUserDays: request.newUserDays || 30
+            };
+            const response = await apiClient.post('/UserPromotion/assign/bulk', payload);
+            return response.data;
+        } catch (error: any) {
+            throw error;
+        }
+    }
+
+    async getPromotionTargets(): Promise<PromotionTargetDto[]> {
+        try {
+            const response = await apiClient.get<PromotionTargetDto[]>('/promotion/getTarget');
+            return response.data || [];
+        } catch (error: any) {
+            return [];
         }
     }
 }

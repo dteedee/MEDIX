@@ -6,7 +6,6 @@ import { Card } from '../../components/ui/Card';
 import { authService } from '../../services/authService';
 import { validatePassword, getPasswordStrength } from '../../utils/validation';
 import { PasswordRequirements } from '../../types/auth.types';
-// @ts-ignore: allow importing CSS without type declarations
 import '../../style/RegistrationPage.css';
 
 const ResetPassword: React.FC = () => {
@@ -34,18 +33,15 @@ const ResetPassword: React.FC = () => {
 
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, label: '', color: '' });
 
-  // Get email and code from URL parameters
   const email = searchParams.get('email');
   const code = searchParams.get('code');
 
-  // Redirect if no email or code
   useEffect(() => {
     if (!email || !code) {
       navigate('/forgot-password');
     }
   }, [email, code, navigate]);
 
-  // Update password requirements when password changes
   useEffect(() => {
     if (formData.password) {
       const requirements = validatePassword(formData.password);
@@ -61,7 +57,6 @@ const ResetPassword: React.FC = () => {
       [name]: value
     }));
     
-    // Clear error when user starts typing
     if (error) setError('');
   };
 
@@ -72,7 +67,6 @@ const ResetPassword: React.FC = () => {
     setError('');
     setSuccess('');
 
-    // Validation
     if (!formData.password) {
       setError('Vui lòng nhập mật khẩu mới');
       return;
@@ -88,7 +82,6 @@ const ResetPassword: React.FC = () => {
       return;
     }
 
-    // Check password requirements
     const requirements = validatePassword(formData.password);
     const allRequirementsMet = Object.values(requirements).every(Boolean);
     
@@ -100,7 +93,6 @@ const ResetPassword: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Call reset password API
       const response = await authService.resetPassword({
         email: email!,
         code: code!,
@@ -124,7 +116,7 @@ const ResetPassword: React.FC = () => {
   };
 
   if (!email || !code) {
-    return null; // Will redirect in useEffect
+    return null;
   }
 
   return (
@@ -189,7 +181,6 @@ const ResetPassword: React.FC = () => {
                   </button>
                 </div>
                 
-                {/* Password Requirements */}
                 <div className="password-requirements mt-3">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Yêu cầu mật khẩu:</h4>
                   <div className="requirement-list space-y-1">

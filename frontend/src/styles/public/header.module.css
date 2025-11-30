@@ -3,6 +3,8 @@ header {
     background: #025FAE;
     color: white;
     padding: 15px 0;
+    position: relative;
+    z-index: 1001;
 }
 
 .top-bar {
@@ -332,5 +334,23 @@ header {
 
 /* Notification dropdown z-index */
 .dropdown-menu {
-  z-index: 9998 !important;
+  z-index: 10000 !important;
+  position: absolute !important;
+}
+
+/* Ensure notification dropdown container has proper positioning */
+.header-links .dropdown {
+  position: relative !important;
+  z-index: 10001 !important;
+}
+
+/* Specific styles for notification dropdown */
+.header-links .dropdown .dropdown-menu {
+  z-index: 10002 !important;
+  position: absolute !important;
+  top: 100% !important;
+  left: auto !important;
+  right: 0 !important;
+  margin-top: 8px !important;
+  display: block !important;
 }

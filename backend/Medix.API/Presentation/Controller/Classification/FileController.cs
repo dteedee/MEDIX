@@ -4,10 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Medix.API.Presentation.Controller.Classification
 {
-    // Đổi tên route để tránh xung đột với controller khác
     [Route("api/classification/[controller]")]
     [ApiController]
-    public class FileController : ControllerBase // Cân nhắc đổi tên class thành ClassificationFileController cho rõ ràng
+    public class FileController : ControllerBase 
     {
         private readonly CloudinaryService _cloudinaryService;
 
@@ -17,8 +16,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
     
-        [HttpPost("upload")] // Giữ tên action là "upload"
-                             // Sử dụng ImageFileAttribute để xác thực tệp tải lên
+        [HttpPost("upload")] 
         public async Task<IActionResult> UploadImage([ImageFile(maxFileSizeInMB: 10)] IFormFile file)
         {
             if (file == null || file.Length == 0)

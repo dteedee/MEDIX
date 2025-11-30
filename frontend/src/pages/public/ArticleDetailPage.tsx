@@ -6,6 +6,8 @@ import { articleService } from '../../services/articleService';
 import { categoryService } from '../../services/categoryService';
 import type { ArticleDTO } from '../../types/article.types';
 import type { CategoryDTO } from '../../types/category.types';
+import ChatbotBubble from '../../components/ChatbotBubble';
+import BackToTopButton from '../../components/BackToTopButton';
 
 function formatViDate(input?: string | null): string {
   if (!input) return '';
@@ -106,12 +108,10 @@ export default function ArticleDetailPage() {
           setLiked(localStorage.getItem(key) === '1');
         } catch {}
 
-        // Increment view count only once per slug visit
         if (articleRes.id && !viewIncrementedRef.current[slug]) {
           viewIncrementedRef.current[slug] = true; // Mark as incremented immediately
           articleService.incrementView(articleRes.id)
             .then(() => {
-              // Optimistically update the UI to show +1 view instantly
               setArticle(prev => prev ? { ...prev, viewCount: (prev.viewCount || 0) + 1 } : null);
             })
             .catch((err) => console.error("Failed to increment view count:", err));
@@ -128,7 +128,6 @@ export default function ArticleDetailPage() {
           .slice(0, 6);
         setRecent(filtered);
       } catch (e) {
-        console.error(e);
         setError('Đã xảy ra lỗi khi tải dữ liệu.');
       } finally {
         setLoading(false);
@@ -370,6 +369,8 @@ export default function ArticleDetailPage() {
           </article>
         </main>
       </div>
+      <BackToTopButton />
+      <ChatbotBubble />
     </div>
   )
 }

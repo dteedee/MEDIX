@@ -24,11 +24,9 @@ const Login: React.FC = () => {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
-  // Regex kiểm tra email hợp lệ
   const isValidEmail = (text: string) =>
     /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(text);
 
-  // Lấy thông tin ghi nhớ từ localStorage
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberEmail');
     const rememberedPassword = localStorage.getItem('rememberPassword');
@@ -41,10 +39,8 @@ const Login: React.FC = () => {
     }
   }, []);
 
-  // Khởi tạo Google Sign-In
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) {
-      console.warn('⚠️ Google Client ID chưa được cấu hình');
       return;
     }
 
@@ -72,6 +68,24 @@ const Login: React.FC = () => {
             shape: 'rectangular',
             logo_alignment: 'left',
           });
+          
+          const updateGoogleButtonText = () => {
+            const googleButton = container.querySelector('div[role="button"]');
+            if (googleButton) {
+              const spans = googleButton.querySelectorAll('span');
+              spans.forEach((span) => {
+                const text = span.textContent || '';
+                if (text.includes('Sign in with Google') || text.includes('Sign in')) {
+                  span.textContent = 'Đăng nhập với Google';
+                  span.style.fontFamily = "'Be Vietnam Pro', sans-serif";
+                }
+              });
+            }
+          };
+          
+          setTimeout(updateGoogleButtonText, 100);
+          setTimeout(updateGoogleButtonText, 300);
+          setTimeout(updateGoogleButtonText, 500);
         }
       }
     };
@@ -81,7 +95,6 @@ const Login: React.FC = () => {
     };
   }, []);
 
-  // Xử lý đăng nhập Google
   const handleGoogleResponse = async (response: any) => {
     if (!response || !response.credential) {
       showToast('Không lấy được credential từ Google', 'error');
@@ -92,7 +105,7 @@ const Login: React.FC = () => {
       setIsLoading(true);
       const idToken = response.credential;
       const auth = await authService.loginWithGoogle(idToken);
-      apiClient.setTokens(auth.accessToken, auth.refreshToken);
+      apiClient.setTokens(auth.accessToken, auth.refreshToken, auth.expiresAt);
       localStorage.setItem('userData', JSON.stringify(auth.user));
       localStorage.setItem('currentUser', JSON.stringify(auth.user));
       window.dispatchEvent(new Event('authChanged'));
@@ -115,11 +128,9 @@ const Login: React.FC = () => {
     }
   };
 
-  // Xử lý submit form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Nếu còn lỗi, không cho gửi
     if (emailError || passwordError) {
       showToast('Vui lòng kiểm tra lại thông tin nhập', 'error');
       return;
@@ -178,7 +189,6 @@ const Login: React.FC = () => {
 
   return (
     <div className={styles["login-page"]}>
-      {/* Background animation */}
       <div className={styles["bg-decoration"]}>
         <div className={styles["shape"]} style={{ top: '10%', left: '5%' }}></div>
         <div className={styles["shape"]} style={{ top: '60%', left: '10%' }}></div>
@@ -187,7 +197,6 @@ const Login: React.FC = () => {
       </div>
 
       <div className={styles["login-container"]}>
-        {/* Left side */}
         <div className={styles["brand-section"]}>
           <div className={styles["brand-content"]}>
             <Link to="/" className={styles["brand-logo"]} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -244,16 +253,13 @@ const Login: React.FC = () => {
           </div>
         </div>
 
-        {/* Right side - Login form */}
         <div className={styles["form-section"]}>
           <div className={styles["form-container"]}>
             <div className={styles["form-header"]}>
               <h2>Đăng nhập</h2>
               <p>Chào mừng bạn trở lại!</p>
             </div>
-
             <form onSubmit={handleSubmit}>
-              {/* Email / Username */}
               <div className={styles["input-group"]}>
                 <label htmlFor="identifier">
                   <i className="bi bi-envelope"></i>
@@ -292,7 +298,6 @@ const Login: React.FC = () => {
                 )}
               </div>
 
-              {/* Password */}
               <div className={styles["input-group"]}>
                 <label htmlFor="password">
                   <i className="bi bi-lock"></i>
@@ -328,7 +333,6 @@ const Login: React.FC = () => {
                 )}
               </div>
 
-              {/* Remember + Forgot */}
               <div className={styles["form-extras"]}>
                 <label className={styles["remember-me"]}>
                   <input
@@ -343,7 +347,6 @@ const Login: React.FC = () => {
                 </Link>
               </div>
 
-              {/* Submit */}
               <button type="submit" className={styles["btn-login"]} disabled={isLoading}>
                 {isLoading ? (
                   <>
@@ -359,24 +362,25 @@ const Login: React.FC = () => {
               </button>
             </form>
 
-            {/* Divider */}
             <div className={styles["divider"]}>
               <span>hoặc</span>
             </div>
 
-            {/* Google Sign In */}
-            <div id="googleSignInDiv" className={styles["google-btn-wrapper"]}></div>
+            <div className={styles["google-signin-container"]}>
+              <div id="googleSignInDiv" className={styles["google-btn-wrapper"]}></div>
+            </div>
 
-            <div className={styles["signup-link"]}>
-              Chưa có tài khoản? 
-              <div className="dropdown">
-                <a href="#" className={styles["btn-register"]} data-bs-toggle="dropdown" aria-expanded="false">
-                  {t('header.register')}
+            <div className={styles["signup-section"]}>
+              <p className={styles["signup-text"]}>Chưa có tài khoản?</p>
+              <div className={styles["register-buttons"]}>
+                <a href="/doctor/register" className={styles["btn-register-doctor"]}>
+                  <i className="bi bi-heart-pulse-fill"></i>
+                  <span>Đăng ký bác sĩ</span>
                 </a>
-                <ul className={`dropdown-menu ${styles["register-dropdown"]}`}>
-                  <li><a className="dropdown-item" href="/patient-register">{t('header.register.patient')}</a></li>
-                  <li><a className="dropdown-item" href="/doctor/register">{t('header.register.doctor')}</a></li>
-                </ul>
+                <a href="/patient-register" className={styles["btn-register-patient"]}>
+                  <i className="bi bi-person-plus-fill"></i>
+                  <span>Đăng ký bệnh nhân</span>
+                </a>
               </div>
             </div>
           </div>

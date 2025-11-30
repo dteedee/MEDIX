@@ -17,8 +17,6 @@ import { NotificationMetadata, NotificationDto } from "../../types/notification.
 import { formatDistanceToNow } from "date-fns"
 import { vi, enUS } from "date-fns/locale"
 
-// --- NEW TYPE DEFINITIONS TO MATCH THE API RESPONSE ---
-
 interface DashboardSummary {
   todayAppointments: number
   todayRevenue: number
@@ -39,7 +37,7 @@ interface ScheduleOverride {
   startTime: string
   endTime: string
   isAvailable: boolean
-  overrideType: boolean // true: Tăng ca, false: Nghỉ
+  overrideType: boolean 
   reason: string
 }
 
@@ -86,7 +84,6 @@ interface DoctorDashboardData {
   reviews: DashboardReview
 }
 
-// --- NEW TYPE DEFINITION FOR COMBINED SCHEDULE SLOTS ---
 type TodayScheduleSlot = (RegularSchedule & { type: "fixed" }) | (ScheduleOverride & { type: "override" })
 
 interface UpcomingAppointment {
@@ -107,22 +104,17 @@ const DoctorDashboard: React.FC = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
 
-  // Tách trạng thái loading cho từng phần để có trải nghiệm người dùng tốt hơn
   const [isDashboardLoading, setIsDashboardLoading] = useState(true)
   const [isAppointmentsLoading, setIsAppointmentsLoading] = useState(true)
   const [appointmentsError, setAppointmentsError] = useState<string | null>(null)
   const [dashboardError, setDashboardError] = useState<string | null>(null)
-  
-  // Notification state
   const [notificationMetadata, setNotificationMetadata] = useState<NotificationMetadata | null>(null)
   const [isNotificationsLoading, setIsNotificationsLoading] = useState(true)
 
-  // Helper to format currency
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount)
   }
 
-  // Get greeting based on time of day
   const getGreeting = () => {
     const hour = new Date().getHours()
     if (hour < 12) return 'Chào buổi sáng'
@@ -130,16 +122,13 @@ const DoctorDashboard: React.FC = () => {
     return 'Chào buổi tối'
   }
 
-  // Format balance
   const formatBalance = (balance: number, currency: string = 'VND') => {
     const formatted = new Intl.NumberFormat('vi-VN').format(balance)
     return `${formatted} ${currency}`
   }
 
   const now = new Date()
-
   const upcomingAppointments = useMemo(() => {
-    // Lọc các cuộc hẹn chưa bị hủy
     const nonCancelledAppointments = appointments.filter(apt => 
       apt.statusCode !== 'CancelledByPatient' && apt.statusCode !== 'CancelledByDoctor' && apt.statusCode !== 'NoShow'
     );
@@ -196,7 +185,6 @@ const DoctorDashboard: React.FC = () => {
   }
 
   const formatTime = (dateString: string): string => {
-    // Chỉ lấy phần HH:mm từ chuỗi "HH:mm:ss"
     if (typeof dateString === 'string' && dateString.includes(':')) {
       return dateString.substring(0, 5);
     }
@@ -207,13 +195,11 @@ const DoctorDashboard: React.FC = () => {
     const notificationDate = new Date(dateString);
     const now = new Date();
     
-    // Tính toán sự khác biệt
     const diffInMs = now.getTime() - notificationDate.getTime();
     const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
     const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
     const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
     
-    // Lấy thông tin ngày (theo múi giờ địa phương)
     const notificationDay = notificationDate.getDate();
     const notificationMonth = notificationDate.getMonth();
     const notificationYear = notificationDate.getFullYear();
@@ -230,10 +216,8 @@ const DoctorDashboard: React.FC = () => {
     const yesterdayMonth = yesterday.getMonth();
     const yesterdayYear = yesterday.getFullYear();
     
-    // Format giờ:phút
     const timeStr = `${String(notificationHour).padStart(2, '0')}:${String(notificationMinute).padStart(2, '0')}`;
     
-    // Nếu là hôm nay
     if (notificationDay === todayDay && notificationMonth === todayMonth && notificationYear === todayYear) {
       if (diffInMinutes < 1) {
         return `Vừa xong (${timeStr})`;
@@ -244,19 +228,15 @@ const DoctorDashboard: React.FC = () => {
       }
     }
     
-    // Nếu là hôm qua
     if (notificationDay === yesterdayDay && notificationMonth === yesterdayMonth && notificationYear === yesterdayYear) {
       return `Hôm qua, ${timeStr}`;
     }
     
-    // Nếu là trong tuần này (7 ngày gần nhất)
     if (diffInDays < 7) {
       const dayNames = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
       const dayName = dayNames[notificationDate.getDay()];
       return `${dayName}, ${timeStr}`;
     }
-    
-    // Nếu xa hơn, hiển thị đầy đủ ngày tháng năm
     const dayStr = String(notificationDay).padStart(2, '0');
     const monthStr = String(notificationMonth + 1).padStart(2, '0');
     return `${dayStr}/${monthStr}/${notificationYear} ${timeStr}`;
@@ -282,11 +262,11 @@ const DoctorDashboard: React.FC = () => {
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(hours / 24)
     
-    if (diff > 0) { // Kiểm tra nếu thời gian hẹn lớn hơn thời gian hiện tại
+    if (diff > 0) {
       if (days > 0) return `${days} ngày nữa`;
       if (hours > 0) return `${hours} giờ nữa`;
       return 'Sắp diễn ra';
-    } else return ''; // Trả về chuỗi trống nếu không còn "Sắp diễn ra" nữa
+    } else return '';
   };
 
   const getAppointmentStatus = (apt: Appointment): 'upcoming' | 'completed' | 'cancelled' => {
@@ -323,7 +303,6 @@ const DoctorDashboard: React.FC = () => {
       }
     }
 
-    // Upcoming status
     if (appointmentStartTime && appointmentEndTime) {
       if (currentTime >= appointmentStartTime && currentTime <= appointmentEndTime) {
         return { 
@@ -430,7 +409,6 @@ const DoctorDashboard: React.FC = () => {
       setDashboardError(null)
       setAppointmentsError(null)
 
-      // Fetch new dashboard data and upcoming appointments concurrently
       try {
         const [dashboardResult, appointmentsResult, tiersResult, notificationsResult] = await Promise.allSettled([
           doctorDashboardService.getDashboard(),
@@ -439,49 +417,38 @@ const DoctorDashboard: React.FC = () => {
           notificationService.getMetadata(),
         ])
 
-        // Handle Dashboard API result
         if (dashboardResult.status === "fulfilled") {
           setDashboardData(dashboardResult.value)
         } else {
-          console.error("Error fetching dashboard data:", dashboardResult.reason)
           setDashboardError("Không thể tải dữ liệu tổng quan.")
         }
         setIsDashboardLoading(false)
 
-        // Handle Appointments API result
         if (tiersResult.status === "fulfilled") {
           setTiersData(tiersResult.value)
         } else {
-          console.error("Error fetching tiers data:", tiersResult.reason)
         }
 
-        // Handle Appointments API result
         if (appointmentsResult.status === "fulfilled") {
           const allAppointments = appointmentsResult.value
           setAppointments(allAppointments)
           setAppointments(appointmentsResult.value)
         } else {
-          console.error("Error fetching appointments:", appointmentsResult.reason)
           setAppointmentsError("Không tải được lịch hẹn.")
         }
 
-        // Handle Tiers API result
         if (tiersResult.status === "fulfilled") {
           setTiersData(tiersResult.value)
         } else {
-          console.error("Error fetching tiers data:", tiersResult.reason)
         }
         
-        // Handle Notifications API result
         if (notificationsResult.status === "fulfilled") {
           setNotificationMetadata(notificationsResult.value)
         } else {
-          console.error("Error fetching notifications:", notificationsResult.reason)
         }
         setIsNotificationsLoading(false)
         setIsAppointmentsLoading(false)
       } catch (err) {
-        console.error("General error fetching data:", err)
         setDashboardError("Đã xảy ra lỗi không xác định.")
         setIsDashboardLoading(false)
         setIsAppointmentsLoading(false)
@@ -490,9 +457,8 @@ const DoctorDashboard: React.FC = () => {
     }
 
     fetchDashboardData()
-  }, []) // ✅ Bỏ [user] để chỉ fetch data một lần khi component được mount
+  }, [])
 
-  // Combine and sort today's schedule
   const todaySchedule: TodayScheduleSlot[] = React.useMemo(() => {
     if (!dashboardData) return []
 
@@ -513,7 +479,7 @@ const DoctorDashboard: React.FC = () => {
     const visibleOverrideSlots: TodayScheduleSlot[] = overrides.map((o) => ({ ...o, type: "override" }))
 
     return [...visibleFixedSlots, ...visibleOverrideSlots].sort((a, b) => a.startTime.localeCompare(b.startTime))
-  }, [dashboardData]) // ✅ Chỉ tính toán lại khi dashboardData thay đổi
+  }, [dashboardData])
 
   if (isDashboardLoading && isAppointmentsLoading) {
     return <PageLoader />
@@ -521,7 +487,6 @@ const DoctorDashboard: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      {/* Welcome Header */}
       <div className={styles.welcomeHeader}>
         <div className={styles.welcomeContent}>
           <div className={styles.greetingSection}>
@@ -659,11 +624,8 @@ const DoctorDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Main Content */}
       <div className={styles.mainContent}>
-        {/* Left Column */}
         <div className={styles.leftColumn}>
-          {/* Today's Schedule - Most Important */}
           <div className={styles.sectionCard}>
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle}>
@@ -727,7 +689,6 @@ const DoctorDashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Upcoming Appointments */}
           <div className={styles.sectionCard}>
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle}>
@@ -830,9 +791,7 @@ const DoctorDashboard: React.FC = () => {
 
         </div>
 
-        {/* Right Column */}
         <div className={styles.rightColumn}>
-          {/* Notifications Widget */}
           <div className={styles.sectionCard}>
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle}>
@@ -884,7 +843,6 @@ const DoctorDashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Subscription Widget */}
           <div className={styles.sectionCard}>
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle}>
@@ -906,7 +864,7 @@ const DoctorDashboard: React.FC = () => {
             ) : tiersData?.currentTierId && tiersData.list.find(tier => tier.id === tiersData.currentTierId) ? (
               (() => {
                 const currentTier = tiersData.list.find(tier => tier.id === tiersData.currentTierId);
-                if (!currentTier) return null; // Should not happen due to the check above
+                if (!currentTier) return null;
 
                 const currentTierIndex = tiersData.list.findIndex(tier => tier.id === tiersData.currentTierId);
 
@@ -943,7 +901,7 @@ const DoctorDashboard: React.FC = () => {
                     try {
                       if (!currentTier.features) return [];
                       const features = JSON.parse(currentTier.features || '[]');
-                      return Array.isArray(features) ? features.slice(0, 3) : []; // Chỉ hiển thị 3 tính năng đầu
+                      return Array.isArray(features) ? features.slice(0, 3) : [];
                     } catch {
                       return [];
                     }

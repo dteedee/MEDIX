@@ -65,6 +65,62 @@
   gap: 24px;
 }
 
+.pageIntroCard {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.08);
+}
+
+.introIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.introTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.introSubtitle {
+  color: #4a5568;
+  margin: 4px 0 12px;
+}
+
+.introList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #2d3748;
+  font-size: 14px;
+}
+
+.introList li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.introList i {
+  color: #22d3ee;
+}
+
 .settingsCard {
   background: white;
   border-radius: 16px;
@@ -231,9 +287,14 @@
   gap: 16px;
 }
 
+.backupRow > div:first-child {
+  min-width: 0; /* Cho phép flex item co lại */
+}
+
 .backupRow strong {
   font-size: 14px;
   color: #1a202c;
+  word-break: break-all; /* Ngắt từ nếu cần để tránh tràn */
 }
 
 .backupMeta {
@@ -254,6 +315,7 @@
   align-items: center;
   gap: 6px;
   transition: background 0.2s ease;
+  white-space: nowrap; /* Ngăn nút tải xuống bị ngắt dòng */
 }
 
 .downloadBtn:hover {
@@ -427,7 +489,7 @@
 
 .templateTextarea {
   min-height: 220px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif !important;
 }
 
 /* Responsive */
@@ -462,4 +524,85 @@
   .settingItem input[type="datetime-local"] {
     max-width: 100%;
   }
+}
+
+/* Footer Actions */
+.footerActions {
+  margin-top: 32px;
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Date Time from Dashboard */
+.dateTime {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f0f4ff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+/* Character Counter */
+.charCounter {
+  text-align: right;
+  font-size: 12px;
+  color: #718096;
+  margin-top: -4px;
+}
+
+/* Validation Error Styles */
+.inputError {
+  border-color: #e53e3e !important; /* Màu viền đỏ cho lỗi */
+  background-color: #fff5f5;
+}
+
+.errorText {
+  color: #c53030;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: -2px;
+}
+
+.summaryChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.summaryChip {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+
+.summaryLabel {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summaryValue {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.helperNote {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: -4px;
 }

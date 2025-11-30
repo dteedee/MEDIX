@@ -133,5 +133,27 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
             return (banners, totalCount);
         }
+
+        public async Task IncrementDisplayOrderForConflictsAsync(int displayOrder, Guid? excludeId = null)
+        {
+            var query = _context.SiteBanners
+                .Where(b => b.DisplayOrder >= displayOrder);
+
+            if (excludeId.HasValue)
+            {
+                query = query.Where(b => b.Id != excludeId.Value);
+            }
+
+            var conflictingBanners = await query.ToListAsync();
+            foreach (var banner in conflictingBanners)
+            {
+                banner.DisplayOrder += 1;
+            }
+
+            if (conflictingBanners.Any())
+            {
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 }

@@ -10,5 +10,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         public Task<Promotion> createPromotionAsync(Promotion promotion);
         public Task<IEnumerable<Promotion>> getAllPromotion();
         public Task<bool> DeletePromotionAync(Guid id);
+
+        public Task<IEnumerable<Promotion>> PromotionTarget(string type);
     }
 }

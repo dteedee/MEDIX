@@ -59,7 +59,6 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
   }
   const [lockoutEnabled, setLockoutEnabled] = useState<boolean>(deriveLocked(user))
   
-  // Keep internal state in sync when `user` prop changes (e.g., when fetched async)
   useEffect(() => {
     setUserName(user?.userName ?? '')
     setFullName(user?.fullName ?? '')
@@ -76,19 +75,16 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     setLockoutEnabled(deriveLocked(user))
   }, [user])
 
-  // Fetch roles from the backend when the component mounts
   useEffect(() => {
     const fetchRoles = async () => {
       try {
         const roles = await userAdminService.getRoles();
-        // Nếu ở chế độ chỉnh sửa, lọc bỏ vai trò Admin khỏi danh sách
         if (isEditMode) {
           setRolesList(roles.filter(r => r.code.toUpperCase() !== 'ADMIN'));
         } else {
           setRolesList(roles);
         }
       } catch (error) {
-        console.error("Failed to fetch roles:", error);
         showToast('Không thể tải danh sách vai trò.', 'error');
       }
     };
@@ -114,7 +110,6 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       return "Tên đăng nhập không được để trống.";
     }
     
-    // Kiểm tra độ dài
     if (username.length > 20) {
       return "Tên đăng nhập không được vượt quá 20 ký tự.";
     }
@@ -123,19 +118,16 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       return "Tên đăng nhập phải có ít nhất 6 ký tự.";
     }
     
-    // Kiểm tra ký tự hợp lệ (chỉ cho phép chữ cái, số, dấu gạch dưới và dấu gạch ngang)
     const validCharsRegex = /^[a-zA-Z0-9_-]+$/;
     if (!validCharsRegex.test(username)) {
       return "Tên đăng nhập chỉ được chứa chữ cái, số, dấu gạch dưới (_) và dấu gạch ngang (-).";
     }
     
-    // Không được bắt đầu hoặc kết thúc bằng dấu gạch
     if (username.startsWith('-') || username.startsWith('_') || 
         username.endsWith('-') || username.endsWith('_')) {
       return "Tên đăng nhập không được bắt đầu hoặc kết thúc bằng dấu gạch.";
     }
     
-    // Không được có dấu gạch liên tiếp
     if (username.includes('--') || username.includes('__') || username.includes('-_') || username.includes('_-')) {
       return "Tên đăng nhập không được có dấu gạch liên tiếp.";
     }
@@ -148,13 +140,11 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       return "Email không được để trống.";
     }
     
-    // Kiểm tra có chứa dấu tiếng Việt không
     const vietnameseRegex = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
     if (vietnameseRegex.test(email)) {
       return "Email không được chứa dấu tiếng Việt (ả, á, à, ạ, ...).";
     }
     
-    // Kiểm tra định dạng email cơ bản
     const basicEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!basicEmailRegex.test(email)) {
       return "Email không đúng định dạng.";
@@ -174,13 +164,11 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       return "Phần trước @ không được có dấu chấm liên tiếp.";
     }
     
-    // Kiểm tra phần domain (sau @)
     const domainPart = email.split('@')[1];
     if (domainPart.length > 253) {
       return "Phần domain không được vượt quá 253 ký tự.";
     }
     
-    // Kiểm tra phần TLD (sau dấu chấm cuối)
     const tldPart = domainPart.split('.').pop();
     if (!tldPart || tldPart.length < 2) {
       return "Phần sau dấu chấm cuối phải có ít nhất 2 ký tự.";
@@ -190,18 +178,15 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       return "Phần sau dấu chấm cuối không được vượt quá 63 ký tự.";
     }
     
-    // Kiểm tra domain có chứa ký tự không hợp lệ
     const domainRegex = /^[a-zA-Z0-9.-]+$/;
     if (!domainRegex.test(domainPart)) {
       return "Domain chỉ được chứa chữ cái, số, dấu chấm và dấu gạch ngang.";
     }
     
-    // Kiểm tra domain không được bắt đầu hoặc kết thúc bằng dấu gạch
     if (domainPart.startsWith('-') || domainPart.endsWith('-')) {
       return "Domain không được bắt đầu hoặc kết thúc bằng dấu gạch ngang.";
     }
     
-    // Kiểm tra domain không được có dấu chấm liên tiếp
     if (domainPart.includes('..')) {
       return "Domain không được có dấu chấm liên tiếp.";
     }
@@ -215,7 +200,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       if (usernameError) {
         setErrors(prev => ({ ...prev, userName: usernameError }));
       } else {
-        setErrors(prev => ({ ...prev, userName: undefined })); // Clear error if valid
+        setErrors(prev => ({ ...prev, userName: undefined })); 
       }
     }
     if (field === 'email') {
@@ -223,7 +208,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       if (emailError) {
         setErrors(prev => ({ ...prev, email: emailError }));
       } else {
-        setErrors(prev => ({ ...prev, email: undefined })); // Clear error if valid
+        setErrors(prev => ({ ...prev, email: undefined })); 
       }
     }
   };
@@ -234,13 +219,11 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     if (!isEditMode) {
       const newErrors: typeof errors = {};
       
-      // Validate username
       const usernameError = validateUsername(userName);
       if (usernameError) {
         newErrors.userName = usernameError;
       }
       
-      // Validate email
       const emailError = validateEmail(email);
       if (emailError) {
         newErrors.email = emailError;
@@ -256,9 +239,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     try {
       if (isEditMode && user) {
         showToast('Đang cập nhật thông tin người dùng...', 'info')
-        // Khi chỉnh sửa, chỉ gửi những trường được phép thay đổi: role và lockoutEnabled
         const payload: UpdateUserRequest = {
-          // Giữ lại các giá trị hiện có của người dùng
           fullName: user.fullName ?? '',
           phoneNumber: user.phoneNumber ?? undefined,
           address: user.address ?? undefined,
@@ -269,28 +250,21 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
           emailConfirmed: user.emailConfirmed ?? false,
           isProfileCompleted: (user as any).isProfileCompleted ?? false,
           accessFailedCount: user.accessFailedCount ?? 0,
-
-          // Các trường có thể thay đổi
           role,
           lockoutEnabled,
         }
         if (!lockoutEnabled) (payload as any).lockoutEnd = null
-        console.debug('[UserForm] update payload', user.id, payload)
         const resp = await userAdminService.update(user.id, payload)
-        console.debug('[UserForm] update response', resp)
         showToast('Cập nhật thông tin người dùng thành công!', 'success')
         onSaved?.(payload)
-      } else { // When creating new user
+      } else { 
         showToast('Đang tạo người dùng mới...', 'info')
-        // Chỉ cần userName và email cho tạo mới
-        const payload: CreateUserRequest = { userName, email, role: 'Manager' } // Force role to Manager on create
+        const payload: CreateUserRequest = { userName, email, role: 'Manager' } 
         await userAdminService.create(payload)
         showToast('Tạo người dùng mới thành công!', 'success')
         onSaved?.(payload)
       }
     } catch (error: any) {
-      // Xử lý lỗi từ server
-      console.error('Lỗi khi lưu người dùng:', error);
       const errorMessage = error?.response?.data?.message || error?.message;
       const serverErrors = error?.response?.data?.errors;
 
@@ -299,10 +273,9 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
         // Backend có thể trả về lỗi với key là 'UserName' hoặc 'userName'
         if (serverErrors.UserName || serverErrors.userName) newErrors.userName = (serverErrors.UserName || serverErrors.userName)[0];
         if (serverErrors.Password || serverErrors.password) newErrors.password = (serverErrors.Password || serverErrors.password)[0];
-        if (serverErrors.Email || serverErrors.email) newErrors.email = (serverErrors.Email || serverErrors.email)[0]; // Handle email server error
+        if (serverErrors.Email || serverErrors.email) newErrors.email = (serverErrors.Email || serverErrors.email)[0]; 
         setErrors(newErrors);
       } else if (errorMessage) {
-        // Xử lý các lỗi cụ thể không nằm trong 'errors' object, ví dụ: email đã tồn tại
         const newErrors: { userName?: string; email?: string } = {};
         if (errorMessage.toLowerCase().includes('email')) {
           newErrors.email = errorMessage;
@@ -311,7 +284,6 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
         }
         setErrors(newErrors);
       } else {
-        // Xử lý các lỗi chung khác
         showToast('Tạo người dùng thất bại. Vui lòng thử lại.', 'error');
       }
     } finally {
@@ -325,11 +297,9 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
     if (confirm(`Bạn có chắc muốn đặt lại mật khẩu cho người dùng "${user.fullName || user.email}" không? Mật khẩu mới sẽ được tạo và gửi đến email của họ.`)) {
       try {
         showToast('Đang gửi yêu cầu đặt lại mật khẩu...', 'info');
-        // Gọi hàm mới để admin reset mật khẩu
         await userAdminService.adminResetPassword(user.id);
         showToast('Yêu cầu đặt lại mật khẩu đã được gửi thành công!', 'success');
       } catch (error) {
-        console.error('Failed to send password reset email:', error);
         showToast('Không thể gửi yêu cầu đặt lại mật khẩu.', 'error');
       }
     }
@@ -353,7 +323,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                       value={userName} 
                       onChange={e => { 
                         const value = e.target.value;
-                        if (value.length <= 20) { // Giới hạn 20 ký tự
+                        if (value.length <= 20) { 
                           setUserName(value); 
                           if (errors.userName) setErrors(prev => ({ ...prev, userName: undefined })); 
                         }
@@ -445,11 +415,11 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                     </div>
                     <div className={styles.inputGroup}>
                       <label className={styles.label}>Ngày tạo tài khoản</label>
-                      <input value={createdAt ? new Date(`${createdAt}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''} disabled className={styles.input} style={{ display: isEditMode ? 'block' : 'none' }} />
+                      <input value={createdAt ? new Date(createdAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''} disabled className={styles.input} style={{ display: isEditMode ? 'block' : 'none' }} />
                     </div>
                     <div className={styles.inputGroup}>
                       <label className={styles.label}>Cập nhật lần cuối</label>
-                      <input value={updatedAt ? new Date(`${updatedAt}Z`).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''} disabled className={styles.input} style={{ display: isEditMode ? 'block' : 'none' }} />
+                      <input value={updatedAt ? new Date(updatedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''} disabled className={styles.input} style={{ display: isEditMode ? 'block' : 'none' }} />
                     </div>
                   </div>
                 </div>                
@@ -462,15 +432,6 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
                 </div>
                 <div className={styles.sectionContent}>
                   <div className={styles.grid}>
-                    <div className={styles.inputGroup}>
-                      <label className={styles.label}>Vai trò</label>
-                      <select value={role} onChange={e => setRole(e.target.value)} className={styles.select} disabled={rolesList.length === 0}>
-                        {rolesList.length === 0 && <option>Đang tải...</option>}
-                        {rolesList.map(r => (
-                          <option key={r.code} value={r.code}>{r.displayName}</option>
-                        ))}
-                      </select>
-                    </div>
                     <div className={styles.inputGroup}>
                       <label className={styles.label}>Trạng thái tài khoản</label>
                       <div className={styles.statusContainer}>

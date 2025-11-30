@@ -22,10 +22,6 @@ namespace Medix.API.Business.Services.Classification
             _promotionRepository = promotionRepository;
             _mapper = mapper;
         }
-
-        /// <summary>
-        /// Tạo mới promotion
-        /// </summary>
         public async Task<PromotionDto> CreatePromotionAsync(PromotionDto promotionDto)
         {
             try
@@ -78,10 +74,6 @@ namespace Medix.API.Business.Services.Classification
                 throw;
             }
         }
-
-        /// <summary>
-        /// Lấy promotion theo code
-        /// </summary>
         public async Task<PromotionDto?> GetPromotionByCodeAsync(string code)
         {
             try
@@ -100,10 +92,6 @@ namespace Medix.API.Business.Services.Classification
                 throw;
             }
         }
-
-        /// <summary>
-        /// Kiểm tra promotion code đã tồn tại chưa
-        /// </summary>
         public async Task<bool> PromotionCodeExistsAsync(string code)
         {
             try
@@ -141,10 +129,6 @@ namespace Medix.API.Business.Services.Classification
                 throw;
             }
         }
-
-        /// <summary>
-        /// Cập nhật promotion
-        /// </summary>
         public async Task<PromotionDto> UpdatePromotionAsync(PromotionDto promotionDto)
         {
             try
@@ -163,6 +147,13 @@ namespace Medix.API.Business.Services.Classification
                 _logger.LogError(ex, "Error updating promotion: {Id}", promotionDto.Id);
                 throw;
             }
+        }
+
+        public async Task<IEnumerable<PromotionDto>> GetPromotionforTypeTarget(string type)
+        {
+            var x = await _promotionRepository.PromotionTarget(type);
+            var dtoList = _mapper.Map<IEnumerable<PromotionDto>>(x);
+            return dtoList;
         }
     }
 }

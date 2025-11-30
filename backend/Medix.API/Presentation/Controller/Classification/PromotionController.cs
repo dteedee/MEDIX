@@ -1,21 +1,28 @@
 ﻿using Medix.API.Business.Interfaces.Classification;
+using Medix.API.DataAccess;
 using Medix.API.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medix.API.Presentation.Controller.Classification
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles ="Manager")]
+   
     public class PromotionController : ControllerBase
     {
         private readonly IPromotionService _promotionService;
+        private readonly MedixContext _context;
+        private readonly IUserPromotionService userPromotionService;
 
-        public PromotionController(IPromotionService promotionService)
+
+        public PromotionController(IPromotionService promotionService, MedixContext context, IUserPromotionService userPromotionService)
         {
             _promotionService = promotionService;
+            _context = context;
+            this.userPromotionService = userPromotionService;
         }
 
         [HttpGet("code/{code}")]
@@ -27,7 +34,7 @@ namespace Medix.API.Presentation.Controller.Classification
                 return NotFound();
             }
             if (promotion.EndDate < DateTime.UtcNow || !promotion.IsActive)
-            {
+                {
                 return BadRequest("Mã đã hết hạn sử dụng");
             }
             if (promotion.MaxUsage.HasValue && promotion.UsedCount >= promotion.MaxUsage.Value)
@@ -56,9 +63,9 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        // Create promotion
         [HttpPost]
-        [Authorize] // add role if needed: [Authorize(Roles = "Admin")]
+        [Authorize] 
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> CreatePromotion([FromBody] PromotionDto promotionDto)
         {
             if (promotionDto == null)
@@ -72,15 +79,64 @@ namespace Medix.API.Presentation.Controller.Classification
                 if (string.IsNullOrWhiteSpace(promotionDto.Code))
                     return BadRequest("Promotion code is required.");
 
-                // Prevent duplicate codes
                 var exists = await _promotionService.PromotionCodeExistsAsync(promotionDto.Code);
                 if (exists)
                     return Conflict(new { message = "Promotion code already exists." });
 
                 var created = await _promotionService.CreatePromotionAsync(promotionDto);
 
-                // Return 201 with location to GET by code
-                return  Ok();
+  
+                var persisted = await _context.Promotions
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Code == created.Code);
+
+                int assignedCount = 0;
+
+                if (persisted != null && !string.IsNullOrWhiteSpace(persisted.ApplicableTargets))
+                {
+                    var tokens = persisted.ApplicableTargets
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(t => t.Trim())
+                        .ToList();
+
+                    var applicableToAll = tokens.Any(t => string.Equals(t, "All", StringComparison.OrdinalIgnoreCase));
+                    var applicableToNew = tokens.Any(t => string.Equals(t, "New", StringComparison.OrdinalIgnoreCase)
+                                                          || string.Equals(t, "NewUsers", StringComparison.OrdinalIgnoreCase));
+                    var applicableToVip = tokens.Any(t => string.Equals(t, "VIP", StringComparison.OrdinalIgnoreCase)
+                                                          || string.Equals(t, "Vip", StringComparison.OrdinalIgnoreCase));
+
+                    var newDaysToken = tokens.FirstOrDefault(t => t.StartsWith("NewDays:", StringComparison.OrdinalIgnoreCase));
+                    int newUserDays = 30;
+                    if (newDaysToken != null)
+                    {
+                        var parts = newDaysToken.Split(':', 2);
+                        if (parts.Length == 2 && int.TryParse(parts[1], out var parsedDays))
+                            newUserDays = Math.Max(1, parsedDays);
+                    }
+
+                    try
+                    {
+                        var assigned = await userPromotionService.AssignPromotionToMultipleUsersAsync(
+                            persisted.Id,
+                            applicableToAll,
+                            applicableToNew,
+                            applicableToVip,
+                            newUserDays);
+
+                        assignedCount = assigned?.Count() ?? 0;
+                    }
+                    catch (Exception ex)
+                    { 
+                   
+                    }
+                }
+
+                return Ok(new
+                {
+                    promotion = created,
+                    assignedCount,
+                    message = assignedCount > 0 ? "Promotion created and assigned to users." : "Promotion created."
+                });
             }
             catch (Exception)
             {
@@ -88,9 +144,9 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-        // Update promotion
         [HttpPut("{id:guid}")]
-        [Authorize] // add role if needed: [Authorize(Roles = "Admin")]
+        [Authorize] 
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> UpdatePromotion(Guid id, [FromBody] PromotionDto promotionDto)
         {
             if (promotionDto == null)
@@ -101,16 +157,13 @@ namespace Medix.API.Presentation.Controller.Classification
 
             try
             {
-                // Ensure DTO carries the route id
                 promotionDto.Id = id;
 
-                // Verify promotion exists by id
                 var all = await _promotionService.GetAllPromotion();
                 var existing = all?.FirstOrDefault(p => p.Id == id);
                 if (existing == null)
                     return NotFound();
 
-                // If code changed, ensure new code isn't used by another promotion
                 if (!string.Equals(existing.Code, promotionDto.Code, StringComparison.OrdinalIgnoreCase))
                 {
                     var codeOwner = await _promotionService.GetPromotionByCodeAsync(promotionDto.Code ?? string.Empty);
@@ -127,8 +180,32 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
+        [HttpGet("getTarget")]
+        [Authorize(Roles = "Manager")]
+
+        public async Task<IActionResult> GetPromotionTargets()
+        {
+            try
+            {
+                var targets = await _context.RefPromotionTargets.Select(x => new
+                {
+                    x.Name,
+                    x.Id,
+                    x.Target,
+                    x.Description
+                }).ToListAsync();
+                if (targets == null || !targets.Any())
+                    return NoContent();
+                return Ok(targets);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An error occurred while fetching promotion targets." });
+            }
+        }
+
         [HttpDelete("{id}")]
-        [Authorize]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> DeletePromotion(Guid id)
         {
             try

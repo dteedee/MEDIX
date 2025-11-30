@@ -40,6 +40,7 @@ namespace Medix.API.Presentation.Controller.Classification
 
                 return Ok(new
                 {
+                    patient.Id,
                     patient.User.AvatarUrl,
                     patient.User.FullName,
                     patient.User.IdentificationNumber,

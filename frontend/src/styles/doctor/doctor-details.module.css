@@ -2781,6 +2781,13 @@
     font-size: 28px;
     color: white;
   }
+
+.reviewerAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
   
   .reviewerInfo {
     flex: 1;
@@ -2813,6 +2820,31 @@
     color: #475569;
     margin: 0;
   }
+
+.adminReplyBlock {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.adminReplyLabel {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #c2410c;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+
+.adminReplyText {
+  margin: 0;
+  font-size: 14px;
+  color: #7c2d12;
+  line-height: 1.6;
+}
   
   .noReviews {
     text-align: center;
@@ -4008,7 +4040,7 @@
     font-size: 14px;
     font-weight: 600;
     color: #667eea;
-    font-family: 'Courier New', monospace;
+    font-family: 'Be Vietnam Pro', sans-serif !important;
     letter-spacing: 1px;
   }
 

@@ -2,7 +2,6 @@ using Medix.API.Business.Helper;
 using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.Entities;
-using static Medix.API.Models.DTOs.DoctorBookinDto;
 
 namespace Medix.API.Business.Interfaces.Classification
 {
@@ -25,5 +24,9 @@ namespace Medix.API.Business.Interfaces.Classification
 
         Task CheckAndUnbanDoctors();
 
+        Task<bool> UpdateDoctorEducationAndFeeAsync(Guid doctorId, string? education, decimal? consultationFee);
+        Task<List<TopDoctorPerformanceDto>> GetTopDoctorsByPerformanceAsync( double ratingWeight = 0.7, double successWeight = 0.3);
+        Task<DoctorBusinessStatsDto?> GetDoctorBusinessStatsAsync(Guid doctorId, DateTime? startDate = null, DateTime? endDate = null);
     }
+
 }

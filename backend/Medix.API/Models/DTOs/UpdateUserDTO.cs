@@ -4,7 +4,6 @@ namespace Medix.API.Models.DTOs
 {
     public class UpdateUserDTO
     {
-        // Basic user information for viewing
         public Guid Id { get; set; }
         public string UserName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
@@ -20,7 +19,6 @@ namespace Medix.API.Models.DTOs
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
-        // Fields that can be updated
         public string Role { get; set; } = string.Empty;
 
         public bool LockoutEnabled { get; set; }

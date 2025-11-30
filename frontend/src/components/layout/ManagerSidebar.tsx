@@ -15,7 +15,6 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
@@ -46,7 +45,6 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
   const handleGoHome = () => {
     setShowUserMenu(false);
     navigate('/');
-    // Scroll to top when navigating to home
     window.scrollTo(0, 0);
   };
 
@@ -108,48 +106,42 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
           <i className="bi bi-image"></i>
           {sidebarOpen && <span>Banner</span>}
         </Link>
-         <Link
+        <Link
           to="/app/manager/categories"
-          className={`${styles.navItem} ${currentPage === 'reports' ? styles.active : ''}`}
+          className={`${styles.navItem} ${currentPage === 'categories' ? styles.active : ''}`}
           onClick={() => setShowUserMenu(false)}
         >
-          <i className="bi bi-graph-up"></i>
+          <i className="bi bi-grid"></i>
           {sidebarOpen && <span>Danh mục</span>}
         </Link>
+
         <Link
-          to="/app/manager/packages"
-          className={`${styles.navItem} ${currentPage === 'packages' ? styles.active : ''}`}
+          to="/app/manager/services"
+          className={`${styles.navItem} ${currentPage === 'services' ? styles.active : ''}`}
           onClick={() => setShowUserMenu(false)}
         >
           <i className="bi bi-box"></i>
           {sidebarOpen && <span>Gói dịch vụ</span>}
         </Link>
-        <Link
-          to="/app/manager/commissions"
-          className={`${styles.navItem} ${currentPage === 'commissions' ? styles.active : ''}`}
-          onClick={() => setShowUserMenu(false)}
-        >
-          <i className="bi bi-percent"></i>
-          {sidebarOpen && <span>Hoa hồng</span>}
-        </Link>
+
         <Link
           to="/app/manager/transfer-transactions"
           className={`${styles.navItem} ${currentPage === 'transfer-transactions' ? styles.active : ''}`}
           onClick={() => setShowUserMenu(false)}
         >
-          
+
           <i className="bi bi-arrow-left-right"></i>
           {sidebarOpen && <span>Yêu cầu chuyển tiền</span>}
         </Link>
-  
-        
+
+
         <Link
           to="/app/manager/feedback"
           className={`${styles.navItem} ${currentPage === 'feedback' ? styles.active : ''}`}
           onClick={() => setShowUserMenu(false)}
         >
           <i className="bi bi-chat-dots"></i>
-          {sidebarOpen && <span>Quản lý phản hồi</span>}
+          {sidebarOpen && <span>Phản hồi</span>}
         </Link>
 
         <Link

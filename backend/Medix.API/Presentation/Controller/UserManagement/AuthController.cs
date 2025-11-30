@@ -1,3 +1,4 @@
+using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.Community;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.UserManagement;
@@ -20,12 +21,17 @@ namespace Medix.API.Presentation.Controller.UserManagement
         private readonly IEmailService _emailService;
         private readonly MedixContext _context;
 
-        public AuthController(IAuthService authService, ILogger<AuthController> logger, IEmailService emailService, MedixContext context)
+        private readonly IUserPromotionService userPromotionService;
+        private readonly IPromotionService promotionService;
+
+        public AuthController(IAuthService authService, ILogger<AuthController> logger, IEmailService emailService, MedixContext context, IUserPromotionService userPromotionService, IPromotionService promotionService)
         {
             _authService = authService;
             _logger = logger;
             _emailService = emailService;
             _context = context;
+            this.userPromotionService = userPromotionService;
+            this.promotionService = promotionService;
         }
 
         [HttpPost("login")]
@@ -73,6 +79,15 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 }
 
                 var result = await _authService.RegisterAsync(registerRequest);
+                var promotionBegin = await promotionService.GetPromotionforTypeTarget("NEW_USER");
+                foreach (var promo in promotionBegin)
+                {
+                    await userPromotionService.AssignPromotionToUserAsync(
+                        result.User.Id,
+                        promo.Id
+                    );
+                }
+
                 return Ok(result);
             }
             catch (ValidationException ex)
@@ -108,10 +123,8 @@ namespace Medix.API.Presentation.Controller.UserManagement
         {
             try
             {
-                // Generate OTP using OTPManager
                 var verificationCode = OTPManager.GenerateOTP(email);
 
-                // Gửi email
                 var result = await _emailService.SendForgotPasswordCodeAsync(email, verificationCode);
                 
                 if (!result)
@@ -135,7 +148,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Code))
                 return BadRequest(new { message = "Email và mã xác thực là bắt buộc" });
 
-            // Verify OTP using OTPManager
             var isValid = OTPManager.VerifyOTP(request.Email, request.Code);
             
             if (isValid)
@@ -153,10 +165,8 @@ namespace Medix.API.Presentation.Controller.UserManagement
         {
             try
             {
-                // Generate new OTP using OTPManager (this will automatically invalidate the old one)
                 var newCode = OTPManager.GenerateOTP(email);
 
-                // Gửi email
                 var result = await _emailService.SendForgotPasswordCodeAsync(email, newCode);
                 
                 if (!result)
@@ -184,7 +194,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
                     return BadRequest(ModelState);
                 }
 
-                // First verify the OTP
                 var isOTPValid = OTPManager.VerifyOTP(resetPasswordRequest.Email, resetPasswordRequest.Code);
                 
                 if (!isOTPValid)
@@ -192,12 +201,10 @@ namespace Medix.API.Presentation.Controller.UserManagement
                     return BadRequest(new { message = "Mã xác thực không đúng hoặc đã hết hạn" });
                 }
 
-                // Reset password
                 var result = await _authService.ResetPasswordAsync(resetPasswordRequest);
                 
                 if (result)
                 {
-                    // Mark OTP as used after successful password reset
                     OTPManager.MarkOTPAsUsed(resetPasswordRequest.Email);
                     return Ok(new { message = "Đặt lại mật khẩu thành công" });
                 }
@@ -217,7 +224,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
             }
         }
 
-        // Request DTO
         public class EmailCodeVerifyRequest
         {
             public string Email { get; set; }
@@ -331,7 +337,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 
                 var results = new List<object>();
 
-                // 1. Create roles if not exist
                 var adminRole = await context.RefRoles.FirstOrDefaultAsync(r => r.Code == "Admin");
                 if (adminRole == null)
                 {
@@ -362,7 +367,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
                 await context.SaveChangesAsync();
 
-                // 2. Create Admin User
                 var adminEmail = "admin@medix.local";
                 var existingAdmin = await userRepository.GetByEmailAsync(adminEmail);
                 if (existingAdmin == null)
@@ -388,7 +392,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
                     await userRepository.CreateAsync(adminUser);
 
-                    // Assign Admin role
                     var adminUserRole = new Medix.API.Models.Entities.UserRole
                     {
                         UserId = adminUser.Id,
@@ -414,7 +417,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
                     });
                 }
 
-                // 3. Create Patient User
                 var userEmail = "patient@medix.local";
                 var existingUser = await userRepository.GetByEmailAsync(userEmail);
                 if (existingUser == null)
@@ -440,7 +442,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
                     await userRepository.CreateAsync(normalUser);
 
-                    // Assign Patient role
                     var normalUserRole = new Medix.API.Models.Entities.UserRole
                     {
                         UserId = normalUser.Id,
@@ -466,7 +467,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
                     });
                 }
 
-                // 4. Create Test User (for your original curl test)
                 var testEmail = "user@example.com";
                 var existingTestUser = await userRepository.GetByEmailAsync(testEmail);
                 if (existingTestUser == null)
@@ -492,7 +492,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
                     await userRepository.CreateAsync(testUser);
 
-                    // Assign User role
                     var testUserRole = new Medix.API.Models.Entities.UserRole
                     {
                         UserId = testUser.Id,
@@ -509,7 +508,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
                     });
                 }
 
-                // 5. Create Requested Test User
                 var requestedEmail = "dungdoile1@gmail.com";
                 var existingRequestedUser = await userRepository.GetByEmailAsync(requestedEmail);
                 if (existingRequestedUser == null)

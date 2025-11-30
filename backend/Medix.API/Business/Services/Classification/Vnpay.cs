@@ -31,12 +31,6 @@ namespace Medix.API.Business.Services.Classification
 
             EnsureParametersBeforePayment();
         }
-
-        /// <summary>
-        /// Tạo URL thanh toán 
-        /// </summary>
-        /// <param name="request">Thông tin cần có để tạo yêu cầu</param>
-        /// <returns></returns>
         public string GetPaymentUrl(PaymentRequest request)
         {
             EnsureParametersBeforePayment();
@@ -75,12 +69,6 @@ namespace Medix.API.Business.Services.Classification
 
             return helper.GetPaymentUrl(_baseUrl, _hashSecret);
         }
-
-        /// <summary>
-        /// Lấy kết quả thanh toán sau khi thực hiện giao dịch.
-        /// </summary>
-        /// <param name="parameters">Các tham số trong chuỗi truy vấn của <c>CallbackUrl</c></param>
-        /// <returns></returns>
         public PaymentResult GetPaymentResult(IQueryCollection parameters)
         {
             var responseData = parameters

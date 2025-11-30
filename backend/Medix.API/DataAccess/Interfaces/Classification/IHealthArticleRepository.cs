@@ -39,5 +39,6 @@ namespace Medix.API.DataAccess.Interfaces.Classification
 
         Task RemoveLikeAsync(Guid articleId, Guid userId);
 
+        Task IncrementDisplayOrderForConflictsAsync(int displayOrder, Guid? excludeId = null);
     }
 }

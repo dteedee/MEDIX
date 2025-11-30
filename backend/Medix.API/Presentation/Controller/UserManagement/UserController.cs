@@ -1,25 +1,17 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using Medix.API.Business.Interfaces.UserManagement;
-using Medix.API.Business.Services.Community;
-using Medix.API.Exceptions;
-using Medix.API.Models.DTOs;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Medix.API.DataAccess;
-using Microsoft.EntityFrameworkCore;
-using Medix.API.Business.Interfaces.Community;
-using Microsoft.Extensions.Logging;
-using Medix.API.Business.Services.UserManagement;
-using Medix.API.Models.DTOs.Doctor;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
+using Medix.API.Business.Interfaces.Community;
+using Medix.API.Business.Interfaces.UserManagement;
+using Medix.API.Business.Services.Community;
+using Medix.API.DataAccess;
+using Medix.API.Exceptions;
+using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Doctor;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medix.API.Presentation.Controller.UserManagement
 {
@@ -47,7 +39,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
             _configService = configService;
         }
 
-        // ========================= USER SELF MANAGEMENT =========================
 
         [HttpGet("getUserInfor")]
         [Authorize]
@@ -97,6 +88,7 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 patient.EmergencyContactPhone = updateDto.EmergencyContactPhone;
                 patient.Allergies = updateDto.Allergies;
                 patient.MedicalHistory = updateDto.MedicalHistory;
+                patient.BloodTypeCode = updateDto.BloodTypeCode;
 
                 var patientDTO = await _patientService.UpdateAsync(userId, patient);
                 if (patientDTO == null)
@@ -109,60 +101,56 @@ namespace Medix.API.Presentation.Controller.UserManagement
         }
 
 
+        [HttpPost("uploadAvatar")]
+        [Authorize]
+        public async Task<IActionResult> UploadAvatar([FromForm] IFormFile file, [FromServices] CloudinaryService cloudinaryService)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null)
+                return Unauthorized(new { message = "User ID not found in token" });
 
+            if (!Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized(new { message = "Invalid user ID in token" });
 
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "No file uploaded" });
 
-        //[HttpPost("uploadAvatar")]
-        //[Authorize]
-        //public async Task<IActionResult> UploadAvatar([FromForm] IFormFile file, [FromServices] CloudinaryService cloudinaryService)
-        //{
-        //    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-        //    if (userIdClaim == null)
-        //        return Unauthorized(new { message = "User ID not found in token" });
+            const long maxFileSize = 5 * 1024 * 1024;
+            if (file.Length > maxFileSize)
+                return BadRequest(new { message = "File quá lớn (tối đa 5 MB)" });
 
-        //    if (!Guid.TryParse(userIdClaim.Value, out var userId))
-        //        return Unauthorized(new { message = "Invalid user ID in token" });
+            if (string.IsNullOrWhiteSpace(file.ContentType) || !file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { message = "File must be an image." });
 
-        //    if (file == null || file.Length == 0)
-        //        return BadRequest(new { message = "No file uploaded" });
+            var allowedExt = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+            var ext = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+            if (string.IsNullOrEmpty(ext) || !allowedExt.Contains(ext))
+                return BadRequest(new { message = "Định dạng file không được hỗ trợ." });
 
-        //    const long maxFileSize = 5 * 1024 * 1024;
-        //    if (file.Length > maxFileSize)
-        //        return BadRequest(new { message = "File quá lớn (tối đa 5 MB)" });
+            try
+            {
+                using var stream = file.OpenReadStream();
+                var fileName = $"{userId}_{Guid.NewGuid()}{ext}";
+                var imageUrl = await cloudinaryService.UploadImageAsync(stream, fileName);
 
-        //    if (string.IsNullOrWhiteSpace(file.ContentType) || !file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-        //        return BadRequest(new { message = "File must be an image." });
+                if (string.IsNullOrEmpty(imageUrl))
+                    return StatusCode(500, new { message = "Image upload failed" });
 
-        //    var allowedExt = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-        //    var ext = Path.GetExtension(file.FileName)?.ToLowerInvariant();
-        //    if (string.IsNullOrEmpty(ext) || !allowedExt.Contains(ext))
-        //        return BadRequest(new { message = "Định dạng file không được hỗ trợ." });
+                var user = await _userService.GetByIdAsync(userId);
+                if (user == null)
+                    return NotFound(new { message = "User not found" });
 
-        //    try
-        //    {
-        //        using var stream = file.OpenReadStream();
-        //        var fileName = $"{userId}_{Guid.NewGuid()}{ext}";
-        //        var imageUrl = await cloudinaryService.UploadImageAsync(stream, fileName);
+                await _userService.UpdateAvatarURL(imageUrl, user.Id);
 
-        //        if (string.IsNullOrEmpty(imageUrl))
-        //            return StatusCode(500, new { message = "Image upload failed" });
+                return Ok(new { imageUrl });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading avatar for user {UserId}", userIdClaim.Value);
+                return StatusCode(500, new { message = "Cloud upload error", detail = ex.Message });
+            }
+        }
 
-        //        var user = await _userService.GetByIdAsync(userId);
-        //        if (user == null)
-        //            return NotFound(new { message = "User not found" });
-
-        //        await _userService.UpdateAvatarURL(imageUrl, user.Id);
-
-        //        return Ok(new { imageUrl });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error uploading avatar for user {UserId}", userIdClaim.Value);
-        //        return StatusCode(500, new { message = "Cloud upload error", detail = ex.Message });
-        //    }
-        //}
-
-        // ========================= ADMIN MANAGEMENT =========================
 
         [HttpGet]
         //[Authorize(Roles = "Admin")]
@@ -209,13 +197,10 @@ namespace Medix.API.Presentation.Controller.UserManagement
 
             try
             {
-                // 1. Generate a temporary password
                 var temporaryPassword = GenerateRandomPassword();
 
-                // 2. Create user with the temporary password
                 var userDto = await _userService.CreateUserAsync(request, temporaryPassword);
 
-                // 3. Send the temporary password to the user's email
                 try
                 {
                     await _emailService.SendNewUserPasswordAsync(userDto.Email, userDto.UserName, temporaryPassword);
@@ -223,8 +208,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 }
                 catch (Exception emailEx)
                 {
-                    // Log the email sending failure but don't fail the whole request
-                    // The user is created, they can use "Forgot Password" flow
                     _logger.LogWarning(emailEx, "Failed to send temporary password email to {Email} for new user {UserId}", userDto.Email, userDto.Id);
                 }
 
@@ -249,7 +232,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
         [ProducesResponseType(404)]
         public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserDTO updateUserDto)
         {
-            // Lấy ID của người dùng đang thực hiện hành động từ token
             var currentUserIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
             if (currentUserIdClaim == null || !Guid.TryParse(currentUserIdClaim.Value, out var currentUserId))
             {
@@ -298,14 +280,10 @@ namespace Medix.API.Presentation.Controller.UserManagement
         {
             try
             {
-                // 1. Generate a new temporary password
                 var temporaryPassword = GenerateRandomPassword();
 
-                // 2. Update the user's password in the database
-                // This requires a method in IUserService to update the password hash.
                 var updatedUser = await _userService.AdminResetPasswordAsync(id, temporaryPassword);
 
-                // 3. Send the new password via email using the existing service method
                 await _emailService.SendNewUserPasswordAsync(updatedUser.Email, updatedUser.UserName, temporaryPassword);
 
                 return Ok(new { message = "Mật khẩu đã được đặt lại và gửi đến email của người dùng." });
@@ -340,14 +318,9 @@ namespace Medix.API.Presentation.Controller.UserManagement
             {
                 password[i] = allChars[random.Next(allChars.Length)];
             }
-
-            // Xáo trộn mảng mật khẩu để tránh các ký tự đầu tiên luôn theo một thứ tự cố định
-            // (ví dụ: luôn bắt đầu bằng chữ hoa, chữ thường, số, ký tự đặc biệt)
-            // Đây là một dạng của thuật toán Fisher-Yates shuffle.
             for (int i = password.Length - 1; i > 0; i--)
             {
                 int j = random.Next(i + 1);
-                // Hoán đổi vị trí
                 (password[i], password[j]) = (password[j], password[i]);
             }
 
@@ -382,7 +355,6 @@ namespace Medix.API.Presentation.Controller.UserManagement
                     return BadRequest(validationResults);
                 }
 
-                // Validate new password against system configuration policy
                 try
                 {
                     await _configService.ValidatePasswordAsync(req.NewPassword);

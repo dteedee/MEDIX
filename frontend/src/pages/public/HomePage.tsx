@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import styles from '../../styles/public/home.module.css'
 import { HomeMetadata } from '../../types/home.types';
 import HomeService from '../../services/homeService';
@@ -9,12 +9,14 @@ import { Banner } from '../../types/home.types';
 import { bannerService } from '../../services/bannerService';
 import { articleService } from '../../services/articleService';
 import doctorService from '../../services/doctorService';
+import ChatbotBubble from '../../components/ChatbotBubble';
+import BackToTopButton from '../../components/BackToTopButton';
 
 function HomePage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { t } = useLanguage();
 
-    //get home page details
     const [homeMetadata, setHomeMetadata] = useState<HomeMetadata>();
     const [banners, setBanners] = useState<Banner[]>([]);
     const [featuredArticles, setFeaturedArticles] = useState<ArticleDTO[]>([]);
@@ -26,9 +28,7 @@ function HomePage() {
             try {
                 const data = await HomeService.getHomeMetadata();
                 setHomeMetadata(data);
-                console.log('Banners received from API:', data?.banners.length); // Thêm dòng này để kiểm tra
             } catch (error) {
-                console.error('Failed to fetch home metadata:', error);
             }
         };
 
@@ -36,34 +36,31 @@ function HomePage() {
 
         const fetchBanners = async () => {
             try {
-                // Lấy tất cả banner, sau đó sắp xếp và giới hạn ở frontend
                 const allBanners = await bannerService.getAll({ page: 1, pageSize: 9999 });
                 
                 const today = new Date();
-                today.setHours(0, 0, 0, 0); // Chuẩn hóa về đầu ngày để so sánh
+                today.setHours(0, 0, 0, 0); 
 
                 const validBanners = (allBanners || []).filter(banner => {
-                    if (!banner.endDate) return false; // Không hiển thị nếu không có ngày kết thúc
+                    if (!banner.endDate) return false; 
                     const endDate = new Date(banner.endDate);
-                    return endDate >= today; // Chỉ hiển thị banner có ngày kết thúc >= hôm nay
+                    return endDate >= today; 
                 });
 
                 const sortedBanners = validBanners
                     .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
-                    .slice(0, 7); // Giới hạn 7 banner
+                    .slice(0, 7); 
 
                 setBanners(sortedBanners);
             } catch (error) {
-                console.error('Failed to fetch banners:', error);
             }
         };
 
         const fetchArticles = async () => {
             try {
-                const articles = await articleService.getHomepageArticles(5); // Lấy 5 bài viết ưu tiên nhất
+                const articles = await articleService.getHomepageArticles(5); 
                 setFeaturedArticles(articles);
             } catch (error) {
-                console.error('Failed to fetch homepage articles:', error);
             }
         };
         fetchArticles();
@@ -91,13 +88,11 @@ function HomePage() {
                 results.forEach(r => { if (r.education) map[r.id] = r.education; });
                 setDoctorEducationMap(prev => ({ ...prev, ...map }));
             } catch (e) {
-                console.error('Load doctor education failed', e);
             }
         };
         loadEducation();
     }, [homeMetadata?.displayedDoctors]);
 
-    // Resolve doctorId from username using listing API
     const resolveDoctorId = async (userName: string): Promise<string | null> => {
         try {
             const list = await doctorService.getAll({ page: 1, pageSize: 100, searchTerm: userName });
@@ -149,15 +144,6 @@ function HomePage() {
         return () => clearInterval(interval);
     }, [homeMetadata?.displayedDoctors?.length]);
 
-    const [showButton, setShowButton] = useState(false);
-
-    useEffect(() => {
-      const handleScroll = () => {
-        setShowButton(window.scrollY > 300);
-      };
-      window.addEventListener('scroll', handleScroll);
-      return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
 
     // Knowledge carousel: cửa sổ trượt tròn, hiển thị columns bài, dịch 1 bài/lần
     const knowledgeTrackRef = useRef<HTMLDivElement>(null);
@@ -424,19 +410,26 @@ function HomePage() {
                     <div className={styles["doctors-grid"]}>
                         {getVisibleDoctors().map((doctor, index) => (
                             <a key={`doctor-${doctor.userName}-${index}`} href={`/doctor/details/${doctor.id}`} className={styles["doctor-card"]}>
-                                <div className={styles["doctor-photo"]} style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
-                                    <img className={styles['doctor-photo']} src={doctor.avatarUrl} style={{objectFit:'cover', display:'block'}} />
+                                <div className={styles["doctor-photo"]}>
+                                    <img src={doctor.avatarUrl} alt={doctor.fullName} />
                                 </div>
-                                <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'center'}}>
-                                    <h3 style={{margin:0}}>{doctor.fullName}</h3>
-                                    <p className={styles["specialty"]} style={{margin:0}}>
-                                        {(doctorEducationMap[doctor.id] || '—')} - {doctor.specializationName}
-                                    </p>
-                                    <p className={styles["specialty"]} style={{margin:0}}>
-                                        {doctor.yearsOfExperience} {t('common.years-experience')}
-                                    </p>
+                                <div className={styles["doctor-info"]}>
+                                    <h3>{doctor.fullName}</h3>
+                                    <div className={styles["doctor-details"]}>
+                                        <p className={styles["specialty"]}>
+                                            <i className="bi bi-mortarboard" style={{marginRight: '6px'}}></i>
+                                            {(doctorEducationMap[doctor.id] || '—')} - {doctor.specializationName}
+                                        </p>
+                                        <p className={styles["experience"]}>
+                                            <i className="bi bi-clock-history" style={{marginRight: '6px'}}></i>
+                                            {doctor.yearsOfExperience} {t('common.years-experience')}
+                                        </p>
+                                    </div>
                                     <div className={styles["rating"]}>
                                         {'★'.repeat(Math.round(doctor.averageRating)) + '☆'.repeat(5 - Math.round(doctor.averageRating))}
+                                        {doctor.averageRating > 0 && (
+                                            <span className={styles["rating-value"]}> ({doctor.averageRating.toFixed(1)})</span>
+                                        )}
                                     </div>
                                 </div>
                             </a>
@@ -496,18 +489,9 @@ function HomePage() {
                 </div>
             </section >
 
-            <div className={styles["ai-bubble"]}>
-                <img src="/images/medix-logo-mirrored.jpg" alt="Chat" />
-                <div className={styles['status-indicator-sm']}></div>
-            </div>
 
-            <button
-                className={`${styles["back-to-top"]} ${!showButton ? styles["hidden"] : ""}`}
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                aria-label="Back to top"
-            >
-                <i className="fas fa-arrow-up"></i>
-            </button>
+            <BackToTopButton />
+            <ChatbotBubble />
     </div>
   );
 }

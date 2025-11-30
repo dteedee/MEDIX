@@ -2,11 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { userService, UserBasicInfo, UpdateUserInfo } from '../../services/userService';
+import registrationService from '../../services/registrationService';
 import { apiClient } from '../../lib/apiClient';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { ChangePasswordModal } from '../auth/ChangePasswordModal';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 import styles from '../../styles/patient/PatientProfile.module.css';
+
+interface BloodType {
+  code: string;
+  displayName: string;
+  isActive: boolean;
+}
 
 interface ExtendedUserInfo extends UserBasicInfo {
   cccd?: string;
@@ -30,6 +37,7 @@ interface ExtendedUpdateUserInfo extends UpdateUserInfo {
   medicalHistory?: string;
   allergies?: string;
   imageURL?: string;
+  bloodTypeCode?: string;
 }
 
 const formatDate = (iso: string | null | undefined) => {
@@ -57,6 +65,23 @@ export const PatientProfile: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+  const [avatarUpdateKey, setAvatarUpdateKey] = useState(0); // Track avatar updates
+  const [bloodTypes, setBloodTypes] = useState<BloodType[]>([]); // Blood types from API
+
+  // Helper function to get blood type display name
+  const getBloodTypeDisplayName = (code: string | undefined): string => {
+    if (!code) {
+      // If no code, try to get from data.bloodType (legacy or display name already stored)
+      return data?.bloodType || 'Chưa cập nhật';
+    }
+    // Find the blood type by code
+    const bloodType = bloodTypes.find(bt => bt.code === code);
+    if (bloodType) {
+      return bloodType.displayName;
+    }
+    // Fallback: if bloodTypes not loaded yet, use code or data.bloodType
+    return data?.bloodType || code || 'Chưa cập nhật';
+  };
 
   // Validation functions
   const validateUsername = (username: string): string | null => {
@@ -180,6 +205,27 @@ export const PatientProfile: React.FC = () => {
   };
 
 
+  // Load blood types from API
+  useEffect(() => {
+    const loadBloodTypes = async () => {
+      try {
+        const bloodTypesResponse = await registrationService.getBloodTypes();
+        
+        if (bloodTypesResponse.success && bloodTypesResponse.data) {
+          const bloodTypesWithActive = bloodTypesResponse.data.map(bt => ({
+            ...bt,
+            isActive: true
+          }));
+          setBloodTypes(bloodTypesWithActive);
+        } else {
+        }
+      } catch (err) {
+      }
+    };
+
+    loadBloodTypes();
+  }, []);
+
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -194,17 +240,25 @@ export const PatientProfile: React.FC = () => {
             // Try to get patient data - this endpoint should exist if patient is registered
             const patientResponse = await apiClient.get('/patient/getPatientInfo');
             patientData = patientResponse.data;
-            console.log('Patient data received:', patientData);
+         
           } catch (error) {
-            console.log('Patient info not available, using mock data');
+       
           }
           
+          // Use avatarUrl from user context if imageURL is not available
+          const imageURL = res.imageURL || user?.avatarUrl || (res as any).avatarUrl;
+          
+          // Get blood type code from API response
+          const bloodTypeCode = res.bloodTypeCode || (res as any).bloodTypeCode || patientData.bloodTypeCode || '';
+          
+        
           const extendedData: ExtendedUserInfo = {
             ...res,
+            imageURL: imageURL, // Ensure imageURL is set
             cccd: res.identificationNumber || (res as any).cccd || patientData.cccd,
             identificationNumber: res.identificationNumber || (res as any).identificationNumber,
             gender: (res as any).gender || patientData.gender || 'male',
-            bloodType: (res as any).bloodType || patientData.bloodType || 'A+',
+            bloodType: (res as any).bloodType || patientData.bloodType || '',
             emergencyContactName: res.emergencyContactName || patientData.emergencyContactName || (res as any).emergencyContactName || '',
             emergencyContactPhone: res.emergencyContactPhone || patientData.emergencyContactPhone || (res as any).emergencyContactPhone || '',
             medicalHistory: res.medicalHistory || patientData.medicalHistory || (res as any).medicalHistory || '',
@@ -219,20 +273,30 @@ export const PatientProfile: React.FC = () => {
             address: res.address || '',
             dob: res.dob || '',
             cccd: res.identificationNumber || '',
+            bloodTypeCode: bloodTypeCode,
             emergencyContactName: res.emergencyContactName || (res as any).emergencyContactName || '',
             emergencyContactPhone: res.emergencyContactPhone || (res as any).emergencyContactPhone || '',
             medicalHistory: res.medicalHistory || (res as any).medicalHistory || '',
-            allergies: res.allergies || (res as any).allergies || ''
+            allergies: res.allergies || (res as any).allergies || '',
+            imageURL: imageURL
           });
         }
       } catch (e: any) {
-        if (mounted) setError(e?.message || 'Không thể tải thông tin người dùng');
+        if (mounted) setError(e?.message || 'Não thể tải thông tin người dùng');
       } finally {
         if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [user?.avatarUrl]); // Re-run when user avatar changes
+
+  // Sync avatar from user context when it changes
+  useEffect(() => {
+    if (user?.avatarUrl && data && (!data.imageURL || data.imageURL !== user.avatarUrl)) {
+      setData(prev => prev ? { ...prev, imageURL: user.avatarUrl || prev.imageURL } : null);
+      setAvatarUpdateKey(prev => prev + 1); // Force re-render
+    }
+  }, [user?.avatarUrl, data]);
 
   const handleSaveClick = () => {
     // Validate before showing confirmation
@@ -284,6 +348,7 @@ export const PatientProfile: React.FC = () => {
       const apiData = {
         ...editData,
         identificationNumber: editData.cccd,
+        bloodTypeCode: editData.bloodTypeCode || undefined,
         medicalHistory: editData.medicalHistory?.trim() || undefined,
         allergies: editData.allergies?.trim() || undefined
       };
@@ -295,6 +360,8 @@ export const PatientProfile: React.FC = () => {
       
       delete apiData.cccd; // Remove cccd field before sending to API
       
+    
+      
       const updatedUser = await userService.updateUserInfo(apiData);
       const finalUsername = updatedUser.username && updatedUser.username !== updatedUser.email 
         ? updatedUser.username 
@@ -303,6 +370,12 @@ export const PatientProfile: React.FC = () => {
       // Preserve imageURL from current data - API might not return avatarUrl
       const preservedImageURL = updatedUser.imageURL || data?.imageURL;
       
+      // Find blood type display name from code
+      const selectedBloodType = bloodTypes.find(bt => bt.code === editData.bloodTypeCode);
+      const bloodTypeDisplay = selectedBloodType?.displayName || (updatedUser as any).bloodType || data?.bloodType || '';
+      
+     
+      
       const updatedData: ExtendedUserInfo = {
         ...updatedUser,
         username: finalUsername,
@@ -310,7 +383,7 @@ export const PatientProfile: React.FC = () => {
         cccd: updatedUser.identificationNumber || editData.cccd || data?.cccd,
         identificationNumber: updatedUser.identificationNumber || editData.cccd || data?.identificationNumber,
         gender: (updatedUser as any).gender || data?.gender,
-        bloodType: (updatedUser as any).bloodType || data?.bloodType,
+        bloodType: bloodTypeDisplay,
         emergencyContactName: editData.emergencyContactName || updatedUser.emergencyContactName || data?.emergencyContactName,
         emergencyContactPhone: editData.emergencyContactPhone || updatedUser.emergencyContactPhone || data?.emergencyContactPhone,
         medicalHistory: editData.medicalHistory || updatedUser.medicalHistory || data?.medicalHistory,
@@ -318,6 +391,13 @@ export const PatientProfile: React.FC = () => {
       };
       
       setData(updatedData);
+      
+      // Update editData with the latest bloodTypeCode from API response
+      setEditData(prev => ({
+        ...prev,
+        bloodTypeCode: updatedUser.bloodTypeCode || editData.bloodTypeCode || ''
+      }));
+      
       setIsEditing(false);
       showToast('Cập nhật thông tin thành công!', 'success');
       
@@ -346,6 +426,7 @@ export const PatientProfile: React.FC = () => {
         address: data.address || '',
         dob: data.dob || '',
         cccd: data.cccd || '',
+        bloodTypeCode: (data as any).bloodTypeCode || '',
         emergencyContactName: data.emergencyContactName || '',
         emergencyContactPhone: data.emergencyContactPhone || '',
         medicalHistory: data.medicalHistory || '',
@@ -390,12 +471,44 @@ export const PatientProfile: React.FC = () => {
     try {
       const result = await userService.uploadProfileImage(file);
       
-      if (data && result.imageUrl) {
-        const updatedData = { ...data, imageURL: result.imageUrl };
-        setData(updatedData);
-        
-        // Update user context with new avatar
-        updateUser({ avatarUrl: result.imageUrl });
+      if (result.imageUrl) {
+        // Reload user info from API to get the latest data
+        try {
+          const latestUserInfo = await userService.getUserInfo();
+          const updatedData: ExtendedUserInfo = {
+            ...latestUserInfo,
+            cccd: latestUserInfo.identificationNumber || data?.cccd,
+            identificationNumber: latestUserInfo.identificationNumber || data?.identificationNumber,
+            gender: (latestUserInfo as any).gender || data?.gender,
+            bloodType: (latestUserInfo as any).bloodType || data?.bloodType,
+            emergencyContactName: latestUserInfo.emergencyContactName || data?.emergencyContactName,
+            emergencyContactPhone: latestUserInfo.emergencyContactPhone || data?.emergencyContactPhone,
+            medicalHistory: latestUserInfo.medicalHistory || data?.medicalHistory,
+            allergies: latestUserInfo.allergies || data?.allergies
+          };
+          setData(updatedData);
+          
+          // Update editData with latest info
+          setEditData(prev => ({
+            ...prev,
+            imageURL: latestUserInfo.imageURL || result.imageUrl
+          }));
+          
+          const finalImageUrl = latestUserInfo.imageURL || result.imageUrl;
+          
+          updateUser({ avatarUrl: finalImageUrl });
+          
+          setAvatarUpdateKey(prev => prev + 1);
+        } catch (reloadError) {
+          if (data) {
+            const updatedData = { ...data, imageURL: result.imageUrl };
+            setData(updatedData);
+          }
+          
+          updateUser({ avatarUrl: result.imageUrl });
+          
+          setAvatarUpdateKey(prev => prev + 1);
+        }
       }
       
       showToast('Cập nhật ảnh đại diện thành công!', 'success');
@@ -403,13 +516,25 @@ export const PatientProfile: React.FC = () => {
       URL.revokeObjectURL(previewUrl);
       setPreviewImage(null);
     } catch (e: any) {
-      const errorMessage = e?.message || 'Không thể tải ảnh lên';
-      setError(`${errorMessage}. Ảnh preview sẽ được hiển thị tạm thời.`);
+      let errorMessage = e?.message || 'Không thể tải ảnh lên';
       
+      if (e?.message?.includes('405')) {
+        errorMessage = 'Lỗi 405: Không thể tải ảnh lên. Endpoint upload có thể chưa được kích hoạt trong backend. Ảnh preview sẽ được hiển thị tạm thời.';
+      } else if (e?.message?.includes('404')) {
+        errorMessage = 'Lỗi 404: Endpoint upload không tồn tại. Vui lòng liên hệ quản trị viên.';
+      } else if (e?.message?.includes('401')) {
+        errorMessage = 'Lỗi 401: Bạn cần đăng nhập lại để upload ảnh.';
+      } else if (e?.message?.includes('413')) {
+        errorMessage = 'File quá lớn. Vui lòng chọn ảnh nhỏ hơn 10MB.';
+      }
+      
+      setError(errorMessage);
+      
+      // Keep preview for 10 seconds, then clear
       setTimeout(() => {
         URL.revokeObjectURL(previewUrl);
         setPreviewImage(null);
-        setError(null);
+        // Don't clear error immediately - let user see it
       }, 10000);
     } finally {
       setUploading(false);
@@ -464,11 +589,16 @@ export const PatientProfile: React.FC = () => {
             <div className={styles.profileInfoSection}>
               <div className={styles.avatarSection}>
                 <div className={styles.avatarContainer}>
-                  {(previewImage || data.imageURL) ? (
+                  {(previewImage || data.imageURL || user?.avatarUrl) ? (
                     <img 
-                      src={previewImage || data.imageURL || ''} 
+                      key={`avatar-${avatarUpdateKey}-${data.imageURL || user?.avatarUrl || ''}`} // Force re-render when avatar changes
+                      src={previewImage || data.imageURL || user?.avatarUrl || ''} 
                       alt="Profile" 
                       className={styles.avatarImage}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data?.fullName || data?.email || 'Patient')}&background=667eea&color=fff`;
+                      }}
                     />
                   ) : (
                     <div className={styles.avatarPlaceholder}>
@@ -743,16 +873,42 @@ export const PatientProfile: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Nhóm máu - Read Only */}
+                {/* Nhóm máu - Editable */}
                 <div className={styles.fieldGroup}>
                   <label className={styles.fieldLabel}>
                     <i className="bi bi-droplet"></i>
                     Nhóm máu
                   </label>
-                  <div className={styles.inputContainer}>
-                    <input disabled value={data.bloodType || 'Chưa cập nhật'} className={styles.fieldInputDisabled} />
-                    <i className="bi bi-lock"></i>
-                  </div>
+                  {isEditing ? (
+                    <div className={styles.inputContainer}>
+                      <select
+                        value={editData.bloodTypeCode || ''}
+                        onChange={(e) => setEditData({...editData, bloodTypeCode: e.target.value})}
+                        className={styles.fieldInput}
+                      >
+                        <option value="">Chọn nhóm máu</option>
+                        {bloodTypes.length > 0 ? (
+                          bloodTypes.map((bloodType) => (
+                            <option key={bloodType.code} value={bloodType.code}>
+                              {bloodType.displayName}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="" disabled>Đang tải...</option>
+                        )}
+                      </select>
+                      <i className="bi bi-pencil"></i>
+                    </div>
+                  ) : (
+                    <div className={styles.inputContainer}>
+                      <input 
+                        disabled 
+                        value={getBloodTypeDisplayName(editData.bloodTypeCode) || data.bloodType || 'Chưa cập nhật'} 
+                        className={styles.fieldInputDisabled} 
+                      />
+                      <i className="bi bi-lock"></i>
+                    </div>
+                  )}
                 </div>
 
                 {/* Họ tên người liên hệ */}

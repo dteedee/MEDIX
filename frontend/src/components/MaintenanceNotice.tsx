@@ -49,7 +49,6 @@ export const MaintenanceNotice: React.FC = () => {
         setSchedule(scheduleRes.data?.configValue || null);
         setOpen(true);
       } catch (error) {
-        console.error('Failed to load maintenance status', error);
       }
     };
 

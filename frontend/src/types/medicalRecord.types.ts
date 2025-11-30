@@ -21,6 +21,9 @@ export interface MedicalRecord {
   appointmentDate: string;
   appointmentStartTime?: string;
   appointmentEndTime?: string;
+  appointmentStartDate?: string; // Nova propriedade
+  appointmentEndDate?: string;   // Nova propriedade
+  statusAppointment?: string;    // Nova propriedade
   chiefComplaint: string;
   physicalExamination: string;
   diagnosis: string;
@@ -36,6 +39,7 @@ export interface MedicalRecord {
   weight?: number;
   medicalHistory?: string;
   allergies?: string;
+  diseaseHistory?: string;
   // Thêm các trường từ User
   genderCode?: string;
   dateOfBirth?: string;

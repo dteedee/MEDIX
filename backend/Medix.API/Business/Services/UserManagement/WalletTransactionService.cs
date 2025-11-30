@@ -1,8 +1,12 @@
-﻿using Medix.API.Business.Interfaces.UserManagement;
+﻿using Hangfire;
+using Medix.API.Business.Interfaces.Classification;
+using Medix.API.Business.Interfaces.UserManagement;
+using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Repositories.Classification;
 using Medix.API.Models.DTOs.Wallet;
 using Medix.API.Models.Entities;
 using Medix.API.Models.Enums;
+using System.Net.WebSockets;
 
 namespace Medix.API.Business.Services.UserManagement
 {
@@ -11,10 +15,14 @@ namespace Medix.API.Business.Services.UserManagement
     {
 
         private readonly IWalletTransactionRepository walletTransactionRepository;
+        private readonly ITransferTransactionRepository transferTransactionRepository;
+        private readonly IWalletRepository walletRepository;
 
-        public WalletTransactionService(IWalletTransactionRepository walletTransactionRepository)
+        public WalletTransactionService(IWalletTransactionRepository walletTransactionRepository, ITransferTransactionRepository transferTransactionRepository, IWalletRepository walletRepository)
         {
             this.walletTransactionRepository = walletTransactionRepository;
+            this.transferTransactionRepository = transferTransactionRepository;
+            this.walletRepository = walletRepository;
         }
 
         public async Task<WalletTransactionDto> createWalletTransactionAsync(WalletTransactionDto walletTransactionDto)
@@ -51,6 +59,13 @@ namespace Medix.API.Business.Services.UserManagement
                 CreatedAt = saved.CreatedAt
             };
 
+            if (walletTransactionDto.TransactionTypeCode== "Withdrawal" && walletTransactionDto.Status == "Pending")
+            {
+                BackgroundJob.Schedule<IWalletTransactionService>(
+                 service => service.CheckApproveMoney((Guid)resultDto.id),
+                DateTime.Now.AddDays(1));
+            }
+         
             return resultDto;
         }
 
@@ -231,6 +246,28 @@ namespace Medix.API.Business.Services.UserManagement
                 TransactionDate = transaction.TransactionDate,
                 CreatedAt = transaction.CreatedAt
             };
+        }
+
+        public async Task CheckApproveMoney(Guid walletTransID)
+        {
+        var wallettransaction = await walletTransactionRepository.GetWalletTransactionByIdAsync(walletTransID);
+
+            var transferTransaction = await transferTransactionRepository.GetTransferTransactionWithWalletTransID(walletTransID);
+            var wallet = await walletRepository.GetWalletByIdAsync(wallettransaction.WalletId);
+            if (wallettransaction.TransactionTypeCode == "Withdrawal" && wallettransaction.Status == "Pending")
+            {
+                wallettransaction.Status = "Failed";
+                wallettransaction.Description += "Bị từ chối";
+
+                await walletTransactionRepository.UpdateWalletTransactionAsync(wallettransaction);
+
+                transferTransaction.Status = "Rejected";
+                transferTransaction.Description += "Bị từ chối";
+
+                await transferTransactionRepository.UpdateTransferTransaction(transferTransaction);
+                await walletRepository.IncreaseWalletBalanceAsync(wallet.UserId, transferTransaction.Amount);
+
+            }
         }
     }
 }

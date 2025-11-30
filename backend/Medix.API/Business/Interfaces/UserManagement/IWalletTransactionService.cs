@@ -11,7 +11,7 @@ namespace Medix.API.Business.Interfaces.UserManagement
 
         public Task<WalletTransactionDto> GetWalletTransactionByIdAsync(Guid id);
 
-
+        public Task CheckApproveMoney(Guid walletTransID);
 
         public Task<bool> UpdateTransactionStatusByOrderCodeAsync(long orderCode, string status, decimal? balanceBefore = null, decimal? balanceAfter = null, string? additionalDescription = null);
 

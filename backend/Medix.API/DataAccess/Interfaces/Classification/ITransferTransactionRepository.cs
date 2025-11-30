@@ -13,6 +13,8 @@ namespace Medix.API.DataAccess.Interfaces.Classification
 
         public Task<IEnumerable<TransferTransaction>> GetAllTransferTransactions();
 
+        public Task<TransferTransaction> GetTransferTransactionWithWalletTransID(Guid walletTransID);
+
 
     }
 }

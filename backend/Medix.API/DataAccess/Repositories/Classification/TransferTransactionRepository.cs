@@ -81,12 +81,21 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
             return transaction;
         }
-
         public async Task<IEnumerable<TransferTransaction>> GetAllTransferTransactions()
         {
-         return await _context.TransferTransactions.ToListAsync();
-            
-           
+            return await _context.TransferTransactions.ToListAsync();
+
+
+        }
+        public async Task<TransferTransaction> GetTransferTransactionWithWalletTransID(Guid walletTransID)
+        {
+            var transaction = await _context.TransferTransactions.FirstOrDefaultAsync(t => t.WalletTransaction.Id == walletTransID);
+            if (transaction == null)
+            {
+                throw new InvalidOperationException($"TransferTransaction with ID {walletTransID} not found.");
+            }
+
+            return transaction;
         }
     }
 }

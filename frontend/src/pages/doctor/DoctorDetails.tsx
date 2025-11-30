@@ -160,6 +160,12 @@ function DoctorDetails() {
     const handleBookingConfirm = async () => {
         if (!profileData || !selectedDate || !selectedTimeSlot) return;
         
+        // Validate "Lý do khám" field
+        if (!chiefComplaint || !chiefComplaint.trim()) {
+            showToast("Vui lòng nhập lý do khám trước khi đặt lịch hẹn.", 'warning');
+            return;
+        }
+        
         if (!checkUserLogin()) {
             showToast("Bạn cần đăng nhập để đặt lịch hẹn với bác sĩ. Vui lòng đăng nhập để tiếp tục.", 'warning');
             navigate('/login');
@@ -183,6 +189,15 @@ function DoctorDetails() {
     };
     const handleConfirmedBooking = async () => {
         if (!profileData || !selectedDate || !selectedTimeSlot) return;
+        
+        // Validate "Lý do khám" field again (double check)
+        if (!chiefComplaint || !chiefComplaint.trim()) {
+            showToast("Vui lòng nhập lý do khám trước khi đặt lịch hẹn.", 'warning');
+            setShowConfirmModal(false);
+            return;
+        }
+        
+        // Close confirmation modal
         setShowConfirmModal(false);
         setIsCreatingPayment(true);
         try {
@@ -1660,7 +1675,7 @@ function DoctorDetails() {
                                                     <button 
                                                         className={styles.confirmButton} 
                                                         onClick={handleBookingConfirm}
-                                                        disabled={isCreatingPayment || !chiefComplaint.trim()}
+                                                        disabled={isCreatingPayment}
                                                     >
                                                         {isCreatingPayment ? (
                                                             <>

@@ -279,11 +279,11 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
                       <input
                         type='number'
                         className={styles.textarea}
-                        placeholder="Giá khám..."
-                        value={formData.consultationFee}
+                        placeholder="Nhập giá khám (VNĐ)..."
+                        value={formData.consultationFee === 0 ? '' : formData.consultationFee}
                         onChange={(e) => {
                           const fee = parseFloat(e.target.value); // or Number(e.target.value)
-                          setFormData({ ...formData, consultationFee: isNaN(fee) ? 0 : fee });
+                          setFormData({ ...formData, consultationFee: isNaN(fee) || e.target.value === '' ? 0 : fee });
                           setErrors({ ...errors, consultationFee: '' });
                         }}
                       />

@@ -150,7 +150,8 @@ export const Header: React.FC = () => {
                                 </div>
                             )}
 
-                            <div className="dropdown" style={{ position: 'relative', display: 'inline-block' }}>
+                            {/* Notifications */}
+                            <div className="dropdown" style={{ position: 'relative', display: 'inline-block', zIndex: 10001 }}>
                                 <i
                                     className="bi bi-bell-fill fs-4"
                                     style={{ cursor: 'pointer' }}
@@ -168,13 +169,17 @@ export const Header: React.FC = () => {
                                             height: '10px',
                                             backgroundColor: 'red',
                                             borderRadius: '50%',
+                                            zIndex: 10002,
                                         }}
                                     ></span>
                                 )}
 
                                 <ul className="dropdown-menu dropdown-menu-start" style={{
                                     maxHeight: '500px',
-                                    overflowY: 'auto', width: '400px'
+                                    overflowY: 'auto', 
+                                    width: '400px',
+                                    zIndex: 10000,
+                                    position: 'absolute',
                                 }}>
                                     <li><h6 className="dropdown-header">{t('header.notifications')}</h6></li>
                                     {notificationMetadata?.notifications.map((notification) => (

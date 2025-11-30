@@ -60,12 +60,34 @@ namespace Medix.API.Business.Services.UserManagement
 
         public string GenerateRefreshToken()
         {
-            return Guid.NewGuid().ToString();
+            // Use cryptographic random number generator for better security
+            using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+            var bytes = new byte[32]; // 256 bits
+            rng.GetBytes(bytes);
+            return Convert.ToBase64String(bytes);
         }
 
         public bool ValidateRefreshToken(string refreshToken)
         {
-            return !string.IsNullOrEmpty(refreshToken) && Guid.TryParse(refreshToken, out _);
+            // Support both GUID (legacy) and Base64 (new) format for backward compatibility
+            if (string.IsNullOrEmpty(refreshToken))
+                return false;
+            
+            // Check if it's a valid GUID (legacy format)
+            if (Guid.TryParse(refreshToken, out _))
+                return true;
+            
+            // Check if it's a valid Base64 string (new format)
+            try
+            {
+                var bytes = Convert.FromBase64String(refreshToken);
+                // Base64 string should decode to 32 bytes (256 bits)
+                return bytes.Length == 32;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public int GetUserIdFromToken(string token)

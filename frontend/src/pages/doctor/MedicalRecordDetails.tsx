@@ -23,7 +23,6 @@ const MedicalRecordDetails: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [newAllergy, setNewAllergy] = useState('');
 
-  // Map statusCode sang tiếng Việt
   const statusDisplayNameMap: Record<string, string> = {
     'BeforeAppoiment': 'Trước giờ khám',
     'CancelledByDoctor': 'Bác sĩ hủy',
@@ -66,7 +65,6 @@ const MedicalRecordDetails: React.FC = () => {
         setError(null);
 
       } catch (err: any) {
-        console.error("Error fetching medical record:", err);
         if (err.response && err.response.status === 404) {
           setError("Không tìm thấy hồ sơ bệnh án cho cuộc hẹn này.");
         } else {
@@ -118,19 +116,35 @@ const MedicalRecordDetails: React.FC = () => {
 
   const handleFieldBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
     const { name, value } = e.target as { name: keyof MedicalRecord, value: string };
-    const error = validateField(name, value);
+    let processedValue = value;
+
+    if (name === 'diagnosis' && value) {
+      const diagnoses = value.split(',').map(d => d.trim()).filter(d => d !== '');
+      const uniqueDiagnosesMap = new Map<string, string>(); 
+
+      for (const diagnosis of diagnoses) {
+        const lowerCaseDiagnosis = diagnosis.toLowerCase();
+        if (!uniqueDiagnosesMap.has(lowerCaseDiagnosis)) {
+          uniqueDiagnosesMap.set(lowerCaseDiagnosis, diagnosis);
+        }
+      }
+      processedValue = Array.from(uniqueDiagnosesMap.values()).join(', ');
+      handleUpdateField(name, processedValue); 
+    }
+
+    const error = validateField(name, processedValue);
     setFieldErrors(prev => ({ ...prev, [name]: error }));
   };
 
   const handleAddMedicine = () => {
     const newMedicine: Prescription = {
-      id: `new-${Date.now()}`, // ID tạm thời cho client
+      id: `new-${Date.now()}`, 
       medicationName: "",
       dosage: "",
       frequency: "",
       duration: "",
       instructions: "",
-      medicalRecordId: medicalRecord?.id, // Liên kết với hồ sơ bệnh án hiện tại
+      medicalRecordId: medicalRecord?.id, 
     };
     handleUpdateField('prescriptions', [...(medicalRecord?.prescriptions || []), newMedicine]);
   };
@@ -154,7 +168,6 @@ const MedicalRecordDetails: React.FC = () => {
     e.preventDefault();
     if (!medicalRecord) return;
 
-    // --- VALIDATION ---
     const requiredFields: (keyof MedicalRecord)[] = [
       'chiefComplaint',
       'physicalExamination',
@@ -168,58 +181,40 @@ const MedicalRecordDetails: React.FC = () => {
     });
 
     if (missingFields.length > 0) {
-      // Cập nhật trạng thái lỗi để hiển thị trên UI
       missingFields.forEach(field => setFieldErrors(prev => ({ ...prev, [field]: `${fieldDisplayNames[field]} không được để trống.` })));
       const missingFieldNames = missingFields.map(field => fieldDisplayNames[field] || field).join(', ');
       Swal.fire('Thiếu thông tin', `Vui lòng điền đầy đủ các trường bắt buộc: ${missingFieldNames}.`, 'warning');
       return;
     }
 
-    // Thêm bước xác nhận trước khi kết thúc ca khám
-    Swal.fire({
-      title: 'Xác nhận kết thúc ca khám',
-      text: "Bạn có chắc chắn muốn hoàn tất và lưu hồ sơ không? Hành động này sẽ kết thúc ca khám.",
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Đồng ý',
-      cancelButtonText: 'Hủy bỏ'
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        setIsSubmitting(true);
-        try {          
-          const payload = {
-            ...medicalRecord,
-            // Không cập nhật tiền sử bệnh ở bước này
-            updatePatientMedicalHistory: false, 
-          };
+    setIsSubmitting(true);
+    try {          
+      const payload = {
+        ...medicalRecord,
+        updatePatientMedicalHistory: false, 
+        updatePatientAllergies: false,
+        newAllergy: newAllergy.trim(),
+        updatePatientDiseaseHistory: false, 
+      };
+      await medicalRecordService.updateMedicalRecord(medicalRecord.id, payload);
 
-          await medicalRecordService.updateMedicalRecord(medicalRecord.id, payload);
-
-          Swal.fire({
-            title: 'Thành công!',
-            text: 'Hồ sơ bệnh án đã được cập nhật.',
-            icon: 'success',
-            confirmButtonText: 'OK'
-          }).then(() => {
-            navigate(-1); // Quay lại trang trước
-          });
-        } catch (err) {
-          console.error("Failed to update medical record:", err);
-          Swal.fire('Thất bại!', 'Không thể cập nhật hồ sơ. Vui lòng thử lại.', 'error');
-        } finally {
-          setIsSubmitting(false);
-        }
-      }
-    });
+      Swal.fire({
+        title: 'Thành công!',
+        text: 'Hồ sơ bệnh án đã được cập nhật.',
+        icon: 'success',
+        confirmButtonText: 'OK'
+      }).then(() => {
+      });
+    } catch (err) {
+      Swal.fire('Thất bại!', 'Không thể cập nhật hồ sơ. Vui lòng thử lại.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Função para cancelar a consulta (status: MissedByPatient)
   const handleCancelAppointment = async () => {
     if (!medicalRecord) return;
 
-    // Validar se pode cancelar (apenas até startTime + 30 minutos)
     if (!canCancelAppointment) {
       if (medicalRecord.appointmentStartDate) {
         const now = new Date();
@@ -252,7 +247,6 @@ const MedicalRecordDetails: React.FC = () => {
       if (result.isConfirmed) {
         setIsSubmitting(true);
         try {
-          // Chama a API UpdateStatus com status "MissedByPatient"
           await appointmentService.updateStatus(medicalRecord.appointmentId, 'MissedByPatient');
           
           Swal.fire({
@@ -264,7 +258,6 @@ const MedicalRecordDetails: React.FC = () => {
             navigate(-1);
           });
         } catch (err: any) {
-          console.error("Failed to cancel appointment:", err);
           Swal.fire('Thất bại!', err.response?.data?.message || 'Không thể hủy lịch khám. Vui lòng thử lại.', 'error');
         } finally {
           setIsSubmitting(false);
@@ -273,13 +266,10 @@ const MedicalRecordDetails: React.FC = () => {
     });
   };
 
-  // Função para completar a consulta (status: Completed)
   const handleCompleteAppointment = async () => {
     if (!medicalRecord) return;
 
-    // Validar campos obrigatórios E janela de tempo
     if (!canComplete) {
-      // Verificar campos obrigatórios
       const missingFields: string[] = [];
       if (!medicalRecord.diagnosis || medicalRecord.diagnosis.trim() === '') {
         missingFields.push('Chẩn đoán chính');
@@ -298,7 +288,6 @@ const MedicalRecordDetails: React.FC = () => {
         return;
       }
 
-      // Verificar janela de tempo (endTime - 5min até endTime + 10min)
       if (medicalRecord.appointmentEndDate) {
         const now = new Date();
         const endDate = new Date(medicalRecord.appointmentEndDate);
@@ -342,16 +331,15 @@ const MedicalRecordDetails: React.FC = () => {
       if (result.isConfirmed) {
         setIsSubmitting(true);
         try {          
-          // 1. Gửi yêu cầu cập nhật hồ sơ lần cuối với cờ updatePatientMedicalHistory = true
-          // để backend cộng dồn chẩn đoán vào tiền sử bệnh của bệnh nhân.
           const finalPayload = {
             ...medicalRecord,
-            updatePatientMedicalHistory: true,
+            updatePatientMedicalHistory: true, 
+            updatePatientAllergies: newAllergy.trim() !== '', 
             newAllergy: newAllergy.trim(),
+            updatePatientDiseaseHistory: true, 
           };
           await medicalRecordService.updateMedicalRecord(medicalRecord.id, finalPayload);
 
-          // 2. Sau khi lưu thành công, cập nhật trạng thái cuộc hẹn thành "Completed"
           await appointmentService.updateStatus(medicalRecord.appointmentId, 'Completed');
           
           Swal.fire({
@@ -360,6 +348,12 @@ const MedicalRecordDetails: React.FC = () => {
             icon: 'success',
             confirmButtonText: 'OK'
           }).then(() => {
+            setNewAllergy(''); 
+            setMedicalRecord(prev => prev ? {
+              ...prev,
+              diagnosis: '',
+              physicalExamination: '',
+            } : null);
             navigate(-1);
           });
         } catch (err: any) {
@@ -371,29 +365,23 @@ const MedicalRecordDetails: React.FC = () => {
     });
   };
 
-  
   const isEditable = useMemo(() => {
     if (isBanned || !medicalRecord) return false;
 
-    // Không cho phép chỉnh sửa nếu status là các trạng thái đã kết thúc
     const blockedStatuses = ['MissedByPatient', 'MissedByDoctor', 'Completed', 'CancelledByPatient', 'CancelledByDoctor'];
     if (medicalRecord.statusAppointment && blockedStatuses.includes(medicalRecord.statusAppointment)) {
       return false;
     }
 
-    // Cho phép chỉnh sửa nếu status là OnProgressing
     return medicalRecord.statusAppointment === 'OnProgressing';
   }, [medicalRecord, isBanned]);
 
-  // Verificar se os botões "Hủy lịch khám" e "Hoàn thành" devem ser exibidos
   const showActionButtons = useMemo(() => {
     if (!medicalRecord) return false;
 
-    // Botões aparecem APENAS se o status é "OnProgressing"
     return medicalRecord.statusAppointment === "OnProgressing";
   }, [medicalRecord]);
 
-  
   const canCancelAppointment = useMemo(() => {
     if (!medicalRecord || !medicalRecord.appointmentStartDate) return false;
 
@@ -401,12 +389,10 @@ const MedicalRecordDetails: React.FC = () => {
     const startDate = new Date(medicalRecord.appointmentStartDate);
     const startDatePlus30Min = new Date(startDate.getTime() + 30 * 60 * 1000);
 
-   
 
     return now <= startDatePlus30Min;
   }, [medicalRecord]);
 
-  
   const canComplete = useMemo(() => {
     if (!medicalRecord || !medicalRecord.appointmentEndDate) return false;
 
@@ -512,18 +498,28 @@ const MedicalRecordDetails: React.FC = () => {
               name="chiefComplaint"
               className={`form-textarea ${fieldErrors.chiefComplaint ? 'input-error' : ''}`}
               value={medicalRecord.chiefComplaint || ''}
-              disabled={true}
+              onClick={() => {
+                if (isBanned) showBannedPopup();
+              }}
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              disabled
               rows={3} ></textarea>
             {fieldErrors.chiefComplaint && <p className="error-message">{fieldErrors.chiefComplaint}</p>}
           </div>
           <div className="form-column full-width">
-            <label className="form-label">Quá trình bệnh lý và diễn biến (Khám lâm sàng)</label>
+            <label className="form-label">*Quá trình bệnh lý và diễn biến (Khám lâm sàng)</label>
             <textarea
               name="physicalExamination"
               className={`form-textarea ${fieldErrors.physicalExamination ? 'input-error' : ''}`}
               value={medicalRecord.physicalExamination || ''}
-              disabled={true}
-              rows={5} />
+              onClick={() => {
+                if (isBanned) showBannedPopup();
+              }}
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              rows={5}
+              disabled />
             {fieldErrors.physicalExamination && <p className="error-message">{fieldErrors.physicalExamination}</p>}
           </div>
         </div>
@@ -539,6 +535,12 @@ const MedicalRecordDetails: React.FC = () => {
           <div className="form-column">
             <label className="form-label">Dị ứng</label>
             <p className="info-value-box">{medicalRecord.allergies || 'Không có'}</p>
+          </div>
+          <div className="form-column full-width">
+            <label className="form-label">Bệnh sử</label>
+            <div className="info-value-box" style={{ whiteSpace: 'pre-line', minHeight: '100px', maxHeight: '300px', overflowY: 'auto' }}>
+              {medicalRecord.diseaseHistory || 'Không có'}
+            </div>
           </div>
           {isEditable && (
             <div className="form-column full-width">

@@ -269,7 +269,6 @@ export default function EMRTimeline() {
                     const updatedBasicInfo = await PatientService.getBasicEMRInfo();
                     setBasicInfo(updatedBasicInfo);
                 } catch (error) {
-                    console.warn('Failed to reload basicInfo after avatar update:', error);
                 }
             };
             reloadBasicInfo();

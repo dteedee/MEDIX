@@ -37,7 +37,6 @@ export default function MedicationManagement(): JSX.Element {
       const data = await medicationService.getAllIncludingInactive();
       setMedications(data || []);
     } catch (error) {
-      console.error("Failed to load medications:", error);
       showToast('Không thể tải danh sách thuốc.', 'error');
     } finally {
       setLoading(false);
@@ -72,7 +71,6 @@ export default function MedicationManagement(): JSX.Element {
       // Reload data
       await load();
     } catch (error: any) {
-      console.error("Failed to update medication status:", error);
       const errorMessage = error.response?.data?.message || 'Không thể cập nhật trạng thái thuốc.';
       showToast(errorMessage, 'error');
     } finally {

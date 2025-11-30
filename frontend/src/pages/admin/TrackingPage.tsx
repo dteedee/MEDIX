@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { apiClient } from '../../lib/apiClient';
 import { useToast } from '../../contexts/ToastContext';
 import styles from '../../styles/admin/TrackingPage.module.css';
-import userStyles from '../../styles/admin/UserList.module.css'; // Import CSS từ UserList
+import userStyles from '../../styles/admin/UserList.module.css';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 
@@ -24,7 +24,7 @@ interface Filters {
   pageSize: number;
   search: string;
   actionType: 'all' | AuditLog['actionType'];
-  userFilter: string; // Thêm bộ lọc người dùng
+  userFilter: string;
   dateFrom: string;
   dateTo: string;
 }
@@ -41,20 +41,19 @@ interface ConfirmationDialogProps {
   title: string; showConfirmButton: boolean; cancelText: string; type: "info"; fullWidth: boolean;
 }
 export default function TrackingPage() {
-  const [allRawLogs, setAllRawLogs] = useState<AuditLog[]>([]); // Lưu trữ tất cả logs lấy từ API (tối đa 5000 bản ghi)
-  const [overallTotalLogs, setOverallTotalLogs] = useState(0); // Tổng số bản ghi từ phản hồi API
+  const [allRawLogs, setAllRawLogs] = useState<AuditLog[]>([]);
+  const [overallTotalLogs, setOverallTotalLogs] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>({
     page: 1,
     pageSize: 15,
     search: '',
     actionType: 'all',
-    userFilter: 'all', // Giá trị mặc định
+    userFilter: 'all',
     dateFrom: '',
     dateTo: '',
   });
   const [viewingLog, setViewingLog] = useState<AuditLog | null>(null);
-  // Mặc định sắp xếp theo thời gian mới nhất
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'timestamp', direction: 'descending' });
   const [showFilters, setShowFilters] = useState(false);
   const { showToast } = useToast();
@@ -62,19 +61,15 @@ export default function TrackingPage() {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      // Lấy một lượng lớn logs để thực hiện lọc và phân trang phía client
-      // API backend hiện tại chỉ hỗ trợ page và pageSize, không hỗ trợ các bộ lọc khác.
-      // Vì vậy, chúng ta lấy một khối lớn và lọc/phân trang trên client.
       const response = await apiClient.get('/AuditLogs', {
         params: {
-          page: 1, // Luôn lấy trang đầu tiên
-          pageSize: 5000, // Lấy một lượng lớn logs để xử lý phía client
+          page: 1,
+          pageSize: 5000,
         },
       });
       setAllRawLogs(response.data.data || []);
-      setOverallTotalLogs(response.data.total || 0); // Tổng số bản ghi từ backend
+      setOverallTotalLogs(response.data.total || 0);
     } catch (error) {
-      console.error('Failed to fetch audit logs:', error);
       showToast('Không thể tải nhật ký hoạt động.', 'error');
     } finally {
       setLoading(false);
@@ -83,12 +78,11 @@ export default function TrackingPage() {
 
   useEffect(() => {
     fetchLogs();
-  }, []); // Lấy tất cả logs một lần khi component được mount
+  }, []);
 
   const handleFilterChange = (key: keyof Filters, value: any) => {
     setFilters(prev => {
       const newState = { ...prev, [key]: value };
-      // Chỉ đặt lại trang về 1 nếu bộ lọc thay đổi không phải là 'page'
       if (key !== 'page') {
         newState.page = 1;
       }
@@ -123,7 +117,6 @@ export default function TrackingPage() {
     const to = filters.dateTo ? new Date(filters.dateTo) : null;
     if (to) to.setHours(23, 59, 59, 999);
 
-    // 1. First, map over all logs to patch user names and determine display action type
     const patchedLogs = allRawLogs.map(log => {
       let displayActionType = log.actionType;
       if (log.entityType === 'RefreshToken') {
@@ -149,15 +142,12 @@ export default function TrackingPage() {
             }
           }
         } catch (e) {
-          // Ignore parsing errors
         }
       }
       return { ...log, userName: patchedUserName, displayActionType };
     });
 
-    // 2. Now, filter the patched logs
     const finalFiltered = patchedLogs.filter(log => {
-      // Always hide LOGOUT actions from the table
       if (log.displayActionType === 'LOGOUT') {
         return false;
       }
@@ -178,7 +168,6 @@ export default function TrackingPage() {
       return okSearch && okAction && okDate && okUser;
     });
     
-    // 3. Sort the filtered logs
     const sortedLogs = [...finalFiltered].sort((a, b) => {
       const aValue = a[sortConfig.key];
       const bValue = b[sortConfig.key];
@@ -195,7 +184,6 @@ export default function TrackingPage() {
       return sortConfig.direction === 'ascending' ? comparison : -comparison;
     });
 
-    // 4. Apply client-side pagination to the sorted logs
     const startIndex = (filters.page - 1) * filters.pageSize;
     const endIndex = startIndex + filters.pageSize;
     const paginated = sortedLogs.slice(startIndex, endIndex);
@@ -205,16 +193,13 @@ export default function TrackingPage() {
   
   const totalPages = Math.ceil(totalFilteredItems / filters.pageSize);
 
-  // Các phép tính thống kê nên sử dụng allRawLogs
   const totalLogins = useMemo(() => allRawLogs.filter(log => log.entityType === 'RefreshToken' && log.actionType === 'CREATE').length, [allRawLogs]);
   const totalCreates = useMemo(() => allRawLogs.filter(log => log.actionType === 'CREATE' && log.entityType !== 'RefreshToken').length, [allRawLogs]);
   const totalUpdates = useMemo(() => allRawLogs.filter(log => log.actionType === 'UPDATE').length, [allRawLogs]);
   const totalDeletes = useMemo(() => allRawLogs.filter(log => log.actionType === 'DELETE' && log.entityType !== 'RefreshToken').length, [allRawLogs]);
 
-  // Lấy danh sách người dùng duy nhất để hiển thị trong bộ lọc
   const uniqueUsers = useMemo(() => {
     const userNames = new Set<string>();
-    // Use patchedLogs to get the correct user names
     allRawLogs.forEach(log => {
       let patchedUserName = log.userName;
       if ((!log.userName || log.userName === 'Unknown') && (log.newValues || log.oldValues)) {
@@ -240,8 +225,6 @@ export default function TrackingPage() {
     return Array.from(userNames).sort();
   }, [allRawLogs]);
 
-  // --- Friendly Display Functions ---
-  // Chuyển đổi tên trường từ PascalCase/camelCase sang tiếng Việt
   const friendlyFieldNames: Record<string, string> = {
     DayOfWeek: 'Ngày trong tuần',
     StartTime: 'Giờ bắt đầu',
@@ -273,7 +256,6 @@ export default function TrackingPage() {
     Message: 'Nội dung thông báo',
     Type: 'Kiểu',
     StatusCode: 'Trạng thái',
-    // Thêm các trường khác nếu cần
     Slug: 'Đường dẫn (Slug)',
     DisplayType: 'Kiểu hiển thị',
     ThumbnailUrl: 'URL ảnh thu nhỏ',
@@ -301,11 +283,9 @@ export default function TrackingPage() {
     return humanized.charAt(0).toUpperCase() + humanized.slice(1);
   };
 
-  // Chuyển đổi giá trị sang dạng dễ hiểu
   const getFriendlyValue = (key: string, value: any): string => {
     if (value === null || value === undefined) return 'Không có';
 
-    // Xử lý trạng thái tiếng Việt cho các giá trị đặc biệt
     const statusViMap: Record<string, string> = {
       BeforeAppoiment: 'Trước lịch hẹn',
       OnProgressing: 'Đang diễn ra',
@@ -315,7 +295,7 @@ export default function TrackingPage() {
       return statusViMap[value];
     }
 
-    const keyForCheck = key; // Sử dụng key gốc (PascalCase) để kiểm tra
+    const keyForCheck = key;
 
     if (typeof value === 'boolean') {
       if (keyForCheck === 'IsAvailable') return value ? 'Sẵn sàng' : 'Không sẵn sàng';
@@ -355,19 +335,15 @@ export default function TrackingPage() {
 
     return stringValue;
   };
-  // --- End Friendly Display Functions ---
 
   const renderJson = (jsonString: string | null) => {
     if (!jsonString || jsonString.trim() === 'null' || jsonString.trim() === '{}') {
       return <div className={styles.jsonEmpty}>Không có dữ liệu</div>;
     }
 
-    // --- Xử lý hiển thị diff cho HealthArticle ---
-    // Dữ liệu diff từ backend có dạng đặc biệt với các dòng bắt đầu bằng '+' hoặc '-'
     const isDiffFormat = /"-\s+""|"\+\s+""/.test(jsonString) || (jsonString.includes('\r\n-') && jsonString.includes('\r\n+'));
     if (isDiffFormat) {
         try {
-            // Chuẩn hóa chuỗi để có thể parse thành JSON
             const parsableJson = `[${jsonString.replace(/"\r\n/g, '",\r\n')}]`;
             const diffLines = JSON.parse(parsableJson);
 
@@ -381,17 +357,15 @@ export default function TrackingPage() {
                         if (trimmedLine.startsWith('-')) {
                             return <div key={index} className={`${styles.diffLine} ${styles.diffRemoved}`}>{trimmedLine}</div>;
                         }
-                        return null; // Bỏ qua các dòng không phải là thay đổi
+                        return null;
                     })}
                 </div>
             );
         } catch (e) {
-            // Nếu parse lỗi, hiển thị dạng thô
             return <pre>{jsonString}</pre>;
         }
     }
 
-    // --- Xử lý hiển thị JSON thông thường ---
     try {
       const obj = JSON.parse(jsonString);
       if (typeof obj !== 'object' || obj === null) {
@@ -402,7 +376,6 @@ export default function TrackingPage() {
         <div className={styles.jsonDetailList}>
           {Object.entries(obj).map(([key, value]) => {
             const lowerKey = key.toLowerCase();
-            // Danh sách các trường kỹ thuật cần ẩn
             const fieldsToHide = [
               'id', 'userid', 'doctorid', 'patientid', 'appointmentid', 'medicalrecordid',
               'createdat', 'updatedat', 'normalizedemail', 'normalizedusername',
@@ -411,23 +384,18 @@ export default function TrackingPage() {
               'emailconfirmed', 'isprofilecompleted', 'accessfailedcount', 'istemporaryusername'
             ];
 
-            // Ẩn các trường kỹ thuật không cần thiết
             if (fieldsToHide.some(field => lowerKey.endsWith(field))) {
               return null;
             }
 
-            // Xử lý đặc biệt cho trường Content để hiển thị HTML
             if (key === 'Content' && typeof value === 'string') {
-              // Giải mã các ký tự HTML
               const decodedContent = value.replace(/\\u003c/g, '<').replace(/\\u003e/g, '>');
-              // Chuyển HTML thành văn bản thuần túy để rút gọn
               const plainText = decodedContent.replace(/<[^>]*>/g, '');
               const displayValue = plainText.length > 50 ? plainText.substring(0, 50) + '...' : plainText;
 
               return (
                   <div key={key} className={styles.jsonDetailItem}>
                       <strong className={styles.jsonKey}>{getFriendlyFieldName(key)}:</strong>
-                      {/* Hiển thị văn bản đã được rút gọn */}
                       <div className={styles.jsonValue} title={plainText}>{displayValue}</div>
                   </div>
               );
@@ -546,7 +514,7 @@ export default function TrackingPage() {
         <div className={`${styles.statCard} ${styles.statCard1}`}>
           <div className={styles.statIcon}><i className="bi bi-activity"></i></div>
           <div className={styles.statContent}>
-            <div className={styles.statLabel}>Tổng hoạt động</div> {/* Tổng số bản ghi từ backend */}
+            <div className={styles.statLabel}>Tổng hoạt động</div>
             <div className={styles.statValue}>{totalFilteredItems}</div>
           </div>
         </div>
@@ -582,10 +550,6 @@ export default function TrackingPage() {
 
       <div className={userStyles.contentCard}>
         
-
-       
-
-        {/* Search and Filter */}
         <div className={userStyles.searchSection}>
             <div className={userStyles.searchWrapper}>
                 <i className="bi bi-search"></i>
@@ -618,7 +582,6 @@ export default function TrackingPage() {
             </button>
         </div>
 
-        {/* Advanced Filters */}
         {showFilters && (
             <div className={userStyles.filterPanel}>
                 <div className={userStyles.filterGrid}>
@@ -756,7 +719,6 @@ export default function TrackingPage() {
             </div>
           )}
 
-          {/* Pagination */}
           {paginatedLogs.length > 0 && (
             <div className={userStyles.pagination}>
               <div className={userStyles.paginationInfo}>
@@ -806,8 +768,8 @@ export default function TrackingPage() {
             <div 
               className={userStyles.modalBody} 
               style={{
-                maxHeight: '70vh', // Giới hạn chiều cao tối đa của phần thân modal
-                overflowY: 'auto'  // Thêm thanh cuộn dọc khi nội dung vượt quá chiều cao
+                maxHeight: '70vh',
+                overflowY: 'auto'
               }}>
               <div className={styles.modalSummary}>
                 <div className={styles.summaryIcon}>

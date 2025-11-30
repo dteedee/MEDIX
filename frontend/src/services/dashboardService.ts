@@ -7,7 +7,6 @@ class DashboardService {
             const response = await apiClient.get<SpecializationDistributionDto[]>('/dashboard/specializations/popular');
             return response.data || [];
         } catch (error: any) {
-            console.error('Get popular specializations error:', error);
             throw error;
         }
     }
@@ -23,7 +22,6 @@ class DashboardService {
             );
             return response.data;
         } catch (error: any) {
-            console.error('Get appointment trends error:', error);
             throw error;
         }
     }
@@ -38,7 +36,6 @@ class DashboardService {
             );
             return response.data;
         } catch (error: any) {
-            console.error('Get user growth error:', error);
             throw error;
         }
     }
@@ -48,7 +45,6 @@ class DashboardService {
             const response = await apiClient.get<ManagerDashboardSummaryDto>('/dashboard/summary');
             return response.data;
         } catch (error: any) {
-            console.error('Get dashboard summary error:', error);
             throw error;
         }
     }
@@ -58,7 +54,6 @@ class DashboardService {
             const response = await apiClient.get<TopRatedDoctorDto[]>(`/dashboard/top-doctors?count=${count}`);
             return response.data || [];
         } catch (error: any) {
-            console.error('Get top rated doctors error:', error);
             throw error;
         }
     }

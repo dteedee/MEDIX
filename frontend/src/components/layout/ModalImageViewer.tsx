@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "../../styles/public/ModalImageViewer.module.css"; // optional CSS module
+import styles from "../../styles/public/ModalImageViewer.module.css"; 
 
 interface ModalImageViewerProps {
     src: string;

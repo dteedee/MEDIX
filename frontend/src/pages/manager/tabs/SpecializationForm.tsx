@@ -182,14 +182,11 @@ const SpecializationForm: React.FC<SpecializationFormProps> = ({
       );
       onSaved();
     } catch (error: any) {
-      console.error('Error saving specialization:', error);
-      console.error('Error response:', error.response?.data);
+    
       
-      // Handle validation errors
       if (error.response?.status === 400) {
         const errorData = error.response.data;
         if (errorData?.errors) {
-          // Multiple validation errors
           const errorMessages = Object.values(errorData.errors).flat().join(', ');
           showToast(`Lỗi validation: ${errorMessages}`, 'error');
         } else if (errorData?.message) {
@@ -211,7 +208,6 @@ const SpecializationForm: React.FC<SpecializationFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
       <div className={styles.formContent}>
-        {/* View Mode - Display Info Cards */}
         {isReadOnly && specialization && (
           <div style={{ 
             display: 'grid', 

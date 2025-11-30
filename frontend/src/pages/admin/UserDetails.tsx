@@ -11,8 +11,8 @@ interface Props {
   user: UserDTO | null;
   onClose: () => void;
   isLoading: boolean;
-  roles: Role[]; // Nhận danh sách tất cả các vai trò
-  role?: string | null; // Nhận vai trò trực tiếp từ component cha
+  roles: Role[];
+  role?: string | null;
 }
 
 export default function UserDetails({ user, onClose, isLoading, roles, role: userRole }: Props) {
@@ -28,9 +28,8 @@ export default function UserDetails({ user, onClose, isLoading, roles, role: use
 
   const getRoleName = (userRoleCode?: string | null) => {
     if (!userRoleCode) return 'Chưa có';
-    // Tìm trong danh sách roles được truyền vào
     const role = roles.find(r => r.code.toLowerCase() === userRoleCode.toLowerCase());
-    return role ? role.displayName : userRoleCode; // Nếu không tìm thấy, hiển thị code
+    return role ? role.displayName : userRoleCode;
   }
 
   return (
@@ -65,7 +64,6 @@ export default function UserDetails({ user, onClose, isLoading, roles, role: use
         ) : (
           <div className={styles.content}>
             <div className={styles.sections}>
-              {/* Personal Information */}
               <div className={styles.section}>
                 <div className={styles.sectionHeader}>
                   <i className="bi bi-person"></i>
@@ -109,7 +107,6 @@ export default function UserDetails({ user, onClose, isLoading, roles, role: use
                 </div>
               </div>
 
-              {/* Account Information */}
               <div className={styles.section}>
                 <div className={styles.sectionHeader}>
                   <i className="bi bi-shield-check"></i>
@@ -145,7 +142,6 @@ export default function UserDetails({ user, onClose, isLoading, roles, role: use
                 </div>
               </div>
 
-              {/* System Information */}
               <div className={styles.section}>
                 <div className={styles.sectionHeader}>
                   <i className="bi bi-gear"></i>

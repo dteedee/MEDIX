@@ -1,16 +1,4 @@
-    // Map statusCode sang tiếng Việt
-    const statusDisplayNameMap: Record<string, string> = {
-      'BeforeAppoiment': 'Trước giờ khám',
-      'CancelledByDoctor': 'Bác sĩ hủy',
-      'CancelledByPatient': 'Bệnh nhân hủy',
-      'Completed': 'Hoàn thành',
-      'Confirmed': 'Đã xác nhận',
-      'MissedByDoctor': 'Bác sĩ vắng mặt',
-      'MissedByPatient': 'Bệnh nhân vắng mặt',
-      'NoShow': 'Không đến',
-      'OnProgressing': 'Đang khám',
-      'PendingConfirmation': 'Chờ xác nhận',
-    };
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../../styles/doctor/DoctorAppointments.module.css';
@@ -62,7 +50,18 @@ const DoctorAppointments: React.FC = () => {
     timeRange: 'all',
     search: ''
   });
-
+    const statusDisplayNameMap: Record<string, string> = {
+      'BeforeAppoiment': 'Trước giờ khám',
+      'CancelledByDoctor': 'Bác sĩ hủy',
+      'CancelledByPatient': 'Bệnh nhân hủy',
+      'Completed': 'Hoàn thành',
+      'Confirmed': 'Đã xác nhận',
+      'MissedByDoctor': 'Bác sĩ vắng mặt',
+      'MissedByPatient': 'Bệnh nhân vắng mặt',
+      'NoShow': 'Không đến',
+      'OnProgressing': 'Đang khám',
+      'PendingConfirmation': 'Chờ xác nhận',
+    };
   const showBannedPopup = () => {
     if (user) {
       const startDate = (user as any)?.startDateBanned ? new Date((user as any).startDateBanned).toLocaleDateString('vi-VN') : '';
@@ -77,7 +76,6 @@ const DoctorAppointments: React.FC = () => {
     }
   };
 
-  // Handle complete appointment
   const handleCompleteAppointment = async () => {
     if (!selectedAppointment) return;
 
@@ -97,19 +95,15 @@ const DoctorAppointments: React.FC = () => {
       const data = await appointmentService.getMyAppointmentsByDateRange(startDateStr, endDateStr);
       
       const transformedData: AppointmentDisplay[] = data.map(apt => {
-        // Converter string ISO para Date object (tự động xử lý timezone)
         const startDate = new Date(apt.appointmentStartTime);
         
-        // Chuyển sang timezone Việt Nam (UTC+7)
         const vietnamTime = new Date(startDate.getTime() + (7 * 60 * 60 * 1000));
         
-        // Lấy data theo Việt Nam
         const year = vietnamTime.getUTCFullYear();
         const month = (vietnamTime.getUTCMonth() + 1).toString().padStart(2, '0');
         const day = vietnamTime.getUTCDate().toString().padStart(2, '0');
         const datePart = `${year}-${month}-${day}`;
         
-        // Lấy giờ phút theo Việt Nam
         const hours = vietnamTime.getUTCHours().toString().padStart(2, '0');
         const minutes = vietnamTime.getUTCMinutes().toString().padStart(2, '0');
         
@@ -141,14 +135,12 @@ const DoctorAppointments: React.FC = () => {
     }
   };
 
-  // Load appointments from API
   useEffect(() => {
     const loadAppointments = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        // Get appointments for the last 3 months and next 3 months
         const now = new Date();
         const startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
         const endDate = new Date(now.getFullYear(), now.getMonth() + 3, 0);
@@ -160,19 +152,15 @@ const DoctorAppointments: React.FC = () => {
 
         
         const transformedData: AppointmentDisplay[] = data.map(apt => {
-          // Converter string ISO para Date object (tự động xử lý timezone)
           const startDate = new Date(apt.appointmentStartTime);
           
-          // Chuyển sang timezone Việt Nam (UTC+7)
           const vietnamTime = new Date(startDate.getTime() + (7 * 60 * 60 * 1000));
           
-          // Lấy data theo Việt Nam
           const year = vietnamTime.getUTCFullYear();
           const month = (vietnamTime.getUTCMonth() + 1).toString().padStart(2, '0');
           const day = vietnamTime.getUTCDate().toString().padStart(2, '0');
           const datePart = `${year}-${month}-${day}`;
           
-          // Lấy giờ phút theo Việt Nam
           const hours = vietnamTime.getUTCHours().toString().padStart(2, '0');
           const minutes = vietnamTime.getUTCMinutes().toString().padStart(2, '0');
           
@@ -206,7 +194,6 @@ const DoctorAppointments: React.FC = () => {
     loadAppointments();
   }, []);
 
-  // Statistics
   const stats = {
     total: appointments.length,
     upcoming: appointments.filter(apt => 
@@ -228,7 +215,6 @@ const DoctorAppointments: React.FC = () => {
     ).length
   };
 
-  // Filter appointments
   useEffect(() => {
     let filtered = [...appointments];
 
@@ -263,14 +249,12 @@ const DoctorAppointments: React.FC = () => {
     }
 
     if (filters.timeRange !== 'all') {
-      // Filtro de tempo baseado apenas na data do appointment, não no statusCode
       const now = new Date();
       filtered = filtered.filter(apt => {
         const aptDate = new Date(apt.date);
         if (filters.timeRange === 'today') {
           return aptDate.setHours(0, 0, 0, 0) === new Date().setHours(0, 0, 0, 0);
         } else if (filters.timeRange === 'week') {
-          // Set 'now' to the beginning of today for a consistent comparison
           now.setHours(0, 0, 0, 0);
           const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
           return aptDate >= now && aptDate <= weekFromNow;
@@ -281,16 +265,14 @@ const DoctorAppointments: React.FC = () => {
       });
     }
 
-    // Sort by status priority and then by date/time
     filtered.sort((a, b) => {
       const getSortPriority = (apt: AppointmentDisplay) => {
-        // Prioridade baseada apenas no statusCode
-        if (apt.statusCode === 'OnProgressing') return 1; // Em andamento (primeiro)
+        if (apt.statusCode === 'OnProgressing') return 1; 
         if (apt.statusCode === 'BeforeAppoiment' || apt.statusCode === 'PendingConfirmation' || apt.statusCode === 'Confirmed') return 2; // Agendado/Pendente
-        if (apt.statusCode === 'Completed') return 3; // Concluído
+        if (apt.statusCode === 'Completed') return 3; 
         if (apt.statusCode === 'CancelledByPatient' || apt.statusCode === 'CancelledByDoctor') return 4; // Cancelado
         if (apt.statusCode === 'MissedByPatient' || apt.statusCode === 'MissedByDoctor' || apt.statusCode === 'NoShow') return 5; // Faltou
-        return 6; // Outros
+        return 6; 
       };
     
       const priorityA = getSortPriority(a);
@@ -300,11 +282,10 @@ const DoctorAppointments: React.FC = () => {
         return priorityA - priorityB;
       }
     
-      // Dentro do mesmo grupo de prioridade, ordenar por data/hora de início
       const timeA = a.appointmentStartTime ? new Date(a.appointmentStartTime).getTime() : 0;
       const timeB = b.appointmentStartTime ? new Date(b.appointmentStartTime).getTime() : 0;
       
-      return timeA - timeB; // Ordem crescente (mais cedo primeiro)
+      return timeA - timeB; 
     });
     
     setFilteredAppointments(filtered);
@@ -320,24 +301,19 @@ const DoctorAppointments: React.FC = () => {
     });
   };
 
-  // Função para converter string ISO 8601 para Date
-  // JavaScript automaticamente converte a string com offset (+07:00) para o horário correto
-  // Ví dụ: "2025-11-26T07:28:41.642+07:00" → Date object (UTC: 2025-11-26T00:28:41.642Z)
+  
   const convertToUTC = (isoString: string): Date => {
-    // new Date() tự động xử lý offset timezone trong chuỗi ISO 8601
-    // Công thức: Giờ UTC = Giờ địa phương - Số giờ Offset múi giờ
+   
     return new Date(isoString);
   };
 
   const formatTimeRange = (startTime?: string, endTime?: string) => {
     if (!startTime) return '';
     
-    // Lấy giờ theo timezone Việt Nam (UTC+7)
-    // Ví dụ: "2025-11-26T07:28:41.642+07:00" → "07:28"
+    
     const extractTimeFromISO = (isoString: string): string => {
       const date = new Date(isoString);
       
-      // Chuyển sang timezone Việt Nam (UTC+7)
       const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000));
       
       const hours = vietnamTime.getUTCHours().toString().padStart(2, '0');
@@ -364,7 +340,6 @@ const DoctorAppointments: React.FC = () => {
   };
 
   const getStatusConfig = (statusCode: string) => {
-  // Retorna configuração baseada APENAS no statusCode - NÃO verifica tempo
   const config: Record<string, { label: string; icon: string; color: string }> = {
     'OnProgressing': { 
       label: statusDisplayNameMap[statusCode] || 'Đang khám', 
@@ -517,7 +492,6 @@ const DoctorAppointments: React.FC = () => {
           </div>
         </div>
 
-        {/* Stats Cards */}
         <div className={styles.statsContainer}>
           <div className={styles.statCard} onClick={() => setFilters({...filters, status: 'all'})}>
             <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
@@ -561,7 +535,6 @@ const DoctorAppointments: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters Section */}
       <div className={styles.filtersSection}>
         <div className={styles.searchBox}>
           <i className="bi bi-search"></i>
@@ -598,7 +571,6 @@ const DoctorAppointments: React.FC = () => {
         </div>
       </div>
 
-      {/* Appointments List */}
       {filteredAppointments.length === 0 ? (
         <div className={styles.emptyState}>
           <div className={styles.emptyIcon}>
@@ -704,7 +676,6 @@ const DoctorAppointments: React.FC = () => {
                         <button 
                           className={styles.completeBtn}
                           onClick={async () => {
-                            // Kiểm tra điều kiện thời gian và statusCode
                             const now = new Date();
                             const startTime = appointment.appointmentStartTime ? new Date(appointment.appointmentStartTime) : null;
                             const endTime = appointment.appointmentEndTime ? new Date(appointment.appointmentEndTime) : null;
@@ -716,7 +687,6 @@ const DoctorAppointments: React.FC = () => {
                               try {
                                 await appointmentService.updateStatus(appointment.id, 'OnProgressing');
                                 showToast('Đã bắt đầu ca khám!', 'success');
-                                // Gọi lại API lấy danh sách mới
                                 const reloadNow = new Date();
                                 const reloadStartDate = new Date(reloadNow.getFullYear(), reloadNow.getMonth() - 3, 1);
                                 const reloadEndDate = new Date(reloadNow.getFullYear(), reloadNow.getMonth() + 3, 0);
@@ -757,7 +727,6 @@ const DoctorAppointments: React.FC = () => {
                               showToast('Chỉ được bắt đầu ca khám trong khung giờ đã đặt!', 'warning');
                             }
                           }}
-                          // Luôn cho phép bấm
                         >
                           <i className="bi bi-play-circle"></i>
                           Bắt đầu ca khám
@@ -773,7 +742,6 @@ const DoctorAppointments: React.FC = () => {
         </div>
       )}
 
-      {/* Detail Modal */}
       {showDetailModal && selectedAppointment && (() => {
         const statusConfig = getStatusConfig(selectedAppointment.statusCode);
         const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedAppointment.patientName)}&background=667eea&color=fff`;
@@ -911,7 +879,6 @@ const DoctorAppointments: React.FC = () => {
         );
       })()}
 
-      {/* Confirm Complete Modal */}
       {showConfirmCompleteModal && selectedAppointment && (
         <div className={styles.modalOverlay} onClick={() => !isCompletingAppointment && setShowConfirmCompleteModal(false)}>
           <div className={styles.confirmModal} onClick={(e) => e.stopPropagation()}>

@@ -2,7 +2,6 @@ import React, { useState, createContext, useContext } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import PatientSidebar from './PatientSidebar';
 
-// Create context for sidebar state
 interface SidebarContextType {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
@@ -21,8 +20,7 @@ export const useSidebar = () => {
 const PatientLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
-  
-  // Determine current page based on pathname
+
   const getCurrentPage = () => {
     if (location.pathname.includes('/appointments')) return 'appointments';
     if (location.pathname.includes('/results')) return 'results';

@@ -363,7 +363,6 @@ const MedicalRecordDetails: React.FC = () => {
             navigate(-1);
           });
         } catch (err: any) {
-          console.error("Failed to complete appointment:", err);
           Swal.fire('Thất bại!', err.response?.data?.message || 'Không thể hoàn thành lịch khám. Vui lòng thử lại.', 'error');
         } finally {
           setIsSubmitting(false);
@@ -372,8 +371,7 @@ const MedicalRecordDetails: React.FC = () => {
     });
   };
 
-  // Xác định xem hồ sơ có được phép chỉnh sửa hay không
-  // LOGIC: Chỉ dựa vào status của appointment
+  
   const isEditable = useMemo(() => {
     if (isBanned || !medicalRecord) return false;
 
@@ -395,8 +393,7 @@ const MedicalRecordDetails: React.FC = () => {
     return medicalRecord.statusAppointment === "OnProgressing";
   }, [medicalRecord]);
 
-  // Verificar se o botão "Hủy" pode ser habilitado
-  // Pode clicar apenas até startTime + 30 minutos
+  
   const canCancelAppointment = useMemo(() => {
     if (!medicalRecord || !medicalRecord.appointmentStartDate) return false;
 
@@ -404,18 +401,12 @@ const MedicalRecordDetails: React.FC = () => {
     const startDate = new Date(medicalRecord.appointmentStartDate);
     const startDatePlus30Min = new Date(startDate.getTime() + 30 * 60 * 1000);
 
-    console.log('=== VALIDAÇÃO BOTÃO HỦY ===');
-    console.log('Giờ hiện tại:', now.toISOString());
-    console.log('Start time:', startDate.toISOString());
-    console.log('Start time + 30min:', startDatePlus30Min.toISOString());
-    console.log('Pode cancelar?', now <= startDatePlus30Min);
+   
 
-    // Pode cancelar apenas até startTime + 30 minutos
     return now <= startDatePlus30Min;
   }, [medicalRecord]);
 
-  // Verificar se o botão "Hoàn thành" pode ser habilitado
-  // Pode clicar entre endTime - 5 minutos e endTime + 10 minutos
+  
   const canComplete = useMemo(() => {
     if (!medicalRecord || !medicalRecord.appointmentEndDate) return false;
 
@@ -424,10 +415,9 @@ const MedicalRecordDetails: React.FC = () => {
     const endDateMinus5Min = new Date(endDate.getTime() - 5 * 60 * 1000);
     const endDatePlus10Min = new Date(endDate.getTime() + 10 * 60 * 1000);
 
-    // Verificar se os campos obrigatórios da seção IV estão preenchidos
     const requiredFields: (keyof MedicalRecord)[] = [
-      'diagnosis',          // Chẩn đoán chính
-      'treatmentPlan',      // Kế hoạch điều trị
+      'diagnosis',          
+      'treatmentPlan',      
     ];
 
     const allFieldsFilled = requiredFields.every(field => {
@@ -435,18 +425,7 @@ const MedicalRecordDetails: React.FC = () => {
       return value && (typeof value === 'string' && value.trim() !== '');
     });
 
-    console.log('=== VALIDAÇÃO BOTÃO HOÀN THÀNH ===');
-    console.log('Giờ hiện tại:', now.toISOString());
-    console.log('End time - 5min:', endDateMinus5Min.toISOString());
-    console.log('End time:', endDate.toISOString());
-    console.log('End time + 10min:', endDatePlus10Min.toISOString());
-    console.log('Campos preenchidos?', allFieldsFilled);
-    console.log('Trong khung giờ?', now >= endDateMinus5Min && now <= endDatePlus10Min);
-    console.log('Pode completar?', allFieldsFilled && now >= endDateMinus5Min && now <= endDatePlus10Min);
-
-    // Botão habilitado se:
-    // 1. Todos os campos obrigatórios estão preenchidos
-    // 2. Está entre endTime - 5min e endTime + 10min
+    
     return allFieldsFilled && now >= endDateMinus5Min && now <= endDatePlus10Min;
   }, [medicalRecord]);
 

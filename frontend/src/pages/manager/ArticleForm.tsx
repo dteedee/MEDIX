@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { ArticleDTO } from '../../types/article.types';
 import { useToast } from '../../contexts/ToastContext';
 import { articleService } from '../../services/articleService';
-import { categoryService } from '../../services/categoryService'; // Import categoryService
-import { CategoryDTO } from '../../types/category.types'; // Import CategoryDTO
+import { categoryService } from '../../services/categoryService'; 
+import { CategoryDTO } from '../../types/category.types'; 
 import styles from '../../styles/admin/ArticleForm.module.css';
-import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
+import { useAuth } from '../../contexts/AuthContext'; 
 import { CKEditor } from '@ckeditor/ckeditor5-react';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 
@@ -20,7 +20,7 @@ interface Props {
 export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRequest }: Props) {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const { user } = useAuth(); // Get current user from AuthContext
+  const { user } = useAuth(); 
   const [statuses, setStatuses] = useState<Array<{ code: string; displayName: string }>>([]);
   const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -83,7 +83,6 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
         const fetchedCategories = await articleService.getCachedCategories(); // Use cached categories
         setCategories(fetchedCategories.items.filter((cat: CategoryDTO) => cat.isActive)); // Filter for active categories
       } catch (error) {
-        console.error('Error fetching statuses or categories:', error);
         showToast('Không thể tải dữ liệu trạng thái hoặc danh mục.', 'error');
       }
     };
@@ -214,19 +213,12 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
       coverFile: coverFile || undefined,
     };
 
-    console.log('Form submission - Mode:', mode);
-    console.log('Form submission - FormData:', formData);
-    console.log('Form submission - Thumbnail preview:', thumbnailPreview);
-    console.log('Form submission - Cover preview:', coverPreview);
-    console.log('Form submission - Thumbnail file:', thumbnailFile);
-    console.log('Form submission - Cover file:', coverFile);
-    console.log('Form submission - Payload:', payload);
+   
 
     if (onSaveRequest) {
       try {
         await onSaveRequest(payload);
       } catch (error: any) {
-        console.error('Caught error in ArticleForm from onSaveRequest:', error);
         const backendErrors = error?.response?.data?.errors;
         if (backendErrors) {
           const newErrors: Record<string, string> = {};
@@ -250,19 +242,14 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
     setLoading(true);
     try {
       if (mode === 'create') {
-        console.log('Creating new article with payload:', payload);
         await articleService.create(payload);
         showToast('Tạo bài viết thành công!', 'success');
       } else if (article) {
-        console.log('Updating article with ID:', article.id);
-        console.log('Update payload:', payload);
         await articleService.update(article.id, payload);
-        console.log('Update successful');
         showToast('Cập nhật bài viết thành công!', 'success');
       }
       onSaved();
     } catch (error: any) {
-      console.error('Error saving article:', error);
       console.error('Error details:', {
         status: error?.response?.status,
         statusText: error?.response?.statusText,

@@ -1,4 +1,3 @@
-// src/services/systemConfigService.ts
 import { apiClient } from "../lib/apiClient";
 
 export const systemConfigService = {

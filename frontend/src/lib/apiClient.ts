@@ -6,7 +6,6 @@ class ApiClient {
   private refreshTokenPromise: Promise<string> | null = null;
 
   constructor() {
-    // Use environment variable for API base URL, fallback to localhost for development
     const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5123/api';
     
     this.client = axios.create({
@@ -20,10 +19,8 @@ class ApiClient {
   }
 
   private setupInterceptors() {
-    // Request interceptor to add auth token
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        // Don't add access token to refresh-token endpoint
         const reqUrl = (config.url || '').toString();
         const isRefreshTokenEndpoint = reqUrl.includes('/auth/refresh-token');
         
@@ -34,7 +31,6 @@ class ApiClient {
           }
         }
         
-        // If sending FormData, remove Content-Type header to let browser set it with boundary
         if (config.data instanceof FormData) {
           delete config.headers['Content-Type'];
         }
@@ -46,7 +42,6 @@ class ApiClient {
       }
     );
 
-    // Response interceptor to handle token refresh
     this.client.interceptors.response.use(
       (response: AxiosResponse) => response,
       async (error) => {
@@ -59,12 +54,10 @@ class ApiClient {
           reqUrl.includes('/auth/refresh-token') ||
           reqUrl.includes('/auth/logout');
 
-        // If the failing request is an auth route (login/refresh) don't attempt refresh —
-        // let the caller receive the original 401 so UI can show the correct message.
         if (error.response?.status === 401 && !originalRequest._retry) {
           if (isAuthEndpoint) {
             this.handleLogout();
-            return Promise.reject(error); // propagate original 401/error to caller
+            return Promise.reject(error); 
           }
 
           originalRequest._retry = true;
@@ -76,8 +69,6 @@ class ApiClient {
               return this.client(originalRequest);
             }
           } catch (refreshError) {
-            // this.handleLogout();
-            // window.location.href = '/login';
             return Promise.reject(refreshError);
           }
         }
@@ -120,16 +111,13 @@ class ApiClient {
     return this.getAccessToken();
   }
   
-  // Token management
   private getAccessToken(): string | null {
     const token = localStorage.getItem('accessToken');
     const expiration = localStorage.getItem('tokenExpiration');
     
-    // Check if token is expired
     if (token && expiration) {
       const expirationTime = parseInt(expiration);
       if (Date.now() >= expirationTime) {
-        // Token expired, clear it
         this.clearAccessTokens();
         return null;
       }
@@ -145,8 +133,7 @@ class ApiClient {
   public setTokens(accessToken: string, refreshToken: string): void {
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
-    // Set token expiration time (30 minutes from now)
-    const expirationTime = Date.now() + (30 * 60 * 1000); // 30 minutes
+    const expirationTime = Date.now() + (30 * 60 * 1000);
     localStorage.setItem('tokenExpiration', expirationTime.toString());
   }
 
@@ -163,10 +150,8 @@ class ApiClient {
 
   private handleLogout(): void {
     this.clearTokens();
-    // Clear any user data from context/state
   }
 
-  // HTTP methods
   public get<T = any>(url: string, config?: any): Promise<AxiosResponse<T>> {
     return this.client.get<T>(url, config);
   }
@@ -178,7 +163,6 @@ class ApiClient {
   public postMultipart<T = any>(url: string, formData: FormData): Promise<AxiosResponse<T>> {
     return this.client.post<T>(url, formData, {
       headers: {
-        // Explicitly remove Content-Type to let browser set it with boundary
         'Content-Type': undefined,
       },
     });
@@ -191,7 +175,6 @@ class ApiClient {
   public putMultipart<T = any>(url: string, formData: FormData): Promise<AxiosResponse<T>> {
     return this.client.put<T>(url, formData, {
       headers: {
-        // Explicitly remove Content-Type to let browser set it with boundary
         'Content-Type': undefined,
       },
     });
@@ -206,5 +189,4 @@ class ApiClient {
   }
 }
 
-// Export singleton instance
 export const apiClient = new ApiClient();

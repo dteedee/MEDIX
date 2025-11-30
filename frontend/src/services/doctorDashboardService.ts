@@ -1,6 +1,5 @@
 import { apiClient } from "../lib/apiClient";
 
-// --- NEW TYPE DEFINITIONS TO MATCH THE API RESPONSE ---
 
 interface DashboardSummary {
   todayAppointments: number;
@@ -67,20 +66,16 @@ interface DoctorDashboardData {
   wallet: DashboardWallet | null;
   salary: DashboardSalary | null;
   reviews: DashboardReview;
-  campaigns: any[]; // Define campaign type if needed
+  campaigns: any[]; 
 }
 
 class DoctorDashboardService {
-  /**
-   * Fetches all dashboard data for the currently logged-in doctor from a single endpoint.
-   */
+
   async getDashboard(): Promise<DoctorDashboardData> {
     try {
-      // The API now uses a consolidated endpoint. The backend determines the doctor via auth token.
       const response = await apiClient.get<DoctorDashboardData>('/Dashboard/doctor');
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching doctor dashboard data:', error);
       throw this.handleApiError(error);
     }
   }
@@ -89,7 +84,6 @@ class DoctorDashboardService {
     if (error.response?.data) {
       const apiError = error.response.data;
 
-      // Handle validation errors from backend
       if (apiError.errors) {
         const errorMessages = Object.entries(apiError.errors)
           .flat()

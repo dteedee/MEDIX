@@ -38,7 +38,6 @@ const MedicationForm: React.FC<MedicationFormProps> = ({
         isActive: medication.isActive ?? true,
       });
     } else {
-      // Reset form when creating new
       setFormData({
         medicationName: '',
         genericName: '',
@@ -91,7 +90,6 @@ const MedicationForm: React.FC<MedicationFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
-      {/* View Mode - Display Info Cards */}
       {isReadOnly && medication && (
         <div style={{ 
           display: 'grid', 
@@ -149,7 +147,6 @@ const MedicationForm: React.FC<MedicationFormProps> = ({
         </div>
       )}
 
-      {/* Basic Information Section */}
       <div style={{ 
         padding: '24px', 
         background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', 

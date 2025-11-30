@@ -15,14 +15,11 @@ import { managerDashboardService } from '../../services/managerDashboardService'
 import { PageLoader } from '../../components/ui';
 import styles from '../../styles/manager/ManageDashboard.module.css';
 
-// --- Helper Functions ---
 const formatRelativeTime = (dateString: string) => {
   try {
     const date = new Date(dateString);
-    // Hiển thị "trong X giờ" hoặc "X giờ trước"
     return formatDistanceToNow(date, { addSuffix: true, locale: vi });
   } catch (error) {
-    console.error("Invalid date for formatting:", dateString);
     return "Thời gian không hợp lệ";
   }
 };
@@ -115,7 +112,6 @@ export const ManageDashboard: React.FC = () => {
         const data = await managerDashboardService.getDashboardData();
         setDashboardData(data);
       } catch (err: any) {
-        console.error("Không thể tải dữ liệu dashboard:", err);
         setError("Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại sau.");
       } finally {
         setIsLoading(false);

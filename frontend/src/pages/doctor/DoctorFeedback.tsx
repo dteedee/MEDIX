@@ -22,7 +22,7 @@ const StarRating: React.FC<{ rating: number; size?: number }> = ({ rating, size 
 
 const RatingDistributionChart: React.FC<{ reviews: DoctorReview[] }> = ({ reviews }) => {
   const distribution = useMemo(() => {
-    const counts = [0, 0, 0, 0, 0]; // [1 star, 2 stars, ..., 5 stars]
+    const counts = [0, 0, 0, 0, 0];
     reviews.forEach(review => {
       if (review.rating >= 1 && review.rating <= 5) {
         counts[review.rating - 1]++;
@@ -75,7 +75,7 @@ const DoctorFeedback: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const [filterRating, setFilterRating] = useState(0); // 0 for all
+  const [filterRating, setFilterRating] = useState(0);
   const [sortBy, setSortBy] = useState('newest');
 
   useEffect(() => {
@@ -83,16 +83,13 @@ const DoctorFeedback: React.FC = () => {
       try {
         setIsLoading(true);
         const data = await reviewService.getReviewsForCurrentDoctor();
-        // Chỉ giữ các đánh giá đã xuất bản (bao gồm mọi biến thể chữ hoa/thường)
         const publicReviews = data.filter(review => {
           const status = review.status?.toUpperCase();
           return status === 'PUBLIC' || status === 'PUBLISHED' || status === 'APPROVED';
         });
-        // Sắp xếp các đánh giá mới nhất lên đầu
         setReviews(publicReviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
         setError(null);
       } catch (err) {
-        console.error("Error fetching reviews:", err);
         setError("Không thể tải danh sách phản hồi. Vui lòng thử lại.");
       } finally {
         setIsLoading(false);
@@ -231,9 +228,7 @@ const DoctorFeedback: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary Cards Grid */}
       <div className={styles.summaryGrid}>
-        {/* Average Rating Card */}
         <div className={`${styles.summaryCard} ${styles.summaryCardPrimary}`}>
           <div className={styles.cardHeader}>
             <div className={styles.cardIcon} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
@@ -257,7 +252,6 @@ const DoctorFeedback: React.FC = () => {
           </div>
         </div>
 
-        {/* Total Reviews Card */}
         <div className={`${styles.summaryCard} ${styles.summaryCardSecondary}`}>
           <div className={styles.cardHeader}>
             <div className={styles.cardIcon} style={{ background: 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)' }}>
@@ -286,7 +280,6 @@ const DoctorFeedback: React.FC = () => {
           </div>
         </div>
 
-        {/* Rating Distribution Card */}
         <div className={`${styles.summaryCard} ${styles.summaryCardTertiary}`}>
           <div className={styles.cardHeader}>
             <div className={styles.cardIcon} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
@@ -303,7 +296,6 @@ const DoctorFeedback: React.FC = () => {
         </div>
       </div>
 
-      {/* Toolbar Section */}
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
           <div className={styles.filterGroup}>
@@ -346,7 +338,6 @@ const DoctorFeedback: React.FC = () => {
         </div>
       </div>
 
-      {/* Reviews List */}
       <div className={styles.reviewList}>
         {filteredAndSortedReviews.length > 0 ? (
           filteredAndSortedReviews.map((review, index) => {

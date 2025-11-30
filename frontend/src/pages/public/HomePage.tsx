@@ -17,7 +17,6 @@ function HomePage() {
     const location = useLocation();
     const { t } = useLanguage();
 
-    //get home page details
     const [homeMetadata, setHomeMetadata] = useState<HomeMetadata>();
     const [banners, setBanners] = useState<Banner[]>([]);
     const [featuredArticles, setFeaturedArticles] = useState<ArticleDTO[]>([]);
@@ -29,9 +28,7 @@ function HomePage() {
             try {
                 const data = await HomeService.getHomeMetadata();
                 setHomeMetadata(data);
-                console.log('Banners received from API:', data?.banners.length); // Thêm dòng này để kiểm tra
             } catch (error) {
-                console.error('Failed to fetch home metadata:', error);
             }
         };
 
@@ -39,34 +36,31 @@ function HomePage() {
 
         const fetchBanners = async () => {
             try {
-                // Lấy tất cả banner, sau đó sắp xếp và giới hạn ở frontend
                 const allBanners = await bannerService.getAll({ page: 1, pageSize: 9999 });
                 
                 const today = new Date();
-                today.setHours(0, 0, 0, 0); // Chuẩn hóa về đầu ngày để so sánh
+                today.setHours(0, 0, 0, 0); 
 
                 const validBanners = (allBanners || []).filter(banner => {
-                    if (!banner.endDate) return false; // Không hiển thị nếu không có ngày kết thúc
+                    if (!banner.endDate) return false; 
                     const endDate = new Date(banner.endDate);
-                    return endDate >= today; // Chỉ hiển thị banner có ngày kết thúc >= hôm nay
+                    return endDate >= today; 
                 });
 
                 const sortedBanners = validBanners
                     .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
-                    .slice(0, 7); // Giới hạn 7 banner
+                    .slice(0, 7); 
 
                 setBanners(sortedBanners);
             } catch (error) {
-                console.error('Failed to fetch banners:', error);
             }
         };
 
         const fetchArticles = async () => {
             try {
-                const articles = await articleService.getHomepageArticles(5); // Lấy 5 bài viết ưu tiên nhất
+                const articles = await articleService.getHomepageArticles(5); 
                 setFeaturedArticles(articles);
             } catch (error) {
-                console.error('Failed to fetch homepage articles:', error);
             }
         };
         fetchArticles();
@@ -94,13 +88,11 @@ function HomePage() {
                 results.forEach(r => { if (r.education) map[r.id] = r.education; });
                 setDoctorEducationMap(prev => ({ ...prev, ...map }));
             } catch (e) {
-                console.error('Load doctor education failed', e);
             }
         };
         loadEducation();
     }, [homeMetadata?.displayedDoctors]);
 
-    // Resolve doctorId from username using listing API
     const resolveDoctorId = async (userName: string): Promise<string | null> => {
         try {
             const list = await doctorService.getAll({ page: 1, pageSize: 100, searchTerm: userName });

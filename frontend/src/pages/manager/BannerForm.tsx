@@ -172,12 +172,7 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
       bannerFile: imageFile || undefined,
     };
     
-    console.log('Form submission - Mode:', mode);
-    console.log('Form submission - FormData:', formData);
-    console.log('Form submission - Image preview:', imagePreview);
-    console.log('Form submission - Image file:', imageFile);
-    console.log('Form submission - Final banner image URL:', finalBannerImageUrl);
-    console.log('Form submission - Payload:', payload);
+ 
 
     if (onSaveRequest) {
       onSaveRequest(payload);
@@ -191,25 +186,15 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
     setLoading(true);
     try {
       if (mode === 'create') {
-        console.log('Creating new banner with payload:', payload);
         await bannerService.create(payload as CreateBannerRequest);
         showToast('Tạo banner thành công!', 'success');
       } else if (banner) {
-        console.log('Updating banner with ID:', banner.id);
-        console.log('Update payload:', payload);
         await bannerService.update(banner.id, payload);
-        console.log('Update successful');
         showToast('Cập nhật banner thành công!', 'success');
       }
       onSaved();
     } catch (error: any) {
-      console.error('Error saving banner:', error);
-      console.error('Error details:', {
-        status: error?.response?.status,
-        statusText: error?.response?.statusText,
-        data: error?.response?.data,
-        message: error?.message
-      });
+
       const message = error?.response?.data?.message || error?.message || 'Không thể lưu banner';
       showToast(message, 'error');
     } finally {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import ErrorPage from './ErrorPage'; // adjust path if needed
+import ErrorPage from './ErrorPage';
 
 const ErrorPageWrapper: React.FC = () => {
   const { code } = useParams<{ code: string }>();

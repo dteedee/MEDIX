@@ -53,7 +53,6 @@ export default function DoctorEvaluation({
       const data = await DoctorService.getTopDoctorsByPerformance(0.7, 0.3);
       setPerformanceData(data);
     } catch (error) {
-      console.error('Error loading performance data:', error);
       showToast('Không thể tải dữ liệu hiệu suất bác sĩ', 'error');
     } finally {
       setLoading(false);
@@ -65,7 +64,6 @@ export default function DoctorEvaluation({
       const metadata = await DoctorService.getMetadata();
       setSpecializations(metadata.specializations || []);
     } catch (error) {
-      console.error('Error loading specializations:', error);
     }
   };
 
@@ -266,7 +264,6 @@ export default function DoctorEvaluation({
         onRefresh();
       }
     } catch (error: any) {
-      console.error('Error updating doctor:', error);
       showToast(error.message || 'Không thể cập nhật thông tin bác sĩ', 'error');
       throw error;
     }

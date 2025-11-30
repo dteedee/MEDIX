@@ -72,7 +72,6 @@ const SpecialtyDetailPage: React.FC = () => {
       const data = await specializationService.getById(id);
       setSpecialization(data);
     } catch (err: any) {
-      console.error('Error loading specialization:', err);
       setError('Không thể tải thông tin chuyên khoa. Vui lòng thử lại.');
     } finally {
       setLoading(false);
@@ -173,7 +172,6 @@ const SpecialtyDetailPage: React.FC = () => {
       setDoctorAvatars(avatarMap);
       
     } catch (err: any) {
-      console.error('Error loading doctors:', err);
     } finally {
       setDoctorsLoading(false);
     }

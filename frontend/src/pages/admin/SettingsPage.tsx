@@ -4,7 +4,7 @@ import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import { apiClient } from '../../lib/apiClient';
 import { useToast } from '../../contexts/ToastContext';
 import styles from '../../styles/admin/SettingsPage.module.css';
-import userStyles from '../../styles/admin/UserList.module.css'; // Import CSS từ UserList
+import userStyles from '../../styles/admin/UserList.module.css';
 import { Language } from '../../contexts/LanguageContext';
 
 interface SystemSettings {
@@ -176,7 +176,6 @@ export default function SettingsPage() {
           apiClient.get('/SystemConfiguration/JWT_EXPIRY_MINUTES'),
           apiClient.get('/SystemConfiguration/MaxFailedLoginAttempts'),
           apiClient.get('/SystemConfiguration/AccountLockoutDurationMinutes'),
-          // Password policy settings
           apiClient.get('/SystemConfiguration/PASSWORD_MIN_LENGTH'),
           apiClient.get('/SystemConfiguration/PASSWORD_MAX_LENGTH'),
           apiClient.get('/SystemConfiguration/REQUIRE_DIGIT'),
@@ -195,11 +194,9 @@ export default function SettingsPage() {
           contactEmail: emailRes.data.configValue,
           contactPhone: phoneRes.data.configValue,
           contactAddress: addressRes.data.configValue,
-          // Security settings
           jwtExpiryMinutes: parseInt(jwtExpiryRes.data.configValue, 10),
           maxFailedLoginAttempts: parseInt(maxFailedLoginRes.data.configValue, 10),
           accountLockoutDurationMinutes: parseInt(lockoutDurationRes.data.configValue, 10),
-          // Password policy settings
           passwordMinLength: parseInt(passwordMinLengthRes.data.configValue, 10),
           passwordMaxLength: parseInt(passwordMaxLengthRes.data.configValue, 10),
           requireDigit: requireDigitRes.data.configValue.toLowerCase() === 'true',
@@ -213,7 +210,6 @@ export default function SettingsPage() {
         });
 
       } catch (error) {
-        console.error("Failed to fetch settings", error);
         showToast('Không thể tải cài đặt hệ thống.', 'error');
       } finally {
         setLoading(false);
@@ -233,7 +229,6 @@ export default function SettingsPage() {
         apiClient.get('/SystemConfiguration/BACKUP_RETENTION_DAYS'),
         apiClient.get('/SystemConfiguration/database-backup'),
       ]);
-
       setBackupSettings({
         enabled: enabledRes.data?.configValue?.toLowerCase() === 'true',
         frequency: frequencyRes.data?.configValue || 'daily',
@@ -241,14 +236,12 @@ export default function SettingsPage() {
         retentionDays: parseInt(retentionRes.data?.configValue || '30', 10),
       });
 
-      // Chỉ lấy bản sao lưu mới nhất (sắp xếp theo createdAt và lấy phần tử đầu tiên)
       const backups: DatabaseBackupInfo[] = backupFilesRes.data || [];
       const latestBackup = backups.length > 0 
         ? [backups.sort((a: DatabaseBackupInfo, b: DatabaseBackupInfo) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]]
         : [];
       setBackupList(latestBackup);
     } catch (error) {
-      console.error('Failed to fetch backup settings', error);
       showToast('Không thể tải cấu hình sao lưu.', 'error');
     } finally {
       setBackupLoading(false);
@@ -291,7 +284,6 @@ export default function SettingsPage() {
         setSelectedTemplateKey('');
       }
     } catch (error) {
-      console.error('Failed to fetch email settings', error);
       showToast('Không thể tải cấu hình email.', 'error');
     } finally {
       setEmailSettingsLoading(false);
@@ -311,7 +303,6 @@ export default function SettingsPage() {
         : 80;
       setRefundPercentage(Math.min(100, Math.max(0, Math.round(normalized))));
     } catch (error) {
-      console.error('Failed to fetch refund percentage', error);
       showToast('Không thể tải cấu hình hoàn tiền hủy lịch.', 'error');
     }
   }, [showToast]);
@@ -328,26 +319,22 @@ export default function SettingsPage() {
     const newErrors: Partial<Record<'username' | 'fromEmail' | 'fromName', string>> = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    // Username validation
     if (!username) {
       newErrors.username = 'Tên đăng nhập SMTP không được để trống.';
     } else if (!emailRegex.test(username)) {
       newErrors.username = 'Định dạng email không hợp lệ.';
     }
 
-    // FromEmail validation
     if (!fromEmail) {
       newErrors.fromEmail = 'Email người gửi không được để trống.';
     } else if (!emailRegex.test(fromEmail)) {
       newErrors.fromEmail = 'Định dạng email không hợp lệ.';
     }
 
-    // FromName validation
     if (!fromName.trim()) {
       newErrors.fromName = 'Tên hiển thị không được để trống.';
     }
 
-    // Cross-field validation (only if both fields have a valid format individually and are not empty)
     if (username && fromEmail && !newErrors.username && !newErrors.fromEmail && username !== fromEmail) {
       newErrors.username = 'Tên đăng nhập SMTP phải giống Email người gửi.';
       newErrors.fromEmail = 'Email người gửi phải giống Tên đăng nhập SMTP.';
@@ -392,7 +379,6 @@ export default function SettingsPage() {
       showToast('Đã lưu cấu hình máy chủ email.', 'success');
       await fetchEmailSettings();
     } catch (error) {
-      console.error('Failed to save email server settings', error);
       showToast('Lưu cấu hình email thất bại.', 'error');
     } finally {
       setEmailSettingsSaving(false);
@@ -408,7 +394,6 @@ export default function SettingsPage() {
       showToast('Đã lưu cấu hình hoàn tiền.', 'success');
       await fetchRefundConfig();
     } catch (error) {
-      console.error('Failed to save refund percentage', error);
       showToast('Lưu cấu hình hoàn tiền thất bại.', 'error');
     } finally {
       setRefundSaving(false);
@@ -463,7 +448,6 @@ export default function SettingsPage() {
       });
       showToast('Đã lưu mẫu email.', 'success');
     } catch (error) {
-      console.error('Failed to save email template', error);
       showToast('Lưu mẫu email thất bại.', 'error');
     } finally {
       setEmailTemplateSaving(false);
@@ -481,10 +465,9 @@ export default function SettingsPage() {
 
 
   const handleInputChange = (key: keyof SystemSettings, value: string | boolean) => {
-    // Xóa lỗi cũ khi người dùng bắt đầu nhập
     setErrors(prev => ({ ...prev, [key]: undefined }));
 
-    if (key === 'siteName' && typeof value === 'string') { // Cho phép ký tự đặc biệt
+    if (key === 'siteName' && typeof value === 'string') { 
       setSettings(prev => ({ ...prev, [key]: value }));
     } else if (
       (key === 'jwtExpiryMinutes' ||
@@ -494,24 +477,23 @@ export default function SettingsPage() {
         key === 'passwordMaxLength') &&
       typeof value === 'string'
     ) {
-      const sanitizedValue = value.replace(/[^0-9]/g, ''); // Chỉ cho phép nhập số, không cho phép số âm
+      const sanitizedValue = value.replace(/[^0-9]/g, '');
       setSettings(prev => ({ ...prev, [key]: sanitizedValue }));
-    } else if (key === 'contactEmail' && typeof value === 'string') { // Validation cho Email liên hệ
+    } else if (key === 'contactEmail' && typeof value === 'string') {
       setSettings(prev => ({ ...prev, [key]: value }));
-      // Kiểm tra định dạng email bằng Regex
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (value && !emailRegex.test(value)) {
         setErrors(prev => ({ ...prev, contactEmail: 'Định dạng email không hợp lệ.' }));
       } else {
         setErrors(prev => ({ ...prev, contactEmail: undefined }));
       }
-
-    } else if (key === 'systemDescription' && typeof value === 'string') { // Validation cho Mô tả hệ thống
+    } else if (key === 'systemDescription' && typeof value === 'string') {
       setSettings(prev => ({ ...prev, [key]: value }));
-
-    } else if (key === 'contactPhone' && typeof value === 'string') { // Validation cho Số điện thoại
-      const sanitizedValue = value.replace(/\D/g, ''); // Chỉ giữ lại số
-      setSettings(prev => ({ ...prev, [key]: sanitizedValue }));
+    } else if (key === 'contactPhone' && typeof value === 'string') {
+      const sanitizedValue = value.replace(/\D/g, '');
+      if (sanitizedValue.length <= 10) {
+        setSettings(prev => ({ ...prev, [key]: sanitizedValue }));
+      }
 
       if (sanitizedValue && sanitizedValue.length !== 10) {
         setErrors(prev => ({ ...prev, contactPhone: 'Số điện thoại phải có đúng 10 chữ số.' }));
@@ -534,10 +516,8 @@ export default function SettingsPage() {
   const handleBlur = (key: keyof SystemSettings, value: string) => {
     if (!value || value.trim() === '') {
       setErrors(prev => ({ ...prev, [key]: 'Trường này không được để trống.' }));
-      return; // Dừng lại nếu trường trống
+      return;
     }
-
-    // Nếu không trống, xóa lỗi "để trống" và thực hiện các validation khác
     setErrors(prev => ({ ...prev, [key]: undefined }));
 
     if (key === 'contactEmail') {
@@ -560,27 +540,20 @@ export default function SettingsPage() {
         setErrors(prev => ({ ...prev, [key]: 'Số lần phải nhỏ hơn 6.' }));
       }
     } else if (key === 'passwordMinLength' || key === 'passwordMaxLength') {
-      // Cross-field validation for password lengths
       const minLength = key === 'passwordMinLength' ? parseInt(value, 10) : settings.passwordMinLength;
       const maxLength = key === 'passwordMaxLength' ? parseInt(value, 10) : settings.passwordMaxLength;
 
-      // Clear previous cross-field errors first
-      setErrors(prev => ({ ...prev, passwordMinLength: undefined, passwordMaxLength: undefined })); // Xóa lỗi cũ
+      setErrors(prev => ({ ...prev, passwordMinLength: undefined, passwordMaxLength: undefined }));
 
-      // 1. Kiểm tra tương quan giữa min và max
       if (minLength && maxLength && minLength >= maxLength - 5) {
         const errorMessage = 'Độ dài tối thiểu phải nhỏ hơn độ dài tối đa ít nhất 6 ký tự.';
         setErrors(prev => ({ ...prev, passwordMinLength: errorMessage, passwordMaxLength: errorMessage }));
-        return; // Dừng lại nếu có lỗi này
+        return;
       }
-
-      // 2. Kiểm tra giá trị cố định của passwordMaxLength
-
     }
   };
 
   const validateBeforeSave = () => {
-    // Kiểm tra tất cả các lỗi hiện có
     for (const key in errors) {
       if (errors[key as keyof SystemSettings] || !settings[key as keyof SystemSettings]) {
         showToast(`Vui lòng sửa các lỗi trong form trước khi lưu.`, 'error');
@@ -605,11 +578,9 @@ export default function SettingsPage() {
         apiClient.put('/SystemConfiguration/ContactEmail', { value: settings.contactEmail }),
         apiClient.put('/SystemConfiguration/ContactPhone', { value: settings.contactPhone }),
         apiClient.put('/SystemConfiguration/ContactAddress', { value: settings.contactAddress }),
-        // Security settings
         apiClient.put('/SystemConfiguration/JWT_EXPIRY_MINUTES', { value: settings.jwtExpiryMinutes?.toString() }),
         apiClient.put('/SystemConfiguration/MaxFailedLoginAttempts', { value: settings.maxFailedLoginAttempts?.toString() }),
         apiClient.put('/SystemConfiguration/AccountLockoutDurationMinutes', { value: settings.accountLockoutDurationMinutes?.toString() }),
-        // Password policy settings
         apiClient.put('/SystemConfiguration/PASSWORD_MIN_LENGTH', { value: settings.passwordMinLength?.toString() }),
         apiClient.put('/SystemConfiguration/PASSWORD_MAX_LENGTH', { value: settings.passwordMaxLength?.toString() }),
         apiClient.put('/SystemConfiguration/REQUIRE_DIGIT', { value: settings.requireDigit?.toString() }),
@@ -620,7 +591,6 @@ export default function SettingsPage() {
       ]);
       showToast('Lưu thay đổi thành công!', 'success');
     } catch (error) {
-      console.error("Failed to save settings", error);
       showToast('Lưu thay đổi thất bại. Vui lòng thử lại.', 'error');
     } finally {
       setSaving(false);
@@ -650,7 +620,6 @@ export default function SettingsPage() {
       showToast('Đã lưu cấu hình sao lưu.', 'success');
       await fetchBackupSettings();
     } catch (error) {
-      console.error('Failed to save backup settings', error);
       showToast('Lưu cấu hình sao lưu thất bại.', 'error');
     } finally {
       setBackupSaving(false);
@@ -693,7 +662,6 @@ export default function SettingsPage() {
       setBackupName('');
       await fetchBackupSettings();
     } catch (error) {
-      console.error('Backup failed', error);
       showToast('Sao lưu thất bại. Vui lòng thử lại.', 'error');
     } finally {
       setBackupRunning(false);
@@ -709,7 +677,6 @@ export default function SettingsPage() {
       const suggestedName = extractFileName(response.headers['content-disposition']) || fileName;
       downloadBlobFile(response.data, suggestedName);
     } catch (error) {
-      console.error('Download failed', error);
       showToast('Tải bản sao lưu thất bại.', 'error');
     }
   };
@@ -726,7 +693,6 @@ export default function SettingsPage() {
       setSettings((prev) => ({ ...prev, maintenanceMode }));
       showToast('Đã cập nhật cấu hình bảo trì.', 'success');
     } catch (error) {
-      console.error('Failed to save maintenance settings', error);
       showToast('Lưu cấu hình bảo trì thất bại.', 'error');
     } finally {
       setMaintenanceSaving(false);
@@ -736,7 +702,6 @@ export default function SettingsPage() {
 
   return (
     <div className={userStyles.container}>
-      {/* Header */}
       <div className={userStyles.header}>
         <div className={userStyles.headerLeft}>
           <h1 className={userStyles.title}>Cấu hình hệ thống</h1>
@@ -750,14 +715,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      
-      {/* System Overview Stats */}
-
-
-
-      {/* Settings Grid - Giữ lại grid layout của trang settings */}
       <div className={styles.settingsGrid}>
-        {/* General Settings Card */}
         <div className={styles.settingsCard}>
           <div className={styles.cardHeader}>
             <h3>
@@ -841,8 +799,6 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
-
-        {/* Security Settings Card */}
         <div className={styles.settingsCard}>
           <div className={styles.cardHeader}>
             <h3>
@@ -958,10 +914,6 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
-
-
-
-        {/* Email Server Settings Card */}
         <div className={styles.settingsCard}>
           <div className={styles.cardHeader}>
             <h3>
@@ -1074,8 +1026,6 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
-
-        {/* Email Templates Card */}
         <div className={styles.settingsCard}>
           <div className={styles.cardHeader}>
             <h3>
@@ -1185,8 +1135,6 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
-
-        {/* Refund Policy Settings Card */}
         <div className={styles.settingsCard}>
           <div className={styles.cardHeader}>
             <h3>
@@ -1236,8 +1184,6 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-
-        {/* Backup Settings Card */}
         <div className={styles.settingsCard}>
           <div className={styles.cardHeader}>
             <h3>
@@ -1279,15 +1225,6 @@ export default function SettingsPage() {
                     onChange={(e) => handleBackupSettingChange('time', e.target.value)}
                   />
                 </div>
-                {/* <div className={styles.settingItem}>
-                      <label>Số bản sao lưu giữ lại</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={backupSettings.retentionDays}
-                        onChange={(e) => handleBackupSettingChange('retentionDays', e.target.value)}
-                      />
-                    </div> */}
                 <div className={styles.settingItem}>
                   <button
                     className={styles.saveBtn}
@@ -1349,8 +1286,6 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
-
-        {/* Maintenance Settings Card */}
         <div className={styles.settingsCard}>
           <div className={styles.cardHeader}>
             <h3>
@@ -1410,21 +1345,10 @@ export default function SettingsPage() {
                 Người dùng sẽ thấy thông điệp này khi truy cập vào khung giờ bảo trì.
               </div>
             </div>
-            {/* <div className={styles.settingItem}>
-                  <button
-                    className={styles.maintenanceBtn}
-                    onClick={() => handleSaveMaintenanceSettings(true)}
-                    disabled={maintenanceSaving}
-                  >
-                    <i className="bi bi-gear"></i>
-                    Kích hoạt chế độ bảo trì
-                  </button>
-                </div> */}
           </div>
         </div>
       </div>
 
-      {/* Footer Actions */}
       <div className={styles.footerActions}>
         <button onClick={handleSaveChanges} className={userStyles.btnCreate} disabled={saving || loading}>
           <i className={`bi ${saving ? 'bi-arrow-repeat' : 'bi-check-lg'}`}></i>

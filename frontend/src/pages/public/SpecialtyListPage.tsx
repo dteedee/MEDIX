@@ -27,7 +27,6 @@ const SpecialtyListPage: React.FC = () => {
       const data = await specializationService.getAll(true);
       setSpecializations(data);
     } catch (err: any) {
-      console.error('Error loading specializations:', err);
       setError('Không thể tải danh sách chuyên khoa. Vui lòng thử lại.');
     } finally {
       setLoading(false);

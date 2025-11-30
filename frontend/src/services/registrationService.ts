@@ -9,15 +9,11 @@ import { apiClient } from '../lib/apiClient';
 
 
 const registrationService = {
-  // Kiểm tra email đã tồn tại chưa
   checkEmailExists: async (email: string): Promise<ApiResponse<{ exists: boolean }>> => {
     try {
-      console.log('Checking email exists:', email);
       const response = await apiClient.post('/register/checkEmailExist', email);
       
-      // API trả về boolean trực tiếp
       const exists: boolean = response.data;
-      console.log('Email exists result:', exists);
       
       return {
         success: true,
@@ -25,7 +21,6 @@ const registrationService = {
       };
       
     } catch (error) {
-      console.error('Error checking email:', error);
       
       return {
         success: false,
@@ -35,15 +30,11 @@ const registrationService = {
     }
   },
 
-  // Kiểm tra số CCCD/CMND đã tồn tại chưa
   checkIdNumberExists: async (idNumber: string): Promise<ApiResponse<{ exists: boolean }>> => {
     try {
-      console.log('Checking ID number exists:', idNumber);
       const response = await apiClient.post('/register/checkVNEIDExist', idNumber);
       
-      // API trả về boolean trực tiếp
       const exists: boolean = response.data;
-      console.log('ID number exists result:', exists);
       
       return {
         success: true,
@@ -51,7 +42,6 @@ const registrationService = {
       };
       
     } catch (error) {
-      console.error('Error checking ID number:', error);
       
       return {
         success: false,
@@ -61,14 +51,11 @@ const registrationService = {
     }
   },
 
-  // Lấy danh sách nhóm máu
   getBloodTypes: async (): Promise<ApiResponse<BloodTypeDTO[]>> => {
     try {
-      console.log('Fetching blood types...');
       const response = await apiClient.get<BloodTypeDTO[]>('/register/getBloodTypes');
       
       const data: BloodTypeDTO[] = response.data;
-      console.log('Blood types fetched successfully:', data);
       
       return {
         success: true,
@@ -76,7 +63,6 @@ const registrationService = {
       };
       
     } catch (error) {
-      console.error('Error fetching blood types:', error);
       
       return {
         success: false,
@@ -86,12 +72,9 @@ const registrationService = {
     }
   },
 
-  // Đăng ký bệnh nhân
   registerPatient: async (registrationData: PatientRegistration): Promise<ApiResponse<any>> => {
     try {
-      console.log('Registering patient with data:', registrationData);
       
-      // Transform frontend data to match backend DTO structure
       const payload = {
         registerRequest: {
           email: registrationData.registerRequest.email,
@@ -114,12 +97,10 @@ const registrationService = {
         }
       };
 
-      console.log('Sending registration payload:', payload);
 
       const response = await apiClient.post('/register/registerPatient', payload);
       
       const result = response.data;
-      console.log('Patient registration successful:', result);
       
       return {
         success: true,
@@ -127,7 +108,6 @@ const registrationService = {
       };
       
     } catch (error) {
-      console.error('Error registering patient:', error);
       
       return {
         success: false,

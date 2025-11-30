@@ -37,7 +37,7 @@ const getInitialState = (): PromotionListFilters => {
         return { ...defaultFilters, ...JSON.parse(savedState) };
     }
   } catch (e) {
-    console.error("Failed to parse promotionListState from localStorage", e);
+
   }
   return defaultFilters;
 };
@@ -113,7 +113,6 @@ export default function PromotionManagement() {
       const promotions = await promotionService.getAllPromotions();
       setAllPromotions(promotions || []);
     } catch (error) {
-      console.error('Error loading promotions:', error);
       showToast('Không thể tải danh sách khuyến mãi', 'error');
     } finally {
       setLoading(false);
@@ -160,7 +159,6 @@ export default function PromotionManagement() {
       showToast(`Đã ${currentIsActive ? 'tắt' : 'bật'} khuyến mãi thành công`, 'success');
       await load();
     } catch (error: any) {
-      console.error('❌ ERROR:', error);
       const message = error?.response?.data?.message || error?.message || 'Không thể thay đổi trạng thái';
       showToast(message, 'error');
     }
@@ -189,7 +187,6 @@ export default function PromotionManagement() {
         await handleToggleStatus(promotion);
       }
     } catch (error: any) {
-      console.error('Error performing action:', error);
       const message = error?.response?.data?.message || error?.message || 'Không thể thực hiện thao tác';
       showToast(message, 'error');
     }
@@ -897,7 +894,6 @@ export default function PromotionManagement() {
               setEditing(null);
               await load();
             } catch (error: any) {
-              console.error('Error updating promotion:', error);
               const message = error?.response?.data?.message || error?.message || 'Không thể cập nhật khuyến mãi';
               throw new Error(message);
             }
@@ -918,7 +914,6 @@ export default function PromotionManagement() {
               setCreating(false);
               await load();
             } catch (error: any) {
-              console.error('Error creating promotion:', error);
               const message = error?.response?.data?.message || error?.message || 'Không thể tạo khuyến mãi';
               
               // Check for specific error messages
@@ -986,7 +981,6 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
         const data = await promotionService.getPromotionTargets();
         setTargets(data);
       } catch (error) {
-        console.error('Error loading promotion targets:', error);
         showToast('Không thể tải danh sách nhóm áp dụng', 'error');
       } finally {
         setLoadingTargets(false);
@@ -1197,7 +1191,6 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
       
       await onSave(submitData);
     } catch (error: any) {
-      console.error('Error saving promotion:', error);
       const message = error?.response?.data?.message || error?.message || 'Không thể lưu khuyến mãi';
       showToast(message, 'error');
     } finally {

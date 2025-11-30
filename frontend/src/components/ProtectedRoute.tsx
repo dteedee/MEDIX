@@ -19,16 +19,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { isAuthenticated, user, checkRole, hasPermission, isLoading } = useAuth();
   const location = useLocation();
 
-  // Debug logs in useEffect to prevent infinite re-renders
   useEffect(() => {
-    console.log('🔐 ProtectedRoute - Path:', location.pathname);
-    console.log('🔐 ProtectedRoute - isLoading:', isLoading);
-    console.log('🔐 ProtectedRoute - isAuthenticated:', isAuthenticated);
-    console.log('🔐 ProtectedRoute - user:', user);
-    console.log('🔐 ProtectedRoute - requiredRoles:', requiredRoles);
+   
   }, [location.pathname, isLoading, isAuthenticated, user, requiredRoles]);
 
-  // Show loading while checking authentication
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -37,17 +31,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return <Navigate to={fallbackPath} state={{ from: location }} replace />;
   }
 
-  // Check role permissions
   if (requiredRoles.length > 0 && !checkRole(requiredRoles)) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Check specific permissions
   if (requiredPermissions.length > 0) {
     const hasRequiredPermissions = requiredPermissions.every(permission =>
       hasPermission(permission)
@@ -61,17 +52,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   return <>{children}</>;
 };
 
-// Component for routes that should redirect authenticated users
 export const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
   const location = useLocation();
 
   // Debug logs in useEffect to prevent infinite re-renders
   useEffect(() => {
-    console.log('🌍 PublicRoute - Path:', location.pathname);
-    console.log('🌍 PublicRoute - isLoading:', isLoading);
-    console.log('🌍 PublicRoute - isAuthenticated:', isAuthenticated);
-    console.log('🌍 PublicRoute - user:', user);
+  
   }, [location.pathname, isLoading, isAuthenticated, user]);
   
   if (isLoading) {
@@ -82,7 +69,6 @@ export const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   }
 
-  // Redirect authenticated users to their respective dashboards
   if (isAuthenticated && user) {
     const dashboardPath = getDashboardPath(user.role as UserRole);
     return <Navigate to={dashboardPath} replace />;
@@ -91,7 +77,6 @@ export const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children 
   return <>{children}</>;
 };
 
-// Helper function to get dashboard path based on role
 const getDashboardPath = (role: UserRole): string => {
   switch (role) {
     case UserRole.ADMIN:

@@ -7,9 +7,7 @@ interface GetAllParams {
   pageSize?: number;
 }
 
-// Helper function to map API response to our DTO consistently
 function mapToDTO(x: any): BannerDTO {
-  console.log('Mapping banner data:', x);
   return {
     id: x.id,
     bannerTitle: x.bannerTitle || x.title || '',
@@ -76,7 +74,6 @@ export const bannerService = {
       if (payload.startDate) formData.append('StartDate', payload.startDate);
       if (payload.endDate) formData.append('EndDate', payload.endDate);
 
-      // Append the file if it exists
       if (payload.bannerFile) {
         formData.append('bannerFile', payload.bannerFile);
       }
@@ -86,19 +83,14 @@ export const bannerService = {
     } catch (error: any) {
       if (error.response?.data?.errors) {
         const backendErrors = error.response.data.errors;
-        console.error("Lỗi validation từ backend khi tạo banner:", JSON.stringify(backendErrors, null, 2));
-        // Ném lại đối tượng lỗi để component có thể xử lý
         throw backendErrors;
       }
-      throw error; // Ném lại các lỗi khác
+      throw error;
     }
   },
   update: async (id: string, payload: UpdateBannerRequest): Promise<BannerDTO> => {
     try {
-      console.log(`Updating banner ID: ${id}`);
-      console.log('Payload received:', payload);
 
-      // Always use FormData for update because the backend endpoint expects [FromForm]
       const formData = new FormData();
 
       formData.append('BannerTitle', payload.bannerTitle || '');
@@ -116,12 +108,9 @@ export const bannerService = {
       const r = await apiClient.putMultipart(`${BASE}/${id}`, formData);
       return mapToDTO(r.data);
     } catch (error: any) {
-      console.error('Error updating banner:', error);
-      console.error('Error response:', error?.response?.data);
       
       if (error.response?.data?.errors) {
         const backendErrors = error.response.data.errors;
-        console.error(`Lỗi validation từ backend khi cập nhật banner (ID: ${id}):`, JSON.stringify(backendErrors, null, 2));
         throw backendErrors;
       }
       throw error;
@@ -129,37 +118,19 @@ export const bannerService = {
   },
   lock: async (id: string): Promise<void> => {
     try {
-      console.log('Locking banner with ID:', id);
-      console.log('Endpoint:', `${BASE}/${id}/lock`);
       const response = await apiClient.put(`${BASE}/${id}/lock`, {});
-      console.log('Lock response status:', response.status);
       return;
     } catch (error: any) {
-      console.error('Error locking banner:', error);
-      console.error('Error details:', {
-        status: error?.response?.status,
-        statusText: error?.response?.statusText,
-        data: error?.response?.data,
-        message: error?.message
-      });
+  
       throw error;
     }
   },
   unlock: async (id: string): Promise<void> => {
     try {
-      console.log('Unlocking banner with ID:', id);
-      console.log('Endpoint:', `${BASE}/${id}/unlock`);
       const response = await apiClient.put(`${BASE}/${id}/unlock`, {});
-      console.log('Unlock response status:', response.status);
       return;
     } catch (error: any) {
-      console.error('Error unlocking banner:', error);
-      console.error('Error details:', {
-        status: error?.response?.status,
-        statusText: error?.response?.statusText,
-        data: error?.response?.data,
-        message: error?.message
-      });
+      
       throw error;
     }
   },

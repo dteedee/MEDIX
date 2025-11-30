@@ -1,10 +1,6 @@
 import { apiClient } from '../lib/apiClient';
 
-// --- New Interfaces for the updated API response ---
 
-/**
- * Thống kê về các lịch hẹn.
- */
 export interface AppointmentStats {
   totalAppointments: number;
   confirmed: number;
@@ -20,12 +16,10 @@ export interface AppointmentStats {
   todayAppointmentsCount: number;
 }
 
-/**
- * Ca làm việc của bác sĩ.
- */
+
 export interface WorkShift {
-  startTime: string; // "HH:mm:ss"
-  endTime: string; // "HH:mm:ss"
+  startTime: string; 
+  endTime: string; 
   isAvailable: boolean;
   overrideReason: string | null;
   overrideType: boolean | null;
@@ -101,7 +95,6 @@ const getDashboardData = async (): Promise<ManagerDashboardData> => {
     const response = await apiClient.get<ManagerDashboardData>('/Dashboard/manager');
     return response.data;
   } catch (error) {
-    console.error('Error fetching manager dashboard data:', error);
     throw error;
   }
 };

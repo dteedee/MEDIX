@@ -7,7 +7,6 @@ const ChatbotBubble: React.FC = () => {
   const location = useLocation();
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  // Không hiển thị ở trang AI chẩn đoán
   if (location.pathname.includes('/ai-chat')) {
     return null;
   }

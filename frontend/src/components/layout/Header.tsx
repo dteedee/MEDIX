@@ -26,7 +26,6 @@ export const Header: React.FC = () => {
     const isHomePage = location.pathname === '/';
 
     useEffect(() => {
-        // Only fetch if user is logged in
         if (!user) {
             return;
         }
@@ -36,13 +35,12 @@ export const Header: React.FC = () => {
                 const data = await NotificationService.getMetadata();
                 setNotificationMetadata(data);
             } catch (error) {
-                console.error('❌ Header - Failed to fetch metadata:', error);
+                
             }
         }
         fetchMetadata();
     }, [user?.id]);
 
-    // Fetch site settings
     useEffect(() => {
         const fetchSiteSettings = async () => {
             setLoadingSettings(true);
@@ -54,7 +52,7 @@ export const Header: React.FC = () => {
                 setSiteName(nameRes.data.configValue);
                 setSiteDescription(descRes.data.configValue);
             } catch (error) {
-                console.error('❌ Header - Failed to fetch site settings:', error);
+               
             } finally {
                 setLoadingSettings(false);
             }
@@ -62,7 +60,6 @@ export const Header: React.FC = () => {
         fetchSiteSettings();
     }, []);
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
@@ -89,7 +86,7 @@ export const Header: React.FC = () => {
             case 'Marketing':
                 return 'bi-megaphone';
             default:
-                return 'bi-info-circle'; // fallback icon
+                return 'bi-info-circle'; 
         }
     };
 
@@ -153,7 +150,6 @@ export const Header: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Notifications */}
                             <div className="dropdown" style={{ position: 'relative', display: 'inline-block' }}>
                                 <i
                                     className="bi bi-bell-fill fs-4"
@@ -203,14 +199,13 @@ export const Header: React.FC = () => {
                                 </ul>
                             </div>
 
-                            {/* User Avatar Dropdown */}
                             <div className={styles["user-dropdown"]} ref={userDropdownRef}>
                                 <div 
                                     className={styles["user-avatar-container"]}
                                     onClick={handleUserDropdownToggle}
                                 >
                                     <img
-                                        key={user.avatarUrl || 'avatar'} // Force re-render when avatar changes
+                                        key={user.avatarUrl || 'avatar'} 
                                         src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || user.email || 'User')}&background=667eea&color=fff`}
                                         alt="User avatar"
                                         className={styles["user-avatar"]}

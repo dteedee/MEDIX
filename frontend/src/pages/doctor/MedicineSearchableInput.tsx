@@ -71,7 +71,7 @@ const MedicineSearchableInput: React.FC<MedicineSearchableInputProps> = ({
     const option = { label: formatMedicationLabel(medication), value: medication };
     setSelectedOption(option);
     skipSyncRef.current = true;
-    onSelect(medication); // Chỉ gọi onSelect, không gọi onInputChange
+    onSelect(medication); 
     setInputValue('');
   };
 

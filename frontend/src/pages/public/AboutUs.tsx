@@ -42,7 +42,6 @@ const AboutUs: React.FC = () => {
           contactAddress: addressRes.data.configValue,
         });
       } catch (error) {
-        console.error("Failed to fetch settings for About Us page:", error);
       } finally {
         setLoading(false);
       }

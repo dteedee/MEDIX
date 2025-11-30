@@ -49,7 +49,6 @@ const Footer: React.FC = () => {
   return (
     <footer>
       <div className={styles["footer-content"]}>
-        {/* Section 1: MEDIX info */}
         <div className={styles["footer-section"]}>
           <h3>{loading ? '...' : (settings.siteName || 'MEDIX')}</h3>
           <p style={{ fontSize: '13px', lineHeight: '1.8' }}>
@@ -61,7 +60,6 @@ const Footer: React.FC = () => {
           </div>
         </div>
 
-        {/* Section 2: About Us */}
         <div className={styles["footer-section"]}>
           <h3>{t('footer.links.title')}</h3>
           <ul>
@@ -73,7 +71,6 @@ const Footer: React.FC = () => {
           </ul>
         </div>
 
-        {/* Section 3: Services */}
         <div className={styles["footer-section"]}>
           <h3>{t('footer.services.title')}</h3>
           <ul>
@@ -85,7 +82,6 @@ const Footer: React.FC = () => {
           </ul>
         </div>
 
-        {/* Section 4: Contact */}
         <div className={styles["footer-section"]}>
           <h3>{t('footer.contact.title')}</h3>
           <ul>
@@ -96,7 +92,6 @@ const Footer: React.FC = () => {
               <a href={`tel:${settings.contactPhone}`}>{`Hotline: ${loading ? '...' : (settings.contactPhone || '1900-0000')}`}</a>
             </li>
             <li>
-              {/* Assuming website is derived from siteName or a fixed URL */}
               <a>Website: {loading ? '...' : (settings.siteName ? `www.${settings.siteName.toLowerCase()}.com` : 'www.medix.com')}</a>
             </li>
             <li>
@@ -106,7 +101,6 @@ const Footer: React.FC = () => {
         </div>
       </div>
 
-      {/* Bottom line */}
       <div className={styles["footer-bottom"]}>
         <p>© 2025 MEDIX. {t('footer.rights')}</p>
       </div>

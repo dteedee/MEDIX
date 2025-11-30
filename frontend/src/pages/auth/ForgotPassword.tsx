@@ -24,7 +24,6 @@ const ForgotPassword: React.FC = () => {
   const isValidEmail = (text: string) =>
     /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(text);
 
-  // Countdown resend
   useEffect(() => {
     if (resendCountdown > 0) {
       const timer = setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
@@ -32,7 +31,6 @@ const ForgotPassword: React.FC = () => {
     }
   }, [resendCountdown]);
 
-  // Gửi mã xác thực
   const handleSendVerificationCode = async () => {
     if (!email) {
       setError('Vui lòng nhập email');
@@ -65,14 +63,12 @@ const ForgotPassword: React.FC = () => {
         setError('Không thể gửi mã xác thực. Vui lòng thử lại.');
       }
     } catch (err: any) {
-      console.error('Error sending verification code:', err);
       setError(err.response?.data?.message || 'Có lỗi xảy ra khi gửi mã xác thực');
     } finally {
       setIsCheckingEmail(false);
     }
   };
 
-  // Xác thực mã
   const handleVerifyCode = async () => {
     if (!verificationCode) {
       setError('Vui lòng nhập mã xác thực');
@@ -95,14 +91,12 @@ const ForgotPassword: React.FC = () => {
         setError(result.message || 'Mã xác thực không đúng');
       }
     } catch (err: any) {
-      console.error('Error verifying code:', err);
       setError('Có lỗi xảy ra khi xác thực mã');
     } finally {
       setIsVerifyingCode(false);
     }
   };
 
-  // Gửi lại mã
   const handleResendCode = async () => {
     if (resendCountdown > 0) return;
     try {
@@ -115,7 +109,6 @@ const ForgotPassword: React.FC = () => {
         setError('Không thể gửi lại mã xác thực');
       }
     } catch (err: any) {
-      console.error('Error resending code:', err);
       setError('Có lỗi xảy ra khi gửi lại mã xác thực');
     }
   };
@@ -132,7 +125,6 @@ const ForgotPassword: React.FC = () => {
           </div>
 
           <div className="forgot-password-form">
-            {/* Nhập Email */}
             {!emailVerificationSent && (
               <div className="email-input-section">
                 <div
@@ -203,7 +195,6 @@ const ForgotPassword: React.FC = () => {
               </div>
             )}
 
-            {/* Hiển thị thông báo gửi mã */}
             {emailVerificationSent && !emailVerified && emailExists && (
               <div
                 className="success-message"
@@ -220,7 +211,6 @@ const ForgotPassword: React.FC = () => {
               </div>
             )}
 
-            {/* Nhập mã xác thực */}
             {emailVerificationSent && !emailVerified && emailExists && (
               <div className="verification-code-section">
                 <p className="info-text">

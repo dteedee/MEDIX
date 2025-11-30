@@ -37,7 +37,6 @@ export default function SpecializationManagement(): JSX.Element {
       const data = await specializationService.getAll(false); // Lấy tất cả, không chỉ active
       setSpecializations(data || []);
     } catch (error) {
-      console.error("Failed to load specializations:", error);
       showToast('Không thể tải danh sách chuyên khoa.', 'error');
     } finally {
       setLoading(false);
@@ -75,7 +74,6 @@ export default function SpecializationManagement(): JSX.Element {
       // Reload data to get updated doctor count and other info
       await load();
     } catch (error: any) {
-      console.error("Failed to update specialization status:", error);
       const errorMessage = error.response?.data?.message || error.message || 'Không thể cập nhật trạng thái chuyên khoa.';
       showToast(errorMessage, 'error');
     } finally {

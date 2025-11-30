@@ -52,7 +52,6 @@ export const PatientDashboard: React.FC = () => {
         setMedicalRecords(medicalRecordsData);
         setReminders(remindersData);
       } catch (err: any) {
-        console.error('Error fetching data:', err);
       } finally {
         setLoading(false);
       }
@@ -73,8 +72,6 @@ export const PatientDashboard: React.FC = () => {
           setIsMaintenance(false);
         }
       } catch (error) {
-        // Không hiển thị lỗi cho người dùng, chỉ log ra console
-        console.error("Không thể kiểm tra trạng thái bảo trì:", error);
       }
     };
     checkMaintenanceMode();
@@ -277,7 +274,6 @@ export const PatientDashboard: React.FC = () => {
             return newMap;
           });
         } catch (err) {
-          console.error(`Error loading doctor profile for ${doctorID}:`, err);
         } finally {
           setLoadingDoctors(prev => {
             const newSet = new Set(prev);

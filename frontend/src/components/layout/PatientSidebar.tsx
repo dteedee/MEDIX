@@ -15,7 +15,6 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
@@ -30,15 +29,11 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
   }, []);
 
   const handleLogout = async () => {
-    // Close menu first
     setShowUserMenu(false);
 
     try {
-      // Call logout from AuthContext - it will handle redirect
       await logout();
     } catch (error) {
-      console.error('Logout error:', error);
-      // Logout will still clear state and redirect even if API call fails
     }
   };
 
@@ -50,7 +45,6 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
   const handleGoHome = () => {
     setShowUserMenu(false);
     navigate('/');
-    // Scroll to top when navigating to home
     window.scrollTo(0, 0);
   };
 
@@ -126,7 +120,7 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({ currentPage = 'dashboar
         >
           <div className={styles.userAvatar}>
             <img
-              key={user?.avatarUrl || 'avatar'} // Force re-render when avatar changes
+              key={user?.avatarUrl || 'avatar'}
               src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || user?.email || 'Patient')}&background=667eea&color=fff`}
               alt={user?.fullName || 'Patient'}
               onError={(e) => {

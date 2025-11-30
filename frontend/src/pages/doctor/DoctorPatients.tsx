@@ -61,12 +61,10 @@ const DoctorPatients: React.FC = () => {
     const fetchAppointments = async () => {
       try {
         setIsLoading(true);
-        // API này sẽ lấy tất cả các cuộc hẹn của bác sĩ hiện tại
         const data = await appointmentService.getMyAppointmentsByDateRange("2020-01-01", "2030-12-31");
         setAppointments(data);
         setError(null);
       } catch (err) {
-        console.error("Error fetching appointments:", err);
         setError("Không thể tải danh sách bệnh nhân. Vui lòng thử lại.");
       } finally {
         setIsLoading(false);
@@ -81,7 +79,6 @@ const DoctorPatients: React.FC = () => {
 
     const patientMap = new Map<string, { appointments: Appointment[] }>();
     appointments.forEach(app => {
-      // Chỉ xử lý các cuộc hẹn có patientID và chưa bị hủy
       if (app.patientID && app.statusCode !== 'CancelledByPatient' && app.statusCode !== 'CancelledByDoctor') {
         if (!patientMap.has(app.patientID)) {
           patientMap.set(app.patientID, { appointments: [] });
@@ -92,21 +89,17 @@ const DoctorPatients: React.FC = () => {
     
     const patientList: Patient[] = Array.from(patientMap.entries())
       .map(([patientId, data]) => {
-        // Lọc ra các cuộc hẹn đã diễn ra trong quá khứ hoặc đang diễn ra
         const pastAppointments = data.appointments
           .filter(app => new Date(app.appointmentStartTime) <= now)
           .sort((a, b) => new Date(b.appointmentStartTime).getTime() - new Date(a.appointmentStartTime).getTime());
 
-        // Nếu không có cuộc hẹn nào trong quá khứ, không hiển thị bệnh nhân này
         if (pastAppointments.length === 0) return null;
 
-        const lastVisitAppointment = pastAppointments[0]; // Lần khám cuối cùng (gần nhất trong quá khứ)
-        const firstVisitAppointment = pastAppointments[pastAppointments.length - 1]; // Lần khám đầu tiên
+        const lastVisitAppointment = pastAppointments[0]; 
+        const firstVisitAppointment = pastAppointments[pastAppointments.length - 1]; 
 
-        // Tính tổng số tiền đã chi
         const totalSpent = pastAppointments.reduce((sum, app) => sum + (app.totalAmount || 0), 0);
         
-        // Tính rating trung bình nếu có
         const ratings = pastAppointments
           .filter(app => app.patientRating)
           .map(app => parseFloat(app.patientRating || '0'))
@@ -115,7 +108,6 @@ const DoctorPatients: React.FC = () => {
           ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length 
           : undefined;
 
-        // Lấy email từ appointment - tìm trong tất cả appointments của bệnh nhân
         const emailFromLastVisit = (lastVisitAppointment as any).patientEmail || (lastVisitAppointment as any).email;
         let email = emailFromLastVisit || 'N/A';
         if (!email) {
@@ -151,7 +143,6 @@ const DoctorPatients: React.FC = () => {
   const filteredAndSortedPatients = useMemo(() => {
     let result = [...patients];
 
-    // Filter by search term
     if (searchTerm) {
       result = result.filter(p => 
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -159,7 +150,6 @@ const DoctorPatients: React.FC = () => {
       );
     }
 
-    // Filter by option
     if (filterBy === 'recent') {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -168,7 +158,6 @@ const DoctorPatients: React.FC = () => {
       result = result.filter(p => p.totalAppointments >= 3);
     }
     
-    // Advanced filters
     if (minVisits) {
       const minVisitsNumber = parseInt(minVisits, 10);
       if (!isNaN(minVisitsNumber)) {
@@ -195,7 +184,6 @@ const DoctorPatients: React.FC = () => {
       result = result.filter(p => p.lastVisitDate <= toDate);
     }
 
-    // Sort
     result.sort((a, b) => {
       let comparison = 0;
       
@@ -220,7 +208,6 @@ const DoctorPatients: React.FC = () => {
     return result;
   }, [patients, searchTerm, sortBy, filterBy, sortOrder, dateFrom, dateTo, minVisits, minSpent]);
 
-  // Statistics
   const stats = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -270,7 +257,6 @@ const DoctorPatients: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      {/* Header Section */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <div className={styles.titleWrapper}>
@@ -301,7 +287,6 @@ const DoctorPatients: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary Cards Grid */}
       <div className={styles.summaryGrid}>
         <div className={`${styles.summaryCard} ${styles.summaryCardPrimary}`}>
           <div className={styles.cardHeader}>
@@ -370,7 +355,6 @@ const DoctorPatients: React.FC = () => {
         </div>
       </div>
 
-      {/* Toolbar */}
       <div className={styles.toolbar}>
         <div className={styles.searchContainer}>
           <div className={styles.searchIcon}>
@@ -394,7 +378,6 @@ const DoctorPatients: React.FC = () => {
         </button>
       </div>
 
-      {/* Advanced Filter Panel */}
       {showAdvancedFilter && (
         <div className={styles.advancedFilterPanel}>
           <div className={styles.filterRow}>

@@ -57,7 +57,6 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
     const messageText = text || inputText.trim();
     if (!messageText && uploadedFiles.length === 0) return;
 
-    // Add user message
     if (messageText) {
       const newUserMessage: AIChatMessage = {
         id: Date.now().toString(),
@@ -69,7 +68,6 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
       setInputText('');
     }
 
-    // Handle file uploads
     if (uploadedFiles.length > 0) {
       setIsLoading(true);
       try {
@@ -105,16 +103,14 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
     setIsLoading(true);
 
     try {
-      // Check if it's a symptom query
       const symptomKeywords = ['đau', 'mệt', 'sốt', 'ho', 'khó', 'buồn', 'chóng', 'nóng', 'ngứa', 'triệu chứng'];
       const isSymptomQuery = symptomKeywords.some(keyword => messageText.toLowerCase().includes(keyword));
 
       if (isSymptomQuery) {
-        // Extract symptoms (simplified - in production, use NLP)
         const symptoms = messageText.split(/[,\n]/).map(s => s.trim()).filter(s => s.length > 0);
         
         const analysisResponse = await aiChatService.analyzeSymptoms({
-          symptoms: symptoms.slice(0, 10), // Limit to 10 symptoms
+          symptoms: symptoms.slice(0, 10),
           additionalInfo: messageText,
         });
 
@@ -153,7 +149,6 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
         };
         setMessages(prev => [...prev, aiResponse]);
       } else {
-        // Regular chat message
         const conversationHistory = messages.map(msg => ({
           text: msg.text,
           sender: msg.sender,
@@ -209,7 +204,6 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
   };
 
   const formatMessage = (text: string): string => {
-    // Format markdown-like syntax
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br />')
@@ -270,7 +264,6 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
   return (
     <div className={styles.chatboxOverlay} onClick={onClose}>
       <div className={styles.chatboxContainer} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
         <div className={styles.chatboxHeader}>
           <div className={styles.headerLeft}>
             <div className={styles.avatarContainer}>
@@ -305,7 +298,6 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Messages Area */}
         <div className={styles.messagesArea}>
 
           {messages.map((message) => (
@@ -359,7 +351,6 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* File Preview */}
         {uploadedFiles.length > 0 && (
           <div className={styles.filePreview}>
             {uploadedFiles.map((file, index) => (
@@ -376,7 +367,6 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
           </div>
         )}
 
-        {/* Quick Suggestions - Above input area */}
         {messages.length === 1 && (
           <div className={styles.quickSuggestions}>
             <p className={styles.suggestionPrompt}>Gợi ý:</p>
@@ -394,7 +384,6 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
           </div>
         )}
 
-        {/* Input Area - At the bottom */}
         <div className={styles.inputArea}>
           <input
             ref={fileInputRef}
@@ -433,4 +422,3 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
 };
 
 export default AIChatBox;
-

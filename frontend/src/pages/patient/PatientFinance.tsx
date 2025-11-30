@@ -94,7 +94,6 @@ export const PatientFinance: React.FC = () => {
           setBanksWithLogos(updatedBanks);
         }
       } catch (err) {
-        console.error('Error fetching banks from API:', err);
         setBanksWithLogos(BANKS);
       }
     };
@@ -121,7 +120,6 @@ export const PatientFinance: React.FC = () => {
         setAppointmentMap(map);
         await fetchTransactions();
       } catch (err: any) {
-        console.error('Error fetching wallet:', err);
         setError(err.message || 'Không thể tải thông tin ví');
       } finally {
         setLoading(false);
@@ -158,10 +156,8 @@ export const PatientFinance: React.FC = () => {
         });
         setAppointmentMap(map);
       } catch (err) {
-        console.error('Error loading appointments for transactions:', err);
       }
     } catch (err: any) {
-      console.error('Error fetching transactions:', err);
     } finally {
       setLoadingTransactions(false);
     }
@@ -323,7 +319,6 @@ export const PatientFinance: React.FC = () => {
       setWallet(walletData);
       await fetchTransactions();
     } catch (err: any) {
-      console.error('Error processing withdrawal:', err);
       
       let errorMessage = 'Có lỗi xảy ra khi rút tiền. Vui lòng thử lại.';
       
@@ -536,22 +531,12 @@ export const PatientFinance: React.FC = () => {
       ? (appointmentMap.get(transaction.relatedAppointmentId) || appointments.find(apt => apt.id === transaction.relatedAppointmentId))
       : null;
     
-    // If not found by relatedAppointmentId, try to find by transactionId
     if (!appointment && transaction.id) {
       appointment = appointments.find(apt => apt.transactionId === transaction.id);
     }
 
-    // Debug logging
     if (transaction.transactionTypeCode === 'AppointmentPayment') {
-      console.log('Formatting AppointmentPayment transaction:', {
-        transactionId: transaction.id,
-        relatedAppointmentId: transaction.relatedAppointmentId,
-        description: transaction.description,
-        appointmentFound: !!appointment,
-        appointmentDoctorName: appointment?.doctorName,
-        appointmentMapSize: appointmentMap.size,
-        appointmentsArraySize: appointments.length
-      });
+     
     }
 
     switch (transaction.transactionTypeCode) {
@@ -561,65 +546,47 @@ export const PatientFinance: React.FC = () => {
         // First, try to get doctor name from appointment
         if (appointment) {
           const rawDoctorName = appointment.doctorName;
-          console.log('Checking appointment doctor name:', {
-            rawDoctorName,
-            appointmentId: appointment.id
-          });
+         
           
           if (rawDoctorName) {
             const trimmedName = rawDoctorName.trim();
-            // Validate doctor name - must not be empty, "0", "O", or just whitespace
             if (trimmedName !== '' && 
                 trimmedName !== '0' && 
                 trimmedName !== 'O' && 
                 trimmedName.length > 0 &&
                 !/^\s*$/.test(trimmedName)) {
               doctorName = trimmedName;
-              console.log('Found valid doctor name from appointment:', doctorName);
             }
           }
         }
         
-        // If no doctor name from appointment, try to extract from description
         if (!doctorName && cleanedDescription) {
           let desc = cleanedDescription.trim();
           
-          // Handle case where description might be "Thanh toán cuộc hẹn0" or similar
-          // Remove trailing "0" if it's part of a malformed description
           desc = desc.replace(/cuộc hẹn0$/i, 'cuộc hẹn').trim();
-          // Also remove any trailing "0" at the end
           desc = desc.replace(/0+$/, '').trim();
           
-          console.log('Trying to extract from description:', desc);
           
-          // Check for invalid patterns first
           const invalidPatterns = [
-            /bác sĩ\s*[0O]\b/i,           // "bác sĩ 0" or "bác sĩ0" or "bác sĩ O"
-            /bác sĩ\s*$/i,                 // "bác sĩ " at end
-            /cho\s+đặt\s+bác sĩ\s*[0O]\b/i, // "cho đặt bác sĩ 0"
-            /cho\s+bác sĩ\s*[0O]\b/i       // "cho bác sĩ 0"
+            /bác sĩ\s*[0O]\b/i,           
+            /bác sĩ\s*$/i,                 
+            /cho\s+đặt\s+bác sĩ\s*[0O]\b/i, 
+            /cho\s+bác sĩ\s*[0O]\b/i       
           ];
           
           const hasInvalidDoctor = invalidPatterns.some(pattern => pattern.test(desc));
           
           if (!hasInvalidDoctor && desc.includes('bác sĩ')) {
-            // Try to extract doctor name from description
-            // Patterns: "bác sĩ [name]", "cho bác sĩ [name]", "cho đặt bác sĩ [name]"
-            // Match text after "bác sĩ" until we hit "ngày", end of string, or invalid characters
             const doctorNameMatch = desc.match(/bác sĩ\s+([^0O\s][^\s]*(?:\s+[^0O\s][^\s]*)*?)(?:\s+ngày|\s*$|$)/i);
             if (doctorNameMatch && doctorNameMatch[1]) {
               const extractedName = doctorNameMatch[1].trim();
-              // Validate that it's not just "0" or empty
               if (extractedName !== '' && extractedName !== '0' && extractedName !== 'O' && extractedName.length > 0) {
                 doctorName = extractedName;
-                console.log('Extracted doctor name from description:', doctorName);
               }
             }
           }
           
-          // Try alternative patterns if first attempt failed
           if (!doctorName) {
-            // Pattern: "cho bác sĩ [name]" or "cho đặt bác sĩ [name]"
             const altPatterns = [
               /cho\s+đặt\s+bác sĩ\s+([A-Za-zÀ-ỹ\s]+?)(?:\s+ngày|$)/i,
               /cho\s+bác sĩ\s+([A-Za-zÀ-ỹ\s]+?)(?:\s+ngày|$)/i,
@@ -632,7 +599,6 @@ export const PatientFinance: React.FC = () => {
                 const extractedName = match[1].trim();
                 if (extractedName !== '' && extractedName !== '0' && extractedName !== 'O' && extractedName.length > 1) {
                   doctorName = extractedName;
-                  console.log('Extracted doctor name using alternative pattern:', doctorName);
                   break;
                 }
               }
@@ -640,9 +606,7 @@ export const PatientFinance: React.FC = () => {
           }
         }
         
-        // Build the description - ALWAYS show doctor name, date, and time if available
         if (doctorName) {
-          // Clean doctor name to remove any trailing "0"
           const cleanDoctorName = cleanDescription(doctorName);
           const { date, time } = formatAppointmentDateTime(appointment);
           
@@ -654,38 +618,15 @@ export const PatientFinance: React.FC = () => {
             result += ` ${time}`;
           }
           
-          // Ensure no trailing "0" in final description
           return cleanDescription(result);
         }
         
-        // If we have appointment but no doctor name, log for debugging
-        if (appointment && !doctorName) {
-          console.warn('Appointment found but no valid doctor name:', {
-            appointmentId: appointment.id,
-            doctorName: appointment.doctorName,
-            transactionId: transaction.id,
-            transactionDescription: transaction.description
-          });
-        }
+     
         
-        // If we have relatedAppointmentId but no appointment found, log it
-        if (transaction.relatedAppointmentId && !appointment) {
-          console.warn('Related appointment ID found but appointment not in map/array:', {
-            relatedAppointmentId: transaction.relatedAppointmentId,
-            transactionId: transaction.id,
-            appointmentMapKeys: Array.from(appointmentMap.keys()),
-            appointmentsIds: appointments.map(apt => apt.id)
-          });
-        }
-        
-        // Fallback: try to extract doctor name from description or use transaction date/time
         if (cleanedDescription && cleanedDescription.trim() !== '0' && !/^0+$/.test(cleanedDescription.trim())) {
           let desc = cleanDescription(cleanedDescription);
-          // If cleaned description is empty or just "0", skip
           if (!desc || desc.trim() === '0' || /^0+$/.test(desc.trim())) {
-            // Skip to last fallback
           } else {
-            // Try to extract doctor name one more time
             const doctorNameMatch = desc.match(/bác sĩ\s+([A-Za-zÀ-ỹ\s]+?)(?:\s+ngày|$)/i);
             if (doctorNameMatch && doctorNameMatch[1]) {
               const extractedName = cleanDescription(doctorNameMatch[1].trim());
@@ -704,7 +645,6 @@ export const PatientFinance: React.FC = () => {
           }
         }
         
-        // Last fallback: use transaction date/time
         const { date, time } = formatTransactionDateTime(transaction);
         let result = 'Thanh toán cuộc hẹn';
         if (date) {
@@ -1006,7 +946,6 @@ export const PatientFinance: React.FC = () => {
             timestamp: new Date().toISOString()
           }));
         } catch (storageError) {
-          console.warn('Failed to save order to localStorage:', storageError);
         }
         
         window.location.href = order.checkoutUrl;
@@ -1014,7 +953,6 @@ export const PatientFinance: React.FC = () => {
         throw new Error('Không nhận được link thanh toán từ server');
       }
     } catch (err: any) {
-      console.error('Error processing deposit:', err);
       
       let errorMessage = 'Có lỗi xảy ra khi nạp tiền. Vui lòng thử lại.';
       
@@ -1271,7 +1209,6 @@ export const PatientFinance: React.FC = () => {
                                   });
                                 }
                               } catch (e) {
-                                console.error('Error parsing date:', e);
                               }
                             }
                             return 'N/A';

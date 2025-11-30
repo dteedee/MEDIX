@@ -34,7 +34,6 @@ const getInitialState = (): DoctorFilters => {
       return JSON.parse(savedState);
     }
   } catch (e) {
-    console.error("Failed to parse doctorListState", e);
   }
   return {
     page: 1,
@@ -75,7 +74,6 @@ export default function DoctorManagement() {
       const uniqueSpecs = [...new Set(data.items.map((d: any) => d.specialization).filter(Boolean))];
       setSpecializations(uniqueSpecs);
     } catch (error) {
-      console.error("Failed to load doctors:", error);
       showToast('Không thể tải danh sách bác sĩ', 'error');
     }
   };
@@ -85,7 +83,6 @@ export default function DoctorManagement() {
       const data = await DoctorRegistrationFormService.getAll({ page: 1, pageSize: 10000, searchTerm: '' });
       setPendingDoctors(data.doctors || []);
     } catch (error) {
-      console.error("Failed to load pending doctors:", error);
       showToast('Không thể tải danh sách bác sĩ chờ duyệt', 'error');
     }
   };
@@ -95,7 +92,6 @@ export default function DoctorManagement() {
       const data = await DoctorDegreeService.getAll();
       setDegrees(data || []);
     } catch (error) {
-      console.error("Failed to load degrees:", error);
     }
   };
 
@@ -152,7 +148,6 @@ export default function DoctorManagement() {
         setViewing(fullDoctor);
       }
     } catch (error) {
-      console.error("Failed to load doctor details:", error);
       showToast('Không thể tải chi tiết bác sĩ', 'error');
     } finally {
       setLoadingDetails(false);
@@ -165,7 +160,6 @@ export default function DoctorManagement() {
       const fullDoctor = await DoctorRegistrationFormService.getDetails(doctor.id);
       setReviewing(fullDoctor);
     } catch (error) {
-      console.error("Failed to load doctor details:", error);
       showToast('Không thể tải chi tiết bác sĩ', 'error');
     } finally {
       setLoadingDetails(false);
@@ -180,7 +174,6 @@ export default function DoctorManagement() {
       setReviewing(null);
       await load();
     } catch (error: any) {
-      console.error('Review failed:', error);
       const message = error?.response?.data?.message || error?.message || 'Không thể xử lý hồ sơ';
       showToast(message, 'error');
     }

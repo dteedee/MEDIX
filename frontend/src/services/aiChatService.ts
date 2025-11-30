@@ -71,9 +71,7 @@ export interface SystemQueryResponse {
 }
 
 class AIChatService {
-  /**
-   * Send chat message to AI
-   */
+ 
   async sendMessage(message: string, conversationHistory?: ChatMessage[]): Promise<ChatMessage> {
     try {
       const response = await apiClient.post<ChatMessage>('/ai-chat/message', {
@@ -86,14 +84,11 @@ class AIChatService {
       });
       return response.data;
     } catch (error: any) {
-      console.error('AI chat error:', error);
       throw this.handleApiError(error);
     }
   }
 
-  /**
-   * Analyze symptoms and get diagnosis recommendations
-   */
+
   async analyzeSymptoms(request: SymptomAnalysisRequest): Promise<SymptomAnalysisResponse> {
     try {
       const response = await apiClient.post<SymptomAnalysisResponse>(
@@ -102,14 +97,11 @@ class AIChatService {
       );
       return response.data;
     } catch (error: any) {
-      console.error('Symptom analysis error:', error);
       throw this.handleApiError(error);
     }
   }
 
-  /**
-   * Upload and analyze EMR file
-   */
+
   async uploadAndAnalyzeEMR(request: EMRUploadRequest): Promise<EMRAnalysisResponse> {
     try {
       const formData = new FormData();
@@ -124,14 +116,10 @@ class AIChatService {
       );
       return response.data;
     } catch (error: any) {
-      console.error('EMR analysis error:', error);
       throw this.handleApiError(error);
     }
   }
 
-  /**
-   * Query system information (doctors, specialties, etc.)
-   */
   async querySystem(query: string): Promise<SystemQueryResponse> {
     try {
       const response = await apiClient.post<SystemQueryResponse>('/ai-chat/query-system', {
@@ -139,7 +127,6 @@ class AIChatService {
       });
       return response.data;
     } catch (error: any) {
-      console.error('System query error:', error);
       throw this.handleApiError(error);
     }
   }

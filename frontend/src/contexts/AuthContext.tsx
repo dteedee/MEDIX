@@ -44,13 +44,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [user]);
 
-  // Initialize auth state on app start
   useEffect(() => {
     initializeAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Listen for auth changes from external sources (like Google login)
   useEffect(() => {
     const handleAuthChange = () => {
       const userData = localStorage.getItem('userData');
@@ -59,7 +56,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const parsedUser = JSON.parse(userData);
           setUser(parsedUser);
         } catch (error) {
-          console.error('Error parsing user data:', error);
         }
       }
     };
@@ -73,12 +69,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const initializeAuth = async () => {
     try {
-      // Check if user data exists in localStorage
       const userData = localStorage.getItem('userData');
       const accessToken = localStorage.getItem('accessToken');
       const refreshToken = localStorage.getItem('refreshToken');
       
-      // If we have user data but no tokens, clear everything (Google login error case)
       if (userData && !accessToken && !refreshToken) {
         localStorage.removeItem('userData');
         localStorage.removeItem('currentUser');
@@ -86,35 +80,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
       
-      // Check if access token is expired but we have refresh token
       const tokenExpiration = localStorage.getItem('tokenExpiration');
       const isTokenExpired = tokenExpiration && Date.now() >= parseInt(tokenExpiration);
       
-      // If we have refresh token but access token is expired or missing, try to refresh
       if (refreshToken && (!accessToken || isTokenExpired)) {
         try {
-          // Try to refresh the token
           const authResponse = await authService.refreshToken(refreshToken);
-          // Store new tokens
           apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken);
-          // Restore user data
           if (userData) {
             await loadUserProfile();
           }
         } catch (refreshError) {
-          console.error('Failed to refresh token on initialization:', refreshError);
-          // If refresh fails, clear everything
+
           apiClient.clearTokens();
           localStorage.removeItem('userData');
           localStorage.removeItem('currentUser');
         }
       } else if (userData && accessToken) {
-        // If we have both user data and valid access token, just restore user profile
         await loadUserProfile();
       }
     } catch (error) {
-      console.error('Failed to initialize auth:', error);
-      // Clear invalid tokens
       apiClient.clearTokens();
       localStorage.removeItem('userData');
       localStorage.removeItem('currentUser');
@@ -125,17 +110,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loadUserProfile = async () => {
     try {
-      // You would need to implement a profile endpoint in your backend
-      // For now, we'll decode from token or store user data during login
       const userData = localStorage.getItem('userData');
       if (userData) {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
-        // Dispatch auth changed event for Header component
         window.dispatchEvent(new Event('authChanged'));
       }
     } catch (error) {
-      console.error('Failed to load user profile:', error);
       throw error;
     }
   };
@@ -147,27 +128,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       let finalUser = authResponse.user;
 
-      // Store tokens immediately so subsequent API calls are authenticated
       apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken);
 
-      // If the user is a doctor, fetch additional profile details
       if (finalUser.role === UserRole.DOCTOR) {
         try {
           const doctorDetails = await doctorService.getDoctorProfileDetails();
-          // Merge the details into the user object
           finalUser = { ...finalUser, ...doctorDetails };
         } catch (detailsError) {
-          console.error('Could not fetch doctor details:', detailsError);
         }
       }
 
-      // Store user data
       updateUserInStorageAndState(finalUser);
       
-      // Dispatch auth changed event for Header component
       window.dispatchEvent(new Event('authChanged'));
     } catch (error: any) {
-      console.error('Login failed:', error);
       
       if (error?.message?.includes('Tài khoản bị khóa')) {
         throw new Error('Tài khoản bị khóa, vui lòng liên hệ bộ phận hỗ trợ');
@@ -183,7 +157,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(userToUpdate);
     localStorage.setItem('userData', JSON.stringify(userToUpdate));
     localStorage.setItem('currentUser', JSON.stringify(userToUpdate));
-    // Dispatch event to notify other components of the update
     window.dispatchEvent(new Event('authChanged'));
   };
 
@@ -192,18 +165,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const authResponse: AuthResponse = await authService.register(userData);
       
-      // Store tokens
       apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken);
       
-      // Store user data
       localStorage.setItem('userData', JSON.stringify(authResponse.user));
       localStorage.setItem('currentUser', JSON.stringify(authResponse.user));
       setUser(authResponse.user);
       
-      // Dispatch auth changed event for Header component
       window.dispatchEvent(new Event('authChanged'));
     } catch (error) {
-      console.error('Registration failed:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -215,18 +184,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const authResponse: AuthResponse = await authService.registerPatient(patientData);
       
-      // Store tokens
       apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken);
       
-      // Store user data
       localStorage.setItem('userData', JSON.stringify(authResponse.user));
       localStorage.setItem('currentUser', JSON.stringify(authResponse.user));
       setUser(authResponse.user);
       
-      // Dispatch auth changed event for Header component
       window.dispatchEvent(new Event('authChanged'));
     } catch (error) {
-      console.error('Patient registration failed:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -236,10 +201,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     try {
       await authService.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      // Always clear local state
+    } catch (error) { } finally {
       setUser(null);
       localStorage.removeItem('userData');
       localStorage.removeItem('currentUser');
@@ -247,10 +209,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('refreshToken');
       apiClient.clearTokens();
       
-      // Dispatch auth changed event for Header component
       window.dispatchEvent(new Event('authChanged'));
       
-      // Force reload to clear all state and prevent back navigation
       window.location.href = '/login';
     }
   };
@@ -266,18 +226,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const updatedUser = { ...user, ...updatedUserData };
     setUser(updatedUser);
     
-    // Update localStorage
     localStorage.setItem('userData', JSON.stringify(updatedUser));
     localStorage.setItem('currentUser', JSON.stringify(updatedUser));
     
-    // Dispatch auth changed event for other components
     window.dispatchEvent(new Event('authChanged'));
   };
 
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
     
-    // Define permissions based on roles
     const rolePermissions: Record<string, string[]> = {
       [UserRole.ADMIN]: [
         'manage_users',

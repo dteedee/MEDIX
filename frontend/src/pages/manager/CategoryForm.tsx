@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext'; 
 import { categoryService } from '../../services/categoryService';
 import type { CategoryDTO, CreateCategoryRequest, UpdateCategoryRequest } from '../../types/category.types';
-import styles from '../../styles/admin/ArticleForm.module.css'; // Tái sử dụng style
+import styles from '../../styles/admin/ArticleForm.module.css'; 
 
 interface Props {
   category?: CategoryDTO | null;

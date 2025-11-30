@@ -128,15 +128,12 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
       setEditingScheduleId(null);
       setIsAdding(false);
     } catch (err: any) {
-      console.error("Error saving schedule:", err);
 
-      let errorMessage = 'Lưu lịch làm việc thất bại.'; // Fallback mặc định
+      let errorMessage = 'Lưu lịch làm việc thất bại.'; 
       if (err.response && err.response.data) {
         if (typeof err.response.data === 'string') {
-          // Xử lý trường hợp backend trả về chuỗi thuần túy
           errorMessage = err.response.data;
         } else if (typeof err.response.data === 'object') {
-          // Xử lý trường hợp backend trả về đối tượng JSON (ví dụ: ProblemDetails)
           errorMessage =
             err.response.data.detail ||
             err.response.data.message ||
@@ -171,15 +168,12 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
         Swal.fire('Đã xóa!', 'Lịch làm việc đã được xóa.', 'success');
         onRefresh();
       } catch (err: any) {
-        console.error("Error deleting schedule:", err);
 
-        let errorMessage = 'Xóa lịch làm việc thất bại.'; // Fallback mặc định
+        let errorMessage = 'Xóa lịch làm việc thất bại.'; 
         if (err.response && err.response.data) {
           if (typeof err.response.data === 'string') {
-            // Xử lý trường hợp backend trả về chuỗi thuần túy
             errorMessage = err.response.data;
           } else if (typeof err.response.data === 'object') {
-            // Xử lý trường hợp backend trả về đối tượng JSON
             errorMessage =
               err.response.data.detail ||
               err.response.data.message ||

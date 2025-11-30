@@ -24,11 +24,9 @@ const Login: React.FC = () => {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
-  // Regex kiểm tra email hợp lệ
   const isValidEmail = (text: string) =>
     /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(text);
 
-  // Lấy thông tin ghi nhớ từ localStorage
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberEmail');
     const rememberedPassword = localStorage.getItem('rememberPassword');
@@ -41,10 +39,8 @@ const Login: React.FC = () => {
     }
   }, []);
 
-  // Khởi tạo Google Sign-In
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) {
-      console.warn('⚠️ Google Client ID chưa được cấu hình');
       return;
     }
 
@@ -73,11 +69,9 @@ const Login: React.FC = () => {
             logo_alignment: 'left',
           });
           
-          // Override text to Vietnamese after button is rendered
           const updateGoogleButtonText = () => {
             const googleButton = container.querySelector('div[role="button"]');
             if (googleButton) {
-              // Find all text spans
               const spans = googleButton.querySelectorAll('span');
               spans.forEach((span) => {
                 const text = span.textContent || '';
@@ -89,7 +83,6 @@ const Login: React.FC = () => {
             }
           };
           
-          // Try multiple times as Google button loads asynchronously
           setTimeout(updateGoogleButtonText, 100);
           setTimeout(updateGoogleButtonText, 300);
           setTimeout(updateGoogleButtonText, 500);
@@ -102,7 +95,6 @@ const Login: React.FC = () => {
     };
   }, []);
 
-  // Xử lý đăng nhập Google
   const handleGoogleResponse = async (response: any) => {
     if (!response || !response.credential) {
       showToast('Không lấy được credential từ Google', 'error');
@@ -136,11 +128,9 @@ const Login: React.FC = () => {
     }
   };
 
-  // Xử lý submit form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Nếu còn lỗi, không cho gửi
     if (emailError || passwordError) {
       showToast('Vui lòng kiểm tra lại thông tin nhập', 'error');
       return;
@@ -199,7 +189,6 @@ const Login: React.FC = () => {
 
   return (
     <div className={styles["login-page"]}>
-      {/* Background animation */}
       <div className={styles["bg-decoration"]}>
         <div className={styles["shape"]} style={{ top: '10%', left: '5%' }}></div>
         <div className={styles["shape"]} style={{ top: '60%', left: '10%' }}></div>
@@ -208,7 +197,6 @@ const Login: React.FC = () => {
       </div>
 
       <div className={styles["login-container"]}>
-        {/* Left side */}
         <div className={styles["brand-section"]}>
           <div className={styles["brand-content"]}>
             <Link to="/" className={styles["brand-logo"]} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -265,16 +253,13 @@ const Login: React.FC = () => {
           </div>
         </div>
 
-        {/* Right side - Login form */}
         <div className={styles["form-section"]}>
           <div className={styles["form-container"]}>
             <div className={styles["form-header"]}>
               <h2>Đăng nhập</h2>
               <p>Chào mừng bạn trở lại!</p>
             </div>
-
             <form onSubmit={handleSubmit}>
-              {/* Email / Username */}
               <div className={styles["input-group"]}>
                 <label htmlFor="identifier">
                   <i className="bi bi-envelope"></i>
@@ -313,7 +298,6 @@ const Login: React.FC = () => {
                 )}
               </div>
 
-              {/* Password */}
               <div className={styles["input-group"]}>
                 <label htmlFor="password">
                   <i className="bi bi-lock"></i>
@@ -349,7 +333,6 @@ const Login: React.FC = () => {
                 )}
               </div>
 
-              {/* Remember + Forgot */}
               <div className={styles["form-extras"]}>
                 <label className={styles["remember-me"]}>
                   <input
@@ -364,7 +347,6 @@ const Login: React.FC = () => {
                 </Link>
               </div>
 
-              {/* Submit */}
               <button type="submit" className={styles["btn-login"]} disabled={isLoading}>
                 {isLoading ? (
                   <>
@@ -380,12 +362,10 @@ const Login: React.FC = () => {
               </button>
             </form>
 
-            {/* Divider */}
             <div className={styles["divider"]}>
               <span>hoặc</span>
             </div>
 
-            {/* Google Sign In */}
             <div className={styles["google-signin-container"]}>
               <div id="googleSignInDiv" className={styles["google-btn-wrapper"]}></div>
             </div>

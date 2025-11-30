@@ -58,7 +58,6 @@ export default function CommissionManagement() {
         setLoading(false);
       }, 1000);
     } catch (error) {
-      console.error('Error loading commissions:', error);
       showToast('Không thể tải dữ liệu hoa hồng', 'error');
       setLoading(false);
     }

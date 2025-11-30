@@ -15,7 +15,6 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
@@ -46,7 +45,6 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
   const handleGoHome = () => {
     setShowUserMenu(false);
     navigate('/');
-    // Scroll to top when navigating to home
     window.scrollTo(0, 0);
   };
 
@@ -125,14 +123,7 @@ const ManagerSidebar: React.FC<ManagerSidebarProps> = ({ currentPage = 'dashboar
           <i className="bi bi-box"></i>
           {sidebarOpen && <span>Gói dịch vụ</span>}
         </Link>
-        {/* <Link
-          to="/app/manager/commissions"
-          className={`${styles.navItem} ${currentPage === 'commissions' ? styles.active : ''}`}
-          onClick={() => setShowUserMenu(false)}
-        >
-          <i className="bi bi-percent"></i>
-          {sidebarOpen && <span>Hoa hồng</span>}
-        </Link> */}
+
         <Link
           to="/app/manager/transfer-transactions"
           className={`${styles.navItem} ${currentPage === 'transfer-transactions' ? styles.active : ''}`}

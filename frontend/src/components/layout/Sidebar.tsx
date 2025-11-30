@@ -11,7 +11,7 @@ type SidebarItem = {
 };
 
 interface SidebarProps {
-  basePath?: string; // e.g., '/app/patient'
+  basePath?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ basePath }) => {
@@ -21,18 +21,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ basePath }) => {
 
   const toggleCMS = () => setOpenCMS((prev) => !prev);
 
-  // Auto-detect basePath from current /app/<module> when not provided
   const autoBasePath = useMemo(() => {
     if (basePath) return basePath;
     const segments = location.pathname.split('/').filter(Boolean);
-    // Expecting /app/<section>/...
     if (segments[0] === 'app' && segments[1]) {
       return `/app/${segments[1]}`;
     }
     return '/app';
   }, [basePath, location.pathname]);
 
-  // Menu per role
   const items: SidebarItem[] = useMemo(() => {
     switch (user?.role as UserRole | undefined) {
       case UserRole.ADMIN:

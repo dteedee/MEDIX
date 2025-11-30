@@ -4,14 +4,10 @@ import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, Service
 class DoctorService {
     async getDoctorProfile(doctorID: string | undefined): Promise<DoctorProfileDto> {
         try {
-            console.log('🔵 Calling API: /doctor/profile/' + doctorID);
             const response = await apiClient.get<DoctorProfileDto>('/doctor/profile/' + doctorID);
-            console.log('🟢 API Response:', response);
-            console.log('🟢 Response Data:', response.data);
         
             return response.data;
         } catch (error: any) {
-            console.error('🔴 Get doctor profile data error: ', error);
             throw this.handleApiError(error);
         }
     }
@@ -30,9 +26,6 @@ class DoctorService {
         return response.data;
     }
 
-    // async updatePassword(payload: FormData): Promise<any> {
-    //     await apiClient.put('doctor/profile/update-password', payload);
-    // }
 
     async getDoctorsGroupedByTier(queryParams: DoctorQueryParameters): Promise<ServiceTierWithPaginatedDoctorsDto[]> {
         try {
@@ -41,7 +34,6 @@ class DoctorService {
             });
             return response.data;
         } catch (error: any) {
-            console.error('Get doctors grouped by tier error: ', error);
             throw this.handleApiError(error);
         }
     }
@@ -51,7 +43,6 @@ class DoctorService {
             const response = await apiClient.get<DoctorTypeDegreeDto[]>('/doctor/education-type');
             return response.data;
         } catch (error: any) {
-            console.error('Get education types error: ', error);
             throw this.handleApiError(error);
         }
     }
@@ -77,7 +68,6 @@ class DoctorService {
             const response = await apiClient.get<DoctorRegisterMetadata>('/DoctorRegistrationForm/register-metadata');
             return response.data;
         } catch (error: any) {
-            console.error('Get metadata error: ', error);
             throw this.handleApiError(error);
         }
     }
@@ -89,7 +79,6 @@ class DoctorService {
             });
             return response.data;
         } catch (error: any) {
-            console.error('Get doctors grouped by education error: ', error);
             throw this.handleApiError(error);
         }
     }
@@ -99,7 +88,6 @@ class DoctorService {
             const response = await apiClient.get<any>(`/doctor/${id}/statistics`);
             return response.data;
         } catch (error: any) {
-            console.error('Get doctor statistics error: ', error);
             throw this.handleApiError(error);
         }
     }
@@ -114,7 +102,6 @@ class DoctorService {
             });
             return response.data;
         } catch (error: any) {
-            console.error('Get top doctors by performance error: ', error);
             throw this.handleApiError(error);
         }
     }
@@ -128,7 +115,6 @@ class DoctorService {
             const response = await apiClient.put(`/doctor/${doctorId}/education-fee`, requestBody);
             return response.data;
         } catch (error: any) {
-            console.error('Update doctor education and fee error: ', error);
             throw this.handleApiError(error);
         }
     }
@@ -137,7 +123,6 @@ class DoctorService {
         if (error.response?.data) {
             const apiError = error.response.data;
 
-            // Handle validation errors from backend
             if (apiError.errors) {
                 const errorMessages = Object.entries(apiError.errors)
                     .flat()

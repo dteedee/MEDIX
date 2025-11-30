@@ -324,7 +324,7 @@ export const PatientResults: React.FC = () => {
             } catch (err: any) {
               // Medical record might not exist yet
               if (err.response?.status !== 404) {
-                console.error('Error loading medical record:', err);
+
               }
             }
 
@@ -334,7 +334,6 @@ export const PatientResults: React.FC = () => {
               try {
                 doctorProfile = await doctorService.getDoctorProfile(item.appointment.doctorID);
               } catch (err) {
-                console.error('Error loading doctor profile:', err);
               }
             }
 
@@ -350,7 +349,6 @@ export const PatientResults: React.FC = () => {
               return updated;
             });
           } catch (err) {
-            console.error('Error loading result details:', err);
             setResults((prev) => {
               const updated = [...prev];
               updated[i] = {
@@ -362,7 +360,6 @@ export const PatientResults: React.FC = () => {
           }
         }
       } catch (err: any) {
-        console.error('Error loading results:', err);
         setError(err.response?.data?.message || 'Không thể tải kết quả khám');
         showToast('Không thể tải kết quả khám', 'error');
       } finally {

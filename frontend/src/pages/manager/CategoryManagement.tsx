@@ -6,7 +6,7 @@ import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 import { categoryService } from '../../services/categoryService';
 import type { CategoryDTO } from '../../types/category.types';
-import CategoryForm from './CategoryForm'; // Import form component
+import CategoryForm from './CategoryForm'; 
 
 interface CategoryListFilters {
   page: number;
@@ -48,7 +48,6 @@ export default function CategoryList({ hideHeader = false, title = 'Quản lý D
       setTotal(total);
       setLoading(false);
     } catch (error) {
-      console.error("Failed to load categories:", error);
       showToast('Không thể tải danh mục.', 'error');
     } finally {
       setLoading(false);
@@ -78,19 +77,15 @@ export default function CategoryList({ hideHeader = false, title = 'Quản lý D
   const confirmSoftDelete = async () => {
     if (!selectedCategory) return;
     try {
-      // Sử dụng categoryService để cập nhật
       await categoryService.update(selectedCategory.id, {
-        // Gửi đầy đủ các trường thông tin của danh mục, chỉ thay đổi isActive
         name: selectedCategory.name,
         slug: selectedCategory.slug,
         description: selectedCategory.description,
-        isActive: !selectedCategory.isActive, // Đảo ngược trạng thái hiện tại
+        isActive: !selectedCategory.isActive, 
       });
       showToast(`Đã ${!selectedCategory.isActive ? 'kích hoạt' : 'tạm dừng'} danh mục "${selectedCategory.name}"`, 'success');
-      // Tải lại danh sách để cập nhật UI
       await load();
     } catch (error) {
-      console.error("Failed to update category status:", error);
       showToast('Không thể cập nhật trạng thái danh mục.', 'error');
     } finally {
       setShowConfirmation(false);

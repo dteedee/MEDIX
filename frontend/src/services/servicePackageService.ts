@@ -6,16 +6,15 @@ const toModel = (dto: DoctorServiceTier): DoctorServiceTier => {
   try {
     featuresList = JSON.parse(dto.features || '[]');
     if (!Array.isArray(featuresList)) {
-      featuresList = []; // Đảm bảo luôn là mảng
+      featuresList = []; 
     }
   } catch (e) {
-    console.error('Failed to parse features JSON string:', dto.features, e);
     featuresList = [];
   }
 
   return {
     ...dto,
-    id: dto.serviceTierId, // Thêm id để tương thích với các component cũ
+    id: dto.serviceTierId,
     featuresList,
   };
 };

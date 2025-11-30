@@ -23,20 +23,16 @@ function DoctorRegister() {
         identityCardImages?: boolean,
     }>({});
 
-    // Separate state for date display value (DD/MM/YYYY format)
     const [dateOfBirthDisplay, setDateOfBirthDisplay] = useState('');
 
-    // Helper function to format date to DD/MM/YYYY for display
     const formatDateForDisplay = (dateString: string): string => {
         if (!dateString) return '';
         
-        // If already in YYYY-MM-DD format, convert to DD/MM/YYYY
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
             const [year, month, day] = dateString.split('-');
             return `${day}/${month}/${year}`;
         }
         
-        // If already in DD/MM/YYYY format, return as is
         if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
             return dateString;
         }
@@ -44,30 +40,25 @@ function DoctorRegister() {
         return dateString;
     };
 
-    // Helper function to validate date values
     const validateDateValues = (day: string, month: string, year: string): { isValid: boolean; error?: string } => {
         const dayNum = parseInt(day, 10);
         const monthNum = parseInt(month, 10);
         const yearNum = parseInt(year, 10);
         
-        // Check year range (reasonable range: 1900 to current year)
         const currentYear = new Date().getFullYear();
         if (yearNum < 1900 || yearNum > currentYear) {
             return { isValid: false, error: `Năm phải từ 1900 đến ${currentYear}` };
         }
         
-        // Check month range
         if (monthNum < 1 || monthNum > 12) {
             return { isValid: false, error: 'Tháng phải từ 1 đến 12' };
         }
         
-        // Check day range based on month
         const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
         if (dayNum < 1 || dayNum > daysInMonth) {
             return { isValid: false, error: `Ngày không hợp lệ. Tháng ${monthNum} có tối đa ${daysInMonth} ngày` };
         }
         
-        // Check if the date is valid (e.g., not 29/02 on non-leap year)
         const date = new Date(yearNum, monthNum - 1, dayNum);
         if (date.getFullYear() !== yearNum || date.getMonth() !== monthNum - 1 || date.getDate() !== dayNum) {
             return { isValid: false, error: 'Ngày tháng năm không hợp lệ' };
@@ -76,9 +67,7 @@ function DoctorRegister() {
         return { isValid: true };
     };
 
-    // Helper function to parse and format date input with validation
     const parseDateInput = (input: string): { date: string; error?: string } => {
-        // If input is already in YYYY-MM-DD format, validate and return
         if (/^\d{4}-\d{2}-\d{2}$/.test(input)) {
             const [year, month, day] = input.split('-');
             const validation = validateDateValues(day, month, year);
@@ -88,7 +77,6 @@ function DoctorRegister() {
             return { date: input };
         }
         
-        // Handle DD/MM/YYYY format
         const ddmmyyyyMatch = input.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
         if (ddmmyyyyMatch) {
             const [, day, month, year] = ddmmyyyyMatch;
@@ -157,7 +145,6 @@ function DoctorRegister() {
                 const data = await DoctorRegistrationFormService.getMetadata();
                 setMetadata(data);
             } catch (error) {
-                console.error('Failed to fetch metadata:', error);
                 setErrorCode(500);
             } finally {
                 setPageLoading(false);
@@ -189,9 +176,7 @@ function DoctorRegister() {
         }
 
         for (const [key, value] of submitFormData.entries()) {
-            console.log(`${key}:`, value);
         }
-        console.log(submitFormData);
 
         const agreed = submitFormData.get('agreeToTerms') === 'on'; // checkbox returns 'on' if checked
 
@@ -207,7 +192,6 @@ function DoctorRegister() {
         try {
             await DoctorRegistrationFormService.registerDoctor(submitFormData);
             setLoading(false);
-            console.log('Registration successful');
             Swal.fire({
                 title: 'Đăng ký thành công!',
                 text: 'Tài khoản của bạn đang chờ xác minh. Hệ thống sẽ tự động quay lại trang chủ.',
@@ -218,17 +202,13 @@ function DoctorRegister() {
             });
         } catch (error: any) {
             setLoading(false);
-            console.error('Registration failed:', error);
 
             const status = error?.response?.status;
 
             if (status === 400 || status === 422) {
-                // Handle validation errors
                 const errorData = error.response.data;
                 setErrors(errorData.errors);
-                console.log(errorData.errors);
             } else {
-                // Fallback for other errors
                 setErrors({ general: 'Đã xảy ra lỗi. Vui lòng thử lại.' });
             }
         }

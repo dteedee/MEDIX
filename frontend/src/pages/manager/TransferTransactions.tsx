@@ -100,7 +100,7 @@ const TransferTransactions: React.FC = () => {
       setTransactions(data);
       setLastSyncedAt(new Date());
     } catch (err: any) {
-      console.error('Error loading transactions:', err);
+
       const errorMessage =
         err?.response?.data?.message || err?.message || 'Không thể tải danh sách giao dịch';
       setError(errorMessage);

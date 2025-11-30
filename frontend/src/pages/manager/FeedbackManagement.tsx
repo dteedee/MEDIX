@@ -196,7 +196,6 @@ const FeedbackManagement: React.FC = () => {
         setReviews(sorted);
         setError(null);
       } catch (err) {
-        console.error('Error loading reviews', err);
         setError('Không thể tải danh sách phản hồi. Vui lòng thử lại.');
       } finally {
         setIsLoading(false);

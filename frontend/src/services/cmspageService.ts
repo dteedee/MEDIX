@@ -3,13 +3,10 @@ import { apiClient } from '../lib/apiClient'
 
 const BASE = '/Cmspage'
 
-// Helper function to process and re-throw API validation errors
 function handleApiError(error: any, context: string) {
   if (error.response?.data?.errors) {
     const backendErrors = error.response.data.errors;
-    console.error(`Lỗi validation từ backend khi ${context}:`, JSON.stringify(backendErrors, null, 2));
     
-    // Trích xuất thông báo lỗi đầu tiên từ mỗi trường
     const processedErrors: { [key: string]: string } = {};
     for (const key in backendErrors) {
       if (backendErrors[key] && backendErrors[key].length > 0) {
@@ -18,7 +15,7 @@ function handleApiError(error: any, context: string) {
     }
     throw processedErrors;
   }
-  throw error; // Re-throw other types of errors
+  throw error; 
 }
 
 export const cmspageService = {
@@ -58,7 +55,6 @@ export const cmspageService = {
     } catch (error: any) {
       if (error.response?.data?.errors) {
         const backendErrors = error.response.data.errors;
-        console.error("Lỗi validation từ backend khi tạo trang CMS:", JSON.stringify(backendErrors, null, 2));
         throw backendErrors;
       }
       throw error;
@@ -72,7 +68,6 @@ export const cmspageService = {
     } catch (error: any) {
       if (error.response?.data?.errors) {
         const backendErrors = error.response.data.errors;
-        console.error(`Lỗi validation từ backend khi cập nhật trang CMS (ID: ${id}):`, JSON.stringify(backendErrors, null, 2));
         throw backendErrors;
       }
       throw error;

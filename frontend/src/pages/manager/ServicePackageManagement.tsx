@@ -5,7 +5,6 @@ import { useToast } from '../../contexts/ToastContext'
 import styles from '../../styles/manager/ServicePackageManagement.module.css'
 import { servicePackageService } from '../../services/servicePackageService'
 import { DoctorServiceTier, DoctorServiceTierUpdateRequest } from '../../types/doctor-service-tier.types'
-// SVG Icons for actions
 const ViewIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -59,7 +58,6 @@ export default function ServicePackageManagement() {
       const data = await servicePackageService.getAllTiers();
       setPackages(data);
     } catch (error) {
-      console.error('Failed to load service packages', error);
       const message =
         axios.isAxiosError(error)
           ? error.response?.data?.message ?? 'Không thể tải danh sách gói dịch vụ.'
@@ -106,7 +104,6 @@ export default function ServicePackageManagement() {
       setViewPackage(latest);
       setShowDetails(true);
     } catch (error) {
-      console.error('Failed to load service package detail', error);
       const message =
         axios.isAxiosError(error)
           ? error.response?.data?.message ?? 'Không thể tải chi tiết gói dịch vụ.'
@@ -131,7 +128,6 @@ export default function ServicePackageManagement() {
       setFormErrors({});
       setShowEditModal(true);
     } catch (error) {
-      console.error('Failed to load service package detail', error);
       const message =
         axios.isAxiosError(error)
           ? error.response?.data?.message ?? 'Không thể tải thông tin gói dịch vụ.'
@@ -193,10 +189,9 @@ export default function ServicePackageManagement() {
       });
 
       showToast('Cập nhật gói dịch vụ thành công', 'success');
-      await loadPackages(); // Tải lại toàn bộ danh sách
+      await loadPackages(); 
       handleCloseEdit();
     } catch (error) {
-      console.error('Failed to update service package', error);
       const message =
         axios.isAxiosError(error)
           ? error.response?.data?.message ?? 'Không thể cập nhật gói dịch vụ.'

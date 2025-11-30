@@ -174,15 +174,11 @@ export const ManagerProfile: React.FC = () => {
       try {
         const res = await userService.getUserInfo();
         if (mounted) {
-          // Get manager-specific data from API
           let managerData: any = {};
           try {
-            // Try to get manager data - this endpoint should exist if manager is registered
             const managerResponse = await apiClient.get('/manager/getManagerInfo');
             managerData = managerResponse.data;
-            console.log('Manager data received:', managerData);
           } catch (error) {
-            console.log('Manager info not available, using basic data');
           }
           
           const extendedData: ExtendedUserInfo = {

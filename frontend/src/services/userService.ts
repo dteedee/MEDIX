@@ -8,16 +8,16 @@ export interface UserBasicInfo {
   email: string;
   phoneNumber: string | null;
   address: string | null;
-  dob: string | null; // ISO date string 'YYYY-MM-DD'
-  imageURL?: string | null; // Match backend DTO field name
-  identificationNumber?: string | null; // Số CMND/CCCD
+  dob: string | null; 
+  imageURL?: string | null; 
+  identificationNumber?: string | null; 
   createdAt: string;
-  medicalRecordNumber?: string | null; // Somente leitura
-  emergencyContactName?: string | null; // Editável
-  emergencyContactPhone?: string | null; // Editável
-  allergies?: string | null; // Match backend DTO field name
-  medicalHistory?: string | null; // Match backend DTO field name
-  bloodTypeCode?: string | null; // Blood type code
+  medicalRecordNumber?: string | null; 
+  emergencyContactName?: string | null; 
+  emergencyContactPhone?: string | null; 
+  allergies?: string | null; 
+  medicalHistory?: string | null; 
+  bloodTypeCode?: string | null; 
 }
 
 export interface UpdateUserInfo {
@@ -32,25 +32,17 @@ export interface UpdateUserInfo {
   emergencyContactPhone?: string;
   medicalHistory?: string;
   allergies?: string;
-  imageURL?: string; // Avatar URL
-  bloodTypeCode?: string; // Blood type code
+  imageURL?: string;
+  bloodTypeCode?: string; 
 }
 
 export const userService = {
   async getUserInfo(): Promise<UserBasicInfo> {
     try {
-      console.log('🔄 userService - Calling API: /user/getUserInfor');
       const response = await apiClient.get<UserBasicInfo>('/user/getUserInfor');
-      console.log('✅ userService - API response received:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('❌ userService - Error fetching user info:', error);
-      console.error('❌ userService - Error details:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message
-      });
+     
 
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
@@ -97,11 +89,8 @@ export const userService = {
       }
 
       const response = await apiClient.put<UserBasicInfo>('/user/updateUserInfor', updateDto);
-      console.log('UpdateUserInfo - Request payload:', updateDto);
-      console.log('UpdateUserInfo - API response:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Error updating user info:', error);
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -118,17 +107,13 @@ export const userService = {
     try {
       const formData = new FormData();
       formData.append('file', imageFile);
-      console.log('Upload profile image:');
-      console.log('- File name:', imageFile.name);
-      console.log('- File type:', imageFile.type);
-      console.log('- File size:', imageFile.size);
+      
       
       // Chỉ gọi endpoint /user/uploadAvatar
       const userResponse = await apiClient.postMultipart<{ imageUrl: string }>('/user/uploadAvatar', formData);
       const imageUrl = userResponse.data.imageUrl;
       return { imageUrl };
     } catch (error: any) {
-      console.error('Error uploading profile image:', error);
       if (error.response?.status === 401) {
         throw new Error('Unauthorized - please login again');
       } else if (error.response?.status === 404) {
@@ -148,11 +133,9 @@ export const userService = {
               validationErrors.push(`${field}: ${messages}`);
             }
           }
-          console.log('Validation errors:', validationErrors);
           throw new Error(`Validation Error: ${validationErrors.join('; ')}`);
         }
         const backendMessage = responseData?.message || responseData?.title || 'File không hợp lệ';
-        console.log('Backend 400 error message:', backendMessage);
         throw new Error(`Backend Error: ${backendMessage}`);
       } else if (error.response?.status === 500) {
         throw new Error('Lỗi server khi upload ảnh. Vui lòng thử lại sau');

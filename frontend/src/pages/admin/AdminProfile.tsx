@@ -99,7 +99,6 @@ export const AdminProfile: React.FC = () => {
     const errors: Record<string, string> = {};
     let isValid = true;
 
-    // Validate required fields - these must not be empty
     const requiredFields = ['username', 'fullName', 'email', 'phoneNumber', 'cccd'];
     
     for (const field of requiredFields) {
@@ -108,7 +107,6 @@ export const AdminProfile: React.FC = () => {
         errors[field] = `${getFieldDisplayName(field)} không được để trống`;
         isValid = false;
       } else {
-        // Validate format if field has value
         const error = validateField(field, value);
         if (error) {
           errors[field] = error;
@@ -117,7 +115,6 @@ export const AdminProfile: React.FC = () => {
       }
     }
 
-    // Validate optional fields if they have values
     if (editData.address && editData.address.trim() === '') {
       errors.address = 'Địa chỉ không được để trống nếu đã nhập';
       isValid = false;
@@ -152,7 +149,6 @@ export const AdminProfile: React.FC = () => {
     if (value.trim()) {
       validateSingleField(fieldName, value);
     } else {
-      // Clear error if field is empty
       setFieldErrors(prev => ({
         ...prev,
         [fieldName]: ''
@@ -166,15 +162,11 @@ export const AdminProfile: React.FC = () => {
       try {
         const res = await userService.getUserInfo();
         if (mounted) {
-          // Get admin-specific data from API
           let adminData: any = {};
           try {
-            // Try to get admin data - this endpoint should exist if admin is registered
             const adminResponse = await apiClient.get('/admin/getAdminInfo');
             adminData = adminResponse.data;
-            console.log('Admin data received:', adminData);
           } catch (error) {
-            console.log('Admin info not available, using basic data');
           }
           
           const extendedData: ExtendedUserInfo = {
@@ -205,7 +197,6 @@ export const AdminProfile: React.FC = () => {
   }, []);
 
   const handleSaveClick = () => {
-    // Check required fields first
     const requiredFields = ['username', 'fullName', 'email', 'phoneNumber', 'cccd'];
     const missingFields: string[] = [];
     
@@ -221,13 +212,11 @@ export const AdminProfile: React.FC = () => {
       return;
     }
 
-    // Validate format
     if (!validateAllFields()) {
       showToast('Vui lòng kiểm tra lại thông tin đã nhập', 'error');
       return;
     }
 
-    // Validate age
     if (editData.dob) {
       const date = new Date(editData.dob);
       const now = new Date();
@@ -244,7 +233,6 @@ export const AdminProfile: React.FC = () => {
       }
     }
 
-    // Show confirmation dialog
     setShowSaveConfirmation(true);
   };
 
@@ -257,31 +245,28 @@ export const AdminProfile: React.FC = () => {
     showToast('Đang cập nhật thông tin...', 'info');
 
     try {
-      // Map cccd to identificationNumber for API
       const apiData = {
         ...editData,
         identificationNumber: editData.cccd,
       };
       
-      // Nếu username không được nhập hoặc rỗng, giữ nguyên username hiện tại
       if (!apiData.username || apiData.username.trim() === '') {
         apiData.username = data?.username || '';
       }
       
-      delete apiData.cccd; // Remove cccd field before sending to API
+      delete apiData.cccd; 
       
       const updatedUser = await userService.updateUserInfo(apiData);
       const finalUsername = updatedUser.username && updatedUser.username !== updatedUser.email 
         ? updatedUser.username 
         : editData.username || data?.username || '';
       
-      // Preserve imageURL from current data - API might not return avatarUrl
       const preservedImageURL = updatedUser.imageURL || data?.imageURL;
       
       const updatedData: ExtendedUserInfo = {
         ...updatedUser,
         username: finalUsername,
-        imageURL: preservedImageURL, // Keep current avatar if API doesn't return it
+        imageURL: preservedImageURL, 
         cccd: updatedUser.identificationNumber || editData.cccd || data?.cccd,
         identificationNumber: updatedUser.identificationNumber || editData.cccd || data?.identificationNumber,
         gender: (updatedUser as any).gender || data?.gender,
@@ -292,7 +277,6 @@ export const AdminProfile: React.FC = () => {
       setIsEditing(false);
       showToast('Cập nhật thông tin thành công!', 'success');
       
-      // Update user context with new data
       updateUser({
         fullName: updatedData.fullName || undefined,
         email: updatedData.email || undefined,
@@ -361,7 +345,6 @@ export const AdminProfile: React.FC = () => {
         const updatedData = { ...data, imageURL: result.imageUrl };
         setData(updatedData);
         
-        // Update user context with new avatar
         updateUser({ avatarUrl: result.imageUrl });
       }
       
@@ -396,7 +379,6 @@ export const AdminProfile: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <h1>Thông tin cá nhân</h1>
@@ -427,7 +409,6 @@ export const AdminProfile: React.FC = () => {
         {data && (
           <>
 
-            {/* Profile Info Section */}
             <div className={styles.profileInfoSection}>
               <div className={styles.avatarSection}>
                 <div className={styles.avatarContainer}>
@@ -482,7 +463,6 @@ export const AdminProfile: React.FC = () => {
               </div>
             </div>
 
-            {/* Form Fields */}
             <div className={styles.formSection}>
               <div className={styles.sectionHeader}>
                 <h3>Thông tin cơ bản</h3>
@@ -502,7 +482,6 @@ export const AdminProfile: React.FC = () => {
                         value={editData.username || ''} 
                         onChange={(e) => {
                           setEditData({...editData, username: e.target.value});
-                          // Clear error when user starts typing
                           if (fieldErrors.username) {
                             setFieldErrors({...fieldErrors, username: ''});
                           }
@@ -572,7 +551,6 @@ export const AdminProfile: React.FC = () => {
                         onChange={(e) => {
                           const numericValue = e.target.value.replace(/[^0-9]/g, '');
                           setEditData({...editData, phoneNumber: numericValue});
-                          // Clear error when user starts typing
                           if (fieldErrors.phoneNumber) {
                             setFieldErrors({...fieldErrors, phoneNumber: ''});
                           }
@@ -661,7 +639,6 @@ export const AdminProfile: React.FC = () => {
                   )}
                 </div>
 
-                {/* CCCD - Editable */}
                 <div className={styles.fieldGroup}>
                   <label className={`${styles.fieldLabel} ${fieldErrors.cccd ? styles.fieldLabelError : ''}`}>
                     <i className="bi bi-card-text"></i>
@@ -676,7 +653,6 @@ export const AdminProfile: React.FC = () => {
                         onChange={(e) => {
                           const numericValue = e.target.value.replace(/[^0-9]/g, '');
                           setEditData({...editData, cccd: numericValue});
-                          // Clear error when user starts typing
                           if (fieldErrors.cccd) {
                             setFieldErrors({...fieldErrors, cccd: ''});
                           }
@@ -699,7 +675,6 @@ export const AdminProfile: React.FC = () => {
                   )}
                 </div>
 
-                {/* Giới tính - Read Only */}
                 <div className={styles.fieldGroup}>
                   <label className={styles.fieldLabel}>
                     <i className="bi bi-gender-ambiguous"></i>
@@ -713,7 +688,6 @@ export const AdminProfile: React.FC = () => {
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className={styles.actionSection}>
               {isEditing ? (
                 <div className={styles.editActions}>
@@ -770,7 +744,6 @@ export const AdminProfile: React.FC = () => {
         )}
       </div>
 
-      {/* Change Password Modal */}
       <ChangePasswordModal
         isOpen={showChangePasswordModal}
         onClose={() => setShowChangePasswordModal(false)}
@@ -780,7 +753,6 @@ export const AdminProfile: React.FC = () => {
         }}
       />
 
-      {/* Save Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={showSaveConfirmation}
         title="Xác nhận lưu thay đổi"

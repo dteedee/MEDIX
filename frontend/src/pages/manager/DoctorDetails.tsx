@@ -24,7 +24,6 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
         const data = await DoctorDegreeService.getAll();
         setDegrees(data || []);
       } catch (error) {
-        console.error("Failed to load degrees:", error);
       }
     };
     loadDegrees();
@@ -48,10 +47,7 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
             revenue: stats.revenue || stats.totalRevenue || stats.monthlyEarnings || 0,
           });
         } catch (apiError: any) {
-          // Nếu API không tồn tại hoặc lỗi, thử lấy từ doctor object
-          console.log("Statistics API không khả dụng, sử dụng dữ liệu từ doctor object");
 
-          // Kiểm tra xem doctor object có chứa thống kê không
           if (doctor.totalAppointments !== undefined || doctor.appointmentCount !== undefined) {
             setStatistics({
               totalAppointments: doctor.totalAppointments || doctor.appointmentCount || 0,
@@ -74,7 +70,6 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
           }
         }
       } catch (error) {
-        console.error("Lỗi khi tải thống kê:", error);
         setStatistics({
           totalAppointments: 0,
           successfulAppointments: 0,

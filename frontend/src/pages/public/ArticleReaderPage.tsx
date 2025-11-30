@@ -51,35 +51,28 @@ export default function ArticleReaderPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Load categories - CHỈ lấy categories đang active
   useEffect(() => {
     (async () => {
       try {
         const { items } = await categoryService.list(1, 9999);
-        // Chỉ hiển thị categories đang active
         setCategories(items.filter(cat => cat.isActive === true));
       } catch (err) {
-        console.error('Failed to load categories', err);
       }
     })();
   }, []);
 
-  // Fetch, filter bài hợp lệ và đếm badge sidebar + dữ liệu phân trang (client-side)
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        // Load cả categories và articles
         const [{ items: allCategories }, { items: allArticles }] = await Promise.all([
           categoryService.list(1, 9999),
           articleService.list(1, 9999)
         ]);
         
-        // Chỉ lấy categories active
         const activeCategories = allCategories.filter(cat => cat.isActive === true);
         const activeCategoryIds = new Set(activeCategories.map(cat => cat.id));
         
-        // Lọc bài viết: phải published VÀ có ít nhất 1 category active
         const valid = allArticles.filter(a => {
           const isPublished = String(a.statusCode).toLowerCase() === 'published';
           const hasActiveCategory = Array.isArray(a.categoryIds) && 

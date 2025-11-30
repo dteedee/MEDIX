@@ -95,10 +95,6 @@ class SpecializationService {
       formData.append('imageFile', dto.imageFile);
     }
 
-    console.log('FormData entries (create):', Array.from(formData.entries()).map(([key, value]) => [
-      key, 
-      value instanceof File ? `${value.name} (${value.size} bytes)` : value
-    ]));
 
     const response = await apiClient.postMultipart<SpecializationListDto>(
       '/Specialization',
@@ -120,21 +116,14 @@ class SpecializationService {
     } else {
       formData.append('Description', '');
     }
-    // Always append ImageUrl, even if empty, to ensure backend receives it
-    // If we have a new file, backend will override this with uploaded URL
-    // If no new file, backend will use this existing URL
     formData.append('ImageUrl', dto.imageUrl || '');
     formData.append('IsActive', String(dto.isActive));
     
-    // Only append file if it exists and is a valid File object
     if (dto.imageFile && dto.imageFile instanceof File) {
       formData.append('imageFile', dto.imageFile);
     }
 
-    console.log('FormData entries:', Array.from(formData.entries()).map(([key, value]) => [
-      key, 
-      value instanceof File ? `${value.name} (${value.size} bytes)` : value
-    ]));
+   
 
     const response = await apiClient.putMultipart<SpecializationListDto>(
       `/Specialization/${id}`,
@@ -143,9 +132,7 @@ class SpecializationService {
     return response.data;
   }
 
-  /**
-   * Toggle trạng thái hoạt động (Lock/Unlock)
-   */
+ 
   async toggleActive(id: string): Promise<{ id: string; isActive: boolean; message: string }> {
     const response = await apiClient.patch<{ id: string; isActive: boolean; message: string }>(
       `/Specialization/${id}/toggle-active`

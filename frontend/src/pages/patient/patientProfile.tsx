@@ -209,22 +209,17 @@ export const PatientProfile: React.FC = () => {
   useEffect(() => {
     const loadBloodTypes = async () => {
       try {
-        console.log('🔄 Carregando tipos sanguíneos...');
         const bloodTypesResponse = await registrationService.getBloodTypes();
-        console.log('📥 Resposta da API getBloodTypes:', bloodTypesResponse);
         
         if (bloodTypesResponse.success && bloodTypesResponse.data) {
           const bloodTypesWithActive = bloodTypesResponse.data.map(bt => ({
             ...bt,
             isActive: true
           }));
-          console.log('✅ Tipos sanguíneos carregados:', bloodTypesWithActive);
           setBloodTypes(bloodTypesWithActive);
         } else {
-          console.error('❌ Falha ao carregar tipos sanguíneos:', bloodTypesResponse.errors);
         }
       } catch (err) {
-        console.error('❌ Erro ao carregar tipos sanguíneos:', err);
       }
     };
 
@@ -499,26 +494,19 @@ export const PatientProfile: React.FC = () => {
             imageURL: latestUserInfo.imageURL || result.imageUrl
           }));
           
-          // Use the latest imageURL from API response
           const finalImageUrl = latestUserInfo.imageURL || result.imageUrl;
           
-          // Update user context with new avatar - this will update sidebar, header, and other components
           updateUser({ avatarUrl: finalImageUrl });
           
-          // Force avatar refresh by updating key
           setAvatarUpdateKey(prev => prev + 1);
         } catch (reloadError) {
-          console.warn('Failed to reload user info, using uploaded image URL:', reloadError);
-          // Fallback: use the uploaded image URL directly
           if (data) {
             const updatedData = { ...data, imageURL: result.imageUrl };
             setData(updatedData);
           }
           
-          // Update user context with uploaded image URL
           updateUser({ avatarUrl: result.imageUrl });
           
-          // Force avatar refresh by updating key
           setAvatarUpdateKey(prev => prev + 1);
         }
       }
@@ -528,10 +516,8 @@ export const PatientProfile: React.FC = () => {
       URL.revokeObjectURL(previewUrl);
       setPreviewImage(null);
     } catch (e: any) {
-      console.error('Upload error details:', e);
       let errorMessage = e?.message || 'Không thể tải ảnh lên';
       
-      // Handle specific error cases
       if (e?.message?.includes('405')) {
         errorMessage = 'Lỗi 405: Không thể tải ảnh lên. Endpoint upload có thể chưa được kích hoạt trong backend. Ảnh preview sẽ được hiển thị tạm thời.';
       } else if (e?.message?.includes('404')) {

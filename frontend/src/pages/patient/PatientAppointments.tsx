@@ -131,7 +131,6 @@ export const PatientAppointments: React.FC = () => {
       setAppointments(transformedData);
       setFilteredAppointments(transformedData);
     } catch (err: any) {
-      console.error('Error loading appointments:', err);
       setError(err.response?.data?.message || 'Não thể tải danh sách lịch hẹn');
     } finally {
       setLoading(false);
@@ -154,7 +153,6 @@ export const PatientAppointments: React.FC = () => {
           setRefundPercentage(Math.min(100, Math.max(0, Math.round(normalized))));
         }
       } catch (error) {
-        console.error('Failed to fetch refund configuration', error);
       }
     };
 
@@ -182,7 +180,6 @@ export const PatientAppointments: React.FC = () => {
             return newMap;
           });
         } catch (err) {
-          console.error(`Error loading doctor profile for ${doctorID}:`, err);
         } finally {
           setLoadingDoctors(prev => {
             const newSet = new Set(prev);
@@ -331,7 +328,6 @@ export const PatientAppointments: React.FC = () => {
       });
       setShowSuccessModal(true);
     } catch (error: any) {
-      console.error('Error cancelling appointment:', error);
       alert(error.response?.data?.message || 'Không thể hủy lịch hẹn. Vui lòng thử lại.');
     } finally {
       setIsCancelling(false);
@@ -358,14 +354,11 @@ export const PatientAppointments: React.FC = () => {
       setHoverRating(0);
       setReviewComment('');
 
-      // Mostrar mensagem de sucesso
       alert('Cảm ơn bạn đã đánh giá! Đánh giá của bạn đã được gửi thành công.');
       
-      // Recarregar a lista de appointments para atualizar o status
       await loadAppointments();
       
     } catch (error: any) {
-      console.error('Error submitting review:', error);
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.title ||
                           'Không thể gửi đánh giá. Vui lòng thử lại.';

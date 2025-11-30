@@ -49,7 +49,6 @@ export default function ReportsAndAnalytics() {
    
       setSpecializations(data);
     } catch (error) {
-      console.error('Error loading specializations:', error);
       showToast('Không thể tải dữ liệu chuyên khoa', 'error');
     }
   };
@@ -93,23 +92,16 @@ export default function ReportsAndAnalytics() {
       const dashboardData = await managerDashboardService.getDashboardData();
       setAppointmentStats(dashboardData.appointmentStats);
     } catch (error) {
-      console.error('Error loading appointment stats:', error);
-      // Không hiển thị toast để tránh spam, vì đây là dữ liệu bổ sung
     }
   };
 
   const loadPatientCount = async () => {
     try {
-      // Tính số bệnh nhân = tổng users - tổng bác sĩ (vì users bao gồm cả bác sĩ, admin, manager, patient)
-      // Nếu có API riêng, sẽ thay thế logic này
       if (summary) {
-        // Giả sử users.total bao gồm tất cả, trừ đi doctors để lấy số bệnh nhân
-        // (có thể còn admin/manager nhưng số lượng nhỏ)
         const calculatedPatientCount = Math.max(0, summary.users.total - summary.doctors.total);
         setPatientCount(calculatedPatientCount);
       }
     } catch (error) {
-      console.error('Error calculating patient count:', error);
     }
   };
 
@@ -118,7 +110,6 @@ export default function ReportsAndAnalytics() {
       const data = await DoctorService.getEducationTypes();
       setEducationTypes(data);
     } catch (error) {
-      console.error('Error loading education types:', error);
     }
   };
 
@@ -157,8 +148,6 @@ export default function ReportsAndAnalytics() {
               experienceYears: doctor.experienceYears || doctorDetail.yearsOfExperience || undefined,
             };
           } catch (error) {
-            console.error(`Error fetching doctor details for ${doctor.doctorId}:`, error);
-            // Nếu lỗi, vẫn trả về dữ liệu gốc và map degree nếu có
             const degreeLabel = doctor.degree ? getEducationLabel(doctor.degree) : undefined;
             return {
               ...doctor,
@@ -170,7 +159,6 @@ export default function ReportsAndAnalytics() {
       
       setTopRatedDoctors(enrichedData);
     } catch (error) {
-      console.error('Error loading top rated doctors:', error);
       showToast('Không thể tải dữ liệu bác sĩ được đánh giá cao', 'error');
     }
   };
@@ -358,7 +346,6 @@ export default function ReportsAndAnalytics() {
       
       showToast('Đã xuất báo cáo CSV thành công!', 'success');
     } catch (error) {
-      console.error('Error exporting report:', error);
       showToast('Không thể xuất báo cáo. Vui lòng thử lại.', 'error');
     }
   };

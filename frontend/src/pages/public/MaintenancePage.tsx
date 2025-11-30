@@ -39,7 +39,6 @@ export const MaintenancePage: React.FC = () => {
         setMessage(messageRes.data?.configValue || 'Hệ thống đang bảo trì.');
         setSchedule(scheduleRes.data?.configValue || null);
       } catch (error) {
-        console.error('Failed to load maintenance information', error);
       } finally {
         setIsLoading(false);
       }
@@ -67,7 +66,6 @@ export const MaintenancePage: React.FC = () => {
       // Logout sẽ tự động redirect, nhưng để chắc chắn
       navigate('/login');
     } catch (error) {
-      console.error('Logout failed', error);
       setIsLoggingOut(false);
     }
   };

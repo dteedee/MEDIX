@@ -16,7 +16,7 @@ interface ArticleListFilters {
   pageSize: number;
   search: string;
   statusFilter: 'all' | 'published' | 'draft';
-  categoryFilter: string; // Filter by category ID
+  categoryFilter: string; 
   dateFrom: string;
   dateTo: string;
   sortBy: string;
@@ -30,7 +30,6 @@ const getInitialState = (): ArticleListFilters => {
       return JSON.parse(savedState);
     }
   } catch (e) {
-    console.error("Failed to parse articleListState from localStorage", e);
   }
   return {
     page: 1,
@@ -142,13 +141,10 @@ export default function ArticleManagement() {
   const load = async () => {
     setLoading(true);
     try {
-      console.log('Loading articles...');
       const articles = await articleService.getAll();
-      console.log('Loaded articles:', articles);
       setAllArticles(articles || []);
       setTotal(articles?.length);
     } catch (error) {
-      console.error('Error loading articles:', error);
       showToast('Không thể tải danh sách bài viết', 'error');
     } finally {
       setLoading(false);
@@ -158,10 +154,8 @@ export default function ArticleManagement() {
   const loadCategories = async () => {
     try {
       const { items } = await categoryService.list(1, 9999);
-      // Chỉ lấy categories đang active để hiển thị trong filter
       setCategories(items.filter(cat => cat.isActive) || []);
     } catch (error) {
-      console.error('Error loading categories:', error);
     }
   };
 
@@ -177,7 +171,6 @@ export default function ArticleManagement() {
         const fetchedStatuses = await articleService.getStatuses();
         setStatuses(fetchedStatuses);
       } catch (error) {
-        console.error('Failed to fetch article statuses:', error);
         showToast('Không thể tải danh sách trạng thái bài viết.', 'error');
       }
     };
@@ -210,13 +203,7 @@ export default function ArticleManagement() {
     const isBeingLocked = action === 'lock';
     const actionText = isBeingLocked ? 'chuyển thành bản nháp' : 'xuất bản';
 
-    console.log('Confirming status change:', {
-      articleId: currentArticle.id,
-      title: currentArticle.title,
-      currentStatusCode: currentArticle.statusCode,
-      isBeingLocked,
-      action
-    });
+ 
 
     setConfirmationDialog({ isOpen: false, article: null, action: null });
     showToast(`Đang ${actionText} bài viết "${currentArticle.title}"...`, 'info');
@@ -243,21 +230,13 @@ export default function ArticleManagement() {
         categoryIds: currentArticle.categoryIds || [],
       };
 
-      console.log('Updating article status:', {
-        id: currentArticle.id,
-        newStatusCode,
-        payload: updatePayload
-      });
+   
 
       await articleService.update(currentArticle.id, updatePayload);
-      console.log('Status update successful');
       showToast(`Đã ${actionText} bài viết thành công.`, 'success');
       
-      // Reload data
-      console.log('Reloading articles after lock/unlock...');
       await load();
     } catch (error: any) {
-      console.error('Error locking/unlocking article:', error);
       const message = error?.response?.data?.message || error?.message || 'Không thể cập nhật trạng thái bài viết.';
       showToast(message, 'error');
     } finally {
@@ -300,22 +279,16 @@ export default function ArticleManagement() {
   const handleSaveRequest = async (formData: any) => {
     try {
       if (editing) {
-        console.log('Updating article with ID:', editing.id);
-        console.log('Update payload:', formData);
         await articleService.update(editing.id, formData);
-        console.log('Update successful');
         showToast('Cập nhật bài viết thành công!', 'success');
         setEditing(null);
       } else if (creating) {
-        console.log('Creating new article with payload:', formData);
         await articleService.create(formData);
         showToast('Tạo bài viết thành công!', 'success');
         setCreating(false);
       }
       await load();
     } catch (error: any) {
-      console.error('Error saving article:', error);
-      // Ném lại lỗi để component ArticleForm có thể bắt và hiển thị lỗi inline
       throw error;
     }
   };

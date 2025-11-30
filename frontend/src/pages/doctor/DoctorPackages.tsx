@@ -50,7 +50,6 @@ const DoctorPackages: React.FC = () => {
       const data = await serviceTierService.getDisplayedList();
       setData(data);
     } catch (error: any) {
-      console.error('Error fetching packages:', error);
     }
   }
 
@@ -108,28 +107,22 @@ const DoctorPackages: React.FC = () => {
     setShowUnsubscribe(false);
   }
 
-  // Sắp xếp các gói: Professional, Premium, VIP lên trên, Basic xuống dưới
   const sortedPackages = useMemo(() => {
     if (!data?.list) return [];
     return [...data.list].sort((a, b) => {
       const priceA = a.monthlyPrice || 0;
       const priceB = b.monthlyPrice || 0;
       
-      // Nếu một gói là miễn phí (0), đưa xuống cuối
       if (priceA === 0 && priceB > 0) return 1;
       if (priceB === 0 && priceA > 0) return -1;
       
-      // Các gói có giá sắp xếp từ thấp đến cao
       return priceA - priceB;
     });
   }, [data?.list]);
 
-  // Xác định theme và icon cho từng gói dựa trên giá
   const getPackageTheme = (price: number, name: string) => {
-    // Gói miễn phí
     if (price === 0) return { theme: 'themeFree', icon: <Package size={24} />, name: 'Miễn phí' };
     
-    // Xác định theo tên gói hoặc giá
     const nameLower = name.toLowerCase();
     if (nameLower.includes('professional') || nameLower.includes('chuyên nghiệp')) {
       return { theme: 'themeBasic', icon: <Zap size={24} />, name: 'Professional' };
@@ -141,7 +134,6 @@ const DoctorPackages: React.FC = () => {
       return { theme: 'themeVip', icon: <Crown size={24} />, name: 'VIP' };
     }
     
-    // Mặc định theo giá
     if (price < 1000000) return { theme: 'themeBasic', icon: <Zap size={24} />, name: 'Professional' };
     if (price < 3000000) return { theme: 'themePremium', icon: <Sparkles size={24} />, name: 'Premium' };
     return { theme: 'themeVip', icon: <Crown size={24} />, name: 'VIP' };
@@ -151,16 +143,13 @@ const DoctorPackages: React.FC = () => {
     return new Intl.NumberFormat('vi-VN').format(balance);
   };
 
-  // Hàm dịch features sang tiếng Việt (chuyên nghiệp và phù hợp ngữ cảnh y tế)
   const translateFeature = (feature: string): string => {
     const featureMap: { [key: string]: string } = {
-      // Basic features
       'Basic Listing': 'Hiển thị danh sách cơ bản',
       'basic listing': 'Hiển thị danh sách cơ bản',
       'Standard Search': 'Tìm kiếm tiêu chuẩn',
       'standard search': 'Tìm kiếm tiêu chuẩn',
       
-      // Professional features
       'Priority Listing': 'Hiển thị ưu tiên trong danh sách',
       'priority listing': 'Hiển thị ưu tiên trong danh sách',
       'Search Boost': 'Tối ưu hóa tìm kiếm',
@@ -168,7 +157,6 @@ const DoctorPackages: React.FC = () => {
       'Profile Highlight': 'Làm nổi bật hồ sơ bác sĩ',
       'profile highlight': 'Làm nổi bật hồ sơ bác sĩ',
       
-      // Premium features
       'Homepage Spotlight': 'Vị trí nổi bật trên trang chủ',
       'homepage spotlight': 'Vị trí nổi bật trên trang chủ',
       'Top Category': 'Vị trí đầu danh mục chuyên khoa',
@@ -178,7 +166,6 @@ const DoctorPackages: React.FC = () => {
       'Priority Support': 'Dịch vụ hỗ trợ ưu tiên',
       'priority support': 'Dịch vụ hỗ trợ ưu tiên',
       
-      // VIP features
       'VIP Placement': 'Vị trí ưu tiên cao nhất',
       'vip placement': 'Vị trí ưu tiên cao nhất',
       'Maximum Visibility': 'Tối đa hóa khả năng hiển thị',
@@ -189,12 +176,10 @@ const DoctorPackages: React.FC = () => {
       'custom campaigns': 'Chiến dịch quảng bá cá nhân hóa',
     };
 
-    // Kiểm tra xem có trong map không
     if (featureMap[feature]) {
       return featureMap[feature];
     }
 
-    // Nếu không tìm thấy, thử tìm không phân biệt hoa thường
     const lowerFeature = feature.toLowerCase();
     for (const [key, value] of Object.entries(featureMap)) {
       if (key.toLowerCase() === lowerFeature) {
@@ -202,7 +187,6 @@ const DoctorPackages: React.FC = () => {
       }
     }
 
-    // Nếu vẫn không tìm thấy, trả về nguyên bản
     return feature;
   };
 
@@ -254,7 +238,6 @@ const DoctorPackages: React.FC = () => {
         </div>
       </div>
 
-      {/* Packages Grid */}
       <div className={styles.packagesGrid}>
         {sortedPackages.map((item, index) => {
           const isCurrentTier = data?.currentTierId === item.id;

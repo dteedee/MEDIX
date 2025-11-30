@@ -1,5 +1,5 @@
 using Medix.API.Business.Helper;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Patient;
 using Medix.API.Models.Entities;
 
 namespace Medix.API.DataAccess.Interfaces.Classification

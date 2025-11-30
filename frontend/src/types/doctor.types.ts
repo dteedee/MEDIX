@@ -66,19 +66,19 @@ export interface DoctorTypeDegreeDto {
 }
 
 export interface AppointmentBookedDto {
-  startTime: string; // DateTime from backend
-  endTime: string; // DateTime from backend
+  startTime: string; 
+  endTime: string; 
 }
 
 export interface DoctorProfileDto {
   doctorID?: string;
   avatarUrl?: string;
   fullName: string;
-  consulationFee: number; // phí khám từ backend (correct spelling)
-  price?: number; // giữ tương thích nếu có nơi dùng price
-  yearsOfExperience?: number | string; // kinh nghiệm từ backend
-  experience?: number | string; // một số API trả experience
-  experiece?: number | string; // typo từ backend (Experiece)
+  consulationFee: number; 
+  price?: number; 
+  yearsOfExperience?: number | string; 
+  experience?: number | string;
+  experiece?: number | string; 
   averageRating: number;
   numberOfReviews: number;
   specialization: string;
@@ -87,21 +87,21 @@ export interface DoctorProfileDto {
   reviews: ReviewDto[];
   education?: string;
   schedules: DoctorScheduleDto[];
-  scheduleOverride?: DoctorScheduleOverrideDto[]; // Lịch override mới
-  appointmentBookedDtos?: AppointmentBookedDto[]; // Danh sách slot đã được book
+  scheduleOverride?: DoctorScheduleOverrideDto[]; 
+  appointmentBookedDtos?: AppointmentBookedDto[]; 
 }
 
 export interface DoctorScheduleOverrideDto {
   id: string;
   doctorId: string;
-  overrideDate: string; // DateOnly from backend
-  startTime: string; // TimeOnly from backend
-  endTime: string; // TimeOnly from backend
+  overrideDate: string; 
+  startTime: string; 
+  endTime: string; 
   isAvailable: boolean;
   reason?: string;
   createdAt: string;
   updatedAt: string;
-  overrideType: boolean; // true = doctor works, false = doctor doesn't work
+  overrideType: boolean; 
 }
 
 export interface DoctorProfileDetails {
@@ -126,7 +126,6 @@ export interface DoctorProfileDetails {
   endDateBanned?: string;
 }
 
-// Types for Service Tier API with Pagination
 export interface DoctorInTier {
   userId: string;
   doctorId: string;
@@ -137,15 +136,15 @@ export interface DoctorInTier {
   price: number;
   bio: string;
   rating: number;
-  isAcceptingAppointments?: boolean; // Bác sĩ có nhận lịch hẹn không
-  totalDone?: number; // Số ca đã thực hiện
-  totalAppointments?: number; // Tổng số lịch hẹn
-  successPercentage?: number; // Tỷ lệ thành công (%)
-  totalReviews?: number; // Tổng số đánh giá
+  isAcceptingAppointments?: boolean; 
+  totalDone?: number; 
+  totalAppointments?: number; 
+  successPercentage?: number; 
+  totalReviews?: number; 
   totalCases?: number;
   successfulCases?: number;
   successRate?: number;
-  averageResponseTime?: number; // in minutes
+  averageResponseTime?: number; 
   reviewCount?: number;
 }
 
@@ -176,7 +175,6 @@ export interface ServiceTierWithPaginatedDoctorsDto {
   doctors: PaginatedListDto<DoctorInTier>;
 }
 
-// Types for Education Group API
 export interface DoctorInEducation {
   userId: string;
   doctorId: string;
@@ -190,15 +188,15 @@ export interface DoctorInEducation {
   price: number;
   bio: string;
   rating: number;
-  isAcceptingAppointments?: boolean; // Bác sĩ có nhận lịch hẹn không
-  totalDone?: number; // Số ca đã thực hiện
-  totalAppointments?: number; // Tổng số lịch hẹn
-  successPercentage?: number; // Tỷ lệ thành công (%)
-  totalReviews?: number; // Tổng số đánh giá
+  isAcceptingAppointments?: boolean; 
+  totalDone?: number; 
+  totalAppointments?: number; 
+  successPercentage?: number; 
+  totalReviews?: number; 
   totalCases?: number;
   successfulCases?: number;
   successRate?: number;
-  averageResponseTime?: number; // in minutes
+  averageResponseTime?: number; 
   reviewCount?: number;
 }
 

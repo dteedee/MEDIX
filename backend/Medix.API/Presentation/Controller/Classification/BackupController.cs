@@ -1,5 +1,5 @@
 using Medix.API.Business.Interfaces.Classification;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.SystemConfiguration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

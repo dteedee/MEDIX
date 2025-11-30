@@ -2,11 +2,12 @@ using Medix.API.Business.Interfaces.Community;
 // using Medix.API.Business.Util; // Removed for performance
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess;
-using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
 using Medix.API.Models.DTOs.Wallet;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Medix.API.Models.DTOs.Authen;
+using Medix.API.Models.DTOs.Patient;
 
 namespace Medix.API.Presentation.Controller.UserManagement
 {

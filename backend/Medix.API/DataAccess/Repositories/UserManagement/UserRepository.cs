@@ -1,8 +1,8 @@
 using CloudinaryDotNet.Actions;
 using Medix.API.Application.Util;
 using Medix.API.DataAccess.Interfaces.UserManagement;
-using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.Doctor;
+using Medix.API.Models.DTOs.Manager;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 

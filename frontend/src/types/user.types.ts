@@ -6,8 +6,8 @@ export interface UserDTO {
   phoneNumber?: string;
   address?: string;
   avatarUrl?: string;
-  role?: string; // Thường là vai trò chính, ví dụ: "PATIENT"
-  roles?: string[]; // Danh sách tất cả các vai trò
+  role?: string; 
+  roles?: string[]; 
   emailConfirmed?: boolean;
   lockoutEnabled?: boolean;
   lockoutEnd?: string | null;

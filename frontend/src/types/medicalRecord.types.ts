@@ -1,6 +1,6 @@
 export interface Prescription {
   id: string;
-  medicationId?: string; // ID của thuốc từ database
+  medicationId?: string; 
   medicationName: string;
   dosage: string;
   frequency: string;
@@ -21,9 +21,9 @@ export interface MedicalRecord {
   appointmentDate: string;
   appointmentStartTime?: string;
   appointmentEndTime?: string;
-  appointmentStartDate?: string; // Nova propriedade
-  appointmentEndDate?: string;   // Nova propriedade
-  statusAppointment?: string;    // Nova propriedade
+  appointmentStartDate?: string; 
+  appointmentEndDate?: string;   
+  statusAppointment?: string;   
   chiefComplaint: string;
   physicalExamination: string;
   diagnosis: string;
@@ -32,7 +32,6 @@ export interface MedicalRecord {
   followUpInstructions: string;
   doctorNotes: string;
   prescriptions: Prescription[];
-  // Thêm các trường bị thiếu
   medicalRecordNumber?: string;
   bloodTypeCode?: string;
   height?: number;
@@ -40,7 +39,6 @@ export interface MedicalRecord {
   medicalHistory?: string;
   allergies?: string;
   diseaseHistory?: string;
-  // Thêm các trường từ User
   genderCode?: string;
   dateOfBirth?: string;
   address?: string;

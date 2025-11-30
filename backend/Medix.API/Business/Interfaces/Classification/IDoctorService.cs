@@ -1,6 +1,7 @@
 using Medix.API.Business.Helper;
-using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.Doctor;
+using Medix.API.Models.DTOs.Manager;
+using Medix.API.Models.DTOs.Patient;
 using Medix.API.Models.Entities;
 
 namespace Medix.API.Business.Interfaces.Classification

@@ -9,7 +9,7 @@ using MailKit.Security;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.Community;
 using Medix.API.Models.Constants;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.SystemConfiguration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MimeKit;

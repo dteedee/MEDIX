@@ -36,7 +36,7 @@ export interface UserGrowthDto {
 
 export interface StatDto {
     total: number;
-    growth: number; // percentage, e.g. 12.5 or -86.2
+    growth: number; 
 }
 
 export interface ManagerDashboardSummaryDto {
@@ -50,15 +50,15 @@ export interface TopRatedDoctorDto {
     doctorId: string;
     doctorName: string;
     specialization: string;
-    degree?: string; // Học vị: "GS.", "PGS.", "TS.", "ThS.", etc.
+    degree?: string; 
     averageRating: number;
     reviewCount: number;
     imageUrl?: string;
     formattedRating: string;
-    completedAppointments?: number; // Số ca đã thực hiện
-    successfulAppointments?: number; // Số ca thành công
-    totalAppointments?: number; // Tổng số lịch hẹn
-    experienceYears?: number; // Số năm kinh nghiệm
-    successRate?: number; // Tỷ lệ thành công (%)
+    completedAppointments?: number; 
+    successfulAppointments?: number;
+    totalAppointments?: number; 
+    experienceYears?: number; 
+    successRate?: number; 
 }
 

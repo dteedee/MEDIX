@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Medix.API.Business.Interfaces.Classification;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.SystemConfiguration;
 
 namespace Medix.API.Business.Services.Classification
 {

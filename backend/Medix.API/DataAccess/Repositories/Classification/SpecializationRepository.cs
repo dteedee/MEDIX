@@ -1,6 +1,6 @@
 using Medix.API.DataAccess;
 using Medix.API.DataAccess.Interfaces.Classification;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Manager;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 

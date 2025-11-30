@@ -12,7 +12,6 @@ export interface BannerDTO {
 }
 
 export interface CreateBannerRequest {
-  // Backend expects these fields when creating a banner
   bannerTitle: string
   bannerImageUrl?: string
   bannerUrl?: string
@@ -20,9 +19,9 @@ export interface CreateBannerRequest {
   startDate?: string
   endDate?: string
   isActive: boolean
-  bannerFile?: File; // Add this for file uploads
+  bannerFile?: File; 
 }
 
 export interface UpdateBannerRequest extends Partial<CreateBannerRequest> {
-  bannerFile?: File; // Also add here
+  bannerFile?: File; 
 }

@@ -1,11 +1,8 @@
-// Validation utilities matching backend validation logic
 
 import { VALIDATION_RULES, Gender } from '../types/common.types';
 import { PasswordRequirements, ValidationErrors } from '../types/auth.types';
 
-// ===================== PASSWORD VALIDATION =====================
 
-// Password validation matching backend PasswordComplexityAttribute
 export const validatePassword = (password: string): PasswordRequirements => {
   return {
     minLength: password.length >= VALIDATION_RULES.PASSWORD.MIN_LENGTH,
@@ -21,23 +18,19 @@ export const isPasswordValid = (password: string): boolean => {
   return Object.values(requirements).every(Boolean);
 };
 
-// ===================== EMAIL VALIDATION =====================
 
 export const validateEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
 
-// ===================== PHONE NUMBER VALIDATION =====================
 
-// Phone number validation (Vietnamese format)
 export const validatePhoneNumber = (phone: string): boolean => {
-  if (!phone) return true; // Optional field
+  if (!phone) return true; 
   const phoneRegex = /^(\+84|0)[1-9][0-9]{8}$/;
   return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''));
 };
 
-// ===================== FULL NAME VALIDATION =====================
 
 export const validateFullName = (fullName: string): boolean => {
   return (
@@ -46,27 +39,24 @@ export const validateFullName = (fullName: string): boolean => {
   );
 };
 
-// ===================== IDENTIFICATION NUMBER VALIDATION =====================
 
 export const validateIdentificationNumber = (idNumber: string): boolean => {
-  if (!idNumber) return true; // Optional field
+  if (!idNumber) return true; 
   return (
     idNumber.length <= VALIDATION_RULES.IDENTIFICATION_NUMBER.MAX_LENGTH &&
     /^\d+$/.test(idNumber)
   );
 };
 
-// ===================== GENDER VALIDATION =====================
 
 export const validateGenderCode = (genderCode: string): boolean => {
-  if (!genderCode) return true; // Optional field
+  if (!genderCode) return true; 
   return VALIDATION_RULES.GENDER_CODES.includes(genderCode as Gender);
 };
 
-// ===================== DATE OF BIRTH VALIDATION =====================
 
 export const validateDateOfBirth = (dateOfBirth: string): boolean => {
-  if (!dateOfBirth) return true; // Optional field
+  if (!dateOfBirth) return true; 
 
   const date = new Date(dateOfBirth);
   const now = new Date();
@@ -78,16 +68,13 @@ export const validateDateOfBirth = (dateOfBirth: string): boolean => {
     age--;
   }
 
-  // Must be a valid date, at least 18 years old, not older than 150
   return !isNaN(date.getTime()) && age >= 18 && age <= 150;
 };
 
-// ===================== FORM VALIDATION =====================
 
 export const validatePatientRegistrationForm = (formData: any): ValidationErrors => {
   const errors: ValidationErrors = {};
 
-  // Required field validations
   if (!formData.fullName) {
     errors.fullName = ['Họ và tên là bắt buộc'];
   } else if (!validateFullName(formData.fullName)) {
@@ -116,7 +103,6 @@ export const validatePatientRegistrationForm = (formData: any): ValidationErrors
     errors.passwordConfirmation = ['Mật khẩu và xác nhận không khớp'];
   }
 
-  // Optional field validations
   if (formData.phoneNumber && !validatePhoneNumber(formData.phoneNumber)) {
     errors.phoneNumber = ['Số điện thoại không hợp lệ'];
   }
@@ -136,7 +122,6 @@ export const validatePatientRegistrationForm = (formData: any): ValidationErrors
   return errors;
 };
 
-// ===================== FIELD HELPERS =====================
 
 export const getFieldError = (
   fieldName: string,
@@ -150,13 +135,11 @@ export const hasFieldError = (fieldName: string, allErrors: ValidationErrors): b
   return !!allErrors[fieldName]?.length;
 };
 
-// ===================== ERROR MESSAGE FORMATTER =====================
 
 export const formatErrorMessage = (errors: string[]): string => {
   return errors.join(', ');
 };
 
-// ===================== PASSWORD STRENGTH INDICATOR =====================
 
 export const getPasswordStrength = (
   password: string

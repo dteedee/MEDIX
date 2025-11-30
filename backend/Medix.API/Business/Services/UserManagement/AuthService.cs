@@ -4,7 +4,7 @@ using Medix.API.Business.Interfaces.Community;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Exceptions;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Authen;
 using Medix.API.Models.DTOs.Wallet;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;

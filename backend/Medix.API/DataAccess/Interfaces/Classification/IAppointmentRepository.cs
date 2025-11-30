@@ -1,4 +1,4 @@
-﻿using Medix.API.Models.DTOs;
+﻿using Medix.API.Models.DTOs.Manager;
 using Medix.API.Models.Entities;
 
 namespace Medix.API.DataAccess.Interfaces.Classification

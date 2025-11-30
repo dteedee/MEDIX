@@ -49,7 +49,7 @@ export interface OrderCreateRequest {
   buyerEmail?: string;
   buyerPhone?: string;
   buyerAddress?: string;
-  expiredAt?: string; // DateTimeOffset em ISO string format
+  expiredAt?: string;
   buyerNotGetInvoice?: boolean;
   taxPercentage?: number;
   baseURLFE?: string;

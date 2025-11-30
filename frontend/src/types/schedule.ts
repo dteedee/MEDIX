@@ -1,26 +1,26 @@
 export interface DoctorSchedule {
   id: string;
-  doctorId: string; // Changed from doctorName to match backend consistency
-  dayOfWeek: number;         // 👈 thay vì scheduleDate
-  startTime: string;         // "09:00:00"
-  endTime: string;           // "17:00:00"
+  doctorId: string; 
+  dayOfWeek: number;         
+  startTime: string;        
+  endTime: string;         
   isAvailable: boolean;
 }
 
 export interface CreateSchedulePayload {
-  dayOfWeek: number;         // 👈 thay vì scheduleDate
-  startTime: string;         // "HH:mm"
-  endTime: string;           // "HH:mm"
-  isAvailable: boolean;      // 👈 thêm trường này vì API có
+  dayOfWeek: number;         
+  startTime: string;        
+  endTime: string;           
+  isAvailable: boolean;      
 }
 
 export interface ScheduleOverride {
   id: string;
   doctorId: string;
-  overrideDate: string; // YYYY-MM-DD
-  startTime: string; // HH:mm:ss
-  endTime: string; // HH:mm:ss
-  isAvailable: boolean; // true for extra shift, false for absence
+  overrideDate: string; 
+  startTime: string; 
+  endTime: string; 
+  isAvailable: boolean; 
   reason: string;
   overrideType: boolean;
 }
@@ -28,9 +28,9 @@ export interface ScheduleOverride {
 export interface DoctorScheduleOverrideDto {
   id: string;
   doctorId: string;
-  overrideDate: string; // DateOnly from backend becomes string
-  startTime: string; // TimeOnly from backend becomes string HH:mm:ss
-  endTime: string; // TimeOnly from backend becomes string HH:mm:ss
+  overrideDate: string; 
+  startTime: string; 
+  endTime: string; 
   isAvailable: boolean;
   reason?: string;
   createdAt: string;
@@ -38,9 +38,9 @@ export interface DoctorScheduleOverrideDto {
 }
 
 export interface CreateScheduleOverridePayload {
-  overrideDate: string; // YYYY-MM-DD
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
+  overrideDate: string; 
+  startTime: string; 
+  endTime: string; 
   isAvailable: boolean;
   reason: string;
   overrideType: boolean;

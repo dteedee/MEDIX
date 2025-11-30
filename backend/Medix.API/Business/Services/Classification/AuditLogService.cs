@@ -1,6 +1,6 @@
 ﻿using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.SystemConfiguration;
 
 namespace Medix.API.Business.Services.Classification
 {

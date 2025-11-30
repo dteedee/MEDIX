@@ -2,7 +2,7 @@ using System.Linq;
 using Medix.API.Business.Interfaces.Classification;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Manager;
 
 namespace Medix.API.Presentation.Controller.Classification;
 

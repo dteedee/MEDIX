@@ -5,11 +5,10 @@ export interface DoctorServiceTier {
   consultationFeeMultiplier: number;
   priorityBoost: number;
   maxDailyAppointments: number;
-  features: string; // JSON string
+  features: string; 
   monthlyPrice: number;
   isActive: boolean;
 
-  // Các trường phụ trợ để tương thích với các component hiện có
   id: string;
   featuresList: string[];
 }

@@ -1,12 +1,12 @@
-﻿﻿using AutoMapper;
+﻿using AutoMapper;
 using Hangfire;
 using Humanizer;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
-using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.ApointmentDTO;
+using Medix.API.Models.DTOs.Manager;
 using Medix.API.Models.DTOs.MedicalRecordDTO;
 using Medix.API.Models.DTOs.Wallet;
 using Medix.API.Models.Entities;

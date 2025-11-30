@@ -9,7 +9,6 @@ import { UserRole } from './types/common.types';
 import { MaintenanceRedirect } from './components/MaintenanceRedirect';
 import { MaintenancePage } from './pages/public/MaintenancePage';
 
-// Layout
 import { Header } from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import Sidebar from './components/layout/Sidebar';
@@ -19,7 +18,6 @@ import ManagerLayout from './components/layout/ManagerLayout';
 import DoctorLayout from './components/layout/DoctorLayout';
 import PublicLayout from './components/layout/PublicLayout';
 
-// Auth pages
 import HomePage from './pages/public/HomePage';
 import Login from './pages/auth/Login';
 import { PatientRegister } from './pages/auth/PatientRegister';
@@ -30,7 +28,6 @@ import AuthLayout from './components/layout/AuthLayout';
 import AuthStatus from './pages/auth/AuthStatus';
 import { Unauthorized } from './pages/error/Unauthorized';
 
-// Dashboard pages  
 import AdminDashboard from './pages/admin/AdminDashboard';
 import { ManageDashboard } from './pages/manager/ManageDashboard';
 import DoctorRegister from './pages/doctor/DoctorRegister';
@@ -52,9 +49,8 @@ import { AdminProfile } from './pages/admin/AdminProfile';
 import DoctorDetails from './pages/doctor/DoctorDetails';
 import ScheduleManagement from './pages/doctor/ScheduleManagement';
 import DoctorProfileEdit from './pages/doctor/DoctorProfileEdit';
-import MedicalRecordDetails from './pages/doctor/MedicalRecordDetails'; // New import
+import MedicalRecordDetails from './pages/doctor/MedicalRecordDetails'; 
 
-// Manager pages
 import ArticleManagement from './pages/manager/ArticleManagement';
 import BannerManagement from './pages/manager/BannerManagement';
 import DoctorManagement from './pages/manager/DoctorManagement';
@@ -74,12 +70,10 @@ import ArticleReaderPage from './pages/public/ArticleReaderPage';
 import DoctorBookingList from './pages/patient/DoctorBookingList';
 import ErrorPageWrapper from './pages/error/ErrorPageWrapper';
 
-// Legal pages
 import PrivacyPolicy from './pages/public/PrivacyPolicy';
 import TermsOfService from './pages/public/TermsOfService';
 import AboutUs from './pages/public/AboutUs';
 
-// Specialty pages
 import SpecialtyListPage from './pages/public/SpecialtyListPage';
 import SpecialtyDetailPage from './pages/public/SpecialtyDetailPage';
 import EMRTimeline from './pages/patient/EMRTimeline';
@@ -98,7 +92,6 @@ export function App() {
                 <Route path="/error/:code" element={<ErrorPageWrapper />} />
                 <Route path="/maintenance" element={<MaintenancePage />} />
 
-                {/* ---------- Public routes ---------- */}
                 <Route element={<AuthLayout />}>
                   <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
                   <Route path="/patient-register" element={<PublicRoute><PatientRegister /></PublicRoute>} />
@@ -108,12 +101,10 @@ export function App() {
                   <Route path="/doctor/register" element={<PublicRoute><DoctorRegister /></PublicRoute>} />
                 </Route>
 
-                {/* ---------- Change password route ---------- */}
                 <Route path="/change-password" element={<ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} />} />
 
                 <Route path="/doctor/details/:username" element={<DoctorDetails />} />
 
-                {/* ---------- Public pages with header/footer ---------- */}
                 <Route element={<PublicLayout />}>
                   <Route index element={<HomePage />} />
                   <Route path="/doctors" element={<DoctorBookingList />} />
@@ -122,19 +113,14 @@ export function App() {
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/about" element={<AboutUs />} />
-                  {/* Public article list */}
                   <Route path="/articles" element={<ArticleReaderPage />} />
-                  {/* Public article detail */}
                   <Route path="/articles/:slug" element={<ArticleDetailPage />} />
                 </Route>
 
-                {/* ---------- AI Chat - Full page (no header/footer) ---------- */}
                 <Route path="/ai-chat" element={<AIChatBot />} />
 
-                {/* ---------- Change password route (Protected) ---------- */}
                 <Route path="/change-password" element={<ProtectedRoute><ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} /></ProtectedRoute>} />
 
-                {/* ---------- Main app layout ---------- */}
                 <Route path="/app" element={<MainLayout />}>
                   <Route path="dashboard" element={
                     <ProtectedRoute>
@@ -142,7 +128,6 @@ export function App() {
                     </ProtectedRoute>
                   } />
 
-                  {/* ---------- Admin routes ---------- */}
                   <Route path="admin/*" element={<AdminLayout />}>
                     <Route index element={<AdminDashboard />} />
                     <Route path="dashboard" element={<AdminDashboard />} />
@@ -154,7 +139,6 @@ export function App() {
                     <Route path="settings" element={<SettingsPage />} />
                   </Route>
 
-                  {/* ---------- Manager routes ---------- */}
                   <Route path="manager/*" element={
                     <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
                       <ManagerLayout />
@@ -176,7 +160,6 @@ export function App() {
                     <Route path="promotions" element={<PromotionManagement />} />
                   </Route>
 
-                  {/* ---------- Patient routes ---------- */}
                   <Route path="patient/*" element={
                     <ProtectedRoute requiredRoles={[UserRole.PATIENT]}>
                       <PatientLayout />
@@ -191,11 +174,8 @@ export function App() {
                     <Route path='emr-timeline' element={<EMRTimeline />} />
                   </Route>
 
-                  {/* ---------- Doctor routes ---------- */}
                   <Route path="doctor/*" element={
-                    // <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
                       <DoctorLayout />
-                    // </ProtectedRoute>
                   }>
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard" element={<DoctorDashboard />} />
@@ -210,19 +190,15 @@ export function App() {
                     <Route path="medical-records/:appointmentId" element={<MedicalRecordDetails />} />
                   </Route>
 
-                {/* ---------- Reader ---------- */}
-                {/* Redirect /app/articles -> public list for consistency */}
                 <Route path="articles" element={<Navigate to="/articles" replace />} />
                 <Route path="articles/:slug" element={<ArticleDetailPage />} />
 
-                  {/* ---------- AI Chat ---------- */}
                   <Route path="ai-chat" element={
                     <ProtectedRoute>
                       <AIChatBot />
                     </ProtectedRoute>
                   } />
 
-                  {/* ---------- Error pages ---------- */}
                   <Route path="unauthorized" element={<Unauthorized />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
@@ -235,11 +211,10 @@ export function App() {
   );
 }
 
-// Redirect to role-based dashboard
 const DashboardRedirect: React.FC = () => {
-  const { user } = useAuth(); // ✅ Sử dụng hook useAuth để lấy thông tin người dùng
+  const { user } = useAuth(); 
 
-  switch (user?.role) { // ✅ Sử dụng user.role từ context
+  switch (user?.role) { 
     case UserRole.ADMIN:
       return <Navigate to="/app/admin" replace />;
     case UserRole.MANAGER:
@@ -253,7 +228,6 @@ const DashboardRedirect: React.FC = () => {
   }
 };
 
-// 404 page
 const NotFound: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
     <div className="text-center">

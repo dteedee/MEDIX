@@ -1,4 +1,3 @@
-// Common types used across the application - Updated to match backend
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -22,16 +21,14 @@ export interface SelectOption {
   label: string;
 }
 
-// Updated to match backend Role values
 export enum UserRole {
   ADMIN = "Admin",
   DOCTOR = "Doctor", 
   PATIENT = "Patient",
   MANAGER = "Manager",
-  USER = "User" // Default role
+  USER = "User" 
 }
 
-// Updated to match backend GenderCode validation
 export enum Gender {
   MALE = "Male",
   FEMALE = "Female", 
@@ -52,7 +49,6 @@ export interface BaseEntity {
   updatedAt: string;
 }
 
-// Backend entity mappings
 export interface UserEntity extends BaseEntity {
   userName: string;
   normalizedUserName: string;
@@ -63,7 +59,7 @@ export interface UserEntity extends BaseEntity {
   emailConfirmed: boolean;
   fullName: string;
   role: string;
-  dateOfBirth?: string; // DateOnly
+  dateOfBirth?: string; 
   genderCode?: string;
   identificationNumber?: string;
   address?: string;
@@ -103,7 +99,6 @@ export interface DoctorEntity extends BaseEntity {
   isAcceptingAppointments: boolean;
 }
 
-// Validation constants
 export const VALIDATION_RULES = {
   PASSWORD: {
     MIN_LENGTH: 6,

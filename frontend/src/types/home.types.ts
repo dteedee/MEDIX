@@ -23,12 +23,12 @@ export interface HomeMetadata {
 export interface Banner {
     id: string;
     bannerTitle: string;
-    bannerImageUrl?: string; // Đã thay đổi thành optional
-    bannerUrl?: string;      // Đã thay đổi thành optional
+    bannerImageUrl?: string; 
+    bannerUrl?: string;      
     displayOrder?: number;
     isActive: boolean;
     isLocked?: boolean;
-    createdAt?: string;      // Đã thay đổi thành optional
+    createdAt?: string;      
     startDate?: string | null;
     endDate?: string | null;
 }

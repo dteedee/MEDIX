@@ -2,8 +2,8 @@ export interface CreateAppointmentDto {
   patientId?: string;
   doctorId?: string;
   aiSymptomAnalysisId?: string;
-  appointmentStartTime?: string; // ISO DateTime
-  appointmentEndTime?: string; // ISO DateTime
+  appointmentStartTime?: string; 
+  appointmentEndTime?: string; 
   durationMinutes?: number;
   consultationFee?: number;
   platformFee?: number;
@@ -15,8 +15,8 @@ export interface CreateAppointmentDto {
   medicalInfo?: string;
   chiefComplaint?: string;
   historyOfPresentIllness?: string;
-  userPromotionID?: string; // For promotions from UserPromotion
-  promotionCode?: string; // For general promotions not in UserPromotion
+  userPromotionID?: string; 
+  promotionCode?: string; 
 }
 
 export interface Appointment {
@@ -24,12 +24,12 @@ export interface Appointment {
   patientName: string;
   patientEmail?: string;
   doctorName: string;
-  appointmentStartTime: string; // "YYYY-MM-DDTHH:mm:ss"
-  appointmentEndTime: string;   // "YYYY-MM-DDTHH:mm:ss"
+  appointmentStartTime: string; 
+  appointmentEndTime: string;   
   durationMinutes: number;
   patientID?: string;
   doctorID?: string;
-  statusCode: string;           // e.g., "CONFIRMED", "COMPLETED"
+  statusCode: string;           
   statusDisplayName?: string;
   consultationFee: number;
   platformFee: number;

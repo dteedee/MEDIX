@@ -1,7 +1,7 @@
 using System.Linq;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Manager;
 
 namespace Medix.API.Business.Services.Classification;
 

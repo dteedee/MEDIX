@@ -3,15 +3,15 @@ export interface PromotionDto {
     code: string;
     name: string;
     description?: string;
-    discountType: string; // "Percentage" | "FixedAmount"
+    discountType: string; 
     discountValue: number;
     maxUsage?: number;
     usedCount: number;
     startDate: string;
     endDate: string;
-    isActive: boolean; // Backend pode retornar 0 ou 1
+    isActive: boolean; 
     createdAt: string;
-    applicableTargets?: string; // Comma-separated targets: "All", "New", "VIP", etc.
+    applicableTargets?: string; 
 }
 
 export interface PromotionTargetDto {
@@ -21,7 +21,6 @@ export interface PromotionTargetDto {
     description: string;
 }
 
-// Helper function to normalize isActive
 export const normalizeIsActive = (isActive: boolean | number): boolean => {
     return isActive === true || isActive === 1;
 };
@@ -36,7 +35,6 @@ export interface UserPromotionDto {
     assignedAt: string;
     lastUsedAt?: string | null;
     promotion?: PromotionDto | null;
-    // Computed properties
     isExpired: boolean;
     isValidNow: boolean;
 }

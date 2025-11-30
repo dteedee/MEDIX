@@ -1,20 +1,19 @@
-// Authentication related types - Updated to match backend models
 
 export interface LoginRequest {
-  email: string; // This will be used as identifier (email or username)
+  email: string; 
   password: string;
 }
 
 export interface RegisterRequestPatient {
   email: string;
   password: string;
-  passwordConfirmation: string; // Match backend PasswordConfirmation
+  passwordConfirmation: string; 
   fullName: string;
   phoneNumber?: string;
-  address?: string; // Match backend address field
-  dateOfBirth?: string; // DateOnly from backend
+  address?: string; 
+  dateOfBirth?: string; 
   identificationNumber?: string;
-  genderCode?: string; // "Male", "Female", "Other"
+  genderCode?: string; 
 }
 
 
@@ -87,7 +86,6 @@ export interface Gender {
   isActive: boolean;
 }
 
-// Updated to match backend PatientDTO
 export interface PatientDTO {
   id?: string;
   userId?: string;
@@ -104,13 +102,11 @@ export interface PatientDTO {
   isActive?: boolean;
 }
 
-// Updated to match backend RegistrationPayloadDTO
 export interface PatientRegistration {
   registerRequest: RegisterRequestPatient;
   patientDTO: PatientDTO;
 }
 
-// Password validation requirements
 export interface PasswordRequirements {
   minLength: boolean;
   hasUppercase: boolean;

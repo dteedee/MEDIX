@@ -114,6 +114,8 @@ export default function SettingsPage() {
   const [emailTemplateSaving, setEmailTemplateSaving] = useState(false);
   const [refundPercentage, setRefundPercentage] = useState(80);
   const [refundSaving, setRefundSaving] = useState(false);
+  const [aiDailyAccessLimit, setAiDailyAccessLimit] = useState(50);
+  const [aiAccessLimitSaving, setAiAccessLimitSaving] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof SystemSettings, string>>>({});
   const [templateErrors, setTemplateErrors] = useState<Partial<Record<string, { subject?: string; body?: string }>>>({});
   const [emailServerErrors, setEmailServerErrors] = useState<Partial<Record<'username' | 'fromEmail' | 'fromName', string>>>({});
@@ -307,9 +309,23 @@ export default function SettingsPage() {
     }
   }, [showToast]);
 
+  const fetchAiDailyAccessLimit = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/SystemConfiguration/AI_DAILY_ACCESS_LIMIT');
+      const value = parseInt(response.data?.configValue ?? '50', 10);
+      setAiDailyAccessLimit(Math.max(1, value));
+    } catch (error) {
+      showToast('Không thể tải cấu hình giới hạn truy cập AI.', 'error');
+    }
+  }, [showToast]);
+
   useEffect(() => {
     fetchRefundConfig();
   }, [fetchRefundConfig]);
+
+  useEffect(() => {
+    fetchAiDailyAccessLimit();
+  }, [fetchAiDailyAccessLimit]);
 
   const validateEmailServerFields = (
     username: string,
@@ -397,6 +413,20 @@ export default function SettingsPage() {
       showToast('Lưu cấu hình hoàn tiền thất bại.', 'error');
     } finally {
       setRefundSaving(false);
+    }
+  };
+
+  const handleSaveAiDailyAccessLimit = async () => {
+    setAiAccessLimitSaving(true);
+    showToast('Đang lưu cấu hình giới hạn truy cập AI...', 'info');
+    try {
+      await apiClient.put('/SystemConfiguration/AI_DAILY_ACCESS_LIMIT', { value: aiDailyAccessLimit.toString() });
+      showToast('Đã lưu cấu hình giới hạn truy cập AI.', 'success');
+      await fetchAiDailyAccessLimit();
+    } catch (error) {
+      showToast('Lưu cấu hình giới hạn truy cập AI thất bại.', 'error');
+    } finally {
+      setAiAccessLimitSaving(false);
     }
   };
 
@@ -1180,6 +1210,41 @@ export default function SettingsPage() {
               >
                 <i className={`bi ${refundSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
                 {refundSaving ? 'Đang lưu...' : 'Lưu chính sách hoàn tiền'}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className={styles.settingsCard}>
+          <div className={styles.cardHeader}>
+            <h3>
+              <i className="bi bi-robot"></i>
+              Giới hạn truy cập AI
+            </h3>
+          </div>
+          <div className={styles.cardContent}>
+            <div className={styles.settingItem}>
+              <label>Số lượt truy cập AI tối đa trong 1 ngày</label>
+              <input
+                type="number"
+                min={1}
+                max={999}
+                value={aiDailyAccessLimit}
+                onChange={(e) =>
+                  setAiDailyAccessLimit(Math.max(1, Number(e.target.value) || 1))
+                }
+              />
+            </div>
+            <p className={styles.hintText}>
+              Tùy chỉnh số lượt truy cập AI mà người dùng có thể sử dụng trong một ngày. Ví dụ: 50 lượt/ngày.
+            </p>
+            <div className={styles.settingItem}>
+              <button
+                className={styles.saveBtn}
+                onClick={handleSaveAiDailyAccessLimit}
+                disabled={aiAccessLimitSaving}
+              >
+                <i className={`bi ${aiAccessLimitSaving ? 'bi-arrow-repeat' : 'bi-save'}`}></i>
+                {aiAccessLimitSaving ? 'Đang lưu...' : 'Lưu giới hạn AI'}
               </button>
             </div>
           </div>

@@ -1,7 +1,7 @@
 ﻿using System.Security.Claims;
 using Medix.API.Business.Interfaces.Classification;
 using Microsoft.AspNetCore.Authorization;
-using Medix.API.Business.Interfaces.Classification;
+﻿using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.Business.Services.Classification;
 using Microsoft.AspNetCore.Http;
@@ -14,7 +14,6 @@ namespace Medix.API.Presentation.Controller.Classification
     [Route("api/[controller]")]
     public class DashboardController : ControllerBase
     {
-
         private readonly IDoctorDashboardService _service;
         private readonly IAdminDashboardService _adminService;
         private readonly IManagerDashboardService _managerService;

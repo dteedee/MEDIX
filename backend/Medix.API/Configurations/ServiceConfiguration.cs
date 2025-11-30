@@ -60,6 +60,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IServiceTierSubscriptionsRepository, ServiceTierSubscriptionsRepository>();
             services.AddScoped<IDoctorDashboardRepository, DoctorDashboardRepository>();
             services.AddScoped<IAdminDashboardRepository, AdminDashboardRepository>();
+            services.AddScoped<IManagerDashboardRepository, ManagerDashboardRepository>();
 
             services.AddScoped<IPromotionRepository, PromotionRepository>();
             services.AddScoped<INoticeSetupRepository, NoticeSetupRepository>();
@@ -112,6 +113,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IServicePackageService, ServicePackageService>();
             services.AddScoped<IDoctorDashboardService, DoctorDashboardService>();
             services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+            services.AddScoped<IManagerDashboardService, ManagerDashboardService>();
             services.AddScoped<IPromotionService, PromotionService>();
             services.AddScoped<INoticeSetupService, NoticeSetupService>();
             services.AddScoped<ITransferTransactionService, TransferTransactionService>();

@@ -159,8 +159,7 @@ namespace Medix.API.Presentation.Controller.Money
                 await _walletTransactionService.UppdateWalletTrasactionAsync(wallettransaction);
 
 
-           
-          
+                await _walletService.DecreaseWalletBalanceAsync(wallet.UserId, transferTransaction.Amount);
 
 
                 transferTransaction.Status = "Accepted";
@@ -239,8 +238,8 @@ namespace Medix.API.Presentation.Controller.Money
         transferTransaction.Description += "Bị từ chối";
         
         await _transferTransactionService.UpdateTransferTransactionAsync(transferTransaction);
-          await _walletService.IncreaseWalletBalanceAsync((Guid)wallet.UserId, transferTransaction.Amount);
-                return Ok(new 
+
+        return Ok(new 
         { 
             message = "Transfer rejected successfully",
             transferTransactionId = transferTransaction.Id,

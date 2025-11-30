@@ -8,7 +8,7 @@ using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.Constants;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.SystemConfiguration;
 using Medix.API.Models.Entities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.SqlClient;

@@ -1,8 +1,8 @@
 using Medix.API.DataAccess;
 using Medix.API.Business.Interfaces.UserManagement;
 using Medix.API.DataAccess.Interfaces.UserManagement;
-using Medix.API.Models.DTOs;
 using Medix.API.Models.Entities;
+using Medix.API.Models.DTOs.Patient;
 
 namespace Medix.API.Business.Services.UserManagement
 {

@@ -4,8 +4,9 @@ using Medix.API.Business.Interfaces.Community;
 using Medix.API.DataAccess;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
-using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.Doctor;
+using Medix.API.Models.DTOs.Manager;
+using Medix.API.Models.DTOs.Patient;
 using Medix.API.Models.Entities;
 using Medix.API.Models.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -307,7 +308,7 @@ namespace Medix.API.Business.Services.Classification
             };
 
             profileDto.Reviews = reviews.OrderByDescending(r => r.CreatedAt)
-                .Select(r => new ReviewDto
+                .Select(r => new Models.DTOs.Doctor.ReviewDto
                 {
                     Rating = r.Rating,
                     Comment = r.Comment,

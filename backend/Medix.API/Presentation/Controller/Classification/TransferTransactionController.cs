@@ -46,16 +46,6 @@ namespace Medix.API.Presentation.Controller.Classification
             request.UserId = userId;
 
             var wallet = await walletService.GetWalletByUserIdAsync(userId);
-           if (wallet == null || wallet.Balance < request.Amount)
-            {
-                return BadRequest(new { message = "Insufficient wallet balance" });
-            }
-
-           if (request.Amount < 5000)
-            {
-
-                return BadRequest(new { message = "Minimum transfer amount is 5000" });
-            }
 
             if (wallet == null)
             {
@@ -86,9 +76,6 @@ namespace Medix.API.Presentation.Controller.Classification
             }
             request.WalletTransactionID = transResult.id;
             var result = await _transferTransactionService.CreateTransferTransactionAsync(request);
-            var updateWallet = await walletService.DecreaseWalletBalanceAsync(userId, request.Amount);
-
-
             return CreatedAtAction(nameof(GetTransferTransactionById), new { id = result.Id }, result);
 
         }

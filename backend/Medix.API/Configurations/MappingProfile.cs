@@ -1,15 +1,18 @@
-﻿﻿using AutoMapper;
+﻿using AutoMapper;
 using Medix.API.Application.DTOs.Doctor;
-using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.ApointmentDTO;
+using Medix.API.Models.DTOs.Authen;
 using Medix.API.Models.DTOs.CMSPage;
 using Medix.API.Models.DTOs.ContentCategory;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.DTOs.HealthArticle;
+using Medix.API.Models.DTOs.Manager;
 using Medix.API.Models.DTOs.MedicalRecordDTO;
 using Medix.API.Models.DTOs.MedicationDTO;
+using Medix.API.Models.DTOs.Patient;
 using Medix.API.Models.DTOs.ReviewDTO;
 using Medix.API.Models.DTOs.SiteBanner;
+using Medix.API.Models.DTOs.SystemConfiguration;
 using Medix.API.Models.Entities;
 
 

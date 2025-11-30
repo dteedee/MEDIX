@@ -1,7 +1,7 @@
 ﻿using Medix.API.Business.Helper;
 using Medix.API.DataAccess;
 using Medix.API.DataAccess.Interfaces.Classification;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Patient;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 

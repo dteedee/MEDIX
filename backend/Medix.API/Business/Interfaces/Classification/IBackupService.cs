@@ -1,4 +1,4 @@
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.SystemConfiguration;
 
 namespace Medix.API.Business.Interfaces.Classification
 {

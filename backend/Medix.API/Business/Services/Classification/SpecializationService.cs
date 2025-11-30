@@ -1,6 +1,6 @@
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
-using Medix.API.Models.DTOs;
+using Medix.API.Models.DTOs.Manager;
 using Medix.API.Models.Entities;
 
 namespace Medix.API.Business.Services.Classification

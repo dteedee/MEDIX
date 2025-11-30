@@ -1,5 +1,5 @@
-using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.Doctor;
+using Medix.API.Models.DTOs.Manager;
 using Medix.API.Models.Entities;
 using System;
 using System.Collections.Generic;

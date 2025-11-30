@@ -2,8 +2,8 @@
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models;
-using Medix.API.Models.DTOs;
 using Medix.API.Models.DTOs.ApointmentDTO;
+using Medix.API.Models.DTOs.Patient;
 using Medix.API.Models.Entities;
 using System.Text.RegularExpressions;
 

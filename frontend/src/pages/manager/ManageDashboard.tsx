@@ -343,9 +343,9 @@ export const ManageDashboard: React.FC = () => {
         </div>
         <div className={styles.cardContent}>
           {recentFeedbacks.length > 0 ? (
-            <div className="space-y-5">
+            <div className={styles.cardContentListScrollable}>
               {recentFeedbacks.map((feedback) => (
-                <div key={feedback.appointmentId} className="flex items-start">
+                <div key={feedback.appointmentId} className={`${styles.feedbackItem} flex items-start`}>
                   <div className="flex-shrink-0">
                     <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
                       {feedback.patientName.charAt(0)}

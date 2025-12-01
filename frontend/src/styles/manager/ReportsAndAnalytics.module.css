@@ -1281,7 +1281,7 @@
 .topRatedGrid {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: 24px;
   background: white;
   padding: 100px 24px 32px;
@@ -1331,6 +1331,8 @@
   order: 2;
   border-color: rgba(255, 215, 0, 0.4);
   background: linear-gradient(135deg, #fffef5 0%, #ffffff 100%);
+  margin-top: 0;
+  align-self: flex-start;
 }
 
 .topRatedCard.rank1:hover {
@@ -1344,7 +1346,8 @@
   order: 1;
   border-color: rgba(192, 192, 192, 0.4);
   background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
-  margin-top: 10px;
+  margin-top: 60px;
+  align-self: flex-end;
 }
 
 .topRatedCard.rank2:hover {
@@ -1358,6 +1361,8 @@
   order: 3;
   border-color: rgba(205, 127, 50, 0.4);
   background: linear-gradient(135deg, #fffaf5 0%, #ffffff 100%);
+  margin-top: 60px;
+  align-self: flex-end;
 }
 
 .topRatedCard.rank3:hover {

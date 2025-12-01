@@ -9,6 +9,7 @@ import {
   ArrowDownRight,
   ClipboardList,
   ShieldCheck,
+  XCircle,
 } from 'lucide-react';
 import styles from '../../styles/manager/TransferTransactions.module.css';
 import {
@@ -479,7 +480,6 @@ const TransferTransactions: React.FC = () => {
                 <thead>
                   <tr>
                     <th>Mã giao dịch</th>
-                    <th>Người chuyển</th>
                     <th>Người nhận</th>
                     <th>Số tiền</th>
                     <th>Thời gian</th>
@@ -497,48 +497,52 @@ const TransferTransactions: React.FC = () => {
                         </div>
                       </td>
                       <td>
-                        {txn.fromAccountNumber ? (
-                          <div className={styles.accountInfo}>
-                            <span className={styles.accountNumber}>{txn.fromAccountNumber}</span>
-                            <span className={styles.accountBank}>{getBankNameByBin(txn.fromBin)}</span>
-                          </div>
-                        ) : (
-                          <span className={styles.noInfo}>Medix</span>
-                        )}
-                      </td>
-                      <td>
                         <div className={styles.accountInfo}>
                           <span className={styles.accountNumber}>{txn.toAccountNumber}</span>
                           <span className={styles.accountBank}>{getBankNameByBin(txn.toBin)}</span>
                         </div>
                       </td>
-                      <td>
-                        <span className={styles.amount}>{formatCurrency(txn.amount)}</span>
+                      <td className={styles.amountCell}>
+                        <span className={styles.amount}>{formatCurrencyCompact(txn.amount)}</span>
                       </td>
-                      <td>
+                      <td className={styles.timeCell}>
                         <span className={styles.date}>{formatDateTime(txn.createdAt)}</span>
                       </td>
-                      <td>{statusBadge(txn.status)}</td>
+                      <td className={styles.statusCell}>{statusBadge(txn.status)}</td>
                       <td>
                         <div className={styles.actionGroup}>
-                          <button className={styles.detailBtn} onClick={() => setSelectedTransaction(txn)}>
-                            Xem chi tiết
+                          <button
+                            className={`${styles.iconActionBtn} ${styles.iconNeutral}`}
+                            onClick={() => setSelectedTransaction(txn)}
+                            title="Xem chi tiết"
+                          >
+                            <ClipboardList size={16} />
                           </button>
                           {txn.status === 'Pending' && (
                             <>
                               <button
-                                className={styles.acceptBtn}
+                                className={`${styles.iconActionBtn} ${styles.iconSuccess}`}
                                 onClick={() => handleAcceptTransfer(txn.id)}
                                 disabled={acceptingId === txn.id || rejectingId === txn.id}
+                                title="Chấp nhận"
                               >
-                                {acceptingId === txn.id ? <span className={styles.btnSpinner}></span> : 'Chấp nhận'}
+                                {acceptingId === txn.id ? (
+                                  <span className={styles.btnSpinner}></span>
+                                ) : (
+                                  <ShieldCheck size={16} />
+                                )}
                               </button>
                               <button
-                                className={styles.rejectBtn}
+                                className={`${styles.iconActionBtn} ${styles.iconDanger}`}
                                 onClick={() => handleRejectTransfer(txn.id)}
                                 disabled={rejectingId === txn.id || acceptingId === txn.id}
+                                title="Từ chối"
                               >
-                                {rejectingId === txn.id ? <span className={styles.btnSpinner}></span> : 'Từ chối'}
+                                {rejectingId === txn.id ? (
+                                  <span className={styles.btnSpinner}></span>
+                                ) : (
+                                  <XCircle size={16} />
+                                )}
                               </button>
                             </>
                           )}

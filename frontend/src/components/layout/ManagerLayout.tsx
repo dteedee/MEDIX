@@ -27,7 +27,8 @@ const ManagerLayout: React.FC = () => {
     if (location.pathname.includes('/articles')) return 'articles';
     if (location.pathname.includes('/banners')) return 'banners';
     if (location.pathname.includes('/categories')) return 'categories';
-    if (location.pathname.includes('/packages')) return 'packages';
+    if (location.pathname.includes('/services')) return 'services';
+    if (location.pathname.includes('/transfer-transactions')) return 'transfer-transactions';
     if (location.pathname.includes('/commissions')) return 'commissions';
     if (location.pathname.includes('/promotions')) return 'promotions';
     if (location.pathname.includes('/feedback')) return 'feedback';

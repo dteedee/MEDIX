@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useToast } from '../../contexts/ToastContext';
-import { Calendar } from 'lucide-react';
 import styles from '../../styles/admin/UserList.module.css';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
@@ -199,22 +198,6 @@ export default function CategoryList({ hideHeader = false, title = 'Quản lý D
           </div>
         </div>
         <div className={styles.headerRight}>
-          <div className={styles.dateTime}>
-            <div className={styles.dateIconWrapper}>
-              <Calendar size={20} className={styles.dateIcon} />
-            </div>
-            <div className={styles.dateContent}>
-              <span className={styles.dateText}>
-                {new Date().toLocaleDateString('vi-VN', {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })}
-              </span>
-              <div className={styles.dateGlow}></div>
-            </div>
-          </div>
           <button onClick={() => handleOpenForm(null)} className={styles.btnCreate}>
             <i className="bi bi-plus-lg"></i> Tạo mới
           </button>

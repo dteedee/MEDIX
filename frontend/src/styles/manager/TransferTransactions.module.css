@@ -760,6 +760,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 
 .statusDot {
@@ -872,18 +873,21 @@
   padding: 18px 16px;
   font-size: 14px;
   color: #334155;
+  vertical-align: middle;
 }
 
 .transactionId {
   display: flex;
   flex-direction: column;
-  font-weight: 700;
-  color: #4c6ef5;
 }
 
 .transactionId small {
   font-weight: 500;
   color: #94a3b8;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .accountInfo {
@@ -912,6 +916,19 @@
   color: #059669;
 }
 
+.amountCell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.timeCell {
+  white-space: nowrap;
+}
+
+.statusCell {
+  white-space: nowrap;
+}
+
 .date {
   color: #6b7280;
   font-size: 13px;
@@ -920,7 +937,8 @@
 .actionGroup {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
 }
 
 .detailBtn {
@@ -937,6 +955,54 @@
 .detailBtn:hover {
   border-color: transparent;
   background: rgba(99, 102, 241, 0.1);
+}
+
+.iconActionBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  font-size: 16px;
+}
+
+.iconNeutral {
+  background: #ffffff;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 6px rgba(148, 163, 184, 0.25);
+}
+
+.iconSuccess {
+  background: linear-gradient(135deg, #10b981, #34d399);
+  color: #ffffff;
+  box-shadow: 0 6px 14px rgba(16, 185, 129, 0.35);
+}
+
+.iconDanger {
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  color: #ffffff;
+  box-shadow: 0 6px 14px rgba(239, 68, 68, 0.35);
+}
+
+.iconActionBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.iconActionBtn:not(:disabled):hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+}
+
+.iconActionBtn:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.18);
 }
 
 .acceptBtn,

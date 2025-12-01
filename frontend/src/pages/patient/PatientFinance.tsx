@@ -792,7 +792,7 @@ export const PatientFinance: React.FC = () => {
     if (activeTab === 'all') {
       return transactions;
     }
-    
+
     const typeMap: { [key in TabType]: string[] } = {
       'all': [],
       'deposit': ['Deposit'],
@@ -800,9 +800,16 @@ export const PatientFinance: React.FC = () => {
       'payment': ['AppointmentPayment'],
       'refund': ['AppointmentRefund']
     };
-    
+
+    if (activeTab === 'deposit') {
+      // Kết hợp điều kiện transactionTypeCode === 'Deposit' và status === 'Completed'
+      return transactions.filter(t =>
+        t.transactionTypeCode === 'Deposit' && (t.status || '').toLowerCase() === 'completed'
+      );
+    }
+
     const allowedTypes = typeMap[activeTab];
-    return transactions.filter(t => 
+    return transactions.filter(t =>
       t.transactionTypeCode && allowedTypes.includes(t.transactionTypeCode)
     );
   }, [transactions, activeTab]);
@@ -832,11 +839,11 @@ export const PatientFinance: React.FC = () => {
     // All-time totals
     let totalSpent = 0;
     let totalDeposited = 0;
-    
+
     // Current week totals
     let currentWeekSpent = 0;
     let currentWeekDeposited = 0;
-    
+
     // Last week totals
     let lastWeekSpent = 0;
     let lastWeekDeposited = 0;
@@ -845,36 +852,37 @@ export const PatientFinance: React.FC = () => {
       const transactionDate = transaction.transactionDate 
         ? new Date(transaction.transactionDate)
         : null;
-      
+
       if (!transactionDate) return;
-      
+
       const amount = Math.abs(transaction.amount || 0);
       const typeCode = transaction.transactionTypeCode;
+      const status = (transaction.status || '').toLowerCase();
 
       // All-time totals
-      if (typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') {
+      if ((typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') && status === 'completed') {
         totalSpent += amount;
       }
-      if (typeCode === 'Deposit') {
+      if (typeCode === 'Deposit' && status === 'completed') {
         totalDeposited += amount;
       }
 
       // Current week totals
       if (transactionDate >= startOfCurrentWeek && transactionDate <= endOfCurrentWeek) {
-        if (typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') {
+        if ((typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') && status === 'completed') {
           currentWeekSpent += amount;
         }
-        if (typeCode === 'Deposit') {
+        if (typeCode === 'Deposit' && status === 'completed') {
           currentWeekDeposited += amount;
         }
       }
 
       // Last week totals
       if (transactionDate >= startOfLastWeek && transactionDate <= endOfLastWeek) {
-        if (typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') {
+        if ((typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') && status === 'completed') {
           lastWeekSpent += amount;
         }
-        if (typeCode === 'Deposit') {
+        if (typeCode === 'Deposit' && status === 'completed') {
           lastWeekDeposited += amount;
         }
       }

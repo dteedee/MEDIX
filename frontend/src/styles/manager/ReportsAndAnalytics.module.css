@@ -250,6 +250,12 @@
   border-color: #667eea;
 }
 
+.periodControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Summary Cards Grid */
 .summaryCardsGrid {
   display: grid;

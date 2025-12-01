@@ -469,7 +469,7 @@ export default function TrackingPage() {
     new Date(timestamp).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 
   const getActionDescription = (log: AuditLog) => {
-    const actor = log.userName || 'Hệ thống';
+    const actor = getDisplayUserName(log.userName);
     const actionVerb = actionVerbMap[log.displayActionType] || 'đã thao tác trên';
     if (log.displayActionType === 'LOGIN') {
       
@@ -479,6 +479,11 @@ export default function TrackingPage() {
         ? 'phiên đăng nhập'
         : getFriendlyEntityLabel(log.entityType).toLowerCase();
     return `${actor} ${actionVerb} ${friendlyEntity}.`;
+  };
+
+  const getDisplayUserName = (name?: string) => {
+    if (!name || name === 'Unknown') return 'Hệ thống';
+    return name;
   };
 
   const getActionBadgeStyle = (action: string) => {
@@ -596,13 +601,13 @@ export default function TrackingPage() {
                         </select>
                     </div>
                     <div className={userStyles.filterItem}>
-                        <label><i className="bi bi-person"></i> Người dùng</label>
-                        <select value={filters.userFilter} onChange={e => handleFilterChange('userFilter', e.target.value)}>
-                            <option value="all">Tất cả người dùng</option>
-                            {uniqueUsers.map(user => (
-                                <option key={user} value={user}>{user}</option>
-                            ))}
-                        </select>
+                      <label><i className="bi bi-person"></i> Tác nhân</label>
+                      <select value={filters.userFilter} onChange={e => handleFilterChange('userFilter', e.target.value)}>
+                        <option value="all">Tất cả tác nhân</option>
+                        {uniqueUsers.map(user => (
+                          <option key={user} value={user}>{user}</option>
+                        ))}
+                      </select>
                     </div>
                     <div className={userStyles.filterItem}>
                         <label><i className="bi bi-calendar-event"></i> Từ ngày</label>
@@ -640,7 +645,7 @@ export default function TrackingPage() {
                       )}
                     </th>
                     <th onClick={() => requestSort('userName')} className={userStyles.sortable}>
-                      Người dùng
+                      Tác nhân
                       {sortConfig.key === 'userName' && (
                         <i className={`bi bi-arrow-${sortConfig.direction === 'ascending' ? 'up' : 'down'}`}></i>
                       )}
@@ -652,7 +657,9 @@ export default function TrackingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedLogs.map((log, index) => (
+                  {paginatedLogs.map((log, index) => {
+                    const displayUser = getDisplayUserName(log.userName);
+                    return (
                     <tr key={log.id} className={userStyles.tableRow}>
                       <td className={userStyles.indexCell}>
                         {(filters.page - 1) * filters.pageSize + index + 1}
@@ -665,11 +672,11 @@ export default function TrackingPage() {
                       <td>
                         <div className={userStyles.userCell}>
                           <img
-                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(log.userName || 'Unknown')}&background=random&color=fff`}
-                            alt={log.userName || 'Unknown'}
+                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayUser)}&background=random&color=fff`}
+                            alt={displayUser}
                             className={userStyles.avatar}
                           />
-                          <span className={userStyles.userName}>{log.userName || 'Unknown'}</span>
+                          <span className={userStyles.userName}>{displayUser}</span>
                         </div>
                       </td>
                       <td>
@@ -708,7 +715,8 @@ export default function TrackingPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -780,7 +788,7 @@ export default function TrackingPage() {
                   <div className={styles.summaryMeta}>
                     <span className={styles.infoPill}>
                       <i className="bi bi-person-circle"></i>
-                      {viewingLog.userName || 'Không rõ người dùng'}
+                      {getDisplayUserName(viewingLog.userName)}
                     </span>
                     <span className={styles.infoPill}>
                       <i className="bi bi-cpu"></i>

@@ -27,7 +27,6 @@ export default function CommissionManagement() {
   const loadCommissions = async () => {
     setLoading(true);
     try {
-      // Mock data
       const mockCommissions: Commission[] = [
         {
           id: '1',
@@ -84,12 +83,6 @@ export default function CommissionManagement() {
       const compact = amount / 1_000_000;
       const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
       return `${text}M VND`;
-    }
-
-    if (abs >= 1_000) {
-      const compact = amount / 1_000;
-      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
-      return `${text}K VND`;
     }
 
     return `${amount.toLocaleString('vi-VN')} VND`;

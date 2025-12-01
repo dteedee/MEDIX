@@ -140,6 +140,25 @@ export const DoctorWallet: React.FC = () => {
     return `${formatted} ${currency}`;
   };
 
+  const formatCurrencyCompact = (value: number): string => {
+    const amount = value || 0;
+    const abs = Math.abs(amount);
+
+    if (abs >= 1_000_000_000) {
+      const compact = amount / 1_000_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}B VND`;
+    }
+
+    if (abs >= 1_000_000) {
+      const compact = amount / 1_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}M VND`;
+    }
+
+    return `${amount.toLocaleString('vi-VN')} VND`;
+  };
+
   const formatNumberInput = (value: string): string => {
     const numericValue = value.replace(/\./g, '');
     if (numericValue === '') return '';
@@ -256,7 +275,6 @@ export const DoctorWallet: React.FC = () => {
 
     setIsProcessingWithdrawal(true);
     try {
-      // Tạo transfer transaction request
       const transferRequest: TransferTransactionCreateRequest = {
         amount: Math.round(amount),
         description: `Rút tiền về ${selectedBank.shortName || selectedBank.name} - STK: ${accountNumber.trim()} - Chủ TK: ${accountName.trim()}`,
@@ -264,12 +282,10 @@ export const DoctorWallet: React.FC = () => {
         toAccountNumber: accountNumber.trim()
       };
 
-      // Gọi API tạo transfer transaction
       const result = await walletService.createTransferTransaction(transferRequest);
       
       alert('Yêu cầu rút tiền đã được gửi thành công!');
       
-      // Reset form
       setWithdrawalAmount('');
       setDepositAmount('');
       setShowWithdrawalModal(false);
@@ -279,7 +295,6 @@ export const DoctorWallet: React.FC = () => {
       setAccountName('');
       setBankSearchTerm('');
       
-      // Refresh wallet và transactions
       const walletData = await walletService.getWalletByUserId();
       setWallet(walletData);
       await fetchTransactions();
@@ -366,7 +381,6 @@ export const DoctorWallet: React.FC = () => {
   };
 
   const getTransactionTypeName = (typeCode: string | undefined, transaction?: WalletTransactionDto): string => {
-    // Kiểm tra xem có phải giao dịch mua gói dịch vụ không
     if (transaction && isServicePackagePurchase(transaction)) {
       return 'Mua gói dịch vụ';
     }
@@ -388,7 +402,6 @@ export const DoctorWallet: React.FC = () => {
   };
 
   const getTransactionTypeIcon = (typeCode: string | undefined, transaction?: WalletTransactionDto): string => {
-    // Kiểm tra xem có phải giao dịch mua gói dịch vụ không
     if (transaction && isServicePackagePurchase(transaction)) {
       return 'bi-box-seam';
     }
@@ -409,11 +422,9 @@ export const DoctorWallet: React.FC = () => {
     return iconMap[typeCode] || 'bi-arrow-left-right';
   };
 
-  // Kiểm tra xem giao dịch có phải là mua gói dịch vụ không
   const isServicePackagePurchase = (transaction: WalletTransactionDto): boolean => {
     if (!transaction) return false;
     
-    // Kiểm tra description có chứa từ khóa liên quan đến gói dịch vụ
     const desc = (transaction.description || '').toLowerCase();
     const servicePackageKeywords = [
       'service tier',
@@ -425,12 +436,10 @@ export const DoctorWallet: React.FC = () => {
       'doctor paid for service package'
     ];
     
-    // Nếu description chứa từ khóa liên quan đến gói dịch vụ
     if (servicePackageKeywords.some(keyword => desc.includes(keyword))) {
       return true;
     }
     
-    // Nếu transactionTypeCode là SystemCommission nhưng description liên quan đến gói dịch vụ
     if (transaction.transactionTypeCode === 'SystemCommission' && 
         (desc.includes('tier') || desc.includes('package') || desc.includes('gói'))) {
       return true;
@@ -441,14 +450,12 @@ export const DoctorWallet: React.FC = () => {
 
   const isDebitTransaction = (typeCode: string | undefined, transaction?: WalletTransactionDto): boolean => {
     if (!typeCode) {
-      // Nếu không có typeCode nhưng có transaction, kiểm tra xem có phải mua gói dịch vụ không
       if (transaction && isServicePackagePurchase(transaction)) {
         return true;
       }
       return false;
     }
     
-    // Giao dịch mua gói dịch vụ luôn là debit (trừ tiền)
     if (transaction && isServicePackagePurchase(transaction)) {
       return true;
     }
@@ -462,7 +469,7 @@ export const DoctorWallet: React.FC = () => {
     const isDebit = isDebitTransaction(typeCode, transaction);
     const sign = isDebit ? '-' : '+';
     const absAmount = Math.abs(amount);
-    return `${sign}${formatBalance(absAmount, 'VND')}`;
+    return `${sign}${formatCurrencyCompact(absAmount)}`;
   };
 
   const getTransactionColor = (typeCode: string | undefined, transaction?: WalletTransactionDto): string => {
@@ -497,15 +504,12 @@ export const DoctorWallet: React.FC = () => {
       });
     };
 
-    // Kiểm tra xem có phải giao dịch mua gói dịch vụ không
     if (isServicePackagePurchase(transaction)) {
-      // Trích xuất tên gói từ description nếu có
       const desc = transaction.description || '';
       const tierMatch = desc.match(/tier\s+(\w+)/i) || desc.match(/gói\s+(\w+)/i);
       if (tierMatch) {
         return `Mua gói dịch vụ ${tierMatch[1]}`;
       }
-      // Kiểm tra các pattern khác
       if (desc.includes('VIP') || desc.includes('Premium') || desc.includes('Professional') || desc.includes('Basic')) {
         const tierName = desc.match(/(VIP|Premium|Professional|Basic)/i)?.[0] || '';
         return `Mua gói dịch vụ ${tierName}`;
@@ -534,7 +538,6 @@ export const DoctorWallet: React.FC = () => {
         return transaction.description || `Lương bác sĩ${transactionDate ? ` ngày ${formatDate(transactionDate)}` : ''}`;
       
       case 'SystemCommission':
-        // Nếu là SystemCommission nhưng không phải mua gói dịch vụ, hiển thị hoa hồng
         return transaction.description || 'Hoa hồng hệ thống';
       
       default:
@@ -556,7 +559,6 @@ export const DoctorWallet: React.FC = () => {
     }
     
     if (activeTab === 'expense') {
-      // Lọc các giao dịch mua gói dịch vụ
       return allTransactions.filter(t => isServicePackagePurchase(t));
     }
     
@@ -614,20 +616,16 @@ export const DoctorWallet: React.FC = () => {
       const amount = Math.abs(transaction.amount || 0);
       const typeCode = transaction.transactionTypeCode;
       
-      // Kiểm tra xem có phải giao dịch mua gói dịch vụ không
       const isPackagePurchase = isServicePackagePurchase(transaction);
 
-      // Tính doanh thu (tiền vào)
       if (typeCode === 'DoctorSalary' || typeCode === 'Deposit') {
         totalRevenue += amount;
       }
       
-      // Tính chi tiêu (tiền ra) - bao gồm rút tiền và mua gói dịch vụ
       if (typeCode === 'Withdrawal' || isPackagePurchase) {
         totalSpent += amount;
       }
 
-      // Tính cho tuần hiện tại
       if (transactionDate >= startOfCurrentWeek && transactionDate <= endOfCurrentWeek) {
         if (typeCode === 'DoctorSalary' || typeCode === 'Deposit') {
           currentWeekRevenue += amount;
@@ -637,7 +635,6 @@ export const DoctorWallet: React.FC = () => {
         }
       }
 
-      // Tính cho tuần trước
       if (transactionDate >= startOfLastWeek && transactionDate <= endOfLastWeek) {
         if (typeCode === 'DoctorSalary' || typeCode === 'Deposit') {
           lastWeekRevenue += amount;
@@ -731,7 +728,7 @@ export const DoctorWallet: React.FC = () => {
               <div className={styles.walletAmount}>Lỗi</div>
             ) : wallet ? (
               <div className={styles.walletAmount}>
-                {formatBalance(wallet.balance, wallet.currency)}
+                {formatCurrencyCompact(wallet.balance)}
               </div>
             ) : (
               <div className={styles.walletAmount}>N/A</div>
@@ -756,7 +753,7 @@ export const DoctorWallet: React.FC = () => {
                     <div className={styles.reportLabel}>Đã thu</div>
                     <div className={styles.reportAmountRow}>
                       <div className={styles.reportAmount}>
-                        {formatBalance(weeklyReport.totalRevenue, wallet?.currency || 'VND')}
+                        {formatCurrencyCompact(weeklyReport.totalRevenue)}
                       </div>
                       <div className={`${styles.reportPercentage} ${weeklyReport.revenueChangePercentage >= 0 ? styles.percentageIncrease : styles.percentageDecrease}`}>
                         {weeklyReport.revenueChangePercentage >= 0 ? '+' : ''}{weeklyReport.revenueChangePercentage}% so với tuần trước
@@ -774,7 +771,7 @@ export const DoctorWallet: React.FC = () => {
                     <div className={styles.reportLabel}>Đã chi</div>
                     <div className={styles.reportAmountRow}>
                       <div className={styles.reportAmount}>
-                        {formatBalance(weeklyReport.totalSpent, wallet?.currency || 'VND')}
+                        {formatCurrencyCompact(weeklyReport.totalSpent)}
                       </div>
                       <div className={`${styles.reportPercentage} ${weeklyReport.spentChangePercentage >= 0 ? styles.percentageIncrease : styles.percentageDecrease}`}>
                         {weeklyReport.spentChangePercentage >= 0 ? '+' : ''}{weeklyReport.spentChangePercentage}% so với tuần trước

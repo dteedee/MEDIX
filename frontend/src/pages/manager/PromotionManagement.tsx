@@ -916,7 +916,6 @@ export default function PromotionManagement() {
             } catch (error: any) {
               const message = error?.response?.data?.message || error?.message || 'Không thể tạo khuyến mãi';
               
-              // Check for specific error messages
               if (error?.response?.status === 409) {
                 throw new Error('Mã khuyến mãi đã tồn tại. Vui lòng sử dụng mã khác.');
               }
@@ -930,7 +929,6 @@ export default function PromotionManagement() {
   );
 }
 
-// Modal Component
 interface PromotionModalProps {
   promotion: PromotionDto | null;
   mode: 'view' | 'edit' | 'create';
@@ -957,7 +955,6 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
     promotion?.discountValue ? String(promotion.discountValue) : ''
   );
   
-  // Quản lý danh sách nhóm áp dụng được chọn dưới dạng mảng
   const [selectedTargets, setSelectedTargets] = useState<string[]>(() => {
     if (promotion?.applicableTargets) {
       return promotion.applicableTargets.split(',').map(t => t.trim()).filter(t => t);
@@ -973,7 +970,6 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
   const [loadingTargets, setLoadingTargets] = useState(false);
   const { showToast } = useToast();
 
-  // Tải danh sách nhóm áp dụng khi mở modal
   React.useEffect(() => {
     const fetchTargets = async () => {
       setLoadingTargets(true);
@@ -1136,14 +1132,12 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
     handleChange('discountValue', sanitized === '' ? 0 : Number(sanitized));
   };
 
-  // Xử lý thao tác chọn nhóm áp dụng
   const handleTargetToggle = (targetValue: string) => {
     setSelectedTargets(prev => {
       const newTargets = prev.includes(targetValue)
         ? prev.filter(t => t !== targetValue)
         : [...prev, targetValue];
       
-      // Đồng bộ lại chuỗi applicableTargets trong form
       const targetsString = newTargets.join(',');
       setFormData(prevData => ({ ...prevData, applicableTargets: targetsString }));
       
@@ -1198,7 +1192,6 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ promotion, mode, onClos
     }
   };
 
-  // Prevent form submission on Enter key
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && e.target instanceof HTMLInputElement) {
       e.preventDefault();

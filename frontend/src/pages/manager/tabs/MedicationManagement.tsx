@@ -50,7 +50,6 @@ export default function MedicationManagement(): JSX.Element {
   const handleFilterChange = useCallback((key: keyof MedicationFilters, value: any) => {
     setFilters(prev => {
       const newFilters = { ...prev, [key]: value };
-      // Reset page to 1 only when changing search, statusFilter, or pageSize
       if (key !== 'page') {
         newFilters.page = 1;
       }
@@ -68,7 +67,6 @@ export default function MedicationManagement(): JSX.Element {
     try {
       const result = await medicationService.toggleActive(selectedMedication.id);
       showToast(result.message || `Đã ${result.isActive ? 'kích hoạt' : 'tạm dừng'} thuốc "${selectedMedication.medicationName}"`, 'success');
-      // Reload data
       await load();
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Không thể cập nhật trạng thái thuốc.';
@@ -132,11 +130,9 @@ export default function MedicationManagement(): JSX.Element {
         let valA: any = a[sortConfig.key];
         let valB: any = b[sortConfig.key];
         
-        // Handle undefined/null values
         if (valA == null) valA = '';
         if (valB == null) valB = '';
         
-        // Convert to string for comparison
         const strA = String(valA).toLowerCase();
         const strB = String(valB).toLowerCase();
 

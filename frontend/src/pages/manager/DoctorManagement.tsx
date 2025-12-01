@@ -70,7 +70,6 @@ export default function DoctorManagement() {
       const data = await DoctorService.getAll({ page: 1, pageSize: 0, searchTerm: '' });
       setAllDoctors(data.items || []);
 
-      // Extract unique specializations
       const uniqueSpecs = [...new Set(data.items.map((d: any) => d.specialization).filter(Boolean))];
       setSpecializations(uniqueSpecs);
     } catch (error) {
@@ -139,7 +138,6 @@ export default function DoctorManagement() {
       if (activeTab === 'all') {
         const fullDoctor: any = await DoctorService.getById(doctor.id);
         setViewing(fullDoctor);
-        // Update doctor in list with serviceTier if available
         setAllDoctors(prev => prev.map(d =>
           d.id === doctor.id ? { ...d, serviceTier: fullDoctor.serviceTier || d.serviceTier } : d
         ));
@@ -206,7 +204,6 @@ export default function DoctorManagement() {
         okDate = !!created && (!from || created >= from) && (!to || created <= to);
       }
 
-      // Rating filter
       let okRating = true;
       if (filters.minRating !== undefined || filters.maxRating !== undefined) {
         const rating = d.rating || 0;
@@ -214,7 +211,6 @@ export default function DoctorManagement() {
           (!filters.maxRating || rating <= filters.maxRating);
       }
 
-      // Experience filter
       let okExperience = true;
       if (filters.minExperience !== undefined || filters.maxExperience !== undefined) {
         const exp = d.yearsOfExperience || 0;
@@ -273,7 +269,6 @@ export default function DoctorManagement() {
     });
   }, [filters]);
 
-  // Export to CSV
   const handleExportCSV = useCallback(() => {
     const currentList = activeTab === 'all' ? allDoctors : pendingDoctors;
     const headers = activeTab === 'all'
@@ -322,29 +317,24 @@ export default function DoctorManagement() {
     showToast('Đã xuất file CSV thành công', 'success');
   }, [activeTab, allDoctors, pendingDoctors, showToast]);
 
-  // Calculate stats with real data
   const stats = useMemo(() => {
     const totalDoctors = allDoctors.length;
     const activeDoctors = allDoctors.filter(d => d.statusCode === 1).length;
     const inactiveDoctors = totalDoctors - activeDoctors;
     const pendingCount = pendingDoctors.length;
 
-    // Calculate average rating
     const doctorsWithRating = allDoctors.filter(d => d.rating && d.rating > 0);
     const avgRating = doctorsWithRating.length > 0
       ? doctorsWithRating.reduce((sum, d) => sum + (d.rating || 0), 0) / doctorsWithRating.length
       : 0;
 
-    // Calculate total reviews
     const totalReviews = allDoctors.reduce((sum, d) => sum + (d.reviewCount || 0), 0);
 
-    // Calculate average experience
     const doctorsWithExp = allDoctors.filter(d => d.yearsOfExperience && d.yearsOfExperience > 0);
     const avgExperience = doctorsWithExp.length > 0
       ? doctorsWithExp.reduce((sum, d) => sum + (d.yearsOfExperience || 0), 0) / doctorsWithExp.length
       : 0;
 
-    // Top specialty
     const specCounts: Record<string, number> = allDoctors.reduce((acc, d) => {
       if (d.specialization) {
         acc[d.specialization] = (acc[d.specialization] || 0) + 1;
@@ -356,7 +346,6 @@ export default function DoctorManagement() {
     const sorted = entries.sort((a, b) => b[1] - a[1]);
     const topSpecialty = sorted[0] ? { name: sorted[0][0], count: sorted[0][1] } : { name: 'N/A', count: 0 };
 
-    // Calculate percentage changes (simplified - in real app, compare with previous period)
     const activePercentage = totalDoctors > 0 ? ((activeDoctors / totalDoctors) * 100).toFixed(1) : '0';
 
     return {
@@ -382,13 +371,11 @@ export default function DoctorManagement() {
   const getEducationLabel = (educationCode?: string): string => {
     if (!educationCode) return 'Chưa có';
 
-    // Try to find matching degree description
     const degree = degrees.find((d: any) => d.code === educationCode);
     if (degree) {
       return degree.description;
     }
 
-    // If not found, return the code as is (might be already a description)
     return educationCode;
   };
 

@@ -41,7 +41,6 @@ export default function CategoryList({ hideHeader = false, title = 'Quản lý D
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      // Sử dụng categoryService để lấy dữ liệu
       const { items, total } = await categoryService.list(1, 9999, ''); // Tải tất cả để tính toán stats
       setCategories(items || []);
       setTotal(total);
@@ -60,7 +59,6 @@ export default function CategoryList({ hideHeader = false, title = 'Quản lý D
   const handleFilterChange = useCallback((key: keyof CategoryListFilters, value: any) => {
     setFilters(prev => {
       const newFilters = { ...prev, [key]: value };
-      // Reset page to 1 only when changing search, statusFilter, or pageSize
       if (key !== 'page') {
         newFilters.page = 1;
       }
@@ -127,7 +125,6 @@ export default function CategoryList({ hideHeader = false, title = 'Quản lý D
   const sortedCategories = useMemo(() => {
     let sortableItems = [...categories];
 
-    // Filter by search term
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
       sortableItems = sortableItems.filter(category =>
@@ -137,7 +134,6 @@ export default function CategoryList({ hideHeader = false, title = 'Quản lý D
       );
     }
 
-    // Filter by status
     if (filters.statusFilter !== 'all') {
       const isActive = filters.statusFilter === 'active';
       sortableItems = sortableItems.filter(category => category.isActive === isActive);
@@ -148,11 +144,9 @@ export default function CategoryList({ hideHeader = false, title = 'Quản lý D
         let valA: any = a[sortConfig.key];
         let valB: any = b[sortConfig.key];
         
-        // Handle undefined/null values
         if (valA == null) valA = '';
         if (valB == null) valB = '';
         
-        // Convert to string for comparison
         const strA = String(valA).toLowerCase();
         const strB = String(valB).toLowerCase();
 

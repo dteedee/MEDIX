@@ -112,7 +112,6 @@ export const PatientFinance: React.FC = () => {
         ]);
         setWallet(walletData);
         setAppointments(appointmentsData);
-        // Create a map for quick lookup
         const map = new Map<string, Appointment>();
         appointmentsData.forEach(apt => {
           map.set(apt.id, apt);
@@ -128,11 +127,9 @@ export const PatientFinance: React.FC = () => {
 
     fetchWallet();
 
-    // Check if returning from payment success
     const urlParams = new URLSearchParams(window.location.search);
     const paymentSuccess = urlParams.get('payment_success');
     if (paymentSuccess === 'true') {
-      // Refresh transactions after a short delay to ensure backend has processed
       setTimeout(() => {
         fetchTransactions();
       }, 1000);
@@ -145,11 +142,9 @@ export const PatientFinance: React.FC = () => {
       const transactionData = await walletService.getTransactionsByWalletId();
       setTransactions(transactionData);
       
-      // Reload appointments to ensure we have all appointment data for transactions
       try {
         const allAppointments = await appointmentService.getPatientAppointments();
         setAppointments(allAppointments);
-        // Update appointment map
         const map = new Map<string, Appointment>();
         allAppointments.forEach(apt => {
           map.set(apt.id, apt);
@@ -216,13 +211,11 @@ export const PatientFinance: React.FC = () => {
 
   const handleBankSelect = (bank: BankInfo) => {
     setSelectedBank(bank);
-    // Scroll to account number input after a short delay to ensure DOM is updated
     setTimeout(() => {
       accountNumberInputRef.current?.scrollIntoView({ 
         behavior: 'smooth', 
         block: 'center' 
       });
-      // Focus the input after scrolling
       setTimeout(() => {
         accountNumberInputRef.current?.focus();
       }, 300);
@@ -231,16 +224,13 @@ export const PatientFinance: React.FC = () => {
 
   const handleAccountNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Only allow numbers, remove all non-numeric characters
     const numericValue = value.replace(/\D/g, '');
     setAccountNumber(numericValue);
   };
 
   const handleAccountNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Only allow English letters and spaces, remove numbers and special characters
     const englishOnly = value.replace(/[^A-Za-z\s]/g, '');
-    // Convert to uppercase
     setAccountName(englishOnly.toUpperCase());
   };
 
@@ -253,7 +243,6 @@ export const PatientFinance: React.FC = () => {
       alert('Vui lòng nhập số tài khoản');
       return;
     }
-    // Validate account number is numeric only
     if (!/^\d+$/.test(accountNumber)) {
       alert('Số tài khoản chỉ được chứa số');
       return;
@@ -262,7 +251,6 @@ export const PatientFinance: React.FC = () => {
       alert('Vui lòng nhập tên chủ tài khoản');
       return;
     }
-    // Validate account name is English letters and spaces only
     if (!/^[A-Za-z\s]+$/.test(accountName)) {
       alert('Tên chủ tài khoản chỉ được chứa chữ cái tiếng Anh và khoảng trắng');
       return;
@@ -273,13 +261,11 @@ export const PatientFinance: React.FC = () => {
   const handleSubmitWithdrawal = async () => {
     if (!selectedBank || !accountNumber || !accountName) return;
     
-    // Validate account number is numeric only
     if (!/^\d+$/.test(accountNumber)) {
       alert('Số tài khoản chỉ được chứa số');
       return;
     }
     
-    // Validate account name is English letters and spaces only
     if (!/^[A-Za-z\s]+$/.test(accountName)) {
       alert('Tên chủ tài khoản chỉ được chứa chữ cái tiếng Anh và khoảng trắng');
       return;
@@ -304,7 +290,6 @@ export const PatientFinance: React.FC = () => {
       
       alert('Yêu cầu rút tiền đã được gửi thành công! Vui lòng chờ quản trị viên xét duyệt.');
       
-      // Reset form
       setWithdrawalAmount('');
       setDepositAmount('');
       setShowWithdrawalModal(false);
@@ -314,7 +299,6 @@ export const PatientFinance: React.FC = () => {
       setAccountName('');
       setBankSearchTerm('');
       
-      // Refresh wallet and transactions
       const walletData = await walletService.getWalletByUserId();
       setWallet(walletData);
       await fetchTransactions();
@@ -397,23 +381,19 @@ export const PatientFinance: React.FC = () => {
     return statusMap[status] || status;
   };
 
-   // Helper function to remove trailing "0" from description - XÓA HOÀN TOÀN SỐ 0
    const cleanDescription = (desc: any): string => {
     if (!desc) return '';
   
-    // Nếu BE trả về mảng -> join lại
     if (Array.isArray(desc)) {
       desc = desc.join(' ');
     }
   
     desc = String(desc);
     
-    // Nếu description chỉ là "0" hoặc chỉ chứa số 0, return empty
     if (desc.trim() === '0' || /^0+$/.test(desc.trim())) {
       return '';
     }
   
-    // Loại bỏ tất cả số "0" ở cuối một cách triệt để
     let cleaned = desc.trim();
     let maxIterations = 15;
     let iterations = 0;
@@ -421,26 +401,19 @@ export const PatientFinance: React.FC = () => {
     while (iterations < maxIterations) {
       const before = cleaned;
       
-      // Xóa "0" sau "h" - ví dụ: "9h0", "10h00" -> "9h", "10h"
       cleaned = cleaned.replace(/(\d+)h0+/gi, '$1h');
       
-      // Xóa "0" sau dấu ngoặc đóng - ví dụ: ")0" -> ")"
       cleaned = cleaned.replace(/\)0+/g, ')');
       
-      // Xóa "0" sau chữ cái và dấu cách - ví dụ: "hẹn 0", "hẹn0" -> "hẹn"
       cleaned = cleaned.replace(/([a-zA-ZÀ-ỹ])\s*0+(?=\s*$)/gi, '$1');
       
-      // Xóa "0" đứng một mình ở cuối (có hoặc không có khoảng trắng trước)
       cleaned = cleaned.replace(/\s+0+$/g, '');
       cleaned = cleaned.replace(/\s*0+$/g, '');
       
-      // Xóa tất cả "0" ở cuối dòng
       cleaned = cleaned.replace(/0+$/g, '');
       
-      // Trim lại
       cleaned = cleaned.trim();
       
-      // Nếu không thay đổi gì, dừng lại
       if (cleaned === before) {
         break;
       }
@@ -448,13 +421,11 @@ export const PatientFinance: React.FC = () => {
       iterations++;
     }
   
-    // Kiểm tra cuối cùng: nếu còn "0" đơn lẻ ở cuối, xóa luôn
     if (cleaned.endsWith(' 0')) {
       cleaned = cleaned.substring(0, cleaned.length - 2).trim();
     }
     if (cleaned.endsWith('0') && cleaned.length > 1) {
       const lastChar = cleaned[cleaned.length - 2];
-      // Chỉ xóa "0" nếu ký tự trước nó không phải là số
       if (!/\d/.test(lastChar)) {
         cleaned = cleaned.substring(0, cleaned.length - 1).trim();
       }
@@ -462,7 +433,6 @@ export const PatientFinance: React.FC = () => {
     
     return cleaned;
   };
-  // Helper function to format date and time from transaction date if appointment is not available
   const formatTransactionDateTime = (transaction: WalletTransactionDto): { date: string | null; time: string | null } => {
     const dateStr = transaction.transactionDate || transaction.createdAt;
     if (!dateStr) {
@@ -490,7 +460,6 @@ export const PatientFinance: React.FC = () => {
     }
   };
 
-  // Helper function to format date and time from appointment
   const formatAppointmentDateTime = (appointment: Appointment | null | undefined): { date: string | null; time: string | null } => {
     if (!appointment || !appointment.appointmentStartTime) {
       return { date: null, time: null };
@@ -518,15 +487,12 @@ export const PatientFinance: React.FC = () => {
   };
 
   const formatTransactionDescription = (transaction: WalletTransactionDto): string => {
-    // Clean description ngay từ đầu để loại bỏ "0" từ backend - không mutate transaction
     let originalDescription = transaction.description;
     let cleanedDescription = originalDescription ? cleanDescription(originalDescription) : null;
-    // Nếu sau khi clean chỉ còn "0" hoặc rỗng, bỏ qua description gốc
     if (cleanedDescription && (cleanedDescription.trim() === '0' || /^0+$/.test(cleanedDescription.trim()))) {
       cleanedDescription = null;
     }
     
-    // Try to find appointment from map first, then from array
     let appointment = transaction.relatedAppointmentId 
       ? (appointmentMap.get(transaction.relatedAppointmentId) || appointments.find(apt => apt.id === transaction.relatedAppointmentId))
       : null;
@@ -543,7 +509,6 @@ export const PatientFinance: React.FC = () => {
       case 'AppointmentPayment':
         let doctorName: string | null = null;
         
-        // First, try to get doctor name from appointment
         if (appointment) {
           const rawDoctorName = appointment.doctorName;
          
@@ -657,12 +622,10 @@ export const PatientFinance: React.FC = () => {
       
       case 'AppointmentRefund':
         if (appointment && appointment.doctorName && appointment.doctorName.trim() !== '' && appointment.doctorName !== '0' && appointment.doctorName !== 'O') {
-          // Clean description first to remove trailing "0" or other artifacts
           let cleanDesc = cleanedDescription || '';
           
           const refundPercent = cleanDesc.match(/(\d+)%/)?.[1] || '80';
           const cancelFee = cleanDesc.match(/Phí hủy:\s*([\d.,]+)/)?.[1] || '';
-          // Clean doctor name to remove any trailing "0"
           const cleanDoctorName = cleanDescription(appointment.doctorName.trim());
           const { date, time } = formatAppointmentDateTime(appointment);
           
@@ -682,22 +645,16 @@ export const PatientFinance: React.FC = () => {
             desc += ')';
           }
           
-          // Ensure no trailing "0" in final description
           return cleanDescription(desc);
         }
-        // If appointment not found or doctorName is missing, check description
         if (cleanedDescription && 
             cleanedDescription.trim() !== '0' && 
             !/^0+$/.test(cleanedDescription.trim()) &&
             cleanedDescription.includes('bác sĩ')) {
-          // Clean description first
           let cleanDesc = cleanDescription(cleanedDescription);
           
-          // If cleaned description is empty or just "0", skip
           if (!cleanDesc || cleanDesc.trim() === '0' || /^0+$/.test(cleanDesc.trim())) {
-            // Skip to fallback
           } else if (cleanDesc.includes('bác sĩ 0') || cleanDesc.includes('bác sĩ0')) {
-            // Use transaction date/time as fallback
             const { date, time } = formatTransactionDateTime(transaction);
             let result = 'Hoàn lại tiền hủy lịch';
             if (date) {
@@ -708,12 +665,10 @@ export const PatientFinance: React.FC = () => {
             }
             return cleanDescription(result);
           }
-          // Try to extract doctor name from description
           const doctorNameMatch = cleanDesc.match(/bác sĩ\s+([^0O\s][^\s]*(?:\s+[^0O\s][^\s]*)*?)/i);
           if (doctorNameMatch && doctorNameMatch[1]) {
             const extractedName = cleanDescription(doctorNameMatch[1].trim());
             if (extractedName !== '' && extractedName !== '0' && extractedName !== 'O') {
-              // Extract refund info if available
               const refundPercent = cleanDesc.match(/(\d+)%/)?.[1] || '';
               const cancelFee = cleanDesc.match(/Phí hủy:\s*([\d.,]+)/)?.[1] || '';
               const { date, time } = formatAppointmentDateTime(appointment);
@@ -735,7 +690,6 @@ export const PatientFinance: React.FC = () => {
               return cleanDescription(desc);
             }
           }
-          // If we can't extract doctor name, try to use transaction date/time as fallback
           const { date, time } = formatTransactionDateTime(transaction);
           let result = 'Hoàn lại tiền hủy lịch';
           if (date) {
@@ -746,7 +700,6 @@ export const PatientFinance: React.FC = () => {
           }
           return cleanDescription(result);
         }
-        // Fallback: use transaction date/time if available
         const { date: refundDate, time: refundTime } = formatTransactionDateTime(transaction);
         let desc = 'Hoàn lại tiền hủy lịch';
         if (refundDate) {
@@ -759,7 +712,6 @@ export const PatientFinance: React.FC = () => {
       
       case 'Deposit':
         if (cleanedDescription) {
-          // Handle English descriptions like "Payment for order 123456"
           if (cleanedDescription.toLowerCase().includes('payment for order')) {
             const orderMatch = cleanedDescription.match(/order\s+(\d+)/i);
             if (orderMatch) {
@@ -767,20 +719,17 @@ export const PatientFinance: React.FC = () => {
             }
             return 'Nạp tiền vào ví';
           }
-          // Remove date from description if it exists and clean trailing "0"
           let desc = cleanedDescription.replace(/\s*ngày\s+\d{2}\/\d{2}\/\d{4,}/g, '').trim();
           return cleanDescription(desc) || 'Nạp tiền vào ví';
         }
         return 'Nạp tiền vào ví';
       
       case 'Withdrawal':
-        // Remove date and trailing "0" from description if it exists
         let withdrawalDesc = cleanedDescription ? cleanDescription(cleanedDescription) : '';
         withdrawalDesc = withdrawalDesc.replace(/\s*ngày\s+\d{2}\/\d{2}\/\d{4,}/g, '').trim();
         return cleanDescription(withdrawalDesc) || 'Rút tiền từ ví';
       
       default:
-        // If description is just "0" or empty, return generic message
         if (!cleanedDescription || cleanedDescription.trim() === '0' || /^0+$/.test(cleanedDescription.trim())) {
           return 'Giao dịch';
         }
@@ -802,7 +751,6 @@ export const PatientFinance: React.FC = () => {
     };
 
     if (activeTab === 'deposit') {
-      // Kết hợp điều kiện transactionTypeCode === 'Deposit' và status === 'Completed'
       return transactions.filter(t =>
         t.transactionTypeCode === 'Deposit' && (t.status || '').toLowerCase() === 'completed'
       );
@@ -814,11 +762,9 @@ export const PatientFinance: React.FC = () => {
     );
   }, [transactions, activeTab]);
 
-  // Calculate all-time spending and deposit, and weekly change percentage
   const weeklyReport = useMemo(() => {
     const now = new Date();
     
-    // Current week (this week)
     const startOfCurrentWeek = new Date(now);
     startOfCurrentWeek.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
     startOfCurrentWeek.setHours(0, 0, 0, 0);
@@ -827,7 +773,6 @@ export const PatientFinance: React.FC = () => {
     endOfCurrentWeek.setDate(startOfCurrentWeek.getDate() + 6);
     endOfCurrentWeek.setHours(23, 59, 59, 999);
 
-    // Last week
     const startOfLastWeek = new Date(startOfCurrentWeek);
     startOfLastWeek.setDate(startOfCurrentWeek.getDate() - 7);
     startOfLastWeek.setHours(0, 0, 0, 0);
@@ -836,15 +781,12 @@ export const PatientFinance: React.FC = () => {
     endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
     endOfLastWeek.setHours(23, 59, 59, 999);
 
-    // All-time totals
     let totalSpent = 0;
     let totalDeposited = 0;
 
-    // Current week totals
     let currentWeekSpent = 0;
     let currentWeekDeposited = 0;
 
-    // Last week totals
     let lastWeekSpent = 0;
     let lastWeekDeposited = 0;
 
@@ -859,7 +801,6 @@ export const PatientFinance: React.FC = () => {
       const typeCode = transaction.transactionTypeCode;
       const status = (transaction.status || '').toLowerCase();
 
-      // All-time totals
       if ((typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') && status === 'completed') {
         totalSpent += amount;
       }
@@ -867,7 +808,6 @@ export const PatientFinance: React.FC = () => {
         totalDeposited += amount;
       }
 
-      // Current week totals
       if (transactionDate >= startOfCurrentWeek && transactionDate <= endOfCurrentWeek) {
         if ((typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') && status === 'completed') {
           currentWeekSpent += amount;
@@ -877,7 +817,6 @@ export const PatientFinance: React.FC = () => {
         }
       }
 
-      // Last week totals
       if (transactionDate >= startOfLastWeek && transactionDate <= endOfLastWeek) {
         if ((typeCode === 'AppointmentPayment' || typeCode === 'Withdrawal') && status === 'completed') {
           lastWeekSpent += amount;
@@ -888,7 +827,6 @@ export const PatientFinance: React.FC = () => {
       }
     });
 
-    // Calculate percentage change for this week compared to last week
     const calculatePercentageChange = (current: number, last: number): number => {
       if (last === 0) {
         return current > 0 ? 100 : 0;
@@ -1201,12 +1139,10 @@ export const PatientFinance: React.FC = () => {
                         <span className={styles.transactionDateInline}>
                           {' '}
                           {(() => {
-                            // Use transactionDate if available, otherwise fall back to createdAt
                             const dateStr = transaction.transactionDate || transaction.createdAt;
                             if (dateStr) {
                               try {
                                 const date = new Date(dateStr);
-                                // Check if date is valid
                                 if (!isNaN(date.getTime())) {
                                   return date.toLocaleString('vi-VN', {
                                     day: '2-digit',

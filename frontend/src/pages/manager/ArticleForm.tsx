@@ -70,16 +70,13 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
   useEffect(() => {
     const fetchStatusesAndCategories = async () => {
       try {
-        // Fetch statuses
         const fetchedStatuses = await articleService.getStatuses();
         setStatuses(fetchedStatuses);
 
-        // If in create mode and no article status is set, default to 'Draft'
         if (mode === 'create' && !formData.statusCode) {
           setFormData(prev => ({ ...prev, statusCode: 'Draft' }));
         }
 
-        // Fetch categories
         const fetchedCategories = await articleService.getCachedCategories(); // Use cached categories
         setCategories(fetchedCategories.items.filter((cat: CategoryDTO) => cat.isActive)); // Filter for active categories
       } catch (error) {
@@ -90,7 +87,6 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
     fetchStatusesAndCategories();
   }, [mode, formData.statusCode]); // Re-run if mode or initial status changes
 
-  // Word count utility
   const countWords = (htmlString: string): number => {
     if (!htmlString) return 0;
     const text = htmlString.replace(/<[^>]*>/g, ' ');
@@ -99,7 +95,6 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
     return cleanedText.split(' ').length;
   };
 
-  // Ensure authorId is always set if user is available
   useEffect(() => { if (user?.id && formData.authorId !== user.id) setFormData(prev => ({ ...prev, authorId: user.id })); }, [user?.id, formData.authorId]);
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -171,7 +166,6 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
     setErrors(newErrors);
 
     if (hasErrors) {
-      // Thứ tự hợp lý: title -> slug -> summary -> categoryIds -> content -> thumbnailUrl -> statusCode -> displayOrder -> metaTitle -> metaDescription -> coverImageUrl
       const fieldOrder = ['title', 'slug', 'summary', 'categoryIds', 'content', 'thumbnailUrl', 'statusCode', 'displayOrder', 'metaTitle', 'metaDescription', 'coverImageUrl'];
       const firstErrorField = fieldOrder.find(field => newErrors[field]);
       if (firstErrorField) {
@@ -190,7 +184,6 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
       return;
     }
 
-    // For edit mode, use existing URLs if no new files uploaded
     let finalThumbnailUrl = formData.isHomepageVisible ? (thumbnailPreview || '') : '';
     let finalCoverUrl = coverPreview || '';
 
@@ -233,7 +226,6 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
         }
       }
     } else {
-      // Direct save (no confirmation)
       await saveArticle(payload);
     }
   };
@@ -259,12 +251,10 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
       const message = error?.response?.data?.message || error?.message || 'Không thể lưu bài viết';
       showToast(message, 'error');
 
-      // Xử lý lỗi validation từ backend để hiển thị inline
       const backendErrors = error?.response?.data?.errors;
       if (backendErrors) {
         const newErrors: Record<string, string> = {};
         for (const key in backendErrors) {
-          // Backend có thể trả về key là 'Title' hoặc 'Slug', chúng ta cần map sang 'title', 'slug'
           const frontendKey = key.charAt(0).toLowerCase() + key.slice(1);
           newErrors[frontendKey] = backendErrors[key][0];
         }
@@ -281,7 +271,6 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
-    // Clear error on change
     if (errors[name] && value.trim()) {
       const newErrors = { ...errors };
       delete newErrors[name];
@@ -296,7 +285,6 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
         ? [...prev.categoryIds, value]
         : prev.categoryIds.filter(id => id !== value);
 
-      // Clear category error when at least one is selected
       if (newCategoryIds.length > 0 && errors.categoryIds) {
         const newErrors = { ...errors };
         delete newErrors.categoryIds;
@@ -307,7 +295,6 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
     });
   };
 
-  // Helper to check if a category is selected
   const isCategorySelected = (categoryId: string) => {
     return formData.categoryIds.includes(categoryId);
   };
@@ -329,7 +316,6 @@ export default function ArticleForm({ article, mode, onSaved, onCancel, onSaveRe
         return;
       }
 
-      // Xóa lỗi nếu tệp hợp lệ
       if (errors.thumbnailUrl) {
         setErrors(prev => {
           const newErrors = { ...prev };

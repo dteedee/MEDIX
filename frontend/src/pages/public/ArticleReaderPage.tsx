@@ -33,7 +33,6 @@ export default function ArticleReaderPage() {
   const [totalValid, setTotalValid] = useState(0);
   const [validArticles, setValidArticles] = useState<ArticleDTO[]>([]);
 
-  // Map category name -> icon class
   const getCategoryIcon = (name?: string) => {
     const lower = (name || '').toLowerCase();
     if (lower.includes('cấp cứu') || lower.includes('khẩn')) return 'bi-activity';
@@ -45,7 +44,6 @@ export default function ArticleReaderPage() {
     return 'bi-bookmark-heart';
   };
 
-  // Debounce search
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 300);
     return () => clearTimeout(t);
@@ -84,11 +82,9 @@ export default function ArticleReaderPage() {
         setValidArticles(valid);
         setTotalValid(valid.length);
         
-        // Đếm cho từng category active (chỉ đếm articles có category đó)
         const catCounts: { [catId: string]: number } = {};
         for(const a of valid) {
           (a.categoryIds || []).forEach(cid => {
-            // Chỉ đếm nếu category đó đang active
             if (activeCategoryIds.has(cid)) {
               catCounts[cid] = (catCounts[cid] || 0) + 1;
             }
@@ -115,7 +111,6 @@ export default function ArticleReaderPage() {
     if (selectedCategoryId !== 'all') {
       arr = arr.filter(a => (a.categoryIds || []).includes(String(selectedCategoryId)));
     }
-    // Sort by date: newest first
     return arr.slice().sort((a, b) => {
       const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
       const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
@@ -140,7 +135,6 @@ export default function ArticleReaderPage() {
   const featured: ArticleDTO | undefined = useMemo(() => {
     if (debounced) return undefined;
     if (selectedCategoryId !== 'all') {
-      // Chỉ featured bài đầu tiên thật sự thuộc danh mục đang chọn
       return filteredArticles.find(a => (a.categoryIds || []).includes(String(selectedCategoryId)));
     }
     return filteredArticles[0];

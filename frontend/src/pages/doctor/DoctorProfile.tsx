@@ -141,7 +141,6 @@ export const DoctorProfile: React.FC = () => {
     const errors: Record<string, string[]> = {};
     let isValid = true;
 
-    // Validate required fields
     const requiredFields = ['userName', 'phoneNumber'];
 
     for (const field of requiredFields) {
@@ -165,7 +164,6 @@ export const DoctorProfile: React.FC = () => {
       }
     }
 
-    // Validate optional fields if they have values
     if (editData?.address && editData.address.trim() === '') {
       errors.address = ['Địa chỉ không được để trống nếu đã nhập'];
       isValid = false;
@@ -176,7 +174,6 @@ export const DoctorProfile: React.FC = () => {
   };
 
   const handleSaveClick = () => {
-    // Check required fields first
     const requiredFields = ['userName', 'phoneNumber'];
     const missingFields: string[] = [];
 
@@ -192,13 +189,11 @@ export const DoctorProfile: React.FC = () => {
       return;
     }
 
-    // Validate format
     if (!validateAllFields()) {
       showToast('Vui lòng kiểm tra lại thông tin đã nhập', 'error');
       return;
     }
 
-    // Show confirmation dialog
     setShowSaveConfirmation(true);
   };
 
@@ -373,7 +368,6 @@ export const DoctorProfile: React.FC = () => {
                             setFieldErrors({ ...fieldErrors, UserName: [''] });
                           }
                         }}
-                        //onBlur={(e) => handleFieldBlur('username', e.target.value)}
                         className={`${styles.fieldInput} ${fieldErrors?.UserName?.[0] ? styles.fieldInputError : ''}`}
                         placeholder="Nhập tên tài khoản"
                       />
@@ -430,7 +424,6 @@ export const DoctorProfile: React.FC = () => {
                             setFieldErrors({ ...fieldErrors, PhoneNumber: [''] });
                           }
                         }}
-                        //onBlur={(e) => handleFieldBlur('phoneNumber', e.target.value)}
                         className={`${styles.fieldInput} ${fieldErrors?.PhoneNumber?.[0] ? styles.fieldInputError : ''}`}
                         placeholder="Nhập số điện thoại"
                         type="tel"
@@ -612,12 +605,9 @@ export const DoctorProfile: React.FC = () => {
                         <i className="bi bi-file-earmark-zip" style={{ fontSize: '48px', color: '#667eea' }}></i>
                       </div>
                       <a
-                        // type="button"
-                        // onClick={() => document.getElementById('degreeFileInput')?.click()}
                         className={styles.fileUpdateBtn}
                         href={data.degreeFilesUrl}
                         download
-                        //disabled={uploadingDegree}
                       >
                         Tải về
                       </a>

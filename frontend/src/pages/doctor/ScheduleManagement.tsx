@@ -98,13 +98,11 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                     {slot.startTime.slice(0, 5)} - {slot.endTime.slice(0, 5)}
                   </p>
                   <p className={`detail-status ${
-                    // Chỉ áp dụng class màu cho lịch linh hoạt, lịch cố định có màu mặc định
                     slot.type === 'override' && (slot.overrideType ? "status-available" : "status-unavailable")
                   }`}>
                     <span
                       className="status-dot"
                       style={{
-                        // Nếu là lịch cố định, màu là xám. Nếu là lịch linh hoạt, màu dựa trên overrideType.
                         backgroundColor: slot.type === 'fixed' 
                           ? '#4080ffff' // Màu xám cho lịch cố định
                           : slot.overrideType 
@@ -175,7 +173,6 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   );
 };
 
-// --- Component chính ---
 const ScheduleManagement: React.FC = () => {
   const { user, isAuthenticated, isBanned } = useAuth();
 
@@ -209,7 +206,6 @@ const ScheduleManagement: React.FC = () => {
     }
   };
 
-  // --- Fetch dữ liệu ---
   const refreshAllData = async () => {
     if (!isAuthenticated || !user?.id) return;
     setIsLoading(true);
@@ -266,7 +262,6 @@ const ScheduleManagement: React.FC = () => {
     return { schedulesByDay: sMap, overridesByDate: oMap, appointmentsByDate: aMap };
   }, [viewData]);
 
-  // --- Sinh danh sách ngày ---
   const { days, headerLabel } = useMemo(() => {
     const y = currentDate.getFullYear();
     const m = currentDate.getMonth();
@@ -383,22 +378,17 @@ const ScheduleManagement: React.FC = () => {
                 const dateKey = getLocalDateKey(date);
                 const dayOfWeek = convertDayOfWeek(date.getDay()); // Convert to backend format (1=Monday, ..., 7=Sunday)
 
-                // Lấy lịch cố định và lịch linh hoạt cho ngày hiện tại
                 const fixedSchedules = schedulesByDay.get(dayOfWeek) || [];
                 const dayOverrides = overridesByDate.get(dateKey) || [];
                 const dayAppointments = appointmentsByDate.get(dateKey) || [];
 
 
-                // Tính toán các ca làm việc thực tế trong ngày
                 const workSlots = [
-                  // Lấy các ca cố định không bị lịch nghỉ ghi đè
                   ...fixedSchedules.filter(fs =>
-                    // Lịch cố định bị ẩn nếu trùng với lịch "Nghỉ" (overrideType = false)
                     !dayOverrides.some(
                       o => !o.overrideType && o.startTime < fs.endTime && o.endTime > fs.startTime
                     )
                   ),
-                  // Lấy các ca "Tăng ca" (overrideType = true) mà vẫn còn khả dụng (isAvailable = true)
                   ...dayOverrides.filter(o => o.overrideType && o.isAvailable)
                 ];
 

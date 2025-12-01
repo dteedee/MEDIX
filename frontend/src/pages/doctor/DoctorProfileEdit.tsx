@@ -127,7 +127,6 @@ export default function DoctorProfileEdit() {
 
                 switch (status) {
                     case 400:
-                        // Bad Request – likely validation errors
                         if (errorData?.errors) {
                             setErrors(errorData.errors);
                         } else {
@@ -136,10 +135,7 @@ export default function DoctorProfileEdit() {
                         break;
 
                     case 401:
-                        // Unauthorized – user needs to log in
                         setErrors({ general: 'Bạn chưa đăng nhập hoặc phiên đã hết hạn.' });
-                        // Optionally redirect to login:
-                        // navigate('/login');
                         break;
 
                     case 500:
@@ -156,47 +152,9 @@ export default function DoctorProfileEdit() {
 
     }
 
-    // const handlePasswordUpdateSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    //     e.preventDefault();
 
-    //     const form = e.currentTarget;
-    //     const formData = new FormData(form);
 
-    //     for (const [key, value] of formData.entries()) {
-    //         console.log(`${key}:`, value);
-    //     }
 
-    //     setUpdatePasswordLoading(true);
-    //     setPasswordFieldErrors({});
-    //     try {
-    //         await DoctorService.updatePassword(formData);
-    //         setUpdatePasswordLoading(false);
-    //         Swal.fire({
-    //             title: 'Cập nhật thông tin thành công!',
-    //             icon: 'success',
-    //             confirmButtonText: 'OK',
-    //         }).then(() => {
-    //             window.location.href = '/doctor/profile/edit';
-    //         });
-    //         console.log("Update pasword successfully");
-    //     } catch (error: any) {
-    //         setUpdatePasswordLoading(false);
-    //         if (error.response?.status === 400 && Array.isArray(error.response.data)) {
-    //             const errors: Record<string, string> = {};
-    //             error.response.data.forEach((item: any) => {
-    //                 const field = item.memberNames?.[0];
-    //                 const message = item.errorMessage;
-    //                 if (field && message) {
-    //                     errors[field] = message;
-    //                 }
-    //             });
-    //             setPasswordFieldErrors(errors);
-    //         } else {
-    //             // handle 500 or other errors
-    //             setPasswordFieldErrors({ general: 'Đã xảy ra lỗi máy chủ. Vui lòng thử lại sau.' });
-    //         }
-    //     }
-    // }
 
     const validateField = (name: string, value: string) => {
         const newErrors: Record<string, string[]> = {};

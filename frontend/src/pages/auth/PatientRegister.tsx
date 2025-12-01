@@ -575,7 +575,6 @@ export const PatientRegister: React.FC = () => {
     }
   };
 
-  // Handle verify code
   const handleVerifyCode = async () => {
     if (!verificationCode) {
       setError('Vui lòng nhập mã xác nhận');
@@ -586,7 +585,6 @@ export const PatientRegister: React.FC = () => {
     setError(''); // Clear error trước khi verify
 
     try {
-      // Gọi API verify email code
       const result = await emailVerificationService.verifyEmailCode(formData.email, verificationCode);
       
       

@@ -65,17 +65,14 @@ export default function BannerManagement() {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  // Helper function to calculate percentage change
   const calculatePercentageChange = (current: number, previous: number): number => {
     if (previous === 0) return current > 0 ? 100 : 0;
     return ((current - previous) / previous) * 100;
   };
 
-  // Calculate stats with real data
   const getStats = () => {
     const now = new Date();
     
-    // Calculate date ranges
     const oneMonthAgo = new Date(now);
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     
@@ -83,26 +80,21 @@ export default function BannerManagement() {
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     oneWeekAgo.setHours(0, 0, 0, 0);
 
-    // Total banners created before last month
     const bannersCreatedBeforeLastMonth = allBanners.filter(b => {
       if (!b.createdAt) return false;
       const createdDate = new Date(b.createdAt);
       return createdDate < oneMonthAgo;
     }).length;
     
-    // Total banner now
     const totalNow = allBanners.length;
     
-    // Calculate change: how many new banners in last month
     const newBannersLastMonth = totalNow - bannersCreatedBeforeLastMonth;
     const totalBannerChange = bannersCreatedBeforeLastMonth > 0 
       ? ((newBannersLastMonth / bannersCreatedBeforeLastMonth) * 100)
       : (newBannersLastMonth > 0 ? 100 : 0);
 
-    // Active banners: count banners that existed last week and are currently active
     const activeNow = allBanners.filter(b => b.isActive).length;
     
-    // Count banners that existed a week ago (by createdAt)
     const existingLastWeek = allBanners.filter(b => {
       if (!b.createdAt) return false;
       const createdDate = new Date(b.createdAt);
@@ -114,7 +106,6 @@ export default function BannerManagement() {
       ? ((activeNow - activeLastWeek) / activeLastWeek) * 100
       : (activeNow > 0 ? 100 : 0);
 
-    // Inactive banners: similar logic
     const inactiveNow = allBanners.filter(b => !b.isActive).length;
     const inactiveLastWeek = existingLastWeek.filter(b => !b.isActive).length;
     const inactiveChange = inactiveLastWeek > 0
@@ -164,8 +155,6 @@ export default function BannerManagement() {
   };
 
   const handleStatusChange = (bannerToUpdate: BannerDTO, isBeingLocked: boolean) => {
-    // For banners, lock/unlock is based on isActive status
-    // Lock = set isActive to false, Unlock = set isActive to true
     setConfirmationDialog({
       isOpen: true,
       banner: bannerToUpdate,
@@ -187,7 +176,6 @@ export default function BannerManagement() {
     setUpdatingIds(prev => ({ ...prev, [currentBanner.id]: true }));
 
     try {
-      // Directly use the update service to toggle isActive status
       const newIsActive = !isBeingLocked;
 
       await bannerService.update(currentBanner.id, {
@@ -265,23 +253,18 @@ export default function BannerManagement() {
       const okSearch = !searchTerm ||
         (b.bannerTitle && b.bannerTitle.toLowerCase().includes(searchTerm));
 
-      // Use isActive for status filtering (isLocked may not be available from backend)
       const okStatus = filters.statusFilter === 'all' || 
         (filters.statusFilter === 'active' ? b.isActive : 
          filters.statusFilter === 'inactive' ? !b.isActive : true);
 
-      // Sửa logic lọc ngày: kiểm tra sự giao thoa giữa khoảng thời gian của banner và bộ lọc
       const okDate = (() => {
         if (!from && !to) return true; // Không có bộ lọc ngày
 
         const bannerStart = b.startDate ? new Date(b.startDate) : null;
         const bannerEnd = b.endDate ? new Date(b.endDate) : null;
 
-        // Nếu banner không có ngày bắt đầu hoặc kết thúc, nó không thể khớp với bộ lọc có ngày
         if (!bannerStart || !bannerEnd) return false;
 
-        // Điều kiện để hai khoảng thời gian giao nhau:
-        // (StartA <= EndB) and (EndA >= StartB)
         const overlaps = (!from || bannerEnd >= from) && (!to || bannerStart <= to);
         return overlaps;
       })();
@@ -320,7 +303,6 @@ export default function BannerManagement() {
   };
 
   const getStatusBadge = (isActive: boolean, isLocked: boolean) => {
-    // If isLocked field is available and true, show locked status
     if (isLocked !== undefined && isLocked) {
       return (
         <span className={`${styles.statusBadge} ${styles.statusLocked}`}>
@@ -329,7 +311,6 @@ export default function BannerManagement() {
         </span>
       );
     }
-    // Otherwise use isActive status
     return (
       <span className={`${styles.statusBadge} ${isActive ? styles.statusActive : styles.statusInactive}`}>
         <i className={`bi bi-${isActive ? 'check-circle-fill' : 'x-circle-fill'}`}></i>

@@ -63,7 +63,6 @@ export const PatientAppointments: React.FC = () => {
   const [loadingDoctors, setLoadingDoctors] = useState<Set<string>>(new Set());
   const [refundPercentage, setRefundPercentage] = useState(80);
 
-  // Map statusCode sang tiếng Việt - đồng bộ với DoctorAppointments
   const statusDisplayNameMap: Record<string, string> = {
     'BeforeAppoiment': 'Trước giờ khám',
     'CancelledByDoctor': 'Bác sĩ hủy',
@@ -88,7 +87,6 @@ export const PatientAppointments: React.FC = () => {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isViewingExistingReview, setIsViewingExistingReview] = useState(false);
 
-  // Load appointments function (moved outside useEffect to be reusable)
   const loadAppointments = async () => {
     try {
       setLoading(true);
@@ -96,10 +94,8 @@ export const PatientAppointments: React.FC = () => {
       const data = await appointmentService.getPatientAppointments();
       
       const transformedData: Appointment[] = data.map(apt => {
-        // Chuyển đổi chuỗi ISO sang đối tượng Date, đảm bảo múi giờ được xử lý đúng
         const startDate = new Date(apt.appointmentStartTime);
         
-        // Lấy các thành phần ngày/tháng/năm từ đối tượng Date đã được chuyển đổi sang múi giờ local
         const year = startDate.getFullYear();
         const month = (startDate.getMonth() + 1).toString().padStart(2, '0');
         const day = startDate.getDate().toString().padStart(2, '0');
@@ -137,12 +133,10 @@ export const PatientAppointments: React.FC = () => {
     }
   };
 
-  // Load appointments from API on mount
   useEffect(() => {
     loadAppointments();
   }, []);
 
-  // Load doctor profiles for appointments
   useEffect(() => {
     const fetchRefundSetting = async () => {
       try {
@@ -166,7 +160,6 @@ export const PatientAppointments: React.FC = () => {
       );
 
       for (const doctorID of uniqueDoctorIds) {
-        // Skip if already loaded or loading
         if (doctorProfiles.has(doctorID) || loadingDoctors.has(doctorID)) {
           continue;
         }
@@ -193,10 +186,8 @@ export const PatientAppointments: React.FC = () => {
     if (appointments.length > 0) {
       loadDoctorProfiles();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appointments]);
 
-  // Merge doctor profiles with appointments
   const appointmentsWithDoctorInfo = useMemo(() => {
     return appointments.map(apt => {
       if (!apt.doctorID) return apt;
@@ -213,7 +204,6 @@ export const PatientAppointments: React.FC = () => {
     });
   }, [appointments, doctorProfiles]);
 
-  // Statistics
   const stats = {
     total: appointmentsWithDoctorInfo.length,
     upcoming: appointmentsWithDoctorInfo.filter(apt => 
@@ -232,7 +222,6 @@ export const PatientAppointments: React.FC = () => {
     ).length
   };
 
-  // Filter appointments
   useEffect(() => {
     let filtered = [...appointmentsWithDoctorInfo];
 
@@ -264,7 +253,6 @@ export const PatientAppointments: React.FC = () => {
       );
     }
 
-    // Filter by date range if provided
     if (dateFrom || dateTo) {
       filtered = filtered.filter(apt => {
         const aptDate = new Date(apt.date);
@@ -299,7 +287,6 @@ export const PatientAppointments: React.FC = () => {
       });
     }
 
-    // Sort by date (upcoming first)
     filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     setFilteredAppointments(filtered);
@@ -348,7 +335,6 @@ export const PatientAppointments: React.FC = () => {
 
       await reviewService.createReview(reviewDto);
 
-      // Fechar modal e resetar estados
       setShowRatingModal(false);
       setRating(0);
       setHoverRating(0);
@@ -400,7 +386,6 @@ export const PatientAppointments: React.FC = () => {
   };
 
   const getStatusConfig = (statusCode: string) => {
-    // Retorna configuração baseada APENAS no statusCode - NÃO verifica tempo
     const config: Record<string, { label: string; icon: string; color: string }> = {
       'OnProgressing': { 
         label: statusDisplayNameMap[statusCode] || 'Đang khám', 
@@ -697,7 +682,6 @@ export const PatientAppointments: React.FC = () => {
         ) : (
         <div className={activeView === 'grid' ? styles.appointmentsGrid : styles.appointmentsList}>
           {filteredAppointments.map((appointment) => {
-            // Get the appointment with doctor info
             const appointmentWithInfo = appointmentsWithDoctorInfo.find(apt => apt.id === appointment.id) || appointment;
             const statusConfig = getStatusConfig(appointmentWithInfo.statusCode || '');
             
@@ -811,14 +795,11 @@ export const PatientAppointments: React.FC = () => {
                         className={styles.rateBtn}
                         onClick={() => {
                           setSelectedAppointment(appointmentWithInfo);
-                          // Check if review already exists
                           if (appointmentWithInfo.patientRating && appointmentWithInfo.patientReview) {
-                            // View existing review
                             setRating(parseInt(appointmentWithInfo.patientRating) || 0);
                             setReviewComment(appointmentWithInfo.patientReview || '');
                             setIsViewingExistingReview(true);
                           } else {
-                            // Create new review
                             setRating(0);
                             setReviewComment('');
                             setIsViewingExistingReview(false);

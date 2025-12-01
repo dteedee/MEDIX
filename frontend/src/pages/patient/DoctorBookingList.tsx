@@ -42,11 +42,8 @@ const convertApiDoctorToDoctor = (
   const rating = typeof apiDoctor.rating === 'number' ? apiDoctor.rating : parseFloat(String(apiDoctor.rating)) || 0;
   const experience = typeof apiDoctor.experience === 'number' ? apiDoctor.experience : parseInt(String(apiDoctor.experience)) || 0;
   
-  // Check if avatarUrl is in API response (even if not in TypeScript interface)
-  // Or get from avatarUrlMap if fetched separately
   const imageUrl = (apiDoctor as any).avatarUrl || avatarUrlMap?.[apiDoctor.doctorId] || undefined;
   
-  // Get statistics from API response or from separately fetched statistics map
   const stats = statisticsMap?.[apiDoctor.doctorId] || 
     (apiDoctor.totalCases !== undefined ? {
       totalCases: apiDoctor.totalCases,
@@ -67,7 +64,6 @@ const convertApiDoctorToDoctor = (
   const successPercentage = apiDoctor.successPercentage ?? 0;
   const totalReviews = apiDoctor.totalReviews ?? 0;
   
-  // Validate tierName to prevent crash from invalid UUIDs or null values
   const safeTier =
     tierName === 'Basic' || tierName === 'Professional' || tierName === 'Premium' || tierName === 'VIP'
       ? tierName
@@ -96,7 +92,6 @@ const convertApiDoctorToDoctor = (
   };
 };
 
-// Converter for education-based API
 const convertEducationDoctorToDoctor = (
   apiDoctor: DoctorInEducation,
   avatarUrlMap?: Record<string, string>,
@@ -105,10 +100,8 @@ const convertEducationDoctorToDoctor = (
   const rating = typeof apiDoctor.rating === 'number' ? apiDoctor.rating : parseFloat(String(apiDoctor.rating)) || 0;
   const experience = typeof apiDoctor.experience === 'number' ? apiDoctor.experience : parseInt(String(apiDoctor.experience)) || 0;
   
-  // Use avatarUrl from API response or from avatarUrlMap if fetched separately
   const imageUrl = apiDoctor.avatarUrl || avatarUrlMap?.[apiDoctor.doctorId] || undefined;
   
-  // Get statistics from separately fetched statistics map (education API doesn't include stats)
   const stats = statisticsMap?.[apiDoctor.doctorId];
   const totalCases = stats?.totalCases ?? 0;
   const successRate = stats?.successRate ?? 0;
@@ -143,7 +136,6 @@ const convertEducationDoctorToDoctor = (
 
 type DegreeTab = 'Cử nhân y khoa' | 'Thạc sĩ y khoa' | 'Tiến sĩ y khoa' | 'Phó giáo sư' | 'Giáo sư';
 
-// Education code mapping helper
 const getEducationCodeFromDegree = (degree: DegreeTab): string => {
   switch (degree) {
     case 'Cử nhân y khoa': return 'BC';
@@ -155,7 +147,6 @@ const getEducationCodeFromDegree = (degree: DegreeTab): string => {
   }
 };
 
-// Education name mapping helper  
 const getDegreeFromEducationName = (educationName: string): DegreeTab => {
   switch (educationName) {
     case 'Cử nhân Y khoa': return 'Cử nhân y khoa';
@@ -167,7 +158,6 @@ const getDegreeFromEducationName = (educationName: string): DegreeTab => {
   }
 };
 
-// Map education code to DegreeTab
 const getDegreeFromEducationCode = (code: string): DegreeTab | null => {
   switch (code) {
     case 'BC': return 'Cử nhân y khoa';
@@ -240,14 +230,12 @@ const DoctorBookingList: React.FC = () => {
   const [associateProfPagination, setAssociateProfPagination] = useState({ pageNumber: 1, pageSize: 9 });
   const [profPagination, setProfPagination] = useState({ pageNumber: 1, pageSize: 9 });
 
-  // Refs to prevent double loading
   const mountedRef = useRef(true);
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isLoadingRef = useRef(false);
   const loadRequestIdRef = useRef<string | null>(null);
   const initialLoadDoneRef = useRef(false);
 
-  // Load metadata and education types only once on mount
   useEffect(() => {
     mountedRef.current = true;
     const loadInitialData = async () => {
@@ -282,13 +270,11 @@ const DoctorBookingList: React.FC = () => {
     };
   }, []);
 
-  // Helper function to normalize Vietnamese text for search
   const normalizeSearchText = useCallback((str: string | null | undefined) => {
     if (!str || typeof str !== 'string') return '';
     return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   }, []);
 
-  // Debounce search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setDebouncedSearch(searchTerm);
@@ -296,7 +282,6 @@ const DoctorBookingList: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [searchTerm]);
 
-  // Helper function to check if doctor matches search
   const doctorMatchesSearch = useCallback((doctor: DoctorInTier, searchTerms: string[]): boolean => {
     if (!doctor || searchTerms.length === 0) return false;
     
@@ -314,9 +299,7 @@ const DoctorBookingList: React.FC = () => {
     );
   }, [normalizeSearchText, doctorAvatars, doctorStatistics]);
 
-  // Auto-switch to degree tab with search results
   useEffect(() => {
-    // Không làm gì nếu chưa có data hoặc chưa nhập gì
     if (!debouncedSearch || !debouncedSearch.trim() || tiersData.length === 0) return;
 
     const searchNormalized = normalizeSearchText(debouncedSearch);
@@ -335,7 +318,6 @@ const DoctorBookingList: React.FC = () => {
     if (first && first !== activeDegree) setActiveDegree(first);
   }, [debouncedSearch, tiersData, activeDegree, normalizeSearchText, doctorMatchesSearch, degreeTabs]);
 
-  // Debounce price range
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setPriceRange(tempPriceRange);
@@ -343,7 +325,6 @@ const DoctorBookingList: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [tempPriceRange]);
 
-  // Load education groups data
   const loadEducationData = useCallback(async () => {
     const queryParams: DoctorQueryParameters = {
       pageNumber: 1,
@@ -357,14 +338,11 @@ const DoctorBookingList: React.FC = () => {
     return data;
   }, [selectedSpecializationCode, priceRange]);
 
-  // Initial load only once on mount
   useEffect(() => {
-    // Only load if hasn't loaded yet
     if (initialLoadDoneRef.current || isLoadingRef.current) {
       return;
     }
     
-    // Mark as loading immediately to prevent double execution in StrictMode
     isLoadingRef.current = true;
     const currentRequestId = `${Date.now()}-${Math.random()}`;
     loadRequestIdRef.current = currentRequestId;
@@ -375,20 +353,17 @@ const DoctorBookingList: React.FC = () => {
         return;
       }
       
-      // Mark initial load as done after confirming we should proceed
       initialLoadDoneRef.current = true;
       
       try {
         setLoading(true);
         setError(null);
         
-        // Load education groups data
         const educationGroupsData = await loadEducationData();
 
         if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
           setEducationGroupsData(educationGroupsData);
           
-          // Load avatars and statistics for doctors that don't have them in the response
           const allDoctors = educationGroupsData.flatMap(group => group.doctors?.items || []);
           const doctorsNeedingAvatar = allDoctors.filter(doctor => 
             !doctor.avatarUrl && doctor.doctorId
@@ -397,7 +372,6 @@ const DoctorBookingList: React.FC = () => {
             doctor.doctorId && (doctor.totalCases === undefined || doctor.successRate === undefined || doctor.averageResponseTime === undefined)
           );
           
-          // Fetch avatars in parallel
           if (doctorsNeedingAvatar.length > 0) {
             Promise.all(
               doctorsNeedingAvatar.slice(0, 20).map(async (doctor) => {
@@ -423,13 +397,11 @@ const DoctorBookingList: React.FC = () => {
             });
           }
 
-          // Fetch statistics in parallel
           if (doctorsNeedingStats.length > 0) {
             Promise.all(
               doctorsNeedingStats.slice(0, 20).map(async (doctor) => {
                 try {
                   const stats = await doctorService.getStatistics(doctor.doctorId);
-                  // Map API response to our format
                   const totalCases = stats.totalCases || stats.totalAppointments || 0;
                   const successfulCases = stats.successfulCases || stats.completedCases || stats.completedAppointments || 0;
                   const successRate = totalCases > 0 ? Math.round((successfulCases / totalCases) * 100) : 0;
@@ -479,7 +451,6 @@ const DoctorBookingList: React.FC = () => {
       }
     };
 
-    // Small delay to batch and let StrictMode settle
     const timeoutId = setTimeout(loadData, 50);
     
     return () => {
@@ -491,14 +462,11 @@ const DoctorBookingList: React.FC = () => {
     };
   }, []); // Only run once on mount
 
-  // Reload when filters/pagination change (after initial load)
   useEffect(() => {
-    // Skip if initial load hasn't completed yet
     if (!initialLoadDoneRef.current || isLoadingRef.current) {
       return;
     }
     
-    // Clear any pending timeout
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
       loadingTimeoutRef.current = null;
@@ -508,7 +476,6 @@ const DoctorBookingList: React.FC = () => {
     loadRequestIdRef.current = currentRequestId;
     isLoadingRef.current = true;
 
-    // Debounce reload to prevent rapid-fire requests
     loadingTimeoutRef.current = setTimeout(async () => {
       if (loadRequestIdRef.current !== currentRequestId || !mountedRef.current) {
         return;
@@ -518,13 +485,11 @@ const DoctorBookingList: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        // Load education groups data
         const educationGroupsData = await loadEducationData();
 
         if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
           setEducationGroupsData(educationGroupsData);
           
-          // Load avatars and statistics for doctors that don't have them in the response
           const allDoctors = educationGroupsData.flatMap(group => group.doctors?.items || []);
           const doctorsNeedingAvatar = allDoctors.filter(doctor => 
             !doctor.avatarUrl && doctor.doctorId
@@ -533,7 +498,6 @@ const DoctorBookingList: React.FC = () => {
             doctor.doctorId && (doctor.totalCases === undefined || doctor.successRate === undefined || doctor.averageResponseTime === undefined)
           );
           
-          // Fetch avatars in parallel
           if (doctorsNeedingAvatar.length > 0) {
             Promise.all(
               doctorsNeedingAvatar.slice(0, 20).map(async (doctor) => {
@@ -559,13 +523,11 @@ const DoctorBookingList: React.FC = () => {
             });
           }
 
-          // Fetch statistics in parallel
           if (doctorsNeedingStats.length > 0) {
             Promise.all(
               doctorsNeedingStats.slice(0, 20).map(async (doctor) => {
                 try {
                   const stats = await doctorService.getStatistics(doctor.doctorId);
-                  // Map API response to our format
                   const totalCases = stats.totalCases || stats.totalAppointments || 0;
                   const successfulCases = stats.successfulCases || stats.completedCases || stats.completedAppointments || 0;
                   const successRate = totalCases > 0 ? Math.round((successfulCases / totalCases) * 100) : 0;
@@ -627,7 +589,6 @@ const DoctorBookingList: React.FC = () => {
     };
   }, [selectedSpecializationCode, priceRange, loadEducationData]);
 
-  // Search doctors across all degrees
   const searchDoctorsAcrossAllDegrees = (searchTerm: string): { degree: DegreeTab; doctors: Doctor[] }[] => {
     if (!searchTerm.trim()) return [];
     
@@ -638,7 +599,6 @@ const DoctorBookingList: React.FC = () => {
     const converted = allDoctors.map(d => convertApiDoctorToDoctor(d, 'Basic', doctorAvatars, doctorStatistics));
 
     const filtered = converted.filter(doctor => {
-          // Only show doctors accepting appointments
           if (doctor.isAcceptingAppointments === false) return false;
           
           const nameNormalized = normalizeSearchText(doctor.fullName);
@@ -646,7 +606,6 @@ const DoctorBookingList: React.FC = () => {
           const degreeNormalized = normalizeSearchText(doctor.degree);
           const bioNormalized = normalizeSearchText(doctor.bio || '');
           
-          // Check if all search terms appear in any field
           return searchTerms.every(term => 
             nameNormalized.includes(term) ||
             specialtyNormalized.includes(term) ||
@@ -655,7 +614,6 @@ const DoctorBookingList: React.FC = () => {
           );
     });
 
-    // Group by degree tabs
     const results: { degree: DegreeTab; doctors: Doctor[] }[] = [];
     degreeTabs.forEach(tab => {
       const group = filtered.filter(d => d.degree === tab);
@@ -665,7 +623,6 @@ const DoctorBookingList: React.FC = () => {
   };
 
   const getDoctorsByDegree = useCallback((degree: DegreeTab): Doctor[] => {
-    // Find the education group that matches the degree
     const educationGroup = educationGroupsData.find(group => 
       getDegreeFromEducationName(group.education) === degree
     );
@@ -678,7 +635,6 @@ const DoctorBookingList: React.FC = () => {
       convertEducationDoctorToDoctor(d, doctorAvatars, doctorStatistics)
     );
     
-    // Filter out doctors not accepting appointments
     let doctors = allConverted.filter(doctor => doctor.isAcceptingAppointments !== false);
     
     if (debouncedSearch && debouncedSearch.trim()) {
@@ -696,7 +652,6 @@ const DoctorBookingList: React.FC = () => {
           const degreeNormalized = normalizeSearchText(doctor.degree);
           const bioNormalized = normalizeSearchText(doctor.bio);
           
-          // Check if all search terms appear in any field
           return searchTerms.every(term => 
             nameNormalized.includes(term) ||
             specialtyNormalized.includes(term) ||
@@ -817,7 +772,6 @@ const DoctorBookingList: React.FC = () => {
       }
     };
 
-    // Calculate stats for display
     const totalDone = doctor.totalDone || 0; // Số ca đã thực hiện
     const totalAppointments = doctor.totalAppointments || 0; // Tổng số lịch hẹn
     const successPercentage = doctor.successPercentage 

@@ -27,7 +27,6 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
   const [imagePreview, setImagePreview] = useState<string>(banner?.bannerImageUrl || '');
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  // Helper to convert ISO string to a YYYY-MM-DD format for date input
   const toInputDateString = (isoString?: string | null) => {
     if (!isoString) return '';
     const date = new Date(isoString);
@@ -133,29 +132,22 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
       return;
     }
 
-    // For edit mode, use imagePreview if it's a URL (existing image), otherwise use formData.bannerImageUrl
     let finalBannerImageUrl = formData.bannerImageUrl;
     
-    // If preview is a data URL (base64) and we have imageFile, it's a new upload
-    // If preview is a URL (http/https), it's the existing image
     if (imagePreview && imagePreview.startsWith('http')) {
       finalBannerImageUrl = imagePreview;
     } else if (imagePreview && imageFile) {
-      // New upload - no URL yet
       finalBannerImageUrl = '';
     } else if (!finalBannerImageUrl && imagePreview) {
       finalBannerImageUrl = imagePreview;
     }
     
-    // Helper to convert YYYY-MM-DD string to full ISO string for the backend
     const toISOString = (localDate?: string, isEndDate = false) => {
       if (!localDate) return undefined;
       const date = new Date(localDate);
       if (isEndDate) {
-        // Set to the end of the day
         date.setUTCHours(23, 59, 59, 999);
       } else {
-        // Set to the start of the day
         date.setUTCHours(0, 0, 0, 0);
       }
       return date.toISOString();
@@ -177,7 +169,6 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
     if (onSaveRequest) {
       onSaveRequest(payload);
     } else {
-      // Direct save (no confirmation)
       await saveBanner(payload);
     }
   };
@@ -219,7 +210,6 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
         return;
       }
 
-      // Clear error if file is valid
       setErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors.bannerImageUrl;
@@ -234,7 +224,6 @@ export default function BannerForm({ banner, mode, onSaved, onCancel, onSaveRequ
       };
       reader.readAsDataURL(file);
     } else {
-      // Clear file and preview if user cancels file selection
       setImageFile(null);
       setImagePreview(banner?.bannerImageUrl || '');
     }

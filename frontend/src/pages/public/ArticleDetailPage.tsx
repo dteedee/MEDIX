@@ -39,12 +39,10 @@ function getCategoryIcon(name?: string) {
   return 'bi-bookmark-heart';
 }
 
-// Add scroll-to-top utility
 function scrollToTop() {
   window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
 }
 
-// Helper sum cho badge 'Tất cả' (cố định bằng validArticles.length)
 function sumAllCategories(counts: { [catId: string]: number }) {
   return Object.values(counts).reduce((a, b) => a + b, 0);
 }
@@ -65,11 +63,8 @@ export default function ArticleDetailPage() {
   const [likeBusy, setLikeBusy] = useState(false);
   const [liked, setLiked] = useState(false);
 
-  // Ref to track if the view has been incremented for the current slug
-  // This prevents double-incrementing in React's StrictMode.
   const viewIncrementedRef = useRef<{ [key: string]: boolean }>({});
 
-  // load categories + article + recent
   useEffect(() => {
     (async () => {
       if (!slug) {
@@ -78,7 +73,6 @@ export default function ArticleDetailPage() {
         return;
       }
 
-      // Only show full loading state if this is the first time processing this slug
       if (!viewIncrementedRef.current[slug]) {
         setLoading(true);
         setError(null);
@@ -95,14 +89,12 @@ export default function ArticleDetailPage() {
           setArticle(null);
           return;
         }
-        // chỉ cho phép xem bài đã publish
         if (!articleRes.statusCode || String(articleRes.statusCode).toLowerCase() !== 'published') {
           setError('Bài viết này không được công khai hoặc không tồn tại.');
           setArticle(null);
           return;
         }
         setArticle(articleRes);
-        // init liked từ localStorage
         try {
           const key = `medix-liked-${articleRes.id}`;
           setLiked(localStorage.getItem(key) === '1');
@@ -133,26 +125,22 @@ export default function ArticleDetailPage() {
         setLoading(false);
       }
     })();
-    // `viewIncrementedRef` is a ref, so it doesn't need to be in the dependency array.
   }, [slug]);
 
   useEffect(() => {
     (async () => {
       try {
         const { items } = await articleService.list(1, 9999);
-        // Chỉ lấy bài published, có category hợp lệ
         const valid = items.filter(
           a => String(a.statusCode).toLowerCase() === 'published' && Array.isArray(a.categoryIds) && a.categoryIds.length > 0
         );
         setValidArticles(valid);
         setTotalValid(valid.length);
-        // Tính count từng cat
         const counts: { [catId: string]: number } = {};
         for(const a of valid) {
           (a.categoryIds || []).forEach(cid => { counts[cid] = (counts[cid] || 0) + 1; });
         }
         setCategoryCounts(counts);
-        // Recent chỉ lấy từ valid, khác slug và cùng category với bài hiện tại
         setRecent(
           valid.filter(a =>
             a.slug !== article?.slug &&
@@ -176,14 +164,12 @@ export default function ArticleDetailPage() {
     setLikeBusy(true);
     const prevLiked = liked;
     const prevCount = article.likeCount || 0;
-    // tối ưu UI
     setLiked(!prevLiked);
     setArticle({ ...article, likeCount: prevLiked ? Math.max(0, prevCount - 1) : prevCount + 1 });
     try {
       await articleService.toggleLike(article.id);
       try { localStorage.setItem(`medix-liked-${article.id}`, !prevLiked ? '1' : '0'); } catch {}
     } catch (e) {
-      // revert nếu lỗi
       setLiked(prevLiked);
       setArticle({ ...article, likeCount: prevCount });
     } finally {

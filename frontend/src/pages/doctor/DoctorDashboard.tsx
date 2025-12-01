@@ -115,6 +115,25 @@ const DoctorDashboard: React.FC = () => {
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount)
   }
 
+  const formatCurrencyCompact = (value: number): string => {
+    const amount = value || 0;
+    const abs = Math.abs(amount);
+
+    if (abs >= 1_000_000_000) {
+      const compact = amount / 1_000_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}B VND`;
+    }
+
+    if (abs >= 1_000_000) {
+      const compact = amount / 1_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}M VND`;
+    }
+
+    return `${amount.toLocaleString('vi-VN')} VND`;
+  }
+
   const getGreeting = () => {
     const hour = new Date().getHours()
     if (hour < 12) return 'Chào buổi sáng'
@@ -509,10 +528,10 @@ const DoctorDashboard: React.FC = () => {
                   <span className={styles.walletAmount}>...</span>
                 ) : dashboardData?.wallet ? (
                   <span className={styles.walletAmount}>
-                    {formatBalance(dashboardData.wallet.balance, '₫')}
+                    {formatCurrencyCompact(dashboardData.wallet.balance)}
                   </span>
                 ) : (
-                  <span className={styles.walletAmount}>0 ₫</span>
+                  <span className={styles.walletAmount}>0 VND</span>
                 )}
               </div>
               <button className={styles.addMoneyBtn} onClick={(e) => {
@@ -588,9 +607,8 @@ const DoctorDashboard: React.FC = () => {
                   <span className={styles.statLabel}>Doanh thu hôm nay</span>
                   <div className={styles.statValueRow}>
                     <span className={styles.statValue}>
-                      {new Intl.NumberFormat('vi-VN').format(dashboardData.summary.todayRevenue)}
+                      {formatCurrencyCompact(dashboardData.summary.todayRevenue)}
                     </span>
-                    <span className={styles.statSubtext}>₫</span>
                   </div>
                 </div>
               </div>
@@ -605,9 +623,8 @@ const DoctorDashboard: React.FC = () => {
                   <span className={styles.statLabel}>Doanh thu tháng</span>
                   <div className={styles.statValueRow}>
                     <span className={styles.statValue}>
-                      {new Intl.NumberFormat('vi-VN').format(dashboardData.summary.monthRevenue)}
+                      {formatCurrencyCompact(dashboardData.summary.monthRevenue)}
                     </span>
-                    <span className={styles.statSubtext}>₫</span>
                   </div>
                 </div>
               </div>
@@ -1115,18 +1132,18 @@ const DoctorDashboard: React.FC = () => {
                   <div className={modalStyles.paymentDetails}>
                     <div className={modalStyles.paymentRow}>
                       <span className={modalStyles.paymentLabel}>Phí khám bệnh</span>
-                      <span className={modalStyles.paymentAmount}>{formatCurrency(selectedAppointment.consultationFee)}</span>
+                      <span className={modalStyles.paymentAmount}>{formatCurrencyCompact(selectedAppointment.consultationFee)}</span>
                     </div>
                     {selectedAppointment.platformFee > 0 && (
                       <>
                         <div className={modalStyles.paymentRow}>
                           <span className={modalStyles.paymentLabel}>Phí nền tảng</span>
-                          <span className={modalStyles.paymentAmount}>{formatCurrency(selectedAppointment.platformFee)}</span>
+                          <span className={modalStyles.paymentAmount}>{formatCurrencyCompact(selectedAppointment.platformFee)}</span>
                         </div>
                         <div className={modalStyles.paymentDivider}></div>
                         <div className={modalStyles.paymentRow}>
                           <span className={modalStyles.totalLabel}>Tổng cộng</span>
-                          <span className={modalStyles.totalValue}>{formatCurrency(selectedAppointment.totalAmount)}</span>
+                          <span className={modalStyles.totalValue}>{formatCurrencyCompact(selectedAppointment.totalAmount)}</span>
                         </div>
                       </>
                     )}

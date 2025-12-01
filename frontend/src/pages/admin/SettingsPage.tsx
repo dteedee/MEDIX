@@ -174,7 +174,6 @@ export default function SettingsPage() {
           apiClient.get('/SystemConfiguration/ContactEmail'),
           apiClient.get('/SystemConfiguration/ContactPhone'),
           apiClient.get('/SystemConfiguration/ContactAddress'),
-          // Security settings
           apiClient.get('/SystemConfiguration/JWT_EXPIRY_MINUTES'),
           apiClient.get('/SystemConfiguration/MaxFailedLoginAttempts'),
           apiClient.get('/SystemConfiguration/AccountLockoutDurationMinutes'),

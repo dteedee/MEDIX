@@ -50,7 +50,6 @@ export const AdminProfile: React.FC = () => {
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
 
-  // Validation functions
   const validateUsername = (username: string): string | null => {
     if (!username) return 'Tên tài khoản không được để trống';
     if (username.length < 6) return 'Tên tài khoản phải có ít nhất 6 ký tự';

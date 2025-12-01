@@ -26,7 +26,6 @@ const formatRelativeTime = (dateString: string) => {
 
 const formatTime = (timeString: string) => {
   try {
-    // Giả sử timeString là "HH:mm:ss"
     const [hours, minutes] = timeString.split(':');
     return `${hours}:${minutes}`;
   } catch {
@@ -67,7 +66,6 @@ const renderStars = (rating: number) => {
 };
 
 
-// --- Sub-components ---
 
 interface StatCardProps {
   title: string;
@@ -108,7 +106,6 @@ export const ManageDashboard: React.FC = () => {
       setIsLoading(true);
       setError(null);
       try {
-        // Sử dụng service để gọi API, giúp xử lý xác thực và lỗi nhất quán
         const data = await managerDashboardService.getDashboardData();
         setDashboardData(data);
       } catch (err: any) {
@@ -225,7 +222,6 @@ export const ManageDashboard: React.FC = () => {
         />
         <StatCard
           title="Bệnh nhân không đến"
-          // TODO: Update AppointmentStats type to include missedByPatient and use it here.
           value={appointmentStats.missedByPatient}
           description="Lịch hẹn bị bệnh nhân bỏ lỡ"
           icon={<FaUserInjured />}

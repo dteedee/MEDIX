@@ -54,12 +54,10 @@ export default function CategoryForm({ category, mode, onSaved, onCancel }: Prop
       }
       onSaved();
     } catch (error: any) {
-      // Kiểm tra xem lỗi có phải là lỗi validation từ backend không
       const backendErrors = error; // categoryService đã xử lý và ném lại object lỗi
       if (backendErrors) {
         const newErrors: Record<string, string> = {};
         for (const key in backendErrors) {
-          // Lấy lỗi đầu tiên cho mỗi trường
           newErrors[key.toLowerCase()] = Array.isArray(backendErrors[key]) ? backendErrors[key][0] : backendErrors[key];
         }
         setErrors(prev => ({ ...prev, ...newErrors }));

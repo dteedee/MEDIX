@@ -265,13 +265,11 @@ export const PatientResults: React.FC = () => {
   const [selectedResult, setSelectedResult] = useState<ResultItem | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  // Get today's date in YYYY-MM-DD format
   const getTodayDate = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   };
 
-  // Check if date is today
   const isToday = (dateString: string) => {
     const date = new Date(dateString);
     const today = new Date();
@@ -282,17 +280,14 @@ export const PatientResults: React.FC = () => {
     );
   };
 
-  // Load results
   useEffect(() => {
     const loadResults = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Get all patient appointments
         const appointments = await appointmentService.getPatientAppointments();
 
-        // Filter appointments: today and completed
         const today = getTodayDate();
         const todayAppointments = appointments.filter((apt) => {
           const appointmentDate = new Date(apt.appointmentStartTime);
@@ -303,7 +298,6 @@ export const PatientResults: React.FC = () => {
           );
         });
 
-        // Create result items
         const resultItems: ResultItem[] = todayAppointments.map((apt) => ({
           appointment: apt,
           medicalRecord: null,
@@ -313,22 +307,18 @@ export const PatientResults: React.FC = () => {
 
         setResults(resultItems);
 
-        // Load medical records and doctor profiles for each appointment
         for (let i = 0; i < resultItems.length; i++) {
           const item = resultItems[i];
           try {
-            // Load medical record
             let medicalRecord: MedicalRecord | null = null;
             try {
               medicalRecord = await medicalRecordService.getMedicalRecordByAppointmentId(item.appointment.id);
             } catch (err: any) {
-              // Medical record might not exist yet
               if (err.response?.status !== 404) {
 
               }
             }
 
-            // Load doctor profile
             let doctorProfile: DoctorProfileDto | null = null;
             if (item.appointment.doctorID) {
               try {
@@ -337,7 +327,6 @@ export const PatientResults: React.FC = () => {
               }
             }
 
-            // Update the specific result item
             setResults((prev) => {
               const updated = [...prev];
               updated[i] = {
@@ -392,7 +381,6 @@ export const PatientResults: React.FC = () => {
     setShowDetailModal(true);
   };
 
-  // Filter results that have medical records
   const resultsWithRecords = useMemo(() => {
     return results.filter((result) => result.medicalRecord !== null && !result.loading);
   }, [results]);

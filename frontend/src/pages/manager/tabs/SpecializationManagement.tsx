@@ -50,7 +50,6 @@ export default function SpecializationManagement(): JSX.Element {
   const handleFilterChange = useCallback((key: keyof SpecializationFilters, value: any) => {
     setFilters(prev => {
       const newFilters = { ...prev, [key]: value };
-      // Reset page to 1 only when changing search, statusFilter, or pageSize
       if (key !== 'page') {
         newFilters.page = 1;
       }
@@ -71,7 +70,6 @@ export default function SpecializationManagement(): JSX.Element {
         result.message || `Đã ${result.isActive ? 'kích hoạt' : 'tạm dừng'} chuyên khoa "${selectedSpecialization.name}"`, 
         'success'
       );
-      // Reload data to get updated doctor count and other info
       await load();
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Không thể cập nhật trạng thái chuyên khoa.';
@@ -117,7 +115,6 @@ export default function SpecializationManagement(): JSX.Element {
   const sortedSpecializations = useMemo(() => {
     let sortableItems = [...specializations];
 
-    // Filter by search
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       sortableItems = sortableItems.filter(s =>
@@ -127,23 +124,19 @@ export default function SpecializationManagement(): JSX.Element {
       );
     }
 
-    // Filter by status
     if (filters.statusFilter !== 'all') {
       const isActive = filters.statusFilter === 'active';
       sortableItems = sortableItems.filter(s => s.isActive === isActive);
     }
 
-    // Sort
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
         let valA: any = a[sortConfig.key];
         let valB: any = b[sortConfig.key];
         
-        // Handle undefined/null values
         if (valA == null) valA = '';
         if (valB == null) valB = '';
         
-        // Convert to string for comparison
         const strA = String(valA).toLowerCase();
         const strB = String(valB).toLowerCase();
 

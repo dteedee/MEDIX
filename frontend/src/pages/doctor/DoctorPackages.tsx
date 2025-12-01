@@ -143,6 +143,25 @@ const DoctorPackages: React.FC = () => {
     return new Intl.NumberFormat('vi-VN').format(balance);
   };
 
+  const formatCurrencyCompact = (value: number): string => {
+    const amount = value || 0;
+    const abs = Math.abs(amount);
+
+    if (abs >= 1_000_000_000) {
+      const compact = amount / 1_000_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}B VND`;
+    }
+
+    if (abs >= 1_000_000) {
+      const compact = amount / 1_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}M VND`;
+    }
+
+    return `${amount.toLocaleString('vi-VN')} VND`;
+  };
+
   const translateFeature = (feature: string): string => {
     const featureMap: { [key: string]: string } = {
       'Basic Listing': 'Hiển thị danh sách cơ bản',
@@ -231,7 +250,7 @@ const DoctorPackages: React.FC = () => {
             <div className={styles.balanceInfo}>
               <span className={styles.balanceLabel}>Số dư ví</span>
               <span className={styles.balanceAmount}>
-                {data?.balance ? formatBalance(data.balance) : '0'} đ
+                {data?.balance ? formatCurrencyCompact(data.balance) : '0 VND'}
               </span>
             </div>
           </div>
@@ -283,9 +302,9 @@ const DoctorPackages: React.FC = () => {
                   {item.monthlyPrice ? (
                     <>
                       <span className={`${styles.priceAmount} ${styles[`${packageTheme.theme}Price`]}`}>
-                        {formatBalance(item.monthlyPrice)}
+                        {formatCurrencyCompact(item.monthlyPrice)}
                       </span>
-                      <span className={styles.priceUnit}>đ/tháng</span>
+                      <span className={styles.priceUnit}>/tháng</span>
                     </>
                   ) : (
                     <span className={styles.freeLabel}>Miễn phí</span>

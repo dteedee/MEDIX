@@ -42,13 +42,11 @@ export default function DoctorReviewModal({ doctor, degrees, onClose, onSubmit, 
 
     if (!formData.education) {
       newErrors.education = 'Vui lòng chọn trình độ học vấn';
-      //setErrors({ ...errors, education: 'Vui lòng chọn trình độ học vấn' });
       error = true;
     }
 
     if (!formData.consultationFee || formData.consultationFee <= 0) {
       newErrors.consultationFee = 'Vui lòng nhập giá khám là số dương';
-      //setErrors({ ...errors, consultationFee: 'Vui lòng nhập giá khám là số dương' });
       error = true;
     }
 

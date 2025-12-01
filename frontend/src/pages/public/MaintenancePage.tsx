@@ -63,7 +63,6 @@ export const MaintenancePage: React.FC = () => {
     try {
       setIsLoggingOut(true);
       await logout();
-      // Logout sẽ tự động redirect, nhưng để chắc chắn
       navigate('/login');
     } catch (error) {
       setIsLoggingOut(false);

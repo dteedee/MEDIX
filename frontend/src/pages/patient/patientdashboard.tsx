@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { walletService } from '../../services/walletService';
@@ -67,7 +67,7 @@ export const PatientDashboard: React.FC = () => {
         if (response.data?.configValue?.toLowerCase() === 'true') {
           setIsMaintenance(true);
           const msgResponse = await apiClient.get('/SystemConfiguration/MAINTENANCE_MESSAGE');
-          setMaintenanceMessage(msgResponse.data?.configValue || 'Hệ thống đang được bảo trì để nâng cấp. Vui lòng quay lại sau.');
+          setMaintenanceMessage(msgResponse.data?.configValue || 'H? th?ng dang du?c b?o tr� d? n�ng c?p. Vui l�ng quay l?i sau.');
         } else {
           setIsMaintenance(false);
         }
@@ -139,16 +139,16 @@ export const PatientDashboard: React.FC = () => {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
     
-    if (days > 0) return `${days} ngày nữa`;
-    if (hours > 0) return `${hours} giờ nữa`;
-    return 'Sắp diễn ra';
+    if (days > 0) return `${days} ng�y n?a`;
+    if (hours > 0) return `${hours} gi? n?a`;
+    return 'S?p di?n ra';
   };
 
   const getGreeting = () => {
     const hour = now.getHours();
-    if (hour < 12) return 'Chào buổi sáng';
-    if (hour < 18) return 'Chào buổi chiều';
-    return 'Chào buổi tối';
+    if (hour < 12) return 'Ch�o bu?i s�ng';
+    if (hour < 18) return 'Ch�o bu?i chi?u';
+    return 'Ch�o bu?i t?i';
   };
 
   const formatTimeRange = (startTime?: string, endTime?: string) => {
@@ -188,24 +188,23 @@ export const PatientDashboard: React.FC = () => {
   const getStatusConfig = (status: 'upcoming' | 'completed' | 'cancelled', appointmentStartTime?: string, appointmentEndTime?: string) => {
     const currentTime = new Date();
     
-    // Check if appointment is currently in progress
     const isInProgress = appointmentStartTime && appointmentEndTime && 
       currentTime >= new Date(appointmentStartTime) && 
       currentTime <= new Date(appointmentEndTime);
     
     const configs = {
       upcoming: { 
-        label: isInProgress ? 'Đang diễn ra' : 'Sắp diễn ra', 
+        label: isInProgress ? '�ang di?n ra' : 'S?p di?n ra', 
         icon: 'bi-clock-history',
         color: '#f59e0b'
       },
       completed: { 
-        label: 'Hoàn thành', 
+        label: 'Ho�n th�nh', 
         icon: 'bi-check-circle-fill',
         color: '#10b981'
       },
       cancelled: { 
-        label: 'Đã hủy', 
+        label: '�� h?y', 
         icon: 'bi-x-circle-fill',
         color: '#ef4444'
       }
@@ -214,15 +213,15 @@ export const PatientDashboard: React.FC = () => {
   };
 
   const getPaymentStatusLabel = (statusCode?: string): string => {
-    if (!statusCode) return 'Chưa thanh toán';
+    if (!statusCode) return 'Chua thanh to�n';
     
     const statusMap: { [key: string]: string } = {
-      'Paid': 'Đã thanh toán',
-      'Unpaid': 'Chưa thanh toán',
-      'Pending': 'Đang chờ thanh toán',
-      'Failed': 'Thanh toán thất bại',
-      'Refunded': 'Đã hoàn tiền',
-      'Cancelled': 'Đã hủy'
+      'Paid': '�� thanh to�n',
+      'Unpaid': 'Chua thanh to�n',
+      'Pending': '�ang ch? thanh to�n',
+      'Failed': 'Thanh to�n th?t b?i',
+      'Refunded': '�� ho�n ti?n',
+      'Cancelled': '�� h?y'
     };
     
     return statusMap[statusCode] || statusCode;
@@ -253,7 +252,6 @@ export const PatientDashboard: React.FC = () => {
     });
   };
 
-  // Load doctor profiles for upcoming appointments
   useEffect(() => {
     const loadDoctorProfiles = async () => {
       const uniqueDoctorIds = Array.from(
@@ -287,7 +285,6 @@ export const PatientDashboard: React.FC = () => {
     if (upcomingAppointments.length > 0) {
       loadDoctorProfiles();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [upcomingAppointments]);
 
   if (isMaintenance) {
@@ -295,7 +292,7 @@ export const PatientDashboard: React.FC = () => {
       <div className={styles.maintenanceOverlay}>
         <div className={styles.maintenanceBox}>
           <i className="bi bi-tools"></i>
-          <h2>Hệ thống đang bảo trì</h2>
+          <h2>H? th?ng dang b?o tr�</h2>
           <p>{maintenanceMessage}</p>
         </div>
       </div>
@@ -309,11 +306,11 @@ export const PatientDashboard: React.FC = () => {
         <div className={styles.welcomeContent}>
           <div className={styles.greetingSection}>
             <span className={styles.greetingIcon}>
-              {now.getHours() < 12 ? '🌅' : now.getHours() < 18 ? '☀️' : '🌙'}
+              {now.getHours() < 12 ? '??' : now.getHours() < 18 ? '??' : '??'}
             </span>
             <div>
               <h1 className={styles.greeting}>{getGreeting()}</h1>
-              <p className={styles.userName}>{user?.fullName || 'Bệnh nhân'}</p>
+              <p className={styles.userName}>{user?.fullName || 'B?nh nh�n'}</p>
             </div>
           </div>
           <div className={styles.headerActions}>
@@ -322,7 +319,7 @@ export const PatientDashboard: React.FC = () => {
                 <i className="bi bi-wallet2"></i>
               </div>
               <div className={styles.walletInfo}>
-                <span className={styles.walletLabel}>Số dư ví</span>
+                <span className={styles.walletLabel}>S? du v�</span>
                 {loading ? (
                   <span className={styles.walletAmount}>...</span>
                 ) : wallet ? (
@@ -330,7 +327,7 @@ export const PatientDashboard: React.FC = () => {
                     {formatBalance(wallet.balance, wallet.currency)}
                   </span>
                 ) : (
-                  <span className={styles.walletAmount}>0 ₫</span>
+                  <span className={styles.walletAmount}>0 ?</span>
                 )}
               </div>
               <button className={styles.addMoneyBtn} onClick={(e) => {
@@ -343,7 +340,7 @@ export const PatientDashboard: React.FC = () => {
             <div className={styles.dateCard}>
               <i className="bi bi-calendar-event"></i>
               <div>
-                <span className={styles.dateLabel}>Hôm nay</span>
+                <span className={styles.dateLabel}>H�m nay</span>
                 <span className={styles.dateValue}>
                   {now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                 </span>
@@ -362,13 +359,13 @@ export const PatientDashboard: React.FC = () => {
             </div>
           </div>
           <div className={styles.statInfo}>
-            <span className={styles.statLabel}>Lịch hẹn sắp tới</span>
+            <span className={styles.statLabel}>L?ch h?n s?p t?i</span>
             <div className={styles.statValueRow}>
               <span className={styles.statValue}>{upcomingAppointments.length}</span>
               {todayAppointments.length > 0 && (
                 <span className={styles.statBadge}>
                   <i className="bi bi-clock"></i>
-                  {todayAppointments.length} hôm nay
+                  {todayAppointments.length} h�m nay
                 </span>
               )}
             </div>
@@ -382,10 +379,10 @@ export const PatientDashboard: React.FC = () => {
             </div>
           </div>
           <div className={styles.statInfo}>
-            <span className={styles.statLabel}>Hồ sơ bệnh án</span>
+            <span className={styles.statLabel}>H? so b?nh �n</span>
             <div className={styles.statValueRow}>
               <span className={styles.statValue}>{medicalRecords.length}</span>
-              <span className={styles.statSubtext}>hồ sơ</span>
+              <span className={styles.statSubtext}>h? so</span>
             </div>
           </div>
         </div>
@@ -397,10 +394,10 @@ export const PatientDashboard: React.FC = () => {
             </div>
           </div>
           <div className={styles.statInfo}>
-            <span className={styles.statLabel}>Đã hoàn thành</span>
+            <span className={styles.statLabel}>�� ho�n th�nh</span>
             <div className={styles.statValueRow}>
               <span className={styles.statValue}>{completedAppointments.length}</span>
-              <span className={styles.statSubtext}>lịch khám</span>
+              <span className={styles.statSubtext}>l?ch kh�m</span>
             </div>
           </div>
         </div>
@@ -412,10 +409,10 @@ export const PatientDashboard: React.FC = () => {
             </div>
           </div>
           <div className={styles.statInfo}>
-            <span className={styles.statLabel}>Phân tích AI</span>
+            <span className={styles.statLabel}>Ph�n t�ch AI</span>
             <div className={styles.statValueRow}>
               <span className={styles.statValue}>{aiResults.length}</span>
-              <span className={styles.statSubtext}>kết quả</span>
+              <span className={styles.statSubtext}>k?t qu?</span>
             </div>
           </div>
         </div>
@@ -430,13 +427,13 @@ export const PatientDashboard: React.FC = () => {
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle}>
                 <i className="bi bi-calendar-heart"></i>
-                <h2>Lịch hẹn sắp tới</h2>
+                <h2>L?ch h?n s?p t?i</h2>
               </div>
               <button 
                 className={styles.viewAllLink}
                 onClick={() => navigate('/app/patient/appointments')}
               >
-                Xem tất cả
+                Xem t?t c?
                 <i className="bi bi-arrow-right"></i>
               </button>
             </div>
@@ -444,7 +441,7 @@ export const PatientDashboard: React.FC = () => {
             {loading ? (
               <div className={styles.loadingState}>
                 <div className={styles.loadingSpinner}></div>
-                <p>Đang tải...</p>
+                <p>�ang t?i...</p>
               </div>
             ) : upcomingAppointments.length > 0 ? (
               <div className={styles.appointmentsList}>
@@ -455,7 +452,7 @@ export const PatientDashboard: React.FC = () => {
                   const specialization = doctorProfile?.specialization || '';
                   const specialtyText = education && specialization 
                     ? `${education} - ${specialization}`
-                    : education || specialization || 'Bác sĩ chuyên khoa';
+                    : education || specialization || 'B�c si chuy�n khoa';
 
                   return (
                     <div 
@@ -519,14 +516,14 @@ export const PatientDashboard: React.FC = () => {
                 <div className={styles.emptyIcon}>
                   <i className="bi bi-calendar-x"></i>
                 </div>
-                <h3>Chưa có lịch hẹn</h3>
-                <p>Đặt lịch khám với bác sĩ ngay hôm nay</p>
+                <h3>Chua c� l?ch h?n</h3>
+                <p>�?t l?ch kh�m v?i b�c si ngay h�m nay</p>
                 <button 
                   className={styles.primaryBtn}
                   onClick={() => navigate('/doctors')}
                 >
                   <i className="bi bi-plus-circle"></i>
-                  Đặt lịch khám
+                  �?t l?ch kh�m
                 </button>
               </div>
             )}
@@ -537,7 +534,7 @@ export const PatientDashboard: React.FC = () => {
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle}>
                 <i className="bi bi-activity"></i>
-                <h2>Tổng quan sức khỏe</h2>
+                <h2>T?ng quan s?c kh?e</h2>
               </div>
             </div>
             
@@ -547,14 +544,14 @@ export const PatientDashboard: React.FC = () => {
                   <i className="bi bi-calendar-check"></i>
                 </div>
                 <div className={styles.metricInfo}>
-                  <span className={styles.metricLabel}>Lịch khám tháng này</span>
+                  <span className={styles.metricLabel}>L?ch kh�m th�ng n�y</span>
                   <span className={styles.metricValue}>{thisMonthAppointments.length}</span>
                   {(() => {
                     const trend = calculateTrend(thisMonthAppointments.length, lastMonthAppointments.length);
                     return trend !== 0 ? (
                       <span className={`${styles.metricTrend} ${trend > 0 ? styles.trendUp : styles.trendDown}`}>
                         <i className={`bi bi-arrow-${trend > 0 ? 'up' : 'down'}`}></i>
-                        {Math.abs(trend)}% so với tháng trước
+                        {Math.abs(trend)}% so v?i th�ng tru?c
                       </span>
                     ) : null;
                   })()}
@@ -566,11 +563,11 @@ export const PatientDashboard: React.FC = () => {
                   <i className="bi bi-heart-pulse"></i>
                 </div>
                 <div className={styles.metricInfo}>
-                  <span className={styles.metricLabel}>Lần khám gần nhất</span>
+                  <span className={styles.metricLabel}>L?n kh�m g?n nh?t</span>
                   <span className={styles.metricValue}>
                     {completedAppointments.length > 0 
                       ? formatDate(completedAppointments[completedAppointments.length - 1].appointmentStartTime)
-                      : 'Chưa có'
+                      : 'Chua c�'
                     }
                   </span>
                 </div>
@@ -583,13 +580,13 @@ export const PatientDashboard: React.FC = () => {
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle}>
                 <i className="bi bi-clock-history"></i>
-                <h2>Lịch sử khám gần đây</h2>
+                <h2>L?ch s? kh�m g?n d�y</h2>
               </div>
               <button 
                 className={styles.viewAllLink}
                 onClick={() => navigate('/app/patient/emr-timeline')}
               >
-                Xem tất cả
+                Xem t?t c?
                 <i className="bi bi-arrow-right"></i>
               </button>
             </div>
@@ -607,7 +604,7 @@ export const PatientDashboard: React.FC = () => {
                       <i className="bi bi-file-text"></i>
                     </div>
                     <div className={styles.recordInfo}>
-                      <h5>{record.diagnosis || record.chiefComplaint || 'Khám tổng quát'}</h5>
+                      <h5>{record.diagnosis || record.chiefComplaint || 'Kh�m t?ng qu�t'}</h5>
                       <p>{record.doctor}</p>
                       <span className={styles.recordDate}>
                         <i className="bi bi-calendar3"></i>
@@ -623,7 +620,7 @@ export const PatientDashboard: React.FC = () => {
                 <div className={styles.emptyIcon}>
                   <i className="bi bi-file-medical"></i>
                 </div>
-                <p>Chưa có hồ sơ bệnh án</p>
+                <p>Chua c� h? so b?nh �n</p>
               </div>
             )}
           </div>
@@ -636,7 +633,7 @@ export const PatientDashboard: React.FC = () => {
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle} style={{ color: '#ff6b6b' }}>
                 <i className="bi bi-bell-fill"></i>
-                <h2>Nhắc nhở</h2>
+                <h2>Nh?c nh?</h2>
                 {reminders.length > 0 && (
                   <span className={styles.notificationBadge}>{reminders.length}</span>
                 )}
@@ -649,14 +646,14 @@ export const PatientDashboard: React.FC = () => {
                   const scheduledDate = reminder.scheduledDate ? new Date(reminder.scheduledDate) : now;
                   const hoursUntil = Math.floor((scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60));
                   const remaining = hoursUntil <= 0
-                    ? 'Đã đến hạn'
+                    ? '�� d?n h?n'
                     : hoursUntil <= 24
-                    ? `Còn ${hoursUntil} giờ`
-                    : `Còn ${Math.floor(hoursUntil / 24)} ngày`;
+                    ? `C�n ${hoursUntil} gi?`
+                    : `C�n ${Math.floor(hoursUntil / 24)} ng�y`;
                   return (
                     <ReminderCard
                       key={reminder.id || index}
-                      date={reminder.scheduledDate ? formatDate(reminder.scheduledDate) : 'Chưa xác định'}
+                      date={reminder.scheduledDate ? formatDate(reminder.scheduledDate) : 'Chua x�c d?nh'}
                       time={reminder.scheduledDate ? formatTime(reminder.scheduledDate) : ''}
                       message={reminder.description || ''}
                       remaining={remaining}
@@ -668,7 +665,7 @@ export const PatientDashboard: React.FC = () => {
                     className={styles.viewAllRemindersBtn}
                     onClick={() => navigate('/app/patient/appointments')}
                   >
-                    Xem thêm {reminders.length - 2} nhắc nhở
+                    Xem th�m {reminders.length - 2} nh?c nh?
                     <i className="bi bi-arrow-right"></i>
                   </button>
                 )}
@@ -678,7 +675,7 @@ export const PatientDashboard: React.FC = () => {
                 <div className={styles.emptyIcon}>
                   <i className="bi bi-bell-slash"></i>
                 </div>
-                <p>Chưa có nhắc nhở nào</p>
+                <p>Chua c� nh?c nh? n�o</p>
               </div>
             )}
           </div>
@@ -688,7 +685,7 @@ export const PatientDashboard: React.FC = () => {
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle}>
                 <i className="bi bi-lightning-charge"></i>
-                <h2>Thao tác nhanh</h2>
+                <h2>Thao t�c nhanh</h2>
               </div>
             </div>
             
@@ -700,7 +697,7 @@ export const PatientDashboard: React.FC = () => {
                 <div className={styles.actionIcon} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
                   <i className="bi bi-calendar-plus"></i>
                 </div>
-                <span>Đặt lịch khám</span>
+                <span>�?t l?ch kh�m</span>
               </button>
 
               <button 
@@ -710,7 +707,7 @@ export const PatientDashboard: React.FC = () => {
                 <div className={styles.actionIcon} style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
                   <i className="bi bi-robot"></i>
                 </div>
-                <span>Kiểm tra AI</span>
+                <span>Ki?m tra AI</span>
               </button>
 
               <button 
@@ -720,7 +717,7 @@ export const PatientDashboard: React.FC = () => {
                 <div className={styles.actionIcon} style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
                   <i className="bi bi-file-medical"></i>
                 </div>
-                <span>Hồ sơ bệnh án</span>
+                <span>H? so b?nh �n</span>
               </button>
 
               <button 
@@ -730,7 +727,7 @@ export const PatientDashboard: React.FC = () => {
                 <div className={styles.actionIcon} style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
                   <i className="bi bi-wallet2"></i>
                 </div>
-                <span>Nạp tiền</span>
+                <span>N?p ti?n</span>
               </button>
             </div>
           </div>
@@ -741,7 +738,7 @@ export const PatientDashboard: React.FC = () => {
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionTitle}>
                   <i className="bi bi-stars"></i>
-                  <h2>Phân tích AI</h2>
+                  <h2>Ph�n t�ch AI</h2>
                 </div>
               </div>
               
@@ -751,8 +748,8 @@ export const PatientDashboard: React.FC = () => {
                     <i className="bi bi-robot"></i>
                   </div>
                   <div className={styles.aiInfo}>
-                    <h4>Kết quả phân tích mới nhất</h4>
-                    <p>{aiResults.length} kết quả có sẵn</p>
+                    <h4>K?t qu? ph�n t�ch m?i nh?t</h4>
+                    <p>{aiResults.length} k?t qu? c� s?n</p>
                   </div>
                 </div>
                 <button 
@@ -760,7 +757,7 @@ export const PatientDashboard: React.FC = () => {
                   onClick={() => navigate('/app/patient/ai-checkup')}
                 >
                   <i className="bi bi-eye"></i>
-                  Xem chi tiết
+                  Xem chi ti?t
                 </button>
               </div>
             </div>
@@ -831,15 +828,15 @@ export const PatientDashboard: React.FC = () => {
                 <div className={modalStyles.detailSection}>
                   <h4 className={modalStyles.sectionTitle}>
                     <i className="bi bi-calendar-event"></i>
-                    Thông tin lịch hẹn
+                    Th�ng tin l?ch h?n
                   </h4>
                   <div className={modalStyles.detailGrid}>
                     <div className={modalStyles.detailCard}>
-                      <div className={modalStyles.detailCardLabel}>NGÀY KHÁM</div>
+                      <div className={modalStyles.detailCardLabel}>NG�Y KH�M</div>
                       <div className={modalStyles.detailCardValue}>{formatDetailDate(selectedAppointment.appointmentStartTime)}</div>
                     </div>
                     <div className={modalStyles.detailCard}>
-                      <div className={modalStyles.detailCardLabel}>GIỜ KHÁM</div>
+                      <div className={modalStyles.detailCardLabel}>GI? KH�M</div>
                       <div className={modalStyles.detailCardValue}>
                         {selectedAppointment.appointmentStartTime && selectedAppointment.appointmentEndTime
                           ? formatTimeRange(selectedAppointment.appointmentStartTime, selectedAppointment.appointmentEndTime)
@@ -852,22 +849,22 @@ export const PatientDashboard: React.FC = () => {
                 <div className={modalStyles.detailSection}>
                   <h4 className={modalStyles.sectionTitle}>
                     <i className="bi bi-credit-card"></i>
-                    Thông tin thanh toán
+                    Th�ng tin thanh to�n
                   </h4>
                   <div className={modalStyles.paymentDetails}>
                     <div className={modalStyles.paymentRow}>
-                      <span className={modalStyles.paymentLabel}>Phí khám bệnh</span>
+                      <span className={modalStyles.paymentLabel}>Ph� kh�m b?nh</span>
                       <span className={modalStyles.paymentAmount}>{formatCurrency(selectedAppointment.consultationFee)}</span>
                     </div>
                     {selectedAppointment.platformFee > 0 && (
                       <>
                         <div className={modalStyles.paymentRow}>
-                          <span className={modalStyles.paymentLabel}>Phí nền tảng</span>
+                          <span className={modalStyles.paymentLabel}>Ph� n?n t?ng</span>
                           <span className={modalStyles.paymentAmount}>{formatCurrency(selectedAppointment.platformFee)}</span>
                         </div>
                         <div className={modalStyles.paymentDivider}></div>
                         <div className={modalStyles.paymentRow}>
-                          <span className={modalStyles.totalLabel}>Tổng cộng</span>
+                          <span className={modalStyles.totalLabel}>T?ng c?ng</span>
                           <span className={modalStyles.totalValue}>{formatCurrency(selectedAppointment.totalAmount)}</span>
                         </div>
                       </>
@@ -875,7 +872,7 @@ export const PatientDashboard: React.FC = () => {
                     {selectedAppointment.paymentStatusCode && (
                       <div className={`${modalStyles.paymentStatus} ${modalStyles[`paymentStatus${selectedAppointment.paymentStatusCode}`] || ''}`}>
                         <i className={`bi ${getPaymentStatusIcon(selectedAppointment.paymentStatusCode)}`}></i>
-                        <span>Trạng thái: {getPaymentStatusLabel(selectedAppointment.paymentStatusCode)}</span>
+                        <span>Tr?ng th�i: {getPaymentStatusLabel(selectedAppointment.paymentStatusCode)}</span>
                       </div>
                     )}
                   </div>
@@ -892,7 +889,7 @@ export const PatientDashboard: React.FC = () => {
                     }}
                   >
                     <i className="bi bi-x-circle"></i>
-                    Hủy lịch hẹn
+                    H?y l?ch h?n
                   </button>
                 )}
                 {selectedAppointment.statusCode === 'Completed' && (
@@ -904,7 +901,7 @@ export const PatientDashboard: React.FC = () => {
                     }}
                   >
                     <i className="bi bi-file-text"></i>
-                    Xem hồ sơ bệnh án
+                    Xem h? so b?nh �n
                   </button>
                 )}
               </div>

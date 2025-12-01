@@ -50,7 +50,6 @@ export const ManagerProfile: React.FC = () => {
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
   
-  // Check duplicate data states
   const [emailExists, setEmailExists] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [phoneExists, setPhoneExists] = useState(false);
@@ -58,7 +57,6 @@ export const ManagerProfile: React.FC = () => {
   const [cccdExists, setCccdExists] = useState(false);
   const [isCheckingCccd, setIsCheckingCccd] = useState(false);
 
-  // Validation functions
   const validateUsername = (username: string): string | null => {
     if (!username) return 'Tên tài khoản không được để trống';
     if (username.length < 6) return 'Tên tài khoản phải có ít nhất 6 ký tự';
@@ -107,7 +105,6 @@ export const ManagerProfile: React.FC = () => {
     const errors: Record<string, string> = {};
     let isValid = true;
 
-    // Validate required fields - these must not be empty
     const requiredFields = ['username', 'fullName', 'email', 'phoneNumber', 'cccd'];
     
     for (const field of requiredFields) {
@@ -116,7 +113,6 @@ export const ManagerProfile: React.FC = () => {
         errors[field] = `${getFieldDisplayName(field)} không được để trống`;
         isValid = false;
       } else {
-        // Validate format if field has value
         const error = validateField(field, value);
         if (error) {
           errors[field] = error;
@@ -125,7 +121,6 @@ export const ManagerProfile: React.FC = () => {
       }
     }
 
-    // Validate optional fields if they have values
     if (editData.address && editData.address.trim() === '') {
       errors.address = 'Địa chỉ không được để trống nếu đã nhập';
       isValid = false;
@@ -160,7 +155,6 @@ export const ManagerProfile: React.FC = () => {
     if (value.trim()) {
       validateSingleField(fieldName, value);
     } else {
-      // Clear error if field is empty
       setFieldErrors(prev => ({
         ...prev,
         [fieldName]: ''
@@ -209,7 +203,6 @@ export const ManagerProfile: React.FC = () => {
   }, []);
 
   const handleSaveClick = () => {
-    // Check required fields first
     const requiredFields = ['username', 'fullName', 'email', 'phoneNumber', 'cccd'];
     const missingFields: string[] = [];
     
@@ -225,13 +218,11 @@ export const ManagerProfile: React.FC = () => {
       return;
     }
 
-    // Validate format
     if (!validateAllFields()) {
       showToast('Vui lòng kiểm tra lại thông tin đã nhập', 'error');
       return;
     }
 
-    // Validate age
     if (editData.dob) {
       const date = new Date(editData.dob);
       const now = new Date();
@@ -248,7 +239,6 @@ export const ManagerProfile: React.FC = () => {
       }
     }
 
-    // Show confirmation dialog
     setShowSaveConfirmation(true);
   };
 
@@ -261,13 +251,11 @@ export const ManagerProfile: React.FC = () => {
     showToast('Đang cập nhật thông tin...', 'info');
 
     try {
-      // Map cccd to identificationNumber for API
       const apiData = {
         ...editData,
         identificationNumber: editData.cccd,
       };
       
-      // Nếu username không được nhập hoặc rỗng, giữ nguyên username hiện tại
       if (!apiData.username || apiData.username.trim() === '') {
         apiData.username = data?.username || '';
       }
@@ -279,7 +267,6 @@ export const ManagerProfile: React.FC = () => {
         ? updatedUser.username 
         : editData.username || data?.username || '';
       
-      // Preserve imageURL from current data - API might not return avatarUrl
       const preservedImageURL = updatedUser.imageURL || data?.imageURL;
       
       const updatedData: ExtendedUserInfo = {
@@ -296,7 +283,6 @@ export const ManagerProfile: React.FC = () => {
       setIsEditing(false);
       showToast('Cập nhật thông tin thành công!', 'success');
       
-      // Update user context with new data
       updateUser({
         fullName: updatedData.fullName || undefined,
         email: updatedData.email || undefined,
@@ -365,7 +351,6 @@ export const ManagerProfile: React.FC = () => {
         const updatedData = { ...data, imageURL: result.imageUrl };
         setData(updatedData);
         
-        // Update user context with new avatar
         updateUser({ avatarUrl: result.imageUrl });
       }
       
@@ -511,7 +496,6 @@ export const ManagerProfile: React.FC = () => {
                         value={editData.username || ''} 
                         onChange={(e) => {
                           setEditData({...editData, username: e.target.value});
-                          // Clear error when user starts typing
                           if (fieldErrors.username) {
                             setFieldErrors({...fieldErrors, username: ''});
                           }
@@ -581,7 +565,6 @@ export const ManagerProfile: React.FC = () => {
                         onChange={(e) => {
                           const numericValue = e.target.value.replace(/[^0-9]/g, '');
                           setEditData({...editData, phoneNumber: numericValue});
-                          // Clear error when user starts typing
                           if (fieldErrors.phoneNumber) {
                             setFieldErrors({...fieldErrors, phoneNumber: ''});
                           }
@@ -685,7 +668,6 @@ export const ManagerProfile: React.FC = () => {
                         onChange={(e) => {
                           const numericValue = e.target.value.replace(/[^0-9]/g, '');
                           setEditData({...editData, cccd: numericValue});
-                          // Clear error when user starts typing
                           if (fieldErrors.cccd) {
                             setFieldErrors({...fieldErrors, cccd: ''});
                           }

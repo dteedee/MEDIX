@@ -41,7 +41,6 @@ const SpecializationForm: React.FC<SpecializationFormProps> = ({
       });
       setImagePreview(specialization.imageUrl || '');
     } else {
-      // Reset form when creating new
       setFormData({
         code: '',
         name: '',
@@ -79,7 +78,6 @@ const SpecializationForm: React.FC<SpecializationFormProps> = ({
         return;
       }
 
-      // Clear error if file is valid
       setErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors.imageUrl;
@@ -139,24 +137,18 @@ const SpecializationForm: React.FC<SpecializationFormProps> = ({
 
     setLoading(true);
     try {
-      // Determine imageUrl to send
-      // Always send imageUrl (even if empty) so backend knows what to do
       let finalImageUrl: string = formData.imageUrl || '';
       
-      // If no new file and we're editing, use existing imageUrl from specialization
       if (!imageFile && mode === 'edit' && specialization) {
         if (!finalImageUrl && specialization.imageUrl) {
           finalImageUrl = specialization.imageUrl;
         } else if (imagePreview && imagePreview.startsWith('http')) {
-          // Use preview URL if it's a full URL
           finalImageUrl = imagePreview;
         }
       } else if (imagePreview && imagePreview.startsWith('http') && !imageFile) {
-        // Use preview URL if it's a full URL and no new file
         finalImageUrl = imagePreview;
       }
 
-      // Prepare payload
       const payload = {
         code: formData.code.trim(),
         name: formData.name.trim(),
@@ -563,7 +555,6 @@ const SpecializationForm: React.FC<SpecializationFormProps> = ({
                       setImageFile(null);
                       setFormData({ ...formData, imageUrl: '' });
                       setImageError(false);
-                      // Reset file input
                       const fileInput = document.getElementById('specializationImage') as HTMLInputElement;
                       if (fileInput) fileInput.value = '';
                     }}

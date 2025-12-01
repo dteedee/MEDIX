@@ -111,17 +111,14 @@ export default function EMRTimeline() {
         }
     }
 
-    // Get unique doctors from list
     const getUniqueDoctorsList = () => {
         const doctors = Array.from(new Set(list.map(record => record.doctor).filter(Boolean)));
         return doctors.sort();
     };
 
-    // Filter and sort records
     useEffect(() => {
         let filtered = [...list];
 
-        // Filter by search query
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(record => 
@@ -132,12 +129,10 @@ export default function EMRTimeline() {
             );
         }
 
-        // Filter by doctor
         if (selectedDoctor !== 'all') {
             filtered = filtered.filter(record => record.doctor === selectedDoctor);
         }
 
-        // Sort
         filtered.sort((a, b) => {
             if (sortBy === 'date') {
                 const dateA = new Date(a.date).getTime();
@@ -159,7 +154,6 @@ export default function EMRTimeline() {
     }, [list, searchQuery, selectedDoctor, sortBy, sortOrder]);
 
     const handleDownloadRecord = (record: MedicalRecordDto) => {
-        // Create a temporary div with record content
         const tempDiv = document.createElement('div');
         tempDiv.style.padding = '20px';
         tempDiv.style.background = 'white';
@@ -259,11 +253,9 @@ export default function EMRTimeline() {
         }
     }, []);
 
-    // Update avatar when user avatar changes
     useEffect(() => {
         if (user?.avatarUrl) {
             setAvatarUpdateKey(prev => prev + 1);
-            // Reload basicInfo to sync avatar from backend
             const reloadBasicInfo = async () => {
                 try {
                     const updatedBasicInfo = await PatientService.getBasicEMRInfo();

@@ -150,7 +150,6 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
       return "Email không đúng định dạng.";
     }
     
-    // Kiểm tra phần local (trước @)
     const localPart = email.split('@')[0];
     if (localPart.length > 64) {
       return "Phần trước @ không được vượt quá 64 ký tự.";
@@ -270,7 +269,6 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
 
       if (serverErrors) {
         const newErrors: { userName?: string; email?: string; password?: string } = {};
-        // Backend có thể trả về lỗi với key là 'UserName' hoặc 'userName'
         if (serverErrors.UserName || serverErrors.userName) newErrors.userName = (serverErrors.UserName || serverErrors.userName)[0];
         if (serverErrors.Password || serverErrors.password) newErrors.password = (serverErrors.Password || serverErrors.password)[0];
         if (serverErrors.Email || serverErrors.email) newErrors.email = (serverErrors.Email || serverErrors.email)[0]; 

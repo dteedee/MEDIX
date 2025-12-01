@@ -68,27 +68,20 @@ export const PatientProfile: React.FC = () => {
   const [avatarUpdateKey, setAvatarUpdateKey] = useState(0); // Track avatar updates
   const [bloodTypes, setBloodTypes] = useState<BloodType[]>([]); // Blood types from API
 
-  // Helper function to get blood type display name
   const getBloodTypeDisplayName = (code: string | undefined): string => {
     if (!code) {
-      // If no code, try to get from data.bloodType (legacy or display name already stored)
       return data?.bloodType || 'Chưa cập nhật';
     }
-    // Find the blood type by code
     const bloodType = bloodTypes.find(bt => bt.code === code);
     if (bloodType) {
       return bloodType.displayName;
     }
-    // Fallback: if bloodTypes not loaded yet, use code or data.bloodType
     return data?.bloodType || code || 'Chưa cập nhật';
   };
 
-  // Validation functions
   const validateUsername = (username: string): string | null => {
     if (!username) return 'Tên tài khoản không được để trống';
     if (username.length < 6) return 'Tên tài khoản phải có ít nhất 6 ký tự';
-    // if (username.length > 20) return 'Tên tài khoản không được quá 20 ký tự';
-    // if (!/^[a-zA-Z0-9_]+$/.test(username)) return 'Tên tài khoản chỉ được chứa chữ cái, số và dấu gạch dưới';
     return null;
   };
 
@@ -172,7 +165,6 @@ export const PatientProfile: React.FC = () => {
       }
     }
 
-    // Check if phone numbers are the same
     if (editData.phoneNumber && editData.emergencyContactPhone && 
         editData.phoneNumber === editData.emergencyContactPhone) {
       errors.emergencyContactPhone = 'Số điện thoại liên hệ khẩn cấp không được giống số điện thoại chính';
@@ -196,7 +188,6 @@ export const PatientProfile: React.FC = () => {
     if (value.trim()) {
       validateSingleField(fieldName, value);
     } else {
-      // Clear error if field is empty
       setFieldErrors(prev => ({
         ...prev,
         [fieldName]: ''
@@ -205,7 +196,6 @@ export const PatientProfile: React.FC = () => {
   };
 
 
-  // Load blood types from API
   useEffect(() => {
     const loadBloodTypes = async () => {
       try {
@@ -232,12 +222,8 @@ export const PatientProfile: React.FC = () => {
       try {
         const res = await userService.getUserInfo();
         if (mounted) {
-          // Get patient-specific data from API
-          // TODO: Backend needs to return patient fields in the response
-          // For now, we'll try to get from a separate endpoint if available
           let patientData: any = {};
           try {
-            // Try to get patient data - this endpoint should exist if patient is registered
             const patientResponse = await apiClient.get('/patient/getPatientInfo');
             patientData = patientResponse.data;
          
@@ -245,10 +231,8 @@ export const PatientProfile: React.FC = () => {
        
           }
           
-          // Use avatarUrl from user context if imageURL is not available
           const imageURL = res.imageURL || user?.avatarUrl || (res as any).avatarUrl;
           
-          // Get blood type code from API response
           const bloodTypeCode = res.bloodTypeCode || (res as any).bloodTypeCode || patientData.bloodTypeCode || '';
           
         
@@ -290,7 +274,6 @@ export const PatientProfile: React.FC = () => {
     return () => { mounted = false; };
   }, [user?.avatarUrl]); // Re-run when user avatar changes
 
-  // Sync avatar from user context when it changes
   useEffect(() => {
     if (user?.avatarUrl && data && (!data.imageURL || data.imageURL !== user.avatarUrl)) {
       setData(prev => prev ? { ...prev, imageURL: user.avatarUrl || prev.imageURL } : null);
@@ -299,16 +282,11 @@ export const PatientProfile: React.FC = () => {
   }, [user?.avatarUrl, data]);
 
   const handleSaveClick = () => {
-    // Validate before showing confirmation
     if (editData.username?.trim() && editData.username.length < 3) {
       showToast('Tên tài khoản phải có ít nhất 3 ký tự', 'error');
       return;
     }
 
-    // if (editData.username?.trim() && !/^[a-zA-Z0-9_]+$/.test(editData.username)) {
-    //   showToast('Tên tài khoản chỉ được chứa chữ cái, số và dấu gạch dưới', 'error');
-    //   return;
-    // }
 
     if (editData.dob) {
       const date = new Date(editData.dob);
@@ -331,7 +309,6 @@ export const PatientProfile: React.FC = () => {
       return;
     }
 
-    // Show confirmation dialog
     setShowSaveConfirmation(true);
   };
 
@@ -344,7 +321,6 @@ export const PatientProfile: React.FC = () => {
     showToast('Đang cập nhật thông tin...', 'info');
 
     try {
-      // Map cccd to identificationNumber for API and include medical fields
       const apiData = {
         ...editData,
         identificationNumber: editData.cccd,
@@ -353,7 +329,6 @@ export const PatientProfile: React.FC = () => {
         allergies: editData.allergies?.trim() || undefined
       };
       
-      // Nếu username không được nhập hoặc rỗng, giữ nguyên username hiện tại
       if (!apiData.username || apiData.username.trim() === '') {
         apiData.username = data?.username || '';
       }
@@ -367,10 +342,8 @@ export const PatientProfile: React.FC = () => {
         ? updatedUser.username 
         : editData.username || data?.username || '';
       
-      // Preserve imageURL from current data - API might not return avatarUrl
       const preservedImageURL = updatedUser.imageURL || data?.imageURL;
       
-      // Find blood type display name from code
       const selectedBloodType = bloodTypes.find(bt => bt.code === editData.bloodTypeCode);
       const bloodTypeDisplay = selectedBloodType?.displayName || (updatedUser as any).bloodType || data?.bloodType || '';
       
@@ -392,7 +365,6 @@ export const PatientProfile: React.FC = () => {
       
       setData(updatedData);
       
-      // Update editData with the latest bloodTypeCode from API response
       setEditData(prev => ({
         ...prev,
         bloodTypeCode: updatedUser.bloodTypeCode || editData.bloodTypeCode || ''
@@ -401,7 +373,6 @@ export const PatientProfile: React.FC = () => {
       setIsEditing(false);
       showToast('Cập nhật thông tin thành công!', 'success');
       
-      // Update user context with new data
       updateUser({
         fullName: updatedData.fullName || undefined,
         email: updatedData.email || undefined,
@@ -472,7 +443,6 @@ export const PatientProfile: React.FC = () => {
       const result = await userService.uploadProfileImage(file);
       
       if (result.imageUrl) {
-        // Reload user info from API to get the latest data
         try {
           const latestUserInfo = await userService.getUserInfo();
           const updatedData: ExtendedUserInfo = {
@@ -488,7 +458,6 @@ export const PatientProfile: React.FC = () => {
           };
           setData(updatedData);
           
-          // Update editData with latest info
           setEditData(prev => ({
             ...prev,
             imageURL: latestUserInfo.imageURL || result.imageUrl
@@ -530,11 +499,9 @@ export const PatientProfile: React.FC = () => {
       
       setError(errorMessage);
       
-      // Keep preview for 10 seconds, then clear
       setTimeout(() => {
         URL.revokeObjectURL(previewUrl);
         setPreviewImage(null);
-        // Don't clear error immediately - let user see it
       }, 10000);
     } finally {
       setUploading(false);
@@ -665,7 +632,6 @@ export const PatientProfile: React.FC = () => {
                         value={editData.username || ''} 
                         onChange={(e) => {
                           setEditData({...editData, username: e.target.value});
-                          // Clear error when user starts typing
                           if (fieldErrors.username) {
                             setFieldErrors({...fieldErrors, username: ''});
                           }
@@ -735,7 +701,6 @@ export const PatientProfile: React.FC = () => {
                         onChange={(e) => {
                           const numericValue = e.target.value.replace(/[^0-9]/g, '');
                           setEditData({...editData, phoneNumber: numericValue});
-                          // Clear error when user starts typing
                           if (fieldErrors.phoneNumber) {
                             setFieldErrors({...fieldErrors, phoneNumber: ''});
                           }
@@ -838,7 +803,6 @@ export const PatientProfile: React.FC = () => {
                         onChange={(e) => {
                           const numericValue = e.target.value.replace(/[^0-9]/g, '');
                           setEditData({...editData, cccd: numericValue});
-                          // Clear error when user starts typing
                           if (fieldErrors.cccd) {
                             setFieldErrors({...fieldErrors, cccd: ''});
                           }
@@ -950,7 +914,6 @@ export const PatientProfile: React.FC = () => {
                         onChange={(e) => {
                           const numericValue = e.target.value.replace(/[^0-9]/g, '');
                           setEditData({...editData, emergencyContactPhone: numericValue});
-                          // Clear error when user starts typing
                           if (fieldErrors.emergencyContactPhone) {
                             setFieldErrors({...fieldErrors, emergencyContactPhone: ''});
                           }

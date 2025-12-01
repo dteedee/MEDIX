@@ -67,7 +67,6 @@ function HomePage() {
         fetchBanners();
     }, []);
 
-    // Prefetch extra doctor info (education) for cards to show "học vị - chuyên ngành"
     useEffect(() => {
         const loadEducation = async () => {
             const list = homeMetadata?.displayedDoctors || [];
@@ -103,7 +102,6 @@ function HomePage() {
         }
     };
 
-    // Hydrate doctorIdMap so we can link by id from homepage
     useEffect(() => {
         const hydrate = async () => {
             const list = homeMetadata?.displayedDoctors || [];
@@ -121,7 +119,6 @@ function HomePage() {
         hydrate();
     }, [homeMetadata?.displayedDoctors]);
 
-    // Doctors carousel (auto-next, wrap-around)
     const [currentIndex, setCurrentIndex] = useState(0);
     const doctorsPerPage = 4;
 
@@ -145,7 +142,6 @@ function HomePage() {
     }, [homeMetadata?.displayedDoctors?.length]);
 
 
-    // Knowledge carousel: cửa sổ trượt tròn, hiển thị columns bài, dịch 1 bài/lần
     const knowledgeTrackRef = useRef<HTMLDivElement>(null);
     const [knowledgeIndex, setKnowledgeIndex] = useState(0);
     const [columns, setColumns] = useState(3);

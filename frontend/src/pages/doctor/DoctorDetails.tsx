@@ -160,7 +160,6 @@ function DoctorDetails() {
     const handleBookingConfirm = async () => {
         if (!profileData || !selectedDate || !selectedTimeSlot) return;
         
-        // Validate "Lý do khám" field
         if (!chiefComplaint || !chiefComplaint.trim()) {
             showToast("Vui lòng nhập lý do khám trước khi đặt lịch hẹn.", 'warning');
             return;
@@ -190,14 +189,12 @@ function DoctorDetails() {
     const handleConfirmedBooking = async () => {
         if (!profileData || !selectedDate || !selectedTimeSlot) return;
         
-        // Validate "Lý do khám" field again (double check)
         if (!chiefComplaint || !chiefComplaint.trim()) {
             showToast("Vui lòng nhập lý do khám trước khi đặt lịch hẹn.", 'warning');
             setShowConfirmModal(false);
             return;
         }
         
-        // Close confirmation modal
         setShowConfirmModal(false);
         setIsCreatingPayment(true);
         try {
@@ -359,6 +356,31 @@ function DoctorDetails() {
         setPromotionError('');
         setShowPromotionModal(false);
     };
+    const formatCurrencyCompact = (value: number): string => {
+        const amount = value || 0;
+        const abs = Math.abs(amount);
+
+        if (abs >= 1_000_000_000) {
+            const compact = amount / 1_000_000_000;
+            const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+            return `${text}B VND`;
+        }
+
+        if (abs >= 1_000_000) {
+            const compact = amount / 1_000_000;
+            const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+            return `${text}M VND`;
+        }
+
+        if (abs >= 1_000) {
+            const compact = amount / 1_000;
+            const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+            return `${text}K VND`;
+        }
+
+        return `${amount.toLocaleString('vi-VN')} VND`;
+    };
+
     const calculateFinalPrice = (): number => {
         if (!profileData?.consulationFee) return 0;
         const basePrice = Number(profileData.consulationFee);
@@ -1126,7 +1148,7 @@ function DoctorDetails() {
                                                 <span className={styles.infoLabel}>Phí khám</span>
                                                 <span className={styles.infoPriceValue}>
                                                     {profileData.consulationFee && profileData.consulationFee > 0
-                                                        ? `${Number(profileData.consulationFee).toLocaleString('vi-VN')}đ`
+                                                        ? formatCurrencyCompact(Number(profileData.consulationFee))
                                                         : 'Liên hệ'}
                                                 </span>
                                             </div>
@@ -1137,7 +1159,6 @@ function DoctorDetails() {
                                         className={styles.bookNowButton}
                                         onClick={() => {
                                             setActiveTabIndex(1);
-                                            // Scroll to calendar section after a short delay to allow DOM update
                                             setTimeout(() => {
                                                 if (calendarSectionRef.current) {
                                                     calendarSectionRef.current.scrollIntoView({ 
@@ -1513,7 +1534,7 @@ function DoctorDetails() {
                                                                 <span className={styles.summaryLabel}>Phí khám</span>
                                                                 <span className={styles.summaryPrice}>
                                                                     {profileData.consulationFee != null && profileData.consulationFee !== undefined
-                                                                        ? `${Number(profileData.consulationFee).toLocaleString('vi-VN')}đ`
+                                                                        ? formatCurrencyCompact(Number(profileData.consulationFee))
                                                                         : 'Liên hệ'}
                                                                 </span>
                                                             </div>
@@ -1585,7 +1606,7 @@ function DoctorDetails() {
                                                                     <p className={styles.promotionDiscount}>
                                                                         Giảm: {appliedPromotion.discountType === 'Percentage' 
                                                                             ? `${appliedPromotion.discountValue}%`
-                                                                            : `${appliedPromotion.discountValue.toLocaleString('vi-VN')}đ`}
+                                                                            : formatCurrencyCompact(appliedPromotion.discountValue)}
                                                                     </p>
                                                                 </div>
                                                                 <button
@@ -1653,19 +1674,19 @@ function DoctorDetails() {
                                                                 <div className={styles.priceRow}>
                                                                     <span className={styles.priceLabel}>Phí khám gốc:</span>
                                                                     <span className={styles.priceValue}>
-                                                                        {Number(profileData.consulationFee).toLocaleString('vi-VN')}đ
+                                                                        {formatCurrencyCompact(Number(profileData.consulationFee))}
                                                                     </span>
                                                                 </div>
                                                                 <div className={styles.priceRow}>
                                                                     <span className={styles.priceLabel}>Giảm giá:</span>
                                                                     <span className={styles.discountValue}>
-                                                                        -{(Number(profileData.consulationFee) - calculateFinalPrice()).toLocaleString('vi-VN')}đ
+                                                                        -{formatCurrencyCompact(Number(profileData.consulationFee) - calculateFinalPrice())}
                                                                     </span>
                                                                 </div>
                                                                 <div className={styles.priceRowTotal}>
                                                                     <span className={styles.priceLabelTotal}>Tổng thanh toán:</span>
                                                                     <span className={styles.priceValueTotal}>
-                                                                        {calculateFinalPrice().toLocaleString('vi-VN')}đ
+                                                                        {formatCurrencyCompact(calculateFinalPrice())}
                                                                     </span>
                                                                 </div>
                                                             </div>
@@ -1994,7 +2015,7 @@ function DoctorDetails() {
                                                         <span className={styles.discountBadge}>
                                                             {promotion.discountType === 'Percentage' 
                                                                 ? `-${promotion.discountValue}%`
-                                                                : `-${promotion.discountValue.toLocaleString('vi-VN')}đ`}
+                                                                : `-${formatCurrencyCompact(promotion.discountValue)}`}
                                                         </span>
                                                     </div>
                                                 </div>

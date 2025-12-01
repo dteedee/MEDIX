@@ -78,7 +78,6 @@ const SpecialtyDetailPage: React.FC = () => {
     }
   };
 
-  // Converter function from DoctorBookingList
   const convertApiDoctorToDoctor = (
     apiDoctor: DoctorInTier, 
     tierName: string, 
@@ -644,7 +643,6 @@ const SpecialtyDetailPage: React.FC = () => {
                       const successPercentage = doctor.successPercentage ?? 0;
                       const totalReviews = doctor.totalReviews ?? 0;
                       
-                      // Map tier to correct class name
                       const tierClassMap: Record<string, string> = {
                         'Basic': doctorBookingStyles.tierBasic,
                         'Professional': doctorBookingStyles.tierProfessional,

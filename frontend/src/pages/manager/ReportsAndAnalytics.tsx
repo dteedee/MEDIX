@@ -36,7 +36,6 @@ export default function ReportsAndAnalytics() {
   }, [selectedPeriod, selectedYear]);
   
   useEffect(() => {
-    // Load top rated doctors when education types are ready or when period/year changes
     loadTopRatedDoctors();
   }, [educationTypes, selectedPeriod, selectedYear]);
 
@@ -126,10 +125,8 @@ export default function ReportsAndAnalytics() {
     try {
       const data = await dashboardService.getTopRatedDoctors(3);
       
-      // Fetch thêm thông tin chi tiết từ DoctorService nếu thiếu degree hoặc experienceYears
       const enrichedData = await Promise.all(
         data.map(async (doctor) => {
-          // Nếu đã có đầy đủ thông tin, chỉ cần map degree nếu là code
           if (doctor.degree && doctor.experienceYears) {
             const degreeLabel = getEducationLabel(doctor.degree);
             return {
@@ -139,10 +136,8 @@ export default function ReportsAndAnalytics() {
           }
           
           try {
-            // Fetch thông tin chi tiết từ DoctorService
             const doctorDetail = await DoctorService.getById(doctor.doctorId);
             
-            // Map education code sang description
             const degreeLabel = getEducationLabel(doctorDetail.education);
             
             return {
@@ -187,12 +182,6 @@ export default function ReportsAndAnalytics() {
       const compact = amount / 1_000_000;
       const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
       return `${text}M VND`;
-    }
-
-    if (abs >= 1_000) {
-      const compact = amount / 1_000;
-      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
-      return `${text}K VND`;
     }
 
     return `${amount.toLocaleString('vi-VN')} VND`;
@@ -276,16 +265,13 @@ export default function ReportsAndAnalytics() {
       const currentDate = new Date().toISOString().split('T')[0];
       const dateTime = new Date().toLocaleString('vi-VN');
       
-      // Tạo nội dung CSV với nhiều sections
       let csvContent = '\uFEFF'; // BOM để hỗ trợ UTF-8
       
-      // Header báo cáo
       csvContent += `BÁO CÁO & THỐNG KÊ - MEDIX\n`;
       csvContent += `Ngày xuất: ${dateTime}\n`;
       csvContent += `Năm: ${selectedYear}\n`;
       csvContent += `\n`;
       
-      // Section 1: Tổng quan Metrics
       csvContent += `=== TỔNG QUAN METRICS ===\n`;
       csvContent += `Chỉ số,Giá trị,Tăng trưởng (%)\n`;
       
@@ -302,11 +288,9 @@ export default function ReportsAndAnalytics() {
       
       csvContent += `\n`;
       
-      // Section 2: Metrics bổ sung
       csvContent += `=== METRICS BỔ SUNG ===\n`;
       csvContent += `Chỉ số,Giá trị,Chi tiết\n`;
       
-      // Tỷ lệ hoàn thành
       const completionRate = appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.completed !== undefined
         ? (((appointmentStats.completed || 0) / appointmentStats.totalAppointments) * 100).toFixed(1)
         : '0.0';
@@ -315,7 +299,6 @@ export default function ReportsAndAnalytics() {
         : 'Lịch hẹn đã hoàn thành';
       csvContent += `"Tỷ lệ hoàn thành","${completionRate}%","${completionDetail}"\n`;
       
-      // Tỷ lệ hủy
       const cancellationRate = appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.cancelledByPatient !== undefined && appointmentStats.cancelledByDoctor !== undefined
         ? ((((appointmentStats.cancelledByPatient || 0) + (appointmentStats.cancelledByDoctor || 0)) / appointmentStats.totalAppointments) * 100).toFixed(1)
         : '0.0';
@@ -324,14 +307,12 @@ export default function ReportsAndAnalytics() {
         : 'Lịch hẹn bị hủy';
       csvContent += `"Tỷ lệ hủy","${cancellationRate}%","${cancellationDetail}"\n`;
       
-      // Đánh giá trung bình
       const avgRating = topRatedDoctors.length > 0
         ? (topRatedDoctors.reduce((sum, d) => sum + d.averageRating, 0) / topRatedDoctors.length).toFixed(1)
         : '0.0';
       const totalReviews = topRatedDoctors.reduce((sum, d) => sum + d.reviewCount, 0);
       csvContent += `"Đánh giá trung bình","${avgRating}","${totalReviews} đánh giá"\n`;
       
-      // Tỷ lệ đặt lại lịch
       const rescheduleRate = appointmentStats && appointmentStats.totalAppointments > 0 && appointmentStats.BeforeAppoiment !== undefined
         ? (((appointmentStats.BeforeAppoiment || 0) / appointmentStats.totalAppointments) * 100).toFixed(1)
         : '0.0';
@@ -342,7 +323,6 @@ export default function ReportsAndAnalytics() {
       
       csvContent += `\n`;
       
-      // Section 3: Top Rated Doctors
       csvContent += `=== TOP ${topRatedDoctors.length} BÁC SĨ ĐƯỢC ĐÁNH GIÁ CAO NHẤT ===\n`;
       csvContent += `Hạng,Tên bác sĩ,Chuyên khoa,Kinh nghiệm (năm),Đánh giá trung bình,Số đánh giá,Ca đã thực hiện,Ca thành công\n`;
       
@@ -363,7 +343,6 @@ export default function ReportsAndAnalytics() {
       
       csvContent += `\n`;
       
-      // Section 4: Chuyên khoa phổ biến
       csvContent += `=== CHUYÊN KHOA PHỔ BIẾN ===\n`;
       csvContent += `Hạng,Tên chuyên khoa,Số lượng bác sĩ,Tỷ lệ (%)\n`;
       
@@ -376,7 +355,6 @@ export default function ReportsAndAnalytics() {
       
       csvContent += `\n`;
       
-      // Section 5: Xu hướng lịch hẹn theo tháng
       if (appointmentTrends && appointmentTrends.monthly.length > 0) {
         csvContent += `=== XU HƯỚNG LỊCH HẸN THEO THÁNG (NĂM ${selectedYear}) ===\n`;
         csvContent += `Tháng,Số lịch hẹn,Doanh thu (VND)\n`;
@@ -391,7 +369,6 @@ export default function ReportsAndAnalytics() {
         csvContent += `\n`;
       }
       
-      // Section 6: Tăng trưởng người dùng theo tháng
       if (userGrowth && userGrowth.monthly.length > 0) {
         csvContent += `=== TĂNG TRƯỞNG NGƯỜI DÙNG THEO THÁNG (NĂM ${selectedYear}) ===\n`;
         csvContent += `Tháng,Bệnh nhân mới,Bác sĩ mới\n`;
@@ -405,7 +382,6 @@ export default function ReportsAndAnalytics() {
         csvContent += `"Tổng cộng","${userGrowth.totalNewUsers}","${userGrowth.totalNewDoctors}"\n`;
       }
       
-      // Tạo file và download
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
@@ -889,10 +865,8 @@ export default function ReportsAndAnalytics() {
                               return `${(value / 1000000000).toFixed(1)}B`;
                             } else if (value >= 1000000) {
                               return `${(value / 1000000).toFixed(1)}M`;
-                            } else if (value >= 1000) {
-                              return `${(value / 1000).toFixed(0)}K`;
                             }
-                            return value.toString();
+                            return Number(value).toLocaleString('vi-VN');
                           }}
                         />
                         <Tooltip 

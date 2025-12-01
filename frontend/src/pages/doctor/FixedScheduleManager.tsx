@@ -43,7 +43,6 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
     isAvailable: true,
   });
 
-  // Lọc và sắp xếp lịch làm việc cho ngày được chọn
   const schedulesForSelectedDay = useMemo(() => {
     return schedules
       .filter(s => s.dayOfWeek === selectedDay)
@@ -77,9 +76,7 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
 
-    // --- VALIDATION LOGIC ---
 
-    // 1. Validate Start time < End time
     if (formState.startTime >= formState.endTime) {
       Swal.fire('Lỗi!', 'Giờ bắt đầu phải trước giờ kết thúc.', 'error');
       return;
@@ -87,13 +84,7 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
 
     const schedulesForDay = schedules.filter(s => s.dayOfWeek === formState.dayOfWeek && s.id !== editingScheduleId);
 
-    // // 3. Validate maximum 2 schedules per day (only for new schedules)
-    // if (!editingScheduleId && schedulesForDay.length >= 2) {
-    //   Swal.fire('Lỗi!', `Mỗi ngày chỉ được đăng ký tối đa 2 ca làm việc. Ngày ${getDayLabel(formState.dayOfWeek)} đã đủ số ca.`, 'error');
-    //   return;
-    // }
 
-    // 4. Validate for overlapping schedules
     const isOverlap = schedulesForDay.some(existingSchedule =>
       formState.startTime < existingSchedule.endTime && formState.endTime > existingSchedule.startTime
     );
@@ -106,9 +97,7 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
       );
       return;
     }
-    // --- END VALIDATION ---
 
-    // Đảm bảo thời gian luôn có định dạng HH:mm:ss
     const payload: CreateSchedulePayload = {
       ...formState,
       startTime: `${formState.startTime}:00`,
@@ -117,7 +106,6 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
 
     try {
       if (editingScheduleId) {
-        // Truyền payload đã được định dạng
         await scheduleService.updateSchedule(editingScheduleId, payload);
         Swal.fire('Thành công!', 'Đã cập nhật lịch làm việc.', 'success');
       } else {

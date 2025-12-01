@@ -5,7 +5,6 @@ import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 import { authService } from '../../services/authService';
 import registrationService from '../../services/registrationService';
-// @ts-ignore
 import '../../style/ForgotPassword.css';
 
 const ForgotPassword: React.FC = () => {

@@ -16,7 +16,6 @@ interface Props {
 }
 
 type FormInputs = Omit<CreateScheduleOverridePayload, 'overrideType'> & {
-  // Thêm trường này vào form để dễ quản lý, không có trong payload gửi đi
   timeSlot: string;
   overrideType: number; // Trong form, overrideType là number (1 hoặc 0)
 };
@@ -40,8 +39,6 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
   const { register, handleSubmit, reset, setValue, getValues, formState: { errors } } = useForm<FormInputs>();
 
   useEffect(() => {
-    // Khi modal được mở với một ngày cụ thể (từ việc click vào ngày trên lịch)
-    // thì sẽ mở thẳng form thêm mới cho ngày đó.
     if (initialDate) {
       setEditingOverride(null);
       reset({
@@ -119,7 +116,6 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
     try {
       const overrideTypeNumber = Number(data.overrideType);
 
-      // --- VALIDATION: Ngăn đăng ký nghỉ quá gần ---
       if (overrideTypeNumber === 0) { // Chỉ áp dụng cho lịch "Nghỉ"
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Chuẩn hóa về đầu ngày
@@ -134,25 +130,20 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
         }
       }
 
-      // --- VALIDATION: Giới hạn số ngày nghỉ ---
-      // Chỉ kiểm tra khi tạo mới một lịch "Nghỉ"
       if (overrideTypeNumber === 0 && !editingOverride) {
         const today = new Date().toISOString().split('T')[0]; // Lấy ngày hôm nay dạng 'YYYY-MM-DD'
 
-        // Lấy tất cả các ngày nghỉ (overrideType === false) từ hôm nay trở về sau
         const existingNghiDays = new Set(
           overrides
             .filter(o => !o.overrideType && o.overrideDate >= today)
             .map(o => o.overrideDate)
         );
 
-        // Nếu ngày đang tạo chưa có trong danh sách ngày nghỉ và đã đủ 2 ngày nghỉ
         if (!existingNghiDays.has(data.overrideDate) && existingNghiDays.size >= 2) {
           Swal.fire('Lỗi!', 'Bạn chỉ được phép đăng ký lịch nghỉ tối đa trong 2 ngày khác nhau.', 'error');
           return; // Dừng thực thi
         }
       }
-      // --- END VALIDATION ---
 
 
       const payload: CreateScheduleOverridePayload = {
@@ -160,7 +151,6 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
         reason: data.reason,
         overrideType: overrideTypeNumber === 1, // true for Tăng ca, false for Nghi
         isAvailable: true, // Luôn mặc định là true, backend và background service sẽ xử lý logic
-        // Đảm bảo thời gian luôn có định dạng HH:mm:ss
         startTime: data.startTime.length === 5 ? `${data.startTime}:00` : data.startTime,
         endTime: data.endTime.length === 5 ? `${data.endTime}:00` : data.endTime,
       };
@@ -182,14 +172,11 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
         if (typeof err.response.data === 'string') {
           errorMessage = err.response.data;
         } else if (typeof err.response.data === 'object' && err.response.data.message) {
-          // Trích xuất thông báo từ đối tượng JSON như { "message": "..." }
           errorMessage = err.response.data.message;
         } else if (typeof err.response.data === 'object') {
-          // Fallback cho các đối tượng lỗi khác
           errorMessage = JSON.stringify(err.response.data);
         }
 
-        // Tái cấu trúc để xử lý các thông báo lỗi cụ thể một cách rõ ràng hơn
         switch (true) {
           case errorMessage.includes('Không thể cập nhật lịch ghi đè này vì đã có cuộc hẹn được đặt'):
             errorMessage = "Đã có cuộc hẹn trong khoảng thời gian này, không thể cập nhật!";
@@ -200,7 +187,6 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
           case errorMessage.includes('Lịch tăng ca không được phép trùng với lịch cố định đã có.'):
             errorMessage = "Lịch tăng ca bạn chọn bị trùng với lịch làm việc cố định đã có. Vui lòng chọn một khung giờ khác.";
             break;
-          // Có thể thêm các trường hợp lỗi khác ở đây trong tương lai
         }
       }
 

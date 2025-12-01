@@ -35,7 +35,6 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
 
       setLoadingStats(true);
       try {
-        // Thử lấy thống kê từ API theo doctor ID
         try {
           const stats = await DoctorService.getStatistics(doctor.id);
           setStatistics({
@@ -58,7 +57,6 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
               revenue: doctor.revenue || doctor.totalRevenue || doctor.monthlyEarnings || 0,
             });
           } else {
-            // Nếu không có dữ liệu, hiển thị 0
             setStatistics({
               totalAppointments: 0,
               successfulAppointments: 0,
@@ -104,13 +102,11 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
   const getEducationLabel = (educationCode?: string): string => {
     if (!educationCode) return 'Chưa có';
 
-    // Try to find matching degree description
     const degree = degrees.find(d => d.code === educationCode);
     if (degree) {
       return degree.description;
     }
 
-    // If not found, return the code as is (might be already a description)
     return educationCode;
   };
 
@@ -128,12 +124,6 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
       const compact = amount / 1_000_000;
       const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
       return `${text}M VND`;
-    }
-
-    if (abs >= 1_000) {
-      const compact = amount / 1_000;
-      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
-      return `${text}K VND`;
     }
 
     return `${amount.toLocaleString('vi-VN')} VND`;

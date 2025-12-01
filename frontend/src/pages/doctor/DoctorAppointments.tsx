@@ -86,7 +86,6 @@ const DoctorAppointments: React.FC = () => {
       setShowConfirmCompleteModal(false);
       setShowDetailModal(false);
       
-      // Reload appointments
       const now = new Date();
       const startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
       const endDate = new Date(now.getFullYear(), now.getMonth() + 3, 0);
@@ -337,6 +336,31 @@ const DoctorAppointments: React.FC = () => {
       style: 'currency',
       currency: 'VND'
     }).format(amount);
+  };
+
+  const formatCurrencyCompact = (value: number): string => {
+    const amount = value || 0;
+    const abs = Math.abs(amount);
+
+    if (abs >= 1_000_000_000) {
+      const compact = amount / 1_000_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}B VND`;
+    }
+
+    if (abs >= 1_000_000) {
+      const compact = amount / 1_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}M VND`;
+    }
+
+    if (abs >= 1_000) {
+      const compact = amount / 1_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}K VND`;
+    }
+
+    return `${amount.toLocaleString('vi-VN')} VND`;
   };
 
   const getStatusConfig = (statusCode: string) => {
@@ -647,7 +671,7 @@ const DoctorAppointments: React.FC = () => {
                     </div>
                     <div className={styles.infoRow}>
                       <i className="bi bi-credit-card"></i>
-                      <span className={styles.fee}>{formatCurrency(appointment.totalAmount || appointment.fee)}</span>
+                      <span className={styles.fee}>{formatCurrencyCompact(appointment.totalAmount || appointment.fee)}</span>
                     </div>
                   </div>
                 </div>
@@ -824,18 +848,18 @@ const DoctorAppointments: React.FC = () => {
                   <div className={styles.paymentDetails}>
                     <div className={styles.paymentRow}>
                       <span className={styles.paymentLabel}>Phí khám bệnh</span>
-                      <span className={styles.paymentAmount}>{formatCurrency(selectedAppointment.fee)}</span>
+                      <span className={styles.paymentAmount}>{formatCurrencyCompact(selectedAppointment.fee)}</span>
                     </div>
                     {selectedAppointment.totalAmount && selectedAppointment.totalAmount !== selectedAppointment.fee && (
                       <>
                         <div className={styles.paymentRow}>
                           <span className={styles.paymentLabel}>Phí nền tảng</span>
-                          <span className={styles.paymentAmount}>{formatCurrency(selectedAppointment.totalAmount - selectedAppointment.fee)}</span>
+                          <span className={styles.paymentAmount}>{formatCurrencyCompact(selectedAppointment.totalAmount - selectedAppointment.fee)}</span>
                         </div>
                         <div className={styles.paymentDivider}></div>
                         <div className={styles.paymentRow}>
                           <span className={styles.totalLabel}>Tổng cộng</span>
-                          <span className={styles.totalValue}>{formatCurrency(selectedAppointment.totalAmount)}</span>
+                          <span className={styles.totalValue}>{formatCurrencyCompact(selectedAppointment.totalAmount)}</span>
                         </div>
                       </>
                     )}

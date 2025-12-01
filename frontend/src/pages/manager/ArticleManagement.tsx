@@ -73,17 +73,14 @@ export default function ArticleManagement() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Helper function to calculate percentage change
   const calculatePercentageChange = (current: number, previous: number): number => {
     if (previous === 0) return current > 0 ? 100 : 0;
     return ((current - previous) / previous) * 100;
   };
 
-  // Calculate stats with real data
   const getStats = () => {
     const now = new Date();
     
-    // Calculate date ranges
     const oneMonthAgo = new Date(now);
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     
@@ -91,26 +88,21 @@ export default function ArticleManagement() {
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     oneWeekAgo.setHours(0, 0, 0, 0);
 
-    // Total articles created before last month
     const articlesCreatedBeforeLastMonth = allArticles.filter(a => {
       if (!a.createdAt) return false;
       const createdDate = new Date(a.createdAt);
       return createdDate < oneMonthAgo;
     }).length;
     
-    // Total articles now
     const totalNow = allArticles.length;
     
-    // Calculate change: how many new articles in last month
     const newArticlesLastMonth = totalNow - articlesCreatedBeforeLastMonth;
     const totalArticleChange = articlesCreatedBeforeLastMonth > 0 
       ? ((newArticlesLastMonth / articlesCreatedBeforeLastMonth) * 100)
       : (newArticlesLastMonth > 0 ? 100 : 0);
 
-    // Published articles: count articles that existed last week and are currently published
     const publishedNow = allArticles.filter(a => a.statusCode?.toUpperCase() === 'PUBLISHED').length;
     
-    // Count articles that existed a week ago (by createdAt)
     const existingLastWeek = allArticles.filter(a => {
       if (!a.createdAt) return false;
       const createdDate = new Date(a.createdAt);
@@ -122,7 +114,6 @@ export default function ArticleManagement() {
       ? ((publishedNow - publishedLastWeek) / publishedLastWeek) * 100
       : (publishedNow > 0 ? 100 : 0);
 
-    // Draft articles: similar logic
     const draftNow = allArticles.filter(a => a.statusCode?.toUpperCase() === 'DRAFT').length;
     const draftLastWeek = existingLastWeek.filter(a => a.statusCode?.toUpperCase() === 'DRAFT').length;
     const draftChange = draftLastWeek > 0
@@ -211,7 +202,6 @@ export default function ArticleManagement() {
     setUpdatingIds(prev => ({ ...prev, [currentArticle.id]: true }));
 
     try {
-      // Update status using articleService.update
       const newStatusCode = isBeingLocked ? 'DRAFT' : 'PUBLISHED';
       const updatePayload = {
         title: currentArticle.title || '',
@@ -316,12 +306,10 @@ export default function ArticleManagement() {
       const okSearch = !searchTerm ||
         (a.title && a.title.toLowerCase().includes(searchTerm));
 
-      // Use statusCode for status filtering
       const okStatus = filters.statusFilter === 'all' || 
         (filters.statusFilter === 'published' ? a.statusCode?.toUpperCase() === 'PUBLISHED' : 
          filters.statusFilter === 'draft' ? a.statusCode?.toUpperCase() === 'DRAFT' : true);
 
-      // Filter by category
       const okCategory = !filters.categoryFilter || 
         (a.categoryIds && a.categoryIds.includes(filters.categoryFilter));
 
@@ -377,10 +365,8 @@ export default function ArticleManagement() {
 
     const statusInfo = statuses.find(s => s.code.toUpperCase() === statusCode.toUpperCase());
     
-    // Đảm bảo luôn hiển thị tiếng Việt
     let displayName = statusInfo ? statusInfo.displayName : '';
     if (!displayName) {
-      // Fallback: map trực tiếp sang tiếng Việt
       switch (statusCode.toUpperCase()) {
         case 'PUBLISHED':
           displayName = 'Xuất bản';
@@ -410,7 +396,6 @@ export default function ArticleManagement() {
         iconClass = 'bi bi-tag-fill';
         break;
       default:
-        // Keep default icon and color for any other status
         break;
     }
 

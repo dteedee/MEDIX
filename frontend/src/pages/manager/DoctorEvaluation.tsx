@@ -55,15 +55,9 @@ export default function DoctorEvaluation({
       return `${formatted}M VND`;
     }
 
-    if (abs >= 1_000) {
-      const formatted = (value / 1_000).toFixed(0);
-      return `${formatted}K VND`;
-    }
-
     return `${value.toLocaleString('vi-VN')} VND`;
   };
 
-  // Load performance data from API
   useEffect(() => {
     loadPerformanceData();
     loadSpecializations();
@@ -89,19 +83,14 @@ export default function DoctorEvaluation({
     }
   };
 
-  // Lọc chỉ các bác sĩ đang hoạt động
   const activeDoctors = doctors.filter(d => d.statusCode === 1);
 
-  // Tính toán chỉ số hiệu suất cho từng bác sĩ
   const doctorsWithMetrics = useMemo(() => {
     return performanceData.map(perfData => {
-      // Tìm thông tin bác sĩ từ danh sách doctors
       const doctor = doctors.find(d => d.id === perfData.doctorId) || {};
       
-      // Chuyển đổi compositeScore (0-1) thành performanceScore (0-100)
       const performanceScore = Math.round(perfData.compositeScore * 100);
       
-      // Đề xuất dựa trên hiệu suất
       let recommendation = '';
       let recommendationType: 'salary' | 'education' | 'both' | 'none' = 'none';
       
@@ -155,7 +144,6 @@ export default function DoctorEvaluation({
     });
   }, [performanceData, doctors]);
 
-  // Lọc và sắp xếp
   const filteredAndSortedDoctors = useMemo(() => {
     let filtered = doctorsWithMetrics.filter(d => {
       const searchLower = searchTerm.toLowerCase();
@@ -174,7 +162,6 @@ export default function DoctorEvaluation({
       return matchSearch && matchSpecialization && matchEducation;
     });
 
-    // Sắp xếp
     filtered.sort((a, b) => {
       let aValue: any;
       let bValue: any;
@@ -229,7 +216,6 @@ export default function DoctorEvaluation({
     return filtered;
   }, [doctorsWithMetrics, searchTerm, sortConfig, filterSpecialization, filterEducation]);
 
-  // Phân trang
   const paginatedDoctors = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
@@ -238,7 +224,6 @@ export default function DoctorEvaluation({
 
   const totalPages = Math.ceil(filteredAndSortedDoctors.length / pageSize);
 
-  // Reset về trang 1 khi filter thay đổi
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterSpecialization, filterEducation]);
@@ -280,7 +265,6 @@ export default function DoctorEvaluation({
       showToast('Cập nhật thông tin bác sĩ thành công!', 'success');
       setUpdateModalDoctor(null);
       
-      // Refresh data
       await loadPerformanceData();
       if (onRefresh) {
         onRefresh();
@@ -291,7 +275,6 @@ export default function DoctorEvaluation({
     }
   };
 
-  // Thống kê chung
   const stats = useMemo(() => {
     const total = doctorsWithMetrics.length;
     const excellentPerformers = doctorsWithMetrics.filter(d => d.performanceScore >= 80).length;
@@ -310,7 +293,6 @@ export default function DoctorEvaluation({
       d.recommendationType === 'education' || d.recommendationType === 'both'
     ).length;
     
-    // Additional metrics for manager evaluation
     const totalCases = doctorsWithMetrics.reduce((sum, d) => sum + (d.totalCases || 0), 0);
     const totalSuccessfulCases = doctorsWithMetrics.reduce((sum, d) => sum + (d.successfulCases || 0), 0);
     const overallSuccessRate = totalCases > 0 

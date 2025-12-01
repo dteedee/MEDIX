@@ -87,7 +87,6 @@ function DoctorRegister() {
             return { date: `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` };
         }
         
-        // Handle DD-MM-YYYY format
         const ddmmyyyyDashMatch = input.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
         if (ddmmyyyyDashMatch) {
             const [, day, month, year] = ddmmyyyyDashMatch;
@@ -98,7 +97,6 @@ function DoctorRegister() {
             return { date: `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` };
         }
         
-        // Handle DDMMYYYY format (8 digits)
         const ddmmyyyyNoSepMatch = input.match(/^(\d{2})(\d{2})(\d{4})$/);
         if (ddmmyyyyNoSepMatch) {
             const [, day, month, year] = ddmmyyyyNoSepMatch;
@@ -109,25 +107,18 @@ function DoctorRegister() {
             return { date: `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` };
         }
         
-        // If format doesn't match, check if it's incomplete (user still typing)
         if (input && !input.includes('/') && !input.includes('-') && input.length < 8) {
-            // User is still typing, don't validate yet
             return { date: '' };
         }
         
-        // Invalid format
         return { date: input, error: 'Định dạng ngày không hợp lệ. Vui lòng nhập theo định dạng: dd/mm/yyyy' };
     };
 
-    // Helper function to format date input with mask DD/MM/YYYY
     const formatDateInput = (value: string): string => {
-        // Remove all non-digit characters
         const digits = value.replace(/\D/g, '');
         
-        // Limit to 8 digits (DDMMYYYY)
         const limitedDigits = digits.slice(0, 8);
         
-        // Format as DD/MM/YYYY
         if (limitedDigits.length <= 2) {
             return limitedDigits;
         } else if (limitedDigits.length <= 4) {
@@ -153,13 +144,10 @@ function DoctorRegister() {
         fetchMetadata();
     }, []);
 
-    // Sync dateOfBirthDisplay when formData.dob changes from external source
     useEffect(() => {
         if (formData.dob && /^\d{4}-\d{2}-\d{2}$/.test(formData.dob) && !dateOfBirthDisplay) {
-            // Only update if display is empty (to avoid overwriting user input)
             setDateOfBirthDisplay(formatDateForDisplay(formData.dob));
         } else if (!formData.dob && dateOfBirthDisplay) {
-            // Clear display when dob is cleared
             setDateOfBirthDisplay('');
         }
     }, [formData.dob]);
@@ -170,7 +158,6 @@ function DoctorRegister() {
         const form = e.currentTarget;
         const submitFormData = new FormData(form);
 
-        // Override dob with the parsed YYYY-MM-DD format from formData state
         if (formData.dob) {
             submitFormData.set('dob', formData.dob);
         }
@@ -297,12 +284,10 @@ function DoctorRegister() {
                 if (!value) {
                     newErrors.Dob = ['Vui lòng nhập ngày sinh'];
                 } else {
-                    // Validate date format and values
                     const parsed = parseDateInput(value);
                     if (parsed.error) {
                         newErrors.Dob = [parsed.error];
                     } else if (parsed.date) {
-                        // Check if date is valid YYYY-MM-DD format
                         if (!/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
                             newErrors.Dob = ['Ngày sinh không hợp lệ'];
                         } else {
@@ -312,7 +297,6 @@ function DoctorRegister() {
                             const monthDiff = currentDate.getMonth() - birthDate.getMonth();
                             const dayDiff = currentDate.getDate() - birthDate.getDate();
                             
-                            // Calculate exact age
                             let exactAge = age;
                             if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
                                 exactAge--;
@@ -351,38 +335,29 @@ function DoctorRegister() {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         
-        // Special handling for date of birth field
         if (name === 'dob') {
-            // Format the display value as DD/MM/YYYY while typing
             const formattedValue = formatDateInput(value);
             
-            // Update display value immediately so user can see what they're typing
             setDateOfBirthDisplay(formattedValue);
             
-            // Parse to YYYY-MM-DD format for storage with validation
             const parsed = parseDateInput(formattedValue);
             
-            // Store the parsed date (YYYY-MM-DD) for backend, or empty if invalid/incomplete
             const dateToStore = parsed.date && !parsed.error ? parsed.date : '';
             setFormData((prev: any) => ({ ...prev, [name]: dateToStore }));
             
-            // Validate with error message if any
             if (parsed.error) {
                 setErrors((prev: any) => ({ 
                     ...prev, 
                     Dob: [parsed.error] 
                 }));
             } else if (dateToStore) {
-                // Validate the date - validateField will set errors if invalid
                 validateField(name, dateToStore);
             } else if (formattedValue.length >= 10 && formattedValue.includes('/')) {
-                // User has entered full format but it's invalid
                 setErrors((prev: any) => ({ 
                     ...prev, 
                     Dob: ['Định dạng ngày không hợp lệ. Vui lòng nhập theo định dạng: dd/mm/yyyy'] 
                 }));
             } else {
-                // Clear error if user is still typing (less than 10 chars or incomplete)
                 setErrors((prev: any) => {
                     const { Dob, ...rest } = prev;
                     return rest;
@@ -391,7 +366,6 @@ function DoctorRegister() {
             return; // Early return for date processing
         }
         
-        // For other fields
         setFormData((prev: any) => ({ ...prev, [name]: value }));
         validateField(name, value);
     };
@@ -482,7 +456,6 @@ function DoctorRegister() {
         files: FileList | null,
         name: string,
     ) => {
-        // ✅ Must have exactly 2 files
         if (!files || files.length !== 2) {
             setErrors((prev: any) => ({
                 ...prev,
@@ -501,7 +474,6 @@ function DoctorRegister() {
                 .slice(file.name.lastIndexOf("."))
                 .toLowerCase();
 
-            // ✅ Check extension
             if (!validImageExtensions.includes(fileExtension)) {
                 setErrors((prev: any) => ({
                     ...prev,
@@ -510,7 +482,6 @@ function DoctorRegister() {
                 return;
             }
 
-            // ✅ Check size
             if (file.size > maxSize) {
                 setErrors((prev: any) => ({
                     ...prev,
@@ -522,7 +493,6 @@ function DoctorRegister() {
             }
         }
 
-        // ✅ Passed validation
         setErrors((prev: any) => ({
             ...prev,
             [name]: [""],
@@ -534,7 +504,6 @@ function DoctorRegister() {
     const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const { name, value } = e.target;
 
-        // Live validation
         if (!value) {
             setErrors((prev: any) => ({ ...prev, 'SpecializationId': ['Vui lòng chọn chuyên khoa'] }));
         } else {
@@ -543,7 +512,6 @@ function DoctorRegister() {
     };
 
     const validateNumber = (input: string) => {
-        // Remove any non-digit characters
         return input.replace(/[^0-9]/g, '');
     };
 

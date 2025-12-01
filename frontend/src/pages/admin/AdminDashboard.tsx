@@ -79,12 +79,6 @@ const formatCurrencyCompact = (value: number): string => {
     return `${text}M VND`;
   }
 
-  if (abs >= 1_000) {
-    const compact = amount / 1_000;
-    const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
-    return `${text}K VND`;
-  }
-
   return `${amount.toLocaleString('vi-VN')} VND`;
 };
 

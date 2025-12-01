@@ -37,7 +37,6 @@ export default function DoctorUpdateModal({ doctor, degrees, onClose, onSubmit, 
       consultationFee: '',
     };
 
-    // Kiểm tra ít nhất một trong hai trường phải được thay đổi
     const educationChanged = formData.education && formData.education !== doctor.education;
     const feeChanged = formData.consultationFee && formData.consultationFee !== doctor.consultationFee;
 
@@ -46,7 +45,6 @@ export default function DoctorUpdateModal({ doctor, degrees, onClose, onSubmit, 
       error = true;
     }
 
-    // Validate consultationFee nếu có nhập
     if (formData.consultationFee && formData.consultationFee <= 0) {
       newErrors.consultationFee = 'Giá khám phải là số dương';
       error = true;
@@ -61,7 +59,6 @@ export default function DoctorUpdateModal({ doctor, degrees, onClose, onSubmit, 
     try {
       const updateData: any = {};
       
-      // Chỉ gửi các trường đã thay đổi
       if (formData.education && formData.education !== doctor.education) {
         updateData.education = formData.education;
       }

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { ChevronLeft, ChevronRight, Calendar, Clock, Users, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Clock, Users, Plus, User } from "lucide-react";
 import Swal from "sweetalert2";
 import { scheduleService } from "../../services/scheduleService";
 import { appointmentService } from "../../services/appointmentService";
@@ -220,16 +220,24 @@ const ScheduleManagement: React.FC = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const dayOfWeek = date.getDay() || 7; // 1 = Monday, 7 = Sunday
+    // Get the Monday of the week containing the given date
+    // getDay() returns 0 for Sunday, 1 for Monday, ..., 6 for Saturday
+    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    // Calculate days to subtract to get to Monday
+    // Sunday (0) -> subtract 6 days, Monday (1) -> subtract 0 days, Tuesday (2) -> subtract 1 day, etc.
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    
     const monday = new Date(date);
-    monday.setDate(date.getDate() - (dayOfWeek - 1));
+    monday.setDate(date.getDate() - daysToMonday);
     monday.setHours(0, 0, 0, 0);
 
-    // If today is Friday (5) or later, show current week + next week
-    const todayDayOfWeek = today.getDay() || 7;
+    // If today is Friday or later, show current week + next week
+    // Friday is 5 days from Monday (Monday=1, Tuesday=2, Wednesday=3, Thursday=4, Friday=5)
+    const todayDayOfWeek = today.getDay();
+    const todayDaysToMonday = todayDayOfWeek === 0 ? 6 : todayDayOfWeek - 1;
     let endDate = new Date(monday);
     
-    if (todayDayOfWeek >= 5) {
+    if (todayDaysToMonday >= 4) { // Friday (4 days from Monday, since Monday=0) or later
       // Show 2 weeks
       endDate.setDate(monday.getDate() + 13); // Monday + 13 days = Sunday of next week
     } else {
@@ -304,16 +312,20 @@ const ScheduleManagement: React.FC = () => {
 
   const { weekDays, headerLabel } = useMemo(() => {
     const weekRange = getWeekRange(currentDate);
-    const days: Date[] = [];
+    const days: (Date | null)[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Always show all 7 days of the week (or 14 if 2 weeks)
+    // Use null for past dates to maintain grid structure
     for (let d = new Date(weekRange.start); d <= weekRange.end; d.setDate(d.getDate() + 1)) {
       const day = new Date(d);
       day.setHours(0, 0, 0, 0);
-      // Only include today and future dates
+      // Include all days, but mark past dates as null
       if (day >= today) {
         days.push(new Date(day));
+      } else {
+        days.push(null); // Keep grid structure but mark as empty
       }
     }
 
@@ -418,6 +430,11 @@ const ScheduleManagement: React.FC = () => {
           </div>
           <div className={styles.calendarDays}>
             {weekDays.map((date, i) => {
+              // Handle null dates (past dates)
+              if (!date) {
+                return <div key={`empty-${i}`} className={`${styles.calendarDay} ${styles.emptyDay}`}></div>;
+              }
+
               const dateKey = getLocalDateKey(date);
               const dayOfWeek = convertDayOfWeek(date.getDay());
 
@@ -445,6 +462,11 @@ const ScheduleManagement: React.FC = () => {
                 isToday ? styles.today : ""
               ].filter(Boolean).join(" ");
 
+              // Sort appointments by time
+              const sortedAppointments = [...dayAppointments].sort((a, b) => 
+                new Date(a.appointmentStartTime).getTime() - new Date(b.appointmentStartTime).getTime()
+              );
+
               return (
                 <div
                   key={dateKey}
@@ -459,6 +481,8 @@ const ScheduleManagement: React.FC = () => {
                       </span>
                     )}
                   </div>
+                  
+                  {/* Work slots indicators */}
                   <div className={styles.dayIndicators}>
                     {workSlots.map((slot, index) => (
                       <span
@@ -468,10 +492,57 @@ const ScheduleManagement: React.FC = () => {
                       ></span>
                     ))}
                   </div>
+
+                  {/* Appointments list - hiển thị trực tiếp trên calendar */}
                   {appointmentCount > 0 && (
-                    <div className={styles.appointmentCount}>
-                      <Users size={12} />
-                      <span>{appointmentCount}</span>
+                    <div className={styles.appointmentsPreview}>
+                      <div className={styles.appointmentsPreviewHeader}>
+                        <Users size={12} />
+                        <span>{appointmentCount} cuộc hẹn</span>
+                      </div>
+                      <div className={styles.appointmentsList}>
+                        {sortedAppointments.slice(0, 3).map((app, idx) => {
+                          const appTime = new Date(app.appointmentStartTime);
+                          const appEndTime = new Date(app.appointmentEndTime);
+                          const timeStr = appTime.toLocaleTimeString("vi-VN", {
+                            hour: "2-digit",
+                            minute: "2-digit"
+                          });
+                          const endTimeStr = appEndTime.toLocaleTimeString("vi-VN", {
+                            hour: "2-digit",
+                            minute: "2-digit"
+                          });
+                          const tooltipText = `${timeStr} - ${endTimeStr}\n${app.patientName}\n${app.statusDisplayName || app.statusCode}`;
+                          return (
+                            <div 
+                              key={app.id} 
+                              className={styles.appointmentPreviewItem} 
+                              title={tooltipText}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDayDetails(date);
+                              }}
+                            >
+                              <div className={styles.appointmentPreviewTime}>{timeStr}</div>
+                              <div className={styles.appointmentPreviewPatient}>
+                                <User size={10} />
+                                <span>{app.patientName.length > 12 ? app.patientName.substring(0, 12) + '...' : app.patientName}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {appointmentCount > 3 && (
+                          <div 
+                            className={styles.appointmentMore}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openDayDetails(date);
+                            }}
+                          >
+                            +{appointmentCount - 3} cuộc hẹn khác
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

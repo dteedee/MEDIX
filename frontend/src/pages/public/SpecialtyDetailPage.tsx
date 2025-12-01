@@ -144,9 +144,8 @@ const SpecialtyDetailPage: React.FC = () => {
       if (!specialization) return;
       
       const queryParams: DoctorQueryParameters = {
-        specializationCode: specialization.id, 
+        specializationCode: specialization.id, // Backend parses this as Guid
         pageNumber: 1,
-        page: 1,
         pageSize: 100
       };
       

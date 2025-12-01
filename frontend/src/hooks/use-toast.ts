@@ -1,9 +1,17 @@
 import * as React from "react"
 
-import type {
-  ToastActionElement,
-  ToastProps,
-} from "../components/ui/toast" 
+// Local toast-related types (do not rely on UI component's props which differ)
+type ToastActionElement = {
+  altText: string
+  action: () => void
+}
+
+type ToastProps = {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  // allow other arbitrary fields
+  [key: string]: any
+}
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
@@ -142,22 +150,22 @@ type Toast = Omit<ToasterToast, "id">
 function toast({ ...props }: Toast) {
   const id = genId()
 
-  const update = (props: ToasterToast) =>
+  const update = (props: Partial<ToasterToast>) =>
     dispatch({
       type: "UPDATE_TOAST",
       toast: { ...props, id },
     })
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
-  dispatch({
+    dispatch({
     type: "ADD_TOAST",
     toast: {
       ...props,
       id,
       open: true,
-      onOpenChange: (open) => {
-        if (!open) dismiss()
-      },
+        onOpenChange: (open: boolean) => {
+          if (!open) dismiss()
+        },
     },
   })
 

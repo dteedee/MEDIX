@@ -87,8 +87,8 @@ const DoctorPatients: React.FC = () => {
       }
     });
     
-    const patientList: Patient[] = Array.from(patientMap.entries())
-      .map(([patientId, data]) => {
+    const mappedPatients = Array.from(patientMap.entries()).map<Patient | null>(
+      ([patientId, data]) => {
         const pastAppointments = data.appointments
           .filter(app => new Date(app.appointmentStartTime) <= now)
           .sort((a, b) => new Date(b.appointmentStartTime).getTime() - new Date(a.appointmentStartTime).getTime());
@@ -134,8 +134,10 @@ const DoctorPatients: React.FC = () => {
           averageRating,
           lastAppointmentId: lastVisitAppointment.id,
         };
-      })
-      .filter((patient): patient is Patient => patient !== null);
+      }
+    );
+
+    const patientList: Patient[] = mappedPatients.filter((patient): patient is Patient => patient !== null);
 
     return patientList.sort((a, b) => b.lastVisitDate.getTime() - a.lastVisitDate.getTime());
   }, [appointments]);

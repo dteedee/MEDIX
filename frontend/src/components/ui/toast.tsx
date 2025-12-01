@@ -2,10 +2,10 @@ import React from 'react';
 import styles from './Toast.module.css';
 
 export interface ToastProps {
-  id: number;
+  id: string;
   message: string;
   type: 'success' | 'error' | 'info' | 'warning';
-  onClose: (id: number) => void;
+  onClose: (id: string) => void;
 }
 
 export interface ToastActionElement {

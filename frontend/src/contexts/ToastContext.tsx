@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 import Toast from '../components/ui/toast';
 
 interface ToastMessage {
-  id: number;
+  id: string;
   message: string;
   type: 'success' | 'error' | 'info' | 'warning';
 }
@@ -25,7 +25,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const showToast = useCallback((message: string, type: ToastMessage['type'] = 'info') => {
-    const id = Date.now();
+    const id = Date.now().toString();
     const newToast: ToastMessage = { id, message, type };
     setToasts(prevToasts => [...prevToasts, newToast]);
 
@@ -48,7 +48,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     }, duration);
   }, []);
 
-  const removeToast = (id: number) => {
+  const removeToast = (id: string) => {
     setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
   };
 

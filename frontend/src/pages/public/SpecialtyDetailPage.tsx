@@ -143,9 +143,9 @@ const SpecialtyDetailPage: React.FC = () => {
       setDoctorsLoading(true);
       if (!specialization) return;
       
-      // Get doctors by specialization ID from database (backend expects Guid string)
       const queryParams: DoctorQueryParameters = {
-        specializationCode: specialization.id, // Backend parses this as Guid
+        specializationCode: specialization.id, 
+        pageNumber: 1,
         page: 1,
         pageSize: 100
       };
@@ -153,7 +153,6 @@ const SpecialtyDetailPage: React.FC = () => {
       const data = await doctorService.getDoctorsGroupedByTier(queryParams);
       setTiersData(data);
       
-      // Load avatars and statistics for all doctors
       const allDoctors = data.flatMap(tier => tier.doctors?.items || []);
       const avatarPromises = allDoctors.map(async (doctor) => {
         try {
@@ -177,15 +176,13 @@ const SpecialtyDetailPage: React.FC = () => {
     }
   };
 
-  // Convert all doctors from API to Doctor format
   const doctors = useMemo(() => {
     const allDoctors: Doctor[] = [];
     tiersData.forEach(tier => {
       if (tier.doctors && tier.doctors.items) {
         tier.doctors.items.forEach(apiDoctor => {
-          // Only include doctors accepting appointments
           if (apiDoctor.isAcceptingAppointments !== false) {
-            const doctor = convertApiDoctorToDoctor(apiDoctor, tier.tierName, doctorAvatars, doctorStatistics);
+            const doctor = convertApiDoctorToDoctor(apiDoctor, tier.name, doctorAvatars, doctorStatistics);
             allDoctors.push(doctor);
           }
         });

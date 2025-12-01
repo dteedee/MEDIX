@@ -58,7 +58,7 @@ export default function MedicationManagement(): JSX.Element {
     });
   }, []);
 
-  const handleToggleActive = (medication: Medication) => {
+  const handleToggleActive = (medication: MedicationDto) => {
     setSelectedMedication(medication);
     setShowConfirmation(true);
   };

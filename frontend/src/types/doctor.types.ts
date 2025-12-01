@@ -158,6 +158,7 @@ export interface DoctorQueryParameters extends PaginationParams {
   specializationCode?: string;
   minPrice?: number;
   maxPrice?: number;
+  page?: number;
 }
 
 export interface PaginatedListDto<T> {

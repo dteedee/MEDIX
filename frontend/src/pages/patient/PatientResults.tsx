@@ -68,22 +68,22 @@ const ResultDetailModal: React.FC<ResultDetailModalProps> = ({ result, isOpen, o
                   <h3>Thông tin bác sĩ</h3>
                 </div>
                 <div className={styles.doctorInfoCard}>
-                  {doctorProfile?.imageURL && (
+                  {doctorProfile?.avatarUrl && (
                     <img
-                      src={doctorProfile.imageURL}
+                      src={doctorProfile.avatarUrl}
                       alt={appointment.doctorName}
                       className={styles.doctorAvatar}
                     />
                   )}
                   <div className={styles.doctorInfoDetails}>
                     <h4>{appointment.doctorName}</h4>
-                    {doctorProfile?.title && (
-                      <p className={styles.doctorTitle}>{doctorProfile.title}</p>
+                    {doctorProfile?.education && (
+                      <p className={styles.doctorTitle}>{doctorProfile.education}</p>
                     )}
-                    {doctorProfile?.specializationName && (
+                    {doctorProfile?.specialization && (
                       <p className={styles.doctorSpecialty}>
                         <i className="bi bi-briefcase"></i>
-                        {doctorProfile.specializationName}
+                        {doctorProfile.specialization}
                       </p>
                     )}
                   </div>
@@ -458,9 +458,9 @@ export const PatientResults: React.FC = () => {
                   <div className={styles.cardBody}>
                     {/* Doctor Info */}
                     <div className={styles.doctorSection}>
-                      {result.doctorProfile?.imageURL ? (
+                      {result.doctorProfile?.avatarUrl ? (
                         <img
-                          src={result.doctorProfile.imageURL}
+                          src={result.doctorProfile.avatarUrl}
                           alt={result.appointment.doctorName}
                           className={styles.doctorAvatar}
                         />
@@ -471,13 +471,13 @@ export const PatientResults: React.FC = () => {
                       )}
                       <div className={styles.doctorInfo}>
                         <h4>{result.appointment.doctorName}</h4>
-                        {result.doctorProfile?.title && (
-                          <p className={styles.doctorTitle}>{result.doctorProfile.title}</p>
+                        {result.doctorProfile?.education && (
+                          <p className={styles.doctorTitle}>{result.doctorProfile.education}</p>
                         )}
-                        {result.doctorProfile?.specializationName && (
+                        {result.doctorProfile?.specialization && (
                           <p className={styles.doctorSpecialty}>
                             <i className="bi bi-briefcase"></i>
-                            {result.doctorProfile.specializationName}
+                            {result.doctorProfile.specialization}
                           </p>
                         )}
                       </div>

@@ -8,7 +8,7 @@ class ApiClient {
   constructor() {
     // Use environment variable for API base URL, fallback to localhost for development
     const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5123/api';
-    
+
     this.client = axios.create({
       baseURL: API_BASE_URL,
       headers: {
@@ -27,12 +27,12 @@ class ApiClient {
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
         }
-        
+
         // If sending FormData, remove Content-Type header to let browser set it with boundary
         if (config.data instanceof FormData) {
           delete config.headers['Content-Type'];
         }
-        
+
         return config;
       },
       (error) => {
@@ -110,15 +110,15 @@ class ApiClient {
     return response.data;
   }
 
-  public getToken (): string | null {
+  public getToken(): string | null {
     return this.getAccessToken();
   }
-  
+
   // Token management
   private getAccessToken(): string | null {
     const token = localStorage.getItem('accessToken');
     const expiration = localStorage.getItem('tokenExpiration');
-    
+
     // Check if token is expired
     if (token && expiration) {
       const expirationTime = parseInt(expiration);
@@ -128,7 +128,7 @@ class ApiClient {
         return null;
       }
     }
-    
+
     return token;
   }
 
@@ -144,7 +144,7 @@ class ApiClient {
     localStorage.setItem('tokenExpiration', expirationTime.toString());
   }
 
-    public clearAccessTokens(): void {
+  public clearAccessTokens(): void {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('tokenExpiration');
   }
@@ -177,6 +177,17 @@ class ApiClient {
       },
     });
   }
+
+  public postMultipartWithCredentials<T = any>(url: string, formData: FormData): Promise<AxiosResponse<T>> {
+    return this.client.post<T>(url, formData, {
+      headers: {
+        // Let the browser set Content-Type with boundary
+        'Content-Type': undefined,
+      },
+      withCredentials: true, // ✅ include cookies/credentials
+    });
+  }
+
 
   public put<T = any>(url: string, data?: any, config?: any): Promise<AxiosResponse<T>> {
     return this.client.put<T>(url, data, config);

@@ -7,5 +7,6 @@ namespace Medix.API.Business.Helper
         public string Role { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
         public Blob? File { get; set; }
+        public DateTime TimeStamp { get; set; } = DateTime.UtcNow;
     }
 }

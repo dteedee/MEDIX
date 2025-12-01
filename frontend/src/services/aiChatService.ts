@@ -1,7 +1,8 @@
 import { apiClient } from '../lib/apiClient';
+import { AIChatMessage } from '../types/aiChat';
 
 export interface PromptRequest {
-  guestToken?: string;
+  chatToken?: string;
   prompt: string;
 }
 
@@ -49,7 +50,7 @@ export interface SymptomAnalysisResponse {
 
 export interface EMRUploadRequest {
   file: File;
-  guestToken?: string;
+  chatToken?: string;
 }
 
 export interface EMRAnalysisResponse {
@@ -124,7 +125,7 @@ class AIChatService {
     try {
       const response = await apiClient.post<SymptomAnalysisResponse>(
         '/ai-chat/analyze-symptoms',
-        request
+        request,
       );
       return response.data;
     } catch (error: any) {
@@ -159,13 +160,13 @@ class AIChatService {
     try {
       const formData = new FormData();
       formData.append('file', request.file);
-      if (request.guestToken) {
-        formData.append('guestToken', JSON.stringify(request.guestToken));
+      if (request.chatToken) {
+        formData.append('guestToken', JSON.stringify(request.chatToken));
       }
 
-      const response = await apiClient.postMultipart<string>(
+      const response = await apiClient.postMultipartWithCredentials<string>(
         '/ai-chat/analyze-emr',
-        formData
+        formData,
       );
       return response.data;
     } catch (error: any) {
@@ -187,6 +188,16 @@ class AIChatService {
       console.error('System query error:', error);
       throw this.handleApiError(error);
     }
+  }
+
+  async getChatHistory(chatToken: string): Promise<AIChatMessage[]> {
+    console.log('Fetching chat history for token:', chatToken);
+    const response = await apiClient.get<AIChatMessage[]>(
+      `/ai-chat/conversation-history/${chatToken}`, {
+        withCredentials: true // <-- this is the Axios equivalent of credentials: "include"
+      }
+    );
+    return response.data;
   }
 
   private handleApiError(error: any): Error {

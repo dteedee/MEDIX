@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import styles from '../../styles/pages/AIChatBot.module.css';
 import aiChatService, { SymptomAnalysisResponse, EMRAnalysisResponse, PromptRequest } from '../../services/aiChatService';
 import { AIChatMessage } from '../../types/aiChat';
-import { getChatHistory, saveChatHistory } from '../../utils/chatHistory';
+import { useAuth } from '../../contexts/AuthContext';
+import { get } from 'http';
 
 const createGreetingMessage = (): AIChatMessage => ({
   id: 'medix-greeting',
@@ -14,18 +15,15 @@ const createGreetingMessage = (): AIChatMessage => ({
 
 export const AIChatBot: React.FC = () => {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<AIChatMessage[]>(() => {
-    // const history = getChatHistory();
-    // return history.length > 0 ? history : [createGreetingMessage()];
-    return [createGreetingMessage()];
-  });
+  const [messages, setMessages] = useState<AIChatMessage[]>([]);
+
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [guestToken, setGuestToken] = useState<string>("");
+  const { user, logout } = useAuth();
 
   const quickReplies = [
     'Khó ngủ',
@@ -36,7 +34,9 @@ export const AIChatBot: React.FC = () => {
     'Buồn nôn',
   ];
 
-  useEffect(() => {
+  const [chatToken, setChatToken] = useState<string>("");
+
+  const getNewChatToken = (): string => {
     // Generate a new token every time the page loads
     let token: string;
 
@@ -51,18 +51,63 @@ export const AIChatBot: React.FC = () => {
       });
     }
 
-    setGuestToken(token);
-    console.log("Generated guest token:", token);
+    return token;
+  }
+
+  const initializeChatToken = (): string => {
+    if (user) {
+      return getNewChatToken();
+    }
+
+    const key = "ai_chat_token";
+    const today = new Date().toDateString();
+
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      const parsed = JSON.parse(stored) as { value: string; date: string };
+      if (parsed.date === today) {
+        // ✅ Same day → reuse token
+        return parsed.value;
+      }
+    }
+
+    // ❌ No token yet or different day → generate new token
+    const newToken = getNewChatToken();
+    localStorage.setItem(key, JSON.stringify({ value: newToken, date: today }));
+    return newToken;
+  }
+
+  const getChatHistory = async (token: string) => {
+    try {
+      const history = await aiChatService.getChatHistory(token);
+      if (!history || history.length === 0) {
+        // First time chat - add greeting message
+        setMessages([createGreetingMessage()]);
+      } else {
+        var chatHistory = history.map(msg => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }));
+        setMessages(chatHistory);
+      }
+    } catch (error) {
+      console.error('Error fetching chat history:', error);
+      setMessages([createGreetingMessage()]);
+    }
+  }
+
+  useEffect(() => {
+    (async () => {
+      const token = initializeChatToken();
+      setChatToken(token);
+      await getChatHistory(token);
+    })();
   }, []);
 
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
-
-  useEffect(() => {
-    saveChatHistory(messages);
   }, [messages]);
 
   const handleQuickReply = (text: string) => {
@@ -93,7 +138,7 @@ export const AIChatBot: React.FC = () => {
         const file = uploadedFiles[0];
         const response = await aiChatService.uploadAndAnalyzeEMR({
           file,
-          guestToken,
+          chatToken,
         });
 
         const aiResponse: AIChatMessage = {
@@ -106,12 +151,20 @@ export const AIChatBot: React.FC = () => {
         setMessages(prev => [...prev, aiResponse]);
         setUploadedFiles([]);
       } catch (error: any) {
+        let text = 'Xin lỗi, có lỗi xảy ra khi phân tích EMR. Vui lòng thử lại sau.';
+
+        if (error.response?.status === 400 && error.response.data?.message) {
+          // ✅ Use the message returned by your C# API
+          text = error.response.data.message;
+        }
+
         const errorMessage: AIChatMessage = {
           id: (Date.now() + 1).toString(),
-          text: 'Xin lỗi, có lỗi xảy ra khi phân tích EMR. Vui lòng thử lại sau.',
+          text,
           sender: 'ai',
           timestamp: new Date(),
         };
+
         setMessages(prev => [...prev, errorMessage]);
       } finally {
         setIsLoading(false);
@@ -179,7 +232,7 @@ export const AIChatBot: React.FC = () => {
 
       const promptRequest: PromptRequest = {
         prompt: messageText,
-        guestToken: guestToken,
+        chatToken: chatToken,
       };
 
       const response = await aiChatService.sendMessage(promptRequest);

@@ -32,7 +32,7 @@ namespace Medix.API.Business.Services.AI
                     "\"SessionId\": \"[Tạo ID phiên duy nhất]\"," +
                     "\"UserResponseText\": \"[Đưa ra phản hồi tự nhiên, bao gồm chẩn đoán/câu hỏi tiếp theo, 3 tình trạng có khả năng xảy ra cao nhất và phần trăm, và tuyên bố miễn trừ trách nhiệm.]\"," +
                     "\"Symptoms\": \"[Liệt kê tất cả triệu chứng do người dùng cung cấp]\"," +
-                    "\"SeverityLevelCode\": \"[THẤP | TRUNG BÌNH | CAO | NGHIÊM TRỌNG]\"," +
+                    "\"SeverityLevelCode\": \"[THẤP | TRUNG BÌNH | CAO]\"," +
                     "\"PossibleConditions\": \"[Chẩn đoán hoặc 'CHƯA KẾT LUẬN' hoặc 'TỪ CHỐI']\"," +
                     "\"RecommendedAction\": \"[Ví dụ: Nghỉ ngơi, Uống nước, Theo dõi thêm, hoặc Tìm kiếm sự chăm sóc y tế]\"," +
                     "\"ConfidenceScore\": \"[Giá trị thực 0.0 - 1.0]\"," +
@@ -184,7 +184,6 @@ namespace Medix.API.Business.Services.AI
                 "thấp" => "Mild",
                 "trung bình" => "Moderate",
                 "cao" => "Severe",
-                "nghiêm trọng" => "Critical",
                 _ => "Unknown",
             };
         }

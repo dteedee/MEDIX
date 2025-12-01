@@ -3,8 +3,8 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import Swal from 'sweetalert2';
 import { ScheduleOverride, CreateScheduleOverridePayload, DoctorSchedule } from '../../types/schedule';
 import { scheduleService } from '../../services/scheduleService';
-import { X, Plus, Edit, Trash2 } from 'lucide-react';
-import '../../styles/doctor/FlexibleScheduleManager.css';
+import { X, Plus, Edit, Trash2, Clock, Calendar, AlertCircle } from 'lucide-react';
+import styles from '../../styles/doctor/FlexibleScheduleManager.module.css';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface Props {
@@ -17,7 +17,7 @@ interface Props {
 
 type FormInputs = Omit<CreateScheduleOverridePayload, 'overrideType'> & {
   timeSlot: string;
-  overrideType: number; // Trong form, overrideType là number (1 hoặc 0)
+  overrideType: number;
 };
 
 const timeSlots = [
@@ -36,7 +36,9 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingOverride, setEditingOverride] = useState<ScheduleOverride | null>(null);
 
-  const { register, handleSubmit, reset, setValue, getValues, formState: { errors } } = useForm<FormInputs>();
+  const { register, handleSubmit, reset, setValue, getValues, formState: { errors }, watch } = useForm<FormInputs>();
+
+  const overrideType = watch('overrideType');
 
   useEffect(() => {
     if (initialDate) {
@@ -46,16 +48,16 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
         startTime: timeSlots[0].startTime,
         endTime: timeSlots[0].endTime,
         overrideType: 1,
-        reason: '' // Để trống cho người dùng nhập
+        reason: ''
       });
-      setIsFormVisible(true); // Hiển thị form
+      setIsFormVisible(true);
     }
   }, [initialDate, reset]);
 
   const handleAddNew = () => {
     setEditingOverride(null);
     reset({
-      overrideDate: new Date().toISOString().split('T')[0], // Mặc định là ngày hôm nay
+      overrideDate: new Date().toISOString().split('T')[0],
       startTime: timeSlots[0].startTime,
       endTime: timeSlots[0].endTime,
       overrideType: 1,
@@ -116,22 +118,34 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
     try {
       const overrideTypeNumber = Number(data.overrideType);
 
-      if (overrideTypeNumber === 0) { // Chỉ áp dụng cho lịch "Nghỉ"
+      if (overrideTypeNumber === 0) {
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Chuẩn hóa về đầu ngày
+        today.setHours(0, 0, 0, 0);
         const selectedDate = new Date(data.overrideDate);
+        selectedDate.setHours(0, 0, 0, 0);
 
-        const twoDaysFromNow = new Date(today);
-        twoDaysFromNow.setDate(today.getDate() + 2);
+        const minDate = new Date(today);
+        minDate.setDate(today.getDate() + 2);
 
-        if (selectedDate <= twoDaysFromNow) {
-          Swal.fire('Lỗi!', 'Bạn chỉ có thể đăng ký lịch nghỉ sau 2 ngày kể từ hôm nay.', 'error');
-          return; // Dừng thực thi
+        if (selectedDate < minDate) {
+          const minDateStr = minDate.toLocaleDateString('vi-VN', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+          Swal.fire({
+            title: 'Lỗi!',
+            html: `Bạn chỉ có thể đăng ký nghỉ từ ngày <b>${minDateStr}</b> trở đi (tối thiểu 2 ngày sau hôm nay).`,
+            icon: 'error',
+            confirmButtonText: 'Đã hiểu'
+          });
+          return;
         }
       }
 
       if (overrideTypeNumber === 0 && !editingOverride) {
-        const today = new Date().toISOString().split('T')[0]; // Lấy ngày hôm nay dạng 'YYYY-MM-DD'
+        const today = new Date().toISOString().split('T')[0];
 
         const existingNghiDays = new Set(
           overrides
@@ -141,16 +155,15 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
 
         if (!existingNghiDays.has(data.overrideDate) && existingNghiDays.size >= 2) {
           Swal.fire('Lỗi!', 'Bạn chỉ được phép đăng ký lịch nghỉ tối đa trong 2 ngày khác nhau.', 'error');
-          return; // Dừng thực thi
+          return;
         }
       }
-
 
       const payload: CreateScheduleOverridePayload = {
         overrideDate: data.overrideDate,
         reason: data.reason,
-        overrideType: overrideTypeNumber === 1, // true for Tăng ca, false for Nghi
-        isAvailable: true, // Luôn mặc định là true, backend và background service sẽ xử lý logic
+        overrideType: overrideTypeNumber === 1,
+        isAvailable: true,
         startTime: data.startTime.length === 5 ? `${data.startTime}:00` : data.startTime,
         endTime: data.endTime.length === 5 ? `${data.endTime}:00` : data.endTime,
       };
@@ -207,90 +220,207 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
     }
   };
 
-
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h2>Quản lý lịch linh hoạt</h2>
-          <button onClick={onClose} className="close-button"><X size={24} /></button>
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>Quản lý lịch linh hoạt</h2>
+          <button onClick={onClose} className={styles.closeButton}>
+            <X size={24} />
+          </button>
         </div>
 
         {!isFormVisible ? (
           <>
-            <div className="modal-toolbar">
-              <button onClick={handleAddNew} className="add-new-btn">
-                <Plus size={16} /> Thêm mới
+            <div className={styles.modalToolbar}>
+              <button onClick={handleAddNew} className={styles.addNewBtn}>
+                <Plus size={18} />
+                Thêm mới
               </button>
             </div>
-            <div className="override-list-container">
+            <div className={styles.overrideListContainer}>
               {overrides.filter(o => o.isAvailable).length > 0 ? (
                 overrides
-                  .filter(o => o.isAvailable) // Chỉ hiển thị các ca có IsAvailable = true
+                  .filter(o => o.isAvailable)
                   .sort((a, b) => {
                     const dateComparison = new Date(b.overrideDate).getTime() - new Date(a.overrideDate).getTime();
                     if (dateComparison !== 0) {
                       return dateComparison;
                     }
-                    return b.startTime.localeCompare(a.startTime); // Giữ nguyên thứ tự sắp xếp theo thời gian giảm dần
+                    return b.startTime.localeCompare(a.startTime);
                   })
                   .map(override => (
-                    <div key={override.id} className={`override-list-item ${override.overrideType ? 'available' : 'unavailable'}`}>
-                      <div className="override-info">
-                        <span className="override-date">{new Date(override.overrideDate).toLocaleDateString('vi-VN')}</span>
-                        <span className="override-time">{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</span> 
-                        <span className={`override-status ${override.overrideType ? 'available' : 'unavailable'}`}>
+                    <div key={override.id} className={`${styles.overrideListItem} ${override.overrideType ? styles.available : styles.unavailable}`}>
+                      <div className={styles.overrideInfo}>
+                        <div className={styles.overrideDate}>
+                          <Calendar size={16} />
+                          <span>{new Date(override.overrideDate).toLocaleDateString('vi-VN')}</span>
+                        </div>
+                        <div className={styles.overrideTime}>
+                          <Clock size={16} />
+                          <span>{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</span>
+                        </div>
+                        <span className={`${styles.overrideStatus} ${override.overrideType ? styles.statusAvailable : styles.statusUnavailable}`}>
                           {override.overrideType
-                            ? `Tăng ca${override.reason ? ` - ${override.reason}` : ''}` // Dùng overrideType để quyết định văn bản
+                            ? `Tăng ca${override.reason ? ` - ${override.reason}` : ''}`
                             : `Nghỉ${override.reason ? ` - ${override.reason}` : ''}`}
                         </span>
                       </div>
-                      <div className="override-actions">
-                        <button onClick={() => handleEdit(override)} className="action-btn edit" disabled={isBanned}><Edit size={16} /></button>
-                        <button onClick={() => handleDelete(override.id)} className="action-btn delete" disabled={isBanned}><Trash2 size={16} /></button>
+                      <div className={styles.overrideActions}>
+                        <button onClick={() => handleEdit(override)} className={`${styles.actionBtn} ${styles.editBtn}`} disabled={isBanned}>
+                          <Edit size={16} />
+                        </button>
+                        <button onClick={() => handleDelete(override.id)} className={`${styles.actionBtn} ${styles.deleteBtn}`} disabled={isBanned}>
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </div>
                   ))
               ) : (
-                <p className="no-overrides">Chưa có lịch linh hoạt nào.</p>
+                <div className={styles.noOverrides}>
+                  <Calendar size={48} />
+                  <p>Chưa có lịch linh hoạt nào.</p>
+                </div>
               )}
             </div>
           </>
         ) : (
-          <form onSubmit={handleSubmit(processFormSubmit)} className="override-form">
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Ngày</label>
-                <input type="date" {...register('overrideDate', { required: 'Ngày là bắt buộc' })} min={new Date().toISOString().split('T')[0]}/>
-                {errors.overrideDate && <p className="error-text">{errors.overrideDate.message}</p>}
+          <form onSubmit={handleSubmit(processFormSubmit)} className={styles.overrideForm}>
+            <div className={styles.formGrid}>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
+                  <Calendar size={16} />
+                  Ngày
+                </label>
+                <input 
+                  type="date" 
+                  {...register('overrideDate', { 
+                    required: 'Ngày là bắt buộc',
+                    validate: (value) => {
+                      const overrideType = getValues('overrideType');
+                      if (Number(overrideType) === 0) {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const selectedDate = new Date(value);
+                        selectedDate.setHours(0, 0, 0, 0);
+                        const minDate = new Date(today);
+                        minDate.setDate(today.getDate() + 2);
+                        if (selectedDate < minDate) {
+                          return 'Ngày nghỉ phải cách hôm nay ít nhất 2 ngày';
+                        }
+                      }
+                      return true;
+                    }
+                  })} 
+                  min={(() => {
+                    const overrideType = getValues('overrideType');
+                    if (Number(overrideType) === 0) {
+                      const minDate = new Date();
+                      minDate.setDate(minDate.getDate() + 2);
+                      return minDate.toISOString().split('T')[0];
+                    }
+                    return new Date().toISOString().split('T')[0];
+                  })()}
+                  onChange={(e) => {
+                    register('overrideDate').onChange(e);
+                    const overrideType = getValues('overrideType');
+                    if (Number(overrideType) === 0) {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const selectedDate = new Date(e.target.value);
+                      selectedDate.setHours(0, 0, 0, 0);
+                      const minDate = new Date(today);
+                      minDate.setDate(today.getDate() + 2);
+                      if (selectedDate < minDate) {
+                        Swal.fire({
+                          title: 'Lỗi!',
+                          html: `Ngày nghỉ phải cách hôm nay ít nhất 2 ngày. Ngày sớm nhất có thể chọn là <b>${minDate.toLocaleDateString('vi-VN', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}</b>.`,
+                          icon: 'warning',
+                          confirmButtonText: 'Đã hiểu'
+                        });
+                        e.target.value = minDate.toISOString().split('T')[0];
+                        setValue('overrideDate', minDate.toISOString().split('T')[0]);
+                      }
+                    }
+                  }}
+                  className={styles.formInput}
+                />
+                {errors.overrideDate && <p className={styles.errorText}>{errors.overrideDate.message}</p>}
+                {Number(overrideType) === 0 && (
+                  <p className={styles.formHint}>
+                    <AlertCircle size={14} />
+                    Ngày nghỉ phải cách hôm nay ít nhất 2 ngày
+                  </p>
+                )}
               </div>
-              <div className="form-group">
-                <label>Loại</label>
-                <select {...register('overrideType', { required: 'Vui lòng chọn loại' })}>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Loại</label>
+                <select 
+                  {...register('overrideType', { required: 'Vui lòng chọn loại' })}
+                  onChange={(e) => {
+                    register('overrideType').onChange(e);
+                    const overrideType = Number(e.target.value);
+                    const dateInput = document.querySelector('input[name="overrideDate"]') as HTMLInputElement;
+                    if (dateInput) {
+                      if (overrideType === 0) {
+                        const minDate = new Date();
+                        minDate.setDate(minDate.getDate() + 2);
+                        dateInput.min = minDate.toISOString().split('T')[0];
+                        const currentDate = new Date(dateInput.value || minDate.toISOString().split('T')[0]);
+                        if (currentDate < minDate) {
+                          dateInput.value = minDate.toISOString().split('T')[0];
+                          setValue('overrideDate', minDate.toISOString().split('T')[0]);
+                        }
+                      } else {
+                        const today = new Date();
+                        dateInput.min = today.toISOString().split('T')[0];
+                      }
+                    }
+                  }}
+                  className={styles.formSelect}
+                >
                   <option value="1">Tăng ca</option>
                   <option value="0">Nghỉ</option>
                 </select>
-                {errors.overrideType && <p className="error-text">{errors.overrideType.message}</p>}
+                {errors.overrideType && <p className={styles.errorText}>{errors.overrideType.message}</p>}
               </div>
-              <div className="form-group form-group-span-2">
-                <label>Ca làm việc</label>
+              <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                <label className={styles.formLabel}>
+                  <Clock size={16} />
+                  Ca làm việc
+                </label>
                 <select
                   {...register('timeSlot', { required: 'Vui lòng chọn ca làm việc' })}
                   onChange={handleTimeSlotChange}
+                  className={styles.formSelect}
                 >
                   {timeSlots.map(slot => <option key={slot.startTime} value={slot.startTime}>{slot.label}</option>)}
                 </select>
-                {errors.timeSlot && <p className="error-text">{errors.timeSlot.message}</p>}
+                {errors.timeSlot && <p className={styles.errorText}>{errors.timeSlot.message}</p>}
               </div>
-              <div className="form-group form-group-span-2">
-                <label>Lý do</label>
-                <input type="text" {...register('reason')} placeholder="VD: Tăng ca, Nghỉ phép,..." />
-                {errors.reason && <p className="error-text">{errors.reason.message as string}</p>}
+              <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                <label className={styles.formLabel}>Lý do</label>
+                <input 
+                  type="text" 
+                  {...register('reason')} 
+                  placeholder="VD: Tăng ca, Nghỉ phép,..." 
+                  className={styles.formInput}
+                />
+                {errors.reason && <p className={styles.errorText}>{errors.reason.message as string}</p>}
               </div>
             </div>
-            <div className="form-actions">
-              <button type="button" onClick={() => setIsFormVisible(false)} className="cancel-btn">Hủy</button>
-              <button type="submit" className="save-btn" disabled={isBanned}>{editingOverride ? 'Cập nhật' : 'Lưu'}</button>
+            <div className={styles.formActions}>
+              <button type="button" onClick={() => setIsFormVisible(false)} className={styles.cancelBtn}>
+                Hủy
+              </button>
+              <button type="submit" className={styles.saveBtn} disabled={isBanned}>
+                {editingOverride ? 'Cập nhật' : 'Lưu'}
+              </button>
             </div>
           </form>
         )}

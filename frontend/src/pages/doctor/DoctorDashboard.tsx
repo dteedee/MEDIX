@@ -894,23 +894,24 @@ const DoctorDashboard: React.FC = () => {
 
                 const themeClass = currentTierIndex !== -1 ? getPackageTheme(currentTierIndex) : 'themeBlue'
 
+                const isActive = tiersData.currentSubscriptionActive;
+                
                 return (
-              <div className={`${styles.subscriptionInfo} ${styles[themeClass]}`}>
+              <div 
+                className={`${styles.subscriptionInfo} ${styles[themeClass]}`}
+                onClick={() => navigate('/app/doctor/packages')}
+              >
                 <div className={styles.subscriptionHeader}>
                   <div className={`${styles.subscriptionIcon} ${styles[`${themeClass}Icon`]}`}>
                     <i className="bi bi-star-fill"></i>
                   </div>
                   <div className={styles.subscriptionDetails}>
-                    <h4 className={`${styles.subscriptionName} ${styles[`${themeClass}Name`]}`}>Gói {currentTier.name}</h4>
-                    <span className={styles.subscriptionStatus}/>
-                      {tiersData.currentSubscriptionActive ? 'Đang hoạt động' : 'Đã hủy'}
                     <h4 className={`${styles.subscriptionName} ${styles[`${themeClass}Name`]}`}>
                       Gói {currentTier.name}
                     </h4>
-                      <span className={styles.subscriptionStatus}>
-                        {tiersData.currentSubscriptionActive ? 'Đang hoạt động' : 'Đã hủy'}
-                      </span>
-                    <span className={styles.subscriptionStatus}>{tiersData.currentSubscriptionActive ? "Đang hoạt động" : "Đã hủy"}</span>
+                    <span className={`${styles.subscriptionStatus} ${isActive ? styles.statusActive : styles.statusCancelled}`}>
+                      {isActive ? 'Đang hoạt động' : 'Đã hủy'}
+                    </span>
                   </div>
                 </div>
                 <ul className={styles.featuresList}>

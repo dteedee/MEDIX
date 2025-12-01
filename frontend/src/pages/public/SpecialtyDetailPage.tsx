@@ -146,7 +146,7 @@ const SpecialtyDetailPage: React.FC = () => {
       // Get doctors by specialization ID from database (backend expects Guid string)
       const queryParams: DoctorQueryParameters = {
         specializationCode: specialization.id, // Backend parses this as Guid
-        page: 1,
+        pageNumber: 1,
         pageSize: 100
       };
       
@@ -185,7 +185,7 @@ const SpecialtyDetailPage: React.FC = () => {
         tier.doctors.items.forEach(apiDoctor => {
           // Only include doctors accepting appointments
           if (apiDoctor.isAcceptingAppointments !== false) {
-            const doctor = convertApiDoctorToDoctor(apiDoctor, tier.tierName, doctorAvatars, doctorStatistics);
+            const doctor = convertApiDoctorToDoctor(apiDoctor, tier.name, doctorAvatars, doctorStatistics);
             allDoctors.push(doctor);
           }
         });

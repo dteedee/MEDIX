@@ -25,6 +25,7 @@ namespace Medix.API.Presentation.Controller.Money
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IWalletTransactionService transactionService;
         private readonly IWalletService walletService;
+
         private readonly IUserRoleRepository userRoleRepository;
 
         private readonly IConfiguration _configuration;
@@ -96,6 +97,7 @@ namespace Medix.API.Presentation.Controller.Money
 
         }
         [HttpGet("Redirect-Success")]
+
         public IActionResult RedirectSuccess([FromQuery] PaymentReturnDto paymentReturnDto)
         {
             var result = _client.PaymentRequests.GetAsync(paymentReturnDto.Id).Result;
@@ -105,11 +107,11 @@ namespace Medix.API.Presentation.Controller.Money
             var order = OrderService.GetOrderByOrderCode(transactionId);
 
             var frontendBaseUrl = order.baseURLFE ?? "http://localhost:5173";
-            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
 
+            var role = userRoleRepository.GetByIdAsync(Guid.Parse(userIdClaim.Value));
 
-
-            if (string.Equals(role, "Doctor", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(role.Result.RoleCode, "Doctor", StringComparison.OrdinalIgnoreCase))
             {
                 return Redirect($"{frontendBaseUrl}/app/doctor/wallet");
             }
@@ -118,6 +120,47 @@ namespace Medix.API.Presentation.Controller.Money
 
 
         }
+
+        [HttpGet("Redirect-Success-Patient")]
+
+        public IActionResult RedirectSuccessPatient([FromQuery] PaymentReturnDto paymentReturnDto)
+        {
+            var result = _client.PaymentRequests.GetAsync(paymentReturnDto.Id).Result;
+
+
+            int transactionId = (int)result.OrderCode;
+            var order = OrderService.GetOrderByOrderCode(transactionId);
+
+            var frontendBaseUrl = order.baseURLFE ?? "http://localhost:5173";
+         
+
+           
+
+            return Redirect($"{frontendBaseUrl}/app/patient/finance");
+
+
+        }
+
+
+        [HttpGet("Redirect-Success-Doctor")]
+
+        public IActionResult RedirectSuccessDoctor([FromQuery] PaymentReturnDto paymentReturnDto)
+        {
+            var result = _client.PaymentRequests.GetAsync(paymentReturnDto.Id).Result;
+
+
+            int transactionId = (int)result.OrderCode;
+            var order = OrderService.GetOrderByOrderCode(transactionId);
+
+            var frontendBaseUrl = order.baseURLFE ?? "http://localhost:5173";
+
+
+
+
+            return Redirect($"{frontendBaseUrl}/app/Doctor/wallet");
+
+        }
+
 
         [HttpPost("create-payment")]
         [Authorize]
@@ -141,13 +184,19 @@ namespace Medix.API.Presentation.Controller.Money
             var userInfo = await _userService.GetUserBasicInfo(userId);
             if (userInfo == null)
                 return NotFound(new { message = "User not found" });
-
-
-
-            var orderCode = DateTimeOffset.Now.ToUnixTimeSeconds();
+            var role = userRoleRepository.GetByIdAsync(Guid.Parse(userIdClaim.Value));
             var backendBaseUrl = $"{Request.Scheme}://{Request.Host}";
-            var returnUrl = request.ReturnUrl ?? $"{backendBaseUrl}/api/Receive/Redirect-Success";
-            //var returnUrl = "https://www.youtube.com/";
+            var returnUrl="";
+            if (string.Equals(role.Result.RoleCode, "Doctor", StringComparison.OrdinalIgnoreCase))
+            {
+                returnUrl = backendBaseUrl + "/api/Receive/Redirect-Success-Doctor";
+            } else
+            {
+                returnUrl = backendBaseUrl + "/api/Receive/Redirect-Success-Patient";
+            }
+
+                var orderCode = DateTimeOffset.Now.ToUnixTimeSeconds();
+           
             var cancelUrl = request.CancelUrl ?? $"{backendBaseUrl}/api/Receive/payment-failed";
 
             var wallet = await walletService.GetWalletByUserIdAsync(userId);

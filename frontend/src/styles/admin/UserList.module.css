@@ -849,6 +849,8 @@
     font-weight: 600;
     text-transform: uppercase;
     transition: all 0.3s ease;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
   }
   
   .roleADMIN {
@@ -857,18 +859,26 @@
   }
   
   .roleMANAGER {
-    background: #fef3c7;
-    color: #92400e;
+    /* Quản lý: cam / vàng nổi bật */
+    background: linear-gradient(135deg, #ffedd5, #fed7aa);
+    color: #9a3412;
   }
   
   .roleDOCTOR {
-    background: #dbeafe;
-    color: #1e40af;
+    /* Bác sĩ: xanh dương */
+    background: linear-gradient(135deg, #dbebff, #bfdbfe);
+    color: #1d4ed8;
   }
   
   .rolePATIENT {
-    background: #e0e7ff;
-    color: #3730a3;
+    /* Bệnh nhân: xanh lá dịu */
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    color: #166534;
+  }
+
+  .roleOTHER {
+    background: #e5e7eb;
+    color: #374151;
   }
   
   .roleBadge:hover {

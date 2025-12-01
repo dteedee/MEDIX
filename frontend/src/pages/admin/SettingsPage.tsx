@@ -734,13 +734,32 @@ export default function SettingsPage() {
     <div className={userStyles.container}>
       <div className={userStyles.header}>
         <div className={userStyles.headerLeft}>
-          <h1 className={userStyles.title}>Cấu hình hệ thống</h1>
-          <p className={userStyles.subtitle}>Quản lý cài đặt và cấu hình hệ thống</p>
+          <div className={userStyles.titleWrapper}>
+            <div className={userStyles.titleIcon}>
+              <i className="bi bi-gear"></i>
+            </div>
+            <div>
+              <h1 className={userStyles.title}>Cấu hình hệ thống</h1>
+              <p className={userStyles.subtitle}>Quản lý cài đặt và cấu hình hệ thống</p>
+            </div>
+          </div>
         </div>
         <div className={userStyles.headerRight}>
-          <div className={styles.dateTime}>
-            <i className="bi bi-calendar3"></i>
-            <span>{new Date().toLocaleDateString('vi-VN')}</span>
+          <div className={userStyles.dateTime}>
+            <div className={userStyles.dateIconWrapper}>
+              <i className={`bi bi-calendar3 ${userStyles.dateIcon}`}></i>
+            </div>
+            <div className={userStyles.dateContent}>
+              <span className={userStyles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={userStyles.dateGlow}></div>
+            </div>
           </div>
         </div>
       </div>

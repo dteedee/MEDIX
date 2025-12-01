@@ -522,6 +522,7 @@
   text-transform: uppercase;
   transition: all 0.3s ease;
   border: 1px solid transparent;
+  white-space: nowrap; /* Giữ hành động trên một dòng (ĐĂNG NHẬP không bị tách) */
 }
 
 .actionBadge:hover {

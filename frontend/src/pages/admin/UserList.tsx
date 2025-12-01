@@ -333,17 +333,61 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
 
   const totalPages = Math.ceil(filteredUsers.length / filters.pageSize);
 
+  const getRoleKey = (role?: string) => {
+    const normalized = role?.toUpperCase().trim();
+    if (!normalized) return 'OTHER';
+
+    if (normalized === 'DOCTOR' || normalized.includes('BÁC SĨ')) return 'DOCTOR';
+    if (normalized === 'PATIENT' || normalized.includes('BỆNH NHÂN')) return 'PATIENT';
+    if (
+      normalized === 'MANAGER' ||
+      normalized.includes('QUẢN LÝ') ||
+      normalized.includes('OPERATIONS MANAGER') ||
+      normalized.includes('OPERATIONSMANAGER')
+    ) {
+      return 'MANAGER';
+    }
+    if (normalized === 'ADMIN' || normalized.includes('QUẢN TRỊ')) return 'ADMIN';
+
+    return 'OTHER';
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Quản lý Người dùng</h1>
-          <p className={styles.subtitle}>Quản lý và theo dõi tất cả người dùng trong hệ thống</p>
+          <div className={styles.titleWrapper}>
+            <div className={styles.titleIcon}>
+              <i className="bi bi-people-fill"></i>
+            </div>
+            <div>
+              <h1 className={styles.title}>Quản lý Người dùng</h1>
+              <p className={styles.subtitle}>Quản lý và theo dõi tất cả người dùng trong hệ thống</p>
+            </div>
+          </div>
         </div>
-        <button onClick={onCreate} className={styles.btnCreate}>
-          <i className="bi bi-plus-lg"></i>
-          Tạo mới
-        </button>
+        <div className={styles.headerRight}>
+          <div className={styles.dateTime}>
+            <div className={styles.dateIconWrapper}>
+              <i className={`bi bi-calendar3 ${styles.dateIcon}`}></i>
+            </div>
+            <div className={styles.dateContent}>
+              <span className={styles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={styles.dateGlow}></div>
+            </div>
+          </div>
+          <button onClick={onCreate} className={styles.btnCreate}>
+            <i className="bi bi-plus-lg"></i>
+            Tạo mới
+          </button>
+        </div>
       </div>
 
       <div className={styles.statsGrid}>
@@ -606,9 +650,14 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
                         </div>
                       </td>
                       <td>
-                        <span className={`${styles.roleBadge} ${styles[`role${u.role?.toUpperCase()}`]}`}>
-                          {u.role || '-'}
-                        </span>
+                        {(() => {
+                          const roleKey = getRoleKey(u.role);
+                          return (
+                            <span className={`${styles.roleBadge} ${styles[`role${roleKey}`]}`}>
+                              {u.role || roleKey}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className={styles.emailCell}>{u.email}</td>
                       <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '-'}</td>

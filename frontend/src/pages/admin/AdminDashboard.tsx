@@ -63,6 +63,39 @@ interface DashboardData {
   auditLogs: AuditLog[];
 }
 
+const formatCurrencyCompact = (value: number): string => {
+  const amount = value || 0;
+  const abs = Math.abs(amount);
+
+  if (abs >= 1_000_000_000) {
+    const compact = amount / 1_000_000_000;
+    const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+    return `${text}B VND`;
+  }
+
+  if (abs >= 1_000_000) {
+    const compact = amount / 1_000_000;
+    const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+    return `${text}M VND`;
+  }
+
+  if (abs >= 1_000) {
+    const compact = amount / 1_000;
+    const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+    return `${text}K VND`;
+  }
+
+  return `${amount.toLocaleString('vi-VN')} VND`;
+};
+
+const formatGrowth = (value?: number | null): string => {
+  const num = value ?? 0;
+  if (num === 0) return '0%';
+  const sign = num > 0 ? '+' : '-';
+  const abs = Math.abs(num);
+  return `${sign}${abs}%`;
+};
+
 export default function AdminDashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -173,13 +206,32 @@ export default function AdminDashboard() {
           {/* Header */}
           <div className={styles.header}>
             <div className={styles.headerLeft}>
-              <h1 className={styles.title}>Dashboard</h1>
-              <p className={styles.subtitle}>Tổng quan hệ thống và thống kê</p>
+              <div className={styles.titleWrapper}>
+                <div className={styles.titleIcon}>
+                  <i className="bi bi-speedometer2"></i>
+                </div>
+                <div>
+                  <h1 className={styles.title}>Dashboard</h1>
+                  <p className={styles.subtitle}>Tổng quan hệ thống và thống kê</p>
+                </div>
+              </div>
             </div>
             <div className={styles.headerRight}>
               <div className={styles.dateTime}>
-                <i className="bi bi-calendar3"></i>
-                <span>{new Date().toLocaleDateString('vi-VN')}</span>
+                <div className={styles.dateIconWrapper}>
+                  <i className={`bi bi-calendar3 ${styles.dateIcon}`}></i>
+                </div>
+                <div className={styles.dateContent}>
+                  <span className={styles.dateText}>
+                    {new Date().toLocaleDateString('vi-VN', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </span>
+                  <div className={styles.dateGlow}></div>
+                </div>
               </div>
             </div>
           </div>
@@ -200,7 +252,7 @@ export default function AdminDashboard() {
                 <div className={styles.statValue}>{dashboardData?.summary.totalUsers}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>+{dashboardData?.growth.usersGrowthPercentage}% so với tháng trước</span>
+                  <span>{formatGrowth(dashboardData?.growth.usersGrowthPercentage)} so với tháng trước</span>
                 </div>
               </div>
             </div>
@@ -219,7 +271,7 @@ export default function AdminDashboard() {
                 <div className={styles.statValue}>{dashboardData?.summary.totalDoctors}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>+{dashboardData?.growth.doctorsGrowthPercentage}% tuần trước</span>
+                  <span>{formatGrowth(dashboardData?.growth.doctorsGrowthPercentage)} tuần trước</span>
                 </div>
               </div>
             </div>
@@ -238,7 +290,7 @@ export default function AdminDashboard() {
                 <div className={styles.statValue}>{dashboardData?.summary.totalPatients}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>+{dashboardData?.growth.usersGrowthPercentage}% tháng trước</span>
+                  <span>{formatGrowth(dashboardData?.growth.usersGrowthPercentage)} tháng trước</span>
                 </div>
               </div>
             </div>
@@ -257,7 +309,7 @@ export default function AdminDashboard() {
                 <div className={styles.statValue}>{dashboardData?.summary.todayAppointments}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>+{dashboardData?.growth.todayAppointmentsGrowthPercentage}% hôm qua</span>
+                  <span>{formatGrowth(dashboardData?.growth.todayAppointmentsGrowthPercentage)} hôm qua</span>
                 </div>
               </div>
             </div>
@@ -276,7 +328,7 @@ export default function AdminDashboard() {
                 <div className={styles.statValue}>{dashboardData?.summary.totalAppointments}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>+{dashboardData?.growth.appointmentsGrowthPercentage}% tháng trước</span>
+                  <span>{formatGrowth(dashboardData?.growth.appointmentsGrowthPercentage)} tháng trước</span>
                 </div>
               </div>
             </div>
@@ -295,7 +347,7 @@ export default function AdminDashboard() {
                 <div className={styles.statValue}>{dashboardData?.summary.totalHealthArticles}</div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>+{dashboardData?.growth.articlesGrowthPercentage}% tháng trước</span>
+                  <span>{formatGrowth(dashboardData?.growth.articlesGrowthPercentage)} tháng trước</span>
                 </div>
               </div>
             </div>
@@ -311,10 +363,12 @@ export default function AdminDashboard() {
               </div>
               <div className={styles.statInfo}>
                 <div className={styles.statLabel}>Doanh thu tháng</div>
-                <div className={styles.statValue}>{(dashboardData?.summary.monthRevenue || 0).toLocaleString('vi-VN')}₫</div>
+                <div className={styles.statValue}>
+                  {formatCurrencyCompact(dashboardData?.summary.monthRevenue || 0)}
+                </div>
                 <div className={styles.statTrend}>
                   <i className="bi bi-graph-up"></i>
-                  <span>+{dashboardData?.growth.revenueGrowthPercentage}% tháng trước</span>
+                  <span>{formatGrowth(dashboardData?.growth.revenueGrowthPercentage)} tháng trước</span>
                 </div>
               </div>
             </div>

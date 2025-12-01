@@ -504,15 +504,34 @@ export default function TrackingPage() {
     <div className={userStyles.container}>
       <div className={userStyles.header}>
         <div className={userStyles.headerLeft}>
-          <h1 className={userStyles.title}>Truy vết hoạt động</h1>
-          <p className={userStyles.subtitle}>Theo dõi và phân tích các hoạt động trong hệ thống</p>
-        </div>
-        <div className={styles.headerRight}>
-              <div className={styles.dateTime}>
-                <i className="bi bi-calendar3"></i>
-                <span>{new Date().toLocaleDateString('vi-VN')}</span>
-              </div>
+          <div className={userStyles.titleWrapper}>
+            <div className={userStyles.titleIcon}>
+              <i className="bi bi-activity"></i>
             </div>
+            <div>
+              <h1 className={userStyles.title}>Truy vết hoạt động</h1>
+              <p className={userStyles.subtitle}>Theo dõi và phân tích các hoạt động trong hệ thống</p>
+            </div>
+          </div>
+        </div>
+        <div className={userStyles.headerRight}>
+          <div className={userStyles.dateTime}>
+            <div className={userStyles.dateIconWrapper}>
+              <i className={`bi bi-calendar3 ${userStyles.dateIcon}`}></i>
+            </div>
+            <div className={userStyles.dateContent}>
+              <span className={userStyles.dateText}>
+                {new Date().toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <div className={userStyles.dateGlow}></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className={styles.statsGrid}>
@@ -695,17 +714,6 @@ export default function TrackingPage() {
                       </td>
                       <td className={styles.descriptionCell}>
                         <p className={styles.actionDescription}>{getActionDescription(log)}</p>
-                        <div className={styles.descriptionMeta}>
-                          <span className={styles.metaItem}>
-                          
-                          </span>
-                          {log.ipAddress && (
-                            <span className={styles.metaItem}>
-                             
-                            </span>
-                          )}
-                         
-                        </div>
                       </td>
                       <td>
                         <div className={userStyles.actions}>

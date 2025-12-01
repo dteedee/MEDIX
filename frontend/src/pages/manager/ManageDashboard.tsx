@@ -43,7 +43,7 @@ const getAppointmentStatusInfo = (status: string) => {
     MissedByDoctor: { icon: <FaUserClock />, text: 'Bác sĩ vắng', className: 'text-yellow-600' },
     MissedByPatient: { icon: <FaUserInjured />, text: 'Bệnh nhân không đến', className: 'text-yellow-500' },
     NoShow: { icon: <FaUserInjured />, text: 'Bệnh nhân không đến', className: 'text-yellow-500' }, // Giữ lại để tương thích
-    Completed: { icon: <FaCheckCircle />, text: 'Đã hoàn thành', className: 'text-gray-500' },
+    Completed: { icon: <FaCheckCircle />, text: 'Đã hoàn thành', className: 'text-green-500' },
     BeforeAppointment: { icon: <FaCalendarAlt />, text: 'Sắp diễn ra', className: 'text-purple-500' }, // NOSONAR
     BeforeAppoiment: { icon: <FaCalendarAlt />, text: 'Sắp diễn ra', className: 'text-purple-500' }, // Xử lý lỗi chính tả từ backend
     default: { icon: <FaQuestionCircle />, text: 'Không xác định', className: 'text-gray-400' }

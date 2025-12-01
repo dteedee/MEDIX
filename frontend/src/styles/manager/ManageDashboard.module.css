@@ -68,24 +68,9 @@
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
 }
 
+/* Giữ class .statCardWithIcon để JSX không lỗi, bỏ border bên trái */
 .statCardWithIcon {
-  border-left: 4px solid transparent;
-}
-
-.statCard:nth-child(1) {
-  border-left-color: #667eea;
-}
-
-.statCard:nth-child(2) {
-  border-left-color: #48bb78;
-}
-
-.statCard:nth-child(3) {
-  border-left-color: #f56565;
-}
-
-.statCard:nth-child(4) {
-  border-left-color: #ed8936;
+  border-left: none;
 }
 
 .iconWrapper {

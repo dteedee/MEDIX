@@ -170,6 +170,31 @@ export default function ReportsAndAnalytics() {
     }).format(amount);
   };
 
+  const formatCurrencyCompact = (value: number): string => {
+    const amount = value || 0;
+    const abs = Math.abs(amount);
+
+    if (abs >= 1_000_000_000) {
+      const compact = amount / 1_000_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}B VND`;
+    }
+
+    if (abs >= 1_000_000) {
+      const compact = amount / 1_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}M VND`;
+    }
+
+    if (abs >= 1_000) {
+      const compact = amount / 1_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}K VND`;
+    }
+
+    return `${amount.toLocaleString('vi-VN')} VND`;
+  };
+
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('vi-VN').format(num);
   };
@@ -487,7 +512,7 @@ export default function ReportsAndAnalytics() {
               </div>
               <div className={styles.metricContent}>
                 <div className={styles.metricLabel}>Tổng doanh thu</div>
-                <div className={styles.metricValue}>{formatCurrency(summary.revenue.total)}</div>
+                <div className={styles.metricValue}>{formatCurrencyCompact(summary.revenue.total)}</div>
                 <div className={`${styles.metricGrowth} ${summary.revenue.growth < 0 ? styles.negative : ''}`}>
                   <i className={`bi bi-arrow-${summary.revenue.growth >= 0 ? 'up' : 'down'}`}></i>
                   <span>{summary.revenue.growth > 0 ? '+' : ''}{summary.revenue.growth.toFixed(1)}% so với tháng trước</span>
@@ -766,7 +791,7 @@ export default function ReportsAndAnalytics() {
                         </div>
                         <div className={styles.summaryCardContent}>
                           <div className={styles.summaryCardLabel}>Tổng doanh thu</div>
-                          <div className={styles.summaryCardValue}>{formatCurrency(appointmentTrends.totalRevenue)}</div>
+                          <div className={styles.summaryCardValue}>{formatCurrencyCompact(appointmentTrends.totalRevenue)}</div>
                         </div>
                       </div>
                     </div>

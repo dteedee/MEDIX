@@ -254,6 +254,32 @@ export default function ServicePackageManagement() {
     }).format(amount);
   };
 
+  const formatCurrencyCompact = (value: number): string => {
+    if (value === 0) return 'Miễn phí';
+    const amount = value || 0;
+    const abs = Math.abs(amount);
+
+    if (abs >= 1_000_000_000) {
+      const compact = amount / 1_000_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}B VND`;
+    }
+
+    if (abs >= 1_000_000) {
+      const compact = amount / 1_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}M VND`;
+    }
+
+    if (abs >= 1_000) {
+      const compact = amount / 1_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}K VND`;
+    }
+
+    return `${amount.toLocaleString('vi-VN')} VND`;
+  };
+
   const getStatusBadge = (isActive: boolean) => {
     return (
       <span className={`${styles.statusBadge} ${isActive ? styles.statusActive : styles.statusInactive}`}>
@@ -447,7 +473,7 @@ export default function ServicePackageManagement() {
                         </div>
                       </td>
                       <td>
-                        <span className={styles.priceText}>{formatCurrency(pkg.monthlyPrice)}</span>
+                        <span className={styles.priceText}>{formatCurrencyCompact(pkg.monthlyPrice)}</span>
                       </td>
                       <td>
                         <span className={styles.multiplierBadge}>x{pkg.consultationFeeMultiplier}</span>
@@ -552,7 +578,7 @@ export default function ServicePackageManagement() {
                 </div>
                 <div className={styles.packageInfo}>
                   <p><strong>Mô tả:</strong> {viewPackage.description || 'Chưa có mô tả'}</p>
-                  <p><strong>Phí hàng tháng:</strong> {formatCurrency(viewPackage.monthlyPrice)}</p>
+                  <p><strong>Phí hàng tháng:</strong> {formatCurrencyCompact(viewPackage.monthlyPrice)}</p>
                   <p><strong>Hệ số phí khám:</strong> x{viewPackage.consultationFeeMultiplier}</p>
                   <p><strong>Lịch hẹn tối đa/ngày:</strong> {viewPackage.maxDailyAppointments}</p>
                 </div>

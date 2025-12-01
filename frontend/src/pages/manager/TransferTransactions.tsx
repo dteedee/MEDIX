@@ -142,6 +142,31 @@ const TransferTransactions: React.FC = () => {
       maximumFractionDigits: 0,
     }).format(amount);
 
+  const formatCurrencyCompact = (value: number): string => {
+    const amount = value || 0;
+    const abs = Math.abs(amount);
+
+    if (abs >= 1_000_000_000) {
+      const compact = amount / 1_000_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}B VND`;
+    }
+
+    if (abs >= 1_000_000) {
+      const compact = amount / 1_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}M VND`;
+    }
+
+    if (abs >= 1_000) {
+      const compact = amount / 1_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}K VND`;
+    }
+
+    return `${amount.toLocaleString('vi-VN')} VND`;
+  };
+
   const formatDateTime = (dateString: string) =>
     new Date(dateString).toLocaleString('vi-VN', {
       hour: '2-digit',
@@ -325,12 +350,12 @@ const TransferTransactions: React.FC = () => {
           <div className={styles.summaryCardIcon}>
             <Wallet size={28} />
           </div>
-          <div className={styles.summaryCardContent}>
+            <div className={styles.summaryCardContent}>
             <div className={styles.summaryCardLabel}>Tổng giao dịch</div>
             <div className={styles.summaryCardValue}>{transactions.length}</div>
             <div className={styles.summaryCardTrend}>
               <i className="bi bi-arrow-up"></i>
-              <span>Giá trị {formatCurrency(stats.totalAmount)}</span>
+              <span>Giá trị {formatCurrencyCompact(stats.totalAmount)}</span>
             </div>
           </div>
           <div className={styles.summaryCardBg}>
@@ -341,12 +366,12 @@ const TransferTransactions: React.FC = () => {
           <div className={styles.summaryCardIcon}>
             <AlertTriangle size={28} />
           </div>
-          <div className={styles.summaryCardContent}>
+            <div className={styles.summaryCardContent}>
             <div className={styles.summaryCardLabel}>Chờ xử lý</div>
             <div className={styles.summaryCardValue}>{stats.counts.Pending}</div>
             <div className={styles.summaryCardTrend}>
               <i className="bi bi-arrow-up"></i>
-              <span>Khối lượng {formatCurrency(stats.amounts.Pending)}</span>
+              <span>Khối lượng {formatCurrencyCompact(stats.amounts.Pending)}</span>
             </div>
           </div>
           <div className={styles.summaryCardBg}>
@@ -357,12 +382,12 @@ const TransferTransactions: React.FC = () => {
           <div className={styles.summaryCardIcon}>
             <CheckCircle size={28} />
           </div>
-          <div className={styles.summaryCardContent}>
+            <div className={styles.summaryCardContent}>
             <div className={styles.summaryCardLabel}>Đã chấp nhận</div>
             <div className={styles.summaryCardValue}>{stats.counts.Accepted}</div>
             <div className={styles.summaryCardTrend}>
               <i className="bi bi-arrow-up"></i>
-              <span>{formatCurrency(stats.amounts.Accepted)}</span>
+              <span>{formatCurrencyCompact(stats.amounts.Accepted)}</span>
             </div>
           </div>
           <div className={styles.summaryCardBg}>
@@ -373,12 +398,12 @@ const TransferTransactions: React.FC = () => {
           <div className={styles.summaryCardIcon}>
             <ArrowDownRight size={28} />
           </div>
-          <div className={styles.summaryCardContent}>
+            <div className={styles.summaryCardContent}>
             <div className={styles.summaryCardLabel}>Đã từ chối</div>
             <div className={styles.summaryCardValue}>{stats.counts.Rejected}</div>
             <div className={styles.summaryCardTrend}>
               <i className="bi bi-arrow-down"></i>
-              <span>{formatCurrency(stats.amounts.Rejected)}</span>
+              <span>{formatCurrencyCompact(stats.amounts.Rejected)}</span>
             </div>
           </div>
           <div className={styles.summaryCardBg}>

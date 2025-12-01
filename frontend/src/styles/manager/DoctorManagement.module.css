@@ -713,6 +713,7 @@
   padding: 16px;
   font-size: 14px;
   color: #4b5563;
+  vertical-align: middle;
 }
 
 .indexCell {
@@ -735,11 +736,17 @@
 .doctorName {
   font-weight: 600;
   color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Email Cell */
 .emailCell {
   color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Specialty Badge */

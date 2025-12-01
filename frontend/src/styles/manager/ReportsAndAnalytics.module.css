@@ -368,11 +368,11 @@
 }
 
 .summaryCardValue {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   color: #1f2937;
   margin-bottom: 6px;
-  line-height: 1.2;
+  line-height: 1.1;
   transition: all 0.3s ease;
 }
 
@@ -667,11 +667,11 @@
 }
 
 .metricValue {
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 800;
   color: #1f2937;
   margin-bottom: 8px;
-  line-height: 1;
+  line-height: 1.1;
   transition: all 0.3s ease;
 }
 

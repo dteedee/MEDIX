@@ -70,6 +70,31 @@ export default function CommissionManagement() {
     }).format(amount);
   };
 
+  const formatCurrencyCompact = (value: number): string => {
+    const amount = value || 0;
+    const abs = Math.abs(amount);
+
+    if (abs >= 1_000_000_000) {
+      const compact = amount / 1_000_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}B VND`;
+    }
+
+    if (abs >= 1_000_000) {
+      const compact = amount / 1_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}M VND`;
+    }
+
+    if (abs >= 1_000) {
+      const compact = amount / 1_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}K VND`;
+    }
+
+    return `${amount.toLocaleString('vi-VN')} VND`;
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { text: 'Chờ thanh toán', class: styles.statusPending },
@@ -122,10 +147,10 @@ export default function CommissionManagement() {
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
             </svg>
           </div>
-          <div className={styles.summaryContent}>
+            <div className={styles.summaryContent}>
             <div className={styles.summaryLabel}>Tổng hoa hồng</div>
             <div className={styles.summaryValue}>
-              {formatCurrency(commissions.reduce((sum, c) => sum + c.commissionAmount, 0))}
+              {formatCurrencyCompact(commissions.reduce((sum, c) => sum + c.commissionAmount, 0))}
             </div>
           </div>
         </div>
@@ -138,10 +163,10 @@ export default function CommissionManagement() {
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
           </div>
-          <div className={styles.summaryContent}>
+            <div className={styles.summaryContent}>
             <div className={styles.summaryLabel}>Chờ thanh toán</div>
             <div className={styles.summaryValue}>
-              {formatCurrency(commissions.filter(c => c.status === 'pending').reduce((sum, c) => sum + c.commissionAmount, 0))}
+              {formatCurrencyCompact(commissions.filter(c => c.status === 'pending').reduce((sum, c) => sum + c.commissionAmount, 0))}
             </div>
           </div>
         </div>
@@ -152,10 +177,10 @@ export default function CommissionManagement() {
               <polyline points="20,6 9,17 4,12"></polyline>
             </svg>
           </div>
-          <div className={styles.summaryContent}>
+            <div className={styles.summaryContent}>
             <div className={styles.summaryLabel}>Đã thanh toán</div>
             <div className={styles.summaryValue}>
-              {formatCurrency(commissions.filter(c => c.status === 'paid').reduce((sum, c) => sum + c.commissionAmount, 0))}
+              {formatCurrencyCompact(commissions.filter(c => c.status === 'paid').reduce((sum, c) => sum + c.commissionAmount, 0))}
             </div>
           </div>
         </div>

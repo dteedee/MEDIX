@@ -41,6 +41,28 @@ export default function DoctorEvaluation({
   const [pageSize, setPageSize] = useState(10);
   const { showToast } = useToast();
 
+  const formatCurrencyCompact = (value: number): string => {
+    if (!value) return '0 VND';
+    const abs = Math.abs(value);
+
+    if (abs >= 1_000_000_000) {
+      const formatted = (value / 1_000_000_000).toFixed(1).replace(/\.0$/, '');
+      return `${formatted}B VND`;
+    }
+
+    if (abs >= 1_000_000) {
+      const formatted = (value / 1_000_000).toFixed(1).replace(/\.0$/, '');
+      return `${formatted}M VND`;
+    }
+
+    if (abs >= 1_000) {
+      const formatted = (value / 1_000).toFixed(0);
+      return `${formatted}K VND`;
+    }
+
+    return `${value.toLocaleString('vi-VN')} VND`;
+  };
+
   // Load performance data from API
   useEffect(() => {
     loadPerformanceData();
@@ -457,7 +479,7 @@ export default function DoctorEvaluation({
           </div>
           <div className={styles.statContent}>
             <div className={styles.statLabel}>Giá khám TB</div>
-            <div className={styles.statValue}>{stats.avgConsultationFee.toLocaleString('vi-VN')}₫</div>
+            <div className={styles.statValue}>{formatCurrencyCompact(stats.avgConsultationFee)}</div>
             <div className={styles.statTrend}>
               <i className="bi bi-graph-up"></i>
               <span>Trung bình hệ thống</span>

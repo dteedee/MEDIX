@@ -114,6 +114,31 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
     return educationCode;
   };
 
+  const formatCurrencyCompact = (value: number): string => {
+    const amount = value || 0;
+    const abs = Math.abs(amount);
+
+    if (abs >= 1_000_000_000) {
+      const compact = amount / 1_000_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}B VND`;
+    }
+
+    if (abs >= 1_000_000) {
+      const compact = amount / 1_000_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}M VND`;
+    }
+
+    if (abs >= 1_000) {
+      const compact = amount / 1_000;
+      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
+      return `${text}K VND`;
+    }
+
+    return `${amount.toLocaleString('vi-VN')} VND`;
+  };
+
   const handleShowImage = (url: string) => {
     setModalImageUrl(url);
     setShowImageModal(true);
@@ -411,12 +436,12 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
                             </span>
                           </div>
                           <div className={styles.infoItem}>
-                            <label>
+                          <label>
                               <i className="bi bi-wallet2"></i>
                               Lương / Thù lao
                             </label>
                             <span className={styles.priceText}>
-                              {Number(statistics?.salary || doctor.salary || doctor.monthlySalary || 0).toLocaleString('vi-VN')} VNĐ
+                              {formatCurrencyCompact(Number(statistics?.salary || doctor.salary || doctor.monthlySalary || 0))}
                             </span>
                           </div>
                           <div className={styles.infoItem}>
@@ -425,7 +450,7 @@ export default function DoctorDetails({ doctor, onClose, isLoading, isPending = 
                               Tổng doanh thu
                             </label>
                             <span className={styles.revenueText}>
-                              {Number(statistics?.revenue || doctor.revenue || doctor.totalRevenue || doctor.monthlyEarnings || 0).toLocaleString('vi-VN')} VNĐ
+                              {formatCurrencyCompact(Number(statistics?.revenue || doctor.revenue || doctor.totalRevenue || doctor.monthlyEarnings || 0))}
                             </span>
                           </div>
                         </div>

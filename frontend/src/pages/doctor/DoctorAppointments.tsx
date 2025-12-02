@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../../styles/doctor/DoctorAppointments.module.css';
 import Swal from 'sweetalert2';
@@ -50,6 +50,8 @@ const DoctorAppointments: React.FC = () => {
     timeRange: 'all',
     search: ''
   });
+  const [highlightAppointmentIds, setHighlightAppointmentIds] = useState<string[]>([]);
+  const highlightRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const statusDisplayNameMap: Record<string, string> = {
       'BeforeAppoiment': 'Trước giờ khám',
       'CancelledByDoctor': 'Bác sĩ hủy',
@@ -95,16 +97,14 @@ const DoctorAppointments: React.FC = () => {
       
       const transformedData: AppointmentDisplay[] = data.map(apt => {
         const startDate = new Date(apt.appointmentStartTime);
-        
-        const vietnamTime = new Date(startDate.getTime() + (7 * 60 * 60 * 1000));
-        
-        const year = vietnamTime.getUTCFullYear();
-        const month = (vietnamTime.getUTCMonth() + 1).toString().padStart(2, '0');
-        const day = vietnamTime.getUTCDate().toString().padStart(2, '0');
+
+        const year = startDate.getFullYear();
+        const month = (startDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = startDate.getDate().toString().padStart(2, '0');
         const datePart = `${year}-${month}-${day}`;
         
-        const hours = vietnamTime.getUTCHours().toString().padStart(2, '0');
-        const minutes = vietnamTime.getUTCMinutes().toString().padStart(2, '0');
+        const hours = startDate.getHours().toString().padStart(2, '0');
+        const minutes = startDate.getMinutes().toString().padStart(2, '0');
         
         return {
           id: apt.id,
@@ -153,15 +153,13 @@ const DoctorAppointments: React.FC = () => {
         const transformedData: AppointmentDisplay[] = data.map(apt => {
           const startDate = new Date(apt.appointmentStartTime);
           
-          const vietnamTime = new Date(startDate.getTime() + (7 * 60 * 60 * 1000));
-          
-          const year = vietnamTime.getUTCFullYear();
-          const month = (vietnamTime.getUTCMonth() + 1).toString().padStart(2, '0');
-          const day = vietnamTime.getUTCDate().toString().padStart(2, '0');
+          const year = startDate.getFullYear();
+          const month = (startDate.getMonth() + 1).toString().padStart(2, '0');
+          const day = startDate.getDate().toString().padStart(2, '0');
           const datePart = `${year}-${month}-${day}`;
           
-          const hours = vietnamTime.getUTCHours().toString().padStart(2, '0');
-          const minutes = vietnamTime.getUTCMinutes().toString().padStart(2, '0');
+          const hours = startDate.getHours().toString().padStart(2, '0');
+          const minutes = startDate.getMinutes().toString().padStart(2, '0');
           
           return {
             id: apt.id,
@@ -191,7 +189,23 @@ const DoctorAppointments: React.FC = () => {
     };
 
     loadAppointments();
+
+    // Nhận trạng thái từ trang lịch làm việc để highlight cuộc hẹn cụ thể
+    const navState = (window.history.state && (window.history.state as any).usr) || null;
+    if (navState?.highlightAppointmentIds) {
+      setHighlightAppointmentIds(navState.highlightAppointmentIds as string[]);
+    }
   }, []);
+
+  // Sau khi đã có danh sách highlight và dữ liệu render, cuộn cuộc hẹn đầu tiên vào giữa màn hình
+  useEffect(() => {
+    if (!highlightAppointmentIds.length) return;
+    const firstId = highlightAppointmentIds[0];
+    const el = highlightRefs.current[firstId];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightAppointmentIds, filteredAppointments]);
 
   const stats = {
     total: appointments.length,
@@ -308,26 +322,21 @@ const DoctorAppointments: React.FC = () => {
 
   const formatTimeRange = (startTime?: string, endTime?: string) => {
     if (!startTime) return '';
-    
-    
+
     const extractTimeFromISO = (isoString: string): string => {
       const date = new Date(isoString);
-      
-      const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000));
-      
-      const hours = vietnamTime.getUTCHours().toString().padStart(2, '0');
-      const minutes = vietnamTime.getUTCMinutes().toString().padStart(2, '0');
-      
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
       return `${hours}:${minutes}`;
     };
-    
+
     const startFormatted = extractTimeFromISO(startTime);
-    
+
     if (endTime) {
       const endFormatted = extractTimeFromISO(endTime);
       return `${startFormatted} - ${endFormatted}`;
     }
-    
+
     return startFormatted;
   };
 
@@ -611,7 +620,8 @@ const DoctorAppointments: React.FC = () => {
             return (
               <div 
                 key={appointment.id} 
-                className={styles.appointmentCard}
+                ref={el => { highlightRefs.current[appointment.id] = el; }}
+                className={`${styles.appointmentCard} ${highlightAppointmentIds.includes(appointment.id) ? styles.highlightCard : ''}`}
                 onClick={() => {
                   setSelectedAppointment(appointment);
                   setShowDetailModal(true);

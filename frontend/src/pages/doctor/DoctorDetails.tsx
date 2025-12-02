@@ -583,8 +583,12 @@ function DoctorDetails() {
                 const bookedEnd = new Date(booked.endTime);
                 const bookedDateString = formatDateString(bookedStart);
                 if (bookedDateString !== dateString) return false;
-                const bookedStartTime = `${String(bookedStart.getHours()).padStart(2, '0')}:${String(bookedStart.getMinutes()).padStart(2, '0')}`;
-                const bookedEndTime = `${String(bookedEnd.getHours()).padStart(2, '0')}:${String(bookedEnd.getMinutes()).padStart(2, '0')}`;
+                // Backend đang lưu giờ cuộc hẹn lệch 7h so với ma trận ca (03:00 lưu cho ca 10:00),
+                // nên cần cộng thêm 7h để khớp với các slot 07:00, 08:00, 09:00, 10:00...
+                const adjustedStartHour = (bookedStart.getHours() + 7) % 24;
+                const adjustedEndHour = (bookedEnd.getHours() + 7) % 24;
+                const bookedStartTime = `${String(adjustedStartHour).padStart(2, '0')}:${String(bookedStart.getMinutes()).padStart(2, '0')}`;
+                const bookedEndTime = `${String(adjustedEndHour).padStart(2, '0')}:${String(bookedEnd.getMinutes()).padStart(2, '0')}`;
                 const overlaps = isTimeSlotOverlap(slot.startTime, slot.endTime, bookedStartTime, bookedEndTime);
                 return overlaps;
             });
@@ -1393,12 +1397,6 @@ function DoctorDetails() {
                                                                                                     <i className={`bi ${isSelected ? 'bi-check-circle-fill' : 'bi-clock-fill'}`}></i>
                                                                                                     <span className={styles.timeText}>{slot.display}</span>
                                                                                                 </div>
-                                                                                                {slot.type === 'override' && slot.reason && (
-                                                                                                    <div className={styles.timeslotBadge}>
-                                                                                                        <i className="bi bi-info-circle"></i>
-                                                                                                        <span>{slot.reason}</span>
-                                                                                                    </div>
-                                                                                                )}
                                                                                             </button>
                                                                                         );
                                                                                     })}
@@ -1429,12 +1427,6 @@ function DoctorDetails() {
                                                                                                     <i className={`bi ${isSelected ? 'bi-check-circle-fill' : 'bi-clock-fill'}`}></i>
                                                                                                     <span className={styles.timeText}>{slot.display}</span>
                                                                                                 </div>
-                                                                                                {slot.type === 'override' && slot.reason && (
-                                                                                                    <div className={styles.timeslotBadge}>
-                                                                                                        <i className="bi bi-info-circle"></i>
-                                                                                                        <span>{slot.reason}</span>
-                                                                                                    </div>
-                                                                                                )}
                                                                                             </button>
                                                                                         );
                                                                                     })}

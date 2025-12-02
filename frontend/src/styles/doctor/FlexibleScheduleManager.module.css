@@ -28,9 +28,9 @@
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border-radius: 20px;
   padding: 32px;
-  width: 90%;
-  max-width: 700px;
-  max-height: 90vh;
+  width: 95%;
+  max-width: 960px;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   animation: slideInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -117,6 +117,122 @@
   overflow-y: auto;
   flex-grow: 1;
   padding-right: 8px;
+}
+
+.overrideTableWrapper {
+  max-height: 360px;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f9fafb;
+}
+
+.overrideTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.overrideTable thead {
+  position: sticky;
+  top: 0;
+  background: #f1f5f9;
+  z-index: 1;
+}
+
+.overrideTable th,
+.overrideTable td {
+  padding: 16px 18px;
+  border-bottom: none;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.overrideTable tbody tr {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.overrideTable th {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.rowIncrease {
+  background: #ecfdf5;
+}
+
+.rowOff {
+  background: #fef2f2;
+}
+
+.dateCell {
+  min-width: 190px;
+  border-right: 1px solid #e2e8f0;
+}
+
+.dateChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.dateChip svg {
+  width: 14px;
+  height: 14px;
+}
+
+.dateSummary {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.slotCell {
+  width: 70px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.timeCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.timeCell svg {
+  width: 14px;
+  height: 14px;
+  color: #64748b;
+}
+
+.reasonCell {
+  max-width: 220px;
+  color: #4b5563;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.reasonPlaceholder {
+  color: #cbd5e1;
+  font-style: italic;
+}
+
+.actionsCell {
+  width: 96px;
 }
 
 .overrideListContainer::-webkit-scrollbar {

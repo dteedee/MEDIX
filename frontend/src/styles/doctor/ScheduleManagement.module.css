@@ -460,6 +460,11 @@
   color: #166534;
 }
 
+.daySlotOccupied {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .daySlotOff {
   background: #fee2e2;
   color: #b91c1c;
@@ -780,6 +785,11 @@
 .slotCellWork {
   background: #dcfce7;
   color: #166534;
+}
+
+.slotCellOccupied {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .slotCellOff {

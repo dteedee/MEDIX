@@ -84,10 +84,11 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
 
       let status: 'none' | 'work' | 'off' | 'occupied' = 'none';
       if (existing) {
-        if (!existing.isAvailable) {
-          status = 'off';
-        } else if (hasAppointment) {
+        if (hasAppointment) {
+          // Ưu tiên hiển thị O (có hẹn) ngay cả khi lịch cố định đang ở trạng thái nghỉ
           status = 'occupied';
+        } else if (!existing.isAvailable) {
+          status = 'off';
         } else {
           status = 'work';
         }

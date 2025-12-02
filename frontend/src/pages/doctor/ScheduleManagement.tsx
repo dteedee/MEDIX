@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { ChevronLeft, ChevronRight, Calendar, Clock, Users, Plus, User } from "lucide-react";
 import Swal from "sweetalert2";
@@ -12,6 +12,7 @@ import { Appointment } from "../../types/appointment.types";
 import styles from "../../styles/doctor/ScheduleManagement.module.css";
 import FixedScheduleManager from "./FixedScheduleManager";
 import FlexibleScheduleManager from "./FlexibleScheduleManager";
+import { useToast } from "../../contexts/ToastContext";
 
 const dayNames = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
@@ -29,6 +30,15 @@ const timeSlotMatrix = [
 const parseTimeToMinutes = (timeStr: string) => {
   const normalized = timeStr.length === 5 ? timeStr : timeStr.substring(0, 5);
   const [h, m] = normalized.split(":").map(Number);
+  return h * 60 + m;
+};
+
+// Lấy số phút từ chuỗi thời gian ISO của cuộc hẹn, bù thêm 7 giờ để khớp với ma trận ca (07:00, 08:00, ...).
+// Ví dụ: 03:00 (+07:00) -> 10:00 trong ma trận.
+const getLocalMinutesFromISO = (isoString: string): number => {
+  const date = new Date(isoString);
+  const h = (date.getHours() + 7) % 24;
+  const m = date.getMinutes();
   return h * 60 + m;
 };
 
@@ -66,10 +76,19 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   onRefresh,
   onAddFlexibleSchedule
 }) => {
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+
   const slotStatuses = useMemo(() => {
     return timeSlotMatrix.map(slot => {
       const slotStart = parseTimeToMinutes(slot.startTime);
       const slotEnd = parseTimeToMinutes(slot.endTime);
+
+      const hasAppointment = appointments.some(app => {
+        const appStart = getLocalMinutesFromISO(app.appointmentStartTime);
+        const appEnd = getLocalMinutesFromISO(app.appointmentEndTime);
+        return appStart < slotEnd && appEnd > slotStart;
+      });
 
       const hasOff = overrides.some(o => {
         if (o.overrideType || !o.isAvailable) return false;
@@ -80,27 +99,31 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
 
       const hasWork =
         !hasOff &&
-        (
-          schedules.some(s => {
-            if (!s.isAvailable) return false;
-            const sStart = parseTimeToMinutes(s.startTime);
-            const sEnd = parseTimeToMinutes(s.endTime);
-            return sStart < slotEnd && sEnd > slotStart;
-          }) ||
+        (schedules.some(s => {
+          if (!s.isAvailable) return false;
+          const sStart = parseTimeToMinutes(s.startTime);
+          const sEnd = parseTimeToMinutes(s.endTime);
+          return sStart < slotEnd && sEnd > slotStart;
+        }) ||
           overrides.some(o => {
             if (!o.overrideType || !o.isAvailable) return false;
             const oStart = parseTimeToMinutes(o.startTime);
             const oEnd = parseTimeToMinutes(o.endTime);
             return oStart < slotEnd && oEnd > slotStart;
-          })
-        );
+          }));
+
+      const status =
+        hasAppointment ? ("occupied" as const)
+        : hasOff ? ("off" as const)
+        : hasWork ? ("work" as const)
+        : ("none" as const);
 
       return {
         ...slot,
-        status: hasOff ? ("off" as const) : hasWork ? ("work" as const) : ("none" as const),
+        status,
       };
     });
-  }, [schedules, overrides]);
+  }, [schedules, overrides, appointments]);
 
   const morningSlots = slotStatuses.filter(s => s.session === "morning");
   const afternoonSlots = slotStatuses.filter(s => s.session === "afternoon");
@@ -112,6 +135,28 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
       today.setHours(0, 0, 0, 0);
       const selectedDate = new Date(dateKey);
       selectedDate.setHours(0, 0, 0, 0);
+
+      if (slot.status === "occupied") {
+        // Điều hướng sang trang lịch hẹn và highlight các cuộc hẹn thuộc ca này
+        const slotStartMin = parseTimeToMinutes(slot.startTime);
+        const slotEndMin = parseTimeToMinutes(slot.endTime);
+
+        const relatedIds = appointments
+          .filter(app => {
+            const appStartMin = getLocalMinutesFromISO(app.appointmentStartTime);
+            const appEndMin = getLocalMinutesFromISO(app.appointmentEndTime);
+            return appStartMin < slotEndMin && appEndMin > slotStartMin;
+          })
+          .map(app => app.id);
+
+        navigate('/app/doctor/appointments', {
+          state: {
+            fromSchedule: true,
+            highlightAppointmentIds: relatedIds
+          }
+        });
+        return;
+      }
 
       if (slot.status === "none") {
         // Nếu chưa có ca làm việc, vẫn dùng form để đăng ký linh hoạt chi tiết
@@ -134,6 +179,10 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
       if (existingOff) {
         await scheduleService.deleteScheduleOverride(existingOff.id);
         await onRefresh();
+        showToast(
+          `Đã bỏ đăng ký nghỉ cho ${slot.label} (${slot.startTime} - ${slot.endTime}) ngày ${formattedDate}.`,
+          "success"
+        );
         return;
       }
 
@@ -167,6 +216,10 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
 
       await scheduleService.createScheduleOverride(payload);
       await onRefresh();
+      showToast(
+        `Đã đăng ký nghỉ cho ${slot.label} (${slot.startTime} - ${slot.endTime}) ngày ${formattedDate}.`,
+        "success"
+      );
     } catch (err: any) {
       let errorMessage = 'Không thể cập nhật lịch. Vui lòng kiểm tra lại thông tin.';
 
@@ -216,6 +269,7 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
         <div className={styles.modalBody}>
           <div className={styles.matrixLegend}>
             <span><strong>V</strong>: Làm việc</span>
+            <span><strong>O</strong>: Có hẹn</span>
             <span><strong>X</strong>: Nghỉ</span>
             <span><strong>-</strong>: Chưa đăng ký</span>
             <span className={styles.matrixHint}>Nhấn vào ca để đăng ký lịch linh hoạt nhanh</span>
@@ -234,16 +288,24 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                 <div
                   key={slot.id}
                   className={`${styles.slotCell} ${
-                    slot.status === "work"
-                      ? styles.slotCellWork
-                      : slot.status === "off"
-                        ? styles.slotCellOff
-                        : styles.slotCellNone
+                    slot.status === "occupied"
+                      ? styles.slotCellOccupied
+                      : slot.status === "work"
+                        ? styles.slotCellWork
+                        : slot.status === "off"
+                          ? styles.slotCellOff
+                          : styles.slotCellNone
                   }`}
                   onClick={() => handleSlotClick(slot)}
                 >
                   <span className={styles.slotSymbol}>
-                    {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
+                    {slot.status === "occupied"
+                      ? "O"
+                      : slot.status === "work"
+                        ? "V"
+                        : slot.status === "off"
+                          ? "X"
+                          : "-"}
                   </span>
                   <span className={styles.slotTimeSmall}>
                     {slot.startTime} - {slot.endTime}
@@ -264,16 +326,24 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                 <div
                   key={slot.id}
                   className={`${styles.slotCell} ${
-                    slot.status === "work"
-                      ? styles.slotCellWork
-                      : slot.status === "off"
-                        ? styles.slotCellOff
-                        : styles.slotCellNone
+                    slot.status === "occupied"
+                      ? styles.slotCellOccupied
+                      : slot.status === "work"
+                        ? styles.slotCellWork
+                        : slot.status === "off"
+                          ? styles.slotCellOff
+                          : styles.slotCellNone
                   }`}
                   onClick={() => handleSlotClick(slot)}
                 >
                   <span className={styles.slotSymbol}>
-                    {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
+                    {slot.status === "occupied"
+                      ? "O"
+                      : slot.status === "work"
+                        ? "V"
+                        : slot.status === "off"
+                          ? "X"
+                          : "-"}
                   </span>
                   <span className={styles.slotTimeSmall}>
                     {slot.startTime} - {slot.endTime}
@@ -542,6 +612,12 @@ const ScheduleManagement: React.FC = () => {
       const slotStart = parseTimeToMinutes(slot.startTime);
       const slotEnd = parseTimeToMinutes(slot.endTime);
 
+      const hasAppointment = dayAppointments.some(app => {
+        const appStart = getLocalMinutesFromISO(app.appointmentStartTime);
+        const appEnd = getLocalMinutesFromISO(app.appointmentEndTime);
+        return appStart < slotEnd && appEnd > slotStart;
+      });
+
       const hasOff = dayOverrides.some(o => {
         if (o.overrideType || !o.isAvailable) return false;
         const oStart = parseTimeToMinutes(o.startTime);
@@ -551,47 +627,47 @@ const ScheduleManagement: React.FC = () => {
 
       const hasWork =
         !hasOff &&
-        (
-          fixedSchedules.some(s => {
-            if (!s.isAvailable) return false;
-            const sStart = parseTimeToMinutes(s.startTime);
-            const sEnd = parseTimeToMinutes(s.endTime);
-            return sStart < slotEnd && sEnd > slotStart;
-          }) ||
+        (fixedSchedules.some(s => {
+          if (!s.isAvailable) return false;
+          const sStart = parseTimeToMinutes(s.startTime);
+          const sEnd = parseTimeToMinutes(s.endTime);
+          return sStart < slotEnd && sEnd > slotStart;
+        }) ||
           dayOverrides.some(o => {
             if (!o.overrideType || !o.isAvailable) return false;
             const oStart = parseTimeToMinutes(o.startTime);
             const oEnd = parseTimeToMinutes(o.endTime);
             return oStart < slotEnd && oEnd > slotStart;
-          })
-        );
+          }));
+
+      const status =
+        hasAppointment ? ("occupied" as const)
+        : hasOff ? ("off" as const)
+        : hasWork ? ("work" as const)
+        : ("none" as const);
 
       return {
         ...slot,
-        status: hasOff ? ("off" as const) : hasWork ? ("work" as const) : ("none" as const),
+        status,
       };
     });
 
-    const hasDayOff = slotStatuses.some(s => s.status === "off");
+    const appointmentCount = dayAppointments.length;
+    const hasDayOffOnly = appointmentCount === 0 && slotStatuses.some(s => s.status === "off");
     const morningSlots = slotStatuses.filter(s => s.session === "morning");
     const afternoonSlots = slotStatuses.filter(s => s.session === "afternoon");
 
     const isToday = getLocalDateKey(date) === getLocalDateKey(new Date());
-    const appointmentCount = dayAppointments.length;
 
     const dayClasses = [
       styles.calendarDay,
       selectedDate && getLocalDateKey(selectedDate) === dateKey ? styles.selected : "",
       dayOverrides.length > 0 ? styles.hasOverride : "",
-      hasDayOff ? styles.dayOff : "",
+      hasDayOffOnly ? styles.dayOff : "",
       appointmentCount > 0 ? styles.hasAppointment : "",
       isToday ? styles.today : "",
       options?.isOutsideMonth ? styles.outsideMonth : ""
     ].filter(Boolean).join(" ");
-
-    const sortedAppointments = [...dayAppointments].sort((a, b) => 
-      new Date(a.appointmentStartTime).getTime() - new Date(b.appointmentStartTime).getTime()
-    );
 
     return (
       <div
@@ -616,15 +692,23 @@ const ScheduleManagement: React.FC = () => {
                 <span
                   key={slot.id}
                   className={`${styles.daySlotSymbol} ${
-                    slot.status === "work"
-                      ? styles.daySlotWork
-                      : slot.status === "off"
-                        ? styles.daySlotOff
-                        : styles.daySlotNone
+                    slot.status === "occupied"
+                      ? styles.daySlotOccupied
+                      : slot.status === "work"
+                        ? styles.daySlotWork
+                        : slot.status === "off"
+                          ? styles.daySlotOff
+                          : styles.daySlotNone
                   }`}
                   title={`${slot.label}: ${slot.startTime}-${slot.endTime}`}
                 >
-                  {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
+                  {slot.status === "occupied"
+                    ? "O"
+                    : slot.status === "work"
+                      ? "V"
+                      : slot.status === "off"
+                        ? "X"
+                        : "-"}
                 </span>
               ))}
             </div>
@@ -636,72 +720,29 @@ const ScheduleManagement: React.FC = () => {
                 <span
                   key={slot.id}
                   className={`${styles.daySlotSymbol} ${
-                    slot.status === "work"
-                      ? styles.daySlotWork
-                      : slot.status === "off"
-                        ? styles.daySlotOff
-                        : styles.daySlotNone
+                    slot.status === "occupied"
+                      ? styles.daySlotOccupied
+                      : slot.status === "work"
+                        ? styles.daySlotWork
+                        : slot.status === "off"
+                          ? styles.daySlotOff
+                          : styles.daySlotNone
                   }`}
                   title={`${slot.label}: ${slot.startTime}-${slot.endTime}`}
                 >
-                  {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
+                  {slot.status === "occupied"
+                    ? "O"
+                    : slot.status === "work"
+                      ? "V"
+                      : slot.status === "off"
+                        ? "X"
+                        : "-"}
                 </span>
               ))}
             </div>
           </div>
         </div>
 
-        {appointmentCount > 0 && (
-          <div className={styles.appointmentsPreview}>
-            <div className={styles.appointmentsPreviewHeader}>
-              <Users size={12} />
-              <span>{appointmentCount} cuộc hẹn</span>
-            </div>
-            <div className={styles.appointmentsList}>
-              {sortedAppointments.slice(0, 3).map((app, idx) => {
-                const appTime = new Date(app.appointmentStartTime);
-                const appEndTime = new Date(app.appointmentEndTime);
-                const timeStr = appTime.toLocaleTimeString("vi-VN", {
-                  hour: "2-digit",
-                  minute: "2-digit"
-                });
-                const endTimeStr = appEndTime.toLocaleTimeString("vi-VN", {
-                  hour: "2-digit",
-                  minute: "2-digit"
-                });
-                const tooltipText = `${timeStr} - ${endTimeStr}\n${app.patientName}\n${app.statusDisplayName || app.statusCode}`;
-                return (
-                  <div 
-                    key={app.id} 
-                    className={styles.appointmentPreviewItem} 
-                    title={tooltipText}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openDayDetails(date);
-                    }}
-                  >
-                    <div className={styles.appointmentPreviewTime}>{timeStr}</div>
-                    <div className={styles.appointmentPreviewPatient}>
-                      <User size={10} />
-                      <span>{app.patientName.length > 12 ? app.patientName.substring(0, 12) + '...' : app.patientName}</span>
-                    </div>
-                  </div>
-                );
-              })}
-              {appointmentCount > 3 && (
-                <div 
-                  className={styles.appointmentMore}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openDayDetails(date);
-                  }}
-                >
-                  +{appointmentCount - 3} cuộc hẹn khác
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     );
   };

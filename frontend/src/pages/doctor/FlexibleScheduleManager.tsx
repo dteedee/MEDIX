@@ -6,6 +6,7 @@ import { scheduleService } from '../../services/scheduleService';
 import { X, Plus, Edit, Trash2, Clock, Calendar, AlertCircle } from 'lucide-react';
 import styles from '../../styles/doctor/FlexibleScheduleManager.module.css';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 
 interface Props {
   schedules: DoctorSchedule[];
@@ -35,6 +36,7 @@ const timeSlots = [
 
 const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClose, onRefresh, initialDate, initialStartTime, initialEndTime }) => {
   const { isBanned } = useAuth();
+  const { showToast } = useToast();
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingOverride, setEditingOverride] = useState<ScheduleOverride | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,6 +103,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
         await scheduleService.deleteScheduleOverride(overrideId);
         Swal.fire('Đã xóa!', 'Lịch linh hoạt đã được xóa.', 'success');
         onRefresh();
+        showToast('Đã xóa lịch linh hoạt thành công.', 'success');
       } catch (err: any) {
         let errorMessage = 'Không thể xóa lịch. Vui lòng thử lại.'; 
 
@@ -118,6 +121,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
           icon: 'error',
           confirmButtonText: 'Đã hiểu'
         });
+        showToast(errorMessage, 'error');
       }
     }
   };
@@ -168,6 +172,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
 
         if (!existingNghiDays.has(data.overrideDate) && existingNghiDays.size >= 2) {
           Swal.fire('Lỗi!', 'Bạn chỉ được phép đăng ký lịch nghỉ tối đa trong 2 ngày khác nhau.', 'error');
+          showToast('Bạn chỉ được phép đăng ký lịch nghỉ tối đa trong 2 ngày khác nhau.', 'warning');
           return;
         }
       }
@@ -189,6 +194,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
             confirmButtonText: 'Đã hiểu'
           });
           setIsSubmitting(false);
+          showToast('Bạn đã đăng ký ca linh hoạt này rồi, không thể tạo trùng.', 'warning');
           return;
         }
       }
@@ -205,9 +211,11 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
       if (editingOverride) {
         await scheduleService.updateScheduleOverride(editingOverride.id, payload);
         Swal.fire('Thành công!', 'Lịch linh hoạt đã được cập nhật.', 'success');
+        showToast('Lịch linh hoạt đã được cập nhật.', 'success');
       } else {
         await scheduleService.createScheduleOverride(payload);
         Swal.fire('Thành công!', 'Lịch linh hoạt đã được thêm mới.', 'success');
+        showToast('Lịch linh hoạt đã được thêm mới.', 'success');
       }
       onRefresh();
       setIsFormVisible(false);
@@ -243,6 +251,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
         icon: 'error',
         confirmButtonText: 'Đã hiểu'
       });
+      showToast(errorMessage, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -276,42 +285,102 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
             </div>
             <div className={styles.overrideListContainer}>
               {overrides.filter(o => o.isAvailable).length > 0 ? (
-                overrides
-                  .filter(o => o.isAvailable)
-                  .sort((a, b) => {
-                    const dateComparison = new Date(b.overrideDate).getTime() - new Date(a.overrideDate).getTime();
-                    if (dateComparison !== 0) {
-                      return dateComparison;
-                    }
-                    return b.startTime.localeCompare(a.startTime);
-                  })
-                  .map(override => (
-                    <div key={override.id} className={`${styles.overrideListItem} ${override.overrideType ? styles.available : styles.unavailable}`}>
-                      <div className={styles.overrideInfo}>
-                        <div className={styles.overrideDate}>
-                          <Calendar size={16} />
-                          <span>{new Date(override.overrideDate).toLocaleDateString('vi-VN')}</span>
-                        </div>
-                        <div className={styles.overrideTime}>
-                          <Clock size={16} />
-                          <span>{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</span>
-                        </div>
-                        <span className={`${styles.overrideStatus} ${override.overrideType ? styles.statusAvailable : styles.statusUnavailable}`}>
-                          {override.overrideType
-                            ? `Tăng ca${override.reason ? ` - ${override.reason}` : ''}`
-                            : `Nghỉ${override.reason ? ` - ${override.reason}` : ''}`}
-                        </span>
-                      </div>
-                      <div className={styles.overrideActions}>
-                        <button onClick={() => handleEdit(override)} className={`${styles.actionBtn} ${styles.editBtn}`} disabled={isBanned}>
-                          <Edit size={16} />
-                        </button>
-                        <button onClick={() => handleDelete(override.id)} className={`${styles.actionBtn} ${styles.deleteBtn}`} disabled={isBanned}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                (() => {
+                  const sorted = overrides
+                    .filter(o => o.isAvailable)
+                    .sort((a, b) => {
+                      const dateComparison = new Date(a.overrideDate).getTime() - new Date(b.overrideDate).getTime();
+                      if (dateComparison !== 0) {
+                        return dateComparison;
+                      }
+                      return a.startTime.localeCompare(b.startTime);
+                    });
+
+                  const grouped: { [date: string]: ScheduleOverride[] } = {};
+                  sorted.forEach(o => {
+                    if (!grouped[o.overrideDate]) grouped[o.overrideDate] = [];
+                    grouped[o.overrideDate].push(o);
+                  });
+
+                  const dateKeys = Object.keys(grouped).sort();
+
+                  return (
+                    <div className={styles.overrideTableWrapper}>
+                      <table className={styles.overrideTable}>
+                        <thead>
+                          <tr>
+                            <th>Ngày</th>
+                            <th>Ca</th>
+                            <th>Giờ</th>
+                            <th>Loại</th>
+                            <th>Lý do</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dateKeys.map(dateKey => {
+                            const list = grouped[dateKey];
+                            const dateLabel = new Date(dateKey).toLocaleDateString('vi-VN', {
+                              weekday: 'short',
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            });
+                            return list.map((override, index) => (
+                              <tr key={override.id} className={override.overrideType ? styles.rowIncrease : styles.rowOff}>
+                                {index === 0 && (
+                                  <td rowSpan={list.length} className={styles.dateCell}>
+                                    <div className={styles.dateChip}>
+                                      <Calendar size={14} />
+                                      <span>{dateLabel}</span>
+                                    </div>
+                                    <div className={styles.dateSummary}>
+                                      {list.filter(o => o.overrideType).length} tăng ca · {list.filter(o => !o.overrideType).length} nghỉ
+                                    </div>
+                                  </td>
+                                )}
+                                {!index && null}
+                                <td className={styles.slotCell}>
+                                  {timeSlots.find(t => t.startTime === override.startTime.substring(0, 5))?.label.split(' ')[1] || ''}
+                                </td>
+                                <td className={styles.timeCell}>
+                                  <Clock size={14} />
+                                  <span>{override.startTime.substring(0, 5)} - {override.endTime.substring(0, 5)}</span>
+                                </td>
+                                <td>
+                                  <span className={`${styles.overrideStatus} ${override.overrideType ? styles.statusAvailable : styles.statusUnavailable}`}>
+                                    {override.overrideType ? 'Tăng ca' : 'Nghỉ'}
+                                  </span>
+                                </td>
+                                <td className={styles.reasonCell}>
+                                  {override.reason || <span className={styles.reasonPlaceholder}>—</span>}
+                                </td>
+                                <td className={styles.actionsCell}>
+                                  <div className={styles.overrideActions}>
+                                    <button
+                                      onClick={() => handleEdit(override)}
+                                      className={`${styles.actionBtn} ${styles.editBtn}`}
+                                      disabled={isBanned}
+                                    >
+                                      <Edit size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDelete(override.id)}
+                                      className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                                      disabled={isBanned}
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ));
+                          })}
+                        </tbody>
+                      </table>
                     </div>
-                  ))
+                  );
+                })()
               ) : (
                 <div className={styles.noOverrides}>
                   <Calendar size={48} />
@@ -348,46 +417,16 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
                       return true;
                     }
                   })} 
-                  min={(() => {
-                    const overrideType = getValues('overrideType');
-                    if (Number(overrideType) === 0) {
-                      const minDate = new Date();
-                      minDate.setDate(minDate.getDate() + 2);
-                      return minDate.toISOString().split('T')[0];
-                    }
-                    return new Date().toISOString().split('T')[0];
-                  })()}
+                  // Cho phép chọn bất kỳ ngày từ hôm nay trở đi; rule "nghỉ phải cách 2 ngày"
+                  // sẽ được kiểm tra bằng validate + khi submit, không tự động đổi ngày.
+                  min={new Date().toISOString().split('T')[0]}
                   onChange={(e) => {
                     register('overrideDate').onChange(e);
-                    const overrideType = getValues('overrideType');
-                    if (Number(overrideType) === 0) {
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const selectedDate = new Date(e.target.value);
-                      selectedDate.setHours(0, 0, 0, 0);
-                      const minDate = new Date(today);
-                      minDate.setDate(today.getDate() + 2);
-                      if (selectedDate < minDate) {
-                        Swal.fire({
-                          title: 'Lỗi!',
-                          html: `Ngày nghỉ phải cách hôm nay ít nhất 2 ngày. Ngày sớm nhất có thể chọn là <b>${minDate.toLocaleDateString('vi-VN', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}</b>.`,
-                          icon: 'warning',
-                          confirmButtonText: 'Đã hiểu'
-                        });
-                        e.target.value = minDate.toISOString().split('T')[0];
-                        setValue('overrideDate', minDate.toISOString().split('T')[0]);
-                      }
-                    }
                   }}
                   className={styles.formInput}
                 />
                 {errors.overrideDate && <p className={styles.errorText}>{errors.overrideDate.message}</p>}
-                {Number(overrideType) === 0 && (
+                {Number(overrideType) === 0 && !errors.overrideDate && (
                   <p className={styles.formHint}>
                     <AlertCircle size={14} />
                     Ngày nghỉ phải cách hôm nay ít nhất 2 ngày
@@ -400,22 +439,12 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
                   {...register('overrideType', { required: 'Vui lòng chọn loại' })}
                   onChange={(e) => {
                     register('overrideType').onChange(e);
-                    const overrideType = Number(e.target.value);
+                    // Không tự động thay đổi ngày khi chuyển sang "Nghỉ" để tránh nhầm lẫn.
+                    // Chỉ cập nhật ràng buộc tối thiểu là hôm nay.
                     const dateInput = document.querySelector('input[name="overrideDate"]') as HTMLInputElement;
                     if (dateInput) {
-                      if (overrideType === 0) {
-                        const minDate = new Date();
-                        minDate.setDate(minDate.getDate() + 2);
-                        dateInput.min = minDate.toISOString().split('T')[0];
-                        const currentDate = new Date(dateInput.value || minDate.toISOString().split('T')[0]);
-                        if (currentDate < minDate) {
-                          dateInput.value = minDate.toISOString().split('T')[0];
-                          setValue('overrideDate', minDate.toISOString().split('T')[0]);
-                        }
-                      } else {
-                        const today = new Date();
-                        dateInput.min = today.toISOString().split('T')[0];
-                      }
+                      const today = new Date();
+                      dateInput.min = today.toISOString().split('T')[0];
                     }
                   }}
                   className={styles.formSelect}

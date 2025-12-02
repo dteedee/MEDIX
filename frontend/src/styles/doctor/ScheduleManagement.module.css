@@ -365,6 +365,57 @@
   transform: scale(1.3);
 }
 
+.daySessionMatrix {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.daySessionRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.daySessionLabel {
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 36px;
+}
+
+.daySessionSlots {
+  display: flex;
+  gap: 4px;
+}
+
+.daySlotSymbol {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.daySlotWork {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.daySlotOff {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.daySlotNone {
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
 /* Appointments Preview */
 .appointmentsPreview {
   margin-top: auto;

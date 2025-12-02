@@ -20,11 +20,18 @@ namespace Medix.API.Business.Helper
         // Ghi ra JSON (serialize): chuyển UTC sang giờ Việt Nam và format kèm offset
         public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
         {
-            // Nếu gốc là UTC, cộng 7 giờ
-            var vietnamTime = value.Kind == DateTimeKind.Utc ? value.AddHours(7) : value;
-            // Format đúng chuẩn ISO 8601 kèm offset '+07:00'
+            // Lấy timezone Việt Nam
+            var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
+            // Convert từ UTC sang giờ VN
+            var vietnamTime = value.Kind == DateTimeKind.Utc
+                ? TimeZoneInfo.ConvertTimeFromUtc(value, vnTimeZone)
+                : TimeZoneInfo.ConvertTime(value, vnTimeZone);
+
+            // Format ISO 8601 +07:00
             var formatted = vietnamTime.ToString("yyyy-MM-dd'T'HH:mm:ss.fff", CultureInfo.InvariantCulture) + "+07:00";
             writer.WriteStringValue(formatted);
         }
+
     }
 }

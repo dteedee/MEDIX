@@ -1610,11 +1610,29 @@
   font-size: 18px;
 }
 
+.prescriptionDetails {
+  padding-left: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .prescriptionInstructions {
   font-size: 14px;
   color: #334155;
   line-height: 1.6;
-  padding-left: 28px;
+}
+
+.prescriptionMeta {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.prescriptionLabel {
+  font-weight: 600;
+  color: #475569;
+  margin-right: 6px;
 }
 
 @keyframes slideInDown {

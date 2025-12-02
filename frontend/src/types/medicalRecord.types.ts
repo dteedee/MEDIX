@@ -52,6 +52,7 @@ export interface MedicalRecordDto {
   chiefComplaint: string;
   diagnosis: string;
   treatmentPlan: string;
+  prescription?: PrescriptionDto[];
   attatchments: AttatchmentDto[];
 }
 
@@ -64,6 +65,8 @@ export interface PrescriptionDto {
   id: string;
   medicationName: string;
   instructions: string;
+  frequency: string;
+  duration: string;
 }
 
 export interface AttatchmentDto {

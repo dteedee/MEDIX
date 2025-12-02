@@ -105,6 +105,13 @@ namespace Medix.API.Presentation.Controllers
 
             var user = await _userService.GetByIdAsync(userId);
             var doctor = await _doctorService.GetDoctorByIdAsync((Guid)dto.DoctorId);
+            if (doctor.IsAcceptingAppointments== false)
+            {
+                return BadRequest(new
+                {
+                    message = "Bác sĩ hiện không nhận lịch hẹn. Vui lòng chọn bác sĩ khác.",
+                });
+            }
 
             var patient = await _patientService.GetByUserIdAsync(userId);
             var wallet = await _walletService.GetWalletByUserIdAsync(userId);
@@ -215,8 +222,12 @@ namespace Medix.API.Presentation.Controllers
             BackgroundJob.Schedule<IPatientHealthReminderService>(
                    service => service.ExecuteSendReminderAsync(x),
                   DateTime.Now);
+            BackgroundJob.Schedule<IAppointmentService>(
+                service => service.CheckisAppointmentCompleted(dto.Result.Id)
+                , DateTime.UtcNow.AddHours(7).AddMinutes(3));
 
-       var updated = await _service.UpdateAsync(updateDto);
+
+            var updated = await _service.UpdateAsync(updateDto);
             if (updated == null)
                 return NotFound();
 

@@ -157,6 +157,23 @@ export default function EMRTimeline() {
         const tempDiv = document.createElement('div');
         tempDiv.style.padding = '20px';
         tempDiv.style.background = 'white';
+        const prescriptionHtml = record.prescription && record.prescription.length > 0 
+            ? `
+                <div style="margin-bottom: 15px;">
+                    <strong>Đơn thuốc:</strong>
+                    <ul style="margin-top: 10px; padding-left: 20px;">
+                        ${record.prescription.map(p => `
+                            <li style="margin-bottom: 10px;">
+                                <strong>${p.medicationName}</strong><br/>
+                                Hướng dẫn: ${p.instructions || 'N/A'}<br/>
+                                ${p.frequency ? `Tần suất: ${p.frequency}<br/>` : ''}
+                                ${p.duration ? `Thời gian: ${p.duration}` : ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `
+            : '';
         tempDiv.innerHTML = `
             <h2 style="text-align: center; margin-bottom: 20px;">Hồ sơ khám bệnh</h2>
             <div style="margin-bottom: 15px;">
@@ -174,6 +191,7 @@ export default function EMRTimeline() {
             <div style="margin-bottom: 15px;">
                 <strong>Kế hoạch điều trị:</strong> ${record.treatmentPlan || 'N/A'}
             </div>
+            ${prescriptionHtml}
         `;
         document.body.appendChild(tempDiv);
 
@@ -193,6 +211,23 @@ export default function EMRTimeline() {
     const handlePrintRecord = (record: MedicalRecordDto) => {
         const printWindow = window.open('', '_blank');
         if (printWindow) {
+            const prescriptionHtml = record.prescription && record.prescription.length > 0 
+                ? `
+                    <div class="info-row">
+                        <span class="label">Đơn thuốc:</span>
+                        <ul style="margin-top: 10px; padding-left: 20px;">
+                            ${record.prescription.map(p => `
+                                <li style="margin-bottom: 10px;">
+                                    <strong>${p.medicationName}</strong><br/>
+                                    Hướng dẫn: ${p.instructions || 'N/A'}<br/>
+                                    ${p.frequency ? `Tần suất: ${p.frequency}<br/>` : ''}
+                                    ${p.duration ? `Thời gian: ${p.duration}` : ''}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `
+                : '';
             printWindow.document.write(`
                 <html>
                     <head>
@@ -221,6 +256,7 @@ export default function EMRTimeline() {
                         <div class="info-row">
                             <span class="label">Kế hoạch điều trị:</span> ${record.treatmentPlan || 'N/A'}
                         </div>
+                        ${prescriptionHtml}
                     </body>
                 </html>
             `);
@@ -719,6 +755,39 @@ export default function EMRTimeline() {
                                                         {item.treatmentPlan || 'N/A'}
                                                     </div>
                                                 </div>
+                                                {item.prescription && item.prescription.length > 0 && (
+                                                    <div className={styles.recordSection}>
+                                                        <div className={styles.recordSectionHeader}>
+                                                            <i className="bi bi-capsule"></i>
+                                                            <span>Đơn thuốc</span>
+                                                        </div>
+                                                        <div className={styles.prescriptionList}>
+                                                            {item.prescription.map((medication) => (
+                                                                <div key={medication.id} className={styles.prescriptionItem}>
+                                                                    <div className={styles.prescriptionName}>
+                                                                        <i className="bi bi-capsule-pill"></i>
+                                                                        <strong>{medication.medicationName}</strong>
+                                                                    </div>
+                                                                    <div className={styles.prescriptionDetails}>
+                                                                        <div className={styles.prescriptionInstructions}>
+                                                                            <span className={styles.prescriptionLabel}>Hướng dẫn:</span> {medication.instructions}
+                                                                        </div>
+                                                                        {medication.frequency && (
+                                                                            <div className={styles.prescriptionMeta}>
+                                                                                <span className={styles.prescriptionLabel}>Tần suất:</span> {medication.frequency}
+                                                                            </div>
+                                                                        )}
+                                                                        {medication.duration && (
+                                                                            <div className={styles.prescriptionMeta}>
+                                                                                <span className={styles.prescriptionLabel}>Thời gian:</span> {medication.duration}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 {item.attatchments && item.attatchments.length > 0 && (
                                                     <div className={`${styles.recordSection} pdf-exclude`}>
                                                         <div className={styles.recordSectionHeader}>
@@ -795,6 +864,14 @@ export default function EMRTimeline() {
                                             <span className={styles.listItemLabel}>Triệu chứng:</span>
                                             <span className={styles.listItemValue}>{item.chiefComplaint || 'N/A'}</span>
                                         </div>
+                                        {item.prescription && item.prescription.length > 0 && (
+                                            <div className={styles.listItemSection}>
+                                                <span className={styles.listItemLabel}>Đơn thuốc:</span>
+                                                <span className={styles.listItemValue}>
+                                                    {item.prescription.map(p => p.medicationName).join(', ')}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className={styles.listItemFooter}>
                                         <button 
@@ -897,8 +974,15 @@ export default function EMRTimeline() {
                                                                     ${recordDetails.prescription && recordDetails.prescription.length > 0 ? `
                                                                         <div class="info-row">
                                                                             <span class="label">Đơn thuốc:</span>
-                                                                            <ul>
-                                                                                ${recordDetails.prescription.map(p => `<li>${p.medicationName} - ${p.instructions}</li>`).join('')}
+                                                                            <ul style="margin-top: 10px; padding-left: 20px;">
+                                                                                ${recordDetails.prescription.map(p => `
+                                                                                    <li style="margin-bottom: 10px;">
+                                                                                        <strong>${p.medicationName}</strong><br/>
+                                                                                        Hướng dẫn: ${p.instructions || 'N/A'}<br/>
+                                                                                        ${p.frequency ? `Tần suất: ${p.frequency}<br/>` : ''}
+                                                                                        ${p.duration ? `Thời gian: ${p.duration}` : ''}
+                                                                                    </li>
+                                                                                `).join('')}
                                                                             </ul>
                                                                         </div>
                                                                     ` : ''}
@@ -971,8 +1055,20 @@ export default function EMRTimeline() {
                                                                     <i className="bi bi-capsule-pill"></i>
                                                                     <strong>{medication.medicationName}</strong>
                                                                 </div>
-                                                                <div className={styles.prescriptionInstructions}>
-                                                                    {medication.instructions}
+                                                                <div className={styles.prescriptionDetails}>
+                                                                    <div className={styles.prescriptionInstructions}>
+                                                                        <span className={styles.prescriptionLabel}>Hướng dẫn:</span> {medication.instructions}
+                                                                    </div>
+                                                                    {medication.frequency && (
+                                                                        <div className={styles.prescriptionMeta}>
+                                                                            <span className={styles.prescriptionLabel}>Tần suất:</span> {medication.frequency}
+                                                                        </div>
+                                                                    )}
+                                                                    {medication.duration && (
+                                                                        <div className={styles.prescriptionMeta}>
+                                                                            <span className={styles.prescriptionLabel}>Thời gian:</span> {medication.duration}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         ))}

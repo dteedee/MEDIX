@@ -164,8 +164,10 @@ namespace Medix.API.Presentation.Controllers.Classification
                         .Select(p => new
                         {
                             p.Id,
-                            p.Medication?.MedicationName,
+                            p.MedicationName,
                             p.Instructions,
+                            p.Frequency,
+                            p.Duration
                         }).ToList(),
                     Attatchments = record.MedicalRecordAttachments
                         .Select(a => new

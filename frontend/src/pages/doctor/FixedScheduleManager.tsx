@@ -3,6 +3,8 @@ import { DoctorSchedule, CreateSchedulePayload } from '../../types/schedule';
 import { scheduleService } from '../../services/scheduleService';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../contexts/AuthContext';
+import { X, Clock, CheckCircle, XCircle, Edit, Trash2, Plus } from 'lucide-react';
+import styles from '../../styles/doctor/FixedScheduleManager.module.css';
 
 interface FixedScheduleManagerProps {
   schedules: DoctorSchedule[];
@@ -26,7 +28,6 @@ const timeSlots = [
   { label: 'Ca 6 (14:00 - 14:50)', startTime: '14:00', endTime: '14:50' },
   { label: 'Ca 7 (15:00 - 15:50)', startTime: '15:00', endTime: '15:50' },
   { label: 'Ca 8 (16:00 - 16:50)', startTime: '16:00', endTime: '16:50' },
-
 ];
 
 const getDayLabel = (dayValue: number) => daysOfWeek.find(d => d.value === dayValue)?.label || 'Không xác định';
@@ -35,7 +36,7 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
   const { isBanned } = useAuth();
   const [isAdding, setIsAdding] = useState(false);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
-  const [selectedDay, setSelectedDay] = useState<number>(1); // Mặc định chọn Thứ Hai
+  const [selectedDay, setSelectedDay] = useState<number>(1);
   const [formState, setFormState] = useState<CreateSchedulePayload>({
     dayOfWeek: 1,
     startTime: timeSlots[0].startTime,
@@ -52,7 +53,6 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
         return hA - hB || mA - mB;
       });
   }, [schedules, selectedDay]);
-
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -73,9 +73,9 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
       }));
     }
   };
+
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
-
 
     if (formState.startTime >= formState.endTime) {
       Swal.fire('Lỗi!', 'Giờ bắt đầu phải trước giờ kết thúc.', 'error');
@@ -83,7 +83,6 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
     }
 
     const schedulesForDay = schedules.filter(s => s.dayOfWeek === formState.dayOfWeek && s.id !== editingScheduleId);
-
 
     const isOverlap = schedulesForDay.some(existingSchedule =>
       formState.startTime < existingSchedule.endTime && formState.endTime > existingSchedule.startTime
@@ -116,7 +115,6 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
       setEditingScheduleId(null);
       setIsAdding(false);
     } catch (err: any) {
-
       let errorMessage = 'Lưu lịch làm việc thất bại.'; 
       if (err.response && err.response.data) {
         if (typeof err.response.data === 'string') {
@@ -156,7 +154,6 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
         Swal.fire('Đã xóa!', 'Lịch làm việc đã được xóa.', 'success');
         onRefresh();
       } catch (err: any) {
-
         let errorMessage = 'Xóa lịch làm việc thất bại.'; 
         if (err.response && err.response.data) {
           if (typeof err.response.data === 'string') {
@@ -183,88 +180,146 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
     setEditingScheduleId(schedule.id);
     setFormState({
       dayOfWeek: schedule.dayOfWeek,
-      startTime: schedule.startTime.substring(0, 5), // "HH:mm:ss" -> "HH:mm"
-      endTime: schedule.endTime.substring(0, 5),   // "HH:mm:ss" -> "HH:mm"
+      startTime: schedule.startTime.substring(0, 5),
+      endTime: schedule.endTime.substring(0, 5),
       isAvailable: schedule.isAvailable,
     });
   };
 
   const renderForm = () => (
-    <form onSubmit={handleSave} className="p-4 bg-gray-100 rounded-lg mt-4">
-      <h4 className="font-semibold mb-2">{editingScheduleId ? 'Chỉnh sửa lịch' : 'Thêm lịch mới'}</h4>
-      <div className="grid grid-cols-2 gap-4 items-center">
-        <div className="font-medium text-gray-700">
-          Ngày: <span className="font-bold text-blue-600">{getDayLabel(formState.dayOfWeek)}</span>
+    <form onSubmit={handleSave} className={styles.scheduleForm}>
+      <h4 className={styles.formTitle}>{editingScheduleId ? 'Chỉnh sửa lịch' : 'Thêm lịch mới'}</h4>
+      <div className={styles.formGrid}>
+        <div className={styles.formGroup}>
+          <div className={styles.dayDisplay}>
+            Ngày: <span className={styles.dayName}>{getDayLabel(formState.dayOfWeek)}</span>
+          </div>
         </div>
-        <div className="flex items-center">
-          <input type="checkbox" id="isAvailable" name="isAvailable" checked={formState.isAvailable} onChange={handleInputChange} className="mr-2" />
-          <label htmlFor="isAvailable">Sẵn sàng</label>
+        <div className={styles.formGroup}>
+          <div className={styles.checkboxGroup}>
+            <input 
+              type="checkbox" 
+              id="isAvailable" 
+              name="isAvailable" 
+              checked={formState.isAvailable} 
+              onChange={handleInputChange}
+            />
+            <label htmlFor="isAvailable">Sẵn sàng</label>
+          </div>
         </div>
-        <select name="timeSlot" value={formState.startTime} onChange={handleTimeSlotChange} className="p-2 border rounded col-span-2">
-          {timeSlots.map(slot => <option key={slot.startTime} value={slot.startTime}>{slot.label}</option>)}
-        </select>
+        <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+          <label className={styles.formLabel}>Ca làm việc</label>
+          <select 
+            name="timeSlot" 
+            value={formState.startTime} 
+            onChange={handleTimeSlotChange} 
+            className={styles.formSelect}
+          >
+            {timeSlots.map(slot => <option key={slot.startTime} value={slot.startTime}>{slot.label}</option>)}
+          </select>
+        </div>
       </div>
-      <div className="mt-4 flex gap-2">
-        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Lưu</button>
-        <button type="button" onClick={() => { setIsAdding(false); setEditingScheduleId(null); }} className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Hủy</button>
+      <div className={styles.formActions}>
+        <button type="submit" className={styles.saveButton}>Lưu</button>
+        <button 
+          type="button" 
+          onClick={() => { setIsAdding(false); setEditingScheduleId(null); }} 
+          className={styles.cancelButton}
+        >
+          Hủy
+        </button>
       </div>
     </form>
   );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-2xl font-bold">Quản lý lịch làm việc cố định</h3>
-          <button onClick={onClose} className="text-2xl font-bold">&times;</button>
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <h3 className={styles.modalTitle}>Quản lý lịch làm việc cố định</h3>
+          <button onClick={onClose} className={styles.closeButton}>
+            <X size={24} />
+          </button>
         </div>
         
-        {/* Thanh chọn ngày trong tuần */}
-        <div className="flex border-b mb-4">
+        <div className={styles.dayTabs}>
           {daysOfWeek.map(day => (
             <button
               key={day.value}
               onClick={() => { setSelectedDay(day.value); setIsAdding(false); setEditingScheduleId(null); }}
-              className={`flex-1 py-2 text-sm font-medium ${selectedDay === day.value ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}
+              className={`${styles.dayTab} ${selectedDay === day.value ? styles.active : ''}`}
             >
               {day.label}
             </button>
           ))}
         </div>
 
-        <div className="overflow-y-auto flex-grow px-1">
+        <div className={styles.schedulesList}>
           {schedulesForSelectedDay.length > 0 ? (
-            <ul className="space-y-3">
+            <>
               {schedulesForSelectedDay.map(schedule => (
                 editingScheduleId === schedule.id ? (
-                  <li key={schedule.id}>{renderForm()}</li>
+                  <div key={schedule.id}>{renderForm()}</div>
                 ) : (
-                  <li key={schedule.id} className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors">
-                    <div>
-                      <p className="font-bold text-lg">{schedule.startTime.substring(0, 5)} - {schedule.endTime.substring(0, 5)}</p>
-                      <p className={`text-sm font-semibold ${schedule.isAvailable ? 'text-green-600' : 'text-red-600'}`}>
-                        {schedule.isAvailable ? 'Sẵn sàng' : 'Không sẵn sàng'}
+                  <div key={schedule.id} className={styles.scheduleItem}>
+                    <div className={styles.scheduleInfo}>
+                      <p className={styles.scheduleTime}>
+                        <Clock size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+                        {schedule.startTime.substring(0, 5)} - {schedule.endTime.substring(0, 5)}
                       </p>
+                      <span className={`${styles.scheduleStatus} ${schedule.isAvailable ? styles.available : styles.unavailable}`}>
+                        {schedule.isAvailable ? (
+                          <>
+                            <CheckCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
+                            Sẵn sàng
+                          </>
+                        ) : (
+                          <>
+                            <XCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
+                            Không sẵn sàng
+                          </>
+                        )}
+                      </span>
                     </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => startEditing(schedule)} className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600" disabled={isBanned}>Sửa</button>
-                      <button onClick={() => handleDelete(schedule.id)} className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700" disabled={isBanned}>Xóa</button>
+                    <div className={styles.scheduleActions}>
+                      <button 
+                        onClick={() => startEditing(schedule)} 
+                        className={`${styles.actionButton} ${styles.editButton}`} 
+                        disabled={isBanned}
+                      >
+                        <Edit size={16} />
+                        Sửa
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(schedule.id)} 
+                        className={`${styles.actionButton} ${styles.deleteButton}`} 
+                        disabled={isBanned}
+                      >
+                        <Trash2 size={16} />
+                        Xóa
+                      </button>
                     </div>
-                  </li>
+                  </div>
                 )
               ))}
-            </ul>
+            </>
           ) : (
-            <p className="text-center text-gray-500 py-8">Chưa có lịch làm việc cho ngày này.</p>
+            <div className={styles.emptyState}>
+              <p>Chưa có lịch làm việc cho ngày này.</p>
+            </div>
           )}
 
           {isAdding && !editingScheduleId && renderForm()}
           {!isAdding && !editingScheduleId && (
-            <button onClick={() => {
-              setIsAdding(true);
-              setFormState({ dayOfWeek: selectedDay, startTime: timeSlots[0].startTime, endTime: timeSlots[0].endTime, isAvailable: true });
-            }} className="w-full mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-            disabled={isBanned}>
+            <button 
+              onClick={() => {
+                setIsAdding(true);
+                setFormState({ dayOfWeek: selectedDay, startTime: timeSlots[0].startTime, endTime: timeSlots[0].endTime, isAvailable: true });
+              }} 
+              className={styles.addButton}
+              disabled={isBanned}
+            >
+              <Plus size={18} />
               Thêm ca làm việc cho {getDayLabel(selectedDay)}
             </button>
           )}

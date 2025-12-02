@@ -640,8 +640,8 @@ export const PatientDashboard: React.FC = () => {
               </div>
             </div>
             {reminders.length > 0 ? (
-              <>
-                {reminders.slice(0, 2).map((reminder, index) => {
+              <div className={styles.reminderList}>
+                {reminders.map((reminder, index) => {
                   const now = new Date();
                   const scheduledDate = reminder.scheduledDate ? new Date(reminder.scheduledDate) : now;
                   const hoursUntil = Math.floor((scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60));
@@ -660,16 +660,7 @@ export const PatientDashboard: React.FC = () => {
                     />
                   );
                 })}
-                {reminders.length > 2 && (
-                  <button 
-                    className={styles.viewAllRemindersBtn}
-                    onClick={() => navigate('/app/patient/appointments')}
-                  >
-                    Xem thêm {reminders.length - 2} nhắc nhở
-                    <i className="bi bi-arrow-right"></i>
-                  </button>
-                )}
-              </>
+              </div>
             ) : (
               <div className={styles.emptyState}>
                 <div className={styles.emptyIcon}>

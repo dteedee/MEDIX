@@ -1509,7 +1509,10 @@
   z-index: 2;
   display: flex !important;
   flex-direction: column !important;
-  flex: 1 1 auto !important;
+  flex: 0 0 auto !important;
+  max-height: 250px;
+  min-height: 220px;
+  overflow: hidden;
 }
 
 .reminderCardPriority::before {
@@ -1573,8 +1576,10 @@
   flex-direction: column;
   gap: 12px;
   margin-top: 16px;
-  flex: 1;
-  justify-content: flex-start;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .reminderItem {

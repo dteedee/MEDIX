@@ -32,23 +32,6 @@ const parseTimeToMinutes = (timeStr: string) => {
   return h * 60 + m;
 };
 
-const timeSlotMatrix = [
-  { id: 1, label: "Ca 1", startTime: "07:00", endTime: "07:50", session: "morning" as const },
-  { id: 2, label: "Ca 2", startTime: "08:00", endTime: "08:50", session: "morning" as const },
-  { id: 3, label: "Ca 3", startTime: "09:00", endTime: "09:50", session: "morning" as const },
-  { id: 4, label: "Ca 4", startTime: "10:00", endTime: "10:50", session: "morning" as const },
-  { id: 5, label: "Ca 5", startTime: "13:00", endTime: "13:50", session: "afternoon" as const },
-  { id: 6, label: "Ca 6", startTime: "14:00", endTime: "14:50", session: "afternoon" as const },
-  { id: 7, label: "Ca 7", startTime: "15:00", endTime: "15:50", session: "afternoon" as const },
-  { id: 8, label: "Ca 8", startTime: "16:00", endTime: "16:50", session: "afternoon" as const },
-];
-
-const parseTimeToMinutes = (timeStr: string) => {
-  const normalized = timeStr.length === 5 ? timeStr : timeStr.substring(0, 5);
-  const [h, m] = normalized.split(":").map(Number);
-  return h * 60 + m;
-};
-
 const getLocalDateKey = (date: Date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");

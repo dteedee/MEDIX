@@ -35,6 +35,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
   const { isBanned } = useAuth();
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingOverride, setEditingOverride] = useState<ScheduleOverride | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { register, handleSubmit, reset, setValue, getValues, formState: { errors }, watch } = useForm<FormInputs>();
 
@@ -116,6 +117,11 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
 
   const processFormSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
+      if (isSubmitting) {
+        return;
+      }
+
+      setIsSubmitting(true);
       const overrideTypeNumber = Number(data.overrideType);
 
       if (overrideTypeNumber === 0) {
@@ -155,6 +161,27 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
 
         if (!existingNghiDays.has(data.overrideDate) && existingNghiDays.size >= 2) {
           Swal.fire('Lỗi!', 'Bạn chỉ được phép đăng ký lịch nghỉ tối đa trong 2 ngày khác nhau.', 'error');
+          return;
+        }
+      }
+
+      if (!editingOverride) {
+        const hasSameSlot = overrides.some(o =>
+          o.overrideDate === data.overrideDate &&
+          o.startTime.substring(0, 5) === (data.startTime.length === 5 ? data.startTime : data.startTime.substring(0, 5)) &&
+          o.endTime.substring(0, 5) === (data.endTime.length === 5 ? data.endTime : data.endTime.substring(0, 5)) &&
+          o.overrideType === (overrideTypeNumber === 1) &&
+          o.isAvailable
+        );
+
+        if (hasSameSlot) {
+          Swal.fire({
+            title: 'Trùng ca làm việc',
+            text: 'Bạn đã đăng ký ca linh hoạt này rồi, không thể tạo trùng.',
+            icon: 'warning',
+            confirmButtonText: 'Đã hiểu'
+          });
+          setIsSubmitting(false);
           return;
         }
       }
@@ -209,6 +236,8 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
         icon: 'error',
         confirmButtonText: 'Đã hiểu'
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -418,7 +447,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
               <button type="button" onClick={() => setIsFormVisible(false)} className={styles.cancelBtn}>
                 Hủy
               </button>
-              <button type="submit" className={styles.saveBtn} disabled={isBanned}>
+              <button type="submit" className={styles.saveBtn} disabled={isBanned || isSubmitting}>
                 {editingOverride ? 'Cập nhật' : 'Lưu'}
               </button>
             </div>

@@ -32,6 +32,23 @@ const parseTimeToMinutes = (timeStr: string) => {
   return h * 60 + m;
 };
 
+const timeSlotMatrix = [
+  { id: 1, label: "Ca 1", startTime: "07:00", endTime: "07:50", session: "morning" as const },
+  { id: 2, label: "Ca 2", startTime: "08:00", endTime: "08:50", session: "morning" as const },
+  { id: 3, label: "Ca 3", startTime: "09:00", endTime: "09:50", session: "morning" as const },
+  { id: 4, label: "Ca 4", startTime: "10:00", endTime: "10:50", session: "morning" as const },
+  { id: 5, label: "Ca 5", startTime: "13:00", endTime: "13:50", session: "afternoon" as const },
+  { id: 6, label: "Ca 6", startTime: "14:00", endTime: "14:50", session: "afternoon" as const },
+  { id: 7, label: "Ca 7", startTime: "15:00", endTime: "15:50", session: "afternoon" as const },
+  { id: 8, label: "Ca 8", startTime: "16:00", endTime: "16:50", session: "afternoon" as const },
+];
+
+const parseTimeToMinutes = (timeStr: string) => {
+  const normalized = timeStr.length === 5 ? timeStr : timeStr.substring(0, 5);
+  const [h, m] = normalized.split(":").map(Number);
+  return h * 60 + m;
+};
+
 const getLocalDateKey = (date: Date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -458,16 +475,43 @@ const ScheduleManagement: React.FC = () => {
               const dayOverrides = overridesByDate.get(dateKey) || [];
               const dayAppointments = appointmentsByDate.get(dateKey) || [];
 
-              const workSlots = [
-                ...fixedSchedules.filter(fs =>
-                  !dayOverrides.some(
-                    o => !o.overrideType && o.startTime < fs.endTime && o.endTime > fs.startTime
-                  )
-                ),
-                ...dayOverrides.filter(o => o.overrideType && o.isAvailable)
-              ];
+              const slotStatuses = timeSlotMatrix.map(slot => {
+                const slotStart = parseTimeToMinutes(slot.startTime);
+                const slotEnd = parseTimeToMinutes(slot.endTime);
 
-              const hasDayOff = dayOverrides.some(o => !o.overrideType && o.isAvailable);
+                const hasOff = dayOverrides.some(o => {
+                  if (o.overrideType || !o.isAvailable) return false;
+                  const oStart = parseTimeToMinutes(o.startTime);
+                  const oEnd = parseTimeToMinutes(o.endTime);
+                  return oStart < slotEnd && oEnd > slotStart;
+                });
+
+                const hasWork =
+                  !hasOff &&
+                  (
+                    fixedSchedules.some(s => {
+                      if (!s.isAvailable) return false;
+                      const sStart = parseTimeToMinutes(s.startTime);
+                      const sEnd = parseTimeToMinutes(s.endTime);
+                      return sStart < slotEnd && sEnd > slotStart;
+                    }) ||
+                    dayOverrides.some(o => {
+                      if (!o.overrideType || !o.isAvailable) return false;
+                      const oStart = parseTimeToMinutes(o.startTime);
+                      const oEnd = parseTimeToMinutes(o.endTime);
+                      return oStart < slotEnd && oEnd > slotStart;
+                    })
+                  );
+
+                return {
+                  ...slot,
+                  status: hasOff ? ("off" as const) : hasWork ? ("work" as const) : ("none" as const),
+                };
+              });
+
+              const hasDayOff = slotStatuses.some(s => s.status === "off");
+              const morningSlots = slotStatuses.filter(s => s.session === "morning");
+              const afternoonSlots = slotStatuses.filter(s => s.session === "afternoon");
 
               const isToday = getLocalDateKey(date) === getLocalDateKey(new Date());
               const appointmentCount = dayAppointments.length;
@@ -502,14 +546,47 @@ const ScheduleManagement: React.FC = () => {
                   </div>
                   
                   {/* Work slots indicators */}
-                  <div className={styles.dayIndicators}>
-                    {workSlots.map((slot, index) => (
-                      <span
-                        key={index}
-                        className={styles.indicator}
-                        title={`${slot.startTime.slice(0, 5)}-${slot.endTime.slice(0, 5)}`}
-                      ></span>
-                    ))}
+                  <div className={styles.daySessionMatrix}>
+                    <div className={styles.daySessionRow}>
+                      <span className={styles.daySessionLabel}>Sáng</span>
+                      <div className={styles.daySessionSlots}>
+                        {morningSlots.map(slot => (
+                          <span
+                            key={slot.id}
+                            className={`${styles.daySlotSymbol} ${
+                              slot.status === "work"
+                                ? styles.daySlotWork
+                                : slot.status === "off"
+                                  ? styles.daySlotOff
+                                  : styles.daySlotNone
+                            }`}
+                            title={`${slot.label}: ${slot.startTime}-${slot.endTime}`}
+                          >
+                            {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className={styles.daySessionRow}>
+                      <span className={styles.daySessionLabel}>Chiều</span>
+                      <div className={styles.daySessionSlots}>
+                        {afternoonSlots.map(slot => (
+                          <span
+                            key={slot.id}
+                            className={`${styles.daySlotSymbol} ${
+                              slot.status === "work"
+                                ? styles.daySlotWork
+                                : slot.status === "off"
+                                  ? styles.daySlotOff
+                                  : styles.daySlotNone
+                            }`}
+                            title={`${slot.label}: ${slot.startTime}-${slot.endTime}`}
+                          >
+                            {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Appointments list - hiển thị trực tiếp trên calendar */}

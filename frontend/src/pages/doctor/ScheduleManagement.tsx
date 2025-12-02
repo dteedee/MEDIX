@@ -15,6 +15,23 @@ import FlexibleScheduleManager from "./FlexibleScheduleManager";
 
 const dayNames = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
+const timeSlotMatrix = [
+  { id: 1, label: "Ca 1", startTime: "07:00", endTime: "07:50", session: "morning" as const },
+  { id: 2, label: "Ca 2", startTime: "08:00", endTime: "08:50", session: "morning" as const },
+  { id: 3, label: "Ca 3", startTime: "09:00", endTime: "09:50", session: "morning" as const },
+  { id: 4, label: "Ca 4", startTime: "10:00", endTime: "10:50", session: "morning" as const },
+  { id: 5, label: "Ca 5", startTime: "13:00", endTime: "13:50", session: "afternoon" as const },
+  { id: 6, label: "Ca 6", startTime: "14:00", endTime: "14:50", session: "afternoon" as const },
+  { id: 7, label: "Ca 7", startTime: "15:00", endTime: "15:50", session: "afternoon" as const },
+  { id: 8, label: "Ca 8", startTime: "16:00", endTime: "16:50", session: "afternoon" as const },
+];
+
+const parseTimeToMinutes = (timeStr: string) => {
+  const normalized = timeStr.length === 5 ? timeStr : timeStr.substring(0, 5);
+  const [h, m] = normalized.split(":").map(Number);
+  return h * 60 + m;
+};
+
 const getLocalDateKey = (date: Date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -45,21 +62,44 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   appointments,
   onAddFlexibleSchedule
 }) => {
-  const allSlots = useMemo(() => {
-    const allOverrides = overrides.map(o => ({ ...o, type: "override" as const }));
+  const slotStatuses = useMemo(() => {
+    return timeSlotMatrix.map(slot => {
+      const slotStart = parseTimeToMinutes(slot.startTime);
+      const slotEnd = parseTimeToMinutes(slot.endTime);
 
-    const visibleFixedSlots = schedules.filter(fixedSlot => {
-      const isOverriddenByNghi = allOverrides.some(overrideSlot => 
-        !overrideSlot.overrideType && 
-        overrideSlot.startTime < fixedSlot.endTime && overrideSlot.endTime > fixedSlot.startTime
-      );
-      return !isOverriddenByNghi;
-    }).map(s => ({ ...s, type: "fixed" as const }));
+      const hasOff = overrides.some(o => {
+        if (o.overrideType || !o.isAvailable) return false;
+        const oStart = parseTimeToMinutes(o.startTime);
+        const oEnd = parseTimeToMinutes(o.endTime);
+        return oStart < slotEnd && oEnd > slotStart;
+      });
 
-    const visibleOverrideSlots = allOverrides.filter(o => o.overrideType && o.isAvailable);
+      const hasWork =
+        !hasOff &&
+        (
+          schedules.some(s => {
+            if (!s.isAvailable) return false;
+            const sStart = parseTimeToMinutes(s.startTime);
+            const sEnd = parseTimeToMinutes(s.endTime);
+            return sStart < slotEnd && sEnd > slotStart;
+          }) ||
+          overrides.some(o => {
+            if (!o.overrideType || !o.isAvailable) return false;
+            const oStart = parseTimeToMinutes(o.startTime);
+            const oEnd = parseTimeToMinutes(o.endTime);
+            return oStart < slotEnd && oEnd > slotStart;
+          })
+        );
 
-    return [...visibleFixedSlots, ...visibleOverrideSlots].sort((a, b) => a.startTime.localeCompare(b.startTime));
+      return {
+        ...slot,
+        status: hasOff ? ("off" as const) : hasWork ? ("work" as const) : ("none" as const),
+      };
+    });
   }, [schedules, overrides]);
+
+  const morningSlots = slotStatuses.filter(s => s.session === "morning");
+  const afternoonSlots = slotStatuses.filter(s => s.session === "afternoon");
 
   if (!isOpen) return null;
 
@@ -77,95 +117,71 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
         </div>
 
         <div className={styles.modalBody}>
-          {allSlots.length > 0 ? (
-            <div className={styles.slotsList}>
-              {allSlots.map(slot => {
-                const apps = appointments.filter(app => {
-                  const start = new Date(app.appointmentStartTime).toTimeString().slice(0, 8);
-                  return start >= slot.startTime && start < slot.endTime;
-                });
+          <div className={styles.matrixLegend}>
+            <span><strong>V</strong>: Làm việc</span>
+            <span><strong>X</strong>: Nghỉ</span>
+            <span><strong>-</strong>: Chưa đăng ký</span>
+          </div>
 
-                return (
-                  <div
-                    key={slot.id}
-                    className={`${styles.slotItem} ${
-                      slot.type === "override" ? (slot.overrideType ? styles.slotAvailable : styles.slotUnavailable) : styles.slotFixed
-                    }`}
-                  >
-                    <div className={styles.slotHeader}>
-                      <div className={styles.slotTime}>
-                        <Clock size={16} />
-                        <span>{slot.startTime.slice(0, 5)} - {slot.endTime.slice(0, 5)}</span>
-                      </div>
-                      <div className={`${styles.slotStatus} ${
-                        slot.type === 'override' && (slot.overrideType ? styles.statusAvailable : styles.statusUnavailable)
-                      }`}>
-                        <span
-                          className={styles.statusDot}
-                          style={{
-                            backgroundColor: slot.type === 'fixed' 
-                              ? '#3b82f6'
-                              : slot.overrideType 
-                                ? '#10b981'
-                                : '#ef4444'
-                          }}
-                        ></span>
-                        {slot.type === "fixed"
-                          ? slot.isAvailable
-                            ? "Lịch cố định"
-                            : "Không sẵn sàng"
-                          : slot.overrideType
-                            ? `Tăng ca${slot.reason ? ` - ${slot.reason}` : ''}`
-                            : `Nghỉ${slot.reason ? ` - ${slot.reason}` : ''}`
-                        }
-                      </div>
-                    </div>
+          <div className={styles.slotMatrix}>
+            <div className={styles.matrixHeaderRow}>
+              <div className={styles.matrixCorner}></div>
+              {morningSlots.map(slot => (
+                <div key={slot.id} className={styles.matrixHeaderCell}>{slot.label}</div>
+              ))}
+            </div>
+            <div className={styles.matrixRow}>
+              <div className={styles.sessionCell}>Buổi sáng</div>
+              {morningSlots.map(slot => (
+                <div
+                  key={slot.id}
+                  className={`${styles.slotCell} ${
+                    slot.status === "work"
+                      ? styles.slotCellWork
+                      : slot.status === "off"
+                        ? styles.slotCellOff
+                        : styles.slotCellNone
+                  }`}
+                >
+                  <span className={styles.slotSymbol}>
+                    {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
+                  </span>
+                  <span className={styles.slotTimeSmall}>
+                    {slot.startTime} - {slot.endTime}
+                  </span>
+                </div>
+              ))}
+            </div>
 
-                    {apps.length > 0 && (
-                      <div className={styles.appointmentsList}>
-                        <div className={styles.appointmentsHeader}>
-                          <Users size={14} />
-                          <span>{apps.length} cuộc hẹn</span>
-                        </div>
-                        {apps.map(app => (
-                          <div key={app.id} className={styles.appointmentItem}>
-                            <div className={styles.appointmentInfo}>
-                              <p className={styles.appointmentTime}>
-                                {new Date(app.appointmentStartTime).toLocaleTimeString("vi-VN", {
-                                  hour: "2-digit",
-                                  minute: "2-digit"
-                                })}{" "}
-                                -{" "}
-                                {new Date(app.appointmentEndTime).toLocaleTimeString("vi-VN", {
-                                  hour: "2-digit",
-                                  minute: "2-digit"
-                                })}
-                              </p>
-                              <p className={styles.appointmentPatient}>Bệnh nhân: {app.patientName}</p>
-                              <span className={styles.appointmentStatus}>
-                                {app.statusDisplayName || app.statusCode}
-                              </span>
-                            </div>
-                            <Link
-                              to={`/app/doctor/medical-records/${app.id}`}
-                              className={styles.viewRecordBtn}
-                            >
-                              Xem hồ sơ
-                            </Link>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            <div className={styles.matrixHeaderRow}>
+              <div className={styles.matrixCorner}></div>
+              {afternoonSlots.map(slot => (
+                <div key={slot.id} className={styles.matrixHeaderCell}>{slot.label}</div>
+              ))}
             </div>
-          ) : (
-            <div className={styles.emptyState}>
-              <Calendar size={48} />
-              <p>Không có lịch làm việc hoặc cuộc hẹn nào trong ngày này.</p>
+            <div className={styles.matrixRow}>
+              <div className={styles.sessionCell}>Buổi chiều</div>
+              {afternoonSlots.map(slot => (
+                <div
+                  key={slot.id}
+                  className={`${styles.slotCell} ${
+                    slot.status === "work"
+                      ? styles.slotCellWork
+                      : slot.status === "off"
+                        ? styles.slotCellOff
+                        : styles.slotCellNone
+                  }`}
+                >
+                  <span className={styles.slotSymbol}>
+                    {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
+                  </span>
+                  <span className={styles.slotTimeSmall}>
+                    {slot.startTime} - {slot.endTime}
+                  </span>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
         </div>
         <div className={styles.modalFooter}>
           <button
@@ -451,6 +467,8 @@ const ScheduleManagement: React.FC = () => {
                 ...dayOverrides.filter(o => o.overrideType && o.isAvailable)
               ];
 
+              const hasDayOff = dayOverrides.some(o => !o.overrideType && o.isAvailable);
+
               const isToday = getLocalDateKey(date) === getLocalDateKey(new Date());
               const appointmentCount = dayAppointments.length;
 
@@ -458,6 +476,7 @@ const ScheduleManagement: React.FC = () => {
                 styles.calendarDay,
                 selectedDate && getLocalDateKey(selectedDate) === dateKey ? styles.selected : "",
                 dayOverrides.length > 0 ? styles.hasOverride : "",
+                hasDayOff ? styles.dayOff : "",
                 appointmentCount > 0 ? styles.hasAppointment : "",
                 isToday ? styles.today : ""
               ].filter(Boolean).join(" ");

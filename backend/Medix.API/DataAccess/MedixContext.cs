@@ -1340,6 +1340,11 @@ public partial class MedixContext : DbContext
         {
             var entityName = entry.Entity.GetType().Name;
 
+            if (entityName == "AISymptomAnalysis" || entityName == "Notification")
+            {
+                continue;
+            }
+
             if (entityName == "ArticleCategories"
                 || entityName == "HealthArticleContentCategory"
                 || entityName.EndsWith("CategoryMapping"))

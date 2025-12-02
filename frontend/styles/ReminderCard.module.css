@@ -25,6 +25,12 @@
   flex-direction: column;
   gap: 4px;
 }
+
+/* Allow reminder cards to grow to fill the reminder list container */
+.cardContainer {
+  flex: 0 0 auto;
+  min-height: 84px;
+}
 .remainTime {
   color: #888;
   font-weight: 400;

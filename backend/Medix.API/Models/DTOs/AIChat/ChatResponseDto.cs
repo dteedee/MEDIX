@@ -7,7 +7,7 @@ namespace Medix.API.Models.DTOs.AIChat
         public string Sender { get; set; } = "ai";
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         public string? Type { get; set; }
-        public object? Data { get; set; }
+        public SymptomAnalysisResponseDto? Data { get; set; }
     }
 }
 

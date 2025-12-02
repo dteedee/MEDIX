@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { AIChatMessage } from "../../types/aiChat";
 import { useNavigate } from 'react-router-dom';
 import styles from '../../styles/pages/AIChatBot.module.css';
-import aiChatService, { SymptomAnalysisResponse, EMRAnalysisResponse, PromptRequest } from '../../services/aiChatService';
-import { AIChatMessage } from '../../types/aiChat';
-import { useAuth } from '../../contexts/AuthContext';
-import { get } from 'http';
+import { useEffect, useRef, useState } from "react";
+import aiChatService, { PromptRequest, SymptomAnalysisResponse } from "../../services/aiChatService";
+import { useAuth } from "../../contexts/AuthContext";
 
 const createGreetingMessage = (): AIChatMessage => ({
   id: 'medix-greeting',
@@ -14,9 +13,10 @@ const createGreetingMessage = (): AIChatMessage => ({
 });
 
 export const AIChatBot: React.FC = () => {
-  const navigate = useNavigate();
-  const [messages, setMessages] = useState<AIChatMessage[]>([]);
 
+  const navigate = useNavigate();
+
+  const [messages, setMessages] = useState<AIChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
@@ -104,11 +104,14 @@ export const AIChatBot: React.FC = () => {
     })();
   }, []);
 
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
+  const formatMessage = (text: string): string => {
+    // Format markdown-like syntax
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br />')
+      .replace(/⚠️/g, '⚠️')
+      .replace(/🚨/g, '🚨');
+  };
 
   const handleQuickReply = (text: string) => {
     setInputText(text);
@@ -131,7 +134,7 @@ export const AIChatBot: React.FC = () => {
       setInputText('');
     }
 
-    // Handle file uploads
+    //Handle file uploads
     if (uploadedFiles.length > 0) {
       setIsLoading(true);
       try {
@@ -140,15 +143,8 @@ export const AIChatBot: React.FC = () => {
           file,
           chatToken,
         });
-
-        const aiResponse: AIChatMessage = {
-          id: (Date.now() + 1).toString(),
-          text: response,
-          sender: 'ai',
-          timestamp: new Date(),
-          type: 'text',
-        };
-        setMessages(prev => [...prev, aiResponse]);
+        response.timestamp = new Date(response.timestamp);
+        setMessages(prev => [...prev, response]);
         setUploadedFiles([]);
       } catch (error: any) {
         let text = 'Xin lỗi, có lỗi xảy ra khi phân tích EMR. Vui lòng thử lại sau.';
@@ -175,77 +171,14 @@ export const AIChatBot: React.FC = () => {
     setIsLoading(true);
 
     try {
-      //   // Check if it's a symptom query
-      //   const symptomKeywords = ['đau', 'mệt', 'sốt', 'ho', 'khó', 'buồn', 'chóng', 'nóng', 'ngứa', 'triệu chứng'];
-      //   const isSymptomQuery = symptomKeywords.some(keyword => messageText.toLowerCase().includes(keyword));
-
-      //   if (isSymptomQuery) {
-      //     // Extract symptoms (simplified - in production, use NLP)
-      //     const symptoms = messageText.split(/[,\n]/).map(s => s.trim()).filter(s => s.length > 0);
-
-      //     const analysisResponse = await aiChatService.analyzeSymptoms({
-      //       symptoms: symptoms.slice(0, 10), // Limit to 10 symptoms
-      //       additionalInfo: messageText,
-      //     });
-
-      //     const severityText = analysisResponse.severity === 'mild' ? 'nhẹ' : 
-      //                         analysisResponse.severity === 'moderate' ? 'vừa' : 'nặng';
-
-      //     let responseText = `**Đánh giá mức độ: ${severityText.toUpperCase()}**\n\n`;
-      //     responseText += `${analysisResponse.overview}\n\n`;
-      //     responseText += `**Các khả năng chẩn đoán:**\n`;
-      //     analysisResponse.possibleConditions.forEach((condition, index) => {
-      //       responseText += `${index + 1}. ${condition.condition} (${condition.probability}%)\n   ${condition.description}\n`;
-      //     });
-
-      //     if (analysisResponse.homeTreatment) {
-      //       responseText += `\n**Hướng dẫn điều trị tại nhà:**\n`;
-      //       analysisResponse.homeTreatment.instructions.forEach(instruction => {
-      //         responseText += `• ${instruction}\n`;
-      //       });
-      //     }
-
-      //     if (analysisResponse.recommendedDoctors && analysisResponse.recommendedDoctors.length > 0) {
-      //       responseText += `\n**Bác sĩ được gợi ý:**\n`;
-      //       analysisResponse.recommendedDoctors.slice(0, 3).forEach((doctor, index) => {
-      //         responseText += `${index + 1}. ${doctor.name} - ${doctor.specialization}\n`;
-      //         responseText += `   Đánh giá: ${doctor.rating}/5.0 | Kinh nghiệm: ${doctor.experience} năm\n`;
-      //       });
-      //     }
-
-      //     const aiResponse: AIChatMessage = {
-      //       id: (Date.now() + 1).toString(),
-      //       text: responseText,
-      //       sender: 'ai',
-      //       timestamp: new Date(),
-      //       type: 'symptom_analysis',
-      //       data: analysisResponse,
-      //     };
-      //     setMessages(prev => [...prev, aiResponse]);
-      //   } else {
-      // Regular chat message
-      const conversationHistory = messages.map(msg => ({
-        text: msg.text,
-        sender: msg.sender,
-        type: msg.type,
-      }));
-
       const promptRequest: PromptRequest = {
         prompt: messageText,
         chatToken: chatToken,
       };
 
       const response = await aiChatService.sendMessage(promptRequest);
-
-      const aiResponse: AIChatMessage = {
-        id: (Date.now() + 1).toString(),
-        text: response,
-        sender: 'ai',
-        timestamp: new Date(),
-        type: "text",
-        data: "response.data",
-      };
-      setMessages(prev => [...prev, aiResponse]);
+      response.timestamp = new Date(response.timestamp);
+      setMessages(prev => [...prev, response]);
     } catch (error: any) {
       const errorMessage: AIChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -282,26 +215,16 @@ export const AIChatBot: React.FC = () => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const formatMessage = (text: string): string => {
-    // Format markdown-like syntax
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br />')
-      .replace(/⚠️/g, '⚠️')
-      .replace(/🚨/g, '🚨');
-  };
-
   const renderSymptomAnalysis = (data: SymptomAnalysisResponse) => {
     return (
       <div className={styles.symptomAnalysis}>
-        {data.possibleConditions && data.possibleConditions.length > 0 && (
+        {data.medicines && data.medicines.length > 0 && (
           <div className={styles.conditionsList}>
-            <h4>Khả năng chẩn đoán:</h4>
-            {data.possibleConditions.map((condition, index) => (
+            <h4>Các loại thuốc có thể sử dụng:</h4>
+            {data.medicines.map((medicine, index) => (
               <div key={index} className={styles.conditionItem}>
-                <span className={styles.conditionName}>{condition.condition}</span>
-                <span className={styles.conditionProbability}>{condition.probability}%</span>
-                <p className={styles.conditionDescription}>{condition.description}</p>
+                <span className={styles.conditionName}>{medicine.name}</span>
+                <p className={styles.conditionDescription}>{medicine.instructions}</p>
               </div>
             ))}
           </div>
@@ -316,23 +239,6 @@ export const AIChatBot: React.FC = () => {
                 <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
               </div>
             ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderEMRAnalysis = (data: EMRAnalysisResponse) => {
-    return (
-      <div className={styles.emrAnalysis}>
-        {data.extractedData.diagnosis && data.extractedData.diagnosis.length > 0 && (
-          <div className={styles.emrSection}>
-            <strong>Chẩn đoán:</strong> {data.extractedData.diagnosis.join(', ')}
-          </div>
-        )}
-        {data.extractedData.medications && data.extractedData.medications.length > 0 && (
-          <div className={styles.emrSection}>
-            <strong>Thuốc:</strong> {data.extractedData.medications.join(', ')}
           </div>
         )}
       </div>
@@ -389,11 +295,12 @@ export const AIChatBot: React.FC = () => {
                   {renderSymptomAnalysis(message.data)}
                 </div>
               )}
+              {/*
               {message.data && message.type === 'emr_analysis' && (
                 <div className={styles.messageData}>
                   {renderEMRAnalysis(message.data)}
                 </div>
-              )}
+              )} */}
               <div className={styles.messageTime}>
                 {message.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
               </div>
@@ -493,4 +400,4 @@ export const AIChatBot: React.FC = () => {
       </div>
     </div>
   );
-};
+}

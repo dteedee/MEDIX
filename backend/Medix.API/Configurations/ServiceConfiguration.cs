@@ -129,6 +129,7 @@ namespace Medix.API.Configurations
             services.AddScoped<ISalaryService, SalaryService>();
             services.AddScoped<IUserPromotionService, UserPromotionService>();
             services.AddScoped<IBackupService, BackupService>();
+            services.AddScoped<IVertexAIService, VertexAIService>();
             services.AddScoped<IAIChatService, AIChatService>();
             services.AddScoped<IRAGService, RAGService>();
             services.AddScoped<ILLMService, LLMService>();
@@ -136,7 +137,7 @@ namespace Medix.API.Configurations
             services.AddHttpClient<LLMService>();
             services.AddScoped<SystemConfigurationSeeder>();
 
-            services.AddScoped<IVertexAIService, VertexAIService>();
+            
         }
 
 

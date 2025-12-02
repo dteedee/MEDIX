@@ -1,13 +1,12 @@
+using Medix.API.Business.Helper;
 using Medix.API.Models.DTOs.AIChat;
 
 namespace Medix.API.Business.Interfaces.Classification
 {
     public interface IAIChatService
     {
-        Task<ChatResponseDto> SendMessageAsync(ChatRequestDto request);
-        Task<SymptomAnalysisResponseDto> AnalyzeSymptomsAsync(SymptomAnalysisRequestDto request);
-        Task<EMRAnalysisResponseDto> AnalyzeEMRAsync(IFormFile file, string? patientInfoJson);
-        Task<SystemQueryResponseDto> QuerySystemAsync(string query);
+        Task<ChatResponseDto> SendMessageAsync(List<ContentDto> conversationHistory, string? userIdClaim = null);
+        Task<ChatResponseDto> AnalyzeEMRAsync(IFormFile file, List<ContentDto> conversationHistory, string? userIdClaim = null);
     }
 }
 

@@ -1,48 +1,159 @@
 ﻿using Google.GenAI;
 using Google.GenAI.Types;
+using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.AI;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.AIChat;
 using Medix.API.Models.Entities;
 using Medix.API.Models.Enums;
+using System.Text.Json;
+using Type = Google.GenAI.Types.Type;
 
 namespace Medix.API.Business.Services.AI
 {
     public class VertexAIService : IVertexAIService
     {
-        private static readonly string instructionText =
-            "Bạn là trợ lý hỗ trợ sức khỏe chuyên biệt. MỤC ĐÍCH DUY NHẤT của bạn là đưa ra chẩn đoán phân biệt hoặc trả lời các câu hỏi liên quan đến triệu chứng, bệnh tật và các khái niệm sức khỏe dựa trên dữ liệu đào tạo chuyên môn của bạn. Bạn phải xuất ra MỘT đối tượng JSON hoàn chỉnh và TUÂN THỦ NGHIÊM NGẶT lược đồ. KHÔNG được tạo bất kỳ văn bản, hội thoại, hoặc giải thích nào bên ngoài khối JSON." +
+        private static readonly Dictionary<string, Schema> SymptomAnalysisSchemaProperties = new Dictionary<string, Schema>
+        {
+            // User-Facing Field
+            ["UserResponseText"] = new Schema
+            {
+                Type = Type.STRING,
+                Description = "Phản hồi thân thiện với người dùng được bản địa hóa dựa trên ngôn ngữ của người dùng" +
+                    ", đồng thời cho biết 3 khả năng bệnh có khả năng xảy ra cao nhất kèm theo tỉ lệ phần trăm tương ứng," +
+                    "mỗi khả năng nằm ở 1 dòng."
+            },
+            // Technical Fields (matching SQL/tracking data)
+            ["SessionId"] = new Schema
+            {
+                Type = Type.STRING,
+                Description = "Một chuỗi định danh duy nhất cho phiên phân tích triệu chứng hiện tại."
+            },
 
-            " QUY TẮC JSON VÀ NGÔN NGỮ: " +
-                "Bạn PHẢI phân tích các triệu chứng và điền vào cấu trúc JSON. " +
-                "Trường 'UserResponseText' PHẢI chứa toàn bộ phản hồi thân thiện, được bản địa hóa cho người dùng. " +
+            // SymptomsProvided (Dùng Array vì là string?[]?)
+            ["SymptomsProvided"] = new Schema
+            {
+                Type = Type.ARRAY,
+                Description = "Mảng các triệu chứng mà người dùng đã cung cấp để phân tích.",
+                Items = new Schema
+                {
+                    Type = Type.STRING
+                }
+            },
 
-            " QUY TẮC NGÔN NGỮ: " +
-                "Bạn PHẢI trả lời bằng ngôn ngữ mà người dùng đã sử dụng trong câu hỏi của họ. " +
-                "Nếu ngôn ngữ không rõ ràng, bạn PHẢI mặc định trả lời bằng Tiếng Việt. " +
-                "Luôn luôn phải kèm theo tuyên bố miễn trừ trách nhiệm sau: 'Vui lòng tham khảo ý kiến bác sĩ để có chẩn đoán chính xác.' trong trường 'UserResponseText'." +
+            // SeverityLevelCode (Dùng String với Enum)
+            ["SeverityLevelCode"] = new Schema
+            {
+                Type = Type.STRING,
+                Description = "Mức độ nghiêm trọng của các triệu chứng được cung cấp bởi người dùng.",
+                // Chỉ định các giá trị enum cho LLM
+                Enum = ["Mild", "Moderate", "Severe"]
+            },
 
-            "QUY TẮC PHÂN LOẠI: Trường 'PossibleConditions' PHẢI chứa chẩn đoán, 'CHƯA KẾT LUẬN', hoặc 'TỪ CHỐI'. " +
-                "Bạn PHẢI thiết lập hai cờ boolean sau: " +
-                    "1. 'IsConclusionReached': TRUE nếu bạn đã đưa ra chẩn đoán cụ thể (PossibleConditions không phải 'CHƯA KẾT LUẬN' hoặc 'TỪ CHỐI') VÀ ConfidenceScore >= 0.8 (Đã đạt kết luận cuối cùng). Ngược lại, FALSE. " +
-                    "2. 'IsRequestRejected': TRUE nếu câu hỏi KHÔNG liên quan đến sức khỏe. Ngược lại, FALSE. BẠN PHẢI liệt kê 3 tình trạng có khả năng xảy ra cao nhất cùng với phần trăm ước tính của chúng trong trường 'UserResponseText'. " +
-                    "" +
-                "JSON SCHEMA: {" +
-                    "\"SessionId\": \"[Tạo ID phiên duy nhất]\"," +
-                    "\"UserResponseText\": \"[Đưa ra phản hồi tự nhiên, bao gồm chẩn đoán/câu hỏi tiếp theo, 3 tình trạng có khả năng xảy ra cao nhất và phần trăm, và tuyên bố miễn trừ trách nhiệm.]\"," +
-                    "\"Symptoms\": \"[Liệt kê tất cả triệu chứng do người dùng cung cấp]\"," +
-                    "\"SeverityLevelCode\": \"[THẤP | TRUNG BÌNH | CAO]\"," +
-                    "\"PossibleConditions\": \"[Chẩn đoán hoặc 'CHƯA KẾT LUẬN' hoặc 'TỪ CHỐI']\"," +
-                    "\"RecommendedAction\": \"[Ví dụ: Nghỉ ngơi, Uống nước, Theo dõi thêm, hoặc Tìm kiếm sự chăm sóc y tế]\"," +
-                    "\"ConfidenceScore\": \"[Giá trị thực 0.0 - 1.0]\"," +
-                    "\"IsConclusionReached\": \"[TRUE/FALSE]\"," +
-                    "\"IsRequestRejected\": \"[TRUE/FALSE]\"" +
-                "}" +
+            ["PossibleConditions"] = new Schema
+            {
+                Type = Type.STRING,
+                Description = "Các tình trạng y tế có thể xảy ra dựa trên các triệu chứng được cung cấp hoặc 'CHƯA KẾT LUẬN' hoặc 'TỪ CHỐI'."
+            },
 
-             " LUẬT TỪ CHỐI: " +
-                "Nếu câu hỏi KHÔNG liên quan đến sức khỏe, trường 'PossibleConditions' PHẢI là 'TỪ CHỐI', 'IsConclusionReached' PHẢI là FALSE, 'IsRequestRejected' PHẢI là TRUE, và trường 'UserResponseText' PHẢI chứa câu từ chối lịch sự bằng Tiếng Việt.";
+            ["RecommendedAction"] = new Schema
+            {
+                Type = Type.STRING,
+                Description = "Hành động được đề xuất cho người dùng dựa trên phân tích triệu chứng."
+            },
 
+            // ConfidenceScore (Dùng Number với format float)
+            ["ConfidenceScore"] = new Schema
+            {
+                Type = Type.NUMBER,
+                Description = "Điểm số độ tin cậy (từ 0 đến 1) biểu thị mức độ tự tin của mô hình về các tình trạng có thể xảy ra được liệt kê.",
+                Format = "float"
+            },
+
+            // Boolean Status Flags (for server control flow)
+            ["IsConclusionReached"] = new Schema
+            {
+                Type = Type.BOOLEAN,
+                Description = "true khi có 1 loại bệnh có khả năng xảy ra >=85%"
+            },
+
+            ["IsRequestRejected"] = new Schema
+            {
+                Type = Type.BOOLEAN,
+                Description = "Cờ boolean cho biết liệu yêu cầu có bị từ chối vì không liên quan đến sức khỏe hay không."
+            }
+        };
+
+        private static readonly Schema SymptomAnalysisSchema = new Schema
+        {
+            Type = Type.OBJECT,
+            Properties = SymptomAnalysisSchemaProperties,
+            Required = ["SymptomsProvided", "SeverityLevelCode", "PossibleConditions", "RecommendedAction", "ConfidenceScore", "IsConclusionReached", "IsRequestRejected", "UserResponseText"]
+        };
+
+        private static readonly Schema MedicinesSchema = new Schema
+        {
+            Type = Type.OBJECT,
+            Properties = new Dictionary<string, Schema>
+            {
+                ["List"] = new Schema
+                {
+                    Type = Type.ARRAY,
+                    Description = "Danh sách các loại thuốc được đề xuất.",
+                    Items = new Schema
+                    {
+                        Type = Type.OBJECT,
+                        Properties = new Dictionary<string, Schema>
+                        {
+                            ["Name"] = new Schema
+                            {
+                                Type = Type.STRING,
+                                Description = "Tên của loại thuốc được đề xuất."
+                            },
+                            ["Instructions"] = new Schema
+                            {
+                                Type = Type.STRING,
+                                Description = "Hướng dẫn sử dụng cho loại thuốc được đề xuất."
+                            }
+                        },
+                        Required = ["Name", "Instructions"]
+                    }
+                }
+            },
+            Required = ["List"]
+        };
+
+        private static readonly Schema DoctorsSchema = new Schema
+        {
+            Type = Type.OBJECT,
+            Properties = new Dictionary<string, Schema>
+            {
+                ["IdList"] = new Schema
+                {
+                    Type = Type.ARRAY,
+                    Description = "Danh sách ID của các bác sĩ được đề xuất.",
+                    Items = new Schema
+                    {
+                        Type = Type.STRING,
+                        Description = "ID của các bác sĩ được đề xuất."
+                    }
+                }
+            },
+            Required = ["IdList"]
+        };
+
+        private static readonly string SymptomAnalsysisInstructionText =
+            "Bạn là một chuyên gia y tế ảo được thiết kế để giúp người dùng phân tích các triệu chứng sức khỏe của họ. " +
+            "Dựa trên các triệu chứng được cung cấp, hãy đánh giá mức độ nghiêm trọng và đưa ra các tình trạng y tế có thể xảy ra. " +
+            "Cung cấp hành động được đề xuất và điểm số độ tin cậy cho phân tích của bạn. " +
+            "Nếu các triệu chứng không liên quan đến sức khỏe, hãy từ chối yêu cầu một cách lịch sự. " +
+            "Trả lời chỉ với một đối tượng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
+
+        private static readonly string MedicineRecommendationInstructionText =
+            "Bạn là một chuyên gia y tế ảo được thiết kế để giúp người dùng bằng cách đề xuất các loại thuốc phù hợp dựa trên các triệu chứng sức khỏe của họ. " +
+            "Dựa trên các triệu chứng được cung cấp, hãy đề xuất các loại thuốc phù hợp cùng với hướng dẫn sử dụng. " +
+            "Trả lời chỉ với một mảng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
 
         private readonly Client _vertexClient;
         private readonly string Model;
@@ -52,9 +163,9 @@ namespace Medix.API.Business.Services.AI
         private readonly IAISymptomAnalysisRepository _aiSymptomAnalysisRepository;
 
         public VertexAIService(
-            Client vertexClient, 
-            IConfiguration configuration, 
-            IDoctorRepository doctorRepository, 
+            Client vertexClient,
+            IConfiguration configuration,
+            IDoctorRepository doctorRepository,
             ILogger<VertexAIService> logger,
             IPatientRepository patientRepository,
             IAISymptomAnalysisRepository aiSymptomAnalysisRepository)
@@ -67,29 +178,8 @@ namespace Medix.API.Business.Services.AI
             _aiSymptomAnalysisRepository = aiSymptomAnalysisRepository;
         }
 
-        private async Task<string> GenerateResponseAsync(List<Content> conversationHistory, string? systemInstruction = null)
+        private async Task<string> GenerateResponseAsync(List<Content> conversationHistory, GenerateContentConfig systemConfigs)
         {
-            GenerateContentConfig? systemConfigs = null;
-            if (systemInstruction != null)
-            {
-                var systemContent = new Content
-                {
-                    Parts =
-                    [
-                        new Part
-                        {
-                            Text = systemInstruction
-                        }
-                    ],
-                    Role = "system"
-                };
-
-                systemConfigs = new GenerateContentConfig
-                {
-                    SystemInstruction = systemContent,
-                };
-            }
-
             var response = await _vertexClient.Models.GenerateContentAsync(
                 model: Model,
                 contents: conversationHistory,
@@ -116,27 +206,240 @@ namespace Medix.API.Business.Services.AI
             }
         }
 
-        public async Task<string> GetSymptompAnalysisAsync(List<Content> conversationHistory)
-            => await GenerateResponseAsync(conversationHistory, instructionText);
+        public async Task<ChatResponseDto> GetSymptompAnalysisAsync(List<ContentDto> history, string? userIdClaim)
+        {
+            var systemContent = new Content
+            {
+                Parts =
+                [
+                    new Part
+                        {
+                            Text = SymptomAnalsysisInstructionText,
+                        }
+                ],
+                Role = "system"
+            };
 
-        public async Task<string> GetRecommendedDoctorsAsync(string possibleConditions, int count)
+            var systemConfigs = new GenerateContentConfig
+            {
+                SystemInstruction = systemContent,
+                ResponseMimeType = "application/json",
+                ResponseSchema = SymptomAnalysisSchema // Sử dụng JSON Schema đã định nghĩa
+            };
+
+
+            var rawResponse = await GenerateResponseAsync(GetConversationHistory(history), systemConfigs);
+            var diagnosisModel = AIResponseParser.ParseJson(rawResponse);
+
+            if (diagnosisModel.IsRequestRejected)
+            {
+                return new ChatResponseDto
+                {
+                    Text = "Xin chào! Tôi là MEDIX AI, chuyên tư vấn về sức khỏe và y tế. " +
+                           "Tôi chỉ có thể trả lời các câu hỏi liên quan đến:\n\n" +
+                           "• Sức khỏe và triệu chứng bệnh\n" +
+                           "• Thông tin về bác sĩ và chuyên khoa\n" +
+                           "• Dịch vụ và hệ thống MEDIX\n" +
+                           "• Phân tích hồ sơ bệnh án (EMR)\n\n" +
+                           "Vui lòng đặt câu hỏi liên quan đến lĩnh vực y tế.",
+                    Type = "out_of_scope"
+                };
+            }
+
+            if (!diagnosisModel.IsConclusionReached)
+            {
+                return new ChatResponseDto
+                {
+                    Text = diagnosisModel.UserResponseText ?? "Xin lỗi, tôi cần thêm thông tin để phân tích triệu chứng của bạn.",
+                    Type = "text"
+                };
+            }
+
+            //save symptomp analysis to database
+            if (userIdClaim != null)
+            {
+                await SaveSymptompAnalysisAsync(diagnosisModel, userIdClaim);
+            }
+
+            var symptompAnalysisResponse = new SymptomAnalysisResponseDto
+            {
+                Severity = diagnosisModel.SeverityCode == null ? "mild" : diagnosisModel.SeverityCode.ToLower(),
+            };
+
+            if (diagnosisModel.SeverityCode.ToLower() == "mild")
+            {
+                symptompAnalysisResponse.Medicines = await GetRecommendedMedicinesAsync(string.Join(",", diagnosisModel.PossibleConditions));
+                symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Nghỉ ngơi tại nhà và theo dõi các triệu chứng.";
+
+                return new ChatResponseDto
+                {
+                    Text = diagnosisModel.UserResponseText ?? "Phân tích triệu chứng hoàn tất.",
+                    Type = "symptom_analysis",
+                    Data = symptompAnalysisResponse,
+                };
+            }
+
+            symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Hãy đặt lịch hẹn với bác sĩ chuyên khoa để được tư vấn thêm.";
+            symptompAnalysisResponse.RecommendedDoctors = await GetRecommendedDoctorsAsync(diagnosisModel.PossibleConditions, 3);
+            return new ChatResponseDto
+            {
+                Text = diagnosisModel.UserResponseText ?? "Phân tích triệu chứng hoàn tất.",
+                Type = "symptom_analysis",
+            };
+        }
+
+        public async Task<ChatResponseDto> GetEMRAnalysisAsync(IFormFile file, string? userIdClaim, List<ContentDto> history)
+        {
+            var systemContent = new Content
+            {
+                Parts =
+                [
+                    new Part
+                        {
+                            Text = SymptomAnalsysisInstructionText,
+                        }
+                ],
+                Role = "system"
+            };
+
+            var systemConfigs = new GenerateContentConfig
+            {
+                SystemInstruction = systemContent,
+                ResponseMimeType = "application/json",
+                ResponseSchema = SymptomAnalysisSchema // Sử dụng JSON Schema đã định nghĩa
+            };
+
+            var conversationHistory = GetConversationHistory(history);
+            conversationHistory.Add(new Content
+            {
+                Role = "user",
+                Parts =
+                [
+                    new Part
+                    {
+                        Text = "Dưới đây là hồ sơ bệnh án điện tử (EMR) của bệnh nhân. Vui lòng phân tích các triệu chứng và cung cấp đánh giá y tế chi tiết.",
+                    },
+                    new Part
+                    {
+                        InlineData = await GetBlobFromFileAsync(file)
+                    }
+                ]
+            });
+            var rawResponse = await GenerateResponseAsync(conversationHistory, systemConfigs);
+            var diagnosisModel = AIResponseParser.ParseJson(rawResponse);
+
+            if (diagnosisModel.IsRequestRejected)
+            {
+                return new ChatResponseDto
+                {
+                    Text = "Xin chào! Tôi là MEDIX AI, chuyên tư vấn về sức khỏe và y tế. " +
+                           "Tôi chỉ có thể trả lời các câu hỏi liên quan đến:\n\n" +
+                           "• Sức khỏe và triệu chứng bệnh\n" +
+                           "• Thông tin về bác sĩ và chuyên khoa\n" +
+                           "• Dịch vụ và hệ thống MEDIX\n" +
+                           "• Phân tích hồ sơ bệnh án (EMR)\n\n" +
+                           "Vui lòng đặt câu hỏi liên quan đến lĩnh vực y tế.",
+                    Type = "out_of_scope"
+                };
+            }
+
+            if (!diagnosisModel.IsConclusionReached)
+            {
+                return new ChatResponseDto
+                {
+                    Text = diagnosisModel.UserResponseText ?? "Xin lỗi, tôi cần thêm thông tin để phân tích triệu chứng của bạn.",
+                    Type = "text"
+                };
+            }
+
+            //save symptomp analysis to database
+            if (userIdClaim != null)
+            {
+                await SaveSymptompAnalysisAsync(diagnosisModel, userIdClaim);
+            }
+
+            var symptompAnalysisResponse = new SymptomAnalysisResponseDto
+            {
+                Severity = diagnosisModel.SeverityCode == null ? "mild" : diagnosisModel.SeverityCode.ToLower(),
+            };
+
+            if (diagnosisModel.SeverityCode.ToLower() == "mild")
+            {
+                symptompAnalysisResponse.Medicines = await GetRecommendedMedicinesAsync(string.Join(",", diagnosisModel.PossibleConditions));
+                symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Nghỉ ngơi tại nhà và theo dõi các triệu chứng.";
+
+                return new ChatResponseDto
+                {
+                    Text = diagnosisModel.UserResponseText ?? "Phân tích triệu chứng hoàn tất.",
+                    Type = "symptom_analysis",
+                    Data = symptompAnalysisResponse,
+                };
+            }
+
+            symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Hãy đặt lịch hẹn với bác sĩ chuyên khoa để được tư vấn thêm.";
+            symptompAnalysisResponse.RecommendedDoctors = await GetRecommendedDoctorsAsync(diagnosisModel.PossibleConditions, 3);
+            return new ChatResponseDto
+            {
+                Text = diagnosisModel.UserResponseText ?? "Phân tích triệu chứng hoàn tất.",
+                Type = "symptom_analysis",
+            };
+        }
+
+        private async Task<List<MedicineDto>> GetRecommendedMedicinesAsync(string possibleConditions)
+        {
+            var systemContent = new Content
+            {
+                Parts =
+                 [
+                     new Part
+                        {
+                            Text = MedicineRecommendationInstructionText,
+                        }
+                 ],
+                Role = "system"
+            };
+
+            var systemConfigs = new GenerateContentConfig
+            {
+                SystemInstruction = systemContent,
+                ResponseMimeType = "application/json",
+                ResponseSchema = MedicinesSchema // Sử dụng JSON Schema đã định nghĩa
+            };
+
+            var conversationHistory = new List<Content>
+            {
+                new Content
+                {
+                    Role = "user",
+                    Parts =
+                    [
+                        new Part
+                        {
+                            Text = $"Dựa trên các tình trạng y tế có thể xảy ra sau: '{possibleConditions}', hãy đề xuất các loại thuốc phù hợp cùng với hướng dẫn sử dụng."
+                        }
+                    ]
+                }
+            };
+            var rawResponse = await GenerateResponseAsync(conversationHistory, systemConfigs);
+            var medicines = JsonSerializer.Deserialize<MedicineList>(rawResponse);
+            return medicines?.List ?? [];
+        }
+
+        private async Task<List<RecommendedDoctorDto>> GetRecommendedDoctorsAsync(string possibleConditions, int count)
         {
             var doctorlistString = "";
             var doctorList = await _doctorRepository.GetAllAsync();
             foreach (var doctor in doctorList)
             {
-                doctorlistString += $"- {doctor.User.FullName}" +
+                doctorlistString += $"-Id: {doctor.Id}" +
+                    $", họ và tên: {doctor.User.FullName}" +
                     $", chuyên khoa: {doctor.Specialization.Name}" +
                     $", trình độ học vấn: {DoctorDegree.GetDescription(doctor.Education!)}\n";
             }
-            _logger.LogInformation($"Doctor List: {doctorlistString}");
 
             var prompt = "Dựa trên danh sách bác sĩ sau đây:\n" +
                          $"{doctorlistString}\n" +
-                         $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với các loại bệnh có khả năng là: '{possibleConditions}'. " +
-                         "Trả lời chỉ với tên bác sĩ, chuyên khoa và trình độ học vấn của họ theo dạng: 'Bác sĩ A, B (trình độ học vấn), khoa C (chuyên khoa)', " +
-                         "mỗi bác sĩ trên một dòng, không có văn bản bổ sung nào khác. " +
-                         "Nếu không tìm thấy bác sĩ phù họp trả lời 'Rất tiếc, chúng tôi hiện chưa tìm được bác sĩ nào phù hợp với nhu cầu của bạn.'. ";
+                         $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với các loại bệnh có khả năng là: '{possibleConditions}'. ";
             var conversationHistory = new List<Content>
             {
                 new Content
@@ -151,11 +454,38 @@ namespace Medix.API.Business.Services.AI
                     ]
                 }
             };
-            var responseText = await GenerateResponseAsync(conversationHistory);
-            return responseText;
+
+            var systemConfig = new GenerateContentConfig
+            {
+                ResponseMimeType = "application/json",
+                ResponseSchema = DoctorsSchema // Sử dụng JSON Schema đã định nghĩa
+            };
+            var rawJson = await GenerateResponseAsync(conversationHistory, systemConfig);
+            var doctorIds = JsonSerializer.Deserialize<DoctorList>(rawJson);
+            var recommendedDoctors = doctorIds?.IdList.Select(async id =>
+            {
+                var doctor = await _doctorRepository.GetDoctorByIdAsync(Guid.Parse(id));
+                if (doctor == null)
+                {
+                    _logger.LogWarning("Doctor with ID {DoctorId} not found.", id);
+                    return null;
+                }
+                return new RecommendedDoctorDto
+                {
+                    Id = doctor.Id.ToString(),
+                    Name = doctor.User.FullName,
+                    Specialization = doctor.Specialization.Name,
+                    Rating = (double)doctor.AverageRating,
+                    Experience = doctor.YearsOfExperience,
+                    ConsultationFee = doctor.ConsultationFee,
+                    AvatarUrl = doctor.User.AvatarUrl
+                };
+            });
+
+            return (await Task.WhenAll(recommendedDoctors)).Where(doc => doc != null).ToList()!;
         }
 
-        public async Task SaveSymptompAnalysisAsync(DiagnosisModel diagnosisModel, string? userId)
+        private async Task SaveSymptompAnalysisAsync(DiagnosisModel diagnosisModel, string? userId)
         {
             var patient = userId != null
                 ? await _patientRepository.GetPatientByUserIdAsync(Guid.Parse(userId))
@@ -168,7 +498,7 @@ namespace Medix.API.Business.Services.AI
                 SessionId = Guid.NewGuid().ToString(),
                 IsGuestSession = userId == null,
                 PatientId = patient?.Id,
-                SeverityLevelCode = GetSeverityLevelCode(diagnosisModel.SeverityCode),
+                SeverityLevelCode = diagnosisModel.SeverityCode ?? "Mild",
                 PossibleConditions = diagnosisModel.PossibleConditions,
                 RecommendedAction = diagnosisModel.RecommendedAction,
                 ConfidenceScore = diagnosisModel.ConfidenceScore,
@@ -177,16 +507,47 @@ namespace Medix.API.Business.Services.AI
             await _aiSymptomAnalysisRepository.AddAsync(aiSymptompAnalysis);
         }
 
-        private string GetSeverityLevelCode(string? severityLevel)
+        private async Task<Blob> GetBlobFromFileAsync(IFormFile file)
         {
-            return severityLevel?.Trim().ToLower() switch
+            using var memoryStream = new MemoryStream();
+            await file.CopyToAsync(memoryStream);
+            var blob = new Blob
             {
-                "thấp" => "Mild",
-                "trung bình" => "Moderate",
-                "cao" => "Severe",
-                _ => "Unknown",
+                MimeType = file.ContentType,
+                Data = memoryStream.ToArray()
             };
+            return blob;
         }
 
+        private List<Content> GetConversationHistory(List<ContentDto> history)
+        {
+            var conversationHistory = new List<Content>();
+            foreach (var item in history)
+            {
+                var content = new Content
+                {
+                    Role = item.Role,
+                    Parts = [
+                        new Part
+                        {
+                            Text = item.Content
+                        },
+                    ]
+                };
+                conversationHistory.Add(content);
+            }
+
+            return conversationHistory;
+        }
+    }
+
+    internal class MedicineList
+    {
+        public List<MedicineDto> List { get; set; } = new List<MedicineDto>();
+    }
+
+    internal class DoctorList
+    {
+        public List<string> IdList { get; set; } = new List<string>();
     }
 }

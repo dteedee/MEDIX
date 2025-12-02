@@ -1,11 +1,10 @@
-﻿using Google.GenAI.Types;
-using Medix.API.Business.Helper;
+﻿using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.AI;
-using Medix.API.Business.Services.AI;
+using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.Constants;
+using Medix.API.Models.DTOs.AIChat;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Security.Claims;
 
@@ -15,16 +14,16 @@ namespace Medix.API.Presentation.Controller.Classification
     [Route("api/ai-chat")]
     public class AIChatController : ControllerBase
     {
-        private readonly IVertexAIService _vertexAIService;
+        private readonly IAIChatService _aiChatService;
         private readonly ILogger<AIChatController> _logger;
         private readonly int DailyAccessLimit;
 
         public AIChatController(
             ILogger<AIChatController> logger,
-            IVertexAIService vertexAIService)
+            IAIChatService aIChatService)
         {
-            _vertexAIService = vertexAIService;
             _logger = logger;
+            _aiChatService = aIChatService;
 
             var aiConfig = SystemConfigurationDefaults.Find("AI_DAILY_ACCESS_LIMIT");
             DailyAccessLimit = aiConfig != null ? int.Parse(aiConfig.ConfigValue) : 5;
@@ -50,27 +49,17 @@ namespace Medix.API.Presentation.Controller.Classification
                     return BadRequest(new { message = "Vui lòng nhập câu hỏi" });
                 }
 
-                await AddToConversationHistory(request.ChatToken, "user", request.Prompt);
-                var response = await _vertexAIService.GetSymptompAnalysisAsync(GetConversationHistory(request.ChatToken));
+                AddToConversationHistory(request.ChatToken, "user", request.Prompt);
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+                var response = await _aiChatService.SendMessageAsync(GetSavedConversation(request.ChatToken), userIdClaim?.Value);
 
                 if (response == null)
                 {
                     throw new Exception("AI service returned null response");
                 }
 
-                await AddToConversationHistory(request.ChatToken, "assistant", response);
-                var chatResponse = AIResponseParser.GetResponse(response);
-
-                var diagnosisModel = AIResponseParser.ParseJson(response);
-                if (diagnosisModel.IsConclusionReached)
-                {
-                    var userId = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-                    await _vertexAIService.SaveSymptompAnalysisAsync(diagnosisModel, userId?.Value);
-
-                    var recommendedDoctors = await _vertexAIService.GetRecommendedDoctorsAsync(diagnosisModel.PossibleConditions!, 3);
-                    return Ok(chatResponse + "\n\n" + recommendedDoctors);
-                }
-                return Ok(chatResponse);
+                AddToConversationHistory(request.ChatToken, "assistant", response.Text, response);
+                return Ok(response);
             }
             catch (Exception ex)
             {
@@ -80,33 +69,23 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPost("analyze-emr")]
+        [AllowAnonymous]
         public async Task<IActionResult> AnalyzeEMR([FromForm] EMRAnalysisRequest request)
         {
             try
             {
                 ValidateFileRequest(request.File);
 
-                await AddToConversationHistory(request.ChatToken, "user", "EMR của tôi:", request.File);
-                var response = await _vertexAIService.GetSymptompAnalysisAsync(GetConversationHistory(request.ChatToken));
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+                var response = await _aiChatService.AnalyzeEMRAsync(request.File!, GetSavedConversation(request.ChatToken), userIdClaim?.Value);
 
                 if (response == null)
                 {
                     throw new Exception("AI service returned null response");
                 }
 
-                await AddToConversationHistory(request.ChatToken, "assistant", response);
-                var chatResponse = AIResponseParser.GetResponse(response);
-
-                var diagnosisModel = AIResponseParser.ParseJson(response);
-                if (diagnosisModel.IsConclusionReached)
-                {
-                    var userId = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-                    await _vertexAIService.SaveSymptompAnalysisAsync(diagnosisModel, userId?.Value);
-
-                    var recommendedDoctors = await _vertexAIService.GetRecommendedDoctorsAsync(diagnosisModel.PossibleConditions!, 3);
-                    return Ok(chatResponse + "\n\n" + recommendedDoctors);
-                }
-                return Ok(chatResponse);
+                AddToConversationHistory(request.ChatToken, "assistant", response.Text, response);
+                return Ok(response);
             }
             catch (ArgumentException argEx)
             {
@@ -126,15 +105,23 @@ namespace Medix.API.Presentation.Controller.Classification
             try
             {
                 var history = GetSavedConversation(chatToken);
-                var chatHistory = history
-                    .Where(item => item.File == null)
-                    .Select(item => new
+                var chatHistory = new List<ChatResponseDto>();
+
+                foreach (var item in history)
+                {
+                    if (item.Role == "user")
                     {
-                        Id = Guid.NewGuid(),
-                        Text = item.Role == "user" ? item.Content : AIResponseParser.GetResponse(item.Content),
-                        Sender = item.Role == "user" ? "user" : "ai",
-                        timestamp = item.TimeStamp,
-                    }).ToList();
+                        chatHistory.Add(new ChatResponseDto
+                        {
+                            Text = item.Content,
+                            Sender = "user",
+                        });
+                    }
+                    else
+                    {
+                        chatHistory.Add(item.AIResponse!);
+                    }
+                }
                 return Ok(chatHistory);
             }
             catch (Exception ex)
@@ -184,49 +171,8 @@ namespace Medix.API.Presentation.Controller.Classification
             return history;
         }
 
-        private List<Content> GetConversationHistory(string chatToken)
-        {
-            var history = GetSavedConversation(chatToken);
-
-            var conversationHistory = new List<Content>();
-            foreach (var item in history)
-            {
-                _logger.LogInformation($"history: {item.Content}");
-                var content = new Content
-                {
-                    Role = item.Role,
-                    Parts = [
-                        new Part
-                        {
-                            Text = item.Content
-                        },
-                        item.File != null ? new Part
-                        {
-                            InlineData = item.File
-                        }
-                        : null,
-                    ]
-                };
-                conversationHistory.Add(content);
-            }
-
-            return conversationHistory;
-        }
-
-        private async Task<Blob> GetBlobFromFile(IFormFile file)
-        {
-            using var ms = new MemoryStream();
-            await file.CopyToAsync(ms);
-            var bytes = ms.ToArray();
-            var blob = new Blob
-            {
-                Data = bytes,
-                MimeType = file.ContentType,
-            };
-            return blob;
-        }
-
-        private async Task AddToConversationHistory(string chatToken, string role, string content, IFormFile? file = null)
+        private void AddToConversationHistory(string chatToken, string role, string content,
+            ChatResponseDto? aiResponse = null)
         {
 
             var history = GetSavedConversation(chatToken);
@@ -236,7 +182,7 @@ namespace Medix.API.Presentation.Controller.Classification
             {
                 Role = role,
                 Content = content,
-                File = file != null ? await GetBlobFromFile(file) : null
+                AIResponse = aiResponse,
             };
             history.Add(contentDto);
 

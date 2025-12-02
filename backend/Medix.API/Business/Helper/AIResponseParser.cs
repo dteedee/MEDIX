@@ -1,6 +1,5 @@
 ﻿using Medix.API.Models.DTOs.AIChat;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace Medix.API.Business.Helper
 {
@@ -14,27 +13,10 @@ namespace Medix.API.Business.Helper
             {
                 throw new ArgumentException("Input JSON string is null or empty");
             }
-            string cleanedJson;
-            var match = Regex.Match(rawJsonOutput, @"```(?:json)?\s*([\s\S]*?)\s*```", RegexOptions.IgnoreCase);
-            if (match.Success)
-            {
-                cleanedJson = match.Groups[1].Value.Trim();
-            }
-            else
-            {
-                var jsonMatch = Regex.Match(rawJsonOutput, @"[\{\[].*", RegexOptions.Singleline);
-                if (jsonMatch.Success)
-                {
-                    cleanedJson = jsonMatch.Value.Trim();
-                }
-                else
-                {
-                    cleanedJson = rawJsonOutput.Trim();
-                }
-            }
+
             try
             {
-                var diagnosisResult = JsonSerializer.Deserialize<DiagnosisModel>(cleanedJson);
+                var diagnosisResult = JsonSerializer.Deserialize<DiagnosisModel>(rawJsonOutput);
                 if (diagnosisResult == null)
                 {
                     throw new JsonException("Deserialized object is null");

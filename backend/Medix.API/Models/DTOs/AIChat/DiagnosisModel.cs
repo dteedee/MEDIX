@@ -8,12 +8,12 @@ namespace Medix.API.Models.DTOs.AIChat
         public string? SessionId { get; set; }
 
         [JsonPropertyName("Symptoms")]
-        public string?[]? SymptomsProvided { get; set; }
+        public string[] SymptomsProvided { get; set; } = [];
 
         [JsonPropertyName("SeverityLevelCode")]
-        public string? SeverityCode { get; set; }
+        public string SeverityCode { get; set; } = "Mild";
 
-        public string? PossibleConditions { get; set; }
+        public string PossibleConditions { get; set; } = string.Empty;
         public string? RecommendedAction { get; set; }
         public decimal ConfidenceScore { get; set; }
 

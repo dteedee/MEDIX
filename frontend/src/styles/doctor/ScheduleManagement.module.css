@@ -149,9 +149,44 @@
 .calendarHeader {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 24px;
+  justify-content: space-between;
   margin-bottom: 32px;
+  gap: 24px;
+}
+
+.monthNav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.viewToggle {
+  display: inline-flex;
+  gap: 12px;
+  padding: 6px;
+  background: #eef2ff;
+  border-radius: 999px;
+}
+
+.viewToggleBtn {
+  border: none;
+  background: transparent;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.viewToggleBtn:hover {
+  color: #4338ca;
+}
+
+.viewToggleBtn.activeToggle {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .calendarTitle {
@@ -235,6 +270,16 @@
   gap: 12px;
 }
 
+.monthGrid {
+  margin-bottom: 32px;
+}
+
+.monthDays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px;
+}
+
 .calendarDay {
   aspect-ratio: 1;
   border: 2px solid #e2e8f0;
@@ -296,6 +341,11 @@
 
 .calendarDay.hasOverride {
   border-color: #10b981;
+}
+
+.calendarDay.outsideMonth {
+  opacity: 0.45;
+  background: #f8fafc;
 }
 
 .calendarDay.dayOff {

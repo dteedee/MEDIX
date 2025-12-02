@@ -107,6 +107,7 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
 
   const handleSlotClick = async (slot: typeof slotStatuses[number]) => {
     try {
+      if (!dateKey) return;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const selectedDate = new Date(dateKey);
@@ -317,6 +318,7 @@ const ScheduleManagement: React.FC = () => {
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
   const [initialOverrideStart, setInitialOverrideStart] = useState<string | null>(null);
   const [initialOverrideEnd, setInitialOverrideEnd] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"week" | "month">("week");
 
   const showBannedPopup = () => {
     if (user) {
@@ -365,13 +367,21 @@ const ScheduleManagement: React.FC = () => {
     return { start: monday, end: endDate };
   };
 
+  const getMonthRange = (date: Date): { start: Date; end: Date } => {
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  };
+
   const refreshAllData = async () => {
     if (!isAuthenticated || !user?.id) return;
     setIsLoading(true);
     setError(null);
 
     try {
-      const weekRange = getWeekRange(currentDate);
+      const range = viewMode === "week" ? getWeekRange(currentDate) : getMonthRange(currentDate);
       const [fixed, overrides] = await Promise.all([
         scheduleService.getMySchedules(),
         scheduleService.getMyScheduleOverrides()
@@ -387,8 +397,8 @@ const ScheduleManagement: React.FC = () => {
       });
 
       const appointments = await appointmentService.getMyAppointmentsByDateRange(
-        getLocalDateKey(weekRange.start),
-        getLocalDateKey(weekRange.end)
+        getLocalDateKey(range.start),
+        getLocalDateKey(range.end)
       );
 
       setViewData({ schedules: fixed, overrides: futureOverrides, appointments });
@@ -401,7 +411,7 @@ const ScheduleManagement: React.FC = () => {
 
   useEffect(() => {
     refreshAllData();
-  }, [currentDate, isAuthenticated, user?.id]);
+  }, [currentDate, isAuthenticated, user?.id, viewMode]);
 
   const { schedulesByDay, overridesByDate, appointmentsByDate } = useMemo(() => {
     const sMap = new Map<number, DoctorSchedule[]>();
@@ -427,42 +437,73 @@ const ScheduleManagement: React.FC = () => {
     return { schedulesByDay: sMap, overridesByDate: oMap, appointmentsByDate: aMap };
   }, [viewData]);
 
-  const { weekDays, headerLabel } = useMemo(() => {
+  const weekDays = useMemo(() => {
+    if (viewMode !== "week") return [];
     const weekRange = getWeekRange(currentDate);
     const days: (Date | null)[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Always show all 7 days of the week (or 14 if 2 weeks)
-    // Use null for past dates to maintain grid structure
     for (let d = new Date(weekRange.start); d <= weekRange.end; d.setDate(d.getDate() + 1)) {
       const day = new Date(d);
       day.setHours(0, 0, 0, 0);
-      // Include all days, but mark past dates as null
       if (day >= today) {
         days.push(new Date(day));
       } else {
-        days.push(null); // Keep grid structure but mark as empty
+        days.push(null);
       }
     }
 
-    const startMonth = weekRange.start.getMonth();
-    const startYear = weekRange.start.getFullYear();
-    const endMonth = weekRange.end.getMonth();
-    const endYear = weekRange.end.getFullYear();
-    
+    return days;
+  }, [currentDate, viewMode]);
+
+  const monthDays = useMemo(() => {
+    if (viewMode !== "month") return [];
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    const start = new Date(firstDay);
+    const startDay = start.getDay() === 0 ? 7 : start.getDay();
+    start.setDate(start.getDate() - (startDay - 1));
+
+    const end = new Date(lastDay);
+    const endDay = end.getDay() === 0 ? 7 : end.getDay();
+    end.setDate(end.getDate() + (7 - endDay));
+
+    const days: { date: Date; inCurrentMonth: boolean }[] = [];
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      days.push({
+        date: new Date(d),
+        inCurrentMonth: d.getMonth() === month
+      });
+    }
+    return days;
+  }, [currentDate, viewMode]);
+
+  const headerLabel = useMemo(() => {
     const monthNames = [
       "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
       "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"
     ];
 
-    let label = `${monthNames[startMonth]} ${startYear}`;
-    if (startMonth !== endMonth || startYear !== endYear) {
-      label = `${monthNames[startMonth]} ${startYear} - ${monthNames[endMonth]} ${endYear}`;
+    if (viewMode === "week") {
+      const weekRange = getWeekRange(currentDate);
+      const startMonth = weekRange.start.getMonth();
+      const startYear = weekRange.start.getFullYear();
+      const endMonth = weekRange.end.getMonth();
+      const endYear = weekRange.end.getFullYear();
+
+      let label = `${monthNames[startMonth]} ${startYear}`;
+      if (startMonth !== endMonth || startYear !== endYear) {
+        label = `${monthNames[startMonth]} ${startYear} - ${monthNames[endMonth]} ${endYear}`;
+      }
+      return label;
     }
 
-    return { weekDays: days, headerLabel: label };
-  }, [currentDate]);
+    return `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+  }, [currentDate, viewMode]);
 
   const openDayDetails = (date: Date) => {
     setSelectedDate(date);
@@ -489,10 +530,189 @@ const ScheduleManagement: React.FC = () => {
     });
   };
 
-  const navigateWeek = (direction: 'prev' | 'next') => {
+  const renderDayCard = (date: Date, options?: { isOutsideMonth?: boolean }) => {
+    const dateKey = getLocalDateKey(date);
+    const dayOfWeek = convertDayOfWeek(date.getDay());
+
+    const fixedSchedules = schedulesByDay.get(dayOfWeek) || [];
+    const dayOverrides = overridesByDate.get(dateKey) || [];
+    const dayAppointments = appointmentsByDate.get(dateKey) || [];
+
+    const slotStatuses = timeSlotMatrix.map(slot => {
+      const slotStart = parseTimeToMinutes(slot.startTime);
+      const slotEnd = parseTimeToMinutes(slot.endTime);
+
+      const hasOff = dayOverrides.some(o => {
+        if (o.overrideType || !o.isAvailable) return false;
+        const oStart = parseTimeToMinutes(o.startTime);
+        const oEnd = parseTimeToMinutes(o.endTime);
+        return oStart < slotEnd && oEnd > slotStart;
+      });
+
+      const hasWork =
+        !hasOff &&
+        (
+          fixedSchedules.some(s => {
+            if (!s.isAvailable) return false;
+            const sStart = parseTimeToMinutes(s.startTime);
+            const sEnd = parseTimeToMinutes(s.endTime);
+            return sStart < slotEnd && sEnd > slotStart;
+          }) ||
+          dayOverrides.some(o => {
+            if (!o.overrideType || !o.isAvailable) return false;
+            const oStart = parseTimeToMinutes(o.startTime);
+            const oEnd = parseTimeToMinutes(o.endTime);
+            return oStart < slotEnd && oEnd > slotStart;
+          })
+        );
+
+      return {
+        ...slot,
+        status: hasOff ? ("off" as const) : hasWork ? ("work" as const) : ("none" as const),
+      };
+    });
+
+    const hasDayOff = slotStatuses.some(s => s.status === "off");
+    const morningSlots = slotStatuses.filter(s => s.session === "morning");
+    const afternoonSlots = slotStatuses.filter(s => s.session === "afternoon");
+
+    const isToday = getLocalDateKey(date) === getLocalDateKey(new Date());
+    const appointmentCount = dayAppointments.length;
+
+    const dayClasses = [
+      styles.calendarDay,
+      selectedDate && getLocalDateKey(selectedDate) === dateKey ? styles.selected : "",
+      dayOverrides.length > 0 ? styles.hasOverride : "",
+      hasDayOff ? styles.dayOff : "",
+      appointmentCount > 0 ? styles.hasAppointment : "",
+      isToday ? styles.today : "",
+      options?.isOutsideMonth ? styles.outsideMonth : ""
+    ].filter(Boolean).join(" ");
+
+    const sortedAppointments = [...dayAppointments].sort((a, b) => 
+      new Date(a.appointmentStartTime).getTime() - new Date(b.appointmentStartTime).getTime()
+    );
+
+    return (
+      <div
+        key={dateKey}
+        className={dayClasses}
+        onClick={() => openDayDetails(date)}
+      >
+        <div className={styles.dayNumberWrapper}>
+          <span className={styles.dayNumber}>{date.getDate()}</span>
+          {appointmentCount > 0 && (
+            <span className={styles.appointmentBadge} title={`${appointmentCount} cuộc hẹn`}>
+              {appointmentCount}
+            </span>
+          )}
+        </div>
+        
+        <div className={styles.daySessionMatrix}>
+          <div className={styles.daySessionRow}>
+            <span className={styles.daySessionLabel}>Sáng</span>
+            <div className={styles.daySessionSlots}>
+              {morningSlots.map(slot => (
+                <span
+                  key={slot.id}
+                  className={`${styles.daySlotSymbol} ${
+                    slot.status === "work"
+                      ? styles.daySlotWork
+                      : slot.status === "off"
+                        ? styles.daySlotOff
+                        : styles.daySlotNone
+                  }`}
+                  title={`${slot.label}: ${slot.startTime}-${slot.endTime}`}
+                >
+                  {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className={styles.daySessionRow}>
+            <span className={styles.daySessionLabel}>Chiều</span>
+            <div className={styles.daySessionSlots}>
+              {afternoonSlots.map(slot => (
+                <span
+                  key={slot.id}
+                  className={`${styles.daySlotSymbol} ${
+                    slot.status === "work"
+                      ? styles.daySlotWork
+                      : slot.status === "off"
+                        ? styles.daySlotOff
+                        : styles.daySlotNone
+                  }`}
+                  title={`${slot.label}: ${slot.startTime}-${slot.endTime}`}
+                >
+                  {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {appointmentCount > 0 && (
+          <div className={styles.appointmentsPreview}>
+            <div className={styles.appointmentsPreviewHeader}>
+              <Users size={12} />
+              <span>{appointmentCount} cuộc hẹn</span>
+            </div>
+            <div className={styles.appointmentsList}>
+              {sortedAppointments.slice(0, 3).map((app, idx) => {
+                const appTime = new Date(app.appointmentStartTime);
+                const appEndTime = new Date(app.appointmentEndTime);
+                const timeStr = appTime.toLocaleTimeString("vi-VN", {
+                  hour: "2-digit",
+                  minute: "2-digit"
+                });
+                const endTimeStr = appEndTime.toLocaleTimeString("vi-VN", {
+                  hour: "2-digit",
+                  minute: "2-digit"
+                });
+                const tooltipText = `${timeStr} - ${endTimeStr}\n${app.patientName}\n${app.statusDisplayName || app.statusCode}`;
+                return (
+                  <div 
+                    key={app.id} 
+                    className={styles.appointmentPreviewItem} 
+                    title={tooltipText}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openDayDetails(date);
+                    }}
+                  >
+                    <div className={styles.appointmentPreviewTime}>{timeStr}</div>
+                    <div className={styles.appointmentPreviewPatient}>
+                      <User size={10} />
+                      <span>{app.patientName.length > 12 ? app.patientName.substring(0, 12) + '...' : app.patientName}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              {appointmentCount > 3 && (
+                <div 
+                  className={styles.appointmentMore}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openDayDetails(date);
+                  }}
+                >
+                  +{appointmentCount - 3} cuộc hẹn khác
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+  const navigate = (direction: 'prev' | 'next') => {
     setCurrentDate(prev => {
       const newDate = new Date(prev);
-      newDate.setDate(prev.getDate() + (direction === 'next' ? 7 : -7));
+      if (viewMode === "week") {
+        newDate.setDate(prev.getDate() + (direction === 'next' ? 7 : -7));
+      } else {
+        newDate.setMonth(prev.getMonth() + (direction === 'next' ? 1 : -1));
+      }
       return newDate;
     });
   };
@@ -521,217 +741,72 @@ const ScheduleManagement: React.FC = () => {
       {/* Calendar Section */}
       <div className={styles.calendarSection}>
         <div className={styles.calendarHeader}>
-          <button 
-            onClick={() => navigateWeek('prev')} 
-            className={styles.navButton}
-            aria-label="Tuần trước"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <h2 className={styles.calendarTitle}>{headerLabel}</h2>
-          <button 
-            onClick={() => navigateWeek('next')} 
-            className={styles.navButton}
-            aria-label="Tuần sau"
-          >
-            <ChevronRight size={20} />
-          </button>
+          <div className={styles.viewToggle}>
+            <button
+              className={`${styles.viewToggleBtn} ${viewMode === 'week' ? styles.activeToggle : ''}`}
+              onClick={() => setViewMode('week')}
+            >
+              Xem theo tuần
+            </button>
+            <button
+              className={`${styles.viewToggleBtn} ${viewMode === 'month' ? styles.activeToggle : ''}`}
+              onClick={() => setViewMode('month')}
+            >
+              Xem theo tháng
+            </button>
+          </div>
+          <div className={styles.monthNav}>
+            <button 
+              onClick={() => navigate('prev')} 
+              className={styles.navButton}
+              aria-label="Tháng trước"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <h2 className={styles.calendarTitle}>{headerLabel}</h2>
+            <button 
+              onClick={() => navigate('next')} 
+              className={styles.navButton}
+              aria-label="Tháng sau"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
         </div>
 
         {error && <p className={styles.errorText}>{error}</p>}
         {isLoading && <p className={styles.loadingText}>Đang tải...</p>}
 
-        <div className={styles.calendarGrid}>
-          <div className={styles.dayHeaders}>
-            {dayNames.map((day, idx) => (
-              <div key={idx} className={styles.dayHeader}>{day}</div>
-            ))}
+        {viewMode === 'week' ? (
+          <div className={styles.calendarGrid}>
+            <div className={styles.dayHeaders}>
+              {dayNames.map((day, idx) => (
+                <div key={idx} className={styles.dayHeader}>{day}</div>
+              ))}
+            </div>
+            <div className={styles.calendarDays}>
+              {weekDays.map((date, i) => {
+                if (!date) {
+                  return <div key={`empty-${i}`} className={`${styles.calendarDay} ${styles.emptyDay}`}></div>;
+                }
+                return renderDayCard(date);
+              })}
+            </div>
           </div>
-          <div className={styles.calendarDays}>
-            {weekDays.map((date, i) => {
-              // Handle null dates (past dates)
-              if (!date) {
-                return <div key={`empty-${i}`} className={`${styles.calendarDay} ${styles.emptyDay}`}></div>;
-              }
-
-              const dateKey = getLocalDateKey(date);
-              const dayOfWeek = convertDayOfWeek(date.getDay());
-
-              const fixedSchedules = schedulesByDay.get(dayOfWeek) || [];
-              const dayOverrides = overridesByDate.get(dateKey) || [];
-              const dayAppointments = appointmentsByDate.get(dateKey) || [];
-
-              const slotStatuses = timeSlotMatrix.map(slot => {
-                const slotStart = parseTimeToMinutes(slot.startTime);
-                const slotEnd = parseTimeToMinutes(slot.endTime);
-
-                const hasOff = dayOverrides.some(o => {
-                  if (o.overrideType || !o.isAvailable) return false;
-                  const oStart = parseTimeToMinutes(o.startTime);
-                  const oEnd = parseTimeToMinutes(o.endTime);
-                  return oStart < slotEnd && oEnd > slotStart;
-                });
-
-                const hasWork =
-                  !hasOff &&
-                  (
-                    fixedSchedules.some(s => {
-                      if (!s.isAvailable) return false;
-                      const sStart = parseTimeToMinutes(s.startTime);
-                      const sEnd = parseTimeToMinutes(s.endTime);
-                      return sStart < slotEnd && sEnd > slotStart;
-                    }) ||
-                    dayOverrides.some(o => {
-                      if (!o.overrideType || !o.isAvailable) return false;
-                      const oStart = parseTimeToMinutes(o.startTime);
-                      const oEnd = parseTimeToMinutes(o.endTime);
-                      return oStart < slotEnd && oEnd > slotStart;
-                    })
-                  );
-
-                return {
-                  ...slot,
-                  status: hasOff ? ("off" as const) : hasWork ? ("work" as const) : ("none" as const),
-                };
-              });
-
-              const hasDayOff = slotStatuses.some(s => s.status === "off");
-              const morningSlots = slotStatuses.filter(s => s.session === "morning");
-              const afternoonSlots = slotStatuses.filter(s => s.session === "afternoon");
-
-              const isToday = getLocalDateKey(date) === getLocalDateKey(new Date());
-              const appointmentCount = dayAppointments.length;
-
-              const dayClasses = [
-                styles.calendarDay,
-                selectedDate && getLocalDateKey(selectedDate) === dateKey ? styles.selected : "",
-                dayOverrides.length > 0 ? styles.hasOverride : "",
-                hasDayOff ? styles.dayOff : "",
-                appointmentCount > 0 ? styles.hasAppointment : "",
-                isToday ? styles.today : ""
-              ].filter(Boolean).join(" ");
-
-              // Sort appointments by time
-              const sortedAppointments = [...dayAppointments].sort((a, b) => 
-                new Date(a.appointmentStartTime).getTime() - new Date(b.appointmentStartTime).getTime()
-              );
-
-              return (
-                <div
-                  key={dateKey}
-                  className={dayClasses}
-                  onClick={() => openDayDetails(date)}
-                >
-                  <div className={styles.dayNumberWrapper}>
-                    <span className={styles.dayNumber}>{date.getDate()}</span>
-                    {appointmentCount > 0 && (
-                      <span className={styles.appointmentBadge} title={`${appointmentCount} cuộc hẹn`}>
-                        {appointmentCount}
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* Work slots indicators */}
-                  <div className={styles.daySessionMatrix}>
-                    <div className={styles.daySessionRow}>
-                      <span className={styles.daySessionLabel}>Sáng</span>
-                      <div className={styles.daySessionSlots}>
-                        {morningSlots.map(slot => (
-                          <span
-                            key={slot.id}
-                            className={`${styles.daySlotSymbol} ${
-                              slot.status === "work"
-                                ? styles.daySlotWork
-                                : slot.status === "off"
-                                  ? styles.daySlotOff
-                                  : styles.daySlotNone
-                            }`}
-                            title={`${slot.label}: ${slot.startTime}-${slot.endTime}`}
-                          >
-                            {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className={styles.daySessionRow}>
-                      <span className={styles.daySessionLabel}>Chiều</span>
-                      <div className={styles.daySessionSlots}>
-                        {afternoonSlots.map(slot => (
-                          <span
-                            key={slot.id}
-                            className={`${styles.daySlotSymbol} ${
-                              slot.status === "work"
-                                ? styles.daySlotWork
-                                : slot.status === "off"
-                                  ? styles.daySlotOff
-                                  : styles.daySlotNone
-                            }`}
-                            title={`${slot.label}: ${slot.startTime}-${slot.endTime}`}
-                          >
-                            {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Appointments list - hiển thị trực tiếp trên calendar */}
-                  {appointmentCount > 0 && (
-                    <div className={styles.appointmentsPreview}>
-                      <div className={styles.appointmentsPreviewHeader}>
-                        <Users size={12} />
-                        <span>{appointmentCount} cuộc hẹn</span>
-                      </div>
-                      <div className={styles.appointmentsList}>
-                        {sortedAppointments.slice(0, 3).map((app, idx) => {
-                          const appTime = new Date(app.appointmentStartTime);
-                          const appEndTime = new Date(app.appointmentEndTime);
-                          const timeStr = appTime.toLocaleTimeString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          });
-                          const endTimeStr = appEndTime.toLocaleTimeString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          });
-                          const tooltipText = `${timeStr} - ${endTimeStr}\n${app.patientName}\n${app.statusDisplayName || app.statusCode}`;
-                          return (
-                            <div 
-                              key={app.id} 
-                              className={styles.appointmentPreviewItem} 
-                              title={tooltipText}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openDayDetails(date);
-                              }}
-                            >
-                              <div className={styles.appointmentPreviewTime}>{timeStr}</div>
-                              <div className={styles.appointmentPreviewPatient}>
-                                <User size={10} />
-                                <span>{app.patientName.length > 12 ? app.patientName.substring(0, 12) + '...' : app.patientName}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {appointmentCount > 3 && (
-                          <div 
-                            className={styles.appointmentMore}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openDayDetails(date);
-                            }}
-                          >
-                            +{appointmentCount - 3} cuộc hẹn khác
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        ) : (
+          <div className={styles.monthGrid}>
+            <div className={styles.dayHeaders}>
+              {dayNames.map((day, idx) => (
+                <div key={idx} className={styles.dayHeader}>{day}</div>
+              ))}
+            </div>
+            <div className={styles.monthDays}>
+              {monthDays.map(({ date, inCurrentMonth }) =>
+                renderDayCard(date, { isOutsideMonth: !inCurrentMonth })
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className={styles.managementButtons}>
           <button 

@@ -665,7 +665,7 @@ export const PatientDashboard: React.FC = () => {
                     className={styles.viewAllRemindersBtn}
                     onClick={() => navigate('/app/patient/appointments')}
                   >
-                    Xem th�m {reminders.length - 2} nhắc nhở
+                    Xem thêm {reminders.length - 2} nhắc nhở
                     <i className="bi bi-arrow-right"></i>
                   </button>
                 )}

@@ -1,13 +1,16 @@
-import React, { useState, FormEvent, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { DoctorSchedule, CreateSchedulePayload } from '../../types/schedule';
+import { Appointment } from '../../types/appointment.types';
 import { scheduleService } from '../../services/scheduleService';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { X, Clock, CheckCircle, XCircle, Edit, Trash2, Plus } from 'lucide-react';
 import styles from '../../styles/doctor/FixedScheduleManager.module.css';
 
 interface FixedScheduleManagerProps {
   schedules: DoctorSchedule[];
+  appointments: Appointment[];
   onClose: () => void;
   onRefresh: () => void;
 }
@@ -30,19 +33,22 @@ const timeSlots = [
   { label: 'Ca 8 (16:00 - 16:50)', startTime: '16:00', endTime: '16:50' },
 ];
 
+const parseTimeToMinutes = (timeStr: string) => {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+};
+
+const getDayOfWeekFromDate = (date: Date): number => {
+  const js = date.getDay(); // 0-6, Sunday = 0
+  return js === 0 ? 7 : js;
+};
+
 const getDayLabel = (dayValue: number) => daysOfWeek.find(d => d.value === dayValue)?.label || 'Không xác định';
 
-const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, onClose, onRefresh }) => {
+const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, appointments, onClose, onRefresh }) => {
   const { isBanned } = useAuth();
-  const [isAdding, setIsAdding] = useState(false);
-  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const { showToast } = useToast();
   const [selectedDay, setSelectedDay] = useState<number>(1);
-  const [formState, setFormState] = useState<CreateSchedulePayload>({
-    dayOfWeek: 1,
-    startTime: timeSlots[0].startTime,
-    endTime: timeSlots[0].endTime,
-    isAvailable: true,
-  });
 
   const schedulesForSelectedDay = useMemo(() => {
     return schedules
@@ -54,107 +60,124 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
       });
   }, [schedules, selectedDay]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
-    setFormState(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : name === 'dayOfWeek' ? Number(value) : value,
-    }));
-  };
-
-  const handleTimeSlotChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedSlot = timeSlots.find(slot => slot.startTime === e.target.value);
-    if (selectedSlot) {
-      setFormState(prev => ({
-        ...prev,
-        startTime: selectedSlot.startTime,
-        endTime: selectedSlot.endTime,
-      }));
-    }
-  };
-
-  const handleSave = async (e: FormEvent) => {
-    e.preventDefault();
-
-    if (formState.startTime >= formState.endTime) {
-      Swal.fire('Lỗi!', 'Giờ bắt đầu phải trước giờ kết thúc.', 'error');
-      return;
-    }
-
-    const schedulesForDay = schedules.filter(s => s.dayOfWeek === formState.dayOfWeek && s.id !== editingScheduleId);
-
-    const isOverlap = schedulesForDay.some(existingSchedule =>
-      formState.startTime < existingSchedule.endTime && formState.endTime > existingSchedule.startTime
-    );
-
-    if (isOverlap) {
-      Swal.fire(
-        'Lỗi!',
-        `Lịch làm việc bị trùng lặp với một ca khác trong cùng ngày ${getDayLabel(formState.dayOfWeek)}.`,
-        'error'
+  const slotStatuses = useMemo(() => {
+    return timeSlots.map(slot => {
+      const existing = schedulesForSelectedDay.find(s =>
+        s.startTime.substring(0, 5) === slot.startTime &&
+        s.endTime.substring(0, 5) === slot.endTime
       );
+
+      const slotStartMin = parseTimeToMinutes(slot.startTime);
+      const slotEndMin = parseTimeToMinutes(slot.endTime);
+
+      const hasAppointment = appointments.some(app => {
+        const startDate = new Date(app.appointmentStartTime);
+        if (getDayOfWeekFromDate(startDate) !== selectedDay) return false;
+
+        const startTimeStr = app.appointmentStartTime.substring(11, 16);
+        const endTimeStr = app.appointmentEndTime.substring(11, 16);
+        const appStartMin = parseTimeToMinutes(startTimeStr);
+        const appEndMin = parseTimeToMinutes(endTimeStr);
+
+        return appStartMin < slotEndMin && appEndMin > slotStartMin;
+      });
+
+      let status: 'none' | 'work' | 'off' | 'occupied' = 'none';
+      if (existing) {
+        if (!existing.isAvailable) {
+          status = 'off';
+        } else if (hasAppointment) {
+          status = 'occupied';
+        } else {
+          status = 'work';
+        }
+      } else if (hasAppointment) {
+        // Phòng trường hợp có cuộc hẹn nhưng thiếu lịch cố định (không mong muốn nhưng xử lý an toàn)
+        status = 'occupied';
+      }
+
+      const session: 'morning' | 'afternoon' = Number(slot.startTime.split(':')[0]) < 12 ? 'morning' : 'afternoon';
+
+      return {
+        ...slot,
+        status,
+        session,
+        schedule: existing,
+      };
+    });
+  }, [schedulesForSelectedDay, appointments, selectedDay]);
+
+  const handleSlotClick = (slotStartTime: string) => {
+    if (isBanned) {
+      Swal.fire('Tài khoản bị khóa', 'Bạn không thể chỉnh sửa lịch làm việc vào lúc này.', 'warning');
       return;
     }
 
-    const payload: CreateSchedulePayload = {
-      ...formState,
-      startTime: `${formState.startTime}:00`,
-      endTime: `${formState.endTime}:00`,
-    };
+    const existing = schedulesForSelectedDay.find(s => s.startTime.substring(0, 5) === slotStartTime);
+    const slot = timeSlots.find(t => t.startTime === slotStartTime);
+    if (!slot) return;
 
-    try {
-      if (editingScheduleId) {
-        await scheduleService.updateSchedule(editingScheduleId, payload);
-        Swal.fire('Thành công!', 'Đã cập nhật lịch làm việc.', 'success');
-      } else {
-        await scheduleService.createSchedule(payload);
-        Swal.fire('Thành công!', 'Đã thêm lịch làm việc mới.', 'success');
-      }
-      onRefresh();
-      setEditingScheduleId(null);
-      setIsAdding(false);
-    } catch (err: any) {
-      let errorMessage = 'Lưu lịch làm việc thất bại.'; 
-      if (err.response && err.response.data) {
-        if (typeof err.response.data === 'string') {
-          errorMessage = err.response.data;
-        } else if (typeof err.response.data === 'object') {
-          errorMessage =
-            err.response.data.detail ||
-            err.response.data.message ||
-            JSON.stringify(err.response.data);
-        }
-      }
+    // Nếu ca này đang có cuộc hẹn thì không cho phép thay đổi lịch cố định
+    const slotStartMin = parseTimeToMinutes(slot.startTime);
+    const slotEndMin = parseTimeToMinutes(slot.endTime);
+    const hasAppointment = appointments.some(app => {
+      const startDate = new Date(app.appointmentStartTime);
+      if (getDayOfWeekFromDate(startDate) !== selectedDay) return false;
 
-      Swal.fire({
-        title: 'Thất bại!',
-        text: errorMessage,
-        icon: 'error',
-        confirmButtonText: 'Đã hiểu'
-      });
-    }
-  };
+      const startTimeStr = app.appointmentStartTime.substring(11, 16);
+      const endTimeStr = app.appointmentEndTime.substring(11, 16);
+      const appStartMin = parseTimeToMinutes(startTimeStr);
+      const appEndMin = parseTimeToMinutes(endTimeStr);
 
-  const handleDelete = async (scheduleId: string) => {
-    const result = await Swal.fire({
-      title: 'Bạn có chắc chắn?',
-      text: "Bạn sẽ không thể hoàn tác hành động này!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Xóa',
-      cancelButtonText: 'Hủy'
+      return appStartMin < slotEndMin && appEndMin > slotStartMin;
     });
 
-    if (result.isConfirmed) {
+    if (hasAppointment) {
+      showToast('Ca này đang có cuộc hẹn, không thể thay đổi lịch cố định.', 'warning');
+      return;
+    }
+
+    // Vòng đời: - (none) -> V (work) -> X (off) -> - (xóa)
+    const nextState: 'none' | 'work' | 'off' = existing
+      ? existing.isAvailable
+        ? 'off'
+        : 'none'
+      : 'work';
+
+    const basePayload: CreateSchedulePayload = {
+      dayOfWeek: selectedDay,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      isAvailable: nextState === 'work',
+    };
+
+    const perform = async () => {
       try {
-        await scheduleService.deleteSchedule(scheduleId);
-        Swal.fire('Đã xóa!', 'Lịch làm việc đã được xóa.', 'success');
-        onRefresh();
+        if (!existing && nextState === 'work') {
+          await scheduleService.createSchedule(basePayload);
+        } else if (existing && nextState === 'none') {
+          await scheduleService.deleteSchedule(existing.id);
+        } else if (existing && nextState === 'off') {
+          await scheduleService.updateSchedule(existing.id, {
+            ...basePayload,
+            dayOfWeek: existing.dayOfWeek,
+          });
+        }
+        await onRefresh();
+
+        const actionText =
+          nextState === 'work'
+            ? 'được đánh dấu là làm việc (V).'
+            : nextState === 'off'
+              ? 'được đánh dấu là không làm (X).'
+              : 'đã được xóa khỏi lịch cố định.';
+
+        showToast(
+          `Cập nhật lịch cố định - ${getDayLabel(selectedDay)}: Ca ${slot.label} ${actionText}`,
+          'success'
+        );
       } catch (err: any) {
-        let errorMessage = 'Xóa lịch làm việc thất bại.'; 
+        let errorMessage = 'Cập nhật lịch làm việc thất bại.';
         if (err.response && err.response.data) {
           if (typeof err.response.data === 'string') {
             errorMessage = err.response.data;
@@ -165,72 +188,97 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
               JSON.stringify(err.response.data);
           }
         }
-
-        Swal.fire({
-          title: 'Thất bại!',
-          text: errorMessage,
-          icon: 'error',
-          confirmButtonText: 'Đã hiểu'
-        });
+        Swal.fire('Thất bại!', errorMessage, 'error');
       }
+    };
+
+    perform();
+  };
+
+  const handleFillAllSlots = async () => {
+    if (isBanned) {
+      Swal.fire('Tài khoản bị khóa', 'Bạn không thể chỉnh sửa lịch làm việc vào lúc này.', 'warning');
+      return;
+    }
+
+    const ops: Promise<any>[] = [];
+
+    timeSlots.forEach(slot => {
+      const existing = schedulesForSelectedDay.find(s =>
+        s.startTime.substring(0, 5) === slot.startTime &&
+        s.endTime.substring(0, 5) === slot.endTime
+      );
+
+      const slotStartMin = parseTimeToMinutes(slot.startTime);
+      const slotEndMin = parseTimeToMinutes(slot.endTime);
+      const hasAppointment = appointments.some(app => {
+        const startDate = new Date(app.appointmentStartTime);
+        if (getDayOfWeekFromDate(startDate) !== selectedDay) return false;
+
+        const startTimeStr = app.appointmentStartTime.substring(11, 16);
+        const endTimeStr = app.appointmentEndTime.substring(11, 16);
+        const appStartMin = parseTimeToMinutes(startTimeStr);
+        const appEndMin = parseTimeToMinutes(endTimeStr);
+
+        return appStartMin < slotEndMin && appEndMin > slotStartMin;
+      });
+
+      // Không đè lên các ca đã có cuộc hẹn
+      if (hasAppointment) {
+        return;
+      }
+
+      const payload: CreateSchedulePayload = {
+        dayOfWeek: selectedDay,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        isAvailable: true,
+      };
+
+      if (!existing) {
+        ops.push(scheduleService.createSchedule(payload));
+      } else if (!existing.isAvailable) {
+        ops.push(
+          scheduleService.updateSchedule(existing.id, {
+            ...payload,
+            dayOfWeek: existing.dayOfWeek,
+          })
+        );
+      }
+    });
+
+    if (ops.length === 0) {
+      showToast(
+        `Tất cả 8 ca của ${getDayLabel(selectedDay)} đã ở trạng thái làm việc (V).`,
+        'info'
+      );
+      return;
+    }
+
+    try {
+      await Promise.all(ops);
+      await onRefresh();
+      showToast(
+        `Đã đăng ký đủ 8 ca làm việc (V) cho ${getDayLabel(selectedDay)}.`,
+        'success'
+      );
+    } catch (err: any) {
+      let errorMessage = 'Cập nhật lịch làm việc thất bại.';
+      if (err.response && err.response.data) {
+        if (typeof err.response.data === 'string') {
+          errorMessage = err.response.data;
+        } else if (typeof err.response.data === 'object') {
+          errorMessage =
+            err.response.data.detail ||
+            err.response.data.message ||
+            JSON.stringify(err.response.data);
+        }
+      }
+      Swal.fire('Thất bại!', errorMessage, 'error');
     }
   };
 
-  const startEditing = (schedule: DoctorSchedule) => {
-    setEditingScheduleId(schedule.id);
-    setFormState({
-      dayOfWeek: schedule.dayOfWeek,
-      startTime: schedule.startTime.substring(0, 5),
-      endTime: schedule.endTime.substring(0, 5),
-      isAvailable: schedule.isAvailable,
-    });
-  };
-
-  const renderForm = () => (
-    <form onSubmit={handleSave} className={styles.scheduleForm}>
-      <h4 className={styles.formTitle}>{editingScheduleId ? 'Chỉnh sửa lịch' : 'Thêm lịch mới'}</h4>
-      <div className={styles.formGrid}>
-        <div className={styles.formGroup}>
-          <div className={styles.dayDisplay}>
-            Ngày: <span className={styles.dayName}>{getDayLabel(formState.dayOfWeek)}</span>
-          </div>
-        </div>
-        <div className={styles.formGroup}>
-          <div className={styles.checkboxGroup}>
-            <input 
-              type="checkbox" 
-              id="isAvailable" 
-              name="isAvailable" 
-              checked={formState.isAvailable} 
-              onChange={handleInputChange}
-            />
-            <label htmlFor="isAvailable">Sẵn sàng</label>
-          </div>
-        </div>
-        <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-          <label className={styles.formLabel}>Ca làm việc</label>
-          <select 
-            name="timeSlot" 
-            value={formState.startTime} 
-            onChange={handleTimeSlotChange} 
-            className={styles.formSelect}
-          >
-            {timeSlots.map(slot => <option key={slot.startTime} value={slot.startTime}>{slot.label}</option>)}
-          </select>
-        </div>
-      </div>
-      <div className={styles.formActions}>
-        <button type="submit" className={styles.saveButton}>Lưu</button>
-        <button 
-          type="button" 
-          onClick={() => { setIsAdding(false); setEditingScheduleId(null); }} 
-          className={styles.cancelButton}
-        >
-          Hủy
-        </button>
-      </div>
-    </form>
-  );
+  // Các hàm chỉnh sửa/xóa chi tiết và form phía dưới đã được loại bỏ theo logic mới
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -246,7 +294,7 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
           {daysOfWeek.map(day => (
             <button
               key={day.value}
-              onClick={() => { setSelectedDay(day.value); setIsAdding(false); setEditingScheduleId(null); }}
+              onClick={() => setSelectedDay(day.value)}
               className={`${styles.dayTab} ${selectedDay === day.value ? styles.active : ''}`}
             >
               {day.label}
@@ -255,74 +303,103 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
         </div>
 
         <div className={styles.schedulesList}>
-          {schedulesForSelectedDay.length > 0 ? (
-            <>
-              {schedulesForSelectedDay.map(schedule => (
-                editingScheduleId === schedule.id ? (
-                  <div key={schedule.id}>{renderForm()}</div>
-                ) : (
-                  <div key={schedule.id} className={styles.scheduleItem}>
-                    <div className={styles.scheduleInfo}>
-                      <p className={styles.scheduleTime}>
-                        <Clock size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-                        {schedule.startTime.substring(0, 5)} - {schedule.endTime.substring(0, 5)}
-                      </p>
-                      <span className={`${styles.scheduleStatus} ${schedule.isAvailable ? styles.available : styles.unavailable}`}>
-                        {schedule.isAvailable ? (
-                          <>
-                            <CheckCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-                            Sẵn sàng
-                          </>
-                        ) : (
-                          <>
-                            <XCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-                            Không sẵn sàng
-                          </>
-                        )}
-                      </span>
-                    </div>
-                    <div className={styles.scheduleActions}>
-                      <button 
-                        onClick={() => startEditing(schedule)} 
-                        className={`${styles.actionButton} ${styles.editButton}`} 
-                        disabled={isBanned}
-                      >
-                        <Edit size={16} />
-                        Sửa
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(schedule.id)} 
-                        className={`${styles.actionButton} ${styles.deleteButton}`} 
-                        disabled={isBanned}
-                      >
-                        <Trash2 size={16} />
-                        Xóa
-                      </button>
-                    </div>
-                  </div>
-                )
-              ))}
-            </>
-          ) : (
-            <div className={styles.emptyState}>
-              <p>Chưa có lịch làm việc cho ngày này.</p>
-            </div>
-          )}
+              <div className={styles.fixedMatrixLegend}>
+            <span><strong>V</strong>: Làm việc</span>
+            <span><strong>X</strong>: Không làm</span>
+            <span><strong>O</strong>: Có hẹn</span>
+            <span><strong>-</strong>: Chưa đăng ký</span>
+            <span className={styles.fixedMatrixHint}>Nhấn vào ca để thêm hoặc chỉnh sửa lịch cố định</span>
+          </div>
 
-          {isAdding && !editingScheduleId && renderForm()}
-          {!isAdding && !editingScheduleId && (
-            <button 
-              onClick={() => {
-                setIsAdding(true);
-                setFormState({ dayOfWeek: selectedDay, startTime: timeSlots[0].startTime, endTime: timeSlots[0].endTime, isAvailable: true });
-              }} 
+          <div className={styles.fixedSlotMatrix}>
+            <div className={styles.fixedMatrixHeaderRow}>
+              <div className={styles.fixedMatrixCorner}></div>
+              {timeSlots.slice(0, 4).map(slot => (
+                <div key={slot.startTime} className={styles.fixedMatrixHeaderCell}>{slot.label.split(' ')[1]}</div>
+              ))}
+            </div>
+            <div className={styles.fixedMatrixRow}>
+              <div className={styles.fixedSessionCell}>Buổi sáng</div>
+              {slotStatuses.filter(s => s.session === 'morning').map(slot => (
+                <div
+                  key={slot.startTime}
+                  className={`${styles.fixedSlotCell} ${
+                    slot.status === 'occupied'
+                      ? styles.fixedSlotCellOccupied
+                      : slot.status === 'work'
+                        ? styles.fixedSlotCellWork
+                        : slot.status === 'off'
+                          ? styles.fixedSlotCellOff
+                          : styles.fixedSlotCellNone
+                  }`}
+                  onClick={() => handleSlotClick(slot.startTime)}
+                >
+                  <span className={styles.fixedSlotSymbol}>
+                    {slot.status === 'occupied'
+                      ? 'O'
+                      : slot.status === 'work'
+                        ? 'V'
+                        : slot.status === 'off'
+                          ? 'X'
+                          : '-'}
+                  </span>
+                  <span className={styles.fixedSlotTimeSmall}>
+                    {slot.startTime} - {slot.endTime}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className={styles.fixedMatrixHeaderRow}>
+              <div className={styles.fixedMatrixCorner}></div>
+              {timeSlots.slice(4).map(slot => (
+                <div key={slot.startTime} className={styles.fixedMatrixHeaderCell}>{slot.label.split(' ')[1]}</div>
+              ))}
+            </div>
+            <div className={styles.fixedMatrixRow}>
+              <div className={styles.fixedSessionCell}>Buổi chiều</div>
+              {slotStatuses.filter(s => s.session === 'afternoon').map(slot => (
+                <div
+                  key={slot.startTime}
+                  className={`${styles.fixedSlotCell} ${
+                    slot.status === 'occupied'
+                      ? styles.fixedSlotCellOccupied
+                      : slot.status === 'work'
+                        ? styles.fixedSlotCellWork
+                        : slot.status === 'off'
+                          ? styles.fixedSlotCellOff
+                          : styles.fixedSlotCellNone
+                  }`}
+                  onClick={() => handleSlotClick(slot.startTime)}
+                >
+                  <span className={styles.fixedSlotSymbol}>
+                    {slot.status === 'occupied'
+                      ? 'O'
+                      : slot.status === 'work'
+                        ? 'V'
+                        : slot.status === 'off'
+                          ? 'X'
+                          : '-'}
+                  </span>
+                  <span className={styles.fixedSlotTimeSmall}>
+                    {slot.startTime} - {slot.endTime}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.bulkActions}>
+            <button
+              type="button"
               className={styles.addButton}
+              onClick={handleFillAllSlots}
               disabled={isBanned}
             >
               <Plus size={18} />
-              Thêm ca làm việc cho {getDayLabel(selectedDay)}
+              Đăng ký đủ 8 ca làm việc cho {getDayLabel(selectedDay)}
             </button>
-          )}
+          </div>
         </div>
       </div>
     </div>

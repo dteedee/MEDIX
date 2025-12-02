@@ -12,6 +12,8 @@ interface Props {
   overrides: ScheduleOverride[];
   onClose: () => void;
   initialDate?: string | null;
+  initialStartTime?: string | null;
+  initialEndTime?: string | null;
   onRefresh: () => void;
 }
 
@@ -31,7 +33,7 @@ const timeSlots = [
   { label: 'Ca 8 (16:00 - 16:50)', startTime: '16:00', endTime: '16:50' },
 ];
 
-const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClose, onRefresh, initialDate }) => {
+const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClose, onRefresh, initialDate, initialStartTime, initialEndTime }) => {
   const { isBanned } = useAuth();
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingOverride, setEditingOverride] = useState<ScheduleOverride | null>(null);
@@ -43,17 +45,20 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
 
   useEffect(() => {
     if (initialDate) {
+      const defaultStart = initialStartTime || timeSlots[0].startTime;
+      const defaultEnd = initialEndTime || timeSlots[0].endTime;
       setEditingOverride(null);
       reset({
         overrideDate: initialDate,
-        startTime: timeSlots[0].startTime,
-        endTime: timeSlots[0].endTime,
+        startTime: defaultStart,
+        endTime: defaultEnd,
+        timeSlot: defaultStart,
         overrideType: 1,
         reason: ''
       });
       setIsFormVisible(true);
     }
-  }, [initialDate, reset]);
+  }, [initialDate, initialStartTime, initialEndTime, reset]);
 
   const handleAddNew = () => {
     setEditingOverride(null);
@@ -61,6 +66,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
       overrideDate: new Date().toISOString().split('T')[0],
       startTime: timeSlots[0].startTime,
       endTime: timeSlots[0].endTime,
+      timeSlot: timeSlots[0].startTime,
       overrideType: 1,
       reason: ''
     });
@@ -72,6 +78,7 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
     setValue('overrideDate', override.overrideDate);
     setValue('startTime', override.startTime.substring(0, 5));
     setValue('endTime', override.endTime.substring(0, 5));
+    setValue('timeSlot', override.startTime.substring(0, 5));
     setValue('overrideType', override.overrideType ? 1 : 0);
     setValue('reason', override.reason);
     setIsFormVisible(true);

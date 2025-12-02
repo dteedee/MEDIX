@@ -148,6 +148,107 @@
   background: #94a3b8;
 }
 
+.fixedMatrixLegend {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.fixedMatrixHint {
+  margin-left: auto;
+  font-style: italic;
+  font-size: 12px;
+  color: #6b21a8;
+}
+
+.fixedSlotMatrix {
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  background: #f9fafb;
+}
+
+.fixedMatrixHeaderRow,
+.fixedMatrixRow {
+  display: grid;
+  grid-template-columns: 120px repeat(4, 1fr);
+}
+
+.fixedMatrixHeaderCell {
+  padding: 10px 8px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 13px;
+  background: #e5e7eb;
+  border-bottom: 1px solid #e2e8f0;
+  border-left: 1px solid #e2e8f0;
+}
+
+.fixedMatrixCorner {
+  background: #f3f4f6;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.fixedSessionCell {
+  padding: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #374151;
+  background: #f3f4f6;
+  border-top: 1px solid #e2e8f0;
+}
+
+.fixedSlotCell {
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+  border-top: 1px solid #e2e8f0;
+  border-left: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fixedSlotSymbol {
+  font-weight: 700;
+}
+
+.fixedSlotTimeSmall {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.fixedSlotCellWork {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.fixedSlotCellOff {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.fixedSlotCellNone {
+  background: #f9fafb;
+  color: #6b7280;
+}
+
+.fixedSlotCellOccupied {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.fixedSlotCell:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12);
+}
+
 .scheduleItem {
   background: white;
   padding: 20px;
@@ -408,6 +509,10 @@
 .addButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.bulkActions {
+  margin-top: 16px;
 }
 
 /* Responsive */

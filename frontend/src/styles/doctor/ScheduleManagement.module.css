@@ -219,10 +219,14 @@
   text-align: center;
   font-weight: 700;
   font-size: 14px;
-  color: #64748b;
-  padding: 12px 0;
+  color: #4338ca;
+  padding: 10px 0;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  border: 1px solid rgba(129, 140, 248, 0.7);
+  box-shadow: 0 4px 10px rgba(129, 140, 248, 0.25);
 }
 
 .calendarDays {
@@ -570,16 +574,17 @@
 }
 
 .modalContent {
-  background-color: #fff;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   padding: 32px;
   border-radius: 20px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   width: 90%;
-  max-width: 600px;
+  max-width: 640px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
   animation: slideInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  border: 1px solid rgba(226, 232, 240, 0.9);
 }
 
 @keyframes slideInUp {
@@ -604,15 +609,19 @@
 
 .modalHeader h3 {
   font-size: 24px;
-  font-weight: 700;
-  color: #1e293b;
+  font-weight: 800;
   margin: 0 0 4px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .modalSubtitle {
   font-size: 14px;
   color: #64748b;
   margin: 0;
+  font-weight: 500;
 }
 
 .modalCloseBtn {
@@ -649,6 +658,13 @@
   color: #64748b;
   margin-bottom: 16px;
   flex-wrap: wrap;
+}
+
+.matrixHint {
+  margin-left: auto;
+  font-style: italic;
+  font-size: 12px;
+  color: #6b21a8;
 }
 
 .slotMatrix {
@@ -698,6 +714,8 @@
   font-size: 13px;
   border-top: 1px solid #e2e8f0;
   border-left: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .slotSymbol {
@@ -722,6 +740,11 @@
 .slotCellNone {
   background: #f9fafb;
   color: #6b7280;
+}
+
+.slotCell:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12);
 }
 
 .modalBody::-webkit-scrollbar {

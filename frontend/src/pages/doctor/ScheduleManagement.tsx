@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, Calendar, Clock, Users, Plus, User } from "l
 import Swal from "sweetalert2";
 import { scheduleService } from "../../services/scheduleService";
 import { appointmentService } from "../../services/appointmentService";
-import { DoctorSchedule, ScheduleOverride } from "../../types/schedule";
+import { DoctorSchedule, ScheduleOverride, CreateScheduleOverridePayload } from "../../types/schedule";
 import { Appointment } from "../../types/appointment.types";
 import styles from "../../styles/doctor/ScheduleManagement.module.css";
 import FixedScheduleManager from "./FixedScheduleManager";
@@ -47,19 +47,23 @@ interface DayDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   formattedDate: string;
+  dateKey: string;
   schedules: DoctorSchedule[];
   overrides: ScheduleOverride[];
   appointments: Appointment[];
-  onAddFlexibleSchedule: () => void;
+  onRefresh: () => void;
+  onAddFlexibleSchedule: (slot?: { startTime: string; endTime: string }) => void;
 }
 
 const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   isOpen,
   onClose,
   formattedDate,
+  dateKey,
   schedules,
   overrides,
   appointments,
+  onRefresh,
   onAddFlexibleSchedule
 }) => {
   const slotStatuses = useMemo(() => {
@@ -101,6 +105,98 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   const morningSlots = slotStatuses.filter(s => s.session === "morning");
   const afternoonSlots = slotStatuses.filter(s => s.session === "afternoon");
 
+  const handleSlotClick = async (slot: typeof slotStatuses[number]) => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selectedDate = new Date(dateKey);
+      selectedDate.setHours(0, 0, 0, 0);
+
+      if (slot.status === "none") {
+        // Nếu chưa có ca làm việc, vẫn dùng form để đăng ký linh hoạt chi tiết
+        onAddFlexibleSchedule({ startTime: slot.startTime, endTime: slot.endTime });
+        return;
+      }
+
+      // Xử lý toggle nghỉ / làm việc thông qua overrides
+      const existingOff = overrides.find(o => {
+        if (o.overrideType || !o.isAvailable) return false;
+        if (o.overrideDate !== dateKey) return false;
+        const oStart = parseTimeToMinutes(o.startTime);
+        const oEnd = parseTimeToMinutes(o.endTime);
+        const slotStart = parseTimeToMinutes(slot.startTime);
+        const slotEnd = parseTimeToMinutes(slot.endTime);
+        return oStart < slotEnd && oEnd > slotStart;
+      });
+
+      // Nếu đang X (đang có override nghỉ) -> bỏ nghỉ, quay lại làm việc
+      if (existingOff) {
+        await scheduleService.deleteScheduleOverride(existingOff.id);
+        await onRefresh();
+        return;
+      }
+
+      // Đổi sang nghỉ: chỉ áp dụng rule 2 ngày sau
+      const minDate = new Date(today);
+      minDate.setDate(today.getDate() + 2);
+      if (selectedDate < minDate) {
+        const minDateStr = minDate.toLocaleDateString('vi-VN', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        Swal.fire({
+          title: 'Lỗi!',
+          html: `Ngày nghỉ phải cách hôm nay ít nhất 2 ngày. Bạn chỉ có thể đăng ký nghỉ từ <b>${minDateStr}</b> trở đi.`,
+          icon: 'warning',
+          confirmButtonText: 'Đã hiểu'
+        });
+        return;
+      }
+
+      const payload: CreateScheduleOverridePayload = {
+        overrideDate: dateKey,
+        startTime: `${slot.startTime}:00`,
+        endTime: `${slot.endTime}:00`,
+        overrideType: false, // Nghỉ
+        isAvailable: true,
+        reason: ''
+      };
+
+      await scheduleService.createScheduleOverride(payload);
+      await onRefresh();
+    } catch (err: any) {
+      let errorMessage = 'Không thể cập nhật lịch. Vui lòng kiểm tra lại thông tin.';
+
+      if (err.response && err.response.data) {
+        if (typeof err.response.data === 'string') {
+          errorMessage = err.response.data;
+        } else if (typeof err.response.data === 'object' && err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (typeof err.response.data === 'object') {
+          errorMessage = JSON.stringify(err.response.data);
+        }
+
+        switch (true) {
+          case errorMessage.includes('Bạn đã có ghi đè trong khung giờ'):
+            errorMessage = "Khung giờ này đã tồn tại một lịch linh hoạt khác. Vui lòng chọn thời gian khác.";
+            break;
+          case errorMessage.includes('Lịch tăng ca không được phép trùng với lịch cố định đã có.'):
+            errorMessage = "Lịch tăng ca bạn chọn bị trùng với lịch làm việc cố định đã có. Vui lòng chọn một khung giờ khác.";
+            break;
+        }
+      }
+
+      Swal.fire({
+        title: 'Lỗi!',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonText: 'Đã hiểu'
+      });
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -121,6 +217,7 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
             <span><strong>V</strong>: Làm việc</span>
             <span><strong>X</strong>: Nghỉ</span>
             <span><strong>-</strong>: Chưa đăng ký</span>
+            <span className={styles.matrixHint}>Nhấn vào ca để đăng ký lịch linh hoạt nhanh</span>
           </div>
 
           <div className={styles.slotMatrix}>
@@ -142,6 +239,7 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                         ? styles.slotCellOff
                         : styles.slotCellNone
                   }`}
+                  onClick={() => handleSlotClick(slot)}
                 >
                   <span className={styles.slotSymbol}>
                     {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
@@ -171,6 +269,7 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                         ? styles.slotCellOff
                         : styles.slotCellNone
                   }`}
+                  onClick={() => handleSlotClick(slot)}
                 >
                   <span className={styles.slotSymbol}>
                     {slot.status === "work" ? "V" : slot.status === "off" ? "X" : "-"}
@@ -216,6 +315,8 @@ const ScheduleManagement: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [initialOverrideDate, setInitialOverrideDate] = useState<string | null>(null);
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
+  const [initialOverrideStart, setInitialOverrideStart] = useState<string | null>(null);
+  const [initialOverrideEnd, setInitialOverrideEnd] = useState<string | null>(null);
 
   const showBannedPopup = () => {
     if (user) {
@@ -368,10 +469,12 @@ const ScheduleManagement: React.FC = () => {
     setIsDetailsModalOpen(true);
   };
 
-  const handleAddFlexibleSchedule = () => {
+  const handleAddFlexibleSchedule = (slot?: { startTime: string; endTime: string }) => {
     if (!selectedDate) return;
     const dateString = getLocalDateKey(selectedDate);
     setInitialOverrideDate(dateString);
+    setInitialOverrideStart(slot?.startTime ?? null);
+    setInitialOverrideEnd(slot?.endTime ?? null);
     setIsDetailsModalOpen(false);
     setIsOverrideModalOpen(true);
   };
@@ -644,6 +747,8 @@ const ScheduleManagement: React.FC = () => {
                 showBannedPopup();
               } else {
                 setInitialOverrideDate(null);
+                setInitialOverrideStart(null);
+                setInitialOverrideEnd(null);
                 setIsOverrideModalOpen(true);
               }
             }}
@@ -658,6 +763,7 @@ const ScheduleManagement: React.FC = () => {
       {isModalOpen && (
         <FixedScheduleManager
           schedules={viewData.schedules}
+          appointments={viewData.appointments}
           onClose={() => setIsModalOpen(false)}
           onRefresh={refreshAllData}
         />
@@ -667,6 +773,8 @@ const ScheduleManagement: React.FC = () => {
           schedules={viewData.schedules}
           overrides={viewData.overrides}
           initialDate={initialOverrideDate}
+          initialStartTime={initialOverrideStart}
+          initialEndTime={initialOverrideEnd}
           onClose={() => { setIsOverrideModalOpen(false); setInitialOverrideDate(null); }}
           onRefresh={refreshAllData}
         />
@@ -676,12 +784,14 @@ const ScheduleManagement: React.FC = () => {
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
         formattedDate={getFormattedSelectedDate()}
+        dateKey={selectedDate ? getLocalDateKey(selectedDate) : ''}
         schedules={
           selectedDate
             ? schedulesByDay.get(convertDayOfWeek(selectedDate.getDay())) || []
             : []
         }
         overrides={selectedDate ? overridesByDate.get(getLocalDateKey(selectedDate)) || [] : []}
+        onRefresh={refreshAllData}
         onAddFlexibleSchedule={handleAddFlexibleSchedule}
         appointments={selectedDate ? appointmentsByDate.get(getLocalDateKey(selectedDate)) || [] : []}
       />

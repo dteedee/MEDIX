@@ -6,7 +6,7 @@ class ApiClient {
   private refreshTokenPromise: Promise<string> | null = null;
 
   constructor() {
-    const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://medix-a9bdazgse0d8cpc9.southeastasia-01.azurewebsites.net/api';
+    const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'https://medix-a9bdazgse0d8cpc9.southeastasia-01.azurewebsites.net//api';
     
     this.client = axios.create({
       baseURL: API_BASE_URL,

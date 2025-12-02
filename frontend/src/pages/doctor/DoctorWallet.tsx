@@ -612,6 +612,13 @@ export const DoctorWallet: React.FC = () => {
         : null;
       
       if (!transactionDate) return;
+            const status = transaction.status;
+      const isCompleted =
+        status === 'Completed' ||
+        status === 'Compeleted'; 
+      if (!isCompleted) {
+        return;
+      }
       
       const amount = Math.abs(transaction.amount || 0);
       const typeCode = transaction.transactionTypeCode;

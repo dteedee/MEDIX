@@ -18,6 +18,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
             var today = DateOnly.FromDateTime(DateTime.Now);
             var dotNetDayOfWeek = (int)DateTime.Now.DayOfWeek;
             var dayOfWeek = dotNetDayOfWeek == 0 ? 7 : dotNetDayOfWeek;
+            var now = DateTime.Now;
 
             var dto = new ManagerDashboardDto();
 
@@ -36,11 +37,25 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
             foreach (var doctor in doctors)
             {
+                
+                var isBanned = doctor.StartDateBanned.HasValue 
+                    && doctor.EndDateBanned.HasValue
+                    && doctor.StartDateBanned.Value <= now 
+                    && doctor.EndDateBanned.Value > now;
+
+                if (isBanned)
+                {
+                    continue;
+                }
+
                 var doctorDto = new DoctorScheduleTodayDto
                 {
                     DoctorId = doctor.Id,
                     DoctorName = doctor.User.FullName,
-                    SpecializationName = doctor.Specialization.Name
+                    SpecializationName = doctor.Specialization.Name,
+                    StartDateBanned = doctor.StartDateBanned,
+                    EndDateBanned = doctor.EndDateBanned,
+                    IsBanned = isBanned
                 };
 
                 var doctorSchedules = schedules.Where(s => s.DoctorId == doctor.Id);
@@ -67,7 +82,11 @@ namespace Medix.API.DataAccess.Repositories.Classification
                     });
                 }
 
-                dto.DoctorsTodaySchedules.Add(doctorDto);
+                // Chỉ thêm bác sĩ vào danh sách nếu có lịch làm việc
+                if (doctorDto.WorkShifts.Count > 0)
+                {
+                    dto.DoctorsTodaySchedules.Add(doctorDto);
+                }
             }
 
             var stats = await _context.Appointments.ToListAsync();

@@ -32,6 +32,9 @@ export interface DoctorSchedule {
   doctorId: string;
   doctorName: string;
   specializationName: string;
+  startDateBanned?: string;
+  endDateBanned?: string;
+  isBanned: boolean;
   workShifts: WorkShift[];
 }
 

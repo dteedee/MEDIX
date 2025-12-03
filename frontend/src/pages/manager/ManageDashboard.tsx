@@ -278,9 +278,20 @@ export const ManageDashboard: React.FC = () => {
                     <div key={doctor.doctorId} className={styles.doctorScheduleItem}>
                       <div className="flex items-center mb-2">
                         <FaUserMd className="text-xl text-blue-500 mr-3" />
-                        <div>
-                          <h4 className="font-bold text-gray-800">{doctor.doctorName}</h4>
-                          <p className="text-sm text-gray-500">{doctor.specializationName}</p>
+                        <div className="flex-grow">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-bold text-gray-800">{doctor.doctorName}</h4>
+                              <p className="text-sm text-gray-500">{doctor.specializationName}</p>
+                            </div>
+                            {doctor.isBanned && (
+                              <div className="bg-red-100 border border-red-400 rounded px-2 py-1">
+                                <span className="text-xs font-semibold text-red-700 flex items-center">
+                                  <FaBan className="mr-1" /> Bị ban
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

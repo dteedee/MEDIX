@@ -20,6 +20,9 @@ namespace Medix.API.Models.DTOs.Manager
         public Guid DoctorId { get; set; }
         public string DoctorName { get; set; } = null!;
         public string SpecializationName { get; set; } = null!;
+        public DateTime? StartDateBanned { get; set; }
+        public DateTime? EndDateBanned { get; set; }
+        public bool IsBanned { get; set; }
 
         public List<WorkShiftDto> WorkShifts { get; set; } = new();
     }

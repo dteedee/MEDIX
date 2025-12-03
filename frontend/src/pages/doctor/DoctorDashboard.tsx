@@ -93,15 +93,15 @@ interface UpcomingAppointment {
   serviceType: string
 }
 
-const HIDDEN_NOTIFICATIONS_KEY = "medix_doctor_hidden_notifications_v1"
+const DOCTOR_READ_NOTIFICATIONS_KEY = "medix_doctor_read_notifications_v1"
 
 const getNotificationKey = (notification: NotificationDto) =>
   `${notification.title}-${notification.message}-${notification.createdAt}-${notification.type}`
 
-const getHiddenNotificationKeys = (): Set<string> => {
+const getReadNotificationKeys = (): Set<string> => {
   if (typeof window === "undefined") return new Set()
   try {
-    const raw = localStorage.getItem(HIDDEN_NOTIFICATIONS_KEY)
+    const raw = localStorage.getItem(DOCTOR_READ_NOTIFICATIONS_KEY)
     if (!raw) return new Set()
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return new Set()
@@ -111,12 +111,12 @@ const getHiddenNotificationKeys = (): Set<string> => {
   }
 }
 
-const addHiddenNotificationKeys = (keys: string[]) => {
+const addReadNotificationKeys = (keys: string[]) => {
   if (typeof window === "undefined" || !keys.length) return
   try {
-    const existing = getHiddenNotificationKeys()
+    const existing = getReadNotificationKeys()
     keys.forEach(key => existing.add(key))
-    localStorage.setItem(HIDDEN_NOTIFICATIONS_KEY, JSON.stringify(Array.from(existing)))
+    localStorage.setItem(DOCTOR_READ_NOTIFICATIONS_KEY, JSON.stringify(Array.from(existing)))
   } catch {
   }
 }
@@ -137,6 +137,7 @@ const DoctorDashboard: React.FC = () => {
   const [notificationMetadata, setNotificationMetadata] = useState<NotificationMetadata | null>(null)
   const [notificationList, setNotificationList] = useState<NotificationDto[]>([])
   const [isNotificationsLoading, setIsNotificationsLoading] = useState(true)
+  const [dashboardUnreadCount, setDashboardUnreadCount] = useState<number>(0)
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount)
@@ -483,15 +484,20 @@ const DoctorDashboard: React.FC = () => {
         }
         
         if (notificationsResult.status === "fulfilled") {
-          const hiddenKeys = getHiddenNotificationKeys()
+          const readKeys = getReadNotificationKeys()
           const list = notificationsResult.value.notifications || []
-          const filteredList = list.filter(notification => !hiddenKeys.has(getNotificationKey(notification)))
+          const sorted = [...list].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+          const limited = sorted.slice(0, 5)
+          const unread = limited.filter(n => !readKeys.has(getNotificationKey(n))).length
 
           setNotificationMetadata({
             ...notificationsResult.value,
-            isAllRead: filteredList.length === 0
+            isAllRead: unread === 0
           })
-          setNotificationList(filteredList)
+          setNotificationList(limited)
+          setDashboardUnreadCount(unread)
         } else {
         }
         setIsNotificationsLoading(false)
@@ -590,21 +596,24 @@ const DoctorDashboard: React.FC = () => {
   }, [todaySchedule, currentTime])
 
   const handleMarkAllNotificationsRead = () => {
-    addHiddenNotificationKeys(notificationList.map(getNotificationKey))
-    setNotificationList([])
+    const keys = notificationList.map(getNotificationKey)
+    addReadNotificationKeys(keys)
+    setDashboardUnreadCount(0)
     setNotificationMetadata(prev => prev ? { ...prev, isAllRead: true } : prev)
   }
 
-  const handleNotificationDismiss = (index: number) => {
-    setNotificationList(prev => {
-      const target = prev[index]
-      if (target) {
-        addHiddenNotificationKeys([getNotificationKey(target)])
-      }
-      const next = prev.filter((_, i) => i !== index)
-      setNotificationMetadata(prevMeta => prevMeta ? { ...prevMeta, isAllRead: next.length === 0 } : prevMeta)
-      return next
-    })
+  const handleNotificationClick = (index: number) => {
+    const target = notificationList[index]
+    if (!target) return
+
+    const key = getNotificationKey(target)
+    const readKeys = getReadNotificationKeys()
+    if (readKeys.has(key)) return
+
+    addReadNotificationKeys([key])
+    const newUnread = notificationList.filter(n => !getReadNotificationKeys().has(getNotificationKey(n))).length
+    setDashboardUnreadCount(newUnread)
+    setNotificationMetadata(prevMeta => prevMeta ? { ...prevMeta, isAllRead: newUnread === 0 } : prevMeta)
   }
 
   if (isDashboardLoading && isAppointmentsLoading) {
@@ -831,7 +840,7 @@ const DoctorDashboard: React.FC = () => {
                         .
                       </span>
                     </span>
-                  </div>
+                      </div>
                 </div>
 
                 {todayScheduleSummary.nextShift && todayScheduleSummary.hasRemainingShift && (
@@ -880,7 +889,7 @@ const DoctorDashboard: React.FC = () => {
                           </p>
                         )}
                     </div>
-                  </div>
+              </div>
                 )}
               </>
             ) : (
@@ -1061,9 +1070,9 @@ const DoctorDashboard: React.FC = () => {
                     Đánh dấu tất cả đã đọc
                   </button>
                 )}
-                {notificationMetadata && !notificationMetadata.isAllRead && (
-                  <span className={styles.notificationBadge}></span>
-                )}
+              {dashboardUnreadCount > 0 && (
+                <span className={styles.notificationBadge}></span>
+              )}
               </div>
             </div>
             
@@ -1079,7 +1088,7 @@ const DoctorDashboard: React.FC = () => {
                     key={index} 
                     className={styles.notificationItem}
                     style={{ animationDelay: `${index * 0.1}s` }}
-                    onClick={() => handleNotificationDismiss(index)}
+                    onClick={() => handleNotificationClick(index)}
                   >
                     <div 
                       className={styles.notificationIcon}
@@ -1095,6 +1104,9 @@ const DoctorDashboard: React.FC = () => {
                         {formatNotificationTime(notification.createdAt)}
                       </span>
                     </div>
+                    {!getReadNotificationKeys().has(getNotificationKey(notification)) && (
+                      <span className={styles.notificationUnreadDot}></span>
+                    )}
                   </div>
                 ))}
               </div>

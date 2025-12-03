@@ -525,6 +525,9 @@ header {
   font-weight: 700;
   color: #0f172a;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .notification-card-message {
@@ -553,6 +556,13 @@ header {
   font-size: 12px;
   color: #6366f1;
   font-weight: 600;
+}
+
+.notification-card-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #22c55e;
 }
 
 .notification-empty {

@@ -1249,6 +1249,14 @@
   min-width: 0;
 }
 
+.notificationUnreadDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #22c55e;
+  margin-top: 6px;
+}
+
 .notificationTitle {
   font-size: 15px;
   font-weight: 700;

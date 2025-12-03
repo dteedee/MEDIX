@@ -68,6 +68,7 @@ const getNotificationTypeLabel = (type: string) => {
 export const Header: React.FC = () => {
     const [notificationMetadata, setNotificationMetadata] = useState<NotificationMetadata>();
     const [notifications, setNotifications] = useState<NotificationDto[]>([])
+    const [unreadCount, setUnreadCount] = useState<number>(0)
     const [siteName, setSiteName] = useState('MEDIX');
     const [siteDescription, setSiteDescription] = useState('Hệ thống y tế thông minh ứng dụng AI');
     const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -80,6 +81,9 @@ export const Header: React.FC = () => {
     
     const isHomePage = location.pathname === '/';
 
+    const computeUnread = (list: NotificationDto[], readKeys: Set<string>) =>
+        list.filter(n => !readKeys.has(getNotificationKey(n))).length
+
     useEffect(() => {
         if (!user) {
             return;
@@ -88,15 +92,19 @@ export const Header: React.FC = () => {
         const fetchMetadata = async () => {
             try {
                 const data = await NotificationService.getMetadata();
-                const hidden = getHiddenNotificationKeys()
-                const filtered = (data.notifications || []).filter(
-                    (notification) => !hidden.has(getNotificationKey(notification))
+                const readKeys = getHiddenNotificationKeys()
+                const all = data.notifications || []
+                const sorted = [...all].sort(
+                    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                 )
+                const limited = sorted.slice(0, 7)
+                const unread = computeUnread(limited, readKeys)
 
-                setNotifications(filtered)
+                setNotifications(limited)
+                setUnreadCount(unread)
                 setNotificationMetadata({
                     ...data,
-                    isAllRead: filtered.length === 0
+                    isAllRead: unread === 0
                 })
             } catch (error) {
                 
@@ -158,22 +166,28 @@ export const Header: React.FC = () => {
         setShowUserDropdown(!showUserDropdown);
     };
 
-    const handleNotificationDismiss = (index: number) => {
-        setNotifications((prev) => {
-            const target = prev[index]
-            if (target) addHiddenNotificationKeys([getNotificationKey(target)])
-            const next = prev.filter((_, i) => i !== index)
-            setNotificationMetadata((prevMeta) =>
-                prevMeta ? { ...prevMeta, isAllRead: next.length === 0 } : prevMeta
-            )
-            return next
-        })
+    const handleNotificationClick = (index: number) => {
+        const target = notifications[index]
+        if (!target) return
+
+        const key = getNotificationKey(target)
+        const readKeys = getHiddenNotificationKeys()
+        if (readKeys.has(key)) return
+
+        readKeys.add(key)
+        addHiddenNotificationKeys([key])
+        const unread = computeUnread(notifications, readKeys)
+        setUnreadCount(unread)
+        setNotificationMetadata(prevMeta =>
+            prevMeta ? { ...prevMeta, isAllRead: unread === 0 } : prevMeta
+        )
     }
 
     const handleMarkAllNotificationsRead = () => {
-        addHiddenNotificationKeys(notifications.map(getNotificationKey))
-        setNotifications([])
-        setNotificationMetadata((prevMeta) => prevMeta ? { ...prevMeta, isAllRead: true } : prevMeta)
+        const keys = notifications.map(getNotificationKey)
+        addHiddenNotificationKeys(keys)
+        setUnreadCount(0)
+        setNotificationMetadata(prevMeta => prevMeta ? { ...prevMeta, isAllRead: true } : prevMeta)
     }
 
     const handleLogout = async () => {
@@ -237,13 +251,15 @@ export const Header: React.FC = () => {
                                 <button
                                     className={`${styles['notification-toggle']} ${!notificationMetadata?.isAllRead ? styles['notification-toggle-unread'] : ''}`}
                                     data-bs-toggle="dropdown"
+                                    data-bs-auto-close="outside"
                                     aria-expanded="false"
+                                    type="button"
                                 >
                                     <span className={styles['notification-ripple']}></span>
                                     <i className="bi bi-bell-fill"></i>
-                                    {!notificationMetadata?.isAllRead && (
+                                    {unreadCount > 0 && (
                                         <span className={styles['notification-dot']}>
-                                            {notifications.length > 9 ? '9+' : notifications.length}
+                                            {unreadCount > 9 ? '9+' : unreadCount}
                                         </span>
                                     )}
                                 </button>
@@ -252,7 +268,7 @@ export const Header: React.FC = () => {
                                     <div className={styles['notification-header']}>
                                         <div className={styles['notification-title-block']}>
                                             <span>{t('header.notifications')}</span>
-                                            <small>{notifications.length} mới</small>
+                                            <small>{unreadCount} mới</small>
                                         </div>
                                         {notifications.length > 0 && (
                                             <button
@@ -269,7 +285,12 @@ export const Header: React.FC = () => {
                                                 <button
                                                     key={`${notification.createdAt}-${index}`}
                                                     className={styles['notification-card']}
-                                                    onClick={() => handleNotificationDismiss(index)}
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.preventDefault()
+                                                        e.stopPropagation()
+                                                        handleNotificationClick(index)
+                                                    }}
                                                 >
                                                     <div
                                                         className={styles['notification-card-icon']}
@@ -279,6 +300,9 @@ export const Header: React.FC = () => {
                                                     <div className={styles['notification-card-body']}>
                                                         <div className={styles['notification-card-title']}>
                                                             {notification.title}
+                                                            {!getHiddenNotificationKeys().has(getNotificationKey(notification)) && (
+                                                                <span className={styles['notification-card-unread-dot']}></span>
+                                                            )}
                                                         </div>
                                                         <div className={styles['notification-card-message']}>
                                                             {formatMessageDates(notification.message)}

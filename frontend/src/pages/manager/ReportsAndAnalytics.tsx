@@ -535,7 +535,7 @@ export default function ReportsAndAnalytics() {
                 <i className="bi bi-currency-dollar" style={{ fontSize: '28px' }}></i>
               </div>
               <div className={styles.metricContent}>
-                <div className={styles.metricLabel}>Tổng doanh thu</div>
+                <div className={styles.metricLabel}>Tổng lợi nhuận</div>
                 <div className={styles.metricValue}>{formatCurrencyCompact(summary.revenue.total)}</div>
                 <div className={`${styles.metricGrowth} ${summary.revenue.growth < 0 ? styles.negative : ''}`}>
                   <i className={`bi bi-arrow-${summary.revenue.growth >= 0 ? 'up' : 'down'}`}></i>

@@ -15,7 +15,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
         }
         public async Task<List<MonthlyAppointmentTrendDto>> GetMonthlyAppointmentAndRevenueAsync(Guid? doctorId, int year)
         {
-            const string appointmentStatus = "Completed";
+            var appointmentStatuses = new[] { "Completed", "MissedByPatient" };
             const string appointmentPaymentStatus = "Paid";
 
             const string walletTransactionType = "AppointmentPayment";
@@ -31,29 +31,26 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Select(g => new { Month = g.Key, Count = g.Count() })
                 .ToListAsync();
 
-            var wtQuery = _context.WalletTransactions
+            // Wallet transactions linked to appointments whose appointment.StatusCode is in appointmentStatuses
+            var wtGrouped = await _context.WalletTransactions
                 .AsNoTracking()
                 .Where(wt =>
                     wt.TransactionTypeCode == walletTransactionType &&
                     wt.Status == walletTransactionStatus &&
-                    wt.TransactionDate.Year == year);
-
-            if (doctorId != null)
-            {
-                wtQuery = wtQuery.Join(
-                        _context.Appointments.AsNoTracking(),
-                        wt => wt.RelatedAppointmentId,
-                        a => a.Id,
-                        (wt, a) => new { Wallet = wt, Appointment = a })
-                    .Where(x => x.Appointment.DoctorId == doctorId)
-                    .Select(x => x.Wallet);
-            }
-
-            var wtGrouped = await wtQuery
-                .GroupBy(wt => wt.TransactionDate.Month)
-                .Select(g => new { Month = g.Key, WalletRevenue = g.Sum(wt => (decimal?)wt.Amount) ?? 0m })
+                    wt.TransactionDate.Year == year &&
+                    wt.RelatedAppointmentId != null)
+                .Join(
+                    _context.Appointments.AsNoTracking(),
+                    wt => wt.RelatedAppointmentId,
+                    a => a.Id,
+                    (wt, a) => new { Wallet = wt, Appointment = a })
+                .Where(x => appointmentStatuses.Contains(x.Appointment.StatusCode)
+                            && (doctorId == null || x.Appointment.DoctorId == doctorId))
+                .GroupBy(x => x.Wallet.TransactionDate.Month)
+                .Select(g => new { Month = g.Key, WalletRevenue = g.Sum(x => (decimal?)x.Wallet.Amount) ?? 0m })
                 .ToListAsync();
 
+            // Related appointment ids that have wallet transactions and whose appointment status is within appointmentStatuses.
             var relatedAppointmentIds = await _context.WalletTransactions
                 .AsNoTracking()
                 .Where(wt =>
@@ -61,12 +58,21 @@ namespace Medix.API.DataAccess.Repositories.Classification
                     wt.Status == walletTransactionStatus &&
                     wt.TransactionDate.Year == year &&
                     wt.RelatedAppointmentId != null)
-                .Select(wt => wt.RelatedAppointmentId!.Value)
+                .Join(
+                    _context.Appointments.AsNoTracking(),
+                    wt => wt.RelatedAppointmentId,
+                    a => a.Id,
+                    (wt, a) => a)
+                .Where(a => appointmentStatuses.Contains(a.StatusCode)
+                            && (doctorId == null || a.DoctorId == doctorId))
+                .Select(a => a.Id)
                 .Distinct()
                 .ToListAsync();
 
             if (doctorId != null && relatedAppointmentIds.Any())
             {
+                // Keep this check for safety / compatibility — relatedAppointmentIds already filtered by doctor above,
+                // but we keep same pattern as original code to avoid behavioral changes in other paths.
                 relatedAppointmentIds = await _context.Appointments
                     .AsNoTracking()
                     .Where(a => relatedAppointmentIds.Contains(a.Id) && a.DoctorId == doctorId)
@@ -75,12 +81,13 @@ namespace Medix.API.DataAccess.Repositories.Classification
                     .ToListAsync();
             }
 
-          
+
             var apptRevenueQuery = baseAppts
-                .Where(a => a.StatusCode == appointmentStatus && a.PaymentStatusCode == appointmentPaymentStatus);
+                .Where(a => appointmentStatuses.Contains(a.StatusCode) && a.PaymentStatusCode == appointmentPaymentStatus);
 
             if (relatedAppointmentIds.Any())
             {
+                // Exclude appointments already counted via linked wallet transactions (to avoid double counting)
                 apptRevenueQuery = apptRevenueQuery.Where(a => !relatedAppointmentIds.Contains(a.Id));
             }
 
@@ -116,6 +123,9 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 if (months.ContainsKey(w.Month))
                     months[w.Month].WalletRevenue = w.WalletRevenue;
             }
+
+            // Ensure TotalRevenue reflects only appointments with the desired statuses.
+       
 
             return months.Values.OrderBy(m => m.Month).ToList();
         }

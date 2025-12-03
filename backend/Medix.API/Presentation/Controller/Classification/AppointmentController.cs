@@ -145,6 +145,7 @@ namespace Medix.API.Presentation.Controllers
 
 
             var created = await _service.CreateAsync(dto);
+            WalletTransaction.id= transaction.id;
             WalletTransaction.RelatedAppointmentId = created.Id;
 
             await walletTransactionService.UppdateWalletTrasactionAsync(WalletTransaction);
@@ -226,8 +227,11 @@ namespace Medix.API.Presentation.Controllers
                 service => service.CheckisAppointmentCompleted(dto.Result.Id)
                 , DateTime.UtcNow.AddHours(7).AddMinutes(20));
 
+   
 
             var updated = await _service.UpdateAsync(updateDto);
+      
+
             if (updated == null)
                 return NotFound();
 

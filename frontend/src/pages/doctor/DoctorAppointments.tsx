@@ -216,12 +216,11 @@ const DoctorAppointments: React.FC = () => {
       apt.statusCode !== 'NoShow' &&
       apt.statusCode !== 'OnProgressing'
     ).length,
-    completed: appointments.filter(apt => apt.statusCode === 'Completed').length,
+    completed: appointments.filter(apt => apt.statusCode === 'Completed' || apt.statusCode === 'MissedByPatient').length,
     cancelled: appointments.filter(apt => 
       apt.statusCode === 'CancelledByPatient' || 
       apt.statusCode === 'CancelledByDoctor' || 
       apt.statusCode === 'MissedByDoctor' || 
-      apt.statusCode === 'MissedByPatient' || 
       apt.statusCode === 'NoShow'
     ).length
   };
@@ -241,13 +240,12 @@ const DoctorAppointments: React.FC = () => {
           apt.statusCode !== 'OnProgressing'
         );
       } else if (filters.status === 'completed') {
-        filtered = filtered.filter(apt => apt.statusCode === 'Completed');
+        filtered = filtered.filter(apt => apt.statusCode === 'Completed' || apt.statusCode === 'MissedByPatient');
       } else if (filters.status === 'cancelled') {
         filtered = filtered.filter(apt => 
           apt.statusCode === 'CancelledByPatient' || 
           apt.statusCode === 'CancelledByDoctor' || 
           apt.statusCode === 'MissedByDoctor' || 
-          apt.statusCode === 'MissedByPatient' || 
           apt.statusCode === 'NoShow'
         );
       }
@@ -280,9 +278,9 @@ const DoctorAppointments: React.FC = () => {
       const getSortPriority = (apt: AppointmentDisplay) => {
         if (apt.statusCode === 'OnProgressing') return 1; 
         if (apt.statusCode === 'BeforeAppoiment' || apt.statusCode === 'PendingConfirmation' || apt.statusCode === 'Confirmed') return 2; // Agendado/Pendente
-        if (apt.statusCode === 'Completed') return 3; 
+        if (apt.statusCode === 'Completed' || apt.statusCode === 'MissedByPatient') return 3; 
         if (apt.statusCode === 'CancelledByPatient' || apt.statusCode === 'CancelledByDoctor') return 4; // Cancelado
-        if (apt.statusCode === 'MissedByPatient' || apt.statusCode === 'MissedByDoctor' || apt.statusCode === 'NoShow') return 5; // Faltou
+        if (apt.statusCode === 'MissedByDoctor' || apt.statusCode === 'NoShow') return 5; // Faltou
         return 6; 
       };
     

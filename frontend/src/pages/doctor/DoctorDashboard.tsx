@@ -185,17 +185,11 @@ const DoctorDashboard: React.FC = () => {
   }, [])
 
   const upcomingAppointments = useMemo(() => {
-    const nonCancelledAppointments = appointments.filter(apt => 
-      apt.statusCode !== 'CancelledByPatient' && apt.statusCode !== 'CancelledByDoctor' && apt.statusCode !== 'NoShow'
-    );
-    return nonCancelledAppointments.filter(apt => {
-      const aptDate = new Date(apt.appointmentStartTime)
-      const isUpcoming = apt.statusCode === 'Confirmed' || apt.statusCode === 'OnProgressing'
-      return aptDate >= currentTime && isUpcoming
-    }).sort((a, b) => 
-      new Date(a.appointmentStartTime).getTime() - new Date(b.appointmentStartTime).getTime()
-    )
-  }, [appointments, currentTime])
+    return appointments.filter(apt => apt.statusCode === 'BeforeAppoiment')
+      .sort((a, b) => 
+        new Date(a.appointmentStartTime).getTime() - new Date(b.appointmentStartTime).getTime()
+      )
+  }, [appointments])
   
   const todayAppointments = useMemo(() => {
     return upcomingAppointments.filter(apt => {
@@ -205,13 +199,15 @@ const DoctorDashboard: React.FC = () => {
   }, [upcomingAppointments, currentTime])
 
   const completedAppointments = useMemo(() => {
-    const now = new Date();
-    return appointments.filter(apt => 
-      apt.statusCode === 'Completed' || 
-      (new Date(apt.appointmentStartTime) < now && 
-       apt.statusCode !== 'CancelledByPatient' && apt.statusCode !== 'CancelledByDoctor' && apt.statusCode !== 'NoShow')
-    );
-  }, [appointments])
+    const thisMonthStart = new Date(currentTime.getFullYear(), currentTime.getMonth(), 1);
+    const thisMonthEnd = new Date(currentTime.getFullYear(), currentTime.getMonth() + 1, 0, 23, 59, 59, 999);
+    return appointments.filter(apt => {
+      const aptDate = new Date(apt.appointmentStartTime);
+      const isThisMonth = aptDate >= thisMonthStart && aptDate <= thisMonthEnd;
+      const isCompleted = apt.statusCode === 'Completed' || apt.statusCode === 'MissedByPatient';
+      return isThisMonth && isCompleted;
+    });
+  }, [appointments, currentTime])
 
   const thisMonthStart = new Date(currentTime.getFullYear(), currentTime.getMonth(), 1)
   const thisMonthAppointments = useMemo(() => {
@@ -720,7 +716,7 @@ const DoctorDashboard: React.FC = () => {
                   </div>
                 </div>
                 <div className={styles.statInfo}>
-                  <span className={styles.statLabel}>Doanh thu hôm nay</span>
+                  <span className={styles.statLabel}>Lợi nhuận hôm nay</span>
                   <div className={styles.statValueRow}>
                     <span className={styles.statValue}>
                       {formatCurrencyCompact(dashboardData.summary.todayRevenue)}
@@ -736,7 +732,7 @@ const DoctorDashboard: React.FC = () => {
                   </div>
                 </div>
                 <div className={styles.statInfo}>
-                  <span className={styles.statLabel}>Doanh thu tháng</span>
+                  <span className={styles.statLabel}>Lợi nhuận tháng</span>
                   <div className={styles.statValueRow}>
                     <span className={styles.statValue}>
                       {formatCurrencyCompact(dashboardData.summary.monthRevenue)}

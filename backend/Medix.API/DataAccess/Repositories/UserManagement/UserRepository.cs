@@ -1,5 +1,6 @@
 using CloudinaryDotNet.Actions;
 using Medix.API.Application.Util;
+using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.Doctor;
 using Medix.API.Models.DTOs.Manager;
@@ -12,9 +13,13 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
     {
         private readonly MedixContext _context;
 
-        public UserRepository(MedixContext context)
+        private readonly ISystemConfigurationService _systemConfigurationService;
+        private const string PatientCancelRefundConfigKey = "APPOINTMENT_PATIENT_CANCEL_REFUND_PERCENT";
+
+        public UserRepository(MedixContext context, ISystemConfigurationService systemConfigurationService)
         {
             _context = context;
+            _systemConfigurationService = systemConfigurationService;
         }
 
         public async Task<User?> GetByIdAsync(Guid? id)
@@ -193,12 +198,23 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
             .AnyAsync(u => u.IdentificationNumber == identificationNumber);
 
         public async Task<ManagerDashboardSummaryDto> GetSummaryAsync(
-        DateTime startCurrentPeriodUtc,
-        DateTime endCurrentPeriodUtc,
-        DateTime startPreviousPeriodUtc,
-        DateTime endPreviousPeriodUtc)
+       DateTime startCurrentPeriodUtc,
+       DateTime endCurrentPeriodUtc,
+       DateTime startPreviousPeriodUtc,
+       DateTime endPreviousPeriodUtc)
         {
-           
+            var refundPercentageConfig = await _systemConfigurationService.GetValueAsync<decimal?>(PatientCancelRefundConfigKey);
+
+            var refundPercentage = refundPercentageConfig ?? 0.80m;
+
+            if (refundPercentage > 1m && refundPercentage <= 100m)
+            {
+                refundPercentage /= 100m;
+            }
+
+            if (refundPercentage < 0m) refundPercentage = 0m;
+            if (refundPercentage > 1m) refundPercentage = 1m;
+
             var totalUsers = await _context.Users.AsNoTracking().LongCountAsync();
             var newUsersCurrent = await _context.Users.AsNoTracking()
                 .LongCountAsync(u => u.CreatedAt >= startCurrentPeriodUtc && u.CreatedAt <= endCurrentPeriodUtc);
@@ -211,7 +227,6 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
             var newDoctorsPrev = await _context.Doctors.AsNoTracking()
                 .LongCountAsync(d => d.CreatedAt >= startPreviousPeriodUtc && d.CreatedAt <= endPreviousPeriodUtc);
 
-            
             var totalAppointments = await _context.Appointments.AsNoTracking().LongCountAsync();
             var apptCurrent = await _context.Appointments.AsNoTracking()
                 .LongCountAsync(a => a.CreatedAt >= startCurrentPeriodUtc && a.CreatedAt <= endCurrentPeriodUtc);
@@ -219,20 +234,32 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
                 .LongCountAsync(a => a.CreatedAt >= startPreviousPeriodUtc && a.CreatedAt <= endPreviousPeriodUtc);
 
             var revenueTotal = (await _context.WalletTransactions.AsNoTracking()
-                .Where(wt => wt.TransactionTypeCode== "AppointmentPayment" && wt.Status == "Completed")
+                .Where(wt => wt.TransactionTypeCode == "AppointmentPayment" && wt.Status == "Completed")
                 .Select(wt => (decimal?)wt.Amount)
                 .SumAsync()) ?? 0m;
 
-            var revenueCurrent = (await _context.WalletTransactions.AsNoTracking()
-                .Where(wt => wt.TransactionTypeCode == "AppointmentPayment" && wt.Status == "Completed"
-                             && wt.TransactionDate >= startCurrentPeriodUtc && wt.TransactionDate <= endCurrentPeriodUtc)
-                .Select(wt => (decimal?)wt.Amount)
+            // Apply appointment-based revenue rules for period calculations:
+            // - "Completed" => TotalAmount * 0.3
+            // - "MissedByPatient" => TotalAmount * 0.3
+            // - "CancelledByPatient" => TotalAmount * (1 - refundPercentage)
+            var consideredStatuses = new[] { "Completed", "MissedByPatient", "CancelledByPatient" };
+
+            var revenueCurrent = (await _context.Appointments.AsNoTracking()
+                .Where(a => a.CreatedAt >= startCurrentPeriodUtc && a.CreatedAt <= endCurrentPeriodUtc
+                            && consideredStatuses.Contains(a.StatusCode))
+                .Select(a => (decimal?)
+                    (a.StatusCode == "Completed" ? a.TotalAmount * 0.3m
+                     : a.StatusCode == "MissedByPatient" ? a.TotalAmount * 0.3m
+                     : /* CancelledByPatient */ a.TotalAmount * (1 - refundPercentage)))
                 .SumAsync()) ?? 0m;
 
-            var revenuePrev = (await _context.WalletTransactions.AsNoTracking()
-                .Where(wt => wt.TransactionTypeCode == "AppointmentPayment" && wt.Status == "Completed"
-                             && wt.TransactionDate >= startPreviousPeriodUtc && wt.TransactionDate <= endPreviousPeriodUtc)
-                .Select(wt => (decimal?)wt.Amount)
+            var revenuePrev = (await _context.Appointments.AsNoTracking()
+                .Where(a => a.CreatedAt >= startPreviousPeriodUtc && a.CreatedAt <= endPreviousPeriodUtc
+                            && consideredStatuses.Contains(a.StatusCode))
+                .Select(a => (decimal?)
+                    (a.StatusCode == "Completed" ? a.TotalAmount * 0.3m
+                     : a.StatusCode == "MissedByPatient" ? a.TotalAmount * 0.3m
+                     : /* CancelledByPatient */ a.TotalAmount * (1 - refundPercentage)))
                 .SumAsync()) ?? 0m;
 
             var dto = new ManagerDashboardSummaryDto

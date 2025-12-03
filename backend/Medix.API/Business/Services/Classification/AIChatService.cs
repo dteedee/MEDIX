@@ -1,31 +1,47 @@
-using Medix.API.Business.Helper;
+﻿using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs.AIChat;
 
 namespace Medix.API.Business.Services.Classification
 {
-    public class AIChatService : IAIChatService
+    public class AIChatService(
+        ILogger<AIChatService> logger,
+        ILLMService llmService,
+        IOCRService ocrService,
+        IRAGService ragService) : IAIChatService
     {
-        private readonly ILLMService _llmService;
-        private readonly IOCRService _ocrService;
+        private readonly ILLMService _llmService = llmService;
+        private readonly IOCRService _ocrService = ocrService;
+        private readonly IRAGService _ragService = ragService;
+        private readonly ILogger<AIChatService> _logger = logger;
 
-        public AIChatService(
-            ILLMService llmService,
-            IOCRService ocrService)
+        public async Task<ChatResponseDto> SendMessageAsync(string prompt, List<ContentDto> conversationHistory, string? userIdClaim = null)
         {
-            _llmService = llmService;
-            _ocrService = ocrService;
+            string? context = null;
+
+            if (_llmService.IsHealthRelatedQueryAsync(prompt))
+            {
+                context = await _ragService.GetSymptomAnalysisContextAsync(prompt);
+            }
+
+            return await _llmService.GenerateResponseAsync(context, conversationHistory, userIdClaim);
         }
 
-        public async Task<ChatResponseDto> SendMessageAsync(List<ContentDto> conversationHistory, string? userIdClaim = null)
+        public async Task<ChatResponseDto> AnalyzeEMRAsync(IFormFile file, List<ContentDto> conversationHistory, string? userIdClaim = null)
         {
-            // Generate response using LLM with RAG context
-            return await _llmService.GenerateResponseAsync(conversationHistory, userIdClaim);
-        }
+            var ocrText = await _ocrService.ExtractTextAsync(file);
+            if (ocrText == null)
+            {
+                throw new Exception("OCR extraction failed.");
+            }
 
-        public async Task<ChatResponseDto> AnalyzeEMRAsync(IFormFile file, List<ContentDto> conversationHistory , string? userIdClaim = null)
-        {
-            return await _ocrService.GetEMRAnalysisAsync(file, conversationHistory, userIdClaim);
+            string? context = null;
+            if (_llmService.IsHealthRelatedQueryAsync(ocrText))
+            {
+                context = await _ragService.GetSymptomAnalysisContextAsync(ocrText);
+            }
+
+            return await _llmService.GetEMRAnalysisAsync(ocrText, context, conversationHistory, userIdClaim);
         }
     }
 }

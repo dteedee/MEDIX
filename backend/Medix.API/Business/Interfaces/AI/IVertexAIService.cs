@@ -5,7 +5,7 @@ namespace Medix.API.Business.Interfaces.AI
 {
     public interface IVertexAIService
     {
-        Task<ChatResponseDto> GetSymptompAnalysisAsync(List<ContentDto> conversationHistory, string? userIdClaim);
-        Task<ChatResponseDto> GetEMRAnalysisAsync(IFormFile file, string? userIdClaim, List<ContentDto> history);
+        Task<ChatResponseDto> GetSymptompAnalysisAsync(string? context, List<ContentDto> history, string? userIdClaim);
+        Task<ChatResponseDto> GetEMRAnalysisAsync(string emrText, string? context, string? userIdClaim, List<ContentDto> history);
     }
 }

@@ -1,5 +1,4 @@
 ﻿using Medix.API.Business.Helper;
-using Medix.API.Business.Interfaces.AI;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.Constants;
 using Medix.API.Models.DTOs.AIChat;
@@ -51,7 +50,7 @@ namespace Medix.API.Presentation.Controller.Classification
 
                 AddToConversationHistory(request.ChatToken, "user", request.Prompt);
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-                var response = await _aiChatService.SendMessageAsync(GetSavedConversation(request.ChatToken), userIdClaim?.Value);
+                var response = await _aiChatService.SendMessageAsync(request.Prompt, GetSavedConversation(request.ChatToken), userIdClaim?.Value);
 
                 if (response == null)
                 {

@@ -8,8 +8,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using OpenAI;
 using PayOS;
 using System.Text;
+
+Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -154,8 +157,8 @@ builder.Services.AddSingleton(provider =>
 {
     // Get the Project ID from your app settings (e.g., appsettings.json)
     var configuration = provider.GetRequiredService<IConfiguration>();
-    var projectId = configuration["Vertex:ProjectId"];
-    var location = configuration["Vertex:Location"];
+    var projectId = configuration["GoogleCloud:ProjectId"];
+    var location = configuration["GoogleCloud:Location"];
 
     if (string.IsNullOrEmpty(projectId))
     {

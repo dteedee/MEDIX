@@ -5,7 +5,9 @@ namespace Medix.API.Business.Interfaces.Classification
 {
     public interface ILLMService
     {
-        Task<ChatResponseDto> GenerateResponseAsync(List<ContentDto> conversationHistory, string? userIdClaim);
+        Task<ChatResponseDto> GenerateResponseAsync(string? context, List<ContentDto> conversationHistory, string? userIdClaim = null);
+        Task<ChatResponseDto> GetEMRAnalysisAsync(string emrText, string? context, List<ContentDto> conversationHistory, string? userIdClaim = null);
+        bool IsHealthRelatedQueryAsync(string query);
     }
 }
 

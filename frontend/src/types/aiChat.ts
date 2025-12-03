@@ -1,11 +1,7 @@
 export type AIChatMessageType =
   | 'text'
   | 'symptom_analysis'
-  | 'doctor_recommendation'
-  | 'emr_analysis'
-  | 'system_query'
   | 'symptom_guidance'
-  | 'general_health'
   | 'out_of_scope';
 
 export interface AIChatMessage {

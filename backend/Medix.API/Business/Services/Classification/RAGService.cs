@@ -1,47 +1,57 @@
-using Medix.API.Business.Interfaces.Classification;
-using Medix.API.DataAccess;
+﻿using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
-using Microsoft.EntityFrameworkCore;
 using System.Text;
 
 namespace Medix.API.Business.Services.Classification
 {
-    public class RAGService : IRAGService
+    public class RAGService(
+        ILogger<RAGService> logger,
+        IHealthArticleRepository healthArticleRepository) : IRAGService
     {
-        private readonly IDoctorRepository _doctorRepository;
-        private readonly ISpecializationRepository _specializationRepository;
-        private readonly MedixContext _context;
-        private readonly ILogger<RAGService> _logger;
-        private readonly MedicalKnowledgeDatabase _knowledgeDatabase;
 
-        public RAGService(
-            IDoctorRepository doctorRepository,
-            ISpecializationRepository specializationRepository,
-            MedixContext context,
-            ILogger<RAGService> logger)
+        private readonly MedicalKnowledgeDatabase _knowledgeDatabase = new();
+        private readonly IHealthArticleRepository _healthArticleRepository = healthArticleRepository;
+        private readonly ILogger<RAGService> _logger = logger;
+
+        public async Task<string> GetSymptomAnalysisContextAsync(string symptom)
         {
-            _doctorRepository = doctorRepository;
-            _specializationRepository = specializationRepository;
-            _context = context;
-            _logger = logger;
-            _knowledgeDatabase = new MedicalKnowledgeDatabase();
+            var contextBuilder = new StringBuilder();
+
+            var knowledgeChunks = await SearchMedicalKnowledgeAsync(symptom, 5);
+
+            if (knowledgeChunks.Any())
+            {
+                contextBuilder.AppendLine("\n=== KIẾN THỨC Y TẾ LIÊN QUAN ===");
+                foreach (var chunk in knowledgeChunks)
+                {
+                    contextBuilder.AppendLine($"\n[{chunk.Category.ToUpper()}]");
+                    contextBuilder.AppendLine(chunk.Content);
+                    contextBuilder.AppendLine($"(Nguồn: {chunk.Source})");
+                }
+            }
+
+            if (!string.IsNullOrEmpty(symptom))
+            {
+                var guidelines = await GetTreatmentGuidelinesAsync(symptom);
+                if (!string.IsNullOrEmpty(guidelines))
+                {
+                    contextBuilder.AppendLine("\n=== HƯỚNG DẪN XỬ LÝ ===");
+                    contextBuilder.AppendLine(guidelines);
+                }
+            }
+
+            return contextBuilder.ToString();
         }
 
-        /// <summary>
-        /// Search medical knowledge base using enhanced keyword matching and semantic similarity
-        /// In production, integrate with vector DB (Pinecone/Qdrant) for true semantic search
-        /// </summary>
-        public async Task<List<MedicalKnowledgeChunk>> SearchMedicalKnowledgeAsync(string query, int topK = 5)
+        private async Task<List<MedicalKnowledgeChunk>> SearchMedicalKnowledgeAsync(string query, int topK = 5)
         {
             await Task.CompletedTask;
 
             var results = new List<MedicalKnowledgeChunk>();
             var lowerQuery = query.ToLower();
 
-            // Extract medical keywords with enhanced patterns
             var medicalKeywords = ExtractMedicalKeywordsAdvanced(lowerQuery);
-            
-            // Search in comprehensive knowledge base
+
             foreach (var keyword in medicalKeywords)
             {
                 var knowledge = _knowledgeDatabase.GetKnowledgeForKeyword(keyword);
@@ -59,7 +69,6 @@ namespace Medix.API.Business.Services.Classification
                 }
             }
 
-            // Also search in health articles from database if available
             var articleResults = await SearchHealthArticlesAsync(lowerQuery, topK);
             results.AddRange(articleResults);
 
@@ -69,130 +78,18 @@ namespace Medix.API.Business.Services.Classification
                 .ToList();
         }
 
-        /// <summary>
-        /// Semantic search for doctors with enhanced relevance scoring
-        /// Uses multiple factors: specialization match, name match, rating, experience
-        /// </summary>
-        public async Task<List<DoctorSearchResult>> SearchDoctorsSemanticAsync(string query, int topK = 10)
-        {
-            var results = new List<DoctorSearchResult>();
-            var lowerQuery = query.ToLower();
-
-            // Extract specialization and other search terms
-            var specializationName = ExtractSpecialtyFromQueryAdvanced(lowerQuery);
-            var searchTerms = ExtractSearchTerms(lowerQuery);
-            
-            var doctorQuery = new Business.Helper.DoctorQuery
-            {
-                Page = 1,
-                PageSize = topK * 3, // Get more to filter and rank
-                SearchTerm = specializationName ?? query
-            };
-
-            var doctors = await _doctorRepository.GetDoctorsAsync(doctorQuery);
-            var activeDoctors = doctors.Items
-                .Where(d => d.User.Status == 1)
-                .Select(d => new Models.DTOs.Doctor.DoctorDto
-                {
-                    Id = d.Id,
-                    FullName = d.User.FullName,
-                    Specialization = d.Specialization?.Name ?? "",
-                    Rating = (double)d.AverageRating,
-                    ReviewCount = d.TotalReviews,
-                    YearsOfExperience = d.YearsOfExperience,
-                    StatusCode = d.User.Status,
-                    AvatarUrl = d.User.AvatarUrl
-                })
-                .ToList();
-
-            // Enhanced relevance scoring
-            foreach (var doctor in activeDoctors)
-            {
-                var relevanceScore = CalculateDoctorRelevanceAdvanced(doctor, lowerQuery, searchTerms, specializationName);
-                
-                if (relevanceScore > 0.1) // Minimum threshold
-                {
-                    results.Add(new DoctorSearchResult
-                    {
-                        DoctorId = doctor.Id,
-                        Name = doctor.FullName,
-                        Specialization = doctor.Specialization,
-                        RelevanceScore = relevanceScore,
-                        Rating = doctor.Rating,
-                        Experience = doctor.YearsOfExperience
-                    });
-                }
-            }
-
-            return results
-                .OrderByDescending(r => r.RelevanceScore)
-                .ThenByDescending(r => r.Rating)
-                .ThenByDescending(r => r.Experience)
-                .Take(topK)
-                .ToList();
-        }
-
-        /// <summary>
-        /// Get comprehensive context for symptom analysis
-        /// Combines symptom information with relevant medical knowledge
-        /// </summary>
-        public async Task<string> GetSymptomAnalysisContextAsync(List<string> symptoms)
-        {
-            var contextBuilder = new StringBuilder();
-            contextBuilder.AppendLine("=== THÔNG TIN TRIỆU CHỨNG BỆNH NHÂN ===");
-            
-            foreach (var symptom in symptoms)
-            {
-                contextBuilder.AppendLine($"• {symptom}");
-            }
-
-            // Add medical knowledge context for each symptom
-            var symptomText = string.Join(" ", symptoms);
-            var knowledgeChunks = await SearchMedicalKnowledgeAsync(symptomText, 5);
-            
-            if (knowledgeChunks.Any())
-            {
-                contextBuilder.AppendLine("\n=== KIẾN THỨC Y TẾ LIÊN QUAN ===");
-                foreach (var chunk in knowledgeChunks)
-                {
-                    contextBuilder.AppendLine($"\n[{chunk.Category.ToUpper()}]");
-                    contextBuilder.AppendLine(chunk.Content);
-                    contextBuilder.AppendLine($"(Nguồn: {chunk.Source})");
-                }
-            }
-
-            // Add treatment guidelines if available
-            var primarySymptom = symptoms.FirstOrDefault();
-            if (!string.IsNullOrEmpty(primarySymptom))
-            {
-                var guidelines = await GetTreatmentGuidelinesAsync(primarySymptom);
-                if (!string.IsNullOrEmpty(guidelines))
-                {
-                    contextBuilder.AppendLine("\n=== HƯỚNG DẪN XỬ LÝ ===");
-                    contextBuilder.AppendLine(guidelines);
-                }
-            }
-
-            return contextBuilder.ToString();
-        }
-
-        /// <summary>
-        /// Get treatment guidelines from comprehensive medical knowledge base
-        /// </summary>
-        public async Task<string?> GetTreatmentGuidelinesAsync(string condition)
+        private async Task<string?> GetTreatmentGuidelinesAsync(string condition)
         {
             await Task.CompletedTask;
 
             var lowerCondition = condition.ToLower();
-            
-            // Search in comprehensive guidelines database
+
             var guidelines = _knowledgeDatabase.GetTreatmentGuidelines(lowerCondition);
             if (!string.IsNullOrEmpty(guidelines))
             {
                 return guidelines;
             }
 
-            // Fallback to basic guidelines
             var basicGuidelines = new Dictionary<string, string>
             {
                 { "đau đầu", "Nghỉ ngơi, uống đủ nước, tránh ánh sáng mạnh và tiếng ồn. " +
@@ -221,13 +118,10 @@ namespace Medix.API.Business.Services.Classification
             return null;
         }
 
-        // Enhanced helper methods
-
         private List<string> ExtractMedicalKeywordsAdvanced(string query)
         {
             var keywords = new List<string>();
-            
-            // Comprehensive medical terms dictionary
+
             var medicalTerms = new Dictionary<string, List<string>>
             {
                 { "đau", new List<string> { "đau đầu", "đau bụng", "đau ngực", "đau lưng", "đau khớp" } },
@@ -261,38 +155,29 @@ namespace Medix.API.Business.Services.Classification
             var lowerContent = content.ToLower();
             var lowerQuery = query.ToLower();
 
-            // Exact keyword match
             if (lowerContent.Contains(keyword))
                 score += 0.5;
 
-            // Query term frequency in content
             var queryTerms = lowerQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var contentTerms = lowerContent.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            
+
             var commonTerms = queryTerms.Intersect(contentTerms).Count();
             score += (double)commonTerms / Math.Max(queryTerms.Length, 1) * 0.3;
 
-            // Length factor (prefer concise but informative content)
             var lengthFactor = content.Length > 50 && content.Length < 500 ? 0.2 : 0.1;
             score += lengthFactor;
 
             return Math.Min(score, 1.0);
         }
 
-        /// <summary>
-        /// Search health articles from database with relevance scoring
-        /// </summary>
         private async Task<List<MedicalKnowledgeChunk>> SearchHealthArticlesAsync(string query, int topK)
         {
             try
             {
-                // Search in health articles from database
-                var allArticles = await _context.HealthArticles
-                    .Where(a => a.StatusCode == "PUBLISHED" || a.StatusCode == "1")
-                    .ToListAsync();
+                var allArticles = await _healthArticleRepository.GetPublishedArticlesAsync();
 
                 var relevantArticles = allArticles
-                    .Where(a => 
+                    .Where(a =>
                         (!string.IsNullOrEmpty(a.Title) && a.Title.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                         (!string.IsNullOrEmpty(a.Content) && a.Content.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                         (!string.IsNullOrEmpty(a.Summary) && a.Summary.Contains(query, StringComparison.OrdinalIgnoreCase))
@@ -322,153 +207,35 @@ namespace Medix.API.Business.Services.Classification
             }
         }
 
-        private string GetArticleContent(Models.Entities.HealthArticle article)
-        {
-            // Prioritize summary, then content, then title
-            if (!string.IsNullOrEmpty(article.Summary) && article.Summary.Length > 50)
-                return article.Summary.Substring(0, Math.Min(500, article.Summary.Length));
-            
-            if (!string.IsNullOrEmpty(article.Content) && article.Content.Length > 50)
-                return article.Content.Substring(0, Math.Min(500, article.Content.Length));
-            
-            return article.Title ?? "";
-        }
-
         private double CalculateArticleRelevance(Models.Entities.HealthArticle article, string query)
         {
             var score = 0.0;
             var lowerQuery = query.ToLower();
 
-            // Title match (highest weight)
             if (!string.IsNullOrEmpty(article.Title) && article.Title.ToLower().Contains(lowerQuery))
                 score += 0.5;
 
-            // Summary match
             if (!string.IsNullOrEmpty(article.Summary) && article.Summary.ToLower().Contains(lowerQuery))
                 score += 0.3;
 
-            // Content match
             if (!string.IsNullOrEmpty(article.Content) && article.Content.ToLower().Contains(lowerQuery))
                 score += 0.2;
 
             return Math.Min(score, 1.0);
         }
 
-        private string? ExtractSpecialtyFromQueryAdvanced(string query)
+        private string GetArticleContent(Models.Entities.HealthArticle article)
         {
-            var specialties = new Dictionary<string, string>
-            {
-                { "tim", "Tim mạch" },
-                { "tim mạch", "Tim mạch" },
-                { "thần kinh", "Thần kinh" },
-                { "tiêu hóa", "Tiêu hóa" },
-                { "da", "Da liễu" },
-                { "da liễu", "Da liễu" },
-                { "nhi", "Nhi khoa" },
-                { "nhi khoa", "Nhi khoa" },
-                { "sản", "Sản phụ khoa" },
-                { "sản phụ khoa", "Sản phụ khoa" },
-                { "tai mũi họng", "Tai mũi họng" },
-                { "tai mũi họng", "Tai mũi họng" },
-                { "mắt", "Mắt" },
-                { "răng hàm mặt", "Răng hàm mặt" },
-                { "nội", "Nội tổng quát" },
-                { "ngoại", "Ngoại khoa" }
-            };
+            if (!string.IsNullOrEmpty(article.Summary) && article.Summary.Length > 50)
+                return article.Summary.Substring(0, Math.Min(500, article.Summary.Length));
 
-            // Check for exact matches first
-            foreach (var specialty in specialties.OrderByDescending(s => s.Key.Length))
-            {
-                if (query.Contains(specialty.Key))
-                    return specialty.Value;
-            }
+            if (!string.IsNullOrEmpty(article.Content) && article.Content.Length > 50)
+                return article.Content.Substring(0, Math.Min(500, article.Content.Length));
 
-            return null;
-        }
-
-        private List<string> ExtractSearchTerms(string query)
-        {
-            // Extract meaningful search terms (exclude common words)
-            var stopWords = new[] { "bác sĩ", "tìm", "cần", "muốn", "có", "về", "cho", "với" };
-            var terms = query.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Where(t => !stopWords.Contains(t.ToLower()))
-                .ToList();
-            
-            return terms;
-        }
-
-        private double CalculateDoctorRelevanceAdvanced(
-            Models.DTOs.Doctor.DoctorDto doctor, 
-            string query, 
-            List<string> searchTerms,
-            string? specializationName)
-        {
-            double score = 0.0;
-
-            // Specialization match (highest weight)
-            if (!string.IsNullOrEmpty(specializationName))
-            {
-                if (doctor.Specialization.ToLower().Contains(specializationName.ToLower()))
-                    score += 0.5;
-            }
-
-            // Name match
-            var doctorNameLower = doctor.FullName.ToLower();
-            foreach (var term in searchTerms)
-            {
-                if (doctorNameLower.Contains(term))
-                    score += 0.3;
-            }
-
-            // Specialization keyword match
-            var specializationLower = doctor.Specialization.ToLower();
-            foreach (var term in searchTerms)
-            {
-                if (specializationLower.Contains(term))
-                    score += 0.2;
-            }
-
-            // Rating boost (normalized)
-            score += Math.Min(doctor.Rating / 5.0, 1.0) * 0.15;
-
-            // Experience boost (normalized)
-            score += Math.Min(doctor.YearsOfExperience / 30.0, 1.0) * 0.1;
-
-            // Review count boost (if available)
-            if (doctor.ReviewCount > 0)
-            {
-                var reviewBoost = Math.Min(Math.Log10(doctor.ReviewCount + 1) / 3.0, 1.0) * 0.05;
-                score += reviewBoost;
-            }
-
-            return Math.Min(score, 1.0);
-        }
-
-        private string DetermineCategory(string keyword)
-        {
-            var categoryMap = new Dictionary<string, string>
-            {
-                { "đau", "symptom" },
-                { "sốt", "symptom" },
-                { "ho", "symptom" },
-                { "mệt", "symptom" },
-                { "điều trị", "treatment" },
-                { "chẩn đoán", "diagnosis" },
-                { "thuốc", "medication" },
-                { "phòng ngừa", "prevention" }
-            };
-
-            foreach (var category in categoryMap)
-            {
-                if (keyword.Contains(category.Key))
-                    return category.Value;
-            }
-
-            return "general";
+            return article.Title ?? "";
         }
     }
 
-    // Medical Knowledge Database Helper Class
     internal class MedicalKnowledgeDatabase
     {
         private readonly Dictionary<string, MedicalKnowledge> _knowledgeBase;
@@ -483,7 +250,7 @@ namespace Medix.API.Business.Services.Classification
         public MedicalKnowledge? GetKnowledgeForKeyword(string keyword)
         {
             var lowerKeyword = keyword.ToLower();
-            
+
             foreach (var knowledge in _knowledgeBase)
             {
                 if (lowerKeyword.Contains(knowledge.Key) || knowledge.Key.Contains(lowerKeyword))
@@ -498,7 +265,7 @@ namespace Medix.API.Business.Services.Classification
         public string GetTreatmentGuidelines(string condition)
         {
             var lowerCondition = condition.ToLower();
-            
+
             foreach (var guideline in _treatmentGuidelines)
             {
                 if (lowerCondition.Contains(guideline.Key))

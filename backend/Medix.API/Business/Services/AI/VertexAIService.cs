@@ -7,6 +7,7 @@ using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.AIChat;
 using Medix.API.Models.Entities;
 using Medix.API.Models.Enums;
+using System.Text;
 using System.Text.Json;
 using Type = Google.GenAI.Types.Type;
 
@@ -144,14 +145,21 @@ namespace Medix.API.Business.Services.AI
         };
 
         private static readonly string SymptomAnalsysisInstructionText =
-            "Bạn là một chuyên gia y tế ảo được thiết kế để giúp người dùng phân tích các triệu chứng sức khỏe của họ. " +
+            "Bạn là một chuyên gia y tế ảo được thiết kế để giúp người dùng phân tích các triệu chứng sức khỏe của họ bằng Tiếng Việt. " +
             "Dựa trên các triệu chứng được cung cấp, hãy đánh giá mức độ nghiêm trọng và đưa ra các tình trạng y tế có thể xảy ra. " +
             "Cung cấp hành động được đề xuất và điểm số độ tin cậy cho phân tích của bạn. " +
             "Nếu các triệu chứng không liên quan đến sức khỏe, hãy từ chối yêu cầu một cách lịch sự. " +
             "Trả lời chỉ với một đối tượng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
 
+        private static readonly string EMRAnalysisInstructionText =
+            "Bạn là một chuyên gia y tế ảo được thiết kế để giúp người dùng phân tích hồ sơ bệnh án điện tử (EMR) bằng Tiếng Việt. " +
+            "Dựa trên nội dung của hồ sơ bệnh án, hãy đánh giá các triệu chứng được mô tả, xác định mức độ nghiêm trọng và đưa ra các tình trạng y tế có thể xảy ra. " +
+            "Cung cấp hành động được đề xuất và điểm số độ tin cậy cho phân tích của bạn. " +
+            "Nếu hồ sơ bệnh án không liên quan đến sức khỏe, hãy từ chối yêu cầu một cách lịch sự. " +
+            "Trả lời chỉ với một đối tượng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
+
         private static readonly string MedicineRecommendationInstructionText =
-            "Bạn là một chuyên gia y tế ảo được thiết kế để giúp người dùng bằng cách đề xuất các loại thuốc phù hợp dựa trên các triệu chứng sức khỏe của họ. " +
+            "Bạn là một chuyên gia y tế ảo được thiết kế để giúp người dùng bằng cách đề xuất các loại thuốc phù hợp dựa trên các triệu chứng sức khỏe của họ bằng Tiếng Việt. " +
             "Dựa trên các triệu chứng được cung cấp, hãy đề xuất các loại thuốc phù hợp cùng với hướng dẫn sử dụng. " +
             "Trả lời chỉ với một mảng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
 
@@ -171,7 +179,7 @@ namespace Medix.API.Business.Services.AI
             IAISymptomAnalysisRepository aiSymptomAnalysisRepository)
         {
             _vertexClient = vertexClient;
-            Model = configuration["Vertex:Model"] ?? "gemini-1.5-flash";
+            Model = configuration["GoogleCloud:Model"] ?? "gemini-1.5-flash";
             _doctorRepository = doctorRepository;
             _logger = logger;
             _patientRepository = patientRepository;
@@ -206,7 +214,7 @@ namespace Medix.API.Business.Services.AI
             }
         }
 
-        public async Task<ChatResponseDto> GetSymptompAnalysisAsync(List<ContentDto> history, string? userIdClaim)
+        public async Task<ChatResponseDto> GetSymptompAnalysisAsync(string? context, List<ContentDto> history, string? userIdClaim)
         {
             var systemContent = new Content
             {
@@ -214,7 +222,7 @@ namespace Medix.API.Business.Services.AI
                 [
                     new Part
                         {
-                            Text = SymptomAnalsysisInstructionText,
+                            Text = GetSymptomInstruction(context),
                         }
                 ],
                 Role = "system"
@@ -288,7 +296,7 @@ namespace Medix.API.Business.Services.AI
             };
         }
 
-        public async Task<ChatResponseDto> GetEMRAnalysisAsync(IFormFile file, string? userIdClaim, List<ContentDto> history)
+        public async Task<ChatResponseDto> GetEMRAnalysisAsync(string emrText, string? context, string? userIdClaim, List<ContentDto> history)
         {
             var systemContent = new Content
             {
@@ -296,7 +304,7 @@ namespace Medix.API.Business.Services.AI
                 [
                     new Part
                         {
-                            Text = SymptomAnalsysisInstructionText,
+                            Text = GetEMRAnalysisInstruction(context),
                         }
                 ],
                 Role = "system"
@@ -317,11 +325,7 @@ namespace Medix.API.Business.Services.AI
                 [
                     new Part
                     {
-                        Text = "Dưới đây là hồ sơ bệnh án điện tử (EMR) của bệnh nhân. Vui lòng phân tích các triệu chứng và cung cấp đánh giá y tế chi tiết.",
-                    },
-                    new Part
-                    {
-                        InlineData = await GetBlobFromFileAsync(file)
+                        Text = $"Phân tích hồ sơ bệnh án sau:\n{emrText}"
                     }
                 ]
             });
@@ -507,18 +511,6 @@ namespace Medix.API.Business.Services.AI
             await _aiSymptomAnalysisRepository.AddAsync(aiSymptompAnalysis);
         }
 
-        private async Task<Blob> GetBlobFromFileAsync(IFormFile file)
-        {
-            using var memoryStream = new MemoryStream();
-            await file.CopyToAsync(memoryStream);
-            var blob = new Blob
-            {
-                MimeType = file.ContentType,
-                Data = memoryStream.ToArray()
-            };
-            return blob;
-        }
-
         private List<Content> GetConversationHistory(List<ContentDto> history)
         {
             var conversationHistory = new List<Content>();
@@ -538,6 +530,28 @@ namespace Medix.API.Business.Services.AI
             }
 
             return conversationHistory;
+        }
+
+        private string GetSymptomInstruction(string? context)
+        {
+            var prompt = new StringBuilder();
+            prompt.AppendLine(SymptomAnalsysisInstructionText);
+            if (!string.IsNullOrEmpty(context))
+            {
+                prompt.AppendLine($"\nNgữ cảnh bổ sung: {context}");
+            }
+            return prompt.ToString();
+        }
+
+        private string GetEMRAnalysisInstruction(string? context)
+        {
+            var prompt = new StringBuilder();
+            prompt.AppendLine(EMRAnalysisInstructionText);
+            if (!string.IsNullOrEmpty(context))
+            {
+                prompt.AppendLine($"\nNgữ cảnh bổ sung: {context}");
+            }
+            return prompt.ToString();
         }
     }
 

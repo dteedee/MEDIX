@@ -97,15 +97,8 @@ namespace Medix.API.Business.Services.UserManagement
 
         public async Task<WalletTransactionDto?> UppdateWalletTrasactionAsync(WalletTransactionDto walletTransactionDto)
         {
-            if (walletTransactionDto?.id == null)
-            {
-                return null;
-            }
 
-            if (walletTransactionDto.id == null && walletTransactionDto.orderCode == null)
-            {
-                return null; 
-            }
+    
 
             WalletTransaction? transToUpdate = null;
 

@@ -1,4 +1,5 @@
-﻿﻿using Medix.API.DataAccess.Interfaces.Classification;
+﻿using Medix.API.Business.Interfaces.Classification;
+using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.Doctor;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,16 +8,18 @@ namespace Medix.API.DataAccess.Repositories.Classification
     public class DoctorDashboardRepository : IDoctorDashboardRepository
     {
         private readonly MedixContext _context;
-
+      
         public DoctorDashboardRepository(MedixContext context)
         {
             _context = context;
+           
         }
 
         public async Task<DoctorDashboardDto> GetDashboardAsync(Guid doctorId)
         {
             var today = DateTime.Today;
             var monthStart = new DateTime(today.Year, today.Month, 1);
+      
 
             var doctorUser = await _context.Doctors
                 .AsNoTracking()
@@ -28,9 +31,9 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Where(a => a.DoctorId == doctorId && a.AppointmentStartTime.Date == today)
                 .ToListAsync();
 
-            var todayRevenue = todayAppointments.Sum(a => a.TotalAmount);
+            var todayRevenue = todayAppointments.Where(a => (a.StatusCode == "Completed" || a.StatusCode == "MissedByPatient")).Sum(a => a.TotalAmount) *0.7m;
             var monthRevenue = await _context.Appointments
-                .Where(a => a.DoctorId == doctorId && a.AppointmentStartTime >= monthStart)
+                .Where(a => a.DoctorId == doctorId && a.AppointmentStartTime >= monthStart&& (a.StatusCode == "Completed" || a.StatusCode == "MissedByPatient"))
                 .SumAsync(a => a.TotalAmount);
 
             var totalRevenue = await _context.Appointments

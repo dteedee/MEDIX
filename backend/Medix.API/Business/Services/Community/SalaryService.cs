@@ -47,7 +47,7 @@ namespace Medix.API.Business.Services.Community
                     using var transaction = await _context.Database.BeginTransactionAsync();
                     try
                     {
-                        var salary = doctor.Appointments
+                        var salary = doctor.Appointments.Where(p=>p.StatusCode=="Completed" || p.StatusCode == "CancelledByPatient")
                             .Select(a => a.TotalAmount)
                             .Sum();
                         var netSalary = salary * ((decimal)Constants.DoctorSalaryShare);

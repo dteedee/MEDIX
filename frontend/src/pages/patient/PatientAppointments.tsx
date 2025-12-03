@@ -5,6 +5,7 @@ import doctorService from '../../services/doctorService';
 import { reviewService } from '../../services/reviewService';
 import { DoctorProfileDto } from '../../types/doctor.types';
 import { apiClient } from '../../lib/apiClient';
+import { useToast } from '../../contexts/ToastContext';
 
 interface Appointment {
   id: string;
@@ -38,6 +39,7 @@ interface FilterOptions {
 }
 
 export const PatientAppointments: React.FC = () => {
+  const { showToast } = useToast();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -340,7 +342,7 @@ export const PatientAppointments: React.FC = () => {
       setHoverRating(0);
       setReviewComment('');
 
-      alert('Cảm ơn bạn đã đánh giá! Đánh giá của bạn đã được gửi thành công.');
+      showToast('Cảm ơn bạn đã đánh giá! Đánh giá của bạn đã được gửi thành công.', 'success');
       
       await loadAppointments();
       
@@ -348,7 +350,7 @@ export const PatientAppointments: React.FC = () => {
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.title ||
                           'Không thể gửi đánh giá. Vui lòng thử lại.';
-      alert(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setIsSubmittingReview(false);
     }

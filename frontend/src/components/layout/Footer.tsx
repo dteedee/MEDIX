@@ -55,8 +55,24 @@ const Footer: React.FC = () => {
             {loading ? '...' : (settings.systemDescription || t('footer.about'))}
           </p>
           <div className={styles["social-icons"]}>
-            <div className={styles["social-icon"]}>f</div>
-            <div className={styles["social-icon"]}>in</div>
+            <a
+              href="https://www.facebook.com/medix"
+              target="_blank"
+              rel="noreferrer"
+              className={`${styles["social-icon"]} ${styles["facebook"]}`}
+              aria-label="Facebook"
+            >
+              <i className="bi bi-facebook"></i>
+            </a>
+            <a
+              href="https://www.linkedin.com/company/medix"
+              target="_blank"
+              rel="noreferrer"
+              className={`${styles["social-icon"]} ${styles["linkedin"]}`}
+              aria-label="LinkedIn"
+            >
+              <i className="bi bi-linkedin"></i>
+            </a>
           </div>
         </div>
 

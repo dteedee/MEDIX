@@ -7,6 +7,12 @@ header {
     z-index: 1001;
 }
 
+@keyframes pulse {
+  0% { transform: scale(0.95); opacity: 0.6; }
+  50% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.6; }
+}
+
 .top-bar {
     max-width: 1200px;
     margin: 0 auto;
@@ -353,4 +359,213 @@ header {
   right: 0 !important;
   margin-top: 8px !important;
   display: block !important;
+}
+
+/* Notification dropdown */
+.notification-wrapper {
+  position: relative;
+  display: inline-flex;
+  z-index: 10002;
+}
+
+.notification-toggle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+  position: relative;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.notification-toggle-unread {
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.25);
+}
+
+.notification-ripple {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  animation: pulse 2s infinite;
+}
+
+.notification-toggle i {
+  position: relative;
+  z-index: 2;
+}
+
+.notification-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.notification-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: linear-gradient(135deg, #ff4d4f, #f97316);
+  border-radius: 999px;
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.6);
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-dropdown {
+  width: 360px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  background: #fff;
+  right: 0 !important;
+  left: auto !important;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px 12px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.notification-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notification-title-block small {
+  font-size: 11px;
+  color: #6366f1;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.mark-all-btn {
+  border: none;
+  background: linear-gradient(135deg, #d8b4fe, #a5b4fc);
+  color: #4c1d95;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mark-all-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(99, 102, 241, 0.2);
+}
+
+.notification-list {
+  max-height: 360px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 4px;
+}
+
+.notification-card {
+  display: flex;
+  gap: 12px;
+  text-align: left;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  padding: 12px;
+  background: linear-gradient(135deg, #f8fafc, #eef2ff);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+}
+
+.notification-card:hover {
+  transform: translateX(4px);
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.15);
+}
+
+.notification-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #4c1d95;
+}
+
+.notification-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.notification-card-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.notification-card-message {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.notification-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.notification-card-pill {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.15);
+  color: #4338ca;
+  font-weight: 600;
+}
+
+.notification-card-time {
+  font-size: 12px;
+  color: #6366f1;
+  font-weight: 600;
+}
+
+.notification-empty {
+  padding: 40px 0;
+  text-align: center;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.notification-empty i {
+  font-size: 32px;
+  color: #cbd5f5;
 }

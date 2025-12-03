@@ -83,8 +83,8 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
       const slotEnd = parseTimeToMinutes(slot.endTime);
 
       const hasAppointment = appointments.some(app => {
-        const appStart = getLocalMinutesFromISO(app.appointmentStartTime);
-        const appEnd = getLocalMinutesFromISO(app.appointmentEndTime);
+        const appStart = parseTimeToMinutes(app.appointmentStartTime.substring(11, 16));
+        const appEnd = parseTimeToMinutes(app.appointmentEndTime.substring(11, 16));
         return appStart < slotEnd && appEnd > slotStart;
       });
 
@@ -140,8 +140,8 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
 
         const relatedIds = appointments
           .filter(app => {
-            const appStartMin = getLocalMinutesFromISO(app.appointmentStartTime);
-            const appEndMin = getLocalMinutesFromISO(app.appointmentEndTime);
+            const appStartMin = parseTimeToMinutes(app.appointmentStartTime.substring(11, 16));
+            const appEndMin = parseTimeToMinutes(app.appointmentEndTime.substring(11, 16));
             return appStartMin < slotEndMin && appEndMin > slotStartMin;
           })
           .map(app => app.id);
@@ -596,8 +596,8 @@ const ScheduleManagement: React.FC = () => {
       const slotEnd = parseTimeToMinutes(slot.endTime);
 
       const hasAppointment = dayAppointments.some(app => {
-        const appStart = getLocalMinutesFromISO(app.appointmentStartTime);
-        const appEnd = getLocalMinutesFromISO(app.appointmentEndTime);
+        const appStart = parseTimeToMinutes(app.appointmentStartTime.substring(11, 16));
+        const appEnd = parseTimeToMinutes(app.appointmentEndTime.substring(11, 16));
         return appStart < slotEnd && appEnd > slotStart;
       });
 

@@ -224,7 +224,7 @@ namespace Medix.API.Presentation.Controllers
                   DateTime.Now);
             BackgroundJob.Schedule<IAppointmentService>(
                 service => service.CheckisAppointmentCompleted(dto.Result.Id)
-                , DateTime.UtcNow.AddHours(7).AddMinutes(3));
+                , DateTime.UtcNow.AddHours(7).AddMinutes(20));
 
 
             var updated = await _service.UpdateAsync(updateDto);

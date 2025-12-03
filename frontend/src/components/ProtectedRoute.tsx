@@ -56,7 +56,6 @@ export const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children 
   const { isAuthenticated, user, isLoading } = useAuth();
   const location = useLocation();
 
-  // Debug logs in useEffect to prevent infinite re-renders
   useEffect(() => {
   
   }, [location.pathname, isLoading, isAuthenticated, user]);

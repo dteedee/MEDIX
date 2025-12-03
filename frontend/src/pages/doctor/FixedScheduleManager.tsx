@@ -85,7 +85,6 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
       let status: 'none' | 'work' | 'off' | 'occupied' = 'none';
       if (existing) {
         if (hasAppointment) {
-          // Ưu tiên hiển thị O (có hẹn) ngay cả khi lịch cố định đang ở trạng thái nghỉ
           status = 'occupied';
         } else if (!existing.isAvailable) {
           status = 'off';
@@ -93,7 +92,6 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
           status = 'work';
         }
       } else if (hasAppointment) {
-        // Phòng trường hợp có cuộc hẹn nhưng thiếu lịch cố định (không mong muốn nhưng xử lý an toàn)
         status = 'occupied';
       }
 
@@ -118,7 +116,6 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
     const slot = timeSlots.find(t => t.startTime === slotStartTime);
     if (!slot) return;
 
-    // Nếu ca này đang có cuộc hẹn thì không cho phép thay đổi lịch cố định
     const slotStartMin = parseTimeToMinutes(slot.startTime);
     const slotEndMin = parseTimeToMinutes(slot.endTime);
     const hasAppointment = appointments.some(app => {
@@ -138,7 +135,6 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
       return;
     }
 
-    // Vòng đời: - (none) -> V (work) -> X (off) -> - (xóa)
     const nextState: 'none' | 'work' | 'off' = existing
       ? existing.isAvailable
         ? 'off'
@@ -224,7 +220,6 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
         return appStartMin < slotEndMin && appEndMin > slotStartMin;
       });
 
-      // Không đè lên các ca đã có cuộc hẹn
       if (hasAppointment) {
         return;
       }
@@ -279,7 +274,6 @@ const FixedScheduleManager: React.FC<FixedScheduleManagerProps> = ({ schedules, 
     }
   };
 
-  // Các hàm chỉnh sửa/xóa chi tiết và form phía dưới đã được loại bỏ theo logic mới
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>

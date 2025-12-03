@@ -115,7 +115,6 @@ export interface PasswordRequirements {
   hasSpecialChar: boolean;
 }
 
-// Form validation errors
 export interface ValidationErrors {
   [key: string]: string[];
 }

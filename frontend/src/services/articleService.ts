@@ -25,30 +25,24 @@ export interface ArticleFormPayload {
 
 const BASE = '/HealthArticle'
 
-// Helper to fetch all categories once and cache them for mapping
 export const categoryCache = {
   promise: null as Promise<{ items: any[], total?: number }> | null,
   fetchAll: function() {
     if (!this.promise) {
-      // Fetch a large number to get all categories, assuming less than 9999
       this.promise = categoryService.list(1, 9999);
     }
     return this.promise;
   }
 };
 
-// Helper function to sanitize article content on the frontend
-// This is a workaround for a backend issue where content might be a JSON string.
 function sanitizeArticleContent(content: any): string {
   if (typeof content !== 'string') {
     return '';
   }
   const trimmedContent = content.trim();
-  // Check if the content looks like a JSON object/array
   if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) || (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
     try {
       JSON.parse(trimmedContent);
-      // If parsing succeeds, it's likely invalid JSON content. Return an error message.
       return '<p style="color: red;">[Lỗi: Nội dung bài viết không hợp lệ và không thể hiển thị.]</p>';
     } catch (e) { /* Not a valid JSON, so it might be legitimate content */ }
   }

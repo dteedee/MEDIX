@@ -417,8 +417,6 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
                       return true;
                     }
                   })} 
-                  // Cho phép chọn bất kỳ ngày từ hôm nay trở đi; rule "nghỉ phải cách 2 ngày"
-                  // sẽ được kiểm tra bằng validate + khi submit, không tự động đổi ngày.
                   min={new Date().toISOString().split('T')[0]}
                   onChange={(e) => {
                     register('overrideDate').onChange(e);
@@ -439,8 +437,6 @@ const FlexibleScheduleManager: React.FC<Props> = ({ schedules, overrides, onClos
                   {...register('overrideType', { required: 'Vui lòng chọn loại' })}
                   onChange={(e) => {
                     register('overrideType').onChange(e);
-                    // Không tự động thay đổi ngày khi chuyển sang "Nghỉ" để tránh nhầm lẫn.
-                    // Chỉ cập nhật ràng buộc tối thiểu là hôm nay.
                     const dateInput = document.querySelector('input[name="overrideDate"]') as HTMLInputElement;
                     if (dateInput) {
                       const today = new Date();

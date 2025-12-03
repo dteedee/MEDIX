@@ -22,7 +22,6 @@ export const Header: React.FC = () => {
     const userDropdownRef = useRef<HTMLDivElement>(null);
     const [loadingSettings, setLoadingSettings] = useState(true);
     
-    // Check if we're on the homepage
     const isHomePage = location.pathname === '/';
 
     useEffect(() => {

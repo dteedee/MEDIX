@@ -61,7 +61,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     const handleTokenExpired = () => {
-      // Clear user state when token expires
       setUser(null);
       localStorage.removeItem('userData');
       localStorage.removeItem('currentUser');
@@ -95,9 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (refreshToken && (!accessToken || isTokenExpired)) {
         try {
           const authResponse = await authService.refreshToken(refreshToken);
-          // Store new tokens with expiresAt from backend
           apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken, authResponse.expiresAt);
-          // Restore user data
           if (userData) {
             await loadUserProfile();
           }
@@ -139,8 +136,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       let finalUser = authResponse.user;
 
-      // Store tokens immediately so subsequent API calls are authenticated
-      // Use expiresAt from backend response
       apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken, authResponse.expiresAt);
 
       if (finalUser.role === UserRole.DOCTOR) {
@@ -178,7 +173,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const authResponse: AuthResponse = await authService.register(userData);
       
-      // Store tokens with expiresAt from backend
       apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken, authResponse.expiresAt);
       
       localStorage.setItem('userData', JSON.stringify(authResponse.user));
@@ -198,7 +192,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const authResponse: AuthResponse = await authService.registerPatient(patientData);
       
-      // Store tokens with expiresAt from backend
       apiClient.setTokens(authResponse.accessToken, authResponse.refreshToken, authResponse.expiresAt);
       
       localStorage.setItem('userData', JSON.stringify(authResponse.user));

@@ -1,6 +1,5 @@
 import * as React from "react"
 
-// Local toast-related types (do not rely on UI component's props which differ)
 type ToastActionElement = {
   altText: string
   action: () => void
@@ -9,7 +8,6 @@ type ToastActionElement = {
 type ToastProps = {
   open?: boolean
   onOpenChange?: (open: boolean) => void
-  // allow other arbitrary fields
   [key: string]: any
 }
 
@@ -98,8 +96,6 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {

@@ -27,10 +27,8 @@ export const emailVerificationService = {
     }
   },
 
-  // Gửi lại mã xác nhận
   resendVerificationCode: async (email: string) => {
     try {
-      // Gọi API resend mới từ backend
       const response = await apiClient.post('/register/resendEmailVerificationCode', JSON.stringify(email), {
         headers: {
           'Content-Type': 'application/json',
@@ -97,5 +95,4 @@ export const emailVerificationService = {
   }
 };
 
-// Export default
 export default emailVerificationService;

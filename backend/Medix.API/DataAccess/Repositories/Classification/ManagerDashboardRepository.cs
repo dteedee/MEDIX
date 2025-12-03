@@ -82,7 +82,6 @@ namespace Medix.API.DataAccess.Repositories.Classification
                     });
                 }
 
-                // Chỉ thêm bác sĩ vào danh sách nếu có lịch làm việc
                 if (doctorDto.WorkShifts.Count > 0)
                 {
                     dto.DoctorsTodaySchedules.Add(doctorDto);

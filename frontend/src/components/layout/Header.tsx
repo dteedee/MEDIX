@@ -8,7 +8,6 @@ import { NotificationDto, NotificationMetadata } from '../../types/notification.
 import NotificationService from '../../services/notificationService';
 import { formatDistanceToNow } from 'date-fns';
 import { vi, enUS } from 'date-fns/locale';
-import { LanguageSwitcher } from '../LanguageSwitcher';
 
 const HEADER_HIDDEN_NOTIFICATIONS_KEY = 'medix_header_hidden_notifications_v1'
 
@@ -242,7 +241,6 @@ export const Header: React.FC = () => {
                         <>
                             {!isHomePage && (
                                 <div className={styles['language-selector']}>
-                                    <LanguageSwitcher />
                                 </div>
                             )}
 
@@ -396,7 +394,6 @@ export const Header: React.FC = () => {
                             
                             {!isHomePage && (
                                 <div className={styles['language-selector']}>
-                                    <LanguageSwitcher />
                                 </div>
                             )}
                         </>

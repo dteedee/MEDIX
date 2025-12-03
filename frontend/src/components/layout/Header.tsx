@@ -4,14 +4,71 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { apiClient } from '../../lib/apiClient';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
-import { NotificationMetadata } from '../../types/notification.types';
+import { NotificationDto, NotificationMetadata } from '../../types/notification.types';
 import NotificationService from '../../services/notificationService';
 import { formatDistanceToNow } from 'date-fns';
 import { vi, enUS } from 'date-fns/locale';
 import { LanguageSwitcher } from '../LanguageSwitcher';
 
+const HEADER_HIDDEN_NOTIFICATIONS_KEY = 'medix_header_hidden_notifications_v1'
+
+const getNotificationKey = (notification: NotificationDto) =>
+    `${notification.title}-${notification.message}-${notification.createdAt}-${notification.type}`
+
+const getHiddenNotificationKeys = (): Set<string> => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+        const raw = localStorage.getItem(HEADER_HIDDEN_NOTIFICATIONS_KEY)
+        if (!raw) return new Set()
+        const parsed = JSON.parse(raw)
+        if (!Array.isArray(parsed)) return new Set()
+        return new Set(parsed as string[])
+    } catch {
+        return new Set()
+    }
+}
+
+const addHiddenNotificationKeys = (keys: string[]) => {
+    if (typeof window === 'undefined' || !keys.length) return
+    try {
+        const existing = getHiddenNotificationKeys()
+        keys.forEach(key => existing.add(key))
+        localStorage.setItem(HEADER_HIDDEN_NOTIFICATIONS_KEY, JSON.stringify(Array.from(existing)))
+    } catch {
+    }
+}
+
+const formatMessageDates = (message?: string): string => {
+    if (!message) return ''
+    const dateRegex = /(\d{1,2})\/(\d{1,2})\/(\d{4})/g
+    return message.replace(dateRegex, (_, month, day, year) => {
+        const parsedDay = String(Number(day)).padStart(2, '0')
+        const parsedMonth = String(Number(month)).padStart(2, '0')
+        return `${parsedDay}/${parsedMonth}/${year}`
+    })
+}
+
+const getNotificationTypeLabel = (type: string) => {
+    switch (type) {
+        case 'Appointment':
+            return 'Lịch hẹn'
+        case 'Payment':
+            return 'Thanh toán'
+        case 'System':
+            return 'Hệ thống'
+        case 'Reminder':
+            return 'Nhắc nhở'
+        case 'Marketing':
+            return 'Khuyến mãi'
+        default:
+            return 'Thông báo'
+    }
+}
+
 export const Header: React.FC = () => {
     const [notificationMetadata, setNotificationMetadata] = useState<NotificationMetadata>();
+    const [notifications, setNotifications] = useState<NotificationDto[]>([])
+    const [unreadCount, setUnreadCount] = useState<number>(0)
     const [siteName, setSiteName] = useState('MEDIX');
     const [siteDescription, setSiteDescription] = useState('Hệ thống y tế thông minh ứng dụng AI');
     const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -22,8 +79,10 @@ export const Header: React.FC = () => {
     const userDropdownRef = useRef<HTMLDivElement>(null);
     const [loadingSettings, setLoadingSettings] = useState(true);
     
-    // Check if we're on the homepage
     const isHomePage = location.pathname === '/';
+
+    const computeUnread = (list: NotificationDto[], readKeys: Set<string>) =>
+        list.filter(n => !readKeys.has(getNotificationKey(n))).length
 
     useEffect(() => {
         if (!user) {
@@ -33,7 +92,20 @@ export const Header: React.FC = () => {
         const fetchMetadata = async () => {
             try {
                 const data = await NotificationService.getMetadata();
-                setNotificationMetadata(data);
+                const readKeys = getHiddenNotificationKeys()
+                const all = data.notifications || []
+                const sorted = [...all].sort(
+                    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                )
+                const limited = sorted.slice(0, 7)
+                const unread = computeUnread(limited, readKeys)
+
+                setNotifications(limited)
+                setUnreadCount(unread)
+                setNotificationMetadata({
+                    ...data,
+                    isAllRead: unread === 0
+                })
             } catch (error) {
                 
             }
@@ -94,6 +166,30 @@ export const Header: React.FC = () => {
         setShowUserDropdown(!showUserDropdown);
     };
 
+    const handleNotificationClick = (index: number) => {
+        const target = notifications[index]
+        if (!target) return
+
+        const key = getNotificationKey(target)
+        const readKeys = getHiddenNotificationKeys()
+        if (readKeys.has(key)) return
+
+        readKeys.add(key)
+        addHiddenNotificationKeys([key])
+        const unread = computeUnread(notifications, readKeys)
+        setUnreadCount(unread)
+        setNotificationMetadata(prevMeta =>
+            prevMeta ? { ...prevMeta, isAllRead: unread === 0 } : prevMeta
+        )
+    }
+
+    const handleMarkAllNotificationsRead = () => {
+        const keys = notifications.map(getNotificationKey)
+        addHiddenNotificationKeys(keys)
+        setUnreadCount(0)
+        setNotificationMetadata(prevMeta => prevMeta ? { ...prevMeta, isAllRead: true } : prevMeta)
+    }
+
     const handleLogout = async () => {
         setShowUserDropdown(false);
         await logout();
@@ -151,57 +247,88 @@ export const Header: React.FC = () => {
                             )}
 
                             {/* Notifications */}
-                            <div className="dropdown" style={{ position: 'relative', display: 'inline-block', zIndex: 10001 }}>
-                                <i
-                                    className="bi bi-bell-fill fs-4"
-                                    style={{ cursor: 'pointer' }}
+                            <div className={styles['notification-wrapper']}>
+                                <button
+                                    className={`${styles['notification-toggle']} ${!notificationMetadata?.isAllRead ? styles['notification-toggle-unread'] : ''}`}
                                     data-bs-toggle="dropdown"
-                                    aria-expanded="false">
-                                </i>
+                                    data-bs-auto-close="outside"
+                                    aria-expanded="false"
+                                    type="button"
+                                >
+                                    <span className={styles['notification-ripple']}></span>
+                                    <i className="bi bi-bell-fill"></i>
+                                    {unreadCount > 0 && (
+                                        <span className={styles['notification-dot']}>
+                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                        </span>
+                                    )}
+                                </button>
 
-                                {!notificationMetadata?.isAllRead && (
-                                    <span
-                                        style={{
-                                            position: 'absolute',
-                                            top: 0,
-                                            right: 0,
-                                            width: '10px',
-                                            height: '10px',
-                                            backgroundColor: 'red',
-                                            borderRadius: '50%',
-                                            zIndex: 10002,
-                                        }}
-                                    ></span>
-                                )}
-
-                                <ul className="dropdown-menu dropdown-menu-start" style={{
-                                    maxHeight: '500px',
-                                    overflowY: 'auto', 
-                                    width: '400px',
-                                    zIndex: 10000,
-                                    position: 'absolute',
-                                }}>
-                                    <li><h6 className="dropdown-header">{t('header.notifications')}</h6></li>
-                                    {notificationMetadata?.notifications.map((notification) => (
-                                        <li>
-                                            <a className="dropdown-item" href="#" style={{ whiteSpace: 'normal' }}>
-                                                <div>
-                                                    <strong><i className={`bi ${getNotificationIconClass(notification.type)} me-2`}></i>
-                                                        {notification.title}</strong>
-                                                    <div style={{ fontSize: '0.9rem', lineHeight: '1.4', marginTop: '2px' }}>
-                                                        {notification.message}
+                                <div className={`${styles['notification-dropdown']} dropdown-menu dropdown-menu-start`}>
+                                    <div className={styles['notification-header']}>
+                                        <div className={styles['notification-title-block']}>
+                                            <span>{t('header.notifications')}</span>
+                                            <small>{unreadCount} mới</small>
+                                        </div>
+                                        {notifications.length > 0 && (
+                                            <button
+                                                className={styles['mark-all-btn']}
+                                                onClick={handleMarkAllNotificationsRead}
+                                            >
+                                                Đánh dấu tất cả đã đọc
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className={styles['notification-list']}>
+                                        {notifications.length > 0 ? (
+                                            notifications.map((notification, index) => (
+                                                <button
+                                                    key={`${notification.createdAt}-${index}`}
+                                                    className={styles['notification-card']}
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.preventDefault()
+                                                        e.stopPropagation()
+                                                        handleNotificationClick(index)
+                                                    }}
+                                                >
+                                                    <div
+                                                        className={styles['notification-card-icon']}
+                                                    >
+                                                        <i className={`bi ${getNotificationIconClass(notification.type)}`}></i>
                                                     </div>
-                                                    <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '4px' }}>
-                                                        {formatDistanceToNow(new Date(notification.createdAt), {
-                                                            addSuffix: true,
-                                                            locale: language === 'vi' ? vi : enUS,
-                                                        })}
+                                                    <div className={styles['notification-card-body']}>
+                                                        <div className={styles['notification-card-title']}>
+                                                            {notification.title}
+                                                            {!getHiddenNotificationKeys().has(getNotificationKey(notification)) && (
+                                                                <span className={styles['notification-card-unread-dot']}></span>
+                                                            )}
+                                                        </div>
+                                                        <div className={styles['notification-card-message']}>
+                                                            {formatMessageDates(notification.message)}
+                                                        </div>
+                                                        <div className={styles['notification-card-meta']}>
+                                                            <span className={styles['notification-card-pill']}>
+                                                                {getNotificationTypeLabel(notification.type)}
+                                                            </span>
+                                                            <span className={styles['notification-card-time']}>
+                                                                {formatDistanceToNow(new Date(notification.createdAt), {
+                                                                    addSuffix: true,
+                                                                    locale: language === 'vi' ? vi : enUS,
+                                                                })}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </a>
-                                        </li>
-                                    ))}
-                                </ul>
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className={styles['notification-empty']}>
+                                                <i className="bi bi-inboxes"></i>
+                                                <p>Không còn thông báo nào</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
                             <div className={styles["user-dropdown"]} ref={userDropdownRef}>

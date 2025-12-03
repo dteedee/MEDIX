@@ -583,8 +583,6 @@ function DoctorDetails() {
                 const bookedEnd = new Date(booked.endTime);
                 const bookedDateString = formatDateString(bookedStart);
                 if (bookedDateString !== dateString) return false;
-                // Backend đang lưu giờ cuộc hẹn lệch 7h so với ma trận ca (03:00 lưu cho ca 10:00),
-                // nên cần cộng thêm 7h để khớp với các slot 07:00, 08:00, 09:00, 10:00...
                 const bookedStartTime = `${String(bookedStart.getHours()).padStart(2, '0')}:${String(bookedStart.getMinutes()).padStart(2, '0')}`;
                 const bookedEndTime = `${String(bookedEnd.getHours()).padStart(2, '0')}:${String(bookedEnd.getMinutes()).padStart(2, '0')}`;
                 const overlaps = isTimeSlotOverlap(slot.startTime, slot.endTime, bookedStartTime, bookedEndTime);

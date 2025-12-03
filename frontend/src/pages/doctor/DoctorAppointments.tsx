@@ -190,14 +190,12 @@ const DoctorAppointments: React.FC = () => {
 
     loadAppointments();
 
-    // Nhận trạng thái từ trang lịch làm việc để highlight cuộc hẹn cụ thể
     const navState = (window.history.state && (window.history.state as any).usr) || null;
     if (navState?.highlightAppointmentIds) {
       setHighlightAppointmentIds(navState.highlightAppointmentIds as string[]);
     }
   }, []);
 
-  // Sau khi đã có danh sách highlight và dữ liệu render, cuộn cuộc hẹn đầu tiên vào giữa màn hình
   useEffect(() => {
     if (!highlightAppointmentIds.length) return;
     const firstId = highlightAppointmentIds[0];

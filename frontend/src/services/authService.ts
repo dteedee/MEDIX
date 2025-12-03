@@ -56,7 +56,6 @@ export class AuthService {
     }
   }
 
-  // ===================== REGISTER (PATIENT) =====================
   async registerPatient(patientData: PatientRegistration): Promise<AuthResponse> {
     try {
       const payload = {
@@ -117,18 +116,15 @@ export class AuthService {
     }
   }
 
-  // ===================== CHECK EMAIL EXISTS =====================
   async checkEmailExists(email: string): Promise<{ exists: boolean }> {
     try {
       const response = await apiClient.post('/api/register/checkEmailExist', email);
       return { exists: response.data };
     } catch (error: any) {
-      // If there's an error, assume email doesn't exist
       return { exists: false };
     }
   }
 
-  // ===================== RESET PASSWORD =====================
   async resetPassword(data: ResetPasswordRequest): Promise<{ success: boolean; error?: string }> {
     try {
       await apiClient.post('/auth/reset-password', data);
@@ -141,7 +137,6 @@ export class AuthService {
     }
   }
 
-  // ===================== CHANGE PASSWORD =====================
   async changePassword(data: { currentPassword: string; newPassword: string; confirmPassword: string }): Promise<void> {
     try {
       await apiClient.post('/auth/change-password', data);
@@ -150,7 +145,6 @@ export class AuthService {
     }
   }
 
-  // ===================== REFRESH TOKEN =====================
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
       const response = await apiClient.post<AuthResponse>('/auth/refresh-token', { refreshToken });
@@ -189,7 +183,6 @@ export class AuthService {
     }
   }
 
-  // ===================== GENDER OPTIONS =====================
   getGenderOptions(): Gender[] {
     return [
       { code: 'Male', displayName: 'Nam', isActive: true },
@@ -198,7 +191,6 @@ export class AuthService {
     ];
   }
 
-  // ===================== VALIDATION HELPERS =====================
   validateEmailFormat(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -209,7 +201,6 @@ export class AuthService {
     return complexityRegex.test(password);
   }
 
-  // ===================== ERROR HANDLER =====================
   private handleApiError(error: any): Error {
     if (error.response?.data) {
       const apiError = error.response.data;

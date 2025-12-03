@@ -53,7 +53,6 @@ export interface TransferAcceptRequest {
 }
 
 const acceptTransfer = async (request: TransferAcceptRequest) => {
-  // API: POST /api/WithDraw/transfer
   const response = await apiClient.post('/WithDraw/transfer', request);
   return response.data;
 };

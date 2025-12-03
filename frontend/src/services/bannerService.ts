@@ -27,7 +27,6 @@ export const bannerService = {
     const r = await apiClient.get(BASE, { params });
     const data = r.data;
     
-    // Handle multiple response shapes from backend
     const rawItems = Array.isArray(data)
       ? data
       : data?.data ?? data?.item2 ?? [];
@@ -50,7 +49,6 @@ export const bannerService = {
     const r = await apiClient.get(url, { params: query });
     const data = r.data
 
-    // Handle multiple response shapes from backend
     const rawItems = Array.isArray(data)
       ? data
       : data?.data ?? data?.item2 ?? []
@@ -66,7 +64,6 @@ export const bannerService = {
   create: async (payload: CreateBannerRequest): Promise<BannerDTO> => {
     try {
       const formData = new FormData();
-      // Append fields directly to match [FromForm] SiteBannerCreateDto properties
       formData.append('BannerTitle', payload.bannerTitle);
       if (payload.bannerUrl) formData.append('BannerUrl', payload.bannerUrl);
       if (payload.displayOrder !== undefined) formData.append('DisplayOrder', payload.displayOrder.toString());

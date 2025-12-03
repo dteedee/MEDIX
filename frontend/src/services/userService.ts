@@ -68,7 +68,6 @@ export const userService = {
         emergencyContactPhone: data.emergencyContactPhone || null
       };
 
-      // Add patient-specific fields if they exist
       if (data.emergencyContactName !== undefined) {
         updateDto.emergencyContactName = data.emergencyContactName;
       }
@@ -109,7 +108,6 @@ export const userService = {
       formData.append('file', imageFile);
       
       
-      // Chỉ gọi endpoint /user/uploadAvatar
       const userResponse = await apiClient.postMultipart<{ imageUrl: string }>('/user/uploadAvatar', formData);
       const imageUrl = userResponse.data.imageUrl;
       return { imageUrl };
@@ -152,7 +150,6 @@ export const userService = {
   }
 };
 
-// --- Phần dành cho quản lý người dùng (Admin) ---
 const BASE = '/User'; // Base path (apiClient đã có /api)
 export const userAdminService = {
   list: async (page = 1, pageSize = 10, search?: string): Promise<{ items: UserDTO[]; total?: number }> => {
@@ -194,7 +191,6 @@ export const userAdminService = {
    * @param id The ID of the user.
    */
   adminResetPassword: async (id: string): Promise<void> => {
-    // This calls the POST /api/User/{id}/admin-reset-password endpoint you created.
     await apiClient.post(`${BASE}/${id}/admin-reset-password`);
   },
 };

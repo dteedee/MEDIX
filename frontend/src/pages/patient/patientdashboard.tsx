@@ -13,8 +13,12 @@ import { DoctorProfileDto } from '../../types/doctor.types';
 import { PatientHealthReminderDto } from '../../types/patient.types';
 import styles from '../../styles/patient/PatientDashboard.module.css';
 import ReminderCard from '../../components/ReminderCard';
+import notificationService from '../../services/notificationService';
+import { NotificationDto, NotificationMetadata } from '../../types/notification.types';
 import { apiClient } from '../../lib/apiClient';
 import modalStyles from '../../styles/patient/PatientAppointments.module.css';
+import { formatDistanceToNow } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
 export const PatientDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -28,6 +32,46 @@ export const PatientDashboard: React.FC = () => {
   const [loadingDoctors, setLoadingDoctors] = useState<Set<string>>(new Set());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [notificationMetadata, setNotificationMetadata] = useState<NotificationMetadata | null>(null);
+  const [notifications, setNotifications] = useState<NotificationDto[]>([]);
+
+  const PATIENT_HIDDEN_NOTIFICATIONS_KEY = 'medix_patient_hidden_notifications_v1';
+
+  const getNotificationKey = (notification: NotificationDto) =>
+    `${notification.title}-${notification.message}-${notification.createdAt}-${notification.type}`;
+
+  const getHiddenNotificationKeys = (): Set<string> => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const raw = localStorage.getItem(PATIENT_HIDDEN_NOTIFICATIONS_KEY);
+      if (!raw) return new Set();
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return new Set();
+      return new Set(parsed as string[]);
+    } catch {
+      return new Set();
+    }
+  };
+
+  const addHiddenNotificationKeys = (keys: string[]) => {
+    if (typeof window === 'undefined' || !keys.length) return;
+    try {
+      const existing = getHiddenNotificationKeys();
+      keys.forEach(key => existing.add(key));
+      localStorage.setItem(PATIENT_HIDDEN_NOTIFICATIONS_KEY, JSON.stringify(Array.from(existing)));
+    } catch {
+    }
+  };
+
+  const formatMessageDates = (message?: string): string => {
+    if (!message) return '';
+    const dateRegex = /(\d{1,2})\/(\d{1,2})\/(\d{4})/g;
+    return message.replace(dateRegex, (_, month, day, year) => {
+      const parsedDay = String(Number(day)).padStart(2, '0');
+      const parsedMonth = String(Number(month)).padStart(2, '0');
+      return `${parsedDay}/${parsedMonth}/${year}`;
+    });
+  };
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
 
@@ -37,20 +81,33 @@ export const PatientDashboard: React.FC = () => {
       try {
         setLoading(true);
         
-        const [walletData, appointmentsData, medicalRecordsData, remindersData] = await Promise.all([
+        const [walletData, appointmentsData, medicalRecordsData, remindersData, notificationsData] = await Promise.all([
           walletService.getWalletByUserId().catch(() => null),
           appointmentService.getPatientAppointments().catch(() => []),
           medicalRecordService.getMedicalRecordsOfPatient({
             dateFrom: null,
             dateTo: null
           }).catch(() => []),
-          patientService.getReminders('Medication').catch(() => [])
+          patientService.getReminders('Medication').catch(() => []),
+          notificationService.getMetadata().catch(() => null)
         ]);
         
         setWallet(walletData);
         setAppointments(appointmentsData);
         setMedicalRecords(medicalRecordsData);
         setReminders(remindersData);
+
+        if (notificationsData) {
+          const hidden = getHiddenNotificationKeys();
+          const filtered = (notificationsData.notifications || []).filter(
+            (notification) => !hidden.has(getNotificationKey(notification))
+          );
+          setNotifications(filtered);
+          setNotificationMetadata({
+            ...notificationsData,
+            isAllRead: filtered.length === 0
+          });
+        }
       } catch (err: any) {
       } finally {
         setLoading(false);
@@ -59,6 +116,52 @@ export const PatientDashboard: React.FC = () => {
 
     fetchData();
   }, []);
+
+  const handleNotificationDismiss = (index: number) => {
+    setNotifications(prev => {
+      const target = prev[index];
+      if (target) addHiddenNotificationKeys([getNotificationKey(target)]);
+      const next = prev.filter((_, i) => i !== index);
+      setNotificationMetadata(prevMeta => prevMeta ? { ...prevMeta, isAllRead: next.length === 0 } : prevMeta);
+      return next;
+    });
+  };
+
+  const handleMarkAllNotificationsRead = () => {
+    addHiddenNotificationKeys(notifications.map(getNotificationKey));
+    setNotifications([]);
+    setNotificationMetadata(prevMeta => prevMeta ? { ...prevMeta, isAllRead: true } : prevMeta);
+  };
+
+  const getNotificationTypeLabel = (type: string) => {
+    switch (type) {
+      case 'Appointment':
+        return 'Lịch hẹn';
+      case 'Payment':
+        return 'Thanh toán';
+      case 'System':
+        return 'Hệ thống';
+      case 'Reminder':
+        return 'Nhắc nhở';
+      case 'Marketing':
+        return 'Khuyến mãi';
+      default:
+        return 'Thông báo';
+    }
+  };
+
+  const getNotificationIconClass = (type: string) => {
+    switch (type) {
+      case 'Payment':
+        return 'bi-credit-card';
+      case 'System':
+        return 'bi-gear';
+      case 'Reminder':
+        return 'bi-bell';
+      default:
+        return 'bi-alarm';
+    }
+  };
 
   useEffect(() => {
     const checkMaintenanceMode = async () => {
@@ -670,6 +773,7 @@ export const PatientDashboard: React.FC = () => {
               </div>
             )}
           </div>
+
 
           {/* Quick Actions - Enhanced */}
           <div className={styles.sectionCard}>

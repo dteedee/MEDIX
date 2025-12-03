@@ -1,4 +1,3 @@
-// src/services/patientRegistrationApiService.ts
 import { ApiResponse, BloodTypeDTO} from '../types/common.types';
 import { PatientRegistration } from '../types/auth.types';
 import { apiClient } from '../lib/apiClient';

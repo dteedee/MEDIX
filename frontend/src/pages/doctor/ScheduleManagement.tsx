@@ -33,8 +33,6 @@ const parseTimeToMinutes = (timeStr: string) => {
   return h * 60 + m;
 };
 
-// Lấy số phút từ chuỗi thời gian ISO của cuộc hẹn, bù thêm 7 giờ để khớp với ma trận ca (07:00, 08:00, ...).
-// Ví dụ: 03:00 (+07:00) -> 10:00 trong ma trận.
 const getLocalMinutesFromISO = (isoString: string): number => {
   const date = new Date(isoString);
   const h = (date.getHours() + 7) % 24;
@@ -137,7 +135,6 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
       selectedDate.setHours(0, 0, 0, 0);
 
       if (slot.status === "occupied") {
-        // Điều hướng sang trang lịch hẹn và highlight các cuộc hẹn thuộc ca này
         const slotStartMin = parseTimeToMinutes(slot.startTime);
         const slotEndMin = parseTimeToMinutes(slot.endTime);
 
@@ -159,12 +156,10 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
       }
 
       if (slot.status === "none") {
-        // Nếu chưa có ca làm việc, vẫn dùng form để đăng ký linh hoạt chi tiết
         onAddFlexibleSchedule({ startTime: slot.startTime, endTime: slot.endTime });
         return;
       }
 
-      // Xử lý toggle nghỉ / làm việc thông qua overrides
       const existingOff = overrides.find(o => {
         if (o.overrideType || !o.isAvailable) return false;
         if (o.overrideDate !== dateKey) return false;
@@ -175,7 +170,6 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
         return oStart < slotEnd && oEnd > slotStart;
       });
 
-      // Nếu đang X (đang có override nghỉ) -> bỏ nghỉ, quay lại làm việc
       if (existingOff) {
         await scheduleService.deleteScheduleOverride(existingOff.id);
         await onRefresh();
@@ -186,7 +180,6 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
         return;
       }
 
-      // Đổi sang nghỉ: chỉ áp dụng rule 2 ngày sau
       const minDate = new Date(today);
       minDate.setDate(today.getDate() + 2);
       if (selectedDate < minDate) {
@@ -404,33 +397,24 @@ const ScheduleManagement: React.FC = () => {
     }
   };
 
-  // Get week range: if today is Friday, show current week + next week
   const getWeekRange = (date: Date): { start: Date; end: Date } => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Get the Monday of the week containing the given date
-    // getDay() returns 0 for Sunday, 1 for Monday, ..., 6 for Saturday
     const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    // Calculate days to subtract to get to Monday
-    // Sunday (0) -> subtract 6 days, Monday (1) -> subtract 0 days, Tuesday (2) -> subtract 1 day, etc.
     const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     
     const monday = new Date(date);
     monday.setDate(date.getDate() - daysToMonday);
     monday.setHours(0, 0, 0, 0);
 
-    // If today is Friday or later, show current week + next week
-    // Friday is 5 days from Monday (Monday=1, Tuesday=2, Wednesday=3, Thursday=4, Friday=5)
     const todayDayOfWeek = today.getDay();
     const todayDaysToMonday = todayDayOfWeek === 0 ? 6 : todayDayOfWeek - 1;
     let endDate = new Date(monday);
     
     if (todayDaysToMonday >= 4) { // Friday (4 days from Monday, since Monday=0) or later
-      // Show 2 weeks
       endDate.setDate(monday.getDate() + 13); // Monday + 13 days = Sunday of next week
     } else {
-      // Show 1 week
       endDate.setDate(monday.getDate() + 6); // Monday + 6 days = Sunday
     }
 
@@ -457,7 +441,6 @@ const ScheduleManagement: React.FC = () => {
         scheduleService.getMyScheduleOverrides()
       ]);
 
-      // Filter overrides to only future dates
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const futureOverrides = overrides.filter(o => {

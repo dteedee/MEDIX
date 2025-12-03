@@ -80,17 +80,14 @@ class SpecializationService {
     const formData = new FormData();
     formData.append('Code', dto.code || '');
     formData.append('Name', dto.name || '');
-    // Always append Description, even if empty (backend expects it)
     if (dto.description !== undefined && dto.description !== null) {
       formData.append('Description', dto.description);
     } else {
       formData.append('Description', '');
     }
-    // Always append ImageUrl, even if empty
     formData.append('ImageUrl', dto.imageUrl || '');
     formData.append('IsActive', String(dto.isActive ?? true));
     
-    // Only append file if it exists and is a valid File object
     if (dto.imageFile && dto.imageFile instanceof File) {
       formData.append('imageFile', dto.imageFile);
     }
@@ -110,7 +107,6 @@ class SpecializationService {
     const formData = new FormData();
     formData.append('Code', dto.code || '');
     formData.append('Name', dto.name || '');
-    // Always append Description, even if empty (backend expects it)
     if (dto.description !== undefined && dto.description !== null) {
       formData.append('Description', dto.description);
     } else {

@@ -26,16 +26,12 @@ export const cmspageService = {
 
     if (keyword && keyword.trim()) {
       url = `${BASE}/search`;
-      // API for CmsPage search uses 'name' parameter
       params.name = keyword;
-      // Remove page/pageSize if search API doesn't support them, or keep if it does.
-      // Assuming it supports them for now.
     }
 
     const r = await apiClient.get(url, { params });
     const data = r.data;
 
-    // Handle multiple response shapes from backend (direct array, or paged object)
     const rawItems = Array.isArray(data)
       ? data
       : data?.data ?? data?.item2 ?? [];

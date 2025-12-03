@@ -9,6 +9,7 @@
 		<PackageReference Include="CloudinaryDotNet" Version="1.27.8" />
 		<PackageReference Include="DiffPlex" Version="1.9.0" />
 		<PackageReference Include="MailKit" Version="4.14.1" />
+		<PackageReference Include="OpenAI" Version="2.7.0" />
 		<PackageReference Include="payOS" Version="2.0.1" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
 		<PackageReference Include="Google.GenAI" Version="0.6.0" />

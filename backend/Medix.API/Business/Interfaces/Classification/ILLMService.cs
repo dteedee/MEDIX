@@ -5,8 +5,11 @@ namespace Medix.API.Business.Interfaces.Classification
 {
     public interface ILLMService
     {
-        Task<ChatResponseDto> GenerateResponseAsync(string? context, List<ContentDto> conversationHistory, string? userIdClaim = null);
-        Task<ChatResponseDto> GetEMRAnalysisAsync(string emrText, string? context, List<ContentDto> conversationHistory, string? userIdClaim = null);
+        Task<DiagnosisModel> GetSymptomAnalysisAsync(string? context, List<ContentDto> conversationHistory);
+        Task<DiagnosisModel> GetEMRAnalysisAsync(string emrText, string? context, List<ContentDto> conversationHistory);
+        Task<List<MedicineDto>> GetRecommendedMedicinesAsync(string possibleConditions);
+        Task SaveSymptompAnalysisAsync(DiagnosisModel diagnosisModel, string? userIdClaim);
+        Task<List<RecommendedDoctorDto>> GetRecommendedDoctorsAsync(string possibleConditions, int count);
         bool IsHealthRelatedQueryAsync(string query);
     }
 }

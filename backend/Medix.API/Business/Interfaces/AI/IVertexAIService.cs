@@ -5,7 +5,10 @@ namespace Medix.API.Business.Interfaces.AI
 {
     public interface IVertexAIService
     {
-        Task<ChatResponseDto> GetSymptompAnalysisAsync(string? context, List<ContentDto> history, string? userIdClaim);
-        Task<ChatResponseDto> GetEMRAnalysisAsync(string emrText, string? context, string? userIdClaim, List<ContentDto> history);
+        Task<DiagnosisModel> GetSymptompAnalysisAsync(string? context, List<ContentDto> history);
+        Task<DiagnosisModel> GetEMRAnalysisAsync(string emrText, string? context, List<ContentDto> history);
+        Task<List<MedicineDto>> GetRecommendedMedicinesAsync(string possibleConditions);
+        Task SaveSymptompAnalysisAsync(DiagnosisModel diagnosisModel, string? userIdClaim);
+        Task<List<RecommendedDoctorDto>> GetRecommendedDoctorsAsync(string possibleConditions, int count);
     }
 }

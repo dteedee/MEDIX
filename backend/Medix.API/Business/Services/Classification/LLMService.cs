@@ -18,7 +18,7 @@ namespace Medix.API.Business.Services.Classification
             _vertexAiService = vertexAIService;
         }
 
-        public async Task<ChatResponseDto> GenerateResponseAsync(string? context, List<ContentDto> conversationHistory, string? userIdClaim = null)
+        public async Task<DiagnosisModel> GetSymptomAnalysisAsync(string? context, List<ContentDto> conversationHistory)
         {
             try
             {
@@ -26,7 +26,7 @@ namespace Medix.API.Business.Services.Classification
                 var vertexApiKey = _configuration["GoogleCloud:Model"];
                 if (!string.IsNullOrEmpty(vertexApiKey))
                 {
-                    return await _vertexAiService.GetSymptompAnalysisAsync(context, conversationHistory, userIdClaim);
+                    return await _vertexAiService.GetSymptompAnalysisAsync(context, conversationHistory);
                 }
 
                 // Try to use OpenAI API if configured
@@ -45,11 +45,10 @@ namespace Medix.API.Business.Services.Classification
             }
         }
 
-        public async Task<ChatResponseDto> GetEMRAnalysisAsync(
+        public async Task<DiagnosisModel> GetEMRAnalysisAsync(
             string emrText, 
             string? context, 
-            List<ContentDto> conversationHistory, 
-            string? userIdClaim = null)
+            List<ContentDto> conversationHistory)
         {
             try
             {
@@ -57,7 +56,7 @@ namespace Medix.API.Business.Services.Classification
                 var vertexApiKey = _configuration["GoogleCloud:Model"];
                 if (!string.IsNullOrEmpty(vertexApiKey))
                 {
-                    return await _vertexAiService.GetEMRAnalysisAsync(emrText, context, userIdClaim, conversationHistory);
+                    return await _vertexAiService.GetEMRAnalysisAsync(emrText, context, conversationHistory);
                 }
 
                 // Try to use OpenAI API if configured
@@ -72,6 +71,64 @@ namespace Medix.API.Business.Services.Classification
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error generating LLM response, falling back to rule-based");
+                throw;
+            }
+        }
+
+        public async Task<List<MedicineDto>> GetRecommendedMedicinesAsync(string possibleConditions)
+        {
+            try
+            {
+                // Prefer Vertex if configured
+                var vertexApiKey = _configuration["GoogleCloud:Model"];
+                if (!string.IsNullOrEmpty(vertexApiKey))
+                {
+                    return await _vertexAiService.GetRecommendedMedicinesAsync(possibleConditions);
+                }
+                throw new InvalidOperationException("No LLM API configured.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting recommended medicines");
+                throw;
+            }
+        }
+
+        public async Task SaveSymptompAnalysisAsync(DiagnosisModel diagnosisModel, string? userIdClaim)
+        {
+            try
+            {
+                // Prefer Vertex if configured
+                var vertexApiKey = _configuration["GoogleCloud:Model"];
+                if (!string.IsNullOrEmpty(vertexApiKey))
+                {
+                    await _vertexAiService.SaveSymptompAnalysisAsync(diagnosisModel, userIdClaim);
+                    return;
+                }
+                throw new InvalidOperationException("No LLM API configured.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving symptom analysis");
+                throw;
+            }
+        }
+
+        public async Task<List<RecommendedDoctorDto>> GetRecommendedDoctorsAsync(string possibleConditions, int count)
+        {
+            try
+            {
+                // Prefer Vertex if configured
+                var vertexApiKey = _configuration["GoogleCloud:Model"];
+                if (!string.IsNullOrEmpty(vertexApiKey))
+                {
+                    return await _vertexAiService.GetRecommendedDoctorsAsync(possibleConditions, count);
+                }
+                throw new InvalidOperationException("No LLM API configured.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting recommended doctors");
                 throw;
             }
         }

@@ -21,9 +21,9 @@ namespace Medix.API.Business.Services.AI
             ["UserResponseText"] = new Schema
             {
                 Type = Type.STRING,
-                Description = "Phản hồi thân thiện với người dùng được bản địa hóa dựa trên ngôn ngữ của người dùng" +
-                    ", đồng thời cho biết 3 khả năng bệnh có khả năng xảy ra cao nhất kèm theo tỉ lệ phần trăm tương ứng," +
-                    "mỗi khả năng nằm ở 1 dòng."
+                Description = "Phản hồi thân thiện với người dùng đã được bản địa hóa. " +
+                    "Nội dung này phải chứa 3 khả năng bệnh có khả năng xảy ra cao nhất, mỗi bệnh nằm ở 1 dòng với tỉ lệ phần trăm tương ứng" +
+                    "và tất cả các tuyên bố miễn trừ trách nhiệm."
             },
             // Technical Fields (matching SQL/tracking data)
             ["SessionId"] = new Schema
@@ -214,7 +214,7 @@ namespace Medix.API.Business.Services.AI
             }
         }
 
-        public async Task<ChatResponseDto> GetSymptompAnalysisAsync(string? context, List<ContentDto> history, string? userIdClaim)
+        public async Task<DiagnosisModel> GetSymptompAnalysisAsync(string? context, List<ContentDto> history)
         {
             var systemContent = new Content
             {
@@ -237,66 +237,10 @@ namespace Medix.API.Business.Services.AI
 
 
             var rawResponse = await GenerateResponseAsync(GetConversationHistory(history), systemConfigs);
-            var diagnosisModel = AIResponseParser.ParseJson(rawResponse);
-
-            if (diagnosisModel.IsRequestRejected)
-            {
-                return new ChatResponseDto
-                {
-                    Text = "Xin chào! Tôi là MEDIX AI, chuyên tư vấn về sức khỏe và y tế. " +
-                           "Tôi chỉ có thể trả lời các câu hỏi liên quan đến:\n\n" +
-                           "• Sức khỏe và triệu chứng bệnh\n" +
-                           "• Thông tin về bác sĩ và chuyên khoa\n" +
-                           "• Dịch vụ và hệ thống MEDIX\n" +
-                           "• Phân tích hồ sơ bệnh án (EMR)\n\n" +
-                           "Vui lòng đặt câu hỏi liên quan đến lĩnh vực y tế.",
-                    Type = "out_of_scope"
-                };
-            }
-
-            if (!diagnosisModel.IsConclusionReached)
-            {
-                return new ChatResponseDto
-                {
-                    Text = diagnosisModel.UserResponseText ?? "Xin lỗi, tôi cần thêm thông tin để phân tích triệu chứng của bạn.",
-                    Type = "text"
-                };
-            }
-
-            //save symptomp analysis to database
-            if (userIdClaim != null)
-            {
-                await SaveSymptompAnalysisAsync(diagnosisModel, userIdClaim);
-            }
-
-            var symptompAnalysisResponse = new SymptomAnalysisResponseDto
-            {
-                Severity = diagnosisModel.SeverityCode == null ? "mild" : diagnosisModel.SeverityCode.ToLower(),
-            };
-
-            if (diagnosisModel.SeverityCode.ToLower() == "mild")
-            {
-                symptompAnalysisResponse.Medicines = await GetRecommendedMedicinesAsync(string.Join(",", diagnosisModel.PossibleConditions));
-                symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Nghỉ ngơi tại nhà và theo dõi các triệu chứng.";
-
-                return new ChatResponseDto
-                {
-                    Text = diagnosisModel.UserResponseText ?? "Phân tích triệu chứng hoàn tất.",
-                    Type = "symptom_analysis",
-                    Data = symptompAnalysisResponse,
-                };
-            }
-
-            symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Hãy đặt lịch hẹn với bác sĩ chuyên khoa để được tư vấn thêm.";
-            symptompAnalysisResponse.RecommendedDoctors = await GetRecommendedDoctorsAsync(diagnosisModel.PossibleConditions, 3);
-            return new ChatResponseDto
-            {
-                Text = diagnosisModel.UserResponseText ?? "Phân tích triệu chứng hoàn tất.",
-                Type = "symptom_analysis",
-            };
+            return AIResponseParser.ParseJson(rawResponse);
         }
 
-        public async Task<ChatResponseDto> GetEMRAnalysisAsync(string emrText, string? context, string? userIdClaim, List<ContentDto> history)
+        public async Task<DiagnosisModel> GetEMRAnalysisAsync(string emrText, string? context, List<ContentDto> history)
         {
             var systemContent = new Content
             {
@@ -330,66 +274,10 @@ namespace Medix.API.Business.Services.AI
                 ]
             });
             var rawResponse = await GenerateResponseAsync(conversationHistory, systemConfigs);
-            var diagnosisModel = AIResponseParser.ParseJson(rawResponse);
-
-            if (diagnosisModel.IsRequestRejected)
-            {
-                return new ChatResponseDto
-                {
-                    Text = "Xin chào! Tôi là MEDIX AI, chuyên tư vấn về sức khỏe và y tế. " +
-                           "Tôi chỉ có thể trả lời các câu hỏi liên quan đến:\n\n" +
-                           "• Sức khỏe và triệu chứng bệnh\n" +
-                           "• Thông tin về bác sĩ và chuyên khoa\n" +
-                           "• Dịch vụ và hệ thống MEDIX\n" +
-                           "• Phân tích hồ sơ bệnh án (EMR)\n\n" +
-                           "Vui lòng đặt câu hỏi liên quan đến lĩnh vực y tế.",
-                    Type = "out_of_scope"
-                };
-            }
-
-            if (!diagnosisModel.IsConclusionReached)
-            {
-                return new ChatResponseDto
-                {
-                    Text = diagnosisModel.UserResponseText ?? "Xin lỗi, tôi cần thêm thông tin để phân tích triệu chứng của bạn.",
-                    Type = "text"
-                };
-            }
-
-            //save symptomp analysis to database
-            if (userIdClaim != null)
-            {
-                await SaveSymptompAnalysisAsync(diagnosisModel, userIdClaim);
-            }
-
-            var symptompAnalysisResponse = new SymptomAnalysisResponseDto
-            {
-                Severity = diagnosisModel.SeverityCode == null ? "mild" : diagnosisModel.SeverityCode.ToLower(),
-            };
-
-            if (diagnosisModel.SeverityCode.ToLower() == "mild")
-            {
-                symptompAnalysisResponse.Medicines = await GetRecommendedMedicinesAsync(string.Join(",", diagnosisModel.PossibleConditions));
-                symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Nghỉ ngơi tại nhà và theo dõi các triệu chứng.";
-
-                return new ChatResponseDto
-                {
-                    Text = diagnosisModel.UserResponseText ?? "Phân tích triệu chứng hoàn tất.",
-                    Type = "symptom_analysis",
-                    Data = symptompAnalysisResponse,
-                };
-            }
-
-            symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Hãy đặt lịch hẹn với bác sĩ chuyên khoa để được tư vấn thêm.";
-            symptompAnalysisResponse.RecommendedDoctors = await GetRecommendedDoctorsAsync(diagnosisModel.PossibleConditions, 3);
-            return new ChatResponseDto
-            {
-                Text = diagnosisModel.UserResponseText ?? "Phân tích triệu chứng hoàn tất.",
-                Type = "symptom_analysis",
-            };
+            return AIResponseParser.ParseJson(rawResponse);
         }
 
-        private async Task<List<MedicineDto>> GetRecommendedMedicinesAsync(string possibleConditions)
+        public async Task<List<MedicineDto>> GetRecommendedMedicinesAsync(string possibleConditions)
         {
             var systemContent = new Content
             {
@@ -429,7 +317,7 @@ namespace Medix.API.Business.Services.AI
             return medicines?.List ?? [];
         }
 
-        private async Task<List<RecommendedDoctorDto>> GetRecommendedDoctorsAsync(string possibleConditions, int count)
+        public async Task<List<RecommendedDoctorDto>> GetRecommendedDoctorsAsync(string possibleConditions, int count)
         {
             var doctorlistString = "";
             var doctorList = await _doctorRepository.GetAllAsync();
@@ -489,10 +377,10 @@ namespace Medix.API.Business.Services.AI
             return (await Task.WhenAll(recommendedDoctors)).Where(doc => doc != null).ToList()!;
         }
 
-        private async Task SaveSymptompAnalysisAsync(DiagnosisModel diagnosisModel, string? userId)
+        public async Task SaveSymptompAnalysisAsync(DiagnosisModel diagnosisModel, string? userIdClaim)
         {
-            var patient = userId != null
-                ? await _patientRepository.GetPatientByUserIdAsync(Guid.Parse(userId))
+            var patient = userIdClaim != null
+                ? await _patientRepository.GetPatientByUserIdAsync(Guid.Parse(userIdClaim))
                 : null;
 
             var aiSymptompAnalysis = new AISymptomAnalysis
@@ -500,7 +388,7 @@ namespace Medix.API.Business.Services.AI
                 Id = Guid.NewGuid(),
                 Symptoms = string.Join(",", diagnosisModel.SymptomsProvided!),
                 SessionId = Guid.NewGuid().ToString(),
-                IsGuestSession = userId == null,
+                IsGuestSession = userIdClaim == null,
                 PatientId = patient?.Id,
                 SeverityLevelCode = diagnosisModel.SeverityCode ?? "Mild",
                 PossibleConditions = diagnosisModel.PossibleConditions,

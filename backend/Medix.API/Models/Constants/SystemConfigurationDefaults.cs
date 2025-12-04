@@ -266,19 +266,6 @@ namespace Medix.API.Models.Constants
             }
         };
 
-        public static readonly IReadOnlyList<SystemConfiguration> AIChatDefaults = new List<SystemConfiguration>
-        {
-            new()
-            {
-                ConfigKey = "AI_DAILY_ACCESS_LIMIT",
-                ConfigValue = "50",
-                DataType = "int",
-                Category = "AI_CHAT",
-                Description = "Số lượt truy cập AI tối đa trong 1 ngày",
-                IsActive = true
-            }
-        };
-
         public static readonly IReadOnlyList<EmailTemplateMetadata> EmailTemplateMetadatas = new List<EmailTemplateMetadata>
         {
             new("PASSWORD_RESET_LINK", "Liên kết đặt lại mật khẩu", "EMAIL_TEMPLATE_PASSWORD_RESET_SUBJECT", "EMAIL_TEMPLATE_PASSWORD_RESET_BODY", "Gửi cho người dùng khi họ yêu cầu đặt lại mật khẩu bằng liên kết."),

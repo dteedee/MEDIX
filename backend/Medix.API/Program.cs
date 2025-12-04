@@ -50,7 +50,10 @@ builder.Services.AddKeyedSingleton("TransferClient", (sp, key) =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+        policy.SetIsOriginAllowed(origin => true)
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials());
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();

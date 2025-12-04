@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
+import { PatientProfileCheck } from './components/PatientProfileCheck';
 import { MainLayout } from './components/layout/MainLayout';
 import { UserRole } from './types/common.types';
 import { MaintenanceRedirect } from './components/MaintenanceRedirect';
@@ -21,6 +22,7 @@ import PublicLayout from './components/layout/PublicLayout';
 import HomePage from './pages/public/HomePage';
 import Login from './pages/auth/Login';
 import { PatientRegister } from './pages/auth/PatientRegister';
+import { CompletePatientProfile } from './pages/auth/CompletePatientProfile';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import { ChangePasswordModal } from './pages/auth/ChangePasswordModal';
@@ -95,6 +97,7 @@ export function App() {
                 <Route element={<AuthLayout />}>
                   <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
                   <Route path="/patient-register" element={<PublicRoute><PatientRegister /></PublicRoute>} />
+                  <Route path="/complete-profile" element={<ProtectedRoute requiredRoles={[UserRole.PATIENT]}><CompletePatientProfile /></ProtectedRoute>} />
                   <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
                   <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
                   <Route path="/auth-status" element={<PublicRoute><AuthStatus /></PublicRoute>} />
@@ -162,7 +165,9 @@ export function App() {
 
                   <Route path="patient/*" element={
                     <ProtectedRoute requiredRoles={[UserRole.PATIENT]}>
-                      <PatientLayout />
+                      <PatientProfileCheck>
+                        <PatientLayout />
+                      </PatientProfileCheck>
                     </ProtectedRoute>
                   }>
                     <Route index element={<Navigate to="dashboard" replace />} />
@@ -222,6 +227,10 @@ const DashboardRedirect: React.FC = () => {
     case UserRole.DOCTOR:
       return <Navigate to="/app/doctor" replace />;
     case UserRole.PATIENT:
+      // Kiểm tra nếu patient chưa hoàn thiện profile thì redirect đến trang hoàn thiện
+      if (user.isProfileCompleted === false) {
+        return <Navigate to="/complete-profile" replace />;
+      }
       return <Navigate to="/app/patient" replace />;
     default:
       return <Navigate to="/" replace />;

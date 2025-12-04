@@ -56,6 +56,7 @@ namespace Medix.API.Models.DTOs.Authen
         public string? MedicalHistory { get; set; }
         public string? bloodTypeCode { get; set; }
 
+        public string? GenderCode { get; set; }            // Giới tính (Male/Female/Other)
 
         public DateTime CreatedAt { get; set; }
     }
@@ -67,23 +68,24 @@ namespace Medix.API.Models.DTOs.Authen
         public string? FullName { get; set; } = string.Empty;
         [EmailAddress]
         public string? Email { get; set; } = string.Empty;
-        [Phone(ErrorMessage ="Số diện thoại không hơp lệ")]
+        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
         [VietnamesePhoneNumber]
-        public string? PhoneNumber { get; set; } 
+        public string? PhoneNumber { get; set; }
         public string? address { get; set; }
         public DateOnly? dob { get; set; }
 
+        // 👇 THÊM 2 TRƯỜNG NÀY
+        public string? IdentificationNumber { get; set; }  // Số CCCD
+        public string? GenderCode { get; set; }            // Giới tính (Male/Female/Other)
+
         public string? EmergencyContactName { get; set; }
-        [Phone(ErrorMessage = "Số diện thoại không hơp lệ")]
+        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
         [VietnamesePhoneNumber]
         public string? EmergencyContactPhone { get; set; }
         public string? Allergies { get; set; }
-
         public string? MedicalHistory { get; set; }
-
         public string? BloodTypeCode { get; set; }
-
-        }
+    }
 
 
     public class GoogleLoginRequestDto

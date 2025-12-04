@@ -64,7 +64,7 @@ namespace Medix.API.Business.Services.UserManagement
                 Status = 0,
                 IdentificationNumber = registerDto.IdentificationNumber,
                 Role = "Patient", 
-                IsProfileCompleted = false,
+                IsProfileCompleted = true,
                 CreatedAt = DateTime.UtcNow,
                 Address = registerDto.address,
                 UpdatedAt = DateTime.UtcNow,
@@ -320,7 +320,9 @@ namespace Medix.API.Business.Services.UserManagement
                 MedicalRecordNumber = patient?.MedicalRecordNumber,
                 EmergencyContactName = patient?.EmergencyContactName,
                 EmergencyContactPhone = patient?.EmergencyContactPhone,
-                bloodTypeCode = patient?.BloodTypeCode
+                bloodTypeCode = patient?.BloodTypeCode,
+                GenderCode = user.GenderCode,
+                
 
             };
         }
@@ -342,8 +344,15 @@ namespace Medix.API.Business.Services.UserManagement
                 user.Email = updateDto.Email;
             if (updateDto.username != null)
                 user.UserName = updateDto.username;
+            if (updateDto.GenderCode != null) user.GenderCode= updateDto.GenderCode;
+                if (updateDto.IdentificationNumber != null)
+                    user.IdentificationNumber = updateDto.IdentificationNumber;
 
             user.UpdatedAt = DateTime.UtcNow;
+        if (user.IsProfileCompleted == false)
+            {
+                user.IsProfileCompleted = true;
+            }
 
             var updatedUser = await _userRepository.UpdateAsync(user);
 

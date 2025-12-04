@@ -53,13 +53,11 @@ builder.Services.AddKeyedSingleton("TransferClient", (sp, key) =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy.WithOrigins("http://localhost:5173") // replace with your frontend URL
-              .AllowAnyHeader()
+    options.AddPolicy("AllowAll", policy =>
+        policy.SetIsOriginAllowed(origin => true)
               .AllowAnyMethod()
-              .AllowCredentials(); // allow cookies/session
-    });
+              .AllowAnyHeader()
+              .AllowCredentials());
 });
 
 builder.Services.AddHttpContextAccessor();

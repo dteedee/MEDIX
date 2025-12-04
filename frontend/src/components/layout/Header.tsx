@@ -78,7 +78,12 @@ export const Header: React.FC = () => {
     const userDropdownRef = useRef<HTMLDivElement>(null);
     const [loadingSettings, setLoadingSettings] = useState(true);
     
-    const isHomePage = location.pathname === '/';
+    const isHomePage = location.pathname === '/' || 
+                        location.pathname === '/specialties' || 
+                        location.pathname === '/doctors' || 
+                        location.pathname.startsWith('/app/articles') || 
+                        location.pathname.startsWith('/articles') ||
+                        location.pathname === '/about';
 
     const computeUnread = (list: NotificationDto[], readKeys: Set<string>) =>
         list.filter(n => !readKeys.has(getNotificationKey(n))).length

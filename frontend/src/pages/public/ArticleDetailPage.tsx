@@ -338,7 +338,6 @@ export default function ArticleDetailPage() {
           <div className="adp-toolbar">
             <div className="adp-stats">
               <span><i className="bi bi-eye" /> {article.viewCount ?? 0} lượt xem</span>
-              <span><i className="bi bi-chat-left-text" /> {Math.max(0, Math.floor((article.likeCount || 0) / 3))} bình luận</span>
             </div>
             <button className={`adp-like ${liked ? 'liked' : ''}`} onClick={handleLike} disabled={likeBusy} aria-label="Thích bài viết">
               <i className={`bi ${liked ? 'bi-heart-fill' : 'bi-heart'}`} />

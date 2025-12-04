@@ -16,7 +16,7 @@ namespace Medix.API.Business.Services.Classification
         private readonly IGeminiAIService _geminiAiService = geminiAIService;
         private readonly IVertexAIService _vertexAiService = vertexAIService;
 
-        public async Task<DiagnosisModel> GetSymptomAnalysisAsync(string? context, List<ContentDto> conversationHistory)
+        public async Task<DiagnosisModel> GetSymptomAnalysisAsync(string prompt, string? context, List<ContentDto> conversationHistory)
         {
             // Prefer Vertex if configured
             try
@@ -24,7 +24,7 @@ namespace Medix.API.Business.Services.Classification
                 var vertexApiKey = _configuration["GoogleCloud:ProjectId"];
                 if (!string.IsNullOrEmpty(vertexApiKey))
                 {
-                    return await _vertexAiService.GetSymptompAnalysisAsync(context, conversationHistory);
+                    return await _vertexAiService.GetSymptompAnalysisAsync(prompt, context, conversationHistory);
                 }
             }
             catch (Exception ex)
@@ -37,7 +37,7 @@ namespace Medix.API.Business.Services.Classification
                 var geminiApiKey = _configuration["Gemini:ApiKey"];
                 if (!string.IsNullOrEmpty(geminiApiKey))
                 {
-                    return await _geminiAiService.GetSymptompAnalysisAsync(context, conversationHistory);
+                    return await _geminiAiService.GetSymptompAnalysisAsync(prompt, context, conversationHistory);
                 }
             }
             catch (Exception ex)

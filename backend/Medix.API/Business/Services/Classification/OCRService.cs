@@ -9,6 +9,8 @@ namespace Medix.API.Business.Services.Classification
 {
     public class OCRService : IOCRService
     {
+        private static readonly string Credit = "Evaluation Only. Created with Aspose.PDF. Copyright 2002-2025 Aspose Pty Ltd.";
+
         private readonly ILogger<OCRService> _logger;
         private readonly IConfiguration _configuration;
 
@@ -145,7 +147,12 @@ namespace Medix.API.Business.Services.Classification
                 result.AppendLine(extractedText);
                 File.Delete(imagePath); // Clean up temp image file
             }
-            return result.ToString();
+            var finalText = result.ToString();
+            if (finalText.Contains(Credit))
+            {
+                finalText = finalText.Replace(Credit, string.Empty).Trim();
+            }
+            return finalText;
         }
     }
 }

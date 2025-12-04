@@ -18,8 +18,7 @@ namespace Medix.API.Business.Services.AI
             {
                 Type = Type.STRING,
                 Description = "Phản hồi thân thiện với người dùng đã được bản địa hóa. " +
-                    "Nội dung này phải chứa 3 khả năng bệnh có khả năng xảy ra cao nhất, mỗi bệnh nằm ở 1 dòng với tỉ lệ phần trăm tương ứng" +
-                    "và tất cả các tuyên bố miễn trừ trách nhiệm."
+                    "Nội dung này phải chứa 3 khả năng bệnh có khả năng xảy ra cao nhất, mỗi bệnh nằm ở 1 dòng với tỉ lệ phần trăm tương ứng."
             },
             // Technical Fields (matching SQL/tracking data)
             ["SessionId"] = new Schema
@@ -198,7 +197,7 @@ namespace Medix.API.Business.Services.AI
             }
         }
 
-        public async Task<DiagnosisModel> GetSymptompAnalysisAsync(string? context, List<ContentDto> history)
+        public async Task<DiagnosisModel> GetSymptompAnalysisAsync(string prompt, string? context, List<ContentDto> history)
         {
             var systemContent = new Content
             {
@@ -219,8 +218,19 @@ namespace Medix.API.Business.Services.AI
                 ResponseSchema = SymptomAnalysisSchema // Sử dụng JSON Schema đã định nghĩa
             };
 
-
-            var rawResponse = await GenerateResponseAsync(GetConversationHistory(history), systemConfigs);
+            var conversationHistory = GetConversationHistory(history);
+            conversationHistory.Add(new Content
+            {
+                Role = "user",
+                Parts =
+                [
+                    new Part
+                    {
+                        Text = prompt
+                    }
+                ]
+            });
+            var rawResponse = await GenerateResponseAsync(conversationHistory, systemConfigs);
             return AIResponseParser.ParseJson(rawResponse);
         }
 

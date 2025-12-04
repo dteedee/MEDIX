@@ -46,7 +46,7 @@ namespace Medix.API.Business.Services.Classification
                 context = await _ragService.GetSymptomAnalysisContextAsync(prompt);
             }
 
-            var diagnosisModel = await _llmService.GetSymptomAnalysisAsync(context, conversationHistory);
+            var diagnosisModel = await _llmService.GetSymptomAnalysisAsync(prompt, context, conversationHistory);
             return await GetResponse(diagnosisModel, userIdClaim);
         }
 

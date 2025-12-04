@@ -309,10 +309,21 @@ namespace Medix.API.Business.Services.AI
             return generatedText;
         }
 
-        public async Task<DiagnosisModel> GetSymptompAnalysisAsync(string? context, List<ContentDto> history)
+        public async Task<DiagnosisModel> GetSymptompAnalysisAsync(string prompt, string? context, List<ContentDto> history)
         {
             var systemInstruction = GetSymptomInstruction(context);
             var contents = GetConversationHistory(history);
+            contents.Add(new Content
+            {
+                Role = "user",
+                Parts =
+                {
+                    new Part
+                    {
+                        Text = prompt
+                    }
+                }
+            });
 
             var responseText = await GetResponseAsync(contents, SymptomAnalysisJsonSchema, systemInstruction);
             return AIResponseParser.ParseJson(responseText);

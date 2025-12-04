@@ -1,4 +1,5 @@
 ﻿using Aspose.Pdf;
+using Aspose.Pdf.Text;
 using Google.Cloud.Vision.V1;
 using Medix.API.Business.Interfaces.Classification;
 using System.Text;
@@ -39,19 +40,16 @@ namespace Medix.API.Business.Services.Classification
 
         private async Task<string> ExtractTextFromPdfFileAsync(IFormFile file)
         {
-            var result = new StringBuilder();
-            var tempImagePaths = await GetTempImagesPath(file);
-
-            foreach (var imagePath in tempImagePaths)
+            var text = await ExtractFromTextPdf(file);
+            if (!string.IsNullOrWhiteSpace(text))
             {
-                var extractedText = await ExtractTextWithGoogleVisionAsync(imagePath);
-                result.AppendLine(extractedText);
-                File.Delete(imagePath); // Clean up temp image file
+                return text;
             }
-            return result.ToString();
+
+            return await ExtractFromPdf(file);
         }
 
-        private async Task<List<string>> GetTempImagesPath(IFormFile file)
+        private async Task<List<string>> GetTempImagesPathFromPdf(IFormFile file)
         {
             var tempImagePaths = new List<string>();
 
@@ -118,29 +116,36 @@ namespace Medix.API.Business.Services.Classification
             return extractedText;
         }
 
-        public async Task ConvertPdfToImages(IFormFile file)
+        private async Task<string> ExtractFromTextPdf(IFormFile file)
         {
             if (file == null || file.Length == 0)
                 throw new ArgumentException("Invalid file");
 
-            // Copy IFormFile into a MemoryStream
             using var memoryStream = new MemoryStream();
             await file.CopyToAsync(memoryStream);
             memoryStream.Position = 0;
 
-            // Load PDF document from stream
+            // Load PDF from stream
             var pdfDocument = new Document(memoryStream);
 
-            // Iterate through pages
-            for (int pageCount = 1; pageCount <= pdfDocument.Pages.Count; pageCount++)
-            {
-                // Convert each page to an image
-                using var bitmap = pdfDocument.Pages[pageCount].ConvertToPNGMemoryStream();
+            var textAbsorber = new TextAbsorber();
+            pdfDocument.Pages.Accept(textAbsorber);
 
-                // Save image to disk (or return as stream)
-                using var fileStream = new FileStream($"Page_{pageCount}.png", FileMode.Create, FileAccess.Write);
-                bitmap.CopyTo(fileStream);
+            return textAbsorber.Text; // Full text of the PDF
+        }
+
+        private async Task<string> ExtractFromPdf(IFormFile file)
+        {
+            var result = new StringBuilder();
+            var tempImagePaths = await GetTempImagesPathFromPdf(file);
+
+            foreach (var imagePath in tempImagePaths)
+            {
+                var extractedText = await ExtractTextWithGoogleVisionAsync(imagePath);
+                result.AppendLine(extractedText);
+                File.Delete(imagePath); // Clean up temp image file
             }
+            return result.ToString();
         }
     }
 }

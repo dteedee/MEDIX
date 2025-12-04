@@ -8,8 +8,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<DiagnosisModel> GetSymptomAnalysisAsync(string? context, List<ContentDto> conversationHistory);
         Task<DiagnosisModel> GetEMRAnalysisAsync(string emrText, string? context, List<ContentDto> conversationHistory);
         Task<List<MedicineDto>> GetRecommendedMedicinesAsync(string possibleConditions);
-        Task SaveSymptompAnalysisAsync(DiagnosisModel diagnosisModel, string? userIdClaim);
-        Task<List<RecommendedDoctorDto>> GetRecommendedDoctorsAsync(string possibleConditions, int count);
+        Task<List<string>> GetRecommendedDoctorIdsAsync(string possibleConditions, int count, string doctorListString);
         bool IsHealthRelatedQueryAsync(string query);
     }
 }

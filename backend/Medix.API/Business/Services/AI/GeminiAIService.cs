@@ -2,11 +2,7 @@
 using Google.GenAI.Types;
 using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.AI;
-using Medix.API.DataAccess.Interfaces.Classification;
-using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.AIChat;
-using Medix.API.Models.Entities;
-using Medix.API.Models.Enums;
 using System.Text;
 using System.Text.Json;
 using Type = Google.GenAI.Types.Type;
@@ -165,25 +161,13 @@ namespace Medix.API.Business.Services.AI
 
         private readonly Client _client;
         private readonly string Model;
-        private readonly IDoctorRepository _doctorRepository;
-        private readonly ILogger<GeminiAIService> _logger;
-        private readonly IPatientRepository _patientRepository;
-        private readonly IAISymptomAnalysisRepository _aiSymptomAnalysisRepository;
 
         public GeminiAIService(
             Client client,
-            IConfiguration configuration,
-            IDoctorRepository doctorRepository,
-            ILogger<GeminiAIService> logger,
-            IPatientRepository patientRepository,
-            IAISymptomAnalysisRepository aiSymptomAnalysisRepository)
+            IConfiguration configuration)
         {
             _client = client;
             Model = configuration["Gemini:Model"] ?? "gemini-2.5-flash";
-            _doctorRepository = doctorRepository;
-            _logger = logger;
-            _patientRepository = patientRepository;
-            _aiSymptomAnalysisRepository = aiSymptomAnalysisRepository;
         }
 
         private async Task<string> GenerateResponseAsync(List<Content> conversationHistory, GenerateContentConfig systemConfigs)
@@ -313,24 +297,14 @@ namespace Medix.API.Business.Services.AI
                 }
             };
             var rawResponse = await GenerateResponseAsync(conversationHistory, systemConfigs);
-            var medicines = JsonSerializer.Deserialize<MedicineList>(rawResponse);
+            var medicines = JsonSerializer.Deserialize<RecommendedMedicineList>(rawResponse);
             return medicines?.List ?? [];
         }
 
-        public async Task<List<RecommendedDoctorDto>> GetRecommendedDoctorsAsync(string possibleConditions, int count)
+        public async Task<List<string>> GetRecommendedDoctorIdsAsync(string possibleConditions, int count, string doctorListString)
         {
-            var doctorlistString = "";
-            var doctorList = await _doctorRepository.GetAllAsync();
-            foreach (var doctor in doctorList)
-            {
-                doctorlistString += $"-Id: {doctor.Id}" +
-                    $", họ và tên: {doctor.User.FullName}" +
-                    $", chuyên khoa: {doctor.Specialization.Name}" +
-                    $", trình độ học vấn: {DoctorDegree.GetDescription(doctor.Education!)}\n";
-            }
-
             var prompt = "Dựa trên danh sách bác sĩ sau đây:\n" +
-                         $"{doctorlistString}\n" +
+                         $"{doctorListString}\n" +
                          $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với các loại bệnh có khả năng là: '{possibleConditions}'. ";
             var conversationHistory = new List<Content>
             {
@@ -353,50 +327,8 @@ namespace Medix.API.Business.Services.AI
                 ResponseSchema = DoctorsSchema // Sử dụng JSON Schema đã định nghĩa
             };
             var rawJson = await GenerateResponseAsync(conversationHistory, systemConfig);
-            var doctorIds = JsonSerializer.Deserialize<DoctorList>(rawJson);
-            var recommendedDoctors = doctorIds?.IdList.Select(async id =>
-            {
-                var doctor = await _doctorRepository.GetDoctorByIdAsync(Guid.Parse(id));
-                if (doctor == null)
-                {
-                    _logger.LogWarning("Doctor with ID {DoctorId} not found.", id);
-                    return null;
-                }
-                return new RecommendedDoctorDto
-                {
-                    Id = doctor.Id.ToString(),
-                    Name = doctor.User.FullName,
-                    Specialization = doctor.Specialization.Name,
-                    Rating = (double)doctor.AverageRating,
-                    Experience = doctor.YearsOfExperience,
-                    ConsultationFee = doctor.ConsultationFee,
-                    AvatarUrl = doctor.User.AvatarUrl
-                };
-            });
-
-            return (await Task.WhenAll(recommendedDoctors ?? [])).Where(doc => doc != null).ToList()!;
-        }
-
-        public async Task SaveSymptompAnalysisAsync(DiagnosisModel diagnosisModel, string? userIdClaim)
-        {
-            var patient = userIdClaim != null
-                ? await _patientRepository.GetPatientByUserIdAsync(Guid.Parse(userIdClaim))
-                : null;
-
-            var aiSymptompAnalysis = new AISymptomAnalysis
-            {
-                Id = Guid.NewGuid(),
-                Symptoms = string.Join(",", diagnosisModel.SymptomsProvided!),
-                SessionId = Guid.NewGuid().ToString(),
-                IsGuestSession = userIdClaim == null,
-                PatientId = patient?.Id,
-                SeverityLevelCode = diagnosisModel.SeverityCode ?? "Mild",
-                PossibleConditions = diagnosisModel.PossibleConditions,
-                RecommendedAction = diagnosisModel.RecommendedAction,
-                ConfidenceScore = diagnosisModel.ConfidenceScore,
-            };
-
-            await _aiSymptomAnalysisRepository.AddAsync(aiSymptompAnalysis);
+            var doctorIds = JsonSerializer.Deserialize<RecommenedDoctorIdList>(rawJson);
+            return doctorIds?.IdList ?? [];
         }
 
         private List<Content> GetConversationHistory(List<ContentDto> history)
@@ -441,15 +373,5 @@ namespace Medix.API.Business.Services.AI
             }
             return prompt.ToString();
         }
-    }
-
-    public class MedicineList
-    {
-        public List<MedicineDto> List { get; set; } = new List<MedicineDto>();
-    }
-
-    public class DoctorList
-    {
-        public List<string> IdList { get; set; } = new List<string>();
     }
 }

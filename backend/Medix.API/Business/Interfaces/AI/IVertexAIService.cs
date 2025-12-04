@@ -8,6 +8,6 @@ namespace Medix.API.Business.Interfaces.AI
         Task<DiagnosisModel> GetSymptompAnalysisAsync(string? context, List<ContentDto> history);
         Task<DiagnosisModel> GetEMRAnalysisAsync(string emrText, string? context, List<ContentDto> history);
         Task<List<MedicineDto>> GetRecommendedMedicinesAsync(string possibleConditions);
-        Task<List<RecommendedDoctorDto>> GetRecommendedDoctorsAsync(string possibleConditions, int count);
+        Task<List<string>> GetRecommendedDoctorIdsAsync(string possibleConditions, int count, string doctorListString);
     }
 }

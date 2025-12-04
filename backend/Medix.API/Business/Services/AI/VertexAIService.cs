@@ -256,18 +256,14 @@ namespace Medix.API.Business.Services.AI
             "Dựa trên các triệu chứng được cung cấp, hãy đề xuất các loại thuốc phù hợp cùng với hướng dẫn sử dụng. " +
             "Trả lời chỉ với một mảng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
 
-        private readonly ILogger<VertexAIService> _logger;
         private readonly PredictionServiceClient _client;
         private readonly IConfiguration _configuration;
-        private readonly IDoctorRepository _doctorRepository;
 
         private readonly string ModelResourceName;
 
         public VertexAIService(
             PredictionServiceClient client, 
-            IConfiguration configuration, 
-            ILogger<VertexAIService> logger,
-            IDoctorRepository doctorRepository)
+            IConfiguration configuration)
         {
             _client = client;
             _configuration = configuration;
@@ -275,10 +271,8 @@ namespace Medix.API.Business.Services.AI
             var project = _configuration["GoogleCloud:ProjectId"];
             var location = _configuration["GoogleCloud:VertexAILocation"] ?? "us-central1";
             var model = _configuration["GoogleCloud:VertexAIModel"] ?? "gemini-2.5-flash-lite";
-            _doctorRepository = doctorRepository;
 
             ModelResourceName = $"projects/{project}/locations/{location}/publishers/google/models/{model}";
-            _logger = logger;
         }
 
         private async Task<string> GetResponseAsync(List<Content> contents, Value jsonSchema, string? systemInstruction = null)
@@ -363,24 +357,14 @@ namespace Medix.API.Business.Services.AI
             };
 
             var responseText = await GetResponseAsync(contents, MedicineJsonSchema, MedicineRecommendationInstructionText);
-            var medicines = JsonSerializer.Deserialize<MedicineList>(responseText);
+            var medicines = JsonSerializer.Deserialize<RecommendedMedicineList>(responseText);
             return medicines?.List ?? [];
         }
 
-        public async Task<List<RecommendedDoctorDto>> GetRecommendedDoctorsAsync(string possibleConditions, int count)
+        public async Task<List<string>> GetRecommendedDoctorIdsAsync(string possibleConditions, int count, string doctorListString)
         {
-            var doctorlistString = "";
-            var doctorList = await _doctorRepository.GetAllAsync();
-            foreach (var doctor in doctorList)
-            {
-                doctorlistString += $"-Id: {doctor.Id}" +
-                    $", họ và tên: {doctor.User.FullName}" +
-                    $", chuyên khoa: {doctor.Specialization.Name}" +
-                    $", trình độ học vấn: {DoctorDegree.GetDescription(doctor.Education!)}\n";
-            }
-
             var prompt = "Dựa trên danh sách bác sĩ sau đây:\n" +
-                         $"{doctorlistString}\n" +
+                         $"{doctorListString}\n" +
                          $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với các loại bệnh có khả năng là: '{possibleConditions}'. ";
             var contents = new List<Content>
             {
@@ -398,28 +382,8 @@ namespace Medix.API.Business.Services.AI
             };
 
             var responseText = await GetResponseAsync(contents, DoctorsJsonSchema, null);
-            var doctorIds = JsonSerializer.Deserialize<DoctorList>(responseText);
-            var recommendedDoctors = doctorIds?.IdList.Select(async id =>
-            {
-                var doctor = await _doctorRepository.GetDoctorByIdAsync(Guid.Parse(id));
-                if (doctor == null)
-                {
-                    _logger.LogWarning("Doctor with ID {DoctorId} not found.", id);
-                    return null;
-                }
-                return new RecommendedDoctorDto
-                {
-                    Id = doctor.Id.ToString(),
-                    Name = doctor.User.FullName,
-                    Specialization = doctor.Specialization.Name,
-                    Rating = (double)doctor.AverageRating,
-                    Experience = doctor.YearsOfExperience,
-                    ConsultationFee = doctor.ConsultationFee,
-                    AvatarUrl = doctor.User.AvatarUrl
-                };
-            });
-
-            return (await Task.WhenAll(recommendedDoctors ?? [])).Where(doc => doc != null).ToList()!;
+            var doctorIds = JsonSerializer.Deserialize<RecommenedDoctorIdList>(responseText);
+            return doctorIds?.IdList ?? [];
         }
 
         private List<Content> GetConversationHistory(List<ContentDto> history)

@@ -1,17 +1,29 @@
 ﻿using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.Classification;
+using Medix.API.DataAccess.Interfaces.Classification;
+using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.AIChat;
+using Medix.API.Models.Entities;
+using Medix.API.Models.Enums;
 
 namespace Medix.API.Business.Services.Classification
 {
     public class AIChatService(
+        ILogger<AIChatService> logger,
         ILLMService llmService,
         IOCRService ocrService,
-        IRAGService ragService) : IAIChatService
+        IRAGService ragService,
+        IPatientRepository patientRepository,
+        IAISymptomAnalysisRepository aiSymptomAnalysisRepository,
+        IDoctorRepository doctorRepository) : IAIChatService
     {
+        private readonly ILogger<AIChatService> _logger = logger;
         private readonly ILLMService _llmService = llmService;
         private readonly IOCRService _ocrService = ocrService;
         private readonly IRAGService _ragService = ragService;
+        private readonly IPatientRepository _patientRepository = patientRepository;
+        private readonly IAISymptomAnalysisRepository _aiSymptomAnalysisRepository = aiSymptomAnalysisRepository;
+        private readonly IDoctorRepository _doctorRepository = doctorRepository;
 
         public async Task<ChatResponseDto> SendMessageAsync(string prompt, List<ContentDto> conversationHistory, string? userIdClaim = null)
         {
@@ -73,7 +85,7 @@ namespace Medix.API.Business.Services.Classification
             //save symptomp analysis to database
             if (userIdClaim != null)
             {
-                await _llmService.SaveSymptompAnalysisAsync(diagnosisModel, userIdClaim);
+                await SaveSymptomAnalysisAsync(diagnosisModel, userIdClaim);
             }
 
             var symptompAnalysisResponse = new SymptomAnalysisResponseDto
@@ -95,12 +107,75 @@ namespace Medix.API.Business.Services.Classification
             }
 
             symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Hãy đặt lịch hẹn với bác sĩ chuyên khoa để được tư vấn thêm.";
-            symptompAnalysisResponse.RecommendedDoctors = await _llmService.GetRecommendedDoctorsAsync(diagnosisModel.PossibleConditions, 3);
+            
+            var idList = await _llmService.GetRecommendedDoctorIdsAsync(diagnosisModel.PossibleConditions, 3, await GetDoctorListString());
+            symptompAnalysisResponse.RecommendedDoctors = await GetRecommendedDoctorsAsync(idList);
+
             return new ChatResponseDto
+
             {
                 Text = diagnosisModel.UserResponseText ?? "Phân tích triệu chứng hoàn tất.",
                 Type = "symptom_analysis",
             };
+        }
+
+        private async Task SaveSymptomAnalysisAsync(DiagnosisModel diagnosisModel, string userIdClaim)
+        {
+            var patient =  await _patientRepository.GetPatientByUserIdAsync(Guid.Parse(userIdClaim));
+
+            var aiSymptompAnalysis = new AISymptomAnalysis
+            {
+                Id = Guid.NewGuid(),
+                Symptoms = string.Join(",", diagnosisModel.SymptomsProvided!),
+                SessionId = Guid.NewGuid().ToString(),
+                IsGuestSession = userIdClaim == null,
+                PatientId = patient?.Id,
+                SeverityLevelCode = diagnosisModel.SeverityCode ?? "Mild",
+                PossibleConditions = diagnosisModel.PossibleConditions,
+                RecommendedAction = diagnosisModel.RecommendedAction,
+                ConfidenceScore = diagnosisModel.ConfidenceScore,
+            };
+
+            await _aiSymptomAnalysisRepository.AddAsync(aiSymptompAnalysis);
+        }
+
+        private async Task<string> GetDoctorListString()
+        {
+            var doctorlistString = "";
+            var doctorList = await _doctorRepository.GetAllAsync();
+            foreach (var doctor in doctorList)
+            {
+                doctorlistString += $"-Id: {doctor.Id}" +
+                    $", họ và tên: {doctor.User.FullName}" +
+                    $", chuyên khoa: {doctor.Specialization.Name}" +
+                    $", trình độ học vấn: {DoctorDegree.GetDescription(doctor.Education!)}\n";
+            }
+            return doctorlistString;
+        }
+
+        private async Task<List<RecommendedDoctorDto>> GetRecommendedDoctorsAsync(List<string> doctorIds)
+        {
+            var recommendedDoctors = doctorIds.Select(async id =>
+            {
+                var doctor = await _doctorRepository.GetDoctorByIdAsync(Guid.Parse(id));
+                if (doctor == null)
+                {
+                    _logger.LogWarning("Doctor with ID {DoctorId} not found.", id);
+                    return null;
+                }
+                return new RecommendedDoctorDto
+                {
+                    Id = doctor.Id.ToString(),
+                    Name = doctor.User.FullName,
+                    Specialization = doctor.Specialization.Name,
+                    Rating = (double)doctor.AverageRating,
+                    Experience = doctor.YearsOfExperience,
+                    ConsultationFee = doctor.ConsultationFee,
+                    AvatarUrl = doctor.User.AvatarUrl
+                };
+            });
+
+            return (await Task.WhenAll(recommendedDoctors ?? [])).Where(doc => doc != null).ToList()!;
         }
     }
 }

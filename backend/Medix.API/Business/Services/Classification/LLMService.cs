@@ -2,7 +2,6 @@
 using Medix.API.Business.Interfaces.AI;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Models.DTOs.AIChat;
-using System.Xml;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -50,10 +49,7 @@ namespace Medix.API.Business.Services.Classification
             throw new InvalidOperationException("No LLM API configured.");
         }
 
-        public async Task<DiagnosisModel> GetEMRAnalysisAsync(
-            string emrText,
-            string? context,
-            List<ContentDto> conversationHistory)
+        public async Task<DiagnosisModel> GetEMRAnalysisAsync(string emrText, string? context, List<ContentDto> conversationHistory)
         {
             try
             {
@@ -119,27 +115,7 @@ namespace Medix.API.Business.Services.Classification
             throw new InvalidOperationException("No LLM API configured.");
         }
 
-        public async Task SaveSymptompAnalysisAsync(DiagnosisModel diagnosisModel, string? userIdClaim)
-        {
-            try
-            {
-                // Prefer Vertex if configured
-                var geminiApiKey = _configuration["Gemini:ApiKey"];
-                if (!string.IsNullOrEmpty(geminiApiKey))
-                {
-                    await _geminiAiService.SaveSymptompAnalysisAsync(diagnosisModel, userIdClaim);
-                    return;
-                }
-                throw new InvalidOperationException("No LLM API configured.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error saving symptom analysis");
-                throw;
-            }
-        }
-
-        public async Task<List<RecommendedDoctorDto>> GetRecommendedDoctorsAsync(string possibleConditions, int count)
+        public async Task<List<string>> GetRecommendedDoctorIdsAsync(string possibleConditions, int count, string doctorListString)
         {
             try
             {
@@ -147,7 +123,7 @@ namespace Medix.API.Business.Services.Classification
                 var vertexApiKey = _configuration["GoogleCloud:ProjectId"];
                 if (!string.IsNullOrEmpty(vertexApiKey))
                 {
-                    return await _vertexAiService.GetRecommendedDoctorsAsync(possibleConditions, count);
+                    return await _vertexAiService.GetRecommendedDoctorIdsAsync(possibleConditions, count, doctorListString);
                 }
             }
             catch (Exception ex)
@@ -160,7 +136,7 @@ namespace Medix.API.Business.Services.Classification
                 var geminiApiKey = _configuration["Gemini:ApiKey"];
                 if (!string.IsNullOrEmpty(geminiApiKey))
                 {
-                    return await _geminiAiService.GetRecommendedDoctorsAsync(possibleConditions, count);
+                    return await _geminiAiService.GetRecommendedDoctorIdsAsync(possibleConditions, count, doctorListString);
                 }
             }
             catch (Exception ex)

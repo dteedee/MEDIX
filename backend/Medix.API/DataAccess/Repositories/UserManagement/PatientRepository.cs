@@ -18,7 +18,6 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
         public async Task<Patient?> GetPatientByUserIdAsync(Guid userId)
         {
             return await _context.Patients
-
                  .Include(p => p.User)
                  .FirstOrDefaultAsync(p => p.UserId == userId);
         }

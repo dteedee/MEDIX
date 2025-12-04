@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { AIChatMessage } from "../../types/aiChat";
 import { useNavigate } from 'react-router-dom';
 import styles from '../../styles/pages/AIChatBot.module.css';
-import aiChatService, { SymptomAnalysisResponse, EMRAnalysisResponse } from '../../services/aiChatService';
-import { AIChatMessage } from '../../types/aiChat';
-import { getChatHistory, saveChatHistory } from '../../utils/chatHistory';
+import { useEffect, useRef, useState } from "react";
+import aiChatService, { PromptRequest, SymptomAnalysisResponse } from "../../services/aiChatService";
+import { useAuth } from "../../contexts/AuthContext";
 
 const createGreetingMessage = (): AIChatMessage => ({
   id: 'medix-greeting',
@@ -13,16 +13,17 @@ const createGreetingMessage = (): AIChatMessage => ({
 });
 
 export const AIChatBot: React.FC = () => {
+
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<AIChatMessage[]>(() => {
-    const history = getChatHistory();
-    return history.length > 0 ? history : [createGreetingMessage()];
-  });
+
+  const [messages, setMessages] = useState<AIChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { user, logout } = useAuth();
 
   const quickReplies = [
     'Khó ngủ',
@@ -33,15 +34,84 @@ export const AIChatBot: React.FC = () => {
     'Buồn nôn',
   ];
 
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  const [chatToken, setChatToken] = useState<string>("");
+
+  const getNewChatToken = (): string => {
+    // Generate a new token every time the page loads
+    let token: string;
+
+    if (crypto.randomUUID) {
+      token = crypto.randomUUID(); // modern browsers
+    } else {
+      // fallback for older browsers
+      token = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
     }
-  }, [messages]);
+
+    return token;
+  }
+
+  const initializeChatToken = (): string => {
+    if (user) {
+      return getNewChatToken();
+    }
+
+    const key = "ai_chat_token";
+    const today = new Date().toDateString();
+
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      const parsed = JSON.parse(stored) as { value: string; date: string };
+      if (parsed.date === today) {
+        // ✅ Same day → reuse token
+        return parsed.value;
+      }
+    }
+
+    // ❌ No token yet or different day → generate new token
+    const newToken = getNewChatToken();
+    localStorage.setItem(key, JSON.stringify({ value: newToken, date: today }));
+    return newToken;
+  }
+
+  const getChatHistory = async (token: string) => {
+    try {
+      const history = await aiChatService.getChatHistory(token);
+      if (!history || history.length === 0) {
+        // First time chat - add greeting message
+        setMessages([createGreetingMessage()]);
+      } else {
+        var chatHistory = history.map(msg => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }));
+        setMessages(chatHistory);
+      }
+    } catch (error) {
+      console.error('Error fetching chat history:', error);
+      setMessages([createGreetingMessage()]);
+    }
+  }
 
   useEffect(() => {
-    saveChatHistory(messages);
-  }, [messages]);
+    (async () => {
+      const token = initializeChatToken();
+      setChatToken(token);
+      await getChatHistory(token);
+    })();
+  }, []);
+
+  const formatMessage = (text: string): string => {
+    // Format markdown-like syntax
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br />')
+      .replace(/⚠️/g, '⚠️')
+      .replace(/🚨/g, '🚨');
+  };
 
   const handleQuickReply = (text: string) => {
     setInputText(text);
@@ -52,6 +122,7 @@ export const AIChatBot: React.FC = () => {
     const messageText = text || inputText.trim();
     if (!messageText && uploadedFiles.length === 0) return;
 
+    // Add user message
     if (messageText) {
       const newUserMessage: AIChatMessage = {
         id: Date.now().toString(),
@@ -63,31 +134,33 @@ export const AIChatBot: React.FC = () => {
       setInputText('');
     }
 
+    //Handle file uploads
     if (uploadedFiles.length > 0) {
       setIsLoading(true);
       try {
         const file = uploadedFiles[0];
         const response = await aiChatService.uploadAndAnalyzeEMR({
           file,
+          chatToken,
         });
-
-        const aiResponse: AIChatMessage = {
-          id: (Date.now() + 1).toString(),
-          text: response.summary + '\n\n' + response.recommendations.join('\n'),
-          sender: 'ai',
-          timestamp: new Date(),
-          type: 'emr_analysis',
-          data: response,
-        };
-        setMessages(prev => [...prev, aiResponse]);
+        response.timestamp = new Date(response.timestamp);
+        setMessages(prev => [...prev, response]);
         setUploadedFiles([]);
       } catch (error: any) {
+        let text = 'Xin lỗi, có lỗi xảy ra khi phân tích EMR. Vui lòng thử lại sau.';
+
+        if (error.response?.status === 400 && error.response.data?.message) {
+          // ✅ Use the message returned by your C# API
+          text = error.response.data.message;
+        }
+
         const errorMessage: AIChatMessage = {
           id: (Date.now() + 1).toString(),
-          text: 'Xin lỗi, có lỗi xảy ra khi phân tích EMR. Vui lòng thử lại sau.',
+          text,
           sender: 'ai',
           timestamp: new Date(),
         };
+
         setMessages(prev => [...prev, errorMessage]);
       } finally {
         setIsLoading(false);
@@ -98,70 +171,14 @@ export const AIChatBot: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const symptomKeywords = ['đau', 'mệt', 'sốt', 'ho', 'khó', 'buồn', 'chóng', 'nóng', 'ngứa', 'triệu chứng'];
-      const isSymptomQuery = symptomKeywords.some(keyword => messageText.toLowerCase().includes(keyword));
+      const promptRequest: PromptRequest = {
+        prompt: messageText,
+        chatToken: chatToken,
+      };
 
-      if (isSymptomQuery) {
-        const symptoms = messageText.split(/[,\n]/).map(s => s.trim()).filter(s => s.length > 0);
-        
-        const analysisResponse = await aiChatService.analyzeSymptoms({
-          symptoms: symptoms.slice(0, 10), 
-          additionalInfo: messageText,
-        });
-
-        const severityText = analysisResponse.severity === 'mild' ? 'nhẹ' : 
-                            analysisResponse.severity === 'moderate' ? 'vừa' : 'nặng';
-        
-        let responseText = `**Đánh giá mức độ: ${severityText.toUpperCase()}**\n\n`;
-        responseText += `${analysisResponse.overview}\n\n`;
-        responseText += `**Các khả năng chẩn đoán:**\n`;
-        analysisResponse.possibleConditions.forEach((condition, index) => {
-          responseText += `${index + 1}. ${condition.condition} (${condition.probability}%)\n   ${condition.description}\n`;
-        });
-
-        if (analysisResponse.homeTreatment) {
-          responseText += `\n**Hướng dẫn điều trị tại nhà:**\n`;
-          analysisResponse.homeTreatment.instructions.forEach(instruction => {
-            responseText += `• ${instruction}\n`;
-          });
-        }
-
-        if (analysisResponse.recommendedDoctors && analysisResponse.recommendedDoctors.length > 0) {
-          responseText += `\n**Bác sĩ được gợi ý:**\n`;
-          analysisResponse.recommendedDoctors.slice(0, 3).forEach((doctor, index) => {
-            responseText += `${index + 1}. ${doctor.name} - ${doctor.specialization}\n`;
-            responseText += `   Đánh giá: ${doctor.rating}/5.0 | Kinh nghiệm: ${doctor.experience} năm\n`;
-          });
-        }
-
-        const aiResponse: AIChatMessage = {
-          id: (Date.now() + 1).toString(),
-          text: responseText,
-          sender: 'ai',
-          timestamp: new Date(),
-          type: 'symptom_analysis',
-          data: analysisResponse,
-        };
-        setMessages(prev => [...prev, aiResponse]);
-      } else {
-        const conversationHistory = messages.map(msg => ({
-          text: msg.text,
-          sender: msg.sender,
-          type: msg.type,
-        }));
-
-        const response = await aiChatService.sendMessage(messageText, conversationHistory);
-        
-        const aiResponse: AIChatMessage = {
-          id: response.id || (Date.now() + 1).toString(),
-          text: response.text,
-          sender: 'ai',
-          timestamp: new Date(response.timestamp || new Date()),
-          type: response.type as any,
-          data: response.data,
-        };
-        setMessages(prev => [...prev, aiResponse]);
-      }
+      const response = await aiChatService.sendMessage(promptRequest);
+      response.timestamp = new Date(response.timestamp);
+      setMessages(prev => [...prev, response]);
     } catch (error: any) {
       const errorMessage: AIChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -198,25 +215,16 @@ export const AIChatBot: React.FC = () => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const formatMessage = (text: string): string => {
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br />')
-      .replace(/⚠️/g, '⚠️')
-      .replace(/🚨/g, '🚨');
-  };
-
   const renderSymptomAnalysis = (data: SymptomAnalysisResponse) => {
     return (
       <div className={styles.symptomAnalysis}>
-        {data.possibleConditions && data.possibleConditions.length > 0 && (
+        {data.medicines && data.medicines.length > 0 && (
           <div className={styles.conditionsList}>
-            <h4>Khả năng chẩn đoán:</h4>
-            {data.possibleConditions.map((condition, index) => (
+            <h4>Các loại thuốc có thể sử dụng:</h4>
+            {data.medicines.map((medicine, index) => (
               <div key={index} className={styles.conditionItem}>
-                <span className={styles.conditionName}>{condition.condition}</span>
-                <span className={styles.conditionProbability}>{condition.probability}%</span>
-                <p className={styles.conditionDescription}>{condition.description}</p>
+                <span className={styles.conditionName}>{medicine.name}</span>
+                <p className={styles.conditionDescription}>{medicine.instructions}</p>
               </div>
             ))}
           </div>
@@ -237,31 +245,15 @@ export const AIChatBot: React.FC = () => {
     );
   };
 
-  const renderEMRAnalysis = (data: EMRAnalysisResponse) => {
-    return (
-      <div className={styles.emrAnalysis}>
-        {data.extractedData.diagnosis && data.extractedData.diagnosis.length > 0 && (
-          <div className={styles.emrSection}>
-            <strong>Chẩn đoán:</strong> {data.extractedData.diagnosis.join(', ')}
-          </div>
-        )}
-        {data.extractedData.medications && data.extractedData.medications.length > 0 && (
-          <div className={styles.emrSection}>
-            <strong>Thuốc:</strong> {data.extractedData.medications.join(', ')}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className={styles.chatPage}>
+      {/* Header */}
       <div className={styles.chatHeader}>
         <div className={styles.headerLeft}>
           <div className={styles.avatarContainer}>
-            <img 
-              src="/images/medix-logo-mirrored.jpg" 
-              alt="MEDIX" 
+            <img
+              src="/images/medix-logo-mirrored.jpg"
+              alt="MEDIX"
               className={styles.avatar}
             />
             <div className={styles.statusIndicator}></div>
@@ -271,17 +263,18 @@ export const AIChatBot: React.FC = () => {
             <p className={styles.headerSubtitle}>Đang hoạt động</p>
           </div>
         </div>
-        <button 
-          className={styles.backButton} 
+        <button
+          className={styles.backButton}
           onClick={() => navigate(-1)}
           title="Quay lại"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
+            <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </button>
       </div>
 
+      {/* Messages Area */}
       <div className={styles.messagesArea}>
         {messages.map((message) => (
           <div
@@ -289,9 +282,9 @@ export const AIChatBot: React.FC = () => {
             className={`${styles.message} ${message.sender === 'user' ? styles.userMessage : styles.aiMessage}`}
           >
             {message.sender === 'ai' && (
-              <img 
-                src="/images/medix-logo-mirrored.jpg" 
-                alt="MEDIX" 
+              <img
+                src="/images/medix-logo-mirrored.jpg"
+                alt="MEDIX"
                 className={styles.messageAvatar}
               />
             )}
@@ -302,11 +295,12 @@ export const AIChatBot: React.FC = () => {
                   {renderSymptomAnalysis(message.data)}
                 </div>
               )}
+              {/*
               {message.data && message.type === 'emr_analysis' && (
                 <div className={styles.messageData}>
                   {renderEMRAnalysis(message.data)}
                 </div>
-              )}
+              )} */}
               <div className={styles.messageTime}>
                 {message.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
               </div>
@@ -316,9 +310,9 @@ export const AIChatBot: React.FC = () => {
 
         {isLoading && (
           <div className={`${styles.message} ${styles.aiMessage}`}>
-            <img 
-              src="/images/medix-logo-mirrored.jpg" 
-              alt="MEDIX" 
+            <img
+              src="/images/medix-logo-mirrored.jpg"
+              alt="MEDIX"
               className={styles.messageAvatar}
             />
             <div className={styles.messageBubble}>
@@ -334,12 +328,13 @@ export const AIChatBot: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* File Preview */}
       {uploadedFiles.length > 0 && (
         <div className={styles.filePreview}>
           {uploadedFiles.map((file, index) => (
             <div key={index} className={styles.fileItem}>
               <span className={styles.fileName}>{file.name}</span>
-              <button 
+              <button
                 className={styles.removeFileButton}
                 onClick={() => removeFile(index)}
               >
@@ -350,6 +345,7 @@ export const AIChatBot: React.FC = () => {
         </div>
       )}
 
+      {/* Quick Suggestions - Above input area */}
       {messages.length === 1 && (
         <div className={styles.quickSuggestions}>
           <p className={styles.suggestionPrompt}>Gợi ý nhanh:</p>
@@ -367,6 +363,7 @@ export const AIChatBot: React.FC = () => {
         </div>
       )}
 
+      {/* Input Area - At the bottom */}
       <div className={styles.inputArea}>
         <input
           ref={fileInputRef}
@@ -396,11 +393,11 @@ export const AIChatBot: React.FC = () => {
           className={styles.sendButton}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
       </div>
     </div>
   );
-};
+}

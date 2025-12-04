@@ -251,5 +251,12 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task<List<HealthArticle>> GetPublishedArticlesAsync()
+        {
+            return await _context.HealthArticles
+                .Where(a => a.StatusCode.ToLower() == "published")
+                .ToListAsync();
+        }
     }
 }

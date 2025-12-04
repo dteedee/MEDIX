@@ -11,7 +11,9 @@
 		<PackageReference Include="MailKit" Version="4.14.1" />
 		<PackageReference Include="payOS" Version="2.0.1" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-		<PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
+		<PackageReference Include="Google.GenAI" Version="0.6.0" />
+		<PackageReference Include="Google.Cloud.AIPlatform.V1" Version="3.56.0" />
+		<PackageReference Include="Google.Cloud.Vision.V1" Version="3.8.0" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.13">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -25,6 +27,7 @@
 		<PackageReference Include="VNPAY.NET" Version="8.5.0" />
 		<PackageReference Include="Hangfire.AspNetCore" Version="1.8.21" />
 		<PackageReference Include="Hangfire.SqlServer" Version="1.8.21" />
+		<PackageReference Include="Aspose.PDF" Version="25.11.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<Content Update="appsettings.json">

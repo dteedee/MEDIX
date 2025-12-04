@@ -123,6 +123,19 @@ namespace Medix.API.Models.Constants
             }
         };
 
+        public static readonly IReadOnlyList<SystemConfiguration> AIChatDefaults = new List<SystemConfiguration>
+        {
+            new()
+            {
+                ConfigKey = "AI_DAILY_ACCESS_LIMIT",
+                ConfigValue = "50",
+                DataType = "int",
+                Category = "AI_CHAT",
+                Description = "Số lượt truy cập AI tối đa trong 1 ngày",
+                IsActive = true
+            }
+        };
+
         public static readonly IReadOnlyList<SystemConfiguration> EmailTemplates = new List<SystemConfiguration>
         {
             new()

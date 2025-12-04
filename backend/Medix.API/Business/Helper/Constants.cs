@@ -1,4 +1,6 @@
-﻿namespace Medix.API.Business.Helper
+﻿using Medix.API.Models.DTOs.AIChat;
+
+namespace Medix.API.Business.Helper
 {
     public class Constants
     {
@@ -7,5 +9,15 @@
         public const double DoctorSalaryShare = 0.7;
         
         public static string[] SuccessfulAppointmentStatusCode = ["Completed", "Confirmed"];
+    }
+
+    public class RecommendedMedicineList
+    {
+        public List<MedicineDto> List { get; set; } = new List<MedicineDto>();
+    }
+
+    public class RecommenedDoctorIdList
+    {
+        public List<string> IdList { get; set; } = new List<string>();
     }
 }

@@ -1,3 +1,5 @@
+using Google.Cloud.AIPlatform.V1;
+using Google.GenAI;
 using Hangfire;
 using Medix.API.Configurations;
 using Medix.API.DataAccess;
@@ -9,6 +11,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PayOS;
 using System.Text;
+
+Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,9 +53,15 @@ builder.Services.AddKeyedSingleton("TransferClient", (sp, key) =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173") // replace with your frontend URL
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); // allow cookies/session
+    });
 });
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
 
@@ -132,6 +142,34 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+//config gemini
+builder.Services.AddSingleton(provider =>
+{
+    var configuration = provider.GetRequiredService<IConfiguration>();
+    var apiKey = configuration["Gemini:ApiKey"];
+
+    if (string.IsNullOrEmpty(apiKey))
+    {
+        throw new InvalidOperationException("GeminiApiKey configuration value is required for Gemini.");
+    }
+
+    return new Client(apiKey: apiKey);
+});
+
+//config vertexAI
+builder.Services.AddSingleton(sp =>
+{
+    return new PredictionServiceClientBuilder().Build();
+});
+
+//session
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromDays(1);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.ConfigureServices();
@@ -150,7 +188,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowAll");
+app.UseSession();
+
+app.UseCors("AllowFrontend");
 
 app.UseStaticFiles();
 

@@ -34,7 +34,7 @@ class ApiClient {
         if (config.data instanceof FormData) {
           delete config.headers['Content-Type'];
         }
-        
+
         return config;
       },
       (error) => {
@@ -113,7 +113,7 @@ class ApiClient {
     return response.data;
   }
 
-  public getToken (): string | null {
+  public getToken(): string | null {
     return this.getAccessToken();
   }
   
@@ -129,7 +129,7 @@ class ApiClient {
         return null;
       }
     }
-    
+
     return token;
   }
 
@@ -151,7 +151,7 @@ class ApiClient {
     }
   }
 
-    public clearAccessTokens(): void {
+  public clearAccessTokens(): void {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('tokenExpiration');
   }
@@ -181,6 +181,17 @@ class ApiClient {
       },
     });
   }
+
+  public postMultipartWithCredentials<T = any>(url: string, formData: FormData): Promise<AxiosResponse<T>> {
+    return this.client.post<T>(url, formData, {
+      headers: {
+        // Let the browser set Content-Type with boundary
+        'Content-Type': undefined,
+      },
+      withCredentials: true, // ✅ include cookies/credentials
+    });
+  }
+
 
   public put<T = any>(url: string, data?: any, config?: any): Promise<AxiosResponse<T>> {
     return this.client.put<T>(url, data, config);

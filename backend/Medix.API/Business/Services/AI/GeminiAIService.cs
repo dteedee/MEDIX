@@ -13,7 +13,7 @@ using Type = Google.GenAI.Types.Type;
 
 namespace Medix.API.Business.Services.AI
 {
-    public class VertexAIService : IVertexAIService
+    public class GeminiAIService : IGeminiAIService
     {
         private static readonly Dictionary<string, Schema> SymptomAnalysisSchemaProperties = new Dictionary<string, Schema>
         {
@@ -163,23 +163,23 @@ namespace Medix.API.Business.Services.AI
             "Dựa trên các triệu chứng được cung cấp, hãy đề xuất các loại thuốc phù hợp cùng với hướng dẫn sử dụng. " +
             "Trả lời chỉ với một mảng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
 
-        private readonly Client _vertexClient;
+        private readonly Client _client;
         private readonly string Model;
         private readonly IDoctorRepository _doctorRepository;
-        private readonly ILogger<VertexAIService> _logger;
+        private readonly ILogger<GeminiAIService> _logger;
         private readonly IPatientRepository _patientRepository;
         private readonly IAISymptomAnalysisRepository _aiSymptomAnalysisRepository;
 
-        public VertexAIService(
-            Client vertexClient,
+        public GeminiAIService(
+            Client client,
             IConfiguration configuration,
             IDoctorRepository doctorRepository,
-            ILogger<VertexAIService> logger,
+            ILogger<GeminiAIService> logger,
             IPatientRepository patientRepository,
             IAISymptomAnalysisRepository aiSymptomAnalysisRepository)
         {
-            _vertexClient = vertexClient;
-            Model = configuration["GoogleCloud:Model"] ?? "gemini-1.5-flash";
+            _client = client;
+            Model = configuration["Gemini:Model"] ?? "gemini-2.5-flash";
             _doctorRepository = doctorRepository;
             _logger = logger;
             _patientRepository = patientRepository;
@@ -188,7 +188,7 @@ namespace Medix.API.Business.Services.AI
 
         private async Task<string> GenerateResponseAsync(List<Content> conversationHistory, GenerateContentConfig systemConfigs)
         {
-            var response = await _vertexClient.Models.GenerateContentAsync(
+            var response = await _client.Models.GenerateContentAsync(
                 model: Model,
                 contents: conversationHistory,
                 config: systemConfigs

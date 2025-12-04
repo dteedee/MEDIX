@@ -1,3 +1,4 @@
+using Google.Cloud.AIPlatform.V1;
 using Google.GenAI;
 using Hangfire;
 using Medix.API.Configurations;
@@ -8,7 +9,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using OpenAI;
 using PayOS;
 using System.Text;
 
@@ -152,25 +152,46 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-//config vertexAI
+//config gemini
 builder.Services.AddSingleton(provider =>
 {
     // Get the Project ID from your app settings (e.g., appsettings.json)
     var configuration = provider.GetRequiredService<IConfiguration>();
-    var projectId = configuration["GoogleCloud:ProjectId"];
-    var location = configuration["GoogleCloud:Location"];
+    var apiKey = configuration["Gemini:ApiKey"];
 
-    if (string.IsNullOrEmpty(projectId))
+    if (string.IsNullOrEmpty(apiKey))
     {
-        throw new InvalidOperationException("GcpProjectID configuration value is required for Vertex AI.");
+        throw new InvalidOperationException("GeminiApiKey configuration value is required for Gemini.");
     }
 
     // The Client uses ADC (set up in the Prerequisite step) for authentication.
-    return new Client(
-        project: projectId,
-        location: location,
-        vertexAI: true // Crucial flag to use the Vertex AI endpoint
-    );
+    return new Client(apiKey: apiKey);
+});
+
+//config vertexAI
+//builder.Services.AddSingleton(provider =>
+//{
+//    // Get the Project ID from your app settings (e.g., appsettings.json)
+//    var configuration = provider.GetRequiredService<IConfiguration>();
+//    var projectId = configuration["GoogleCloud:ProjectId"];
+//    var location = configuration["GoogleCloud:Location"];
+
+//    if (string.IsNullOrEmpty(projectId))
+//    {
+//        throw new InvalidOperationException("GcpProjectID configuration value is required for Vertex AI.");
+//    }
+
+//    // The Client uses ADC (set up in the Prerequisite step) for authentication.
+//    return new Client(
+//        apiKey: null,
+//    );
+//});
+
+builder.Services.AddSingleton(sp =>
+{
+    // The client automatically uses Application Default Credentials (ADC)
+    // based on the environment (e.g., service account key, gcloud login, etc.)
+    return new PredictionServiceClientBuilder().Build();
 });
 
 //session

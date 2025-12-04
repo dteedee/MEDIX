@@ -3,7 +3,7 @@ using Medix.API.Models.DTOs.AIChat;
 
 namespace Medix.API.Business.Interfaces.AI
 {
-    public interface IVertexAIService
+    public interface IGeminiAIService
     {
         Task<DiagnosisModel> GetSymptompAnalysisAsync(string? context, List<ContentDto> history);
         Task<DiagnosisModel> GetEMRAnalysisAsync(string emrText, string? context, List<ContentDto> history);

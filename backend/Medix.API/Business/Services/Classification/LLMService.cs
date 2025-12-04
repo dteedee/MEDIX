@@ -5,36 +5,25 @@ using Medix.API.Models.DTOs.AIChat;
 
 namespace Medix.API.Business.Services.Classification
 {
-    public class LLMService : ILLMService
+    public class LLMService(
+        ILogger<LLMService> logger,
+        IConfiguration configuration,
+        IGeminiAIService geminiAIService) : ILLMService
     {
-        private readonly ILogger<LLMService> _logger;
-        private readonly IConfiguration _configuration;
-        private readonly IVertexAIService _vertexAiService;
-
-        public LLMService(ILogger<LLMService> logger, IConfiguration configuration, IVertexAIService vertexAIService)
-        {
-            _logger = logger;
-            _configuration = configuration;
-            _vertexAiService = vertexAIService;
-        }
+        private readonly ILogger<LLMService> _logger = logger;
+        private readonly IConfiguration _configuration = configuration;
+        private readonly IGeminiAIService _geminiAiService = geminiAIService;
 
         public async Task<DiagnosisModel> GetSymptomAnalysisAsync(string? context, List<ContentDto> conversationHistory)
         {
             try
             {
                 // Prefer Vertex if configured
-                var vertexApiKey = _configuration["GoogleCloud:Model"];
-                if (!string.IsNullOrEmpty(vertexApiKey))
+                var geminiApiKey = _configuration["Gemini:ApiKey"];
+                if (!string.IsNullOrEmpty(geminiApiKey))
                 {
-                    return await _vertexAiService.GetSymptompAnalysisAsync(context, conversationHistory);
+                    return await _geminiAiService.GetSymptompAnalysisAsync(context, conversationHistory);
                 }
-
-                // Try to use OpenAI API if configured
-                //var openAiApiKey = _configuration["OpenAI:ApiKey"];
-                //if (!string.IsNullOrEmpty(openAiApiKey))
-                //{
-                //    return await CallOpenAIAsync(userMessage, context, conversationHistory);
-                //}
 
                 throw new InvalidOperationException("No LLM API configured.");
             }
@@ -46,24 +35,24 @@ namespace Medix.API.Business.Services.Classification
         }
 
         public async Task<DiagnosisModel> GetEMRAnalysisAsync(
-            string emrText, 
-            string? context, 
+            string emrText,
+            string? context,
             List<ContentDto> conversationHistory)
         {
             try
             {
                 // Prefer Vertex if configured
-                var vertexApiKey = _configuration["GoogleCloud:Model"];
-                if (!string.IsNullOrEmpty(vertexApiKey))
+                var geminiApiKey = _configuration["Gemini:ApiKey"];
+                if (!string.IsNullOrEmpty(geminiApiKey))
                 {
-                    return await _vertexAiService.GetEMRAnalysisAsync(emrText, context, conversationHistory);
+                    return await _geminiAiService.GetEMRAnalysisAsync(emrText, context, conversationHistory);
                 }
 
                 // Try to use OpenAI API if configured
                 //var openAiApiKey = _configuration["OpenAI:ApiKey"];
                 //if (!string.IsNullOrEmpty(openAiApiKey))
                 //{
-                //    return await CallOpenAIAsync(userMessage, context, conversationHistory);
+                //    return await _openAiService.GetEMRAnalysisAsync(emrText, context, conversationHistory);
                 //}
 
                 throw new InvalidOperationException("No LLM API configured.");
@@ -80,10 +69,10 @@ namespace Medix.API.Business.Services.Classification
             try
             {
                 // Prefer Vertex if configured
-                var vertexApiKey = _configuration["GoogleCloud:Model"];
-                if (!string.IsNullOrEmpty(vertexApiKey))
+                var geminiApiKey = _configuration["Gemini:ApiKey"];
+                if (!string.IsNullOrEmpty(geminiApiKey))
                 {
-                    return await _vertexAiService.GetRecommendedMedicinesAsync(possibleConditions);
+                    return await _geminiAiService.GetRecommendedMedicinesAsync(possibleConditions);
                 }
                 throw new InvalidOperationException("No LLM API configured.");
             }
@@ -99,10 +88,10 @@ namespace Medix.API.Business.Services.Classification
             try
             {
                 // Prefer Vertex if configured
-                var vertexApiKey = _configuration["GoogleCloud:Model"];
-                if (!string.IsNullOrEmpty(vertexApiKey))
+                var geminiApiKey = _configuration["Gemini:ApiKey"];
+                if (!string.IsNullOrEmpty(geminiApiKey))
                 {
-                    await _vertexAiService.SaveSymptompAnalysisAsync(diagnosisModel, userIdClaim);
+                    await _geminiAiService.SaveSymptompAnalysisAsync(diagnosisModel, userIdClaim);
                     return;
                 }
                 throw new InvalidOperationException("No LLM API configured.");
@@ -119,10 +108,10 @@ namespace Medix.API.Business.Services.Classification
             try
             {
                 // Prefer Vertex if configured
-                var vertexApiKey = _configuration["GoogleCloud:Model"];
-                if (!string.IsNullOrEmpty(vertexApiKey))
+                var geminiApiKey = _configuration["Gemini:ApiKey"];
+                if (!string.IsNullOrEmpty(geminiApiKey))
                 {
-                    return await _vertexAiService.GetRecommendedDoctorsAsync(possibleConditions, count);
+                    return await _geminiAiService.GetRecommendedDoctorsAsync(possibleConditions, count);
                 }
                 throw new InvalidOperationException("No LLM API configured.");
             }

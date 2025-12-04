@@ -138,6 +138,7 @@ namespace Medix.API.Business.Services.UserManagement
                     Role = roleCode,
                     CreatedAt = user.CreatedAt,
                     AvatarUrl = user.AvatarUrl,
+                    IsProfileCompleted = user.IsProfileCompleted,
                     UserName = user.UserName
                 }
             };
@@ -421,7 +422,8 @@ namespace Medix.API.Business.Services.UserManagement
                         EmailConfirmed = true,
                         CreatedAt = existingUser.CreatedAt,
                         UserName = existingUser.UserName,
-                        IsTemporaryUsername = existingUser.UserName.StartsWith("temp_")
+                        IsTemporaryUsername = existingUser.UserName.StartsWith("temp_"),
+                        IsProfileCompleted=existingUser.IsProfileCompleted
                     }
                 };
         }

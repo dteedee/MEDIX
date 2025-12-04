@@ -5,6 +5,7 @@ import { apiClient } from '../../lib/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { UserRole } from '../../types/common.types';
 import styles from '../../styles/auth/login.module.css';
 
 const GOOGLE_CLIENT_ID = import.meta.env?.VITE_GOOGLE_CLIENT_ID as string | undefined;
@@ -110,6 +111,15 @@ const Login: React.FC = () => {
       localStorage.setItem('currentUser', JSON.stringify(auth.user));
       window.dispatchEvent(new Event('authChanged'));
       
+      // Kiểm tra nếu là patient và chưa hoàn thiện profile
+      // isProfileCompleted có thể là boolean hoặc string từ API
+      const isCompleted = auth.user.isProfileCompleted;
+      if (auth.user.role === UserRole.PATIENT && isCompleted === false) {
+        showToast('Đăng nhập Google thành công! Vui lòng hoàn thiện thông tin hồ sơ để sử dụng đầy đủ các tính năng', 'info');
+        navigate('/complete-profile');
+        return;
+      }
+      
       if (auth.user.isTemporaryUsername) {
         showToast('Đăng nhập Google thành công! Vui lòng cập nhật tên đăng nhập trong trang profile để hoàn thiện tài khoản.', 'success');
       } else {
@@ -161,6 +171,18 @@ const Login: React.FC = () => {
       } else {
         localStorage.removeItem('rememberEmail');
         localStorage.removeItem('rememberPassword');
+      }
+
+      // Kiểm tra nếu là patient và chưa hoàn thiện profile
+      const userData = localStorage.getItem('userData');
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        // Chỉ redirect khi isProfileCompleted rõ ràng là false
+        if (parsedUser.role === UserRole.PATIENT && parsedUser.isProfileCompleted === false) {
+          showToast('Vui lòng hoàn thiện thông tin hồ sơ để sử dụng đầy đủ các tính năng', 'info');
+          navigate('/complete-profile');
+          return;
+        }
       }
 
       showToast('Đăng nhập thành công! Chào mừng bạn đến với MEDIX', 'success');

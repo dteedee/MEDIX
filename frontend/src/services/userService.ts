@@ -17,7 +17,8 @@ export interface UserBasicInfo {
   emergencyContactPhone?: string | null; 
   allergies?: string | null; 
   medicalHistory?: string | null; 
-  bloodTypeCode?: string | null; 
+  bloodTypeCode?: string | null;
+  genderCode?: string | null; // Giới tính (Male/Female/Other)
 }
 
 export interface UpdateUserInfo {
@@ -28,6 +29,7 @@ export interface UpdateUserInfo {
   address?: string;
   dob?: string; // Will be converted to DateOnly on backend
   identificationNumber?: string; // Số CMND/CCCD
+  genderCode?: string; // Giới tính (Male/Female/Other)
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   medicalHistory?: string;
@@ -68,6 +70,12 @@ export const userService = {
         emergencyContactPhone: data.emergencyContactPhone || null
       };
 
+      if (data.identificationNumber !== undefined) {
+        updateDto.identificationNumber = data.identificationNumber;
+      }
+      if (data.genderCode !== undefined) {
+        updateDto.genderCode = data.genderCode;
+      }
       if (data.emergencyContactName !== undefined) {
         updateDto.emergencyContactName = data.emergencyContactName;
       }

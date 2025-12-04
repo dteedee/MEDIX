@@ -26,6 +26,21 @@ interface ExtendedUserInfo extends UserBasicInfo {
   allergies?: string;
 }
 
+// Helper function để hiển thị giới tính
+const getGenderDisplayName = (genderCode: string | null | undefined): string => {
+  if (!genderCode) return 'Chưa cập nhật';
+  switch (genderCode.toLowerCase()) {
+    case 'male':
+      return 'Nam';
+    case 'female':
+      return 'Nữ';
+    case 'other':
+      return 'Khác';
+    default:
+      return genderCode;
+  }
+};
+
 interface ExtendedUpdateUserInfo extends UpdateUserInfo {
   username?: string;
   fullName?: string;
@@ -241,6 +256,7 @@ export const PatientProfile: React.FC = () => {
             imageURL: imageURL, // Ensure imageURL is set
             cccd: res.identificationNumber || (res as any).cccd || patientData.cccd,
             identificationNumber: res.identificationNumber || (res as any).identificationNumber,
+            genderCode: res.genderCode || (res as any).genderCode || patientData.genderCode || null,
             gender: (res as any).gender || patientData.gender || 'male',
             bloodType: (res as any).bloodType || patientData.bloodType || '',
             emergencyContactName: res.emergencyContactName || patientData.emergencyContactName || (res as any).emergencyContactName || '',
@@ -832,7 +848,7 @@ export const PatientProfile: React.FC = () => {
                     Giới tính
                   </label>
                   <div className={styles.inputContainer}>
-                    <input disabled value={data.gender === 'male' ? 'Nam' : data.gender === 'female' ? 'Nữ' : 'Khác'} className={styles.fieldInputDisabled} />
+                    <input disabled value={getGenderDisplayName(data.genderCode)} className={styles.fieldInputDisabled} />
                     <i className="bi bi-lock"></i>
                   </div>
                 </div>

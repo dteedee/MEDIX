@@ -5,6 +5,9 @@ import './styles/public/Toast.css'
 import { App } from './App'
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
+if (!localStorage.getItem('medix-language')) {
+  localStorage.setItem('medix-language', 'vi');
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

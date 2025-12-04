@@ -83,6 +83,7 @@ export const Header: React.FC = () => {
                         location.pathname === '/doctors' || 
                         location.pathname.startsWith('/app/articles') || 
                         location.pathname.startsWith('/articles') ||
+                        location.pathname.startsWith('/doctor/details') ||
                         location.pathname === '/about';
 
     const computeUnread = (list: NotificationDto[], readKeys: Set<string>) =>

@@ -130,6 +130,7 @@ namespace Medix.API.Configurations
             services.AddScoped<IUserPromotionService, UserPromotionService>();
             services.AddScoped<IBackupService, BackupService>();
             services.AddScoped<IGeminiAIService, GeminiAIService>();
+            services.AddScoped<IVertexAIService, VertexAIService>();
             services.AddScoped<IAIChatService, AIChatService>();
             services.AddScoped<IRAGService, RAGService>();
             services.AddScoped<ILLMService, LLMService>();

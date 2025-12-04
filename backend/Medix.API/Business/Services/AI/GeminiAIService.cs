@@ -374,7 +374,7 @@ namespace Medix.API.Business.Services.AI
                 };
             });
 
-            return (await Task.WhenAll(recommendedDoctors)).Where(doc => doc != null).ToList()!;
+            return (await Task.WhenAll(recommendedDoctors ?? [])).Where(doc => doc != null).ToList()!;
         }
 
         public async Task SaveSymptompAnalysisAsync(DiagnosisModel diagnosisModel, string? userIdClaim)
@@ -443,12 +443,12 @@ namespace Medix.API.Business.Services.AI
         }
     }
 
-    internal class MedicineList
+    public class MedicineList
     {
         public List<MedicineDto> List { get; set; } = new List<MedicineDto>();
     }
 
-    internal class DoctorList
+    public class DoctorList
     {
         public List<string> IdList { get; set; } = new List<string>();
     }

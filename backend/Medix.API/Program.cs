@@ -186,22 +186,25 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseSession();
-
-app.UseCors("AllowFrontend");
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseStaticFiles();
 
-app.UseMiddleware<Medix.API.Presentation.Middleware.ExceptionHandlingMiddleware>();
+app.UseRouting();
 
-app.UseHangfireDashboard();
+app.UseSession();
 
-ServiceConfiguration.RegisterHangfireJobs();
+// ??t ?úng tên policy ? ?ây: "AllowAll" ho?c "AllowFrontend"
+app.UseCors("AllowAll");
 
 app.UseAuthentication();
-app.UseMiddleware<MaintenanceModeMiddleware>();
 app.UseAuthorization();
+
+app.UseMiddleware<MaintenanceModeMiddleware>();
 app.UseMiddleware<AuditMiddleware>();
+
+app.UseHangfireDashboard();
+ServiceConfiguration.RegisterHangfireJobs();
 
 app.MapControllers();
 

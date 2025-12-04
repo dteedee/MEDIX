@@ -2,9 +2,7 @@
 using Google.Protobuf.WellKnownTypes;
 using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.AI;
-using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.AIChat;
-using Medix.API.Models.Enums;
 using System.Text;
 using System.Text.Json;
 using Value = Google.Protobuf.WellKnownTypes.Value;
@@ -23,8 +21,7 @@ namespace Medix.API.Business.Services.AI
                         {
                             { "type", Value.ForString("string") },
                             { "description", Value.ForString("Phản hồi thân thiện với người dùng đã được bản địa hóa. " +
-                                "Nội dung này phải chứa 3 khả năng bệnh có khả năng xảy ra cao nhất, mỗi bệnh nằm ở 1 dòng với tỉ lệ phần trăm tương ứng" +
-                                "và tất cả các tuyên bố miễn trừ trách nhiệm.") }
+                                "Nội dung này phải chứa 3 khả năng bệnh có khả năng xảy ra cao nhất, mỗi bệnh nằm ở 1 dòng với tỉ lệ phần trăm tương ứng.") }
                         }
                     })
                 },

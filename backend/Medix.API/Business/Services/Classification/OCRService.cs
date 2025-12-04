@@ -1,6 +1,8 @@
-﻿using Google.Cloud.Vision.V1;
+﻿using Aspose.Pdf;
+using Google.Cloud.Vision.V1;
 using Medix.API.Business.Interfaces.Classification;
-using System.Text.RegularExpressions;
+using System.Text;
+using Image = Google.Cloud.Vision.V1.Image;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -19,8 +21,14 @@ namespace Medix.API.Business.Services.Classification
         {
             try
             {
-                var text = await ExtractTextWithGoogleVisionAsync(file);
-                return text;
+                if (file.ContentType == "application/pdf")
+                {
+                    var pdfText = await ExtractTextFromPdfFileAsync(file);
+                    _logger.LogInformation("Extracted text from PDF file: {Text}", pdfText);
+                    return pdfText;
+                };
+
+                return await ExtractTextFromImageAsync(file);
             }
             catch (Exception ex)
             {
@@ -29,7 +37,57 @@ namespace Medix.API.Business.Services.Classification
             }
         }
 
-        private async Task<string> ExtractTextWithGoogleVisionAsync(IFormFile file)
+        private async Task<string> ExtractTextFromPdfFileAsync(IFormFile file)
+        {
+            var result = new StringBuilder();
+            var tempImagePaths = await GetTempImagesPath(file);
+
+            foreach (var imagePath in tempImagePaths)
+            {
+                var extractedText = await ExtractTextWithGoogleVisionAsync(imagePath);
+                result.AppendLine(extractedText);
+                File.Delete(imagePath); // Clean up temp image file
+            }
+            return result.ToString();
+        }
+
+        private async Task<List<string>> GetTempImagesPath(IFormFile file)
+        {
+            var tempImagePaths = new List<string>();
+
+            var filePath = Path.GetTempFileName();
+            using (var stream = File.Create(filePath))
+            {
+                await file.CopyToAsync(stream);
+            }
+            // Load PDF document from stream
+            var pdfDocument = new Document(filePath);
+            // Iterate through pages
+            for (int pageCount = 1; pageCount <= pdfDocument.Pages.Count; pageCount++)
+            {
+                // Convert each page to an image
+                using var bitmap = pdfDocument.Pages[pageCount].ConvertToPNGMemoryStream();
+                // Save image to temp file
+                var tempImagePath = Path.GetTempFileName() + ".png";
+                using (var fileStream = new FileStream(tempImagePath, FileMode.Create, FileAccess.Write))
+                {
+                    bitmap.CopyTo(fileStream);
+                }
+                tempImagePaths.Add(tempImagePath);
+            }
+            File.Delete(filePath); // Clean up temp PDF file
+            return tempImagePaths;
+        }
+
+        private async Task<string> ExtractTextFromImageAsync(IFormFile file)
+        {
+            var filePath = await GetTempImagePath(file);
+            var extractedText = await ExtractTextWithGoogleVisionAsync(filePath);
+            File.Delete(filePath); // Clean up temp file
+            return extractedText;
+        }
+
+        private async Task<string> GetTempImagePath(IFormFile file)
         {
             var filePath = Path.GetTempFileName();
             using (var stream = File.Create(filePath))
@@ -37,44 +95,52 @@ namespace Medix.API.Business.Services.Classification
                 await file.CopyToAsync(stream);
             }
 
-            return DetectDocumentText(filePath, _configuration["GoogleCloud:ProjectId"] ?? "scenic-outcome-423204-t3");
+            return filePath;
         }
 
-        private static string DetectDocumentText(string imagePath, string projectId)
+        private async Task<string> ExtractTextWithGoogleVisionAsync(string filePath)
         {
-            // 1. Create the client (using the QuotaProject ID from the previous fix)
-            // This ensures proper billing/quota usage.
-            ImageAnnotatorClient client = new ImageAnnotatorClientBuilder
+            return await DetectDocumentText(filePath, _configuration["GoogleCloud:ProjectId"] ?? "scenic-outcome-423204-t3");
+        }
+
+        private async Task<string> DetectDocumentText(string imagePath, string projectId)
+        {
+            ImageAnnotatorClient client = await new ImageAnnotatorClientBuilder
             {
                 QuotaProject = projectId
-            }.Build();
+            }.BuildAsync();
 
-            // 2. Load the image from a local file path
-            Image image = Image.FromFile(imagePath);
+            Image image = await Image.FromFileAsync(imagePath);
 
-            // 3. Call the API for Document Text Detection (Best for long blocks of text)
-            Console.WriteLine("Sending image to Cloud Vision for OCR...");
-            TextAnnotation response = client.DetectDocumentText(image);
+            TextAnnotation response = await client.DetectDocumentTextAsync(image);
 
-            // The FullTextAnnotation contains the complete, contiguous text detected.
             string extractedText = response.Text;
-
-            Console.WriteLine("--- Extracted Text (Full Annotation) ---");
-            Console.WriteLine(extractedText);
-
-            // Optionally, you can also process the text annotations for structure:
-            // This part is useful if you need bounding boxes for each word/line.
-            Console.WriteLine("\n--- Structural Analysis (Pages, Blocks, Words) ---");
-            foreach (var page in response.Pages)
-            {
-                foreach (var block in page.Blocks)
-                {
-                    Console.WriteLine($"  Block Confidence: {block.Confidence:P2}");
-                    // You can access words, symbols, and bounding boxes here
-                }
-            }
-
             return extractedText;
+        }
+
+        public async Task ConvertPdfToImages(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                throw new ArgumentException("Invalid file");
+
+            // Copy IFormFile into a MemoryStream
+            using var memoryStream = new MemoryStream();
+            await file.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            // Load PDF document from stream
+            var pdfDocument = new Document(memoryStream);
+
+            // Iterate through pages
+            for (int pageCount = 1; pageCount <= pdfDocument.Pages.Count; pageCount++)
+            {
+                // Convert each page to an image
+                using var bitmap = pdfDocument.Pages[pageCount].ConvertToPNGMemoryStream();
+
+                // Save image to disk (or return as stream)
+                using var fileStream = new FileStream($"Page_{pageCount}.png", FileMode.Create, FileAccess.Write);
+                bitmap.CopyTo(fileStream);
+            }
         }
     }
 }

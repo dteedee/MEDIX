@@ -2,7 +2,8 @@ export type AIChatMessageType =
   | 'text'
   | 'symptom_analysis'
   | 'symptom_guidance'
-  | 'out_of_scope';
+  | 'out_of_scope'
+  | 'limit_reached';
 
 export interface AIChatMessage {
   id: string;

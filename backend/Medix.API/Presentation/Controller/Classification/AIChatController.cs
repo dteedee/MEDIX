@@ -15,7 +15,6 @@ namespace Medix.API.Presentation.Controller.Classification
     {
         private readonly IAIChatService _aiChatService;
         private readonly ILogger<AIChatController> _logger;
-        private readonly int DailyAccessLimit;
 
         public AIChatController(
             ILogger<AIChatController> logger,
@@ -23,9 +22,6 @@ namespace Medix.API.Presentation.Controller.Classification
         {
             _logger = logger;
             _aiChatService = aIChatService;
-
-            var aiConfig = SystemConfigurationDefaults.Find("AI_DAILY_ACCESS_LIMIT");
-            DailyAccessLimit = aiConfig != null ? int.Parse(aiConfig.ConfigValue) : 5;
         }
 
         [HttpPost("message")]
@@ -34,21 +30,11 @@ namespace Medix.API.Presentation.Controller.Classification
         {
             try
             {
-                var savedConversation = GetSavedConversation(request.ChatToken);
-                var userMessagesCount = savedConversation.Count(c => c.Role == "user");
-
-                if (userMessagesCount >= DailyAccessLimit)
-                {
-                    return BadRequest(new { message = $"Bạn đã đạt đến giới hạn {DailyAccessLimit} tin nhắn AI mỗi ngày. Vui lòng thử lại vào ngày mai." });
-
-                }
-
                 if (string.IsNullOrWhiteSpace(request.Prompt))
                 {
                     return BadRequest(new { message = "Vui lòng nhập câu hỏi" });
                 }
-
-                AddToConversationHistory(request.ChatToken, "user", request.Prompt);
+                
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
                 var response = await _aiChatService.SendMessageAsync(request.Prompt, GetSavedConversation(request.ChatToken), userIdClaim?.Value);
 
@@ -57,6 +43,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     throw new Exception("AI service returned null response");
                 }
 
+                AddToConversationHistory(request.ChatToken, "user", request.Prompt);
                 AddToConversationHistory(request.ChatToken, "assistant", response.Text, response);
                 return Ok(response);
             }

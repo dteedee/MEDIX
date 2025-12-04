@@ -5,6 +5,7 @@ using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.AIChat;
 using Medix.API.Models.Entities;
 using Medix.API.Models.Enums;
+using static Google.Api.ResourceDescriptor.Types;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -15,7 +16,8 @@ namespace Medix.API.Business.Services.Classification
         IRAGService ragService,
         IPatientRepository patientRepository,
         IAISymptomAnalysisRepository aiSymptomAnalysisRepository,
-        IDoctorRepository doctorRepository) : IAIChatService
+        IDoctorRepository doctorRepository,
+        ISystemConfigurationRepository configurationRepository) : IAIChatService
     {
         private readonly ILogger<AIChatService> _logger = logger;
         private readonly ILLMService _llmService = llmService;
@@ -24,22 +26,41 @@ namespace Medix.API.Business.Services.Classification
         private readonly IPatientRepository _patientRepository = patientRepository;
         private readonly IAISymptomAnalysisRepository _aiSymptomAnalysisRepository = aiSymptomAnalysisRepository;
         private readonly IDoctorRepository _doctorRepository = doctorRepository;
+        private readonly ISystemConfigurationRepository _configurationRepository = configurationRepository;
 
         public async Task<ChatResponseDto> SendMessageAsync(string prompt, List<ContentDto> conversationHistory, string? userIdClaim = null)
         {
+            if (await IsDailyLimitReached(conversationHistory))
+            {
+                return new ChatResponseDto
+                {
+                    Text = "Bạn đã đạt đến giới hạn truy cập hàng ngày cho dịch vụ AI. Vui lòng thử lại sau 24 giờ.",
+                    Type = "limit_reached"
+                };
+            }
+
             string? context = null;
 
             if (_llmService.IsHealthRelatedQueryAsync(prompt))
             {
                 context = await _ragService.GetSymptomAnalysisContextAsync(prompt);
             }
-            
+
             var diagnosisModel = await _llmService.GetSymptomAnalysisAsync(context, conversationHistory);
             return await GetResponse(diagnosisModel, userIdClaim);
         }
 
         public async Task<ChatResponseDto> AnalyzeEMRAsync(IFormFile file, List<ContentDto> conversationHistory, string? userIdClaim = null)
         {
+            if (await IsDailyLimitReached(conversationHistory))
+            {
+                return new ChatResponseDto
+                {
+                    Text = "Bạn đã đạt đến giới hạn truy cập hàng ngày cho dịch vụ AI. Vui lòng thử lại sau 24 giờ.",
+                    Type = "limit_reached"
+                };
+            }
+
             var ocrText = await _ocrService.ExtractTextAsync(file);
             if (ocrText == null)
             {
@@ -52,7 +73,7 @@ namespace Medix.API.Business.Services.Classification
                 context = await _ragService.GetSymptomAnalysisContextAsync(ocrText);
             }
 
-            var diagnosisModel =  await _llmService.GetEMRAnalysisAsync(ocrText, context, conversationHistory);
+            var diagnosisModel = await _llmService.GetEMRAnalysisAsync(ocrText, context, conversationHistory);
             return await GetResponse(diagnosisModel, userIdClaim);
         }
 
@@ -107,7 +128,7 @@ namespace Medix.API.Business.Services.Classification
             }
 
             symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Hãy đặt lịch hẹn với bác sĩ chuyên khoa để được tư vấn thêm.";
-            
+
             var idList = await _llmService.GetRecommendedDoctorIdsAsync(diagnosisModel.PossibleConditions, 3, await GetDoctorListString());
             symptompAnalysisResponse.RecommendedDoctors = await GetRecommendedDoctorsAsync(idList);
 
@@ -121,7 +142,7 @@ namespace Medix.API.Business.Services.Classification
 
         private async Task SaveSymptomAnalysisAsync(DiagnosisModel diagnosisModel, string userIdClaim)
         {
-            var patient =  await _patientRepository.GetPatientByUserIdAsync(Guid.Parse(userIdClaim));
+            var patient = await _patientRepository.GetPatientByUserIdAsync(Guid.Parse(userIdClaim));
 
             var aiSymptompAnalysis = new AISymptomAnalysis
             {
@@ -176,6 +197,18 @@ namespace Medix.API.Business.Services.Classification
             });
 
             return (await Task.WhenAll(recommendedDoctors ?? [])).Where(doc => doc != null).ToList()!;
+        }
+
+        private async Task<bool> IsDailyLimitReached(List<ContentDto> history)
+        {
+            var config = await _configurationRepository.GetByKeyAsync("AI_DAILY_ACCESS_LIMIT");
+            if (config != null && int.TryParse(config.ConfigValue, out int dailyLimit))
+            {
+                var todayCount = history.Where(h => h.Role == "assistant").Count();
+                return todayCount >= dailyLimit;
+            }
+            
+            throw new Exception("AI daily access limit configuration is missing or invalid.");
         }
     }
 }

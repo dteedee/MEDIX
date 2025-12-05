@@ -19,10 +19,7 @@ const createGreetingMessage = (): AIChatMessage => ({
 
 const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<AIChatMessage[]>(() => {
-    const history = getChatHistory();
-    return history.length > 0 ? history : [createGreetingMessage()];
-  });
+  const [messages, setMessages] = useState<AIChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);

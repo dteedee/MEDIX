@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../styles/components/AIChatBox.module.css';
-import aiChatService, { SymptomAnalysisResponse, EMRAnalysisResponse } from '../services/aiChatService';
+import aiChatService, { AIChatMessageDto, PromptRequest, SymptomAnalysisResponse } from '../services/aiChatService';
 import { AIChatMessage } from '../types/aiChat';
-import { getChatHistory, saveChatHistory } from '../utils/chatHistory';
+import { useAuth } from '../contexts/AuthContext';
 
 interface AIChatBoxProps {
   isOpen: boolean;
@@ -29,6 +29,66 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const { user, logout } = useAuth();
+
+  const getMessageHistory = (): AIChatMessageDto[] => {
+    const key = "ai_chat_token";
+    const today = new Date().toDateString();
+
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      const parsed = JSON.parse(stored) as { messages: AIChatMessageDto[]; date: string };
+      if (parsed.date === today) {
+        if (parsed.messages && parsed.messages.length > 0) {
+          return parsed.messages;
+        }
+        return [];
+      }
+    }
+
+    localStorage.removeItem(key);
+    return [];
+  }
+
+  const addToMessageHistory = (message: AIChatMessageDto) => {
+    const key = "ai_chat_token";
+    const today = new Date().toDateString();
+
+    const messages = getMessageHistory();
+    messages.push(message);
+
+    localStorage.setItem(key, JSON.stringify({ messages, date: today }));
+  }
+
+  const clearMessageHistory = () => {
+    const key = "ai_chat_token";
+    localStorage.removeItem(key);
+  }
+
+  const getChatHistory = (): AIChatMessage[] => {
+    var chatHistory = getMessageHistory().map(msg => ({
+      id: Date.now().toString() + Math.random().toString(36).substring(2),
+      text: msg.content,
+      sender: msg.role === 'user' ? 'user' as const : 'ai' as const,
+      timestamp: new Date(msg.timestamp) ?? new Date(),
+    }));
+    return chatHistory;
+  }
+
+  useEffect(() => {
+    if (user) {
+      clearMessageHistory();
+      console.log('User logged in, cleared chat history.');
+    }
+
+    let initialMessages = getChatHistory();
+    if (initialMessages.length === 0) {
+      initialMessages = [createGreetingMessage()];
+    }
+
+    setMessages(initialMessages);
+  }, [user]);
+
   const quickReplies = [
     'Khó ngủ',
     'Mệt mỏi',
@@ -44,52 +104,93 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
     }
   }, [messages, isOpen]);
 
-  useEffect(() => {
-    saveChatHistory(messages);
-  }, [messages]);
-
   const handleQuickReply = (text: string) => {
     setInputText(text);
     handleSendMessage(text);
   };
 
   const handleSendMessage = async (text?: string) => {
-    const messageText = text || inputText.trim();
-    if (!messageText && uploadedFiles.length === 0) return;
-
-    if (messageText) {
-      const newUserMessage: AIChatMessage = {
-        id: Date.now().toString(),
-        text: messageText,
-        sender: 'user',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, newUserMessage]);
-      setInputText('');
-    }
-
-    if (uploadedFiles.length > 0) {
-      setIsLoading(true);
-      try {
-        const file = uploadedFiles[0];
-        const response = await aiChatService.uploadAndAnalyzeEMR({
-          file,
-        });
-
-        const aiResponse: AIChatMessage = {
-          id: (Date.now() + 1).toString(),
-          text: response.summary + '\n\n' + response.recommendations.join('\n'),
-          sender: 'ai',
+      const messageText = text || inputText.trim();
+      if (!messageText && uploadedFiles.length === 0) return;
+  
+      let chatHistory = getMessageHistory();
+  
+      // Add user message
+      if (messageText) {
+        const newUserMessage: AIChatMessage = {
+          id: Date.now().toString(),
+          text: messageText,
+          sender: 'user',
           timestamp: new Date(),
-          type: 'emr_analysis',
-          data: response,
         };
-        setMessages(prev => [...prev, aiResponse]);
-        setUploadedFiles([]);
+        setMessages(prev => [...prev, newUserMessage]);
+        setInputText('');
+      }
+  
+      //Handle file uploads
+      if (uploadedFiles.length > 0) {
+        setIsLoading(true);
+        try {
+          const file = uploadedFiles[0];
+          const response = await aiChatService.uploadAndAnalyzeEMR({
+            file, messages: chatHistory
+          });
+          response.timestamp = new Date(response.timestamp);
+          setMessages(prev => [...prev, response]);
+          addToMessageHistory({
+            role: 'assistant',
+            content: response.text,
+            timestamp: new Date(),
+          });
+          setUploadedFiles([]);
+        } catch (error: any) {
+          let text = 'Xin lỗi, có lỗi xảy ra khi phân tích EMR. Vui lòng thử lại sau.';
+  
+          if (error.response?.status === 400 && error.response.data?.message) {
+            // ✅ Use the message returned by your C# API
+            text = error.response.data.message;
+          }
+  
+          const errorMessage: AIChatMessage = {
+            id: (Date.now() + 1).toString(),
+            text,
+            sender: 'ai',
+            timestamp: new Date(),
+          };
+  
+          setMessages(prev => [...prev, errorMessage]);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+  
+      setIsLoading(true);
+  
+      try {
+        const promptRequest: PromptRequest = {
+          prompt: messageText,
+          messages: chatHistory,
+        };
+  
+        const response = await aiChatService.sendMessage(promptRequest);
+        response.timestamp = new Date(response.timestamp);
+        setMessages(prev => [...prev, response]);
+  
+        addToMessageHistory({
+          role: 'user',
+          content: messageText,
+          timestamp: new Date(),
+        });
+        addToMessageHistory({
+          role: 'assistant',
+          content: response.text,
+          timestamp: new Date(),
+        });
       } catch (error: any) {
         const errorMessage: AIChatMessage = {
           id: (Date.now() + 1).toString(),
-          text: 'Xin lỗi, có lỗi xảy ra khi phân tích EMR. Vui lòng thử lại sau.',
+          text: 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.',
           sender: 'ai',
           timestamp: new Date(),
         };
@@ -97,88 +198,7 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
       } finally {
         setIsLoading(false);
       }
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const symptomKeywords = ['đau', 'mệt', 'sốt', 'ho', 'khó', 'buồn', 'chóng', 'nóng', 'ngứa', 'triệu chứng'];
-      const isSymptomQuery = symptomKeywords.some(keyword => messageText.toLowerCase().includes(keyword));
-
-      if (isSymptomQuery) {
-        const symptoms = messageText.split(/[,\n]/).map(s => s.trim()).filter(s => s.length > 0);
-        
-        const analysisResponse = await aiChatService.analyzeSymptoms({
-          symptoms: symptoms.slice(0, 10),
-          additionalInfo: messageText,
-        });
-
-        const severityText = analysisResponse.severity === 'mild' ? 'nhẹ' : 
-                            analysisResponse.severity === 'moderate' ? 'vừa' : 'nặng';
-        
-        let responseText = `**Đánh giá mức độ: ${severityText.toUpperCase()}**\n\n`;
-        responseText += `${analysisResponse.overview}\n\n`;
-        responseText += `**Các khả năng chẩn đoán:**\n`;
-        analysisResponse.possibleConditions.forEach((condition, index) => {
-          responseText += `${index + 1}. ${condition.condition} (${condition.probability}%)\n   ${condition.description}\n`;
-        });
-
-        if (analysisResponse.homeTreatment) {
-          responseText += `\n**Hướng dẫn điều trị tại nhà:**\n`;
-          analysisResponse.homeTreatment.instructions.forEach(instruction => {
-            responseText += `• ${instruction}\n`;
-          });
-        }
-
-        if (analysisResponse.recommendedDoctors && analysisResponse.recommendedDoctors.length > 0) {
-          responseText += `\n**Bác sĩ được gợi ý:**\n`;
-          analysisResponse.recommendedDoctors.slice(0, 3).forEach((doctor, index) => {
-            responseText += `${index + 1}. ${doctor.name} - ${doctor.specialization}\n`;
-            responseText += `   Đánh giá: ${doctor.rating}/5.0 | Kinh nghiệm: ${doctor.experience} năm\n`;
-          });
-        }
-
-        const aiResponse: AIChatMessage = {
-          id: (Date.now() + 1).toString(),
-          text: responseText,
-          sender: 'ai',
-          timestamp: new Date(),
-          type: 'symptom_analysis',
-          data: analysisResponse,
-        };
-        setMessages(prev => [...prev, aiResponse]);
-      } else {
-        const conversationHistory = messages.map(msg => ({
-          text: msg.text,
-          sender: msg.sender,
-          type: msg.type,
-        }));
-
-        const response = await aiChatService.sendMessage(messageText, conversationHistory);
-        
-        const aiResponse: AIChatMessage = {
-          id: response.id || (Date.now() + 1).toString(),
-          text: response.text,
-          sender: 'ai',
-          timestamp: new Date(response.timestamp || new Date()),
-          type: response.type as any,
-          data: response.data,
-        };
-        setMessages(prev => [...prev, aiResponse]);
-      }
-    } catch (error: any) {
-      const errorMessage: AIChatMessage = {
-        id: (Date.now() + 1).toString(),
-        text: 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.',
-        sender: 'ai',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -214,14 +234,13 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
   const renderSymptomAnalysis = (data: SymptomAnalysisResponse) => {
     return (
       <div className={styles.symptomAnalysis}>
-        {data.possibleConditions && data.possibleConditions.length > 0 && (
+        {data.medicines && data.medicines.length > 0 && (
           <div className={styles.conditionsList}>
-            <h4>Khả năng chẩn đoán:</h4>
-            {data.possibleConditions.map((condition, index) => (
+            <h4>Các loại thuốc có thể sử dụng:</h4>
+            {data.medicines.map((medicine, index) => (
               <div key={index} className={styles.conditionItem}>
-                <span className={styles.conditionName}>{condition.condition}</span>
-                <span className={styles.conditionProbability}>{condition.probability}%</span>
-                <p className={styles.conditionDescription}>{condition.description}</p>
+                <span className={styles.conditionName}>{medicine.name}</span>
+                <p className={styles.conditionDescription}>{medicine.instructions}</p>
               </div>
             ))}
           </div>
@@ -242,23 +261,6 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
     );
   };
 
-  const renderEMRAnalysis = (data: EMRAnalysisResponse) => {
-    return (
-      <div className={styles.emrAnalysis}>
-        {data.extractedData.diagnosis && data.extractedData.diagnosis.length > 0 && (
-          <div className={styles.emrSection}>
-            <strong>Chẩn đoán:</strong> {data.extractedData.diagnosis.join(', ')}
-          </div>
-        )}
-        {data.extractedData.medications && data.extractedData.medications.length > 0 && (
-          <div className={styles.emrSection}>
-            <strong>Thuốc:</strong> {data.extractedData.medications.join(', ')}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -267,9 +269,9 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
         <div className={styles.chatboxHeader}>
           <div className={styles.headerLeft}>
             <div className={styles.avatarContainer}>
-              <img 
-                src="/images/medix-logo-mirrored.jpg" 
-                alt="MEDIX" 
+              <img
+                src="/images/medix-logo-mirrored.jpg"
+                alt="MEDIX"
                 className={styles.avatar}
               />
               <div className={styles.statusIndicator}></div>
@@ -280,8 +282,8 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
             </div>
           </div>
           <div className={styles.headerActions}>
-            <button 
-              className={styles.expandButton} 
+            <button
+              className={styles.expandButton}
               onClick={() => navigate('/ai-chat')}
               title="Phóng to"
             >
@@ -306,9 +308,9 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
               className={`${styles.message} ${message.sender === 'user' ? styles.userMessage : styles.aiMessage}`}
             >
               {message.sender === 'ai' && (
-                <img 
-                  src="/images/medix-logo-mirrored.jpg" 
-                  alt="MEDIX" 
+                <img
+                  src="/images/medix-logo-mirrored.jpg"
+                  alt="MEDIX"
                   className={styles.messageAvatar}
                 />
               )}
@@ -317,11 +319,6 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
                 {message.data && message.type === 'symptom_analysis' && (
                   <div className={styles.messageData}>
                     {renderSymptomAnalysis(message.data)}
-                  </div>
-                )}
-                {message.data && message.type === 'emr_analysis' && (
-                  <div className={styles.messageData}>
-                    {renderEMRAnalysis(message.data)}
                   </div>
                 )}
                 <div className={styles.messageTime}>
@@ -333,9 +330,9 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
 
           {isLoading && (
             <div className={`${styles.message} ${styles.aiMessage}`}>
-              <img 
-                src="/images/medix-logo-mirrored.jpg" 
-                alt="MEDIX" 
+              <img
+                src="/images/medix-logo-mirrored.jpg"
+                alt="MEDIX"
                 className={styles.messageAvatar}
               />
               <div className={styles.messageBubble}>
@@ -356,7 +353,7 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
             {uploadedFiles.map((file, index) => (
               <div key={index} className={styles.fileItem}>
                 <span className={styles.fileName}>{file.name}</span>
-                <button 
+                <button
                   className={styles.removeFileButton}
                   onClick={() => removeFile(index)}
                 >
@@ -411,8 +408,8 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
             className={styles.sendButton}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>

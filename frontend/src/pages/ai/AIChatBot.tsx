@@ -34,6 +34,12 @@ export const AIChatBot: React.FC = () => {
     'Buồn nôn',
   ];
 
+  useEffect(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, [messages]);
+
   const getMessageHistory = (): AIChatMessageDto[] => {
     const key = "ai_chat_token";
     const today = new Date().toDateString();
@@ -300,12 +306,6 @@ export const AIChatBot: React.FC = () => {
                   {renderSymptomAnalysis(message.data)}
                 </div>
               )}
-              {/*
-              {message.data && message.type === 'emr_analysis' && (
-                <div className={styles.messageData}>
-                  {renderEMRAnalysis(message.data)}
-                </div>
-              )} */}
               <div className={styles.messageTime}>
                 {message.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
               </div>

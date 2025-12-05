@@ -107,7 +107,7 @@ namespace Medix.API.Presentation.Controller.Classification
 
         [HttpGet("top/performance")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetTopDoctorsByPerformance([FromQuery] double ratingWeight = 0.7, [FromQuery] double successWeight = 0.3)
+        public async Task<IActionResult> GetTopDoctorsByPerformance([FromQuery] double ratingWeight = 0.6, [FromQuery] double successWeight = 0.4)
         {
             try
             {

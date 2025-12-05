@@ -66,7 +66,7 @@ export default function DoctorEvaluation({
   const loadPerformanceData = async () => {
     try {
       setLoading(true);
-      const data = await DoctorService.getTopDoctorsByPerformance(0.7, 0.3);
+      const data = await DoctorService.getTopDoctorsByPerformance(0.6, 0.4);
       setPerformanceData(data);
     } catch (error) {
       showToast('Không thể tải dữ liệu hiệu suất bác sĩ', 'error');

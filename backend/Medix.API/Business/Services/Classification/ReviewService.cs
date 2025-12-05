@@ -203,7 +203,7 @@ namespace Medix.API.Business.Services.Classification
             return result;
         }
 
-        public Task<List<TopDoctorPerformanceDto>> GetTopDoctorsByPerformanceAsync(int count = 10, double ratingWeight = 0.7, double successWeight = 0.3)
+        public Task<List<TopDoctorPerformanceDto>> GetTopDoctorsByPerformanceAsync(int count = 10, double ratingWeight = 0.6, double successWeight = 0.4)
         {
             throw new NotImplementedException();
         }

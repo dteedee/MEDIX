@@ -118,7 +118,7 @@ namespace Medix.API.Presentation.Controllers
 
             if (wallet != null && wallet.Balance < dto.TotalAmount)
             {
-                return BadRequest(new { message = "Insufficient wallet balance" });
+                return BadRequest(new { message = "Tài khoản của quý khách không đủ tiền" });
             }
             var WalletTransaction = new WalletTransactionDto
             {

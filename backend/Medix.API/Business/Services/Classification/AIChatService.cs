@@ -28,7 +28,7 @@ namespace Medix.API.Business.Services.Classification
         private readonly IDoctorRepository _doctorRepository = doctorRepository;
         private readonly ISystemConfigurationRepository _configurationRepository = configurationRepository;
 
-        public async Task<ChatResponseDto> SendMessageAsync(string prompt, List<ContentDto> conversationHistory, string? userIdClaim = null)
+        public async Task<ChatResponseDto> SendMessageAsync(string prompt, List<AIChatMessageDto> conversationHistory, string? userIdClaim = null)
         {
             if (await IsDailyLimitReached(conversationHistory))
             {
@@ -50,7 +50,7 @@ namespace Medix.API.Business.Services.Classification
             return await GetResponse(diagnosisModel, userIdClaim);
         }
 
-        public async Task<ChatResponseDto> AnalyzeEMRAsync(IFormFile file, List<ContentDto> conversationHistory, string? userIdClaim = null)
+        public async Task<ChatResponseDto> AnalyzeEMRAsync(IFormFile file, List<AIChatMessageDto> conversationHistory, string? userIdClaim = null)
         {
             if (await IsDailyLimitReached(conversationHistory))
             {
@@ -199,7 +199,7 @@ namespace Medix.API.Business.Services.Classification
             return (await Task.WhenAll(recommendedDoctors ?? [])).Where(doc => doc != null).ToList()!;
         }
 
-        private async Task<bool> IsDailyLimitReached(List<ContentDto> history)
+        private async Task<bool> IsDailyLimitReached(List<AIChatMessageDto> history)
         {
             var config = await _configurationRepository.GetByKeyAsync("AI_DAILY_ACCESS_LIMIT");
             if (config != null && int.TryParse(config.ConfigValue, out int dailyLimit))

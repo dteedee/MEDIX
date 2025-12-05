@@ -182,17 +182,6 @@ class ApiClient {
     });
   }
 
-  public postMultipartWithCredentials<T = any>(url: string, formData: FormData): Promise<AxiosResponse<T>> {
-    return this.client.post<T>(url, formData, {
-      headers: {
-        // Let the browser set Content-Type with boundary
-        'Content-Type': undefined,
-      },
-      withCredentials: true, // ✅ include cookies/credentials
-    });
-  }
-
-
   public put<T = any>(url: string, data?: any, config?: any): Promise<AxiosResponse<T>> {
     return this.client.put<T>(url, data, config);
   }

@@ -16,7 +16,7 @@ namespace Medix.API.Business.Services.Classification
         private readonly IGeminiAIService _geminiAiService = geminiAIService;
         private readonly IVertexAIService _vertexAiService = vertexAIService;
 
-        public async Task<DiagnosisModel> GetSymptomAnalysisAsync(string prompt, string? context, List<ContentDto> conversationHistory)
+        public async Task<DiagnosisModel> GetSymptomAnalysisAsync(string prompt, string? context, List<AIChatMessageDto> conversationHistory)
         {
             // Prefer Vertex if configured
             try
@@ -49,7 +49,7 @@ namespace Medix.API.Business.Services.Classification
             throw new InvalidOperationException("No LLM API configured.");
         }
 
-        public async Task<DiagnosisModel> GetEMRAnalysisAsync(string emrText, string? context, List<ContentDto> conversationHistory)
+        public async Task<DiagnosisModel> GetEMRAnalysisAsync(string emrText, string? context, List<AIChatMessageDto> conversationHistory)
         {
             try
             {

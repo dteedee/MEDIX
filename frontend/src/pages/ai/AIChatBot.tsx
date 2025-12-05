@@ -2,7 +2,7 @@ import { AIChatMessage } from "../../types/aiChat";
 import { useNavigate } from 'react-router-dom';
 import styles from '../../styles/pages/AIChatBot.module.css';
 import { useEffect, useRef, useState } from "react";
-import aiChatService, { PromptRequest, SymptomAnalysisResponse } from "../../services/aiChatService";
+import aiChatService, { AIChatMessageDto, PromptRequest, SymptomAnalysisResponse } from "../../services/aiChatService";
 import { useAuth } from "../../contexts/AuthContext";
 
 const createGreetingMessage = (): AIChatMessage => ({
@@ -34,75 +34,60 @@ export const AIChatBot: React.FC = () => {
     'Buồn nôn',
   ];
 
-  const [chatToken, setChatToken] = useState<string>("");
-
-  const getNewChatToken = (): string => {
-    // Generate a new token every time the page loads
-    let token: string;
-
-    if (crypto.randomUUID) {
-      token = crypto.randomUUID(); // modern browsers
-    } else {
-      // fallback for older browsers
-      token = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-        const r = (Math.random() * 16) | 0;
-        const v = c === "x" ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-      });
-    }
-
-    return token;
-  }
-
-  const initializeChatToken = (): string => {
-    if (user) {
-      return getNewChatToken();
-    }
-
+  const getMessageHistory = (): AIChatMessageDto[] => {
     const key = "ai_chat_token";
     const today = new Date().toDateString();
 
     const stored = localStorage.getItem(key);
     if (stored) {
-      const parsed = JSON.parse(stored) as { value: string; date: string };
+      const parsed = JSON.parse(stored) as { messages: AIChatMessageDto[]; date: string };
       if (parsed.date === today) {
-        // ✅ Same day → reuse token
-        return parsed.value;
+        return parsed.messages;
       }
     }
 
-    // ❌ No token yet or different day → generate new token
-    const newToken = getNewChatToken();
-    localStorage.setItem(key, JSON.stringify({ value: newToken, date: today }));
-    return newToken;
+    localStorage.removeItem(key);
+    return [];
   }
 
-  const getChatHistory = async (token: string) => {
-    try {
-      const history = await aiChatService.getChatHistory(token);
-      if (!history || history.length === 0) {
-        // First time chat - add greeting message
-        setMessages([createGreetingMessage()]);
-      } else {
-        var chatHistory = history.map(msg => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        }));
-        setMessages(chatHistory);
-      }
-    } catch (error) {
-      console.error('Error fetching chat history:', error);
-      setMessages([createGreetingMessage()]);
-    }
+  const addToMessageHistory = (message: AIChatMessageDto) => {
+    const key = "ai_chat_token";
+    const today = new Date().toDateString();
+
+    const messages = getMessageHistory();
+    messages.push(message);
+
+    localStorage.setItem(key, JSON.stringify({ messages, date: today }));
+  }
+
+  const clearMessageHistory = () => {
+    const key = "ai_chat_token";
+    localStorage.removeItem(key);
+  }
+
+  const getChatHistory = (): AIChatMessage[] => {
+    var chatHistory = getMessageHistory().map(msg => ({
+      id: Date.now().toString() + Math.random().toString(36).substring(2),
+      text: msg.content,
+      sender: msg.role === 'user' ? 'user' as const : 'ai' as const,
+      timestamp: new Date(msg.timestamp) ?? new Date(),
+    }));
+    return chatHistory;
   }
 
   useEffect(() => {
-    (async () => {
-      const token = initializeChatToken();
-      setChatToken(token);
-      await getChatHistory(token);
-    })();
-  }, []);
+    if (user) {
+      clearMessageHistory();
+      console.log('User logged in, cleared chat history.');
+    }
+
+    let initialMessages = getChatHistory();
+    if (initialMessages.length === 0) {
+      initialMessages = [createGreetingMessage()];
+    }
+
+    setMessages(initialMessages);
+  }, [user]);
 
   const formatMessage = (text: string): string => {
     // Format markdown-like syntax
@@ -122,6 +107,8 @@ export const AIChatBot: React.FC = () => {
     const messageText = text || inputText.trim();
     if (!messageText && uploadedFiles.length === 0) return;
 
+    let chatHistory = getMessageHistory();
+
     // Add user message
     if (messageText) {
       const newUserMessage: AIChatMessage = {
@@ -140,11 +127,15 @@ export const AIChatBot: React.FC = () => {
       try {
         const file = uploadedFiles[0];
         const response = await aiChatService.uploadAndAnalyzeEMR({
-          file,
-          chatToken,
+          file, messages: chatHistory
         });
         response.timestamp = new Date(response.timestamp);
         setMessages(prev => [...prev, response]);
+        addToMessageHistory({
+          role: 'assistant',
+          content: response.text,
+          timestamp: new Date(),
+        });
         setUploadedFiles([]);
       } catch (error: any) {
         let text = 'Xin lỗi, có lỗi xảy ra khi phân tích EMR. Vui lòng thử lại sau.';
@@ -173,12 +164,23 @@ export const AIChatBot: React.FC = () => {
     try {
       const promptRequest: PromptRequest = {
         prompt: messageText,
-        chatToken: chatToken,
+        messages: chatHistory,
       };
 
       const response = await aiChatService.sendMessage(promptRequest);
       response.timestamp = new Date(response.timestamp);
       setMessages(prev => [...prev, response]);
+
+      addToMessageHistory({
+        role: 'user',
+        content: messageText,
+        timestamp: new Date(),
+      });
+      addToMessageHistory({
+        role: 'assistant',
+        content: response.text,
+        timestamp: new Date(),
+      });
     } catch (error: any) {
       const errorMessage: AIChatMessage = {
         id: (Date.now() + 1).toString(),

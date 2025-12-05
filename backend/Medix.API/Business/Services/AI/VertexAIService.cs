@@ -20,8 +20,8 @@ namespace Medix.API.Business.Services.AI
                         Fields =
                         {
                             { "type", Value.ForString("string") },
-                            { "description", Value.ForString("Phản hồi thân thiện với người dùng đã được bản địa hóa. " +
-                                "Nội dung này phải chứa 3 khả năng bệnh có khả năng xảy ra cao nhất, mỗi bệnh nằm ở 1 dòng với tỉ lệ phần trăm tương ứng.") }
+                            { "description", Value.ForString("Đưa ra phản hồi tự nhiên, bao gồm chẩn đoán/câu hỏi tiếp theo. " +
+                                    "Phản hồi phải đi kèm với 3 tình trạng có khả năng xảy ra cao nhất và tỉ lệ phần trăm tương ứng.") }
                         }
                     })
                 },
@@ -235,8 +235,8 @@ namespace Medix.API.Business.Services.AI
         });
 
         private static readonly string SymptomAnalsysisInstructionText =
-            "Bạn là một chuyên gia y tế ảo được thiết kế để giúp người dùng phân tích các triệu chứng sức khỏe của họ bằng Tiếng Việt. " +
-            "Dựa trên các triệu chứng được cung cấp, hãy đánh giá mức độ nghiêm trọng và đưa ra các tình trạng y tế có thể xảy ra. " +
+            "Bạn là trợ lý hỗ trợ sức khỏe chuyên biệt. MỤC ĐÍCH DUY NHẤT của bạn là đưa ra chẩn đoán phân biệt hoặc trả lời các câu hỏi liên quan đến triệu chứng, " +
+                "bệnh tật và các khái niệm sức khỏe dựa trên dữ liệu đào tạo chuyên môn của bạn." +
             "Cung cấp hành động được đề xuất và điểm số độ tin cậy cho phân tích của bạn. " +
             "Nếu các triệu chứng không liên quan đến sức khỏe, hãy từ chối yêu cầu một cách lịch sự. " +
             "Trả lời chỉ với một đối tượng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
@@ -309,7 +309,7 @@ namespace Medix.API.Business.Services.AI
             return generatedText;
         }
 
-        public async Task<DiagnosisModel> GetSymptompAnalysisAsync(string prompt, string? context, List<ContentDto> history)
+        public async Task<DiagnosisModel> GetSymptompAnalysisAsync(string prompt, string? context, List<AIChatMessageDto> history)
         {
             var systemInstruction = GetSymptomInstruction(context);
             var contents = GetConversationHistory(history);
@@ -329,7 +329,7 @@ namespace Medix.API.Business.Services.AI
             return AIResponseParser.ParseJson(responseText);
         }
 
-        public async Task<DiagnosisModel> GetEMRAnalysisAsync(string emrText, string? context, List<ContentDto> history)
+        public async Task<DiagnosisModel> GetEMRAnalysisAsync(string emrText, string? context, List<AIChatMessageDto> history)
         {
             var systemInstruction = GetEMRAnalysisInstruction(context);
             var contents = GetConversationHistory(history);
@@ -394,7 +394,7 @@ namespace Medix.API.Business.Services.AI
             return doctorIds?.IdList ?? [];
         }
 
-        private List<Content> GetConversationHistory(List<ContentDto> history)
+        private List<Content> GetConversationHistory(List<AIChatMessageDto> history)
         {
             var conversationHistory = new List<Content>();
             foreach (var item in history)

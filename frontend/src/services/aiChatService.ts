@@ -1,14 +1,20 @@
 import { apiClient } from "../lib/apiClient";
 import { AIChatMessage } from "../types/aiChat";
 
+export interface AIChatMessageDto{
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
+
 export interface PromptRequest {
-  chatToken?: string;
   prompt: string;
+  messages: AIChatMessageDto[];
 }
 
 export interface EMRUploadRequest {
   file: File;
-  chatToken?: string;
+  messages: AIChatMessageDto[];
 }
 
 export interface SymptomAnalysisResponse {
@@ -36,19 +42,6 @@ class AIChatService {
     const response = await apiClient.post<AIChatMessage>(
       '/ai-chat/message',
       request,
-      {
-        withCredentials: true
-      }
-    );
-    return response.data;
-  }
-
-  async getChatHistory(chatToken: string): Promise<AIChatMessage[]> {
-    console.log('Fetching chat history for token:', chatToken);
-    const response = await apiClient.get<AIChatMessage[]>(
-      `/ai-chat/conversation-history/${chatToken}`, {
-      withCredentials: true // <-- this is the Axios equivalent of credentials: "include"
-    }
     );
     return response.data;
   }
@@ -56,11 +49,11 @@ class AIChatService {
   async uploadAndAnalyzeEMR(request: EMRUploadRequest): Promise<AIChatMessage> {
     const formData = new FormData();
     formData.append('file', request.file);
-    if (request.chatToken) {
-      formData.append('chatToken', JSON.stringify(request.chatToken));
+    if (request.messages && request.messages.length > 0) {
+      formData.append('messages', JSON.stringify(request.messages));
     }
 
-    const response = await apiClient.postMultipartWithCredentials<AIChatMessage>(
+    const response = await apiClient.postMultipart<AIChatMessage>(
       '/ai-chat/analyze-emr',
       formData,
     );

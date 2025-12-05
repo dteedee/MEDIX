@@ -42,7 +42,10 @@ export const AIChatBot: React.FC = () => {
     if (stored) {
       const parsed = JSON.parse(stored) as { messages: AIChatMessageDto[]; date: string };
       if (parsed.date === today) {
-        return parsed.messages;
+        if (parsed.messages && parsed.messages.length > 0) {
+          return parsed.messages;
+        }
+        return [];
       }
     }
 

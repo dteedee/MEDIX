@@ -21,7 +21,8 @@ namespace Medix.API.Business.Services.AI
                         {
                             { "type", Value.ForString("string") },
                             { "description", Value.ForString("Đưa ra phản hồi tự nhiên, bao gồm chẩn đoán/câu hỏi tiếp theo. " +
-                                    "Phản hồi phải đi kèm với 3 tình trạng có khả năng xảy ra cao nhất và tỉ lệ phần trăm tương ứng.") }
+                                "Phản hồi phải đi kèm với 3 tình trạng có khả năng xảy ra cao nhất và tỉ lệ phần trăm tương ứng, " +
+                                "mỗi khả năng nằm trên 1 dòng.") }
                         }
                     })
                 },

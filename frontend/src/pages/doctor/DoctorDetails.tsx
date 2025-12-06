@@ -117,6 +117,7 @@ function DoctorDetails() {
     const [isLoadingPromotions, setIsLoadingPromotions] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] = useState(false);
 
     const { username } = useParams();
     const [searchParams] = useSearchParams();
@@ -256,6 +257,11 @@ function DoctorDetails() {
             let errorMessage = 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
             if (error.response?.data?.message) {
                 errorMessage = error.response.data.message;
+                // Kiểm tra nếu lỗi là không đủ tiền
+                if (errorMessage === 'Tài khoản của quý khách không đủ tiền') {
+                    setShowInsufficientBalanceModal(true);
+                    return;
+                }
             } else if (error.response?.status === 400) {
                 errorMessage = 'Thông tin đặt lịch không hợp lệ. Vui lòng kiểm tra lại.';
             } else if (error.response?.status === 401) {
@@ -1948,6 +1954,55 @@ function DoctorDetails() {
                             >
                                 <i className="bi bi-calendar2-check"></i>
                                 Xem lịch hẹn của tôi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {showInsufficientBalanceModal && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.successModal}>
+                        <button 
+                            className={styles.successCloseBtn}
+                            onClick={() => {
+                                setShowInsufficientBalanceModal(false);
+                                setIsCreatingPayment(false);
+                            }}
+                        >
+                            <i className="bi bi-x-lg"></i>
+                        </button>
+                        <div className={styles.successIcon} style={{ color: '#dc3545' }}>
+                            <i className="bi bi-exclamation-circle-fill"></i>
+                        </div>
+                        <h2>Số dư không đủ!</h2>
+                        <p>Tài khoản của quý khách không đủ tiền để thực hiện giao dịch này.</p>
+                        <div className={styles.appointmentSummary}>
+                            <div className={styles.summaryItem}>
+                                <i className="bi bi-cash-stack"></i>
+                                <span>Số tiền cần thanh toán: {calculateFinalPrice().toLocaleString('vi-VN')}đ</span>
+                            </div>
+                        </div>
+                        <p className={styles.emailNote}>
+                            <i className="bi bi-info-circle"></i>
+                            Vui lòng nạp thêm tiền vào ví để tiếp tục đặt lịch
+                        </p>
+                        <div className={styles.modalActions}>
+                            <button 
+                                className={styles.viewAppointmentsBtn}
+                                onClick={() => navigate('/app/patient/finance')}
+                            >
+                                <i className="bi bi-wallet2"></i>
+                                Nạp tiền ngay
+                            </button>
+                            <button 
+                                className={styles.btnCancel}
+                                onClick={() => {
+                                    setShowInsufficientBalanceModal(false);
+                                    setIsCreatingPayment(false);
+                                }}
+                                style={{ marginTop: '12px' }}
+                            >
+                                Đóng
                             </button>
                         </div>
                     </div>

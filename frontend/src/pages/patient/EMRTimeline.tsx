@@ -432,7 +432,7 @@ export default function EMRTimeline() {
                                         <h3>Thông tin Y tế</h3>
                                         <div className={styles.infoItem}>
                                             <span className={styles.infoLabel}>Mã số EMR</span>
-                                            <span className={styles.infoValue}>{basicInfo?.id || 'N/A'}</span>
+                                            <span className={styles.infoValue}>{basicInfo?.medicalRecordNumber || 'N/A'}</span>
                                         </div>
                                         <div className={styles.infoItem}>
                                             <span className={styles.infoLabel}>Ngày sinh</span>

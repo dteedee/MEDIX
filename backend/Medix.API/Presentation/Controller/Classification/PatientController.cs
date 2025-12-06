@@ -46,11 +46,14 @@ namespace Medix.API.Presentation.Controller.Classification
                     patient.User.IdentificationNumber,
                     patient.User.Address,
                     Email = patient.User.Email.ToLower(),
+                    patient.User.GenderCode,
                     patient.User.PhoneNumber,
                     patient.EmergencyContactName,
                     patient.EmergencyContactPhone,
+                    patient.MedicalRecordNumber,
+          
                     Dob = patient.User.DateOfBirth?.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
-                    patient.User.GenderCode,
+                 
                     patient.BloodTypeCode,
                     patient.Allergies
                 });

@@ -13,6 +13,7 @@ export interface BasicEMRInfo{
   bloodTypeCode: string;
   allergies: string;
   emrNumber?: string;
+  medicalRecordNumber?: string;
 }
 export interface PatientHealthReminderDto {
   id?: string;
@@ -27,4 +28,5 @@ export interface PatientHealthReminderDto {
   completedAt?: string;
   relatedAppointmentId?: string;
   createdAt?: string;
+
 }

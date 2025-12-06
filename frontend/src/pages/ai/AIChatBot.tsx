@@ -115,8 +115,6 @@ export const AIChatBot: React.FC = () => {
     const messageText = text || inputText.trim();
     if (!messageText && uploadedFiles.length === 0) return;
 
-    let chatHistory = getMessageHistory();
-
     // Add user message
     if (messageText) {
       const newUserMessage: AIChatMessage = {
@@ -247,16 +245,27 @@ export const AIChatBot: React.FC = () => {
             ))}
           </div>
         )}
-        {data.recommendedDoctors && data.recommendedDoctors.length > 0 && (
+        {data.recommendedDoctors && data.recommendedDoctors.length > 0 ? (
           <div className={styles.doctorsList}>
             <h4>Bác sĩ được gợi ý:</h4>
             {data.recommendedDoctors.map((doctor, index) => (
-              <div key={index} className={styles.doctorItem}>
-                <span className={styles.doctorName}>{doctor.name}</span>
-                <span className={styles.doctorSpecialty}>{doctor.specialization}</span>
-                <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
-              </div>
+              <>
+                <a href={`/doctor/details/${doctor.id}`} target="_blank" rel="noopener noreferrer">
+                  <div key={index} className={styles.doctorItem}>
+                    <span className={styles.doctorName}>{doctor.name}</span>
+                    <span className={styles.doctorSpecialty}>Chuyên khoa: {doctor.specialization}</span>
+                    <span className={styles.doctorSpecialty}>Học vị: {doctor.education}</span>
+                    <span className={styles.doctorSpecialty}>Giá khám: {doctor.consultationFee} VND</span>
+                    <span className={styles.doctorSpecialty}>Số năm kinh nghiệm: {doctor.experience}</span>
+                    <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
+                  </div>
+                </a>
+              </>
             ))}
+          </div>
+        ) : (
+          <div className={styles.doctorsList}>
+            <p>Không có bác sĩ nào được gợi ý dựa trên phân tích triệu chứng.</p>
           </div>
         )}
       </div>
@@ -269,11 +278,18 @@ export const AIChatBot: React.FC = () => {
         {data && data.length > 0 && (
           <div className={styles.doctorsList}>
             {data.map((doctor, index) => (
-              <div key={index} className={styles.doctorItem}>
-                <span className={styles.doctorName}>{doctor.name}</span>
-                <span className={styles.doctorSpecialty}>{doctor.specialization}</span>
-                <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
-              </div>
+              <>
+                <a href={`/doctor/details/${doctor.id}`} target="_blank" rel="noopener noreferrer">
+                  <div key={index} className={styles.doctorItem}>
+                    <span className={styles.doctorName}>{doctor.name}</span>
+                    <span className={styles.doctorSpecialty}>Chuyên khoa: {doctor.specialization}</span>
+                    <span className={styles.doctorSpecialty}>Học vị: {doctor.education}</span>
+                    <span className={styles.doctorSpecialty}>Giá khám: {doctor.consultationFee} VND</span>
+                    <span className={styles.doctorSpecialty}>Số năm kinh nghiệm: {doctor.experience}</span>
+                    <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
+                  </div>
+                </a>
+              </>
             ))}
           </div>
         )}
@@ -287,16 +303,21 @@ export const AIChatBot: React.FC = () => {
         {data && data.length > 0 && (
           <div className={styles.doctorsList}>
             {data.map((article) => (
-              <div key={article.id} className={styles.doctorItem}>
-                <span className={styles.doctorName}>{article.title}</span>
-                <span className={styles.doctorSpecialty}>{article.summary}</span>
-              </div>
+              <>
+                <a href={`/articles/${article.slug}`} target="_blank" rel="noopener noreferrer">
+                  <div key={article.id} className={styles.doctorItem}>
+                    <span className={styles.doctorName}>{article.title}</span>
+                    <span className={styles.doctorSpecialty}>{article.summary}</span>
+                  </div>
+                </a>
+              </>
             ))}
           </div>
         )}
       </div>
     )
   }
+
   return (
     <div className={styles.chatPage}>
       {/* Header */}

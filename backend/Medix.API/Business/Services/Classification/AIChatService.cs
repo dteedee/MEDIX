@@ -208,7 +208,7 @@ namespace Medix.API.Business.Services.Classification
                     Rating = (double)doctor.AverageRating,
                     Experience = doctor.YearsOfExperience,
                     ConsultationFee = doctor.ConsultationFee,
-                    AvatarUrl = doctor.User.AvatarUrl
+                    Education = DoctorDegree.GetDescription(doctor.Education!),
                 };
             });
 
@@ -231,6 +231,16 @@ namespace Medix.API.Business.Services.Classification
         {
             var idList = await _llmService.GetRecommendedDoctorIdsByPromptAsync(prompt, 3, await GetDoctorListString());
             var recommendedDoctors = await GetRecommendedDoctorsAsync(idList);
+            if (recommendedDoctors.Count == 0)
+            {
+                return new ChatResponseDto
+                {
+                    Text = "Rất tiếc, không tìm thấy bác sĩ phù hợp với yêu cầu của bạn.",
+                    Type = "recommended_doctors",
+                    Data = null
+                };
+            }
+
             return new ChatResponseDto
             {
                 Text = "Dưới đây là danh sách các bác sĩ được đề xuất dựa trên yêu cầu của bạn:",
@@ -249,6 +259,16 @@ namespace Medix.API.Business.Services.Classification
             }
 
             var idList = await _llmService.GetRecommendedArticleIdListAsync(prompt, articleListStringBuilder.ToString(), 3);
+            if (idList.Count == 0)
+            {
+                return new ChatResponseDto
+                {
+                    Text = "Rất tiếc, không tìm thấy bài viết phù hợp với yêu cầu của bạn.",
+                    Type = "recommended_articles",
+                    Data = null
+                };
+            }
+
             var recommendedArticles = new List<RecommendedArticleDto>();
             foreach (var id in idList)
             {
@@ -262,6 +282,7 @@ namespace Medix.API.Business.Services.Classification
                             Id = article.Id,
                             Title = article.Title!,
                             Summary = article.Summary!,
+                            Slug = article.Slug!
                         });
                     }
                 }

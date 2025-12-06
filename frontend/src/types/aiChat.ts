@@ -22,13 +22,14 @@ export interface RecommanededDoctorDto {
   rating: number;
   experience: number;
   consultationFee: number;
-  avatarUrl?: string;
+  education: string;
 }
 
 export interface RecommendedArticleDto{
   id : string;
   title : string;
   summary : string;
+  slug: string;
 }
 
 export interface SymptomAnalysisResponse {

@@ -72,7 +72,7 @@ namespace Medix.API.Business.Services.AI
             ["IsConclusionReached"] = new Schema
             {
                 Type = Type.BOOLEAN,
-                Description = "true khi có 1 loại bệnh có khả năng xảy ra >=85%"
+                Description = "true khi ConfidenceScore >=80%."
             },
 
             ["IsRequestRejected"] = new Schema
@@ -153,6 +153,25 @@ namespace Medix.API.Business.Services.AI
                 }
             },
             Required = ["RequestType"]
+        };
+
+        private static readonly Schema ArticlesSchema = new Schema
+        {
+            Type = Type.OBJECT,
+            Properties = new Dictionary<string, Schema>
+            {
+                ["IdList"] = new Schema
+                {
+                    Type = Type.ARRAY,
+                    Description = "Danh sách ID của các bài viết được đề xuất.",
+                    Items = new Schema
+                    {
+                        Type = Type.STRING,
+                        Description = "ID của các bài viết được đề xuất."
+                    }
+                }
+            },
+            Required = ["IdList"]
         };
 
         private static readonly string SymptomAnalsysisInstructionText =
@@ -410,7 +429,7 @@ namespace Medix.API.Business.Services.AI
             var systemConfig = new GenerateContentConfig
             {
                 ResponseMimeType = "application/json",
-                ResponseSchema = DoctorsSchema // Sử dụng JSON Schema đã định nghĩa
+                ResponseSchema = ArticlesSchema // Sử dụng JSON Schema đã định nghĩa
             };
             var rawJson = await GenerateResponseAsync(conversationHistory, systemConfig);
             var articleIds = JsonSerializer.Deserialize<RecommendedArticleIdList>(rawJson);

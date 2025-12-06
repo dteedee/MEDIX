@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../styles/components/AIChatBox.module.css';
-import aiChatService, { AIChatMessageDto, PromptRequest, SymptomAnalysisResponse } from '../services/aiChatService';
-import { AIChatMessage } from '../types/aiChat';
+import aiChatService, { AIChatMessageDto, PromptRequest } from '../services/aiChatService';
+import { AIChatMessage, RecommanededDoctorDto, RecommendedArticleDto, SymptomAnalysisResponse } from '../types/aiChat';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AIChatBoxProps {
@@ -28,13 +28,13 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
 
   const { user, logout } = useAuth();
 
-  const getMessageHistory = (): AIChatMessageDto[] => {
-    const key = "ai_chat_token";
+  const getMessageHistory = (): AIChatMessage[] => {
+    const key = "ai_chat_history";
     const today = new Date().toDateString();
 
     const stored = localStorage.getItem(key);
     if (stored) {
-      const parsed = JSON.parse(stored) as { messages: AIChatMessageDto[]; date: string };
+      const parsed = JSON.parse(stored) as { messages: AIChatMessage[]; date: string };
       if (parsed.date === today) {
         if (parsed.messages && parsed.messages.length > 0) {
           return parsed.messages;
@@ -47,8 +47,8 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
     return [];
   }
 
-  const addToMessageHistory = (message: AIChatMessageDto) => {
-    const key = "ai_chat_token";
+  const addToMessageHistory = (message: AIChatMessage) => {
+    const key = "ai_chat_history";
     const today = new Date().toDateString();
 
     const messages = getMessageHistory();
@@ -58,18 +58,17 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
   }
 
   const clearMessageHistory = () => {
-    const key = "ai_chat_token";
+    const key = "ai_chat_history";
     localStorage.removeItem(key);
   }
 
-  const getChatHistory = (): AIChatMessage[] => {
-    var chatHistory = getMessageHistory().map(msg => ({
-      id: Date.now().toString() + Math.random().toString(36).substring(2),
-      text: msg.content,
-      sender: msg.role === 'user' ? 'user' as const : 'ai' as const,
-      timestamp: new Date(msg.timestamp) ?? new Date(),
+  const getChatHistory = (): AIChatMessageDto[] => {
+    const storedMessages = getMessageHistory();
+    return storedMessages.map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'assistant',
+      content: msg.text,
+      timestamp: msg.timestamp,
     }));
-    return chatHistory;
   }
 
   useEffect(() => {
@@ -78,7 +77,7 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
       console.log('User logged in, cleared chat history.');
     }
 
-    let initialMessages = getChatHistory();
+    let initialMessages = getMessageHistory();
     if (initialMessages.length === 0) {
       initialMessages = [createGreetingMessage()];
     }
@@ -107,95 +106,101 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
   };
 
   const handleSendMessage = async (text?: string) => {
-      const messageText = text || inputText.trim();
-      if (!messageText && uploadedFiles.length === 0) return;
-  
-      let chatHistory = getMessageHistory();
-  
-      // Add user message
-      if (messageText) {
-        const newUserMessage: AIChatMessage = {
-          id: Date.now().toString(),
-          text: messageText,
-          sender: 'user',
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, newUserMessage]);
-        setInputText('');
-      }
-  
-      //Handle file uploads
-      if (uploadedFiles.length > 0) {
-        setIsLoading(true);
-        try {
-          const file = uploadedFiles[0];
-          const response = await aiChatService.uploadAndAnalyzeEMR({
-            file, messages: chatHistory
-          });
-          response.timestamp = new Date(response.timestamp);
-          setMessages(prev => [...prev, response]);
-          addToMessageHistory({
-            role: 'assistant',
-            content: response.text,
-            timestamp: new Date(),
-          });
-          setUploadedFiles([]);
-        } catch (error: any) {
-          let text = 'Xin lỗi, có lỗi xảy ra khi phân tích EMR. Vui lòng thử lại sau.';
-  
-          if (error.response?.status === 400 && error.response.data?.message) {
-            // ✅ Use the message returned by your C# API
-            text = error.response.data.message;
-          }
-  
-          const errorMessage: AIChatMessage = {
-            id: (Date.now() + 1).toString(),
-            text,
-            sender: 'ai',
-            timestamp: new Date(),
-          };
-  
-          setMessages(prev => [...prev, errorMessage]);
-        } finally {
-          setIsLoading(false);
-        }
-        return;
-      }
-  
+    const messageText = text || inputText.trim();
+    if (!messageText && uploadedFiles.length === 0) return;
+
+    // Add user message
+    if (messageText) {
+      const newUserMessage: AIChatMessage = {
+        id: Date.now().toString(),
+        text: messageText,
+        sender: 'user',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, newUserMessage]);
+      setInputText('');
+    }
+
+    //Handle file uploads
+    if (uploadedFiles.length > 0) {
       setIsLoading(true);
-  
       try {
-        const promptRequest: PromptRequest = {
-          prompt: messageText,
-          messages: chatHistory,
-        };
-  
-        const response = await aiChatService.sendMessage(promptRequest);
+        const file = uploadedFiles[0];
+        const response = await aiChatService.uploadAndAnalyzeEMR({
+          file, messages: getChatHistory(),
+        });
         response.timestamp = new Date(response.timestamp);
         setMessages(prev => [...prev, response]);
-  
         addToMessageHistory({
-          role: 'user',
-          content: messageText,
+          id: new Date().toString(),
+          sender: 'ai',
+          text: response.text,
           timestamp: new Date(),
+          type: response.type,
+          data: response.data,
         });
-        addToMessageHistory({
-          role: 'assistant',
-          content: response.text,
-          timestamp: new Date(),
-        });
+        setUploadedFiles([]);
       } catch (error: any) {
+        let text = 'Xin lỗi, có lỗi xảy ra khi phân tích EMR. Vui lòng thử lại sau.';
+
+        if (error.response?.status === 400 && error.response.data?.message) {
+          // ✅ Use the message returned by your C# API
+          text = error.response.data.message;
+        }
+
         const errorMessage: AIChatMessage = {
           id: (Date.now() + 1).toString(),
-          text: 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.',
+          text,
           sender: 'ai',
           timestamp: new Date(),
         };
+
         setMessages(prev => [...prev, errorMessage]);
       } finally {
         setIsLoading(false);
       }
-    };
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const promptRequest: PromptRequest = {
+        prompt: messageText,
+        messages: getChatHistory(),
+      };
+
+      const response = await aiChatService.sendMessage(promptRequest);
+      response.timestamp = new Date();
+      setMessages(prev => [...prev, response]);
+
+      addToMessageHistory({
+        id: Date.now().toString(),
+        sender: 'user',
+        text: messageText,
+        timestamp: new Date(),
+        type: 'text',
+      });
+      addToMessageHistory({
+        id: new Date().toString(),
+        sender: 'ai',
+        text: response.text,
+        timestamp: new Date(),
+        type: response.type,
+        data: response.data,
+      });
+    } catch (error: any) {
+      const errorMessage: AIChatMessage = {
+        id: (Date.now() + 1).toString(),
+        text: 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.',
+        sender: 'ai',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -242,21 +247,79 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
             ))}
           </div>
         )}
-        {data.recommendedDoctors && data.recommendedDoctors.length > 0 && (
+        {data.recommendedDoctors && data.recommendedDoctors.length > 0 ? (
           <div className={styles.doctorsList}>
             <h4>Bác sĩ được gợi ý:</h4>
             {data.recommendedDoctors.map((doctor, index) => (
-              <div key={index} className={styles.doctorItem}>
-                <span className={styles.doctorName}>{doctor.name}</span>
-                <span className={styles.doctorSpecialty}>{doctor.specialization}</span>
-                <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
-              </div>
+              <>
+                <a href={`/doctor/details/${doctor.id}`} target="_blank" rel="noopener noreferrer">
+                  <div key={index} className={styles.doctorItem}>
+                    <span className={styles.doctorName}>{doctor.name}</span>
+                    <span className={styles.doctorSpecialty}>Chuyên khoa: {doctor.specialization}</span>
+                    <span className={styles.doctorSpecialty}>Học vị: {doctor.education}</span>
+                    <span className={styles.doctorSpecialty}>Giá khám: {doctor.consultationFee} VND</span>
+                    <span className={styles.doctorSpecialty}>Số năm kinh nghiệm: {doctor.experience}</span>
+                    <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
+                  </div>
+                </a>
+              </>
             ))}
+          </div>
+        ) : (
+          <div className={styles.doctorsList}>
+            <p>Không có bác sĩ nào được gợi ý dựa trên phân tích triệu chứng.</p>
           </div>
         )}
       </div>
     );
   };
+
+  const renderRecommendedDoctors = (data: RecommanededDoctorDto[]) => {
+    return (
+      <div className={styles.symptomAnalysis}>
+        {data && data.length > 0 && (
+          <div className={styles.doctorsList}>
+            {data.map((doctor, index) => (
+              <>
+                <a href={`/doctor/details/${doctor.id}`} target="_blank" rel="noopener noreferrer">
+                  <div key={index} className={styles.doctorItem}>
+                    <span className={styles.doctorName}>{doctor.name}</span>
+                    <span className={styles.doctorSpecialty}>Chuyên khoa: {doctor.specialization}</span>
+                    <span className={styles.doctorSpecialty}>Học vị: {doctor.education}</span>
+                    <span className={styles.doctorSpecialty}>Giá khám: {doctor.consultationFee} VND</span>
+                    <span className={styles.doctorSpecialty}>Số năm kinh nghiệm: {doctor.experience}</span>
+                    <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
+                  </div>
+                </a>
+              </>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const renderRecommendedArticles = (data: RecommendedArticleDto[]) => {
+    return (
+      <div className={styles.symptomAnalysis}>
+        {data && data.length > 0 && (
+          <div className={styles.doctorsList}>
+            {data.map((article) => (
+              <>
+                <a href={`/articles/${article.slug}`} target="_blank" rel="noopener noreferrer">
+                  <div key={article.id} className={styles.doctorItem}>
+                    <span className={styles.doctorName}>{article.title}</span>
+                    <span className={styles.doctorSpecialty}>{article.summary}</span>
+                  </div>
+                </a>
+              </>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
 
   if (!isOpen) return null;
 
@@ -313,13 +376,23 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
               )}
               <div className={styles.messageBubble}>
                 <div className={styles.messageText} dangerouslySetInnerHTML={{ __html: formatMessage(message.text) }} />
-                {message.data && message.type === 'symptom_analysis' && (
-                  <div className={styles.messageData}>
-                    {renderSymptomAnalysis(message.data)}
-                  </div>
+                {message.data && (
+                  message.type === 'symptom_analysis' ? (
+                    <div className={styles.messageData}>
+                      {renderSymptomAnalysis(message.data)}
+                    </div>
+                  ) : message.type === 'recommended_doctors' ? (
+                    <div className={styles.messageData}>
+                      {renderRecommendedDoctors(message.data)}
+                    </div>
+                  ) : message.type === 'recommended_articles' ? (
+                    <div className={styles.messageData}>
+                      {renderRecommendedArticles(message.data)}
+                    </div>
+                  ) : null
                 )}
                 <div className={styles.messageTime}>
-                  {message.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(message.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
             </div>

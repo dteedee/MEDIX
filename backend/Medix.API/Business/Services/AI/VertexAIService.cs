@@ -99,7 +99,7 @@ namespace Medix.API.Business.Services.AI
                         Fields =
                         {
                             { "type", Value.ForString("boolean") },
-                            { "description", Value.ForString("true khi có 1 loại bệnh có khả năng xảy ra >=85%.") },
+                            { "description", Value.ForString("true khi ConfidenceScore >=80%.") },
                         }
                     })
                 },
@@ -305,7 +305,7 @@ namespace Medix.API.Business.Services.AI
             Fields =
             {
                 { "type", Value.ForString("object") },
-                { "properties", Value.ForStruct(DoctorsStruct)},
+                { "properties", Value.ForStruct(ArticlesStruct)},
                 { "required", Value.ForList(
                         Value.ForString("IdList")
                     )

@@ -24,7 +24,7 @@ namespace Medix.API.Models.DTOs.AIChat
         public double Rating { get; set; }
         public int Experience { get; set; }
         public decimal ConsultationFee { get; set; }
-        public string? AvatarUrl { get; set; }
+        public string? Education { get; set; }
     }
 }
 

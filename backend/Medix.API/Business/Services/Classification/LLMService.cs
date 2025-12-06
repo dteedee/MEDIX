@@ -16,6 +16,39 @@ namespace Medix.API.Business.Services.Classification
         private readonly IGeminiAIService _geminiAiService = geminiAIService;
         private readonly IVertexAIService _vertexAiService = vertexAIService;
 
+        public async Task<string> GetRequestTypeAsync(string prompt)
+        {
+            // Prefer Vertex if configured
+            try
+            {
+                var vertexApiKey = _configuration["GoogleCloud:ProjectId"];
+                if (!string.IsNullOrEmpty(vertexApiKey))
+                {
+                    return await _vertexAiService.GetRequestTypeAsync(prompt);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating LLM response with Vertex, falling back to Gemini");
+            }
+
+            try
+            {
+                var geminiApiKey = _configuration["Gemini:ApiKey"];
+                if (!string.IsNullOrEmpty(geminiApiKey))
+                {
+                    return await _geminiAiService.GetRequestTypeAsync(prompt);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating LLM response with Gemini");
+            }
+
+            _logger.LogError("Error generating LLM response");
+            throw new InvalidOperationException("No LLM API configured.");
+        }
+
         public async Task<DiagnosisModel> GetSymptomAnalysisAsync(string prompt, string? context, List<AIChatMessageDto> conversationHistory)
         {
             // Prefer Vertex if configured
@@ -115,7 +148,7 @@ namespace Medix.API.Business.Services.Classification
             throw new InvalidOperationException("No LLM API configured.");
         }
 
-        public async Task<List<string>> GetRecommendedDoctorIdsAsync(string possibleConditions, int count, string doctorListString)
+        public async Task<List<string>> GetRecommendedDoctorIdsByConditionsAsync(string possibleConditions, int count, string doctorListString)
         {
             try
             {
@@ -123,7 +156,7 @@ namespace Medix.API.Business.Services.Classification
                 var vertexApiKey = _configuration["GoogleCloud:ProjectId"];
                 if (!string.IsNullOrEmpty(vertexApiKey))
                 {
-                    return await _vertexAiService.GetRecommendedDoctorIdsAsync(possibleConditions, count, doctorListString);
+                    return await _vertexAiService.GetRecommendedDoctorIdsByConditionsAsync(possibleConditions, count, doctorListString);
                 }
             }
             catch (Exception ex)
@@ -136,7 +169,7 @@ namespace Medix.API.Business.Services.Classification
                 var geminiApiKey = _configuration["Gemini:ApiKey"];
                 if (!string.IsNullOrEmpty(geminiApiKey))
                 {
-                    return await _geminiAiService.GetRecommendedDoctorIdsAsync(possibleConditions, count, doctorListString);
+                    return await _geminiAiService.GetRecommendedDoctorIdsByConditionsAsync(possibleConditions, count, doctorListString);
                 }
             }
             catch (Exception ex)
@@ -145,6 +178,72 @@ namespace Medix.API.Business.Services.Classification
             }
 
             _logger.LogError("Error getting recommended doctors");
+            throw new InvalidOperationException("No LLM API configured.");
+        }
+
+        public async Task<List<string>> GetRecommendedDoctorIdsByPromptAsync(string prompt, int count, string doctorListString)
+        {
+            try
+            {
+                // Prefer Vertex if configured
+                var vertexApiKey = _configuration["GoogleCloud:ProjectId"];
+                if (!string.IsNullOrEmpty(vertexApiKey))
+                {
+                    return await _vertexAiService.GetRecommendedDoctorIdsByPromptAsync(prompt, count, doctorListString);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting recommended doctors with Vertex, falling back to Gemini");
+            }
+
+            try
+            {
+                var geminiApiKey = _configuration["Gemini:ApiKey"];
+                if (!string.IsNullOrEmpty(geminiApiKey))
+                {
+                    return await _geminiAiService.GetRecommendedDoctorIdsByPromptAsync(prompt, count, doctorListString);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting recommended doctors with Gemini");
+            }
+
+            _logger.LogError("Error getting recommended doctors");
+            throw new InvalidOperationException("No LLM API configured.");
+        }
+
+        public async Task<List<string>> GetRecommendedArticleIdListAsync(string userPrompt, string articleListString, int count)
+        {
+            try
+            {
+                // Prefer Vertex if configured
+                var vertexApiKey = _configuration["GoogleCloud:ProjectId"];
+                if (!string.IsNullOrEmpty(vertexApiKey))
+                {
+                    return await _vertexAiService.GetRecommendedArticleIdListAsync(userPrompt, articleListString, count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting recommended articles with Vertex, falling back to Gemini");
+            }
+
+            try
+            {
+                var geminiApiKey = _configuration["Gemini:ApiKey"];
+                if (!string.IsNullOrEmpty(geminiApiKey))
+                {
+                    return await _geminiAiService.GetRecommendedArticleIdListAsync(userPrompt, articleListString, count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting recommended articles with Gemini");
+            }
+
+            _logger.LogError("Error getting recommended articles");
             throw new InvalidOperationException("No LLM API configured.");
         }
 

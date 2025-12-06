@@ -1,4 +1,3 @@
-using AutoMapper;
 using Hangfire;
 using Medix.API.BackgroundServices;
 using Medix.API.Business.Helper;

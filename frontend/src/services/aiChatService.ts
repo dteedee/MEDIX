@@ -1,7 +1,7 @@
 import { apiClient } from "../lib/apiClient";
 import { AIChatMessage } from "../types/aiChat";
 
-export interface AIChatMessageDto{
+export interface AIChatMessageDto {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
@@ -15,26 +15,6 @@ export interface PromptRequest {
 export interface EMRUploadRequest {
   file: File;
   messages: AIChatMessageDto[];
-}
-
-export interface SymptomAnalysisResponse {
-  severity: 'mild' | 'moderate' | 'severe';
-  recommendedAction: string;
-  medicines?: {
-    name: string;
-    instructions: string;
-  }[];
-  recommendedSpecialty?: string;
-  recommendedDoctors?: Array<{
-    id: string;
-    name: string;
-    specialization: string;
-    rating: number;
-    experience: number;
-    consultationFee: number;
-    avatarUrl?: string;
-  }>;
-  disclaimer: string;
 }
 
 class AIChatService {

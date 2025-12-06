@@ -1,8 +1,8 @@
-import { AIChatMessage } from "../../types/aiChat";
+import { AIChatMessage, RecommanededDoctorDto, RecommendedArticleDto, SymptomAnalysisResponse } from "../../types/aiChat";
 import { useNavigate } from 'react-router-dom';
 import styles from '../../styles/pages/AIChatBot.module.css';
 import { useEffect, useRef, useState } from "react";
-import aiChatService, { AIChatMessageDto, PromptRequest, SymptomAnalysisResponse } from "../../services/aiChatService";
+import aiChatService, { AIChatMessageDto, PromptRequest } from "../../services/aiChatService";
 import { useAuth } from "../../contexts/AuthContext";
 
 const createGreetingMessage = (): AIChatMessage => ({
@@ -35,18 +35,18 @@ export const AIChatBot: React.FC = () => {
   ];
 
   useEffect(() => {
-      if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, [messages]);
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
-  const getMessageHistory = (): AIChatMessageDto[] => {
-    const key = "ai_chat_token";
+  const getMessageHistory = (): AIChatMessage[] => {
+    const key = "ai_chat_history";
     const today = new Date().toDateString();
 
     const stored = localStorage.getItem(key);
     if (stored) {
-      const parsed = JSON.parse(stored) as { messages: AIChatMessageDto[]; date: string };
+      const parsed = JSON.parse(stored) as { messages: AIChatMessage[]; date: string };
       if (parsed.date === today) {
         if (parsed.messages && parsed.messages.length > 0) {
           return parsed.messages;
@@ -59,8 +59,8 @@ export const AIChatBot: React.FC = () => {
     return [];
   }
 
-  const addToMessageHistory = (message: AIChatMessageDto) => {
-    const key = "ai_chat_token";
+  const addToMessageHistory = (message: AIChatMessage) => {
+    const key = "ai_chat_history";
     const today = new Date().toDateString();
 
     const messages = getMessageHistory();
@@ -70,18 +70,17 @@ export const AIChatBot: React.FC = () => {
   }
 
   const clearMessageHistory = () => {
-    const key = "ai_chat_token";
+    const key = "ai_chat_history";
     localStorage.removeItem(key);
   }
 
-  const getChatHistory = (): AIChatMessage[] => {
-    var chatHistory = getMessageHistory().map(msg => ({
-      id: Date.now().toString() + Math.random().toString(36).substring(2),
-      text: msg.content,
-      sender: msg.role === 'user' ? 'user' as const : 'ai' as const,
-      timestamp: new Date(msg.timestamp) ?? new Date(),
+  const getChatHistory = (): AIChatMessageDto[] => {
+    const storedMessages = getMessageHistory();
+    return storedMessages.map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'assistant',
+      content: msg.text,
+      timestamp: msg.timestamp,
     }));
-    return chatHistory;
   }
 
   useEffect(() => {
@@ -90,7 +89,7 @@ export const AIChatBot: React.FC = () => {
       console.log('User logged in, cleared chat history.');
     }
 
-    let initialMessages = getChatHistory();
+    let initialMessages = getMessageHistory();
     if (initialMessages.length === 0) {
       initialMessages = [createGreetingMessage()];
     }
@@ -136,14 +135,17 @@ export const AIChatBot: React.FC = () => {
       try {
         const file = uploadedFiles[0];
         const response = await aiChatService.uploadAndAnalyzeEMR({
-          file, messages: chatHistory
+          file, messages: getChatHistory(),
         });
         response.timestamp = new Date(response.timestamp);
         setMessages(prev => [...prev, response]);
         addToMessageHistory({
-          role: 'assistant',
-          content: response.text,
+          id: new Date().toString(),
+          sender: 'ai',
+          text: response.text,
           timestamp: new Date(),
+          type: response.type,
+          data: response.data,
         });
         setUploadedFiles([]);
       } catch (error: any) {
@@ -173,22 +175,27 @@ export const AIChatBot: React.FC = () => {
     try {
       const promptRequest: PromptRequest = {
         prompt: messageText,
-        messages: chatHistory,
+        messages: getChatHistory(),
       };
 
       const response = await aiChatService.sendMessage(promptRequest);
-      response.timestamp = new Date(response.timestamp);
+      response.timestamp = new Date();
       setMessages(prev => [...prev, response]);
 
       addToMessageHistory({
-        role: 'user',
-        content: messageText,
+        id: Date.now().toString(),
+        sender: 'user',
+        text: messageText,
         timestamp: new Date(),
+        type: 'text',
       });
       addToMessageHistory({
-        role: 'assistant',
-        content: response.text,
+        id: new Date().toString(),
+        sender: 'ai',
+        text: response.text,
         timestamp: new Date(),
+        type: response.type,
+        data: response.data,
       });
     } catch (error: any) {
       const errorMessage: AIChatMessage = {
@@ -256,6 +263,40 @@ export const AIChatBot: React.FC = () => {
     );
   };
 
+  const renderRecommendedDoctors = (data: RecommanededDoctorDto[]) => {
+    return (
+      <div className={styles.symptomAnalysis}>
+        {data && data.length > 0 && (
+          <div className={styles.doctorsList}>
+            {data.map((doctor, index) => (
+              <div key={index} className={styles.doctorItem}>
+                <span className={styles.doctorName}>{doctor.name}</span>
+                <span className={styles.doctorSpecialty}>{doctor.specialization}</span>
+                <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const renderRecommendedArticles = (data: RecommendedArticleDto[]) => {
+    return (
+      <div className={styles.symptomAnalysis}>
+        {data && data.length > 0 && (
+          <div className={styles.doctorsList}>
+            {data.map((article) => (
+              <div key={article.id} className={styles.doctorItem}>
+                <span className={styles.doctorName}>{article.title}</span>
+                <span className={styles.doctorSpecialty}>{article.summary}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
   return (
     <div className={styles.chatPage}>
       {/* Header */}
@@ -301,13 +342,23 @@ export const AIChatBot: React.FC = () => {
             )}
             <div className={styles.messageBubble}>
               <div className={styles.messageText} dangerouslySetInnerHTML={{ __html: formatMessage(message.text) }} />
-              {message.data && message.type === 'symptom_analysis' && (
-                <div className={styles.messageData}>
-                  {renderSymptomAnalysis(message.data)}
-                </div>
+              {message.data && (
+                message.type === 'symptom_analysis' ? (
+                  <div className={styles.messageData}>
+                    {renderSymptomAnalysis(message.data)}
+                  </div>
+                ) : message.type === 'recommended_doctors' ? (
+                  <div className={styles.messageData}>
+                    {renderRecommendedDoctors(message.data)}
+                  </div>
+                ) : message.type === 'recommended_articles' ? (
+                  <div className={styles.messageData}>
+                    {renderRecommendedArticles(message.data)}
+                  </div>
+                ) : null
               )}
               <div className={styles.messageTime}>
-                {message.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                {new Date(message.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
           </div>

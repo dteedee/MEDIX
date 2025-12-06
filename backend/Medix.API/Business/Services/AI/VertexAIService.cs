@@ -6,6 +6,7 @@ using Medix.API.Models.DTOs.AIChat;
 using System.Text;
 using System.Text.Json;
 using Value = Google.Protobuf.WellKnownTypes.Value;
+using Constant = Medix.API.Business.Helper.RequestTypeConstants;
 
 namespace Medix.API.Business.Services.AI
 {
@@ -235,6 +236,83 @@ namespace Medix.API.Business.Services.AI
             }
         });
 
+        private static readonly Struct RequestTypeStruct = new Struct
+        {
+            Fields =
+            {
+                { "RequestType", Value.ForStruct(new Struct
+                    {
+                        Fields =
+                        {
+                            { "type", Value.ForString("string") },
+                            { "description", Value.ForString($"Loại yêu cầu : " +
+                                $"'{Constant.SymptomAnalysis}', " +
+                                $"'{Constant.DoctorsQuery}', " +
+                                $"'{Constant.ArticlesQuery}', " +
+                                $"' {Constant.NotHealthRelated} ', ") },
+                            { "enum", Value.ForList(
+                                        Value.ForString($"{Constant.SymptomAnalysis}"),
+                                        Value.ForString($"{Constant.DoctorsQuery}"),
+                                        Value.ForString($"{Constant.ArticlesQuery}"),
+                                        Value.ForString($"{Constant.NotHealthRelated}"))
+                            }
+                        }
+                    })
+                }
+            }
+        };
+
+        private static readonly Value RequestTypeJsonSchema = Value.ForStruct(new Struct
+        {
+            Fields =
+            {
+                { "type", Value.ForString("object") },
+                { "properties", Value.ForStruct(RequestTypeStruct)},
+                { "required", Value.ForList(
+                        Value.ForString("RequestType")
+                    )
+                }
+            }
+        });
+
+        private static readonly Struct ArticlesStruct = new Struct
+        {
+            Fields =
+            {
+                { "IdList", Value.ForStruct(new Struct
+                    {
+                        Fields =
+                        {
+                            { "type", Value.ForString("array") },
+                            { "description", Value.ForString("Danh sách ID của các bài viết được đề xuất.") },
+                            { "items", Value.ForStruct(new Struct
+                                {
+                                    Fields =
+                                    {
+                                        { "type", Value.ForString("string") },
+                                        { "description", Value.ForString("ID của bài viết được đề xuất.") }
+                                    }
+                                })
+                            }
+                        }
+                    })
+                },
+            }
+        };
+
+        private static readonly Value ArticlesJsonSchema = Value.ForStruct(new Struct
+        {
+            Fields =
+            {
+                { "type", Value.ForString("object") },
+                { "properties", Value.ForStruct(DoctorsStruct)},
+                { "required", Value.ForList(
+                        Value.ForString("IdList")
+                    )
+                }
+            }
+        });
+
         private static readonly string SymptomAnalsysisInstructionText =
             "Bạn là trợ lý hỗ trợ sức khỏe chuyên biệt. MỤC ĐÍCH DUY NHẤT của bạn là đưa ra chẩn đoán phân biệt hoặc trả lời các câu hỏi liên quan đến triệu chứng, " +
                 "bệnh tật và các khái niệm sức khỏe dựa trên dữ liệu đào tạo chuyên môn của bạn." +
@@ -253,6 +331,12 @@ namespace Medix.API.Business.Services.AI
             "Bạn là một chuyên gia y tế ảo được thiết kế để giúp người dùng bằng cách đề xuất các loại thuốc phù hợp dựa trên các triệu chứng sức khỏe của họ bằng Tiếng Việt. " +
             "Dựa trên các triệu chứng được cung cấp, hãy đề xuất các loại thuốc phù hợp cùng với hướng dẫn sử dụng. " +
             "Trả lời chỉ với một mảng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
+
+        private static readonly string RequestTypeInstructionText =
+            "Bạn là một trợ lý hỗ trợ sức khỏe chuyên biệt. MỤC ĐÍCH DUY NHẤT của bạn là phân loại các yêu cầu của người dùng thành một trong các loại sau: " +
+            "'SymptomAnalysis', 'DoctorQuery', 'ArticlesQuery', 'NotHealthRelated'. " +
+            "Nếu yêu cầu không liên quan đến sức khỏe, hãy phân loại nó là 'NotHealthRelated'. " +
+            "Trả lời chỉ với một đối tượng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
 
         private readonly PredictionServiceClient _client;
         private readonly IConfiguration _configuration;
@@ -308,6 +392,25 @@ namespace Medix.API.Business.Services.AI
             // 5. Extract the response text
             string generatedText = response.Candidates[0].Content.Parts[0].Text;
             return generatedText;
+        }
+
+        public async Task<string> GetRequestTypeAsync(string prompt)
+        {
+            var contents = new List<Content> {
+                new() {
+                    Role = "user",
+                    Parts =
+                    {
+                        new Part
+                        {
+                            Text = prompt
+                        }
+                    }
+                }
+            };
+            var responseText = await GetResponseAsync(contents, RequestTypeJsonSchema, RequestTypeInstructionText);
+            var requestTypeObj = JsonSerializer.Deserialize<PromptRequestType>(responseText);
+            return requestTypeObj?.RequestType ?? "NotHealthRelated";
         }
 
         public async Task<DiagnosisModel> GetSymptompAnalysisAsync(string prompt, string? context, List<AIChatMessageDto> history)
@@ -370,11 +473,25 @@ namespace Medix.API.Business.Services.AI
             return medicines?.List ?? [];
         }
 
-        public async Task<List<string>> GetRecommendedDoctorIdsAsync(string possibleConditions, int count, string doctorListString)
+        public async Task<List<string>> GetRecommendedDoctorIdsByConditionsAsync
+            (string possibleConditions, int count, string doctorListString)
         {
             var prompt = "Dựa trên danh sách bác sĩ sau đây:\n" +
                          $"{doctorListString}\n" +
                          $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với các loại bệnh có khả năng là: '{possibleConditions}'. ";
+            return await GetRecommendedDoctorIdsAsync(prompt);
+        }
+
+        public async Task<List<string>> GetRecommendedDoctorIdsByPromptAsync(string userPrompt, int count, string doctorListString)
+        {
+            var prompt = "Dựa trên danh sách bác sĩ sau đây:\n" +
+                         $"{doctorListString}\n" +
+                         $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với yêu cầu sau: '{userPrompt}'. ";
+            return await GetRecommendedDoctorIdsAsync(prompt);
+        }
+
+        public async Task<List<string>> GetRecommendedDoctorIdsAsync(string prompt)
+        {
             var contents = new List<Content>
             {
                 new Content
@@ -393,6 +510,30 @@ namespace Medix.API.Business.Services.AI
             var responseText = await GetResponseAsync(contents, DoctorsJsonSchema, null);
             var doctorIds = JsonSerializer.Deserialize<RecommenedDoctorIdList>(responseText);
             return doctorIds?.IdList ?? [];
+        }
+
+        public async Task<List<string>> GetRecommendedArticleIdListAsync(string userPrompt, string articleListString, int count)
+        {
+            var prompt = "Dựa trên danh sách bài viết sau đây:\n" +
+                         $"{articleListString}\n" +
+                         $"Hãy đề xuất {count} bài viết phù hợp nhất cho bệnh nhân với yêu cầu sau: '{userPrompt}'. ";
+            var contents = new List<Content>
+            {
+                new Content
+                {
+                    Role = "user",
+                    Parts =
+                    {
+                        new Part
+                        {
+                            Text = prompt
+                        }
+                    }
+                }
+            };
+            var responseText = await GetResponseAsync(contents, ArticlesJsonSchema, null);
+            var articleIds = JsonSerializer.Deserialize<RecommendedArticleIdList>(responseText);
+            return articleIds?.IdList ?? [];
         }
 
         private List<Content> GetConversationHistory(List<AIChatMessageDto> history)

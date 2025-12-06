@@ -140,6 +140,21 @@ namespace Medix.API.Business.Services.AI
             Required = ["IdList"]
         };
 
+        private static readonly Schema RequestTypeSchema = new Schema
+        {
+            Type = Type.OBJECT,
+            Properties = new Dictionary<string, Schema>
+            {
+                ["RequestType"] = new Schema
+                {
+                    Type = Type.STRING,
+                    Description = "Loại yêu cầu phân loại.",
+                    Enum = [RequestTypeConstants.SymptomAnalysis, RequestTypeConstants.DoctorsQuery, RequestTypeConstants.ArticlesQuery, RequestTypeConstants.NotHealthRelated],
+                }
+            },
+            Required = ["RequestType"]
+        };
+
         private static readonly string SymptomAnalsysisInstructionText =
             "Bạn là trợ lý hỗ trợ sức khỏe chuyên biệt. MỤC ĐÍCH DUY NHẤT của bạn là đưa ra chẩn đoán phân biệt hoặc trả lời các câu hỏi liên quan đến triệu chứng, " +
                 "bệnh tật và các khái niệm sức khỏe dựa trên dữ liệu đào tạo chuyên môn của bạn." +
@@ -158,6 +173,12 @@ namespace Medix.API.Business.Services.AI
             "Bạn là một chuyên gia y tế ảo được thiết kế để giúp người dùng bằng cách đề xuất các loại thuốc phù hợp dựa trên các triệu chứng sức khỏe của họ bằng Tiếng Việt. " +
             "Dựa trên các triệu chứng được cung cấp, hãy đề xuất các loại thuốc phù hợp cùng với hướng dẫn sử dụng. " +
             "Trả lời chỉ với một mảng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
+
+        private static readonly string RequestTypeInstructionText =
+            "Bạn là một trợ lý hỗ trợ sức khỏe chuyên biệt. MỤC ĐÍCH DUY NHẤT của bạn là phân loại các yêu cầu của người dùng thành một trong các loại sau: " +
+            "'SymptomAnalysis', 'DoctorQuery', 'ArticlesQuery', 'NotHealthRelated'. " +
+            "Nếu yêu cầu không liên quan đến sức khỏe, hãy phân loại nó là 'NotHealthRelated'. " +
+            "Trả lời chỉ với một đối tượng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
 
         private readonly Client _client;
         private readonly string Model;
@@ -196,6 +217,43 @@ namespace Medix.API.Business.Services.AI
                 var reason = response.PromptFeedback?.BlockReason.ToString() ?? "Unknown";
                 throw new Exception(reason);
             }
+        }
+
+        public async Task<string> GetRequestTypeAsync(string prompt)
+        {
+            var systemConfigs = new GenerateContentConfig
+            {
+                ResponseMimeType = "application/json",
+                ResponseSchema = RequestTypeSchema, // Sử dụng JSON Schema đã định nghĩa
+                SystemInstruction = new Content
+                {
+                    Parts =
+                    [
+                        new Part
+                            {
+                                Text = RequestTypeInstructionText,
+                            }
+                    ],
+                    Role = "system"
+                }
+            };
+            var conversationHistory = new List<Content>
+            {
+                new Content
+                {
+                    Role = "user",
+                    Parts =
+                    [
+                        new Part
+                        {
+                            Text = prompt
+                        }
+                    ]
+                }
+            };
+            var rawResponse = await GenerateResponseAsync(conversationHistory, systemConfigs);
+            var requestTypeObj = JsonSerializer.Deserialize<PromptRequestType>(rawResponse);
+            return requestTypeObj?.RequestType ?? "NotHealthRelated";
         }
 
         public async Task<DiagnosisModel> GetSymptompAnalysisAsync(string prompt, string? context, List<AIChatMessageDto> history)
@@ -312,11 +370,55 @@ namespace Medix.API.Business.Services.AI
             return medicines?.List ?? [];
         }
 
-        public async Task<List<string>> GetRecommendedDoctorIdsAsync(string possibleConditions, int count, string doctorListString)
+        public async Task<List<string>> GetRecommendedDoctorIdsByConditionsAsync
+            (string possibleConditions, int count, string doctorListString)
         {
             var prompt = "Dựa trên danh sách bác sĩ sau đây:\n" +
                          $"{doctorListString}\n" +
                          $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với các loại bệnh có khả năng là: '{possibleConditions}'. ";
+            return await GetRecommendedDoctorIdsAsync(prompt);
+        }
+
+        public async Task<List<string>> GetRecommendedDoctorIdsByPromptAsync
+            (string userPrompt, int count, string doctorListString)
+        {
+            var prompt = "Dựa trên danh sách bác sĩ sau đây:\n" +
+                         $"{doctorListString}\n" +
+                         $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với yêu cầu sau: '{userPrompt}'. ";
+            return await GetRecommendedDoctorIdsAsync(prompt);
+        }
+
+        public async Task<List<string>> GetRecommendedArticleIdListAsync(string userPrompt, string articleListString, int count)
+        {
+            var prompt = "Dựa trên danh sách bài viết sau đây:\n" +
+                         $"{articleListString}\n" +
+                         $"Hãy đề xuất {count} bài viết phù hợp nhất cho người dùng với yêu cầu sau: '{userPrompt}'. ";
+            var conversationHistory = new List<Content>
+            {
+                new Content
+                {
+                    Role = "user",
+                    Parts =
+                    [
+                        new Part
+                        {
+                            Text = prompt
+                        }
+                    ]
+                }
+            };
+            var systemConfig = new GenerateContentConfig
+            {
+                ResponseMimeType = "application/json",
+                ResponseSchema = DoctorsSchema // Sử dụng JSON Schema đã định nghĩa
+            };
+            var rawJson = await GenerateResponseAsync(conversationHistory, systemConfig);
+            var articleIds = JsonSerializer.Deserialize<RecommendedArticleIdList>(rawJson);
+            return articleIds?.IdList ?? [];
+        }
+
+        private async Task<List<string>> GetRecommendedDoctorIdsAsync(string prompt)
+        {
             var conversationHistory = new List<Content>
             {
                 new Content

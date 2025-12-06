@@ -5,7 +5,8 @@ using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.AIChat;
 using Medix.API.Models.Entities;
 using Medix.API.Models.Enums;
-using static Google.Api.ResourceDescriptor.Types;
+using System.Text;
+using Constant = Medix.API.Business.Helper.RequestTypeConstants;
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -16,6 +17,7 @@ namespace Medix.API.Business.Services.Classification
         IRAGService ragService,
         IPatientRepository patientRepository,
         IAISymptomAnalysisRepository aiSymptomAnalysisRepository,
+        IHealthArticleRepository articleRepository,
         IDoctorRepository doctorRepository,
         ISystemConfigurationRepository configurationRepository) : IAIChatService
     {
@@ -27,6 +29,7 @@ namespace Medix.API.Business.Services.Classification
         private readonly IAISymptomAnalysisRepository _aiSymptomAnalysisRepository = aiSymptomAnalysisRepository;
         private readonly IDoctorRepository _doctorRepository = doctorRepository;
         private readonly ISystemConfigurationRepository _configurationRepository = configurationRepository;
+        private readonly IHealthArticleRepository _articleRepository = articleRepository;
 
         public async Task<ChatResponseDto> SendMessageAsync(string prompt, List<AIChatMessageDto> conversationHistory, string? userIdClaim = null)
         {
@@ -39,15 +42,15 @@ namespace Medix.API.Business.Services.Classification
                 };
             }
 
-            string? context = null;
-
-            if (_llmService.IsHealthRelatedQueryAsync(prompt))
+            var requestType = await _llmService.GetRequestTypeAsync(prompt);
+            _logger.LogInformation("Determined request type: {RequestType}", requestType);
+            return requestType switch
             {
-                context = await _ragService.GetSymptomAnalysisContextAsync(prompt);
-            }
-
-            var diagnosisModel = await _llmService.GetSymptomAnalysisAsync(prompt, context, conversationHistory);
-            return await GetResponse(diagnosisModel, userIdClaim);
+                Constant.SymptomAnalysis => await AnalyzeSymptomAsync(prompt, conversationHistory, userIdClaim),
+                Constant.DoctorsQuery => await GetRecommendedDoctorsByPromptAsync(prompt),
+                Constant.ArticlesQuery => await GetRecommendedArticlesAsync(prompt),
+                _ => throw new Exception("Unsupported request type."),
+            };
         }
 
         public async Task<ChatResponseDto> AnalyzeEMRAsync(IFormFile file, List<AIChatMessageDto> conversationHistory, string? userIdClaim = null)
@@ -74,10 +77,23 @@ namespace Medix.API.Business.Services.Classification
             }
 
             var diagnosisModel = await _llmService.GetEMRAnalysisAsync(ocrText, context, conversationHistory);
-            return await GetResponse(diagnosisModel, userIdClaim);
+            return await GetResponseAsync(diagnosisModel, userIdClaim);
         }
 
-        private async Task<ChatResponseDto> GetResponse(DiagnosisModel diagnosisModel, string? userIdClaim)
+        private async Task<ChatResponseDto> AnalyzeSymptomAsync(string prompt, List<AIChatMessageDto> conversationHistory, string? userIdClaim)
+        {
+            string? context = null;
+
+            if (_llmService.IsHealthRelatedQueryAsync(prompt))
+            {
+                context = await _ragService.GetSymptomAnalysisContextAsync(prompt);
+            }
+
+            var diagnosisModel = await _llmService.GetSymptomAnalysisAsync(prompt, context, conversationHistory);
+            return await GetResponseAsync(diagnosisModel, userIdClaim);
+        }
+
+        private async Task<ChatResponseDto> GetResponseAsync(DiagnosisModel diagnosisModel, string? userIdClaim)
         {
             if (diagnosisModel.IsRequestRejected)
             {
@@ -129,7 +145,7 @@ namespace Medix.API.Business.Services.Classification
 
             symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Hãy đặt lịch hẹn với bác sĩ chuyên khoa để được tư vấn thêm.";
 
-            var idList = await _llmService.GetRecommendedDoctorIdsAsync(diagnosisModel.PossibleConditions, 3, await GetDoctorListString());
+            var idList = await _llmService.GetRecommendedDoctorIdsByConditionsAsync(diagnosisModel.PossibleConditions, 3, await GetDoctorListString());
             symptompAnalysisResponse.RecommendedDoctors = await GetRecommendedDoctorsAsync(idList);
 
             return new ChatResponseDto
@@ -207,8 +223,55 @@ namespace Medix.API.Business.Services.Classification
                 var todayCount = history.Where(h => h.Role == "assistant").Count();
                 return todayCount >= dailyLimit;
             }
-            
+
             throw new Exception("AI daily access limit configuration is missing or invalid.");
+        }
+
+        private async Task<ChatResponseDto> GetRecommendedDoctorsByPromptAsync(string prompt)
+        {
+            var idList = await _llmService.GetRecommendedDoctorIdsByPromptAsync(prompt, 3, await GetDoctorListString());
+            var recommendedDoctors = await GetRecommendedDoctorsAsync(idList);
+            return new ChatResponseDto
+            {
+                Text = "Dưới đây là danh sách các bác sĩ được đề xuất dựa trên yêu cầu của bạn:",
+                Type = "recommended_doctors",
+                Data = recommendedDoctors
+            };
+        }
+
+        private async Task<ChatResponseDto> GetRecommendedArticlesAsync(string prompt)
+        {
+            var articleListStringBuilder = new StringBuilder();
+            var articleList = await _articleRepository.GetPublishedArticlesAsync();
+            foreach (var article in articleList)
+            {
+                articleListStringBuilder.AppendLine($"- Id: {article.Id}, Tiêu đề: {article.Title}");
+            }
+
+            var idList = await _llmService.GetRecommendedArticleIdListAsync(prompt, articleListStringBuilder.ToString(), 3);
+            var recommendedArticles = new List<RecommendedArticleDto>();
+            foreach (var id in idList)
+            {
+                if (Guid.TryParse(id, out Guid articleId))
+                {
+                    var article = await _articleRepository.GetByIdWithDetailsAsync(articleId);
+                    if (article != null)
+                    {
+                        recommendedArticles.Add(new RecommendedArticleDto
+                        {
+                            Id = article.Id,
+                            Title = article.Title!,
+                            Summary = article.Summary!,
+                        });
+                    }
+                }
+            }
+            return new ChatResponseDto
+            {
+                Text = "Dưới đây là danh sách các bài viết được đề xuất dựa trên yêu cầu của bạn:",
+                Type = "recommended_articles",
+                Data = recommendedArticles
+            };
         }
     }
 }

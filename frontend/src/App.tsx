@@ -50,7 +50,6 @@ import { ManagerProfile } from './pages/manager/ManagerProfile';
 import { AdminProfile } from './pages/admin/AdminProfile';
 import DoctorDetails from './pages/doctor/DoctorDetails';
 import ScheduleManagement from './pages/doctor/ScheduleManagement';
-import DoctorProfileEdit from './pages/doctor/DoctorProfileEdit';
 import MedicalRecordDetails from './pages/doctor/MedicalRecordDetails'; 
 
 import ArticleManagement from './pages/manager/ArticleManagement';
@@ -185,7 +184,6 @@ export function App() {
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard" element={<DoctorDashboard />} />
                     <Route path="profile" element={<DoctorProfile />} />
-                    <Route path="profile/edit" element={<DoctorProfileEdit />} />
                     <Route path="schedule" element={<ScheduleManagement />} />
                     <Route path="appointments" element={<DoctorAppointments />} />
                     <Route path="patients" element={<DoctorPatients />} />

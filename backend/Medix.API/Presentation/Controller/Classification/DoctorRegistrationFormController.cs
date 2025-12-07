@@ -47,11 +47,13 @@ namespace Medix.API.Presentation.Controller.Classification
                 var specializations = await _specializationService.GetAllSpecializationsAsync();
                 var response = new DoctorRegisterMetadataDto
                 {
-                    Specializations = specializations.Select(s => new SpecializationDto
-                    {
-                        Id = s.Id,
-                        Name = s.Name
-                    }).ToList()
+                    Specializations = specializations
+                        .Where(s => s.IsActive)
+                        .Select(s => new SpecializationDto
+                        {
+                            Id = s.Id,
+                            Name = s.Name
+                        }).ToList()
                 };
                 return Ok(response);
             }
@@ -96,6 +98,19 @@ namespace Medix.API.Presentation.Controller.Classification
                 _logger.LogError(ex, "An error occurred while registering the doctor.");
                 return StatusCode(500, new { Message = "An error occurred while processing your request." });
             }
+        }
+
+        private string FormatFileSize(long bytes)
+        {
+            string[] sizes = { "B", "KB", "MB", "GB" };
+            double len = bytes;
+            int order = 0;
+            while (len >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                len = len / 1024;
+            }
+            return $"{len:0.##} {sizes[order]}";
         }
 
         private async Task<List<ValidationResult>> ValidateRegisterRequestAsync(DoctorRegisterRequest request, List<ValidationResult> prev)
@@ -174,6 +189,18 @@ namespace Medix.API.Presentation.Controller.Classification
                                 ["IdentityCardImage"]));
                         }
                     }
+                }
+            }
+
+            // Validate DegreeFiles
+            if (request.DegreeFiles != null && request.DegreeFiles.Length > 0)
+            {
+                const long maxDegreeFileSize = 5 * 1024 * 1024; // 5MB max
+                if (request.DegreeFiles.Length > maxDegreeFileSize)
+                {
+                    prev.Add(new ValidationResult(
+                        $"File bằng cấp vượt quá dung lượng cho phép (≤ 5MB). Kích thước hiện tại: {FormatFileSize(request.DegreeFiles.Length)}",
+                        ["DegreeFiles"]));
                 }
             }
 

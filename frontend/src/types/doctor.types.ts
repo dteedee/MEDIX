@@ -37,6 +37,7 @@ export enum DoctorStatus {
 export interface SpecializationDto {
   id: string;
   name: string;
+  isActive: number;
 }
 
 export interface DoctorRegisterMetadata {

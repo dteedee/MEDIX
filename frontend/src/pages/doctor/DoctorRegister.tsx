@@ -398,14 +398,16 @@ function DoctorRegister() {
             return;
         }
 
-        const maxSizeInMB = 1; // 3MB in bytes
+        const maxSizeInMB = type === 'archive' ? 5 : 1;
         const maxSize = maxSizeInMB * 1024 * 1024;
 
         if (file.size > maxSize) {
+            const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
             setErrors((prev: any) => ({
                 ...prev,
-                [name]: [`Kích thước tệp không được vượt quá ${maxSizeInMB}MB.`],
+                [name]: [`Kích thước tệp ${fileSizeMB}MB vượt quá dung lượng cho phép (≤ ${maxSizeInMB}MB).`],
             }))
+            return;
         };
 
         const validArchiveExtensions = ['.zip', '.rar'];

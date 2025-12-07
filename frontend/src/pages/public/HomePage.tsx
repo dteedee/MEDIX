@@ -452,7 +452,7 @@ function HomePage() {
                             ref={knowledgeTrackRef}
                         >
                             {getVisibleArticles().map((article) => (
-                                <Link to={`/app/articles/${article.slug}`} key={article.id} className={styles["knowledge-card"]}>
+                                <Link to={`/articles/${article.slug}`} key={article.id} className={styles["knowledge-card"]}>
                                     <div className={styles["knowledge-image-container"]}>
                                         <img className={styles["knowledge-image"]} src={article.thumbnailUrl || '/placeholder-image.jpg'} alt={article.title} />
                                     </div>

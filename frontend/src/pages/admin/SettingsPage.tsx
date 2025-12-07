@@ -1236,12 +1236,12 @@ export default function SettingsPage() {
           <div className={styles.cardHeader}>
             <h3>
               <i className="bi bi-robot"></i>
-              Giới hạn truy cập AI
+              Giới hạn truy cập AI của người dùng chưa đăng nhập
             </h3>
           </div>
           <div className={styles.cardContent}>
             <div className={styles.settingItem}>
-              <label>Số lượt truy cập AI tối đa trong 1 ngày</label>
+              <label>Số lượt truy cập AI tối đa của người dùng chưa đăng nhập trong 1 ngày</label>
               <input
                 type="number"
                 min={1}

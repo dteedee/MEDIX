@@ -136,6 +136,7 @@ export const AIChatBot: React.FC = () => {
           file, messages: getChatHistory(),
         });
         response.timestamp = new Date(response.timestamp);
+        response.sender = 'ai';
         setMessages(prev => [...prev, response]);
         addToMessageHistory({
           id: new Date().toString(),
@@ -178,6 +179,7 @@ export const AIChatBot: React.FC = () => {
 
       const response = await aiChatService.sendMessage(promptRequest);
       response.timestamp = new Date();
+      response.sender = 'ai';
       setMessages(prev => [...prev, response]);
 
       addToMessageHistory({

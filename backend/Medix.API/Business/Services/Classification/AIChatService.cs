@@ -33,7 +33,7 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<ChatResponseDto> SendMessageAsync(string prompt, List<AIChatMessageDto> conversationHistory, string? userIdClaim = null)
         {
-            if (await IsDailyLimitReached(conversationHistory))
+            if (userIdClaim == null && await IsDailyLimitReached(conversationHistory))
             {
                 return new ChatResponseDto
                 {
@@ -49,6 +49,17 @@ namespace Medix.API.Business.Services.Classification
                 Constant.SymptomAnalysis => await AnalyzeSymptomAsync(prompt, conversationHistory, userIdClaim),
                 Constant.DoctorsQuery => await GetRecommendedDoctorsByPromptAsync(prompt),
                 Constant.ArticlesQuery => await GetRecommendedArticlesAsync(prompt),
+                Constant.NotHealthRelated => new ChatResponseDto
+                {
+                    Text = "Xin chào! Tôi là MEDIX AI, chuyên tư vấn về sức khỏe và y tế. " +
+                           "Tôi chỉ có thể trả lời các câu hỏi liên quan đến:\n\n" +
+                           "• Sức khỏe và triệu chứng bệnh\n" +
+                           "• Thông tin về bác sĩ và chuyên khoa\n" +
+                           "• Dịch vụ và hệ thống MEDIX\n" +
+                           "• Phân tích hồ sơ bệnh án (EMR)\n\n" +
+                           "Vui lòng đặt câu hỏi liên quan đến lĩnh vực y tế.",
+                    Type = "out_of_scope"
+                },
                 _ => throw new Exception("Unsupported request type."),
             };
         }

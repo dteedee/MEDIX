@@ -203,27 +203,41 @@ namespace Medix.API.Business.Services.Classification
 
         private async Task<List<RecommendedDoctorDto>> GetRecommendedDoctorsAsync(List<string> doctorIds)
         {
-            var recommendedDoctors = doctorIds.Select(async id =>
+            var recommendedDoctors = new List<RecommendedDoctorDto>();
+
+            if (doctorIds == null || doctorIds.Count == 0)
+                return recommendedDoctors;
+
+            // Avoid concurrent DB calls on the same DbContext instance.
+            // Execute lookups sequentially to prevent "A second operation was started on this context instance" exceptions.
+            foreach (var id in doctorIds)
             {
-                var doctor = await _doctorRepository.GetDoctorByIdAsync(Guid.Parse(id));
+                if (!Guid.TryParse(id, out var guid))
+                {
+                    _logger.LogWarning("Invalid doctor id returned from LLM: {DoctorId}", id);
+                    continue;
+                }
+
+                var doctor = await _doctorRepository.GetDoctorByIdAsync(guid);
                 if (doctor == null)
                 {
                     _logger.LogWarning("Doctor with ID {DoctorId} not found.", id);
-                    return null;
+                    continue;
                 }
-                return new RecommendedDoctorDto
+
+                recommendedDoctors.Add(new RecommendedDoctorDto
                 {
                     Id = doctor.Id.ToString(),
-                    Name = doctor.User.FullName,
-                    Specialization = doctor.Specialization.Name,
+                    Name = doctor.User?.FullName ?? string.Empty,
+                    Specialization = doctor.Specialization?.Name ?? string.Empty,
                     Rating = (double)doctor.AverageRating,
                     Experience = doctor.YearsOfExperience,
                     ConsultationFee = doctor.ConsultationFee,
-                    Education = DoctorDegree.GetDescription(doctor.Education!),
-                };
-            });
+                    Education = DoctorDegree.GetDescription(doctor.Education!)
+                });
+            }
 
-            return (await Task.WhenAll(recommendedDoctors ?? [])).Where(doc => doc != null).ToList()!;
+            return recommendedDoctors;
         }
 
         private async Task<bool> IsDailyLimitReached(List<AIChatMessageDto> history)

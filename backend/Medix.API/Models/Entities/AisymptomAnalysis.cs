@@ -37,5 +37,6 @@ namespace Medix.API.Models.Entities
         public virtual Patient? Patient { get; set; }
 
         public virtual Specialization? RecommendedSpecialization { get; set; }
+        public virtual RefSeverityLevel? SeverityLevelCodeNavigation { get; set; }
     }
 }

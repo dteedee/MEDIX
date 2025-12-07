@@ -163,11 +163,11 @@ public partial class MedixContext : DbContext
                 .HasForeignKey(d => d.RecommendedSpecializationId)
                 .HasConstraintName("FK_AISymptomAnalysis_Specialization");
 
-            // TODO: Re-enable when RefSeverityLevel navigation is fixed
-            // entity.HasOne(d => d.SeverityLevelCodeNavigation).WithMany(p => p.AISymptomAnalyses)
-            //     .HasForeignKey(d => d.SeverityLevelCode)
-            //     .OnDelete(DeleteBehavior.ClientSetNull)
-            //     .HasConstraintName("FK_AISymptomAnalysis_Severity");
+            entity.HasOne(d => d.SeverityLevelCodeNavigation)
+        .WithMany(p => p.AISymptomAnalyses)
+        .HasForeignKey(d => d.SeverityLevelCode)
+        .OnDelete(DeleteBehavior.ClientSetNull)
+        .HasConstraintName("FK_AISymptomAnalysis_Severity");
         });
 
         modelBuilder.Entity<Appointment>(entity =>

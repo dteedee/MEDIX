@@ -1,29 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
-import { Calendar } from 'lucide-react'
+import { Calendar, Eye, FilePenLine, Search, RefreshCw, Box, ChevronsUpDown, ArrowUp, ArrowDown, X, CheckCircle, AlertCircle, Package, BadgeDollarSign, BarChart3 } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import styles from '../../styles/manager/ServicePackageManagement.module.css'
 import { servicePackageService } from '../../services/servicePackageService'
 import { DoctorServiceTier, DoctorServiceTierUpdateRequest } from '../../types/doctor-service-tier.types'
-const ViewIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-
-const EditIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-  </svg>
-);
 
 const SortIcon = ({ direction }: { direction?: 'asc' | 'desc' }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', marginLeft: 4, color: direction ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
-    {direction === 'asc' && <path d="M18 15l-6-6-6 6" />}
-    {direction === 'desc' && <path d="M6 9l6 6 6-6" />}
-  </svg>
+    !direction ? <ChevronsUpDown size={14} style={{ marginLeft: 4, opacity: 0.5 }} /> :
+    direction === 'asc' ? <ArrowUp size={14} style={{ marginLeft: 4 }} /> :
+    <ArrowDown size={14} style={{ marginLeft: 4 }} />
 );
 
 type ServiceTier = DoctorServiceTier;
@@ -207,6 +193,18 @@ export default function ServicePackageManagement() {
     (editForm.description.trim() !== editPackage.description || editForm.monthlyPrice !== editPackage.monthlyPrice);
 
   const filteredAndSortedPackages = useMemo(() => {
+    // We use `packages` here for stats calculation, not the filtered list
+    // to show overall system stats.
+    return packages;
+  }, [packages]);
+
+  const stats = useMemo(() => ({
+    total: packages.length,
+    free: packages.filter(p => p.monthlyPrice === 0).length,
+    averagePrice: packages.length > 0 ? packages.reduce((acc, p) => acc + p.monthlyPrice, 0) / packages.length : 0,
+  }), [packages]);
+
+  const paginatedAndFilteredPackages = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
     const filtered = packages.filter(pkg => {
       if (!keyword) return true;
@@ -235,10 +233,10 @@ export default function ServicePackageManagement() {
     });
   }, [packages, searchTerm, sortDirection, sortField]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredAndSortedPackages.length / itemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(paginatedAndFilteredPackages.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedPackages = filteredAndSortedPackages.slice(startIndex, startIndex + itemsPerPage);
-  const resultCount = filteredAndSortedPackages.length;
+  const paginatedPackages = paginatedAndFilteredPackages.slice(startIndex, startIndex + itemsPerPage);
+  const resultCount = paginatedAndFilteredPackages.length;
   const startRange = resultCount ? startIndex + 1 : 0;
   const endRange = resultCount ? Math.min(startIndex + itemsPerPage, resultCount) : 0;
 
@@ -319,11 +317,7 @@ export default function ServicePackageManagement() {
   const renderErrorState = () => (
     <div className={styles.errorState}>
       <div className={styles.emptyIcon}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-        </svg>
+        <AlertCircle size={48} strokeWidth={1.5} />
       </div>
       <h3>Không thể tải dữ liệu</h3>
       <p>{fetchError}</p>
@@ -349,8 +343,8 @@ export default function ServicePackageManagement() {
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <div className={styles.titleWrapper}>
-            <div className={styles.titleIcon}>
-              <i className="bi bi-box-seam" style={{ fontSize: '28px' }}></i>
+            <div className={styles.titleIcon}>              
+              <Box size={32} strokeWidth={1.5} />
             </div>
             <div>
               <h1 className={styles.title}>Gói Dịch Vụ Bác Sĩ</h1>
@@ -378,25 +372,51 @@ export default function ServicePackageManagement() {
         </div>
       </div>
 
+      <div className={styles.statsGrid}>
+        <div className={`${styles.statCard} ${styles.statCardPrimary}`}>
+          <div className={styles.statCardContent}>
+            <div className={`${styles.statIcon} ${styles.statCardPrimary}`}>
+              <Package size={28} />
+            </div>
+            <div className={styles.statValue}>
+              <div className={styles.statNumber}>{stats.total}</div>
+              <div className={styles.statLabel}>Tổng số gói</div>
+            </div>
+          </div>
+          <div className={styles.statDescription}>
+            <ArrowUp size={14} className={styles.statTrendUp} />
+            Trong hệ thống
+          </div>
+        </div>
+        <div className={`${styles.statCard} ${styles.statCardSuccess}`}>
+          <div className={styles.statCardContent}>
+            <div className={`${styles.statIcon} ${styles.statCardSuccess}`}>
+              <BadgeDollarSign size={28} />
+            </div>
+            <div className={styles.statValue}>
+              <div className={styles.statNumber}>{stats.free}</div>
+              <div className={styles.statLabel}>Gói miễn phí</div>
+            </div>
+          </div>
+          <div className={styles.statDescription}>
+            <ArrowUp size={14} className={styles.statTrendUp} />
+            Đang hoạt động
+          </div>
+        </div>
+      </div>
+
       <div className={styles.actionsBar}>
         <div className={styles.searchInput}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="M21 21l-4.35-4.35"></path>
-          </svg>
+          <Search size={20} className={styles.searchIcon} />
           <input
             type="text"
             placeholder="Tìm kiếm theo tên, mô tả..."
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
           />
-        </div>
+        </div>        
         <button className={styles.refreshButton} onClick={handleRefresh} disabled={loading}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <polyline points="1 20 1 14 7 14"></polyline>
-            <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10m-2.51 5a9 9 0 0 1-14.13 3.36L1 14"></path>
-          </svg>
+          <RefreshCw size={16} className={loading ? styles.spinnerIcon : ''} />
           Làm mới
         </button>
       </div>
@@ -407,11 +427,7 @@ export default function ServicePackageManagement() {
         {!fetchError && paginatedPackages.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyIcon}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                <polyline points="3.27,6.96 12,12.01 20.73,6.96"></polyline>
-                <line x1="12" y1="22.08" x2="12" y2="12"></line>
-              </svg>
+              <Box size={48} strokeWidth={1.5} />
             </div>
             <h3>Không tìm thấy gói dịch vụ nào</h3>
             <p>Hãy thử thay đổi từ khóa tìm kiếm hoặc làm mới dữ liệu</p>
@@ -482,14 +498,14 @@ export default function ServicePackageManagement() {
                             onClick={() => handleViewDetails(pkg)}
                             title="Xem chi tiết"
                           >
-                            <ViewIcon />
+                            <Eye size={18} />
                           </button>
                           <button
                             className={`${styles.actionButton} ${styles.editButton}`}
                             onClick={() => handleOpenEdit(pkg)}
                             title="Chỉnh sửa tên & giá"
                           >
-                            <EditIcon />
+                            <FilePenLine size={18} />
                           </button>
                         </div>
                       </td>
@@ -563,7 +579,7 @@ export default function ServicePackageManagement() {
           <div className={styles.modal}>
             <div className={styles.modalHeader}>
               <h3>Chi tiết Gói Dịch vụ</h3>
-              <button onClick={handleCloseDetails} className={styles.closeButton}>&times;</button>
+              <button onClick={handleCloseDetails} className={styles.closeButton}><X size={24} /></button>
             </div>
             <div className={styles.modalBody}>
               <div className={styles.packageDetails}>
@@ -584,9 +600,7 @@ export default function ServicePackageManagement() {
                     )}
                     {JSON.parse(viewPackage.features).map((feature: string, index: number) => (
                       <li key={index} className={styles.featureItem}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20,6 9,17 4,12"></polyline>
-                        </svg>
+                        <CheckCircle size={16} className={styles.featureIcon} />
                         {feature}
                       </li>
                     ))}
@@ -609,7 +623,7 @@ export default function ServicePackageManagement() {
           <div className={styles.modal}>
             <div className={styles.modalHeader}>
               <h3>Chỉnh sửa gói dịch vụ</h3>
-              <button onClick={handleCloseEdit} className={styles.closeButton}>&times;</button>
+              <button onClick={handleCloseEdit} className={styles.closeButton}><X size={24} /></button>
             </div>
             <div className={styles.modalBody}>
               <div className={styles.packageDetails}>

@@ -26,6 +26,7 @@ const PatientLayout: React.FC = () => {
     if (location.pathname.includes('/results')) return 'results';
     if (location.pathname.includes('/finance')) return 'finance';
     if (location.pathname.includes('/profile')) return 'profile';
+    if (location.pathname.includes('/emr-timeline')) return 'emr-timeline';
     return 'dashboard';
   };
 

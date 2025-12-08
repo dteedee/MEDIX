@@ -184,5 +184,29 @@ namespace Medix.API.Presentation.Controllers.Classification
                 return StatusCode(500);
             }
         }
+
+        [HttpGet("pdf")]
+        [Authorize(Roles = "Patient")]
+        public async Task<IActionResult> GetEMRAsPdf(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+                if (userIdClaim == null)
+                {
+                    return Unauthorized(new { Message = "User ID not found in token" });
+                }
+
+                var userId = Guid.Parse(userIdClaim.Value);
+
+                var pdfFile = await _medicalRecordService.CreateEMRAsPDFAsync(userId, cancellationToken);
+                return File(pdfFile.Data, "application/pdf", pdfFile.FileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to get medical records as pdf");
+                return StatusCode(500);
+            }
+        }
     }
 }

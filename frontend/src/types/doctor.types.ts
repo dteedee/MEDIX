@@ -92,6 +92,12 @@ export interface DoctorProfileDto {
   appointmentBookedDtos?: AppointmentBookedDto[]; 
 }
 
+export interface DoctorProfileUpdateRequest{
+    userName: string;
+    phoneNumber: string;
+    address: string;
+}
+
 export interface DoctorScheduleOverrideDto {
   id: string;
   doctorId: string;

@@ -5,7 +5,6 @@ namespace Medix.API.Models.DTOs.AIChat
         public string Severity { get; set; } = string.Empty; // "mild", "moderate", "severe"
         public string RecommendedAction { get; set; } = string.Empty;
         public List<MedicineDto>? Medicines { get; set; }
-        public string? RecommendedSpecialty { get; set; }
         public List<RecommendedDoctorDto>? RecommendedDoctors { get; set; }
         public string Disclaimer { get; set; } = "Thông tin từ AI chỉ mang tính chất tham khảo, không thay thế việc khám và điều trị của bác sĩ chuyên khoa.";
     }

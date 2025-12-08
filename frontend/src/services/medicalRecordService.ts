@@ -30,9 +30,17 @@ const getMedicalRecordDetails = async (id: string): Promise<MedicalRecordDetail>
   return response.data;
 };
 
+const getPdf = async (): Promise<Blob> => {
+  const response = await apiClient.get<Blob>(`${API_ENDPOINT}/pdf`, {
+    responseType: "blob",
+  });
+  return response.data;
+}
+
 export const medicalRecordService = {
   getMedicalRecordByAppointmentId,
   updateMedicalRecord,
   getMedicalRecordsOfPatient,
   getMedicalRecordDetails,
+  getPdf
 };

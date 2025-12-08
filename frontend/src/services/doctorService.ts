@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, ServiceTierWithPaginatedDoctorsDto, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters, DoctorQuery, DoctorList, DoctorDto, EducationGroupWithPaginatedDoctorsDto, DoctorPerformanceDto } from "../types/doctor.types";
+import { DoctorProfileDetails, DoctorProfileDto, DoctorRegisterMetadata, ServiceTierWithPaginatedDoctorsDto, PaginationParams, DoctorTypeDegreeDto, DoctorQueryParameters, DoctorQuery, DoctorList, DoctorDto, EducationGroupWithPaginatedDoctorsDto, DoctorPerformanceDto, DoctorProfileUpdateRequest } from "../types/doctor.types";
 
 class DoctorService {
     async getDoctorProfile(doctorID: string | undefined): Promise<DoctorProfileDto> {
@@ -17,7 +17,7 @@ class DoctorService {
         return response.data;
     }
 
-    async updateDoctorProfile(payload: FormData): Promise<void> {
+    async updateDoctorProfile(payload: DoctorProfileUpdateRequest): Promise<void> {
         await apiClient.put<any>('doctor/profile/update', payload);
     }
 

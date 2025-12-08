@@ -233,44 +233,71 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
       .replace(/🚨/g, '🚨');
   };
 
+  const getSeverityLevel = (label: string): string => {
+    switch (label) {
+      case "mild": return "Nhẹ";
+      case "moderate": return "Trung bình";
+      case "severe": return "Nặng";
+      default: return "";
+    }
+  }
+
   const renderSymptomAnalysis = (data: SymptomAnalysisResponse) => {
     return (
-      <div className={styles.symptomAnalysis}>
-        {data.medicines && data.medicines.length > 0 && (
-          <div className={styles.conditionsList}>
-            <h4>Các loại thuốc có thể sử dụng:</h4>
-            {data.medicines.map((medicine, index) => (
-              <div key={index} className={styles.conditionItem}>
-                <span className={styles.conditionName}>{medicine.name}</span>
-                <p className={styles.conditionDescription}>{medicine.instructions}</p>
-              </div>
-            ))}
-          </div>
-        )}
-        {data.recommendedDoctors && data.recommendedDoctors.length > 0 ? (
-          <div className={styles.doctorsList}>
-            <h4>Bác sĩ được gợi ý:</h4>
-            {data.recommendedDoctors.map((doctor, index) => (
-              <>
-                <a href={`/doctor/details/${doctor.id}`} target="_blank" rel="noopener noreferrer">
-                  <div key={index} className={styles.doctorItem}>
-                    <span className={styles.doctorName}>{doctor.name}</span>
-                    <span className={styles.doctorSpecialty}>Chuyên khoa: {doctor.specialization}</span>
-                    <span className={styles.doctorSpecialty}>Học vị: {doctor.education}</span>
-                    <span className={styles.doctorSpecialty}>Giá khám: {doctor.consultationFee} VND</span>
-                    <span className={styles.doctorSpecialty}>Số năm kinh nghiệm: {doctor.experience}</span>
-                    <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
-                  </div>
-                </a>
-              </>
-            ))}
-          </div>
-        ) : (
-          <div className={styles.doctorsList}>
-            <p>Không có bác sĩ nào được gợi ý dựa trên phân tích triệu chứng.</p>
-          </div>
-        )}
-      </div>
+      <>
+        <div className={styles.messageText}>
+          Mức độ nghiêm trọng: {getSeverityLevel(data.severity)}
+        </div>
+        <div className={styles.messageText}>
+          {data.recommendedAction}
+        </div>
+        <div className={styles.symptomAnalysis}>
+          {data.severity === 'mild' ? (
+            <>
+              {data.medicines && data.medicines.length > 0 && (
+                <div className={styles.conditionsList}>
+                  <h4>Các loại thuốc có thể sử dụng:</h4>
+                  {data.medicines.map((medicine, index) => (
+                    <div key={index} className={styles.conditionItem}>
+                      <span className={styles.conditionName}>{medicine.name}</span>
+                      <p className={styles.conditionDescription}>{medicine.instructions}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {data.recommendedDoctors && data.recommendedDoctors.length > 0 ? (
+                <div className={styles.doctorsList}>
+                  <h4>Bác sĩ được gợi ý:</h4>
+                  {data.recommendedDoctors.map((doctor, index) => (
+                    <>
+                      <a href={`/doctor/details/${doctor.id}`} target="_blank" rel="noopener noreferrer">
+                        <div key={index} className={styles.doctorItem}>
+                          <span className={styles.doctorName}>{doctor.name}</span>
+                          <span className={styles.doctorSpecialty}>Chuyên khoa: {doctor.specialization}</span>
+                          <span className={styles.doctorSpecialty}>Học vị: {doctor.education}</span>
+                          <span className={styles.doctorSpecialty}>Giá khám: {doctor.consultationFee} VND</span>
+                          <span className={styles.doctorSpecialty}>Số năm kinh nghiệm: {doctor.experience}</span>
+                          <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
+                        </div>
+                      </a>
+                    </>
+                  ))}
+                </div>
+              ) : (
+                <div className={styles.doctorsList}>
+                  <p>Chúng tôi chưa tìm thấy bác sĩ phù hợp với yêu cầu của bạn.</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        <div className={styles.messageText}>
+          {data.disclaimer}
+        </div>
+      </>
     );
   };
 

@@ -208,7 +208,7 @@ export const Header: React.FC = () => {
         } else if (user?.role === "Manager") {
             navigate('/app/manager/profile');
         } else if (user?.role === "Doctor") {
-            navigate('/app/doctor/profile/edit');
+            navigate('/app/doctor/profile');
         } else {
             navigate('/app/patient/profile');
         }

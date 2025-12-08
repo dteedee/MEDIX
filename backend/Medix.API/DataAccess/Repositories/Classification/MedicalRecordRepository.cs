@@ -71,36 +71,38 @@ namespace Medix.API.DataAccess.Repositories.Classification
             await _context.SaveChangesAsync();
         }
 
-        public async Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query)
+        public async Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery? query = null)
         {
             var queryable = _context.MedicalRecords
                 .Where(mr => mr.Appointment.Patient.UserId == userId && mr.Appointment.StatusCode == "Completed")
                 .OrderByDescending(mr => mr.Appointment.AppointmentEndTime)
                 .AsQueryable();
-            if (queryable.Count() == 0)
+            if (!queryable.Any())
             {
-                return new List<MedicalRecord>();
+                return [];
             }
 
-            if (query.DateFrom == null && query.DateTo == null) { }
-            else if (query.DateTo == null)
-            {
-                queryable = queryable.Where(mr => mr.Appointment.AppointmentEndTime >= query.DateFrom);
-            }
-            else
-            {
-                query.DateTo = query.DateTo.Value.AddDays(1);
-                if (query.DateFrom == null)
+            if (query != null) {
+                if (query.DateFrom == null && query.DateTo == null) { }
+                else if (query.DateTo == null)
                 {
-                    queryable = queryable.Where(mr => mr.Appointment.AppointmentEndTime <= query.DateTo);
+                    queryable = queryable.Where(mr => mr.Appointment.AppointmentEndTime >= query.DateFrom);
                 }
                 else
                 {
-                    queryable = queryable.Where(mr =>
-                        mr.Appointment.AppointmentEndTime <= query.DateTo
-                        && mr.Appointment.AppointmentEndTime >= query.DateFrom);
+                    query.DateTo = query.DateTo.Value.AddDays(1);
+                    if (query.DateFrom == null)
+                    {
+                        queryable = queryable.Where(mr => mr.Appointment.AppointmentEndTime <= query.DateTo);
+                    }
+                    else
+                    {
+                        queryable = queryable.Where(mr =>
+                            mr.Appointment.AppointmentEndTime <= query.DateTo
+                            && mr.Appointment.AppointmentEndTime >= query.DateFrom);
+                    }
                 }
-                
+
             }
 
             return await queryable

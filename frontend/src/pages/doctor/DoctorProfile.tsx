@@ -200,14 +200,14 @@ export const DoctorProfile: React.FC = () => {
   const handleSave = async () => {
     setShowSaveConfirmation(false);
     if (editData?.userName && editData.phoneNumber) {
-      const formData = new FormData();
-      formData.append('userName', editData?.userName);
-      formData.append('phoneNumber', editData.phoneNumber);
-      formData.append('address', editData.address ?? '');
 
       setSaving(true);
       try {
-        await DoctorService.updateDoctorProfile(formData);
+        await DoctorService.updateDoctorProfile({
+          userName: editData.userName,
+          phoneNumber: editData.phoneNumber,
+          address: editData.address ?? ''
+        });
 
         setData((prev) => ({
           ...prev!,

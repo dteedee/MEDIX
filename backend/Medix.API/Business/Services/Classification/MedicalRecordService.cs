@@ -330,11 +330,11 @@ namespace Medix.API.Business.Services.Classification
             {
                 page.Paragraphs.Add(CreateText(string.Empty));
 
+                page.Paragraphs.Add(CreateText($"Ngày khám: {record.CreatedAt}"));
                 page.Paragraphs.Add(CreateText($"Bác sĩ phụ trách: {record.Appointment.Doctor.User.FullName}"));
                 page.Paragraphs.Add(CreateText($"Lý do khám & Triệu chứng: {record.ChiefComplaint}"));
                 page.Paragraphs.Add(CreateText($"Chẩn đoán: {record.Diagnosis}"));
                 page.Paragraphs.Add(CreateText($"Kế hoạch điều trị: {record.TreatmentPlan}"));
-                page.Paragraphs.Add(CreateText($"Ngày khám: {record.CreatedAt}"));
 
                 page.Paragraphs.Add(CreateText(string.Empty));
             }

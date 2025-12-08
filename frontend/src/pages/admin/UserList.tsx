@@ -225,9 +225,9 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
 
   const handleCreateUser = async (userData: CreateUserRequest) => {
     try {
-      showToast('Đang tạo người dùng mới...', 'info');
+      showToast('Đang tạo quản lý mới...', 'info');
       await userAdminService.create(userData);
-      showToast('Tạo người dùng thành công!', 'success');
+      showToast('Tạo quản lý thành công!', 'success');
       setCreating(false);
       await load();
     } catch (error: any) {
@@ -768,7 +768,7 @@ export default function UserList() {  const [users, setUsers] = useState<UserDTO
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
-              <h2>Tạo Người dùng Mới</h2>
+              <h2>Tạo Quản Lý Mới</h2>
               <button onClick={() => setCreating(false)} className={styles.closeButton}>
                 <i className="bi bi-x-lg"></i>
               </button>

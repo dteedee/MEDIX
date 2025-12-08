@@ -257,10 +257,10 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
         showToast('Cập nhật thông tin người dùng thành công!', 'success')
         onSaved?.(payload)
       } else { 
-        showToast('Đang tạo người dùng mới...', 'info')
+        showToast('Đang tạo quản lý mới...', 'info')
         const payload: CreateUserRequest = { userName, email, role: 'Manager' } 
         await userAdminService.create(payload)
-        showToast('Tạo người dùng mới thành công!', 'success')
+        showToast('Tạo quản lý mới thành công!', 'success')
         onSaved?.(payload)
       }
     } catch (error: any) {
@@ -282,7 +282,7 @@ export default function UserForm({ user, onSaved, onCancel }: Props) {
         }
         setErrors(newErrors);
       } else {
-        showToast('Tạo người dùng thất bại. Vui lòng thử lại.', 'error');
+        showToast('Tạo quản lý thất bại. Vui lòng thử lại.', 'error');
       }
     } finally {
       setSaving(false)

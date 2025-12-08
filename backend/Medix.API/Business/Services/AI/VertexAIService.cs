@@ -344,7 +344,7 @@ namespace Medix.API.Business.Services.AI
         private readonly string ModelResourceName;
 
         public VertexAIService(
-            PredictionServiceClient client, 
+            PredictionServiceClient client,
             IConfiguration configuration)
         {
             _client = client;
@@ -479,21 +479,22 @@ namespace Medix.API.Business.Services.AI
             var prompt = "Dựa trên danh sách bác sĩ sau đây:\n" +
                          $"{doctorListString}\n" +
                          $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với các loại bệnh có khả năng là: '{possibleConditions}'. ";
-            return await GetRecommendedDoctorIdsAsync(prompt);
+            return await GetRecommendedDoctorIdsAsync(prompt, [], null);
         }
 
-        public async Task<List<string>> GetRecommendedDoctorIdsByPromptAsync(string userPrompt, int count, string doctorListString)
+        public async Task<List<string>> GetRecommendedDoctorIdsByPromptAsync
+            (string userPrompt, int count, string doctorListString, List<AIChatMessageDto> conversationHistory)
         {
-            var prompt = "Dựa trên danh sách bác sĩ sau đây:\n" +
+            var systemInstruction = "Danh sách bác sĩ:\n" +
                          $"{doctorListString}\n" +
-                         $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với yêu cầu sau: '{userPrompt}'. ";
-            return await GetRecommendedDoctorIdsAsync(prompt);
+                         $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân dựa trên cuộc trò chuyện.";
+            return await GetRecommendedDoctorIdsAsync(userPrompt, GetConversationHistory(conversationHistory), systemInstruction);
         }
 
-        public async Task<List<string>> GetRecommendedDoctorIdsAsync(string prompt)
+        private async Task<List<string>> GetRecommendedDoctorIdsAsync
+            (string prompt, List<Content> contents, string? systemInstruction = null)
         {
-            var contents = new List<Content>
-            {
+            contents.Add(
                 new Content
                 {
                     Role = "user",
@@ -505,18 +506,18 @@ namespace Medix.API.Business.Services.AI
                         }
                     }
                 }
-            };
+            );
 
-            var responseText = await GetResponseAsync(contents, DoctorsJsonSchema, null);
+            var responseText = await GetResponseAsync(contents, DoctorsJsonSchema, systemInstruction);
             var doctorIds = JsonSerializer.Deserialize<RecommenedDoctorIdList>(responseText);
             return doctorIds?.IdList ?? [];
         }
 
         public async Task<List<string>> GetRecommendedArticleIdListAsync(string userPrompt, string articleListString, int count)
         {
-            var prompt = "Dựa trên danh sách bài viết sau đây:\n" +
+            var systemInstruction = "Danh sách bài viết:\n" +
                          $"{articleListString}\n" +
-                         $"Hãy đề xuất {count} bài viết phù hợp nhất cho bệnh nhân với yêu cầu sau: '{userPrompt}'. ";
+                         $"Hãy đề xuất {count} bài viết phù hợp nhất cho bệnh nhân. ";
             var contents = new List<Content>
             {
                 new Content
@@ -526,12 +527,12 @@ namespace Medix.API.Business.Services.AI
                     {
                         new Part
                         {
-                            Text = prompt
+                            Text = userPrompt
                         }
                     }
                 }
             };
-            var responseText = await GetResponseAsync(contents, ArticlesJsonSchema, null);
+            var responseText = await GetResponseAsync(contents, ArticlesJsonSchema, systemInstruction);
             var articleIds = JsonSerializer.Deserialize<RecommendedArticleIdList>(responseText);
             return articleIds?.IdList ?? [];
         }

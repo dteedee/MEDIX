@@ -210,8 +210,32 @@ namespace Medix.API.Business.Services.AI
             Model = configuration["Gemini:Model"] ?? "gemini-2.5-flash";
         }
 
-        private async Task<string> GenerateResponseAsync(List<Content> conversationHistory, GenerateContentConfig systemConfigs)
+        private async Task<string> GenerateResponseAsync
+            (List<Content> conversationHistory, Schema jsonSchema, string? systemInstruction = null)
         {
+            var systemConfigs = new GenerateContentConfig
+            {
+                ResponseMimeType = "application/json",
+                ResponseSchema = jsonSchema,
+            };
+
+            if (systemInstruction != null)
+            {
+                var systemContent = new Content
+                {
+                    Parts =
+                    [
+                        new Part
+                            {
+                                Text = systemInstruction
+                            }
+                    ],
+                    Role = "system"
+                };
+
+                systemConfigs.SystemInstruction = systemContent;
+            };
+
             var response = await _client.Models.GenerateContentAsync(
                 model: Model,
                 contents: conversationHistory,
@@ -240,22 +264,6 @@ namespace Medix.API.Business.Services.AI
 
         public async Task<string> GetRequestTypeAsync(string prompt)
         {
-            var systemConfigs = new GenerateContentConfig
-            {
-                ResponseMimeType = "application/json",
-                ResponseSchema = RequestTypeSchema, // Sử dụng JSON Schema đã định nghĩa
-                SystemInstruction = new Content
-                {
-                    Parts =
-                    [
-                        new Part
-                            {
-                                Text = RequestTypeInstructionText,
-                            }
-                    ],
-                    Role = "system"
-                }
-            };
             var conversationHistory = new List<Content>
             {
                 new Content
@@ -270,31 +278,14 @@ namespace Medix.API.Business.Services.AI
                     ]
                 }
             };
-            var rawResponse = await GenerateResponseAsync(conversationHistory, systemConfigs);
+            var rawResponse = await GenerateResponseAsync(conversationHistory, RequestTypeSchema, RequestTypeInstructionText);
             var requestTypeObj = JsonSerializer.Deserialize<PromptRequestType>(rawResponse);
             return requestTypeObj?.RequestType ?? "NotHealthRelated";
         }
 
         public async Task<DiagnosisModel> GetSymptompAnalysisAsync(string prompt, string? context, List<AIChatMessageDto> history)
         {
-            var systemContent = new Content
-            {
-                Parts =
-                [
-                    new Part
-                        {
-                            Text = GetSymptomInstruction(context),
-                        }
-                ],
-                Role = "system"
-            };
-
-            var systemConfigs = new GenerateContentConfig
-            {
-                SystemInstruction = systemContent,
-                ResponseMimeType = "application/json",
-                ResponseSchema = SymptomAnalysisSchema // Sử dụng JSON Schema đã định nghĩa
-            };
+            var systemInstruction = GetSymptomInstruction(context);
 
             var conversationHistory = GetConversationHistory(history);
             conversationHistory.Add(new Content
@@ -308,30 +299,13 @@ namespace Medix.API.Business.Services.AI
                     }
                 ]
             });
-            var rawResponse = await GenerateResponseAsync(conversationHistory, systemConfigs);
+            var rawResponse = await GenerateResponseAsync(conversationHistory, SymptomAnalysisSchema, systemInstruction);
             return AIResponseParser.ParseJson(rawResponse);
         }
 
         public async Task<DiagnosisModel> GetEMRAnalysisAsync(string emrText, string? context, List<AIChatMessageDto> history)
         {
-            var systemContent = new Content
-            {
-                Parts =
-                [
-                    new Part
-                        {
-                            Text = GetEMRAnalysisInstruction(context),
-                        }
-                ],
-                Role = "system"
-            };
-
-            var systemConfigs = new GenerateContentConfig
-            {
-                SystemInstruction = systemContent,
-                ResponseMimeType = "application/json",
-                ResponseSchema = SymptomAnalysisSchema // Sử dụng JSON Schema đã định nghĩa
-            };
+            var systemInstruction = GetEMRAnalysisInstruction(context);
 
             var conversationHistory = GetConversationHistory(history);
             conversationHistory.Add(new Content
@@ -345,31 +319,12 @@ namespace Medix.API.Business.Services.AI
                     }
                 ]
             });
-            var rawResponse = await GenerateResponseAsync(conversationHistory, systemConfigs);
+            var rawResponse = await GenerateResponseAsync(conversationHistory, SymptomAnalysisSchema, systemInstruction);
             return AIResponseParser.ParseJson(rawResponse);
         }
 
         public async Task<List<MedicineDto>> GetRecommendedMedicinesAsync(string possibleConditions)
         {
-            var systemContent = new Content
-            {
-                Parts =
-                 [
-                     new Part
-                        {
-                            Text = MedicineRecommendationInstructionText,
-                        }
-                 ],
-                Role = "system"
-            };
-
-            var systemConfigs = new GenerateContentConfig
-            {
-                SystemInstruction = systemContent,
-                ResponseMimeType = "application/json",
-                ResponseSchema = MedicinesSchema // Sử dụng JSON Schema đã định nghĩa
-            };
-
             var conversationHistory = new List<Content>
             {
                 new Content
@@ -384,7 +339,7 @@ namespace Medix.API.Business.Services.AI
                     ]
                 }
             };
-            var rawResponse = await GenerateResponseAsync(conversationHistory, systemConfigs);
+            var rawResponse = await GenerateResponseAsync(conversationHistory, MedicinesSchema, MedicineRecommendationInstructionText);
             var medicines = JsonSerializer.Deserialize<RecommendedMedicineList>(rawResponse);
             return medicines?.List ?? [];
         }
@@ -395,23 +350,24 @@ namespace Medix.API.Business.Services.AI
             var prompt = "Dựa trên danh sách bác sĩ sau đây:\n" +
                          $"{doctorListString}\n" +
                          $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với các loại bệnh có khả năng là: '{possibleConditions}'. ";
-            return await GetRecommendedDoctorIdsAsync(prompt);
+            return await GetRecommendedDoctorIdsAsync(prompt, []);
         }
 
         public async Task<List<string>> GetRecommendedDoctorIdsByPromptAsync
-            (string userPrompt, int count, string doctorListString)
+            (string userPrompt, int count, string doctorListString, List<AIChatMessageDto> conversationHistory)
         {
-            var prompt = "Dựa trên danh sách bác sĩ sau đây:\n" +
+            var systemInstruction = "Danh sách bác sĩ:\n" +
                          $"{doctorListString}\n" +
-                         $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với yêu cầu sau: '{userPrompt}'. ";
-            return await GetRecommendedDoctorIdsAsync(prompt);
+                         $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân dựa trên cuộc trò chuyện.";
+            return await GetRecommendedDoctorIdsAsync(userPrompt, GetConversationHistory(conversationHistory), systemInstruction);
         }
 
         public async Task<List<string>> GetRecommendedArticleIdListAsync(string userPrompt, string articleListString, int count)
         {
-            var prompt = "Dựa trên danh sách bài viết sau đây:\n" +
+            var systemInstruction = "Danh sách bài viết:\n" +
                          $"{articleListString}\n" +
-                         $"Hãy đề xuất {count} bài viết phù hợp nhất cho người dùng với yêu cầu sau: '{userPrompt}'. ";
+                         $"Hãy đề xuất {count} bài viết phù hợp nhất cho người dùng. ";
+
             var conversationHistory = new List<Content>
             {
                 new Content
@@ -421,25 +377,21 @@ namespace Medix.API.Business.Services.AI
                     [
                         new Part
                         {
-                            Text = prompt
+                            Text = userPrompt
                         }
                     ]
                 }
             };
-            var systemConfig = new GenerateContentConfig
-            {
-                ResponseMimeType = "application/json",
-                ResponseSchema = ArticlesSchema // Sử dụng JSON Schema đã định nghĩa
-            };
-            var rawJson = await GenerateResponseAsync(conversationHistory, systemConfig);
+
+            var rawJson = await GenerateResponseAsync(conversationHistory, ArticlesSchema, systemInstruction);
             var articleIds = JsonSerializer.Deserialize<RecommendedArticleIdList>(rawJson);
             return articleIds?.IdList ?? [];
         }
 
-        private async Task<List<string>> GetRecommendedDoctorIdsAsync(string prompt)
+        private async Task<List<string>> GetRecommendedDoctorIdsAsync
+            (string prompt, List<Content> conversationHistory, string? systemInstruction = null)
         {
-            var conversationHistory = new List<Content>
-            {
+            conversationHistory.Add(
                 new Content
                 {
                     Role = "user",
@@ -451,14 +403,9 @@ namespace Medix.API.Business.Services.AI
                         }
                     ]
                 }
-            };
+            );
 
-            var systemConfig = new GenerateContentConfig
-            {
-                ResponseMimeType = "application/json",
-                ResponseSchema = DoctorsSchema // Sử dụng JSON Schema đã định nghĩa
-            };
-            var rawJson = await GenerateResponseAsync(conversationHistory, systemConfig);
+            var rawJson = await GenerateResponseAsync(conversationHistory, DoctorsSchema, systemInstruction);
             var doctorIds = JsonSerializer.Deserialize<RecommenedDoctorIdList>(rawJson);
             return doctorIds?.IdList ?? [];
         }

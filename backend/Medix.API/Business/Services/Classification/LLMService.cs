@@ -181,7 +181,8 @@ namespace Medix.API.Business.Services.Classification
             throw new InvalidOperationException("No LLM API configured.");
         }
 
-        public async Task<List<string>> GetRecommendedDoctorIdsByPromptAsync(string prompt, int count, string doctorListString)
+        public async Task<List<string>> GetRecommendedDoctorIdsByPromptAsync
+            (string prompt, int count, string doctorListString, List<AIChatMessageDto> conversationHistory)
         {
             try
             {
@@ -189,7 +190,7 @@ namespace Medix.API.Business.Services.Classification
                 var vertexApiKey = _configuration["GoogleCloud:ProjectId"];
                 if (!string.IsNullOrEmpty(vertexApiKey))
                 {
-                    return await _vertexAiService.GetRecommendedDoctorIdsByPromptAsync(prompt, count, doctorListString);
+                    return await _vertexAiService.GetRecommendedDoctorIdsByPromptAsync(prompt, count, doctorListString, conversationHistory);
                 }
             }
             catch (Exception ex)
@@ -202,7 +203,7 @@ namespace Medix.API.Business.Services.Classification
                 var geminiApiKey = _configuration["Gemini:ApiKey"];
                 if (!string.IsNullOrEmpty(geminiApiKey))
                 {
-                    return await _geminiAiService.GetRecommendedDoctorIdsByPromptAsync(prompt, count, doctorListString);
+                    return await _geminiAiService.GetRecommendedDoctorIdsByPromptAsync(prompt, count, doctorListString, conversationHistory);
                 }
             }
             catch (Exception ex)

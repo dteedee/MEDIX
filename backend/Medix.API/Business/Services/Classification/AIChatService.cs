@@ -47,7 +47,7 @@ namespace Medix.API.Business.Services.Classification
             return requestType switch
             {
                 Constant.SymptomAnalysis => await AnalyzeSymptomAsync(prompt, conversationHistory, userIdClaim),
-                Constant.DoctorsQuery => await GetRecommendedDoctorsByPromptAsync(prompt),
+                Constant.DoctorsQuery => await GetRecommendedDoctorsByPromptAsync(prompt, conversationHistory),
                 Constant.ArticlesQuery => await GetRecommendedArticlesAsync(prompt),
                 Constant.NotHealthRelated => new ChatResponseDto
                 {
@@ -169,22 +169,29 @@ namespace Medix.API.Business.Services.Classification
 
         private async Task SaveSymptomAnalysisAsync(DiagnosisModel diagnosisModel, string userIdClaim)
         {
-            var patient = await _patientRepository.GetPatientByUserIdAsync(Guid.Parse(userIdClaim));
-
-            var aiSymptompAnalysis = new AISymptomAnalysis
+            try
             {
-                Id = Guid.NewGuid(),
-                Symptoms = string.Join(",", diagnosisModel.SymptomsProvided!),
-                SessionId = Guid.NewGuid().ToString(),
-                IsGuestSession = userIdClaim == null,
-                PatientId = patient?.Id,
-                SeverityLevelCode = diagnosisModel.SeverityCode ?? "Mild",
-                PossibleConditions = diagnosisModel.PossibleConditions,
-                RecommendedAction = diagnosisModel.RecommendedAction,
-                ConfidenceScore = diagnosisModel.ConfidenceScore,
-            };
+                var patient = await _patientRepository.GetPatientByUserIdAsync(Guid.Parse(userIdClaim));
 
-            await _aiSymptomAnalysisRepository.AddAsync(aiSymptompAnalysis);
+                var aiSymptompAnalysis = new AISymptomAnalysis
+                {
+                    Id = Guid.NewGuid(),
+                    Symptoms = string.Join(",", diagnosisModel.SymptomsProvided!),
+                    SessionId = Guid.NewGuid().ToString(),
+                    IsGuestSession = userIdClaim == null,
+                    PatientId = patient?.Id,
+                    SeverityLevelCode = diagnosisModel.SeverityCode ?? "Mild",
+                    PossibleConditions = diagnosisModel.PossibleConditions,
+                    RecommendedAction = diagnosisModel.RecommendedAction,
+                    ConfidenceScore = diagnosisModel.ConfidenceScore,
+                };
+
+                await _aiSymptomAnalysisRepository.AddAsync(aiSymptompAnalysis);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving symptom analysis for user {UserId}", userIdClaim);
+            }
         }
 
         private async Task<string> GetDoctorListString()
@@ -252,9 +259,10 @@ namespace Medix.API.Business.Services.Classification
             throw new Exception("AI daily access limit configuration is missing or invalid.");
         }
 
-        private async Task<ChatResponseDto> GetRecommendedDoctorsByPromptAsync(string prompt)
+        private async Task<ChatResponseDto> GetRecommendedDoctorsByPromptAsync(string prompt, List<AIChatMessageDto> conversationHistory)
         {
-            var idList = await _llmService.GetRecommendedDoctorIdsByPromptAsync(prompt, 3, await GetDoctorListString());
+            var doctorListString = await GetDoctorListString();
+            var idList = await _llmService.GetRecommendedDoctorIdsByPromptAsync(prompt, 3, doctorListString, conversationHistory);
             var recommendedDoctors = await GetRecommendedDoctorsAsync(idList);
             if (recommendedDoctors.Count == 0)
             {

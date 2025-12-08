@@ -16,6 +16,7 @@ import {
   transferTransactionService,
   TransferTransactionDto,
 } from '../../services/transferTransactionService';
+import { useToast } from '../../contexts/ToastContext';
 
 type StatusFilter = 'all' | 'Pending' | 'Accepted' | 'Rejected';
 type StatusBadgeKey = TransferTransactionDto['status'] | 'all';
@@ -71,6 +72,7 @@ const BANKS = [
 ];
 
 const TransferTransactions: React.FC = () => {
+  const { showToast } = useToast();
   const [transactions, setTransactions] = useState<TransferTransactionDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,26 +113,26 @@ const TransferTransactions: React.FC = () => {
   };
 
   const handleAcceptTransfer = async (transferTransactionId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn chấp nhận giao dịch này?')) return;
     setAcceptingId(transferTransactionId);
     try {
       await transferTransactionService.acceptTransfer({ TransferTransactionID: transferTransactionId });
+      showToast('Đã chấp nhận giao dịch thành công!', 'success');
       await loadTransactions();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Có lỗi khi xác nhận giao dịch!');
+      showToast(err?.response?.data?.message || err?.message || 'Có lỗi khi xác nhận giao dịch!', 'error');
     } finally {
       setAcceptingId(null);
     }
   };
 
   const handleRejectTransfer = async (transferTransactionId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn từ chối giao dịch này?')) return;
     setRejectingId(transferTransactionId);
     try {
       await transferTransactionService.rejectTransfer({ TransferTransactionID: transferTransactionId });
+      showToast('Đã từ chối giao dịch thành công!', 'success');
       await loadTransactions();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Có lỗi khi từ chối giao dịch!');
+      showToast(err?.response?.data?.message || err?.message || 'Có lỗi khi từ chối giao dịch!', 'error');
     } finally {
       setRejectingId(null);
     }

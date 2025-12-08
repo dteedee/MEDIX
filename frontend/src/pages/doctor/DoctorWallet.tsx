@@ -5,6 +5,7 @@ import { WalletDto, OrderCreateRequest, WalletTransactionDto, BankInfo, Withdraw
 import styles from '../../styles/doctor/DoctorWallet.module.css';
 import { Wallet2, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, PlusCircle, Clock, Calendar } from 'lucide-react';
 import { PageLoader } from '../../components/ui';
+import { useToast } from '../../contexts/ToastContext';
 
 type TabType = 'all' | 'deposit' | 'withdrawal' | 'salary' | 'expense';
 
@@ -49,6 +50,7 @@ const BANKS: BankInfo[] = [
 
 export const DoctorWallet: React.FC = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [wallet, setWallet] = useState<WalletDto | null>(null);
   const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -258,18 +260,18 @@ export const DoctorWallet: React.FC = () => {
     if (!selectedBank || !accountNumber || !accountName) return;
     
     if (!/^\d+$/.test(accountNumber)) {
-      alert('Số tài khoản chỉ được chứa số');
+      showToast('Số tài khoản chỉ được chứa số', 'error');
       return;
     }
     
     if (!/^[A-Za-z\s]+$/.test(accountName)) {
-      alert('Tên chủ tài khoản chỉ được chứa chữ cái tiếng Anh và khoảng trắng');
+      showToast('Tên chủ tài khoản chỉ được chứa chữ cái tiếng Anh và khoảng trắng', 'error');
       return;
     }
 
     const amount = parseFormattedNumber(withdrawalAmount || depositAmount);
     if (!amount || amount <= 0) {
-      alert('Vui lòng nhập số tiền hợp lệ');
+      showToast('Vui lòng nhập số tiền hợp lệ', 'error');
       return;
     }
 
@@ -284,8 +286,6 @@ export const DoctorWallet: React.FC = () => {
 
       const result = await walletService.createTransferTransaction(transferRequest);
       
-      alert('Yêu cầu rút tiền đã được gửi thành công!');
-      
       setWithdrawalAmount('');
       setDepositAmount('');
       setShowWithdrawalModal(false);
@@ -294,6 +294,8 @@ export const DoctorWallet: React.FC = () => {
       setAccountNumber('');
       setAccountName('');
       setBankSearchTerm('');
+      
+      showToast('Yêu cầu rút tiền đã được gửi thành công!', 'success');
       
       const walletData = await walletService.getWalletByUserId();
       setWallet(walletData);
@@ -307,7 +309,7 @@ export const DoctorWallet: React.FC = () => {
         errorMessage = err.message;
       }
       
-      alert(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setIsProcessingWithdrawal(false);
     }

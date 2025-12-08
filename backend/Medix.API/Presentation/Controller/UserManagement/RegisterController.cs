@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Medix.API.Models.DTOs.Authen;
 using Medix.API.Models.DTOs.Patient;
+using Medix.API.Business.Interfaces.Classification;
 
 namespace Medix.API.Presentation.Controller.UserManagement
 {
@@ -21,8 +22,10 @@ namespace Medix.API.Presentation.Controller.UserManagement
         private readonly IPatientService _patientService;
         private readonly IAuthService _authService;
         private readonly IWalletService _walletService;
+        private readonly IPromotionService _promotionService;
+        private readonly IUserPromotionService _userPromotionService;
 
-        public RegisterController(MedixContext context, IEmailService emailService, IUserService userService, IPatientService patientService, IAuthService authService, IWalletService walletService)
+        public RegisterController(MedixContext context, IEmailService emailService, IUserService userService, IPatientService patientService, IAuthService authService, IWalletService walletService, IUserPromotionService userPromotionService, IPromotionService promotionService)
         {
             _context = context;
             _emailService = emailService;
@@ -30,6 +33,9 @@ namespace Medix.API.Presentation.Controller.UserManagement
             _patientService = patientService;
             _authService = authService;
             _walletService = walletService;
+
+            _userPromotionService = userPromotionService;
+            _promotionService = promotionService;
         }
 
         [HttpGet("getBloodTypes")]
@@ -190,6 +196,22 @@ namespace Medix.API.Presentation.Controller.UserManagement
                 Identifier = registration.RegisterRequest.Email,
                 Password = registration.RegisterRequest.Password
             };
+            var x = await _promotionService.GetPromotionforTypeTarget("NEW_USER");
+            if (x != null)
+            {
+                
+                foreach (var promotion in x)
+                {
+                    var startdate = promotion.StartDate.Date;
+                    var endDate = promotion.EndDate.Date;
+
+                    if (userDTO.CreatedAt>=startdate && userDTO.CreatedAt <= endDate)
+                    {
+                        await _userPromotionService.AssignPromotionToUserAsync(userDTO.Id, promotion.Id);
+                    }
+
+                }
+            }
 
             var result = await _authService.LoginAsync(loginRequest);
             return Ok(result);

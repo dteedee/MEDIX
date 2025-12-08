@@ -1,4 +1,5 @@
 ﻿using Medix.API.Business.Interfaces.Classification;
+using Medix.API.Business.Services.Classification;
 using Medix.API.DataAccess;
 using Medix.API.Models.DTOs.Manager;
 using Microsoft.AspNetCore.Authorization;
@@ -64,7 +65,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPost]
-        [Authorize] 
+        [Authorize]
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> CreatePromotion([FromBody] PromotionDto promotionDto)
         {
@@ -85,7 +86,6 @@ namespace Medix.API.Presentation.Controller.Classification
 
                 var created = await _promotionService.CreatePromotionAsync(promotionDto);
 
-  
                 var persisted = await _context.Promotions
                     .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.Code == created.Code);
@@ -100,10 +100,8 @@ namespace Medix.API.Presentation.Controller.Classification
                         .ToList();
 
                     var applicableToAll = tokens.Any(t => string.Equals(t, "All", StringComparison.OrdinalIgnoreCase));
-                    var applicableToNew = tokens.Any(t => string.Equals(t, "New", StringComparison.OrdinalIgnoreCase)
-                                                          || string.Equals(t, "NewUsers", StringComparison.OrdinalIgnoreCase));
-                    var applicableToVip = tokens.Any(t => string.Equals(t, "VIP", StringComparison.OrdinalIgnoreCase)
-                                                          || string.Equals(t, "Vip", StringComparison.OrdinalIgnoreCase));
+                    var applicableToNew = tokens.Any(t => string.Equals(t, "NEW_USER", StringComparison.OrdinalIgnoreCase)
+                                                          || string.Equals(t, "New", StringComparison.OrdinalIgnoreCase));
 
                     var newDaysToken = tokens.FirstOrDefault(t => t.StartsWith("NewDays:", StringComparison.OrdinalIgnoreCase));
                     int newUserDays = 30;
@@ -116,18 +114,61 @@ namespace Medix.API.Presentation.Controller.Classification
 
                     try
                     {
-                        var assigned = await userPromotionService.AssignPromotionToMultipleUsersAsync(
-                            persisted.Id,
-                            applicableToAll,
-                            applicableToNew,
-                            applicableToVip,
-                            newUserDays);
+                        // ALL: assign via service (service implements bulk logic)
+                        if (applicableToAll)
+                        {
+                            var assigned = await userPromotionService.AssignPromotionToMultipleUsersAsync(
+                                persisted.Id,
+                                true,  // all users
+                                false, // new users flag not used here
+                                false, // vip not applicable
+                                newUserDays);
 
-                        assignedCount = assigned?.Count() ?? 0;
+                            assignedCount += assigned?.Count() ?? 0;
+                        }
+
+                        // NEW_USER: prefer explicit StartDate/EndDate on promotion; if absent fallback to service new-user-days
+                        if (applicableToNew)
+                        {
+
+                            var start = persisted.StartDate.Date;
+                            var end = persisted.EndDate.Date.AddDays(1).AddTicks(-1);
+
+                            var newUserIds = await _context.Users
+                                .AsNoTracking()
+                                .Where(u => u.CreatedAt >= start && u.CreatedAt <= end)
+                                .Select(u => u.Id)
+                                .ToListAsync();
+
+                            foreach (var userId in newUserIds)
+                            {
+                                try
+                                {
+                                    await userPromotionService.AssignPromotionToUserAsync(userId, persisted.Id);
+                                    assignedCount++;
+                                }
+                                catch
+                                {
+                                    // ignore individual failures
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // fallback: use configured newUserDays heuristic
+                            var assigned = await userPromotionService.AssignPromotionToMultipleUsersAsync(
+                                persisted.Id,
+                                false,
+                                true,
+                                false,
+                                newUserDays);
+                            assignedCount += assigned?.Count() ?? 0;
+                        }
+                        
                     }
-                    catch (Exception ex)
-                    { 
-                   
+                    catch
+                    {
+                        // swallow assignment errors so create succeeds; admin can re-run assignment separately
                     }
                 }
 
@@ -145,7 +186,7 @@ namespace Medix.API.Presentation.Controller.Classification
         }
 
         [HttpPut("{id:guid}")]
-        [Authorize] 
+        [Authorize]
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> UpdatePromotion(Guid id, [FromBody] PromotionDto promotionDto)
         {
@@ -171,8 +212,101 @@ namespace Medix.API.Presentation.Controller.Classification
                         return Conflict(new { message = "Another promotion already uses the specified code." });
                 }
 
+                // Detect change to ApplicableTargets
+                var existingTargets = (existing.ApplicableTargets ?? string.Empty).Trim();
+                var newTargets = (promotionDto.ApplicableTargets ?? string.Empty).Trim();
+                var applicableTargetsChanged = !string.Equals(existingTargets, newTargets, StringComparison.OrdinalIgnoreCase);
+
+                // Persist update first
                 var updated = await _promotionService.UpdatePromotionAsync(promotionDto);
-                return Ok(updated);
+
+                int assignedCount = 0;
+
+                if (applicableTargetsChanged && !string.IsNullOrWhiteSpace(updated.ApplicableTargets))
+                {
+                    var tokens = updated.ApplicableTargets
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(t => t.Trim())
+                        .ToList();
+
+                    var applicableToAll = tokens.Any(t => string.Equals(t, "All", StringComparison.OrdinalIgnoreCase));
+                    var applicableToNew = tokens.Any(t => string.Equals(t, "NEW_USER", StringComparison.OrdinalIgnoreCase)
+                                                          || string.Equals(t, "New", StringComparison.OrdinalIgnoreCase));
+
+                    var newDaysToken = tokens.FirstOrDefault(t => t.StartsWith("NewDays:", StringComparison.OrdinalIgnoreCase));
+                    int newUserDays = 30;
+                    if (newDaysToken != null)
+                    {
+                        var parts = newDaysToken.Split(':', 2);
+                        if (parts.Length == 2 && int.TryParse(parts[1], out var parsedDays))
+                            newUserDays = Math.Max(1, parsedDays);
+                    }
+
+                    try
+                    {
+                        if (applicableToAll)
+                        {
+                            var assigned = await userPromotionService.AssignPromotionToMultipleUsersAsync(
+                                updated.Id,
+                                true,
+                                false,
+                                false,
+                                newUserDays);
+
+                            assignedCount += assigned?.Count() ?? 0;
+                        }
+
+                        if (applicableToNew)
+                        {
+
+                            var start = updated.StartDate.Date;
+                            var end = updated.EndDate.Date.AddDays(1).AddTicks(-1);
+
+                            var newUserIds = await _context.Users
+                                .AsNoTracking()
+                                .Where(u => u.CreatedAt >= start && u.CreatedAt <= end)
+                                .Select(u => u.Id)
+                                .ToListAsync();
+
+                            foreach (var userId in newUserIds)
+                            {
+                                try
+                                {
+                                    await userPromotionService.AssignPromotionToUserAsync(userId, updated.Id);
+                                    assignedCount++;
+                                }
+                                catch
+                                {
+                                    // ignore individual failures
+                                }
+
+                            } }
+
+
+                        else
+                        {
+                            var assigned = await userPromotionService.AssignPromotionToMultipleUsersAsync(
+                                updated.Id,
+                                false,
+                                true,
+                                false,
+                                newUserDays);
+                            assignedCount += assigned?.Count() ?? 0;
+                        }
+                        }
+                    
+                    catch
+                    {
+                        // swallow assignment errors
+                    }
+                }
+
+                return Ok(new
+                {
+                    promotion = updated,
+                    assignedCount,
+                    message = assignedCount > 0 ? "Promotion updated and (re)assigned to users." : "Promotion updated."
+                });
             }
             catch (Exception)
             {

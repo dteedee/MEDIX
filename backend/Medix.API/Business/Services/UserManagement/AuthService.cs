@@ -2,6 +2,7 @@ using Google.Apis.Auth;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.Business.Interfaces.Community;
 using Medix.API.Business.Interfaces.UserManagement;
+using Medix.API.Business.Services.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Exceptions;
 using Medix.API.Models.DTOs.Authen;
@@ -21,6 +22,8 @@ namespace Medix.API.Business.Services.UserManagement
         private readonly IPatientRepository _patientRepository;
         private readonly DataAccess.MedixContext _context;
         private readonly ISystemConfigurationService _configService;
+        private readonly IPromotionService _promotionService;
+        private readonly IUserPromotionService _userPromotionService;
 
 
         private readonly IWalletService _walletService;
@@ -33,7 +36,9 @@ namespace Medix.API.Business.Services.UserManagement
             IPatientRepository patientRepository,
             DataAccess.MedixContext context,
             IWalletService walletService,
-            ISystemConfigurationService configurationService)
+            ISystemConfigurationService configurationService,
+            IPromotionService promotionService,
+            IUserPromotionService userPromotionService)
         {
             _userRepository = userRepository;
             _jwtService = jwtService;
@@ -43,6 +48,8 @@ namespace Medix.API.Business.Services.UserManagement
             _context = context;
             _walletService = walletService;
             _configService = configurationService;
+            _promotionService = promotionService;
+            _userPromotionService = userPromotionService;
         }
 
         public async Task<AuthResponseDto> LoginAsync(LoginRequestDto loginRequest)
@@ -350,7 +357,7 @@ namespace Medix.API.Business.Services.UserManagement
                     UpdatedAt = DateTime.UtcNow
                 };
 
-                await _userRepository.CreateAsync(newUser);
+             var userDTO=    await _userRepository.CreateAsync(newUser);
                 await _userRoleRepository.AssignRole("Patient", newUser.Id);
 
                 var newPatient = new Patient
@@ -374,7 +381,22 @@ namespace Medix.API.Business.Services.UserManagement
                     UpdatedAt = DateTime.UtcNow
                 };
                 var createdWallet = await _walletService.CreateWalletAsync(walletDto);
+                var x = await _promotionService.GetPromotionforTypeTarget("NEW_USER");
+                if (x != null)
+                {
 
+                    foreach (var promotion in x)
+                    {
+                        var startdate = promotion.StartDate.Date;
+                        var endDate = promotion.EndDate.Date;
+
+                        if (userDTO.CreatedAt >= startdate && userDTO.CreatedAt <= endDate)
+                        {
+                            await _userPromotionService.AssignPromotionToUserAsync(userDTO.Id, promotion.Id);
+                        }
+
+                    }
+                }
                 existingUser = newUser;
                 existingUser.Role = "Patient";
             }

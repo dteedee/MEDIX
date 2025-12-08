@@ -18,7 +18,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return await _context.Promotions
                 .AnyAsync(p => p.Code == code);
         }
-        public async Task<Promotion?> GetPromotionByCodeAsync(string code)  
+        public async Task<Promotion?> GetPromotionByCodeAsync(string code)
         {
             return await _context.Promotions
                 .FirstOrDefaultAsync(p => p.Code == code);
@@ -42,7 +42,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
         public async Task<IEnumerable<Promotion>> getAllPromotion()
         {
-         
+
             return await _context.Promotions
                 .Include(p => p.UserPromotions)
                 .ToListAsync();
@@ -69,7 +69,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
         public async Task<IEnumerable<Promotion>> PromotionTarget(string type)
         {
-            return await _context.Promotions.Where(x => x.ApplicableTargets == type).ToListAsync();
+            return await _context.Promotions.Where(x => x.ApplicableTargets == type|| x.ApplicableTargets.Contains(type)).ToListAsync();
         }
     }
 

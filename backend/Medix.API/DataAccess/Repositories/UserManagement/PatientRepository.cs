@@ -19,6 +19,7 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
         {
             return await _context.Patients
                  .Include(p => p.User)
+                    .ThenInclude(u => u.GenderCodeNavigation)
                  .FirstOrDefaultAsync(p => p.UserId == userId);
         }
 

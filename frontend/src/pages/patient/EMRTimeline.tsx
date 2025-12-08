@@ -7,8 +7,11 @@ import { MedicalRecordDetail, MedicalRecordDto, MedicalRecordQuery } from '../..
 import { medicalRecordService } from '../../services/medicalRecordService';
 import { useAuth } from '../../contexts/AuthContext';
 import html2pdf from 'html2pdf.js';
+import { useToast } from '../../contexts/ToastContext';
 
 export default function EMRTimeline() {
+    const { showToast } = useToast();
+
     const { user } = useAuth();
     const [pageLoading, setPageLoading] = useState(true);
     const [basicInfoError, setBasicInfoError] = useState<string | null>(null);
@@ -121,7 +124,7 @@ export default function EMRTimeline() {
 
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
-            filtered = filtered.filter(record => 
+            filtered = filtered.filter(record =>
                 record.doctor?.toLowerCase().includes(query) ||
                 record.chiefComplaint?.toLowerCase().includes(query) ||
                 record.diagnosis?.toLowerCase().includes(query) ||
@@ -157,7 +160,7 @@ export default function EMRTimeline() {
         const tempDiv = document.createElement('div');
         tempDiv.style.padding = '20px';
         tempDiv.style.background = 'white';
-        const prescriptionHtml = record.prescription && record.prescription.length > 0 
+        const prescriptionHtml = record.prescription && record.prescription.length > 0
             ? `
                 <div style="margin-bottom: 15px;">
                     <strong>Đơn thuốc:</strong>
@@ -211,7 +214,7 @@ export default function EMRTimeline() {
     const handlePrintRecord = (record: MedicalRecordDto) => {
         const printWindow = window.open('', '_blank');
         if (printWindow) {
-            const prescriptionHtml = record.prescription && record.prescription.length > 0 
+            const prescriptionHtml = record.prescription && record.prescription.length > 0
                 ? `
                     <div class="info-row">
                         <span class="label">Đơn thuốc:</span>
@@ -331,23 +334,25 @@ export default function EMRTimeline() {
         setRecordDetails(null);
     }
 
-    const handleDownload = () => {
-        if (!contentRef.current) return;
+    const handleDownload = async () => {
+        try {
+            const blob = await medicalRecordService.getPdf();
 
-        const excludedElements = contentRef.current.querySelectorAll('.pdf-exclude');
-        excludedElements.forEach(el => (el as HTMLElement).style.display = 'none');
+            // Create a Blob URL
+            const url = window.URL.createObjectURL(new Blob([blob]));
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "HelloWorld.pdf"; // filename for download
+            document.body.appendChild(link);
+            link.click();
 
-        const opt = {
-            margin: 0.5,
-            filename: `${basicInfo?.fullName}_EMR.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-
-        html2pdf().set(opt).from(contentRef.current).save().then(() => {
-            excludedElements.forEach(el => (el as HTMLElement).style.display = '');
-        });
+            // Cleanup
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        }
+        catch {
+            showToast('Tải EMR không thành công. Vui lòng thử lại sau.', 'error');
+        }
     };
 
     if (pageLoading) {
@@ -378,7 +383,7 @@ export default function EMRTimeline() {
                         </div>
                     </div>
                 </div>
-                
+
                 {basicInfoError ? (
                     <div className={styles.errorMessage}>
                         <i className="bi bi-exclamation-triangle"></i>
@@ -389,11 +394,11 @@ export default function EMRTimeline() {
                         <div className={styles.profileCard}>
                             <div className={styles.profileSection}>
                                 <div className={styles.profileImageWrapper}>
-                                    <img 
+                                    <img
                                         key={avatarUpdateKey}
-                                        className={styles.profileImage} 
+                                        className={styles.profileImage}
                                         src={
-                                            (user?.avatarUrl || basicInfo?.avatarUrl) 
+                                            (user?.avatarUrl || basicInfo?.avatarUrl)
                                                 ? `${(user?.avatarUrl || basicInfo?.avatarUrl)}?v=${avatarUpdateKey || Date.now()}`
                                                 : `https://ui-avatars.com/api/?name=${encodeURIComponent(basicInfo?.fullName || user?.fullName || 'Patient')}&background=667eea&color=fff`
                                         }
@@ -453,7 +458,7 @@ export default function EMRTimeline() {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div className={styles.emergencyContactSection}>
                                 <h3>Người liên hệ khẩn cấp</h3>
                                 <div className={styles.emergencyContactGrid}>
@@ -567,7 +572,7 @@ export default function EMRTimeline() {
                                 </button>
                             )}
                         </div>
-                        
+
                         <div className={styles.searchBar} style={{ marginBottom: '16px' }}>
                             <i className="bi bi-search"></i>
                             <input
@@ -625,8 +630,8 @@ export default function EMRTimeline() {
                             >
                                 <i className={`bi bi-sort-${sortOrder === 'asc' ? 'alpha-down' : 'alpha-up'}`}></i>
                             </button>
-                    </div>
-                    
+                        </div>
+
                         <div className={styles.dateFilter}>
                             <div className={styles.dateInputGroup}>
                                 <label htmlFor="dateFrom">
@@ -693,8 +698,8 @@ export default function EMRTimeline() {
                         <div className={styles.emptyState}>
                             <i className={`bi bi-clipboard-x ${styles.emptyStateIcon}`}></i>
                             <p className={styles.emptyStateText}>
-                                {searchQuery || selectedDoctor !== 'all' 
-                                    ? 'Không tìm thấy kết quả phù hợp' 
+                                {searchQuery || selectedDoctor !== 'all'
+                                    ? 'Không tìm thấy kết quả phù hợp'
                                     : 'Chưa có lịch sử khám'}
                             </p>
                         </div>
@@ -796,11 +801,11 @@ export default function EMRTimeline() {
                                                         </div>
                                                         <div className={styles.attachmentLinks}>
                                                             {item.attatchments.map((attatchment) => (
-                                                                <a 
-                                                                    key={attatchment.id} 
-                                                                    href={attatchment.fileUrl} 
+                                                                <a
+                                                                    key={attatchment.id}
+                                                                    href={attatchment.fileUrl}
                                                                     className={styles.attachmentLink}
-                                                                    rel="noopener noreferrer" 
+                                                                    rel="noopener noreferrer"
                                                                     target="_blank"
                                                                 >
                                                                     <i className="bi bi-file-earmark-pdf"></i>
@@ -813,21 +818,21 @@ export default function EMRTimeline() {
                                             </div>
                                             <div className={styles.recordFooter}>
                                                 <div className={styles.recordActions}>
-                                                    <button 
-                                                        className={`${styles.viewEmrButton} pdf-exclude`} 
+                                                    <button
+                                                        className={`${styles.viewEmrButton} pdf-exclude`}
                                                         onClick={() => handleShowDetails(item.id)}
                                                     >
                                                         <i className="bi bi-eye"></i>
                                                         Xem chi tiết
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         className={`${styles.actionButton} ${styles.downloadButton} pdf-exclude`}
                                                         onClick={() => handleDownloadRecord(item)}
                                                         title="Tải xuống PDF"
                                                     >
                                                         <i className="bi bi-download"></i>
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         className={`${styles.actionButton} ${styles.printButton} pdf-exclude`}
                                                         onClick={() => handlePrintRecord(item)}
                                                         title="In"
@@ -874,22 +879,22 @@ export default function EMRTimeline() {
                                         )}
                                     </div>
                                     <div className={styles.listItemFooter}>
-                                        <button 
-                                            className={`${styles.viewEmrButton} pdf-exclude`} 
+                                        <button
+                                            className={`${styles.viewEmrButton} pdf-exclude`}
                                             onClick={() => handleShowDetails(item.id)}
                                         >
                                             <i className="bi bi-eye"></i>
                                             Xem chi tiết
                                         </button>
                                         <div className={styles.listItemActions}>
-                                            <button 
+                                            <button
                                                 className={`${styles.actionButton} ${styles.downloadButton} pdf-exclude`}
                                                 onClick={() => handleDownloadRecord(item)}
                                                 title="Tải xuống PDF"
                                             >
                                                 <i className="bi bi-download"></i>
                                             </button>
-                                            <button 
+                                            <button
                                                 className={`${styles.actionButton} ${styles.printButton} pdf-exclude`}
                                                 onClick={() => handlePrintRecord(item)}
                                                 title="In"
@@ -927,7 +932,7 @@ export default function EMRTimeline() {
                                 ) : recordDetails ? (
                                     <div ref={recordContentRef}>
                                         <div className="pdf-exclude" style={{ display: 'flex', gap: '8px', marginBottom: '16px', justifyContent: 'flex-end' }}>
-                                            <button 
+                                            <button
                                                 className={styles.modalActionButton}
                                                 onClick={() => {
                                                     if (!recordContentRef.current) return;
@@ -948,7 +953,7 @@ export default function EMRTimeline() {
                                                 <i className="bi bi-download"></i>
                                                 Tải PDF
                                             </button>
-                                            <button 
+                                            <button
                                                 className={styles.modalActionButton}
                                                 onClick={() => {
                                                     const printWindow = window.open('', '_blank');
@@ -999,105 +1004,105 @@ export default function EMRTimeline() {
                                             </button>
                                         </div>
                                         <div className={styles.modalRecordCard}>
-                                        <div className={styles.modalRecordHeader}>
-                                            <div className={styles.modalDoctorInfo}>
-                                                <div className={styles.modalDoctorIcon}>
-                                                    <i className="bi bi-person-badge"></i>
+                                            <div className={styles.modalRecordHeader}>
+                                                <div className={styles.modalDoctorInfo}>
+                                                    <div className={styles.modalDoctorIcon}>
+                                                        <i className="bi bi-person-badge"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div className={styles.modalRecordLabel}>Bác sĩ phụ trách</div>
+                                                        <div className={styles.modalRecordValue}>{recordDetails.doctor || 'N/A'}</div>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <div className={styles.modalRecordLabel}>Bác sĩ phụ trách</div>
-                                                    <div className={styles.modalRecordValue}>{recordDetails.doctor || 'N/A'}</div>
-                                                </div>
-                                            </div>
-                                            <div className={styles.modalDateInfo}>
-                                                <i className="bi bi-calendar3"></i>
-                                                <span>{recordDetails.date || 'N/A'}</span>
-                                            </div>
-                                        </div>
-                                        <div className={styles.modalRecordBody}>
-                                            <div className={styles.recordSection}>
-                                                <div className={styles.recordSectionHeader}>
-                                                    <i className="bi bi-chat-left-text"></i>
-                                                    <span>Lý do khám & Triệu chứng</span>
-                                                </div>
-                                                <div className={styles.recordSectionContent}>
-                                                    {recordDetails.chiefComplaint || 'N/A'}
+                                                <div className={styles.modalDateInfo}>
+                                                    <i className="bi bi-calendar3"></i>
+                                                    <span>{recordDetails.date || 'N/A'}</span>
                                                 </div>
                                             </div>
-                                            <div className={styles.recordSection}>
-                                                <div className={styles.recordSectionHeader}>
-                                                    <i className="bi bi-clipboard-check"></i>
-                                                    <span>Chẩn đoán</span>
-                                                </div>
-                                                <div className={`${styles.recordSectionContent} ${styles.diagnosisContent}`}>
-                                                    {recordDetails.diagnosis || 'N/A'}
-                                                </div>
-                                            </div>
-                                            <div className={styles.recordSection}>
-                                                <div className={styles.recordSectionHeader}>
-                                                    <i className="bi bi-file-medical"></i>
-                                                    <span>Kế hoạch điều trị</span>
-                                                </div>
-                                                <div className={styles.recordSectionContent}>
-                                                    {recordDetails.treatmentPlan || 'N/A'}
-                                                </div>
-                                            </div>
-                                            {recordDetails.prescription && recordDetails.prescription.length > 0 && (
+                                            <div className={styles.modalRecordBody}>
                                                 <div className={styles.recordSection}>
                                                     <div className={styles.recordSectionHeader}>
-                                                        <i className="bi bi-capsule"></i>
-                                                        <span>Đơn thuốc</span>
+                                                        <i className="bi bi-chat-left-text"></i>
+                                                        <span>Lý do khám & Triệu chứng</span>
                                                     </div>
-                                                    <div className={styles.prescriptionList}>
-                                                        {recordDetails.prescription.map((medication) => (
-                                                            <div key={medication.id} className={styles.prescriptionItem}>
-                                                                <div className={styles.prescriptionName}>
-                                                                    <i className="bi bi-capsule-pill"></i>
-                                                                    <strong>{medication.medicationName}</strong>
-                                                                </div>
-                                                                <div className={styles.prescriptionDetails}>
-                                                                    <div className={styles.prescriptionInstructions}>
-                                                                        <span className={styles.prescriptionLabel}>Hướng dẫn:</span> {medication.instructions}
+                                                    <div className={styles.recordSectionContent}>
+                                                        {recordDetails.chiefComplaint || 'N/A'}
+                                                    </div>
+                                                </div>
+                                                <div className={styles.recordSection}>
+                                                    <div className={styles.recordSectionHeader}>
+                                                        <i className="bi bi-clipboard-check"></i>
+                                                        <span>Chẩn đoán</span>
+                                                    </div>
+                                                    <div className={`${styles.recordSectionContent} ${styles.diagnosisContent}`}>
+                                                        {recordDetails.diagnosis || 'N/A'}
+                                                    </div>
+                                                </div>
+                                                <div className={styles.recordSection}>
+                                                    <div className={styles.recordSectionHeader}>
+                                                        <i className="bi bi-file-medical"></i>
+                                                        <span>Kế hoạch điều trị</span>
+                                                    </div>
+                                                    <div className={styles.recordSectionContent}>
+                                                        {recordDetails.treatmentPlan || 'N/A'}
+                                                    </div>
+                                                </div>
+                                                {recordDetails.prescription && recordDetails.prescription.length > 0 && (
+                                                    <div className={styles.recordSection}>
+                                                        <div className={styles.recordSectionHeader}>
+                                                            <i className="bi bi-capsule"></i>
+                                                            <span>Đơn thuốc</span>
+                                                        </div>
+                                                        <div className={styles.prescriptionList}>
+                                                            {recordDetails.prescription.map((medication) => (
+                                                                <div key={medication.id} className={styles.prescriptionItem}>
+                                                                    <div className={styles.prescriptionName}>
+                                                                        <i className="bi bi-capsule-pill"></i>
+                                                                        <strong>{medication.medicationName}</strong>
                                                                     </div>
-                                                                    {medication.frequency && (
-                                                                        <div className={styles.prescriptionMeta}>
-                                                                            <span className={styles.prescriptionLabel}>Tần suất:</span> {medication.frequency}
+                                                                    <div className={styles.prescriptionDetails}>
+                                                                        <div className={styles.prescriptionInstructions}>
+                                                                            <span className={styles.prescriptionLabel}>Hướng dẫn:</span> {medication.instructions}
                                                                         </div>
-                                                                    )}
-                                                                    {medication.duration && (
-                                                                        <div className={styles.prescriptionMeta}>
-                                                                            <span className={styles.prescriptionLabel}>Thời gian:</span> {medication.duration}
-                                                                        </div>
-                                                                    )}
+                                                                        {medication.frequency && (
+                                                                            <div className={styles.prescriptionMeta}>
+                                                                                <span className={styles.prescriptionLabel}>Tần suất:</span> {medication.frequency}
+                                                                            </div>
+                                                                        )}
+                                                                        {medication.duration && (
+                                                                            <div className={styles.prescriptionMeta}>
+                                                                                <span className={styles.prescriptionLabel}>Thời gian:</span> {medication.duration}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        ))}
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                            {recordDetails.attatchments && recordDetails.attatchments.length > 0 && (
-                                                <div className={styles.recordSection}>
-                                                    <div className={styles.recordSectionHeader}>
-                                                        <i className="bi bi-paperclip"></i>
-                                                        <span>Kết quả cận lâm sàng</span>
+                                                )}
+                                                {recordDetails.attatchments && recordDetails.attatchments.length > 0 && (
+                                                    <div className={styles.recordSection}>
+                                                        <div className={styles.recordSectionHeader}>
+                                                            <i className="bi bi-paperclip"></i>
+                                                            <span>Kết quả cận lâm sàng</span>
+                                                        </div>
+                                                        <div className={styles.attachmentLinks}>
+                                                            {recordDetails.attatchments.map((attatchment) => (
+                                                                <a
+                                                                    key={attatchment.id}
+                                                                    href={attatchment.fileUrl}
+                                                                    className={styles.attachmentLink}
+                                                                    rel="noopener noreferrer"
+                                                                    target="_blank"
+                                                                >
+                                                                    <i className="bi bi-file-earmark-pdf"></i>
+                                                                    {attatchment.fileName}
+                                                                </a>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                    <div className={styles.attachmentLinks}>
-                                                        {recordDetails.attatchments.map((attatchment) => (
-                                                            <a 
-                                                                key={attatchment.id} 
-                                                                href={attatchment.fileUrl} 
-                                                                className={styles.attachmentLink}
-                                                                rel="noopener noreferrer" 
-                                                                target="_blank"
-                                                            >
-                                                                <i className="bi bi-file-earmark-pdf"></i>
-                                                                {attatchment.fileName}
-                                                            </a>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 ) : (

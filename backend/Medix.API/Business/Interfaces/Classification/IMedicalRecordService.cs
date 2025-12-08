@@ -11,5 +11,6 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<MedicalRecordDto> UpdateAsync(CreateOrUpdateMedicalRecordDto dto);
         Task<List<MedicalRecord>> GetRecordsByUserIdAsync(Guid userId, MedicalRecordQuery query);
         Task<MedicalRecord?> GetRecordDetailsByIdAsync(Guid id);
+        Task<MedicalRecordPdfDto> CreateEMRAsPDFAsync(Guid userId, CancellationToken cancellationToken);
     }
 }

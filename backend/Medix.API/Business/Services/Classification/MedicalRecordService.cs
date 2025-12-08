@@ -1,8 +1,11 @@
-﻿using AutoMapper;
+﻿using Aspose.Pdf;
+using Aspose.Pdf.Text;
+using AutoMapper;
 using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess;
 using Medix.API.DataAccess.Interfaces.Classification;
+using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.MedicalRecordDTO;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +19,7 @@ namespace Medix.API.Business.Services.Classification
         private readonly IAppointmentRepository _appointmentRepo;
         private readonly IMapper _mapper;
         private readonly IPatientHealthReminderService patientHealthReminderService; 
+        private readonly IPatientRepository _patientRepository;
         private readonly MedixContext _context; 
 
         public MedicalRecordService(
@@ -23,13 +27,15 @@ namespace Medix.API.Business.Services.Classification
             IAppointmentRepository appointmentRepo,
             IMapper mapper,
             MedixContext context,
-            IPatientHealthReminderService patientHealthReminderService)
+            IPatientHealthReminderService patientHealthReminderService,
+            IPatientRepository patientRepository)
         {
             _medicalRecordRepo = medicalRecordRepo;
             _appointmentRepo = appointmentRepo;
             _mapper = mapper;
             _context = context;
             this.patientHealthReminderService = patientHealthReminderService;
+            _patientRepository = patientRepository;
         }
 
         public async Task<MedicalRecordDto?> GetByAppointmentIdAsync(Guid appointmentId)
@@ -273,6 +279,103 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<MedicalRecord?> GetRecordDetailsByIdAsync(Guid id)
             => await _medicalRecordRepo.GetRecordDetailsByIdAsync(id);
+
+        public async Task<MedicalRecordPdfDto> CreateEMRAsPDFAsync(Guid userId, CancellationToken cancellationToken)
+        {
+            var patient = await _patientRepository.GetPatientByUserIdAsync(userId);
+
+            if (patient == null)
+            {
+                throw new ArgumentException($"Patient with userId = {userId} can not be found.");
+            }
+
+            var user = patient.User;
+
+            var records = await _medicalRecordRepo.GetRecordsByUserIdAsync(userId);
+
+            // Create PDF in memory
+            using var document = new Document();
+            var page = document.Pages.Add();
+
+            page.Paragraphs.Add(CreateTitleText($"Hồ sơ y tế"));
+
+            page.Paragraphs.Add(CreateText(string.Empty));
+
+            page.Paragraphs.Add(CreateHeaderText($"1. Thông tin cá nhân"));
+            page.Paragraphs.Add(CreateText($"Họ và tên: {user.FullName}"));
+            page.Paragraphs.Add(CreateText($"Số CCCD: {user.IdentificationNumber}"));
+            page.Paragraphs.Add(CreateText($"Địa chỉ liên lạc: {user.Address}"));
+            page.Paragraphs.Add(CreateText($"Email: {user.Email}"));
+            page.Paragraphs.Add(CreateText($"Số điện thoại: {user.PhoneNumber}"));
+
+            page.Paragraphs.Add(CreateText(string.Empty));
+
+            page.Paragraphs.Add(CreateHeaderText($"2. Thông tin y tế"));
+            page.Paragraphs.Add(CreateText($"Mã số EMR: {patient.MedicalRecordNumber}"));
+            page.Paragraphs.Add(CreateText($"Ngày sinh: {user.DateOfBirth!.Value:dd/MM/yyyy}"));
+            page.Paragraphs.Add(CreateText($"Giới tính: {user.GenderCodeNavigation!.DisplayName}"));
+            page.Paragraphs.Add(CreateText($"Nhóm máu: {patient.BloodTypeCode}"));
+            page.Paragraphs.Add(CreateText($"Dị ứng: {patient.Allergies}"));
+
+            page.Paragraphs.Add(CreateText(string.Empty));
+
+            page.Paragraphs.Add(CreateHeaderText($"3. Người liên hệ khẩn cấp"));
+            page.Paragraphs.Add(CreateText($"Họ và tên người liên hệ: {patient.EmergencyContactName}"));
+            page.Paragraphs.Add(CreateText($"Số điện thoại người liên hệ: {patient.EmergencyContactPhone}"));
+
+            page.Paragraphs.Add(CreateText(string.Empty));
+
+            page.Paragraphs.Add(CreateHeaderText($"4. Lịch sử khám"));
+            foreach (var record in records)
+            {
+                page.Paragraphs.Add(CreateText(string.Empty));
+
+                page.Paragraphs.Add(CreateText($"Bác sĩ phụ trách: {record.Appointment.Doctor.User.FullName}"));
+                page.Paragraphs.Add(CreateText($"Lý do khám & Triệu chứng: {record.ChiefComplaint}"));
+                page.Paragraphs.Add(CreateText($"Chẩn đoán: {record.Diagnosis}"));
+                page.Paragraphs.Add(CreateText($"Kế hoạch điều trị: {record.TreatmentPlan}"));
+                page.Paragraphs.Add(CreateText($"Ngày khám: {record.CreatedAt}"));
+
+                page.Paragraphs.Add(CreateText(string.Empty));
+            }
+
+            using var stream = new MemoryStream();
+            await document.SaveAsync(stream, cancellationToken);
+            return new MedicalRecordPdfDto
+            {
+                Data = stream.ToArray(),
+                FileName = $"{user.FullName}_EMR",
+            };
+        }
+
+        private TextFragment CreateTitleText(string text)
+        {
+            var textFragment = new TextFragment(text);
+            textFragment.TextState.Font = FontRepository.FindFont("Arial");
+            textFragment.TextState.FontSize = 20;
+            textFragment.TextState.FontStyle = FontStyles.Bold;
+            textFragment.HorizontalAlignment = HorizontalAlignment.Center;
+
+            return textFragment;
+        }
+
+        private TextFragment CreateHeaderText(string text)
+        {
+            var textFragment = new TextFragment(text);
+            textFragment.TextState.Font = FontRepository.FindFont("Arial");
+            textFragment.TextState.FontSize = 14;
+            textFragment.TextState.FontStyle = FontStyles.Bold;
+
+            return textFragment;
+        }
+
+        private TextFragment CreateText(string text) {
+            var textFragment = new TextFragment(text);
+            textFragment.TextState.Font = FontRepository.FindFont("Arial");
+            textFragment.TextState.FontSize = 12;
+
+            return textFragment;
+        }
 
     }
 }

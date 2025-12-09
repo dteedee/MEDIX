@@ -41,17 +41,17 @@ namespace Medix.API.Configurations
                  .ForMember(dest => dest.DisplayOrder, opt => opt.MapFrom(src => src.DisplayOrder));
 
 
-             CreateMap<HealthArticleUpdateDto, HealthArticle>()
-                .ForMember(dest => dest.Categories, opt => opt.Ignore()) 
-                .ForMember(dest => dest.PublishedAt, opt => opt.Ignore()); 
-           
+            CreateMap<HealthArticleUpdateDto, HealthArticle>()
+               .ForMember(dest => dest.Categories, opt => opt.Ignore())
+               .ForMember(dest => dest.PublishedAt, opt => opt.Ignore());
+
 
             CreateMap<SiteBanner, SiteBannerDto>();
             CreateMap<PasswordUpdatePresenter, PasswordUpdateRequest>();
             CreateMap<DoctorRegisterPresenter, DoctorRegisterRequest>();
             CreateMap<User, UserBasicInfoDto>();
 
-           
+
             CreateMap<DoctorSchedule, DoctorScheduleWorkDto>()
                 .ForMember(dest => dest.DoctorName,
                     opt => opt.MapFrom(src => src.Doctor != null && src.Doctor.User != null

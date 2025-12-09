@@ -11,7 +11,7 @@ namespace Medix.API.Business.Interfaces.Classification
         public string Content { get; set; } = string.Empty;
         public string Source { get; set; } = string.Empty;
         public double RelevanceScore { get; set; }
-        public string Category { get; set; } = string.Empty; // "symptom", "treatment", "diagnosis", etc.
+        public string Category { get; set; } = string.Empty;
     }
 }
 

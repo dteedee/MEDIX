@@ -9,7 +9,7 @@ namespace Medix.API.BackgroundServices
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<MedicationRemind> _logger;
-        private readonly TimeSpan _interval = TimeSpan.FromDays(1); // Chạy mỗi 5 phút
+        private readonly TimeSpan _interval = TimeSpan.FromDays(1);
 
         public MedicationRemind(
             IServiceProvider serviceProvider,
@@ -28,7 +28,7 @@ namespace Medix.API.BackgroundServices
                 try
                 {
                     await UpdateExpiredReminders(stoppingToken);
-                    
+
                     _logger.LogInformation(
                         "MedicationRemind Background Service chạy lúc: {time}, sẽ chạy lại sau {interval} phút",
                         DateTimeOffset.Now, _interval.TotalMinutes);
@@ -43,8 +43,7 @@ namespace Medix.API.BackgroundServices
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Lỗi trong MedicationRemind Background Service: {message}", ex.Message);
-                    
-                    // Đợi trước khi retry để tránh loop lỗi liên tục
+
                     await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
                 }
             }
@@ -61,7 +60,6 @@ namespace Medix.API.BackgroundServices
 
                 var context = scope.ServiceProvider.GetRequiredService<MedixContext>();
 
-                // Lấy tất cả reminder chưa hoàn thành và đã qua ScheduledDate
                 var expiredReminders = await context.PatientHealthReminders
                     .Where(r => !r.IsCompleted && r.ScheduledDate < DateTime.Now)
                     .ToListAsync();
@@ -69,7 +67,7 @@ namespace Medix.API.BackgroundServices
                 if (expiredReminders.Any())
                 {
                     _logger.LogInformation(
-                        "Tìm thấy {count} reminder đã quá hạn, đang cập nhật...", 
+                        "Tìm thấy {count} reminder đã quá hạn, đang cập nhật...",
                         expiredReminders.Count);
 
                     foreach (var reminder in expiredReminders)
@@ -80,12 +78,12 @@ namespace Medix.API.BackgroundServices
                         await repository.updateReminder(reminder);
 
                         _logger.LogDebug(
-                            "Đã cập nhật reminder ID: {id}, Title: {title}", 
+                            "Đã cập nhật reminder ID: {id}, Title: {title}",
                             reminder.Id, reminder.Title);
                     }
 
                     _logger.LogInformation(
-                        "Đã cập nhật {count} reminder thành IsCompleted = true", 
+                        "Đã cập nhật {count} reminder thành IsCompleted = true",
                         expiredReminders.Count);
                 }
             }

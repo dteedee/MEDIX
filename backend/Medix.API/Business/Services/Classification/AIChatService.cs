@@ -1,5 +1,4 @@
-﻿using Medix.API.Business.Helper;
-using Medix.API.Business.Interfaces.Classification;
+﻿using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.AIChat;

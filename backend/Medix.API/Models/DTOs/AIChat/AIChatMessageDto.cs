@@ -1,4 +1,4 @@
-﻿namespace Medix.API.Business.Helper
+﻿namespace Medix.API.Models.DTOs.AIChat
 {
     public class AIChatMessageDto
     {

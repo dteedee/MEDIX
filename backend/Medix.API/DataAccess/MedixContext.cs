@@ -350,14 +350,13 @@ public partial class MedixContext : DbContext
             entity.Property(e => e.LicenseNumber).HasMaxLength(100);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(getutcdate())");
 
-            // ✅ Cấu hình cho các trường ban, miss và salary deduction
             entity.Property(e => e.TotalCaseMissPerWeek).HasDefaultValue(0);
             entity.Property(e => e.NextWeekMiss).HasDefaultValue(0);
             entity.Property(e => e.isSalaryDeduction).HasDefaultValue(false);
             entity.Property(e => e.TotalBanned).HasDefaultValue(0);
-            entity.Property(e=>e.StartDateBanned).HasDefaultValue(null);
-            entity.Property(e=>e.EndDateBanned).HasDefaultValue(null);
-            
+            entity.Property(e => e.StartDateBanned).HasDefaultValue(null);
+            entity.Property(e => e.EndDateBanned).HasDefaultValue(null);
+
 
             entity.HasOne(d => d.ServiceTier).WithMany(p => p.Doctors)
                 .HasForeignKey(d => d.ServiceTierId)
@@ -1130,7 +1129,7 @@ public partial class MedixContext : DbContext
             // DateTime properties with defaults
             entity.Property(e => e.CreatedDate).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.UpdatedDate).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e=> e.CreatedBy).HasMaxLength(50);
+            entity.Property(e => e.CreatedBy).HasMaxLength(50);
             entity.Property(e => e.UpdatedBy).HasMaxLength(50);
         });
 
@@ -1171,34 +1170,32 @@ public partial class MedixContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_WalletTransactions_Wallet");
 
-            entity.HasOne(d => d.TransferTransaction) // WalletTransaction có MỘT TransferTransaction
-        .WithOne(p => p.WalletTransaction)    // TransferTransaction trỏ về MỘT WalletTransaction
-        .HasForeignKey<TransferTransaction>(d => d.WalletTransactionID) // Sử dụng FK trong TransferTransaction
+            entity.HasOne(d => d.TransferTransaction)
+        .WithOne(p => p.WalletTransaction)
+        .HasForeignKey<TransferTransaction>(d => d.WalletTransactionID)
         .HasConstraintName("FK_TransferTransaction_WalletTransaction");
         });
 
         modelBuilder.Entity<TransferTransaction>(entity =>
         {
-            entity.HasKey(e => e.Id); // Đã có sẵn trong class
-            entity.ToTable("TransferTransaction"); // Tùy chọn, đặt tên bảng
+            entity.HasKey(e => e.Id);
+            entity.ToTable("TransferTransaction");
 
-            // 1. Mối quan hệ N-1 với User (User 1-N TransferTransaction)
+
             entity.HasOne(d => d.User)
                 .WithMany(p => p.TransferTransactions)
                 .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.ClientSetNull) // Giả định là bắt buộc (ClientSetNull/Restrict)
+                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_TransferTransaction_User");
 
-          
+
             entity.HasOne(d => d.WalletTransaction)
                 .WithOne(p => p.TransferTransaction)
-              
+
                 .HasForeignKey<TransferTransaction>(d => d.WalletTransactionID)
-        
+
                 .HasConstraintName("FK_TransferTransaction_WalletTransaction");
 
-            // Bạn có thể thêm các cấu hình khác (Index, MaxLength, DefaultValue) tại đây nếu cần
-            // Ví dụ:
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.Amount).HasColumnType("bigint");
             entity.Property(e => e.Description).HasMaxLength(1000);
@@ -1209,26 +1206,23 @@ public partial class MedixContext : DbContext
             entity.Property(e => e.Status).HasMaxLength(20).HasDefaultValue("Pending");
             entity.Property(e => e.ReferenceCode).HasMaxLength(255);
         });
-        // Thêm vào phương thức OnModelCreating
         modelBuilder.Entity<UserPromotion>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__UserProm__3214EC07XXXXXXXX");
 
             entity.ToTable("UserPromotions");
 
-            // Indexes
             entity.HasIndex(e => e.UserId, "IX_UserPromotions_UserId");
 
             entity.HasIndex(e => e.PromotionId, "IX_UserPromotions_PromotionId");
 
-          
+
             entity.HasIndex(e => new { e.IsActive, e.UserId }, "IX_UserPromotions_Active")
                 .HasFilter("([IsActive]=(1))");
 
             entity.HasIndex(e => new { e.ExpiryDate, e.IsActive }, "IX_UserPromotions_Expiry_Active")
                 .HasFilter("([IsActive]=(1))");
 
-            // Properties
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
 
             entity.Property(e => e.UsedCount).HasDefaultValue(0);
@@ -1243,7 +1237,6 @@ public partial class MedixContext : DbContext
 
             entity.Property(e => e.LastUsedAt).HasColumnType("datetime2(7)");
 
-            // Relationships
             entity.HasOne(d => d.User)
                 .WithMany(p => p.UserPromotions)
                 .HasForeignKey(d => d.UserId)
@@ -1358,7 +1351,7 @@ public partial class MedixContext : DbContext
             }
 
             if (entry.Entity is AuditLog)
-                continue; 
+                continue;
 
             var audit = new AuditLog
             {
@@ -1398,7 +1391,7 @@ public partial class MedixContext : DbContext
                             }
                         }
 
-                        if (!changedProperties.Any()) continue; 
+                        if (!changedProperties.Any()) continue;
 
                         var oldProps = new Dictionary<string, object?>();
                         var newProps = new Dictionary<string, object?>();

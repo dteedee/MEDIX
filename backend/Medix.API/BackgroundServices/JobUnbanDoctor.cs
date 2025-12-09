@@ -28,18 +28,14 @@ namespace Medix.API.BackgroundServices
                     var now = DateTime.Now;
                     var nextSunday = GetNextSunday14PM(now);
 
-                    // Tính thời gian chờ đến Chủ nhật 14:00 tiếp theo
                     var delay = nextSunday - now;
 
                     _logger.LogInformation(
                         "JobUnbanDoctor sẽ chạy vào: {nextRun}. Đợi {hours} giờ {minutes} phút",
                         nextSunday, delay.Hours, delay.Minutes);
 
-             
-                    // Thực thi logic mở ban cho doctor
                     await CheckAndUnbanDoctors(stoppingToken);
 
-                    // Đợi đến Chủ nhật 14:00
                     await Task.Delay(delay, stoppingToken);
 
 
@@ -53,7 +49,6 @@ namespace Medix.API.BackgroundServices
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Lỗi trong JobUnbanDoctor: {message}", ex.Message);
-                    // Đợi 1 giờ trước khi retry để tránh loop lỗi liên tục
                     await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
                 }
             }
@@ -69,11 +64,10 @@ namespace Medix.API.BackgroundServices
 
                 var now = DateTime.Now;
 
-                // Lấy doctor có EndDateBanned đã kết thúc (< now) và không phải ban vĩnh viễn
                 var doctorsToUnban = await context.Doctors
                     .Where(d => d.EndDateBanned < now
-                             && d.EndDateBanned > DateTime.MinValue  // Đã từng bị ban
-                             && d.EndDateBanned < DateTime.Now.AddYears(50)) // Không phải ban vĩnh viễn
+                             && d.EndDateBanned > DateTime.MinValue
+                             && d.EndDateBanned < DateTime.Now.AddYears(50))
                     .ToListAsync(stoppingToken);
 
                 if (!doctorsToUnban.Any())
@@ -90,10 +84,9 @@ namespace Medix.API.BackgroundServices
                 {
                     var oldEndDate = doctor.EndDateBanned;
 
-                    // Cộng NextWeekMiss vào TotalCaseMissPerWeek KHI MỞ BAN
                     if (doctor.NextWeekMiss > 0)
                     {
-                        var carryOverMiss = 1; // Giới hạn tối đa 2
+                        var carryOverMiss = 1;
                         doctor.TotalCaseMissPerWeek = carryOverMiss;
 
                         _logger.LogWarning(
@@ -103,10 +96,8 @@ namespace Medix.API.BackgroundServices
                             doctor.NextWeekMiss, carryOverMiss);
                     }
 
-                    // Reset NextWeekMiss về 0 sau khi áp dụng
                     doctor.NextWeekMiss = 0;
 
-                    // Reset trạng thái ban
                     doctor.StartDateBanned = DateTime.MinValue;
                     doctor.EndDateBanned = DateTime.MinValue;
                     doctor.IsAcceptingAppointments = true;
@@ -115,7 +106,7 @@ namespace Medix.API.BackgroundServices
                     unbannedCount++;
 
                     _logger.LogInformation(
-                        "✅ Đã MỞ BAN cho Doctor {doctorId} ({name}). " +
+                        "Đã MỞ BAN cho Doctor {doctorId} ({name}). " +
                         "EndDateBanned cũ: {oldEnd}, TotalBanned: {total}, TotalCaseMissPerWeek: {miss}",
                         doctor.Id, doctor.User?.FullName ?? "N/A",
                         oldEndDate, doctor.TotalBanned, doctor.TotalCaseMissPerWeek);
@@ -127,27 +118,20 @@ namespace Medix.API.BackgroundServices
             }
         }
 
-        /// <summary>
-        /// Tính thời điểm Chủ nhật 14:00 tiếp theo
-        /// </summary>
         private DateTime GetNextSunday14PM(DateTime now)
         {
-            // Chủ nhật = DayOfWeek.Sunday (0)
             var daysUntilSunday = ((int)DayOfWeek.Sunday - (int)now.DayOfWeek + 7) % 7;
 
-            // Nếu hôm nay là Chủ nhật nhưng đã qua 14:00, chuyển sang Chủ nhật tuần sau
             if (daysUntilSunday == 0 && now.Hour >= 14)
             {
                 daysUntilSunday = 7;
             }
 
-            // Nếu hôm nay là Chủ nhật và chưa qua 14:00, lấy 14:00 hôm nay
             if (daysUntilSunday == 0)
             {
                 return now.Date.AddHours(14);
             }
 
-            // Nếu không phải Chủ nhật, tính đến Chủ nhật 14:00 tiếp theo
             var nextSunday = now.Date.AddDays(daysUntilSunday).AddHours(14);
 
             return nextSunday;

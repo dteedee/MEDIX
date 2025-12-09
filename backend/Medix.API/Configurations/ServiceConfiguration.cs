@@ -29,7 +29,7 @@ namespace Medix.API.Configurations
             services.AddAutoMapper(typeof(MappingProfile));
         }
 
-        private static void RegisterRepositories(IServiceCollection services)   
+        private static void RegisterRepositories(IServiceCollection services)
         {
             services.AddScoped<ICmspageRepository, CmspageRepository>();
             services.AddScoped<IContentCategoryRepository, ContentCategoryRepository>();
@@ -134,7 +134,7 @@ namespace Medix.API.Configurations
             services.AddHttpClient<LLMService>();
             services.AddScoped<SystemConfigurationSeeder>();
 
-            
+
         }
 
 
@@ -143,7 +143,7 @@ namespace Medix.API.Configurations
 
             services.AddHostedService<JobDoctorScheduleOveride>();
             services.AddHostedService<AutoBackupJob>();
-         
+
 
 
         }
@@ -156,7 +156,7 @@ namespace Medix.API.Configurations
                 "59 23 L * *"
             );
 
-            RecurringJob.AddOrUpdate<IDoctorService>("Banned-Doctor",service=>service.CheckAndBanDoctors(),
+            RecurringJob.AddOrUpdate<IDoctorService>("Banned-Doctor", service => service.CheckAndBanDoctors(),
                 "0 12 * * 4"
                 );
 

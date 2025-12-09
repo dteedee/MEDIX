@@ -22,19 +22,16 @@
             var random = new Random();
             var password = new StringBuilder();
 
-            // Ensure at least one of each required type
             password.Append(Uppercase[random.Next(Uppercase.Length)]);
             password.Append(Lowercase[random.Next(Lowercase.Length)]);
             password.Append(Digits[random.Next(Digits.Length)]);
             password.Append(Special[random.Next(Special.Length)]);
 
-            // Fill the rest with random characters
             for (int i = password.Length; i < length; i++)
             {
                 password.Append(AllChars[random.Next(AllChars.Length)]);
             }
 
-            // Shuffle the result
             return new string(password.ToString().OrderBy(_ => random.Next()).ToArray());
         }
     }

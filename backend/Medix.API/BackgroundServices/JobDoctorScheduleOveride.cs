@@ -21,7 +21,6 @@ namespace Medix.API.BackgroundServices
 
             try
             {
-                // 🔹 Chạy ngay khi API khởi động
                 await UpdateExpiredOverridesAsync();
             }
             catch (Exception ex)
@@ -31,14 +30,12 @@ namespace Medix.API.BackgroundServices
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                // 🔹 Tính thời điểm 1h sáng ngày kế tiếp (theo giờ Việt Nam)
                 var vietnamTime = DateTime.UtcNow.AddHours(7);
                 var nextRun = vietnamTime.Date.AddDays(1).AddHours(1);
                 var delay = nextRun - vietnamTime;
 
                 _logger.LogInformation("🕐 Next update scheduled at {NextRun} (Vietnam time)", nextRun);
 
-                // Nếu server khởi động sau 1h sáng, thì đợi tới 1h sáng ngày kế
                 if (delay.TotalMilliseconds < 0)
                 {
                     nextRun = vietnamTime.Date.AddDays(1).AddHours(1);
@@ -52,7 +49,6 @@ namespace Medix.API.BackgroundServices
                 }
                 catch (TaskCanceledException)
                 {
-                    // service bị dừng
                 }
                 catch (Exception ex)
                 {
@@ -84,7 +80,7 @@ namespace Medix.API.BackgroundServices
                 await db.SaveChangesAsync();
 
                 _logger.LogInformation(
-                    "✅ Updated {Count} expired overrides at {Time}",
+                    "Updated {Count} expired overrides at {Time}",
                     expiredOverrides.Count,
                     vietnamTime);
             }

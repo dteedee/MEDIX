@@ -1,5 +1,4 @@
-﻿using Medix.API.Business.Helper;
-using Medix.API.Models.DTOs.AIChat;
+﻿using Medix.API.Models.DTOs.AIChat;
 
 namespace Medix.API.Business.Interfaces.AI
 {

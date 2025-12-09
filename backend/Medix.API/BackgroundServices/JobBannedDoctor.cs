@@ -19,7 +19,7 @@ namespace Medix.API.BackgroundServices
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-                _logger.LogInformation("JobBannedDoctor Background Service đang khởi động...");
+            _logger.LogInformation("JobBannedDoctor Background Service đang khởi động...");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -31,9 +31,8 @@ namespace Medix.API.BackgroundServices
                     var delay = nextThursday - now;
                     await Task.Delay(delay, stoppingToken);
 
-                    // ✅ SAU ĐÓ đánh giá và ban doctor
                     await CheckAndBanDoctors(stoppingToken);
-        
+
 
                     _logger.LogInformation("JobBannedDoctor đã hoàn thành. Sẽ chạy lại vào thứ 5 tuần sau.");
                 }
@@ -52,7 +51,7 @@ namespace Medix.API.BackgroundServices
             _logger.LogInformation("JobBannedDoctor đã dừng.");
         }
 
-   
+
 
         private async Task CheckAndBanDoctors(CancellationToken stoppingToken)
         {
@@ -74,16 +73,15 @@ namespace Medix.API.BackgroundServices
                 {
                     bool updated = false;
 
-                    // ✅ Giới hạn NextWeekMiss tối đa 2
-                    if (doctor.TotalCaseMissPerWeek ==3)
-                    { 
+                    if (doctor.TotalCaseMissPerWeek == 3)
+                    {
 
                         doctor.NextWeekMiss = 1;
                         updated = true;
                     }
 
 
-                    if (doctor.TotalCaseMissPerWeek == 2  )
+                    if (doctor.TotalCaseMissPerWeek == 2)
                     {
                         if ((bool)!doctor.isSalaryDeduction)
                         {
@@ -97,7 +95,6 @@ namespace Medix.API.BackgroundServices
                         }
                     }
 
-                    // ✅ RULE 2: Nếu miss >= 3 lần → Ban từ thứ 2 - CN tuần sau
                     if (doctor.TotalCaseMissPerWeek >= 3)
                     {
                         var nextMonday = GetNextMonday(DateTime.Now);
@@ -108,7 +105,6 @@ namespace Medix.API.BackgroundServices
                         bannedCount++;
                         updated = true;
 
-                        // ✅ RULE 3: Nếu TotalBanned >= 2 → Ban vĩnh viễn
                         if (doctor.TotalBanned >= 2)
                         {
                             doctor.EndDateBanned = DateTime.Now.AddYears(100);
@@ -136,7 +132,7 @@ namespace Medix.API.BackgroundServices
                         doctor.UpdatedAt = DateTime.UtcNow;
                     }
 
-                 
+
                     doctor.TotalCaseMissPerWeek = 0;
                 }
 

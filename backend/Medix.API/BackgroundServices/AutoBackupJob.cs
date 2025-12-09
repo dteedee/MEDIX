@@ -29,11 +29,9 @@ namespace Medix.API.BackgroundServices
                     var configService = scope.ServiceProvider.GetRequiredService<ISystemConfigurationService>();
                     var backupService = scope.ServiceProvider.GetRequiredService<IBackupService>();
 
-                    // Kiểm tra xem auto backup có được bật không
                     var autoBackupEnabled = await configService.GetBoolValueAsync("AUTO_BACKUP_ENABLED");
                     if (autoBackupEnabled == true)
                     {
-                        // Lấy tần suất backup
                         var frequency = await configService.GetValueAsync<string>("AUTO_BACKUP_FREQUENCY") ?? "daily";
                         var backupTime = await configService.GetValueAsync<string>("AUTO_BACKUP_TIME") ?? "02:00";
                         var retentionDays = await configService.GetIntValueAsync("BACKUP_RETENTION_DAYS") ?? 30;
@@ -44,13 +42,11 @@ namespace Medix.API.BackgroundServices
                         }
                         else
                         {
-                            // Tính thời gian chạy backup tiếp theo
                             var nextRun = CalculateNextRunTime(frequency, backupTime);
                             var delay = nextRun - DateTime.UtcNow;
 
                             if (delay.TotalMilliseconds < 0)
                             {
-                                // Nếu đã qua thời gian, chạy ngay
                                 delay = TimeSpan.Zero;
                             }
 
@@ -58,7 +54,6 @@ namespace Medix.API.BackgroundServices
                                 "AutoBackupJob sẽ chạy vào: {nextRun} (UTC). Đợi {hours} giờ {minutes} phút",
                                 nextRun, delay.Hours, delay.Minutes);
 
-                            // Đợi đến thời gian backup
                             if (delay.TotalMilliseconds > 0)
                             {
                                 await Task.Delay(delay, stoppingToken);
@@ -70,7 +65,6 @@ namespace Medix.API.BackgroundServices
                     }
                     else
                     {
-                        // Nếu auto backup bị tắt, đợi 1 giờ rồi kiểm tra lại
                         _logger.LogInformation("Auto backup đang bị tắt. Sẽ kiểm tra lại sau 1 giờ.");
                         await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
                     }
@@ -83,7 +77,6 @@ namespace Medix.API.BackgroundServices
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Lỗi trong AutoBackupJob");
-                    // Đợi 1 giờ trước khi thử lại
                     await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
                 }
             }
@@ -91,10 +84,9 @@ namespace Medix.API.BackgroundServices
 
         private DateTime CalculateNextRunTime(string frequency, string backupTime)
         {
-            // Parse thời gian backup (HH:mm)
             var timeParts = backupTime.Split(':');
-            if (timeParts.Length != 2 || 
-                !int.TryParse(timeParts[0], out int hour) || 
+            if (timeParts.Length != 2 ||
+                !int.TryParse(timeParts[0], out int hour) ||
                 !int.TryParse(timeParts[1], out int minute))
             {
                 hour = 2;
@@ -107,7 +99,6 @@ namespace Medix.API.BackgroundServices
             switch (frequency.ToLower())
             {
                 case "daily":
-                    // Chạy hàng ngày vào giờ đã chỉ định
                     if (now < todayBackupTime)
                     {
                         return todayBackupTime;
@@ -115,7 +106,6 @@ namespace Medix.API.BackgroundServices
                     return todayBackupTime.AddDays(1);
 
                 case "weekly":
-                    // Chạy vào thứ 2 hàng tuần
                     var daysUntilMonday = ((int)DayOfWeek.Monday - (int)now.DayOfWeek + 7) % 7;
                     if (daysUntilMonday == 0 && now < todayBackupTime)
                     {
@@ -128,7 +118,6 @@ namespace Medix.API.BackgroundServices
                     return todayBackupTime.AddDays(daysUntilMonday);
 
                 case "monthly":
-                    // Chạy vào ngày 1 hàng tháng
                     var firstOfMonth = new DateTime(now.Year, now.Month, 1, hour, minute, 0);
                     if (now < firstOfMonth)
                     {
@@ -137,7 +126,6 @@ namespace Medix.API.BackgroundServices
                     return firstOfMonth.AddMonths(1);
 
                 default:
-                    // Mặc định là daily
                     if (now < todayBackupTime)
                     {
                         return todayBackupTime;

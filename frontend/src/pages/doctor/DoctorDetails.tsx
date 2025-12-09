@@ -1943,10 +1943,6 @@ function DoctorDetails() {
                                 <span>{selectedTimeSlot?.display}</span>
                             </div>
                         </div>
-                        <p className={styles.emailNote}>
-                            <i className="bi bi-envelope"></i>
-                            Vui lòng kiểm tra email để xem chi tiết lịch hẹn
-                        </p>
                         <div className={styles.modalActions}>
                             <button 
                                 className={styles.viewAppointmentsBtn}

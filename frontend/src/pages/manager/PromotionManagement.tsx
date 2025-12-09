@@ -620,7 +620,6 @@ export default function PromotionManagement() {
       <div className={styles.viewToolbar}>
         <div>
           <h3>Danh sách khuyến mãi</h3>
-          <p>Đang hiển thị {paginatedItems.length} / {processedItems.length} chiến dịch phù hợp bộ lọc</p>
         </div>
       </div>
 
@@ -746,13 +745,6 @@ export default function PromotionManagement() {
                           title={normalizeIsActive(promotion.isActive) ? 'Tắt khuyến mãi' : 'Bật khuyến mãi'}
                         >
                           <i className={`bi bi-${normalizeIsActive(promotion.isActive) ? 'toggle-off' : 'toggle-on'}`}></i>
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(promotion)}
-                          className={`${styles.actionBtn} ${styles.actionDelete}`}
-                          title="Xóa"
-                        >
-                          <i className="bi bi-trash"></i>
                         </button>
                       </div>
                     </td>

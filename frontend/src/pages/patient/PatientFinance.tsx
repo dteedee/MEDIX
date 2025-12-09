@@ -383,58 +383,23 @@ export const PatientFinance: React.FC = () => {
     return statusMap[status] || status;
   };
 
-   const cleanDescription = (desc: any): string => {
-    if (!desc) return '';
-  
-    if (Array.isArray(desc)) {
-      desc = desc.join(' ');
-    }
-  
-    desc = String(desc);
-    
-    if (desc.trim() === '0' || /^0+$/.test(desc.trim())) {
-      return '';
-    }
-  
-    let cleaned = desc.trim();
-    let maxIterations = 15;
-    let iterations = 0;
-    
-    while (iterations < maxIterations) {
-      const before = cleaned;
-      
-      cleaned = cleaned.replace(/(\d+)h0+/gi, '$1h');
-      
-      cleaned = cleaned.replace(/\)0+/g, ')');
-      
-      cleaned = cleaned.replace(/([a-zA-ZÀ-ỹ])\s*0+(?=\s*$)/gi, '$1');
-      
-      cleaned = cleaned.replace(/\s+0+$/g, '');
-      cleaned = cleaned.replace(/\s*0+$/g, '');
-      
-      cleaned = cleaned.replace(/0+$/g, '');
-      
-      cleaned = cleaned.trim();
-      
-      if (cleaned === before) {
-        break;
-      }
-      
-      iterations++;
-    }
-  
-    if (cleaned.endsWith(' 0')) {
-      cleaned = cleaned.substring(0, cleaned.length - 2).trim();
-    }
-    if (cleaned.endsWith('0') && cleaned.length > 1) {
-      const lastChar = cleaned[cleaned.length - 2];
-      if (!/\d/.test(lastChar)) {
-        cleaned = cleaned.substring(0, cleaned.length - 1).trim();
-      }
-    }
-    
-    return cleaned;
-  };
+const cleanDescription = (desc: any): string => {
+  if (!desc) return '';
+
+  if (Array.isArray(desc)) {
+    desc = desc.join(' ');
+  }
+
+  desc = String(desc).trim();
+
+  if (/^0+$/.test(desc)) {
+    return '';
+  }
+
+  desc = desc.replace(/0+$/g, '').trim();
+
+  return desc;
+};
   const formatTransactionDateTime = (transaction: WalletTransactionDto): { date: string | null; time: string | null } => {
     const dateStr = transaction.transactionDate || transaction.createdAt;
     if (!dateStr) {

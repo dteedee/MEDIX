@@ -1066,7 +1066,9 @@ export const PatientAppointments: React.FC = () => {
             
             <div className={styles.emrHeader}>
               <i className="bi bi-file-text"></i>
-              <h3>Hồ sơ bệnh án điện tử</h3>
+              <h3 style={{ color: '#ffffff' }}>
+  Hồ sơ bệnh án điện tử
+</h3>
                 </div>
 
             <div className={styles.emrBody}>
@@ -1080,12 +1082,6 @@ export const PatientAppointments: React.FC = () => {
               </div>
             </div>
 
-            <div className={styles.emrFooter}>
-              <button className={styles.downloadBtn}>
-                <i className="bi bi-download"></i>
-                Tải xuống PDF
-              </button>
-            </div>
                 </div>
               </div>
             )}

@@ -137,23 +137,11 @@ namespace Medix.API.Presentation.Controller.Money
                 return NotFound(new { message = "Wallet not found" });
             }
 
-            var payoutRequest = new PayoutRequest
-            {
-                ReferenceId = Guid.NewGuid().ToString(),
-                Amount = transferTransaction.Amount,
-                Description = "Rút tiền về TK",
-                ToBin = transferTransaction.ToBin,
-                ToAccountNumber = transferTransaction.ToAccountNumber,
-                Category = new List<string> { "bank_transfer"}
-            };
+     
 
             try
             {
-                var payoutResponse = await _client.Payouts.CreateAsync(payoutRequest);
-
-                var transfer = MapPayoutToTransfer(payoutResponse);
-
-                TransferService.CreateTransfer(transfer);
+        
                 wallettransaction.Status = "Completed";
 
                 await _walletTransactionService.UppdateWalletTrasactionAsync(wallettransaction);
@@ -168,7 +156,13 @@ namespace Medix.API.Presentation.Controller.Money
 
 
 
-                return CreatedAtAction(nameof(Get), new { id = transfer.Id }, transfer);
+             return Ok(new
+                {
+                    message = "Transfer accepted successfully",
+                    transferTransactionId = transferTransaction.Id,
+                    status = transferTransaction.Status,
+                    acceptedAt = DateTime.UtcNow
+                });
             }
             catch (Exception ex)
             {

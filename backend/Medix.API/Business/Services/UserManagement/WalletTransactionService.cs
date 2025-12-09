@@ -59,6 +59,7 @@ namespace Medix.API.Business.Services.UserManagement
                 CreatedAt = saved.CreatedAt
             };
 
+
             if (walletTransactionDto.TransactionTypeCode== "Withdrawal" && walletTransactionDto.Status == "Pending")
             {
                 BackgroundJob.Schedule<IWalletTransactionService>(
@@ -66,6 +67,12 @@ namespace Medix.API.Business.Services.UserManagement
                 DateTime.Now.AddDays(1));
             }
          
+            if (walletTransactionDto.TransactionTypeCode == "Deposit" && walletTransactionDto.Status == "Pending")
+            {
+                BackgroundJob.Schedule<IWalletTransactionService>(
+                 service => service.CheckDepositMoney((Guid)resultDto.id),
+                DateTime.Now.AddMinutes(5));
+            }
             return resultDto;
         }
 
@@ -262,5 +269,16 @@ namespace Medix.API.Business.Services.UserManagement
 
             }
         }
+        public async Task CheckDepositMoney(Guid walletTransID)
+        {
+            var wallettransaction = await walletTransactionRepository.GetWalletTransactionByIdAsync(walletTransID);
+            if  (wallettransaction.TransactionTypeCode == "Deposit" && wallettransaction.Status == "Pending")
+            {
+                wallettransaction.Status = "Failed";
+                wallettransaction.Description += "Hủy giao dịch do người dùng không thanh toán";
+                await walletTransactionRepository.UpdateWalletTransactionAsync(wallettransaction);
+            }
+        }
+
     }
 }

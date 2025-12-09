@@ -25,7 +25,7 @@ namespace Medix.API.BackgroundServices
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Error while running initial update on startup.");
+                _logger.LogError(ex, "Error while running initial update on startup.");
             }
 
             while (!stoppingToken.IsCancellationRequested)
@@ -34,7 +34,7 @@ namespace Medix.API.BackgroundServices
                 var nextRun = vietnamTime.Date.AddDays(1).AddHours(1);
                 var delay = nextRun - vietnamTime;
 
-                _logger.LogInformation("🕐 Next update scheduled at {NextRun} (Vietnam time)", nextRun);
+                _logger.LogInformation("Next update scheduled at {NextRun} (Vietnam time)", nextRun);
 
                 if (delay.TotalMilliseconds < 0)
                 {
@@ -52,7 +52,7 @@ namespace Medix.API.BackgroundServices
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "❌ Error while updating expired overrides.");
+                    _logger.LogError(ex, "Error while updating expired overrides.");
                 }
             }
         }
@@ -86,7 +86,7 @@ namespace Medix.API.BackgroundServices
             }
             else
             {
-                _logger.LogInformation("ℹ️ No expired overrides found at {Time}", vietnamTime);
+                _logger.LogInformation("No expired overrides found at {Time}", vietnamTime);
             }
         }
 

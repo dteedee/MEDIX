@@ -11,6 +11,9 @@
 	  <None Remove="Business\Job\**" />
 	</ItemGroup>
 	<ItemGroup>
+	  <Content Remove="C:\Users\tungd\.nuget\packages\vnpay.net\8.5.0\contentFiles\any\net8.0\Icon.ico" />
+	</ItemGroup>
+	<ItemGroup>
 		<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
 		<PackageReference Include="CloudinaryDotNet" Version="1.27.8" />
 		<PackageReference Include="DiffPlex" Version="1.9.0" />
@@ -42,6 +45,7 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="DataAccess\Repositories\Community\" />
+	  <Folder Include="Presentation\Controller\DiseaseBank\" />
 	  <Folder Include="wwwroot\" />
 	</ItemGroup>
 </Project>

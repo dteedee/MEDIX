@@ -140,7 +140,6 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-//config gemini
 builder.Services.AddSingleton(provider =>
 {
     var configuration = provider.GetRequiredService<IConfiguration>();
@@ -154,13 +153,11 @@ builder.Services.AddSingleton(provider =>
     return new Client(apiKey: apiKey);
 });
 
-//config vertexAI
 builder.Services.AddSingleton(sp =>
 {
     return new PredictionServiceClientBuilder().Build();
 });
 
-//session
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -194,7 +191,6 @@ app.UseRouting();
 
 app.UseSession();
 
-// ??t ?úng tên policy ? ?ây: "AllowAll" ho?c "AllowFrontend"
 app.UseCors("AllowAll");
 
 app.UseAuthentication();

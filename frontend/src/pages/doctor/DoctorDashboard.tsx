@@ -640,7 +640,7 @@ const DoctorDashboard: React.FC = () => {
                   <span className={styles.walletAmount}>...</span>
                 ) : dashboardData?.wallet ? (
                   <span className={styles.walletAmount}>
-                    {formatCurrencyCompact(dashboardData.wallet.balance)}
+                    {formatBalance(dashboardData.wallet.balance)}
                   </span>
                 ) : (
                   <span className={styles.walletAmount}>0 VND</span>

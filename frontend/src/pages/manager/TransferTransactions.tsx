@@ -86,7 +86,7 @@ const TransferTransactions: React.FC = () => {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const getBankNameByBin = (bin: string | null | undefined): string => {
-    if (!bin) return 'Không xác định';
+    if (!bin) return 'Medix';
     const bank = BANKS.find(b => b.bin === bin);
     return bank ? `${bank.shortName} - ${bank.name}` : bin;
   };

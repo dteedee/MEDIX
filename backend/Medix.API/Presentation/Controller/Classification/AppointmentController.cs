@@ -536,7 +536,7 @@ namespace Medix.API.Presentation.Controllers
 
                     return Ok(new
                     {
-                        message = "Appointment cancelled and refunded successfully",
+                        message = "Lịch khám đã được hủy thành công,Tiền đã được hoàn về tài khoản của bạn",
                         appointmentId = appointment.Id,
                         totalAmount = appointment.TotalAmount,
                         refundAmount = refundAmount,

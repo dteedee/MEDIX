@@ -733,11 +733,13 @@ export const DoctorWallet: React.FC = () => {
           </div>
           <div className={styles.walletBalance}>
             <div className={styles.walletLabel}>Số dư ví</div>
-            {error ? (
+            {loading ? (
+              <div className={styles.walletAmount}>Đang tải...</div>
+            ) : error ? (
               <div className={styles.walletAmount}>Lỗi</div>
             ) : wallet ? (
               <div className={styles.walletAmount}>
-                {formatCurrencyCompact(wallet.balance)}
+                {formatBalance(wallet.balance, wallet.currency)}
               </div>
             ) : (
               <div className={styles.walletAmount}>N/A</div>

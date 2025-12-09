@@ -121,6 +121,9 @@ namespace Medix.API.Business.Services.Classification
                 };
             }
 
+            _logger.LogInformation($"Severity: {diagnosisModel.SeverityCode}");
+            _logger.LogInformation($"conclusion: {diagnosisModel.IsConclusionReached}");
+
             if (!diagnosisModel.IsConclusionReached)
             {
                 return new ChatResponseDto
@@ -164,6 +167,7 @@ namespace Medix.API.Business.Services.Classification
             {
                 Text = diagnosisModel.UserResponseText ?? "Phân tích triệu chứng hoàn tất.",
                 Type = "symptom_analysis",
+                Data = symptompAnalysisResponse,
             };
         }
 
@@ -203,7 +207,9 @@ namespace Medix.API.Business.Services.Classification
                 doctorlistString += $"-Id: {doctor.Id}" +
                     $", họ và tên: {doctor.User.FullName}" +
                     $", chuyên khoa: {doctor.Specialization.Name}" +
-                    $", trình độ học vấn: {DoctorDegree.GetDescription(doctor.Education!)}\n";
+                    $", trình độ học vấn: {DoctorDegree.GetDescription(doctor.Education!)}\n" +
+                    $", số năm kinh nghiệm: {DoctorDegree.GetDescription(doctor.YearsOfExperience.ToString())}\n" +
+                    $", đánh giá trung bình: {DoctorDegree.GetDescription(doctor.AverageRating.ToString())}/5\n";
             }
             return doctorlistString;
         }

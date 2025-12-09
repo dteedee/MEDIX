@@ -72,7 +72,7 @@ namespace Medix.API.Business.Services.AI
             ["IsConclusionReached"] = new Schema
             {
                 Type = Type.BOOLEAN,
-                Description = "true khi ConfidenceScore >=80%."
+                Description = "true khi ConfidenceScore >=80% hoặc có 1 loại bệnh có khả năng xảy ra trên 80%."
             },
 
             ["IsRequestRejected"] = new Schema

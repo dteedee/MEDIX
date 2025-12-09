@@ -94,7 +94,6 @@ namespace Medix.API.Configurations
             services.AddScoped<CloudinaryService>();
             services.AddScoped<IArticleService, ArticleService>();
             services.AddScoped<INotificationService, NotificationService>();
-            services.AddScoped<IVnpay, Vnpay>();
             services.AddScoped<IWalletService, WalletService>();
             services.AddScoped<IWalletTransactionService, WalletTransactionService>();
 

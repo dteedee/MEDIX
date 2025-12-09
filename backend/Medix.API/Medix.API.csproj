@@ -5,6 +5,12 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
 	<ItemGroup>
+	  <Compile Remove="Business\Job\**" />
+	  <Content Remove="Business\Job\**" />
+	  <EmbeddedResource Remove="Business\Job\**" />
+	  <None Remove="Business\Job\**" />
+	</ItemGroup>
+	<ItemGroup>
 		<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
 		<PackageReference Include="CloudinaryDotNet" Version="1.27.8" />
 		<PackageReference Include="DiffPlex" Version="1.9.0" />
@@ -35,7 +41,8 @@
 		</Content>
 	</ItemGroup>
 	<ItemGroup>
-	  <Folder Include="Business\Job\" />
+	  <Folder Include="DataAccess\Repositories\Community\" />
+	  <Folder Include="wwwroot\" />
 	</ItemGroup>
 </Project>
 

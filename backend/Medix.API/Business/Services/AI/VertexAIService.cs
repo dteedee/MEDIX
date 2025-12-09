@@ -359,7 +359,6 @@ namespace Medix.API.Business.Services.AI
 
         private async Task<string> GetResponseAsync(List<Content> contents, Value jsonSchema, string? systemInstruction = null)
         {
-            // 3. Create the GenerateContentRequest
             var request = new GenerateContentRequest
             {
                 Model = ModelResourceName,
@@ -386,10 +385,7 @@ namespace Medix.API.Business.Services.AI
                 };
             }
 
-            // 4. Make the call
             var response = await _client.GenerateContentAsync(request);
-
-            // 5. Extract the response text
             string generatedText = response.Candidates[0].Content.Parts[0].Text;
             return generatedText;
         }

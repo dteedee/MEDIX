@@ -417,7 +417,7 @@ namespace Medix.API.Business.Services.AI
             {
                 var content = new Content
                 {
-                    Role = item.Role,
+                    Role = item.Role.ToLower() == "user" ? "user" : "model",
                     Parts = [
                         new Part
                         {

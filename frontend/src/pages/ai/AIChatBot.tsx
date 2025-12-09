@@ -280,7 +280,6 @@ export const AIChatBot: React.FC = () => {
                             <span className={styles.doctorSpecialty}>Học vị: {doctor.education}</span>
                             <span className={styles.doctorSpecialty}>Giá khám: {doctor.consultationFee} VND</span>
                             <span className={styles.doctorSpecialty}>Số năm kinh nghiệm: {doctor.experience}</span>
-                            <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
                           </div>
                         </a>
                       </>
@@ -315,7 +314,6 @@ export const AIChatBot: React.FC = () => {
                     <span className={styles.doctorSpecialty}>Học vị: {doctor.education}</span>
                     <span className={styles.doctorSpecialty}>Giá khám: {doctor.consultationFee} VND</span>
                     <span className={styles.doctorSpecialty}>Số năm kinh nghiệm: {doctor.experience}</span>
-                    <span className={styles.doctorRating}>⭐ {doctor.rating}/5.0</span>
                   </div>
                 </a>
               </>

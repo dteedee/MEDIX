@@ -242,7 +242,6 @@ namespace Medix.API.Business.Services.Classification
                     Id = doctor.Id.ToString(),
                     Name = doctor.User?.FullName ?? string.Empty,
                     Specialization = doctor.Specialization?.Name ?? string.Empty,
-                    Rating = (double)doctor.AverageRating,
                     Experience = doctor.YearsOfExperience,
                     ConsultationFee = doctor.ConsultationFee,
                     Education = DoctorDegree.GetDescription(doctor.Education!)

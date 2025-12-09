@@ -1,4 +1,4 @@
-using Google.Cloud.AIPlatform.V1;
+﻿using Google.Cloud.AIPlatform.V1;
 using Google.GenAI;
 using Hangfire;
 using Medix.API.Configurations;
@@ -155,7 +155,19 @@ builder.Services.AddSingleton(provider =>
 
 builder.Services.AddSingleton(sp =>
 {
-    return new PredictionServiceClientBuilder().Build();
+    var logger = sp.GetRequiredService<ILogger<PredictionServiceClient>>();
+
+    try
+    {
+        return new PredictionServiceClientBuilder().Build();
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex,
+            "Failed to create PredictionServiceClient. Prediction features will be disabled.");
+
+        return null!;
+    }
 });
 
 builder.Services.AddDistributedMemoryCache();

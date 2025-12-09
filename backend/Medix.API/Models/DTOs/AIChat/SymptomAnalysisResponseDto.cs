@@ -20,7 +20,6 @@ namespace Medix.API.Models.DTOs.AIChat
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Specialization { get; set; } = string.Empty;
-        public double Rating { get; set; }
         public int Experience { get; set; }
         public decimal ConsultationFee { get; set; }
         public string? Education { get; set; }

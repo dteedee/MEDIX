@@ -290,7 +290,7 @@ namespace Medix.API.Business.Services.Classification
 
             var conflictingAppointments = allAppointments.Where(a =>
    
-             a.StatusCode == "BeforeAppoiment" &&
+             (a.StatusCode == "BeforeAppoiment"||a.StatusCode== "OnProgressing") &&
   
   appointmentStartTime < a.AppointmentEndTime &&
         appointmentEndTime > a.AppointmentStartTime

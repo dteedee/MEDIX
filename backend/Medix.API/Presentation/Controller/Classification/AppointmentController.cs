@@ -209,8 +209,8 @@ namespace Medix.API.Presentation.Controllers
                 PaymentMethodCode = dto.Result.PaymentMethodCode,
                 MedicalInfo = dto.Result.MedicalInfo,
             };
-            updateDto.AppointmentStartTime = DateTime.Today.AddHours(8);
-            updateDto.AppointmentEndTime = DateTime.Today.AddHours(8).AddMinutes(50);
+            updateDto.AppointmentStartTime = DateTime.Now;
+            updateDto.AppointmentEndTime = DateTime.Now.AddMinutes(5);
             var x = new PatientHealthReminder
             {
                 Title = "Nhắc nhở lịch khám - 1 ngày trước",

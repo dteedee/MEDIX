@@ -1,4 +1,6 @@
-﻿using Medix.API.Models.Enums;
+﻿using Medix.API.Business.Helper;
+using Medix.API.Models.Enums;
+using System.Text.Json.Serialization;
 
 namespace Medix.API.Models.DTOs.Patient
 {
@@ -13,7 +15,7 @@ namespace Medix.API.Models.DTOs.Patient
         public string? Title { get; set; } = null!;
 
         public string? Description { get; set; }
-
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime? ScheduledDate { get; set; }
 
         public bool? IsRecurring { get; set; }
@@ -21,11 +23,11 @@ namespace Medix.API.Models.DTOs.Patient
         public string? RecurrencePattern { get; set; }
 
         public bool? IsCompleted { get; set; }
-
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime? CompletedAt { get; set; }
 
         public Guid? RelatedAppointmentId { get; set; }
-
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime? CreatedAt { get; set; }
 
     }

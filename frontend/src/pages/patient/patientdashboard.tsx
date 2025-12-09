@@ -505,7 +505,7 @@ export const PatientDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className={styles.statCard} onClick={() => navigate('/app/patient/ai-checkup')}>
+        <div className={styles.statCard}>
           <div className={styles.statIconWrapper}>
             <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
               <i className="bi bi-robot"></i>

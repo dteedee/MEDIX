@@ -6,6 +6,7 @@ import { transferTransactionService, TransferTransactionCreateRequest } from '..
 import { WalletDto, OrderCreateRequest, WalletTransactionDto, BankInfo, WithdrawalRequest } from '../../types/wallet.types';
 import { Appointment } from '../../types/appointment.types';
 import styles from '../../styles/patient/PatientFinance.module.css';
+import { useToast } from '../../contexts/ToastContext';
 
 type TabType = 'all' | 'deposit' | 'withdrawal' | 'payment' | 'refund';
 
@@ -50,6 +51,7 @@ const BANKS: BankInfo[] = [
 
 export const PatientFinance: React.FC = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [wallet, setWallet] = useState<WalletDto | null>(null);
   const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -262,18 +264,18 @@ export const PatientFinance: React.FC = () => {
     if (!selectedBank || !accountNumber || !accountName) return;
     
     if (!/^\d+$/.test(accountNumber)) {
-      alert('Số tài khoản chỉ được chứa số');
+      showToast('Số tài khoản chỉ được chứa số', 'error');
       return;
     }
     
     if (!/^[A-Za-z\s]+$/.test(accountName)) {
-      alert('Tên chủ tài khoản chỉ được chứa chữ cái tiếng Anh và khoảng trắng');
+      showToast('Tên chủ tài khoản chỉ được chứa chữ cái tiếng Anh và khoảng trắng', 'error');
       return;
     }
 
     const amount = parseFormattedNumber(withdrawalAmount || depositAmount);
     if (!amount || amount <= 0) {
-      alert('Vui lòng nhập số tiền hợp lệ');
+      showToast('Vui lòng nhập số tiền hợp lệ', 'error');
       return;
     }
 
@@ -288,8 +290,6 @@ export const PatientFinance: React.FC = () => {
 
       await transferTransactionService.createTransferTransaction(transferRequest);
       
-      alert('Yêu cầu rút tiền đã được gửi thành công! Vui lòng chờ quản trị viên xét duyệt.');
-      
       setWithdrawalAmount('');
       setDepositAmount('');
       setShowWithdrawalModal(false);
@@ -298,6 +298,8 @@ export const PatientFinance: React.FC = () => {
       setAccountNumber('');
       setAccountName('');
       setBankSearchTerm('');
+      
+      showToast('Yêu cầu rút tiền đã được gửi thành công! Vui lòng chờ quản trị viên xét duyệt.', 'success');
       
       const walletData = await walletService.getWalletByUserId();
       setWallet(walletData);
@@ -312,7 +314,7 @@ export const PatientFinance: React.FC = () => {
         errorMessage = err.message;
       }
       
-      alert(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setIsProcessingWithdrawal(false);
     }

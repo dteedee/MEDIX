@@ -216,16 +216,25 @@ const MedicalRecordDetails: React.FC = () => {
     if (!medicalRecord) return;
 
     if (!canCancelAppointment) {
-      if (medicalRecord.appointmentStartDate) {
+      if (medicalRecord.appointmentStartDate && medicalRecord.appointmentEndDate) {
         const now = new Date();
         const startDate = new Date(medicalRecord.appointmentStartDate);
-        const startDatePlus30Min = new Date(startDate.getTime() + 30 * 60 * 1000);
+        const endDate = new Date(medicalRecord.appointmentEndDate);
         
-        if (now > startDatePlus30Min) {
-          const minutesPassed = Math.ceil((now.getTime() - startDatePlus30Min.getTime()) / 60000);
+        if (now < startDate) {
+          Swal.fire({
+            title: 'Chưa thể hủy',
+            html: `Chỉ có thể hủy lịch khám trong thời gian ca khám.<br/>Ca khám bắt đầu lúc <b>${startDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</b>.`,
+            icon: 'info',
+            confirmButtonText: 'Đã hiểu'
+          });
+          return;
+        }
+        
+        if (now > endDate) {
           Swal.fire({
             title: 'Không thể hủy',
-            html: `Đã quá thời gian cho phép hủy lịch khám.<br/>Chỉ có thể hủy trong vòng <b>30 phút</b> sau khi bắt đầu ca khám.<br/>Đã qua <b>${minutesPassed} phút</b>.`,
+            html: `Đã quá thời gian cho phép hủy lịch khám.<br/>Ca khám đã kết thúc lúc <b>${endDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</b>.`,
             icon: 'warning',
             confirmButtonText: 'Đã hiểu'
           });
@@ -382,15 +391,25 @@ const MedicalRecordDetails: React.FC = () => {
     return medicalRecord.statusAppointment === "OnProgressing";
   }, [medicalRecord]);
 
+  const showCancelButton = useMemo(() => {
+    if (!medicalRecord) return false;
+
+    const blockedStatuses = ['MissedByPatient', 'MissedByDoctor', 'Completed', 'CancelledByPatient', 'CancelledByDoctor', 'OnProgressing'];
+    if (medicalRecord.statusAppointment && blockedStatuses.includes(medicalRecord.statusAppointment)) {
+      return false;
+    }
+
+    return true;
+  }, [medicalRecord]);
+
   const canCancelAppointment = useMemo(() => {
-    if (!medicalRecord || !medicalRecord.appointmentStartDate) return false;
+    if (!medicalRecord || !medicalRecord.appointmentStartDate || !medicalRecord.appointmentEndDate) return false;
 
     const now = new Date();
     const startDate = new Date(medicalRecord.appointmentStartDate);
-    const startDatePlus30Min = new Date(startDate.getTime() + 30 * 60 * 1000);
+    const endDate = new Date(medicalRecord.appointmentEndDate);
 
-
-    return now <= startDatePlus30Min;
+    return now >= startDate && now <= endDate;
   }, [medicalRecord]);
 
   const canComplete = useMemo(() => {
@@ -519,7 +538,7 @@ const MedicalRecordDetails: React.FC = () => {
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
               rows={5}
-              disabled />
+              disabled={!isEditable} />
             {fieldErrors.physicalExamination && <p className="error-message">{fieldErrors.physicalExamination}</p>}
           </div>
         </div>
@@ -670,28 +689,28 @@ const MedicalRecordDetails: React.FC = () => {
                 {isSubmitting ? 'Đang lưu...' : 'Lưu hồ sơ'}
               </button>
               {showActionButtons && (
-                <>
-                  <button 
-                    type="button" 
-                    className="btn-cancel" 
-                    onClick={handleCancelAppointment}
-                    disabled={isSubmitting || !canCancelAppointment}
-                    title={!canCancelAppointment ? 'Chỉ có thể hủy trong vòng 30 phút sau khi bắt đầu ca khám' : ''}
-                  >
-                    Hủy lịch khám
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn-complete" 
-                    onClick={handleCompleteAppointment}
-                    disabled={isSubmitting || !canComplete}
-                    title={!canComplete ? 'Có thể hoàn thành từ 5 phút trước đến 10 phút sau khi kết thúc ca khám' : ''}
-                  >
-                    Hoàn thành
-                  </button>
-                </>
+                <button 
+                  type="button" 
+                  className="btn-complete" 
+                  onClick={handleCompleteAppointment}
+                  disabled={isSubmitting || !canComplete}
+                  title={!canComplete ? 'Có thể hoàn thành từ 5 phút trước đến 10 phút sau khi kết thúc ca khám' : ''}
+                >
+                  Hoàn thành
+                </button>
               )}
             </>
+          )}
+          {showCancelButton && (
+            <button 
+              type="button" 
+              className="btn-cancel" 
+              onClick={handleCancelAppointment}
+              disabled={isSubmitting || !canCancelAppointment}
+              title={!canCancelAppointment ? 'Chỉ có thể hủy trong thời gian ca khám (từ giờ bắt đầu đến giờ kết thúc)' : ''}
+            >
+              Hủy lịch khám
+            </button>
           )}
         </div>
       </div>

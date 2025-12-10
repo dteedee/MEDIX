@@ -14,6 +14,14 @@
 	  <Content Remove="C:\Users\tungd\.nuget\packages\vnpay.net\8.5.0\contentFiles\any\net8.0\Icon.ico" />
 	</ItemGroup>
 	<ItemGroup>
+	  <None Remove="Fonts\liberation-sans.ttf" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Content Include="Fonts\liberation-sans.ttf">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	</ItemGroup>
+	<ItemGroup>
 		<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
 		<PackageReference Include="CloudinaryDotNet" Version="1.27.8" />
 		<PackageReference Include="DiffPlex" Version="1.9.0" />

@@ -50,10 +50,100 @@ namespace Medix.API.Business.Services.Classification
             _connectionString = configuration.GetConnectionString("MyCnn")
                 ?? throw new InvalidOperationException("Connection string 'MyCnn' is missing.");
 
-            _dbBackupFolder = Path.Combine(environment.WebRootPath ?? environment.ContentRootPath, "db-backups");
-            if (!Directory.Exists(_dbBackupFolder))
+            _dbBackupFolder = ResolveBackupFolder(configuration, environment, logger);
+            
+            _logger.LogInformation("Database backup folder set to: {Folder}", _dbBackupFolder);
+        }
+
+        private static string ResolveBackupFolder(IConfiguration configuration, IWebHostEnvironment environment, ILogger logger)
+        {
+            
+
+            var attempts = new List<string>();
+
+            var customPath = configuration["BackupSettings:Folder"];
+            if (!string.IsNullOrWhiteSpace(customPath))
             {
-                Directory.CreateDirectory(_dbBackupFolder);
+                attempts.Add(customPath);
+            }
+
+            if (!string.IsNullOrEmpty(environment.WebRootPath))
+            {
+                attempts.Add(Path.Combine(environment.WebRootPath, "db-backups"));
+            }
+
+            if (!string.IsNullOrEmpty(environment.ContentRootPath))
+            {
+                attempts.Add(Path.Combine(environment.ContentRootPath, "db-backups"));
+            }
+
+            foreach (var path in attempts)
+            {
+                if (TryCreateAndValidatePath(path, out var validPath))
+                {
+                    logger.LogInformation("Using backup folder: {Path}", validPath);
+                    return validPath;
+                }
+            }
+
+            var tempBackupPath = Path.Combine(Path.GetTempPath(), "medix-db-backups");
+            try
+            {
+                if (!Directory.Exists(tempBackupPath))
+                {
+                    Directory.CreateDirectory(tempBackupPath);
+                }
+                logger.LogWarning("All primary backup paths failed. Falling back to temp folder: {Path}", tempBackupPath);
+                return tempBackupPath;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to create backup folder even in temp path");
+                // Last resort: use temp directory itself
+                logger.LogWarning("Using system temp directory as final fallback");
+                return Path.GetTempPath();
+            }
+        }
+
+        private static bool TryCreateAndValidatePath(string path, out string resolvedPath)
+        {
+            resolvedPath = string.Empty;
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                    return false;
+
+                var root = Path.GetPathRoot(path);
+                if (!string.IsNullOrEmpty(root))
+                {
+                    var driveInfo = new System.IO.DriveInfo(root);
+                    if (!driveInfo.IsReady)
+                    {
+                        return false; 
+                    }
+                }
+
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+
+                var testFile = Path.Combine(path, ".medix-write-test-" + Guid.NewGuid());
+                try
+                {
+                    File.WriteAllText(testFile, "test");
+                    File.Delete(testFile);
+                    resolvedPath = path;
+                    return true;
+                }
+                catch
+                {
+                    return false; 
+                }
+            }
+            catch
+            {
+                return false; 
             }
         }
 
@@ -223,40 +313,69 @@ namespace Medix.API.Business.Services.Classification
                 Directory.CreateDirectory(_dbBackupFolder);
 
                 var baseName = string.IsNullOrWhiteSpace(backupName)
-                    ? "db-backup"
+                    ? $"db-backup-{DateTime.UtcNow:yyyyMMdd-HHmmss}"
                     : SanitizeFileName(backupName!);
 
                 var fileName = $"{baseName}.bak";
                 var filePath = Path.Combine(_dbBackupFolder, fileName);
 
-                foreach (var file in Directory.GetFiles(_dbBackupFolder, "*.bak"))
+                try
                 {
-                    if (!file.Equals(filePath, StringComparison.OrdinalIgnoreCase))
+                    foreach (var file in Directory.GetFiles(_dbBackupFolder, "*.bak"))
                     {
-                        File.Delete(file);
+                        if (!file.Equals(filePath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            try
+                            {
+                                File.Delete(file);
+                                _logger.LogInformation("Deleted old backup: {File}", file);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Could not delete old backup file: {File}", file);
+                            }
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error while cleaning up old backups");
                 }
 
                 await using var connection = new SqlConnection(_connectionString);
                 await connection.OpenAsync();
 
                 var databaseName = connection.Database;
+                if (string.IsNullOrWhiteSpace(databaseName))
+                {
+                    throw new InvalidOperationException("Could not determine database name from connection string");
+                }
+
                 var escapedPath = filePath.Replace("'", "''");
                 var commandText =
                     $"BACKUP DATABASE [{databaseName}] TO DISK = '{escapedPath}' WITH INIT, SKIP, STATS = 5";
 
-                await using (var command = new SqlCommand(commandText, connection))
+                await using var command = new SqlCommand(commandText, connection)
                 {
-                    command.CommandTimeout = 0;
-                    await command.ExecuteNonQueryAsync();
+                    CommandTimeout = 0
+                };
+                
+                await command.ExecuteNonQueryAsync();
+
+                if (!File.Exists(filePath))
+                {
+                    throw new InvalidOperationException($"Backup file was not created at {filePath}");
                 }
 
-                _logger.LogInformation("Database backup created at {Path}", filePath);
+                var fileInfo = new FileInfo(filePath);
+                _logger.LogInformation("Database backup created successfully at {Path}, size: {Size} bytes", 
+                    filePath, fileInfo.Length);
+                
                 return filePath;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to backup database");
+                _logger.LogError(ex, "Failed to backup database to {Folder}", _dbBackupFolder);
                 throw;
             }
         }

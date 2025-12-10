@@ -57,10 +57,27 @@ namespace Medix.API.Presentation.Controller.Classification
         [HttpPost("database-backup")]
         public async Task<IActionResult> BackupDatabase([FromBody] CreateBackupRequest? request = null)
         {
-            var filePath = await _service.BackupDatabaseAsync(request?.BackupName);
-            var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var fileName = Path.GetFileName(filePath);
-            return File(stream, "application/octet-stream", fileName);
+            try
+            {
+                var filePath = await _service.BackupDatabaseAsync(request?.BackupName);
+                
+                if (!System.IO.File.Exists(filePath))
+                {
+                    return StatusCode(500, new { message = "Backup file was created but could not be verified", error = "File not found" });
+                }
+
+                var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                var fileName = Path.GetFileName(filePath);
+                return File(stream, "application/octet-stream", fileName);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(500, new { message = "Backup configuration error", error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Failed to create backup", error = ex.Message });
+            }
         }
 
         [HttpGet("database-backup")]

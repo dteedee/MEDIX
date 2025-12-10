@@ -351,29 +351,16 @@ namespace Medix.API.Business.Services.Classification
                 {
                     using (var writer = new System.IO.StreamWriter(fileStream))
                     {
-                        await writer.WriteLineAsync("-- Azure SQL Database Backup Export");
-                        await writer.WriteLineAsync($"-- Database: {databaseName}");
-                        await writer.WriteLineAsync($"-- Created: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
-                        await writer.WriteLineAsync($"-- Backup Name: {baseName}");
-                        await writer.WriteLineAsync("-- ============================================");
-                        await writer.WriteLineAsync();
-
                         var tables = await GetAllTablesAsync(connection, databaseName);
                         
                         foreach (var table in tables)
                         {
-                            await writer.WriteLineAsync($"-- Table: {table}");
                             await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] ON;");
                             
                             var rowCount = await ExportTableDataAsync(connection, table, writer);
                             
                             await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] OFF;");
-                            await writer.WriteLineAsync($"-- Total rows exported: {rowCount}");
-                            await writer.WriteLineAsync();
                         }
-
-                        await writer.WriteLineAsync("-- ============================================");
-                        await writer.WriteLineAsync("-- Backup export completed successfully");
                         
                         await writer.FlushAsync();
                     }
@@ -432,37 +419,47 @@ namespace Medix.API.Business.Services.Classification
                         }
 
                         while (await reader.ReadAsync())
-                        {
-                            var values = new List<string>();
-                            for (int i = 0; i < reader.FieldCount; i++)
                             {
-                                if (reader.IsDBNull(i))
+                                var values = new List<string>();
+                                for (int i = 0; i < reader.FieldCount; i++)
                                 {
-                                    values.Add("NULL");
-                                }
-                                else
-                                {
-                                    var value = reader.GetValue(i);
-                                    if (value is string)
+                                    if (reader.IsDBNull(i))
                                     {
-                                        values.Add($"'{((string)value).Replace("'", "''")}'");
-                                    }
-                                    else if (value is DateTime)
-                                    {
-                                        values.Add($"'{((DateTime)value):yyyy-MM-dd HH:mm:ss.fff}'");
+                                        values.Add("NULL");
                                     }
                                     else
                                     {
-                                        values.Add(value.ToString());
+                                        var value = reader.GetValue(i);
+                                        if (value is string)
+                                        {
+                                            values.Add($"'{((string)value).Replace("'", "''")}'");
+                                        }
+                                        else if (value is DateTime)
+                                        {
+                                            values.Add($"'{((DateTime)value):yyyy-MM-dd HH:mm:ss.fff}'");
+                                        }
+                                        else if (value is Guid)
+                                        {
+                                            values.Add($"'{((Guid)value).ToString().ToUpper())}'");
+                                        }
+                                        else if (value is bool)
+                                        {
+                                            values.Add(((bool)value) ? "1" : "0");
+                                        }
+                                        else if (value is decimal || value is float || value is double)
+                                        {
+                                            values.Add(value.ToString());
+                                        }
+                                        else
+                                        {
+                                            values.Add(value.ToString());
+                                        }
                                     }
                                 }
-                            }
 
-                            var insertStatement = $"INSERT INTO [{tableName}] ({string.Join(", ", columnNames)}) VALUES ({string.Join(", ", values)});";
-                            await writer.WriteLineAsync(insertStatement);
-                            rowCount++;
-
-                            if (rowCount >= 100000)
+                                var insertStatement = $"INSERT INTO [{tableName}] ({string.Join(", ", columnNames)}) VALUES ({string.Join(", ", values)});";
+                                await writer.WriteLineAsync(insertStatement);
+                                rowCount++;                            if (rowCount >= 100000)
                             {
                                 _logger.LogWarning("Export limited to 100000 rows for table {Table} to prevent huge files", tableName);
                                 break;

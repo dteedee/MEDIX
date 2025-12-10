@@ -430,23 +430,25 @@ namespace Medix.API.Business.Services.Classification
                                     else
                                     {
                                         var value = reader.GetValue(i);
-                                        if (value is string)
-                                        {
-                                            values.Add($"'{((string)value).Replace("'", "''")}'");
-                                        }
-                                        else if (value is DateTime)
-                                        {
-                                            values.Add($"'{((DateTime)value):yyyy-MM-dd HH:mm:ss.fff}'");
-                                        }
-                                        else if (value is Guid)
-                                        {
-                                            values.Add($"'{((Guid)value).ToString().ToUpper()}'");
-                                        }
-                                        else if (value is bool)
+                                        var valueType = value.GetType();
+                                        
+                                        if (valueType == typeof(bool) || valueType.Name == "Boolean")
                                         {
                                             values.Add(((bool)value) ? "1" : "0");
                                         }
-                                        else if (value is decimal || value is float || value is double)
+                                        else if (valueType == typeof(Guid))
+                                        {
+                                            values.Add($"'{((Guid)value).ToString().ToUpper()}'");
+                                        }
+                                        else if (valueType == typeof(DateTime))
+                                        {
+                                            values.Add($"'{((DateTime)value):yyyy-MM-dd HH:mm:ss.fff}'");
+                                        }
+                                        else if (valueType == typeof(string))
+                                        {
+                                            values.Add($"'{((string)value).Replace("'", "''")}'");
+                                        }
+                                        else if (valueType == typeof(decimal) || valueType == typeof(float) || valueType == typeof(double))
                                         {
                                             values.Add(value.ToString());
                                         }

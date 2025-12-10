@@ -99,7 +99,6 @@ namespace Medix.API.Business.Services.Classification
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to create backup folder even in temp path");
-                // Last resort: use temp directory itself
                 logger.LogWarning("Using system temp directory as final fallback");
                 return Path.GetTempPath();
             }
@@ -375,6 +374,8 @@ namespace Medix.API.Business.Services.Classification
 
                         await writer.WriteLineAsync("-- ============================================");
                         await writer.WriteLineAsync("-- Backup export completed successfully");
+                        
+                        await writer.FlushAsync();
                     }
                 }
 
@@ -461,7 +462,6 @@ namespace Medix.API.Business.Services.Classification
                             await writer.WriteLineAsync(insertStatement);
                             rowCount++;
 
-                            // Limit output to prevent huge files
                             if (rowCount >= 100000)
                             {
                                 _logger.LogWarning("Export limited to 100000 rows for table {Table} to prevent huge files", tableName);

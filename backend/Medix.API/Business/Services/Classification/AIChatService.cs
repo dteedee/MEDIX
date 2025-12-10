@@ -158,7 +158,7 @@ namespace Medix.API.Business.Services.Classification
 
             symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Hãy đặt lịch hẹn với bác sĩ chuyên khoa để được tư vấn thêm.";
 
-            var idList = await _llmService.GetRecommendedDoctorIdsByConditionsAsync(diagnosisModel.PossibleConditions, 3, await GetDoctorListString());
+            var idList = await _llmService.GetRecommendedDoctorIdsByDiagnosisAsync(diagnosisModel.UserResponseText, 3, await GetDoctorListString());
             symptompAnalysisResponse.RecommendedDoctors = await GetRecommendedDoctorsAsync(idList);
 
             return new ChatResponseDto

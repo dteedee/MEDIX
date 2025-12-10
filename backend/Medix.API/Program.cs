@@ -164,7 +164,7 @@ builder.Services.AddSingleton(sp =>
     catch (Exception ex)
     {
         logger.LogError(ex,
-            "Failed to create PredictionServiceClient. Prediction features will be disabled.");
+            "Failed to create PredictionServiceClient. Vertex AI will be disabled.");
 
         return null!;
     }

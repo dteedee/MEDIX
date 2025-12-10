@@ -344,12 +344,12 @@ namespace Medix.API.Business.Services.AI
             return medicines?.List ?? [];
         }
 
-        public async Task<List<string>> GetRecommendedDoctorIdsByConditionsAsync
-            (string possibleConditions, int count, string doctorListString)
+        public async Task<List<string>> GetRecommendedDoctorIdsByDiagnosisAsync
+            (string diagnosis, int count, string doctorListString)
         {
             var prompt = "Dựa trên danh sách bác sĩ sau đây:\n" +
                          $"{doctorListString}\n" +
-                         $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với các loại bệnh có khả năng là: '{possibleConditions}'. ";
+                         $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với chẩn đoán bệnh: '{diagnosis}'. "; ;
             return await GetRecommendedDoctorIdsAsync(prompt, []);
         }
 

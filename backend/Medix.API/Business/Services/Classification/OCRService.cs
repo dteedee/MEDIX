@@ -1,4 +1,5 @@
 ﻿using Aspose.Pdf;
+using Aspose.Pdf.Devices;
 using Aspose.Pdf.Text;
 using Google.Cloud.Vision.V1;
 using Medix.API.Business.Interfaces.Classification;
@@ -53,29 +54,43 @@ namespace Medix.API.Business.Services.Classification
 
         private async Task<List<string>> GetTempImagesPathFromPdf(IFormFile file)
         {
-            var tempImagePaths = new List<string>();
-
-            var filePath = Path.GetTempFileName();
-            using (var stream = File.Create(filePath))
+            var pdfFilePath = Path.GetTempFileName();
+            using (var stream = File.Create(pdfFilePath))
             {
                 await file.CopyToAsync(stream);
             }
-            // Load PDF document from stream
-            var pdfDocument = new Document(filePath);
-            // Iterate through pages
-            for (int pageCount = 1; pageCount <= pdfDocument.Pages.Count; pageCount++)
+
+            var dataDir = pdfFilePath;    
+            var resolution = new Resolution(300);
+            var pngDevice = new PngDevice(resolution);
+
+            List<string> imagePaths = new List<string>();
+
+            using (var document = new Document(dataDir))
             {
-                // Convert each page to an image
-                using var bitmap = pdfDocument.Pages[pageCount].ConvertToPNGMemoryStream();
-                // Save image to temp file
-                var tempImagePath = Path.GetTempFileName() + ".png";
-                using (var fileStream = new FileStream(tempImagePath, FileMode.Create, FileAccess.Write))
-                {
-                    bitmap.CopyTo(fileStream);
-                }
-                tempImagePaths.Add(tempImagePath);
+                imagePaths = ConvertPDFtoImages(pngDevice, "png", document);
             }
-            File.Delete(filePath); // Clean up temp PDF file
+            File.Delete(pdfFilePath);
+            return imagePaths;
+        }
+
+        private static List<string> ConvertPDFtoImages(ImageDevice imageDevice,
+            string ext, Document document)
+        {
+            var tempImagePaths = new List<string>();
+            for (int pageCount = 1; pageCount <= document.Pages.Count; pageCount++)
+            {
+                var tempImagePath = $"{Path.GetTempFileName()}.{ext}";
+                using (FileStream imageStream =
+                    new FileStream(tempImagePath,
+                    FileMode.Create))
+                {
+                    // Convert a particular page and save the image to stream
+                    imageDevice.Process(document.Pages[pageCount], imageStream);
+                    tempImagePaths.Add(tempImagePath);
+                }
+            }
+
             return tempImagePaths;
         }
 

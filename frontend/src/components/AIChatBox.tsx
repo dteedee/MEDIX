@@ -129,7 +129,8 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
         const response = await aiChatService.uploadAndAnalyzeEMR({
           file, messages: getChatHistory(),
         });
-        response.timestamp = new Date(response.timestamp);
+        response.timestamp = new Date();
+        response.sender = 'ai';
         setMessages(prev => [...prev, response]);
         addToMessageHistory({
           id: new Date().toString(),
@@ -172,6 +173,7 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
 
       const response = await aiChatService.sendMessage(promptRequest);
       response.timestamp = new Date();
+      response.sender = 'ai';
       setMessages(prev => [...prev, response]);
 
       addToMessageHistory({

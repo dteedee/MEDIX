@@ -309,12 +309,8 @@ namespace Medix.API.Business.Services.Classification
         {
             try
             {
-                if (_connectionString.Contains("database.windows.net", StringComparison.OrdinalIgnoreCase))
-                {
-                    return await CreateAzureSqlScriptBackupAsync(backupName);
-                }
-
-                return await BackupOnPremisesSqlServerAsync(backupName);
+                // For both Azure and On-Premises, use SQL script backup for consistency
+                return await CreateSqlScriptBackupAsync(backupName);
             }
             catch (Exception ex)
             {
@@ -323,14 +319,14 @@ namespace Medix.API.Business.Services.Classification
             }
         }
 
-        private async Task<string> CreateAzureSqlScriptBackupAsync(string? backupName = null)
+        private async Task<string> CreateSqlScriptBackupAsync(string? backupName = null)
         {
             try
             {
                 Directory.CreateDirectory(_dbBackupFolder);
 
                 var baseName = string.IsNullOrWhiteSpace(backupName)
-                    ? $"azure-export-{DateTime.UtcNow:yyyyMMdd-HHmmss}"
+                    ? $"db-export-{DateTime.UtcNow:yyyyMMdd-HHmmss}"
                     : SanitizeFileName(backupName!);
 
                 var fileName = $"{baseName}.bak";
@@ -393,6 +389,12 @@ namespace Medix.API.Business.Services.Classification
                         await writer.WriteLineAsync("-- ========================================");
                         await writer.WriteLineAsync("-- INSERT ALL DATA");
                         await writer.WriteLineAsync("-- ========================================");
+                        
+                        // Disable foreign key constraints trước insert data
+                        await writer.WriteLineAsync("EXEC sp_MSForEachTable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL';");
+                        await writer.WriteLineAsync("GO");
+                        await writer.WriteLineAsync();
+                        
                         foreach (var table in tables)
                         {
                             await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] ON;");
@@ -402,6 +404,11 @@ namespace Medix.API.Business.Services.Classification
                             await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] OFF;");
                             await writer.WriteLineAsync("GO");
                         }
+                        
+                        // Re-enable foreign key constraints sau insert xong
+                        await writer.WriteLineAsync("EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL';");
+                        await writer.WriteLineAsync("GO");
+                        await writer.WriteLineAsync();
                         
                         await writer.FlushAsync();
                     }
@@ -586,80 +593,6 @@ namespace Medix.API.Business.Services.Classification
             }
         }
 
-        private async Task<string> BackupOnPremisesSqlServerAsync(string? backupName = null)
-        {
-            try
-            {
-                Directory.CreateDirectory(_dbBackupFolder);
-
-                var baseName = string.IsNullOrWhiteSpace(backupName)
-                    ? $"db-backup-{DateTime.UtcNow:yyyyMMdd-HHmmss}"
-                    : SanitizeFileName(backupName!);
-
-                var fileName = $"{baseName}.bak";
-                var filePath = Path.Combine(_dbBackupFolder, fileName);
-
-                try
-                {
-                    foreach (var file in Directory.GetFiles(_dbBackupFolder, "*.bak"))
-                    {
-                        if (!file.Equals(filePath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            try
-                            {
-                                File.Delete(file);
-                                _logger.LogInformation("Deleted old backup: {File}", file);
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogWarning(ex, "Could not delete old backup file: {File}", file);
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Error while cleaning up old backups");
-                }
-
-                await using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
-
-                var databaseName = connection.Database;
-                if (string.IsNullOrWhiteSpace(databaseName))
-                {
-                    throw new InvalidOperationException("Could not determine database name from connection string");
-                }
-
-                var escapedPath = filePath.Replace("'", "''");
-                var commandText =
-                    $"BACKUP DATABASE [{databaseName}] TO DISK = '{escapedPath}' WITH INIT, SKIP, STATS = 5";
-
-                await using var command = new SqlCommand(commandText, connection)
-                {
-                    CommandTimeout = 0
-                };
-                
-                await command.ExecuteNonQueryAsync();
-
-                if (!File.Exists(filePath))
-                {
-                    throw new InvalidOperationException($"Backup file was not created at {filePath}");
-                }
-
-                var fileInfo = new FileInfo(filePath);
-                _logger.LogInformation("Database backup created successfully at {Path}, size: {Size} bytes", 
-                    filePath, fileInfo.Length);
-                
-                return filePath;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to backup on-premises SQL Server database");
-                throw;
-            }
-        }
-
         public Task<List<DatabaseBackupInfo>> GetDatabaseBackupFilesAsync()
         {
             Directory.CreateDirectory(_dbBackupFolder);
@@ -755,6 +688,103 @@ ALTER DATABASE [{databaseName}] SET MULTI_USER;";
             {
                 _logger.LogError(ex, "Failed to restore database from backup.");
                 throw;
+            }
+        }
+
+        public async Task ExecuteSqlScriptAsync(string sqlScript)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(sqlScript))
+                {
+                    throw new ArgumentException("SQL script cannot be empty.", nameof(sqlScript));
+                }
+
+                var builder = new SqlConnectionStringBuilder(_connectionString);
+                var masterBuilder = new SqlConnectionStringBuilder(builder.ConnectionString)
+                {
+                    InitialCatalog = "master"
+                };
+
+                await using var connection = new SqlConnection(masterBuilder.ConnectionString);
+                await connection.OpenAsync();
+
+                // Disable all foreign key constraints trước khi execute script
+                await DisableForeignKeyConstraintsAsync(connection);
+
+                try
+                {
+                    // Split script by GO statements
+                    var batches = sqlScript.Split(new[] { "\r\nGO\r\n", "\nGO\n", "\r\nGO", "\nGO" }, StringSplitOptions.None);
+
+                    foreach (var batch in batches)
+                    {
+                        var trimmedBatch = batch.Trim();
+                        if (string.IsNullOrWhiteSpace(trimmedBatch))
+                            continue;
+
+                        await using var command = new SqlCommand(trimmedBatch, connection)
+                        {
+                            CommandTimeout = 0
+                        };
+
+                        try
+                        {
+                            await command.ExecuteNonQueryAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error executing batch: {Batch}", trimmedBatch.Substring(0, Math.Min(100, trimmedBatch.Length)));
+                            throw;
+                        }
+                    }
+
+                    _logger.LogInformation("SQL script executed successfully");
+                }
+                finally
+                {
+                    // Re-enable foreign key constraints sau khi execute xong
+                    await EnableForeignKeyConstraintsAsync(connection);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to execute SQL script.");
+                throw;
+            }
+        }
+
+        private async Task DisableForeignKeyConstraintsAsync(SqlConnection connection)
+        {
+            try
+            {
+                var command = new SqlCommand("EXEC sp_MSForEachTable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'", connection)
+                {
+                    CommandTimeout = 0
+                };
+                await command.ExecuteNonQueryAsync();
+                _logger.LogInformation("Foreign key constraints disabled");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to disable foreign key constraints");
+            }
+        }
+
+        private async Task EnableForeignKeyConstraintsAsync(SqlConnection connection)
+        {
+            try
+            {
+                var command = new SqlCommand("EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'", connection)
+                {
+                    CommandTimeout = 0
+                };
+                await command.ExecuteNonQueryAsync();
+                _logger.LogInformation("Foreign key constraints re-enabled");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to re-enable foreign key constraints");
             }
         }
 

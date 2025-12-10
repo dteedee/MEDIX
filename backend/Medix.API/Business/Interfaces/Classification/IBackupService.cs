@@ -8,6 +8,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<List<BackupRecordResponse>> GetAllBackupsAsync();
         Task<BackupRecordResponse?> GetBackupByIdAsync(Guid id);
         Task<bool> RestoreBackupAsync(Guid backupId);
+        Task<bool> RestoreFromUploadedFileAsync(Stream fileStream, string fileName);
         Task<bool> DeleteBackupAsync(Guid id);
         Task<int> CleanupOldBackupsAsync(int retentionDays);
     }

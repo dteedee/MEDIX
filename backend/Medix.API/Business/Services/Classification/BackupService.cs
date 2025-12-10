@@ -138,6 +138,25 @@ namespace Medix.API.Business.Services.Classification
             }
         }
 
+        public async Task<bool> RestoreFromUploadedFileAsync(Stream fileStream, string fileName)
+        {
+            try
+            {
+                using (var reader = new StreamReader(fileStream))
+                {
+                    var sqlScript = await reader.ReadToEndAsync();
+                    await _configService.ExecuteSqlScriptAsync(sqlScript);
+                    _logger.LogInformation("Database restored successfully from uploaded file: {FileName}", fileName);
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error restoring database from uploaded file {FileName}", fileName);
+                throw;
+            }
+        }
+
         public async Task<int> CleanupOldBackupsAsync(int retentionDays)
         {
             try

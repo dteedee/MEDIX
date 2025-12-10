@@ -90,6 +90,38 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
+        [HttpPost("restore-upload")]
+        public async Task<IActionResult> RestoreFromUploadedFile(IFormFile file)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                {
+                    return BadRequest(new { message = "File không được để trống" });
+                }
+
+                if (!file.FileName.EndsWith(".bak", StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new { message = "Chỉ hỗ trợ file .bak" });
+                }
+
+                using (var stream = file.OpenReadStream())
+                {
+                    var success = await _backupService.RestoreFromUploadedFileAsync(stream, file.FileName);
+                    if (success)
+                    {
+                        return Ok(new { message = "Restore từ file upload thành công" });
+                    }
+                }
+
+                return BadRequest(new { message = "Không thể restore từ file" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi khi restore từ file upload", error = ex.Message });
+            }
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBackup(Guid id)
         {

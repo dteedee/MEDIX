@@ -19,6 +19,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<List<DatabaseBackupInfo>> GetDatabaseBackupFilesAsync();
         Task<FileStream?> GetDatabaseBackupFileAsync(string fileName);
         Task RestoreDatabaseAsync(string backupFilePath);
+        Task ExecuteSqlScriptAsync(string sqlScript);
         Task<EmailServerSettingsDto> GetEmailServerSettingsAsync();
         Task UpdateEmailServerSettingsAsync(UpdateEmailServerSettingsRequest request, string updatedBy);
         Task<List<EmailTemplateDto>> GetEmailTemplatesAsync();

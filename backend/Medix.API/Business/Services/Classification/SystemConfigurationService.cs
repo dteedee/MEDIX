@@ -445,6 +445,11 @@ namespace Medix.API.Business.Services.Classification
                                             var dateValue = ((DateTime)value).ToString("yyyy-MM-dd HH:mm:ss.fff");
                                             values.Add($"'{dateValue}'");
                                         }
+                                        else if (valueType == typeof(TimeSpan))
+                                        {
+                                            var timeValue = ((TimeSpan)value).ToString("HH:mm:ss");
+                                            values.Add($"'{timeValue}'");
+                                        }
                                         else if (valueType == typeof(string))
                                         {
                                             values.Add($"'{((string)value).Replace("'", "''")}'");

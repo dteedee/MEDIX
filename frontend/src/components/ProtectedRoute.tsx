@@ -36,7 +36,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (requiredRoles.length > 0 && !checkRole(requiredRoles)) {
-    return <Navigate to="/unauthorized" replace />;
+    return <Navigate to="/unauthorize" replace />;
   }
 
   if (requiredPermissions.length > 0) {
@@ -45,7 +45,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
     
     if (!hasRequiredPermissions) {
-      return <Navigate to="/unauthorized" replace />;
+      return <Navigate to="/unauthorize" replace />;
     }
   }
 

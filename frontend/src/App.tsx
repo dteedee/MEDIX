@@ -121,6 +121,9 @@ export function App() {
 
                 <Route path="/ai-chat" element={<AIChatBot />} />
 
+                <Route path="/unauthorize" element={<Unauthorized />} />
+                <Route path="/unauthorized" element={<Unauthorized />} />
+
                 <Route path="/change-password" element={<ProtectedRoute><ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} /></ProtectedRoute>} />
 
                 <Route path="/app" element={<MainLayout />}>
@@ -202,7 +205,6 @@ export function App() {
                     </ProtectedRoute>
                   } />
 
-                  <Route path="unauthorized" element={<Unauthorized />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Routes>

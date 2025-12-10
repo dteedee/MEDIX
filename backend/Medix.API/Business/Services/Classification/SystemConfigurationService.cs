@@ -377,6 +377,9 @@ namespace Medix.API.Business.Services.Classification
                         await writer.WriteLineAsync("GO");
                         await writer.WriteLineAsync();
                         
+                        await writer.WriteLineAsync("-- ========================================");
+                        await writer.WriteLineAsync("-- CREATE ALL TABLES");
+                        await writer.WriteLineAsync("-- ========================================");
                         foreach (var table in tables)
                         {
                             if (tableScripts.TryGetValue(table, out var createTableScript))
@@ -387,6 +390,9 @@ namespace Medix.API.Business.Services.Classification
                             }
                         }
                         
+                        await writer.WriteLineAsync("-- ========================================");
+                        await writer.WriteLineAsync("-- INSERT ALL DATA");
+                        await writer.WriteLineAsync("-- ========================================");
                         foreach (var table in tables)
                         {
                             await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] ON;");
@@ -394,6 +400,7 @@ namespace Medix.API.Business.Services.Classification
                             var rowCount = await ExportTableDataAsync(connection, table, writer);
                             
                             await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] OFF;");
+                            await writer.WriteLineAsync("GO");
                         }
                         
                         await writer.FlushAsync();

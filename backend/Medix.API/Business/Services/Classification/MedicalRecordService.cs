@@ -1,5 +1,4 @@
-﻿using Aspose.Pdf;
-using Aspose.Pdf.Text;
+﻿
 using AutoMapper;
 using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.Classification;
@@ -9,7 +8,12 @@ using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.MedicalRecordDTO;
 using Medix.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Drawing;
+using QuestPDF.Infrastructure;
 using System.Text.RegularExpressions;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+
 
 namespace Medix.API.Business.Services.Classification
 {
@@ -282,6 +286,9 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<MedicalRecordPdfDto> CreateEMRAsPDFAsync(Guid userId, CancellationToken cancellationToken)
         {
+            // Set license (Community license is free for non-commercial use)
+            QuestPDF.Settings.License = LicenseType.Community;
+
             var patient = await _patientRepository.GetPatientByUserIdAsync(userId);
 
             if (patient == null)
@@ -290,91 +297,105 @@ namespace Medix.API.Business.Services.Classification
             }
 
             var user = patient.User;
-
             var records = await _medicalRecordRepo.GetRecordsByUserIdAsync(userId);
 
-            // Create PDF in memory
-            using var document = new Document();
-            var page = document.Pages.Add();
+            // Register Vietnamese font support
+            RegisterVietnameseFont();
 
-            page.Paragraphs.Add(CreateTitleText($"Hồ sơ y tế"));
-
-            page.Paragraphs.Add(CreateText(string.Empty));
-
-            page.Paragraphs.Add(CreateHeaderText($"1. Thông tin cá nhân"));
-            page.Paragraphs.Add(CreateText($"Họ và tên: {user.FullName}"));
-            page.Paragraphs.Add(CreateText($"Số CCCD: {user.IdentificationNumber}"));
-            page.Paragraphs.Add(CreateText($"Địa chỉ liên lạc: {user.Address}"));
-            page.Paragraphs.Add(CreateText($"Email: {user.Email}"));
-            page.Paragraphs.Add(CreateText($"Số điện thoại: {user.PhoneNumber}"));
-
-            page.Paragraphs.Add(CreateText(string.Empty));
-
-            page.Paragraphs.Add(CreateHeaderText($"2. Thông tin y tế"));
-            page.Paragraphs.Add(CreateText($"Mã số EMR: {patient.MedicalRecordNumber}"));
-            page.Paragraphs.Add(CreateText($"Ngày sinh: {user.DateOfBirth!.Value:dd/MM/yyyy}"));
-            page.Paragraphs.Add(CreateText($"Giới tính: {user.GenderCodeNavigation!.DisplayName}"));
-            page.Paragraphs.Add(CreateText($"Nhóm máu: {patient.BloodTypeCode}"));
-            page.Paragraphs.Add(CreateText($"Dị ứng: {patient.Allergies}"));
-
-            page.Paragraphs.Add(CreateText(string.Empty));
-
-            page.Paragraphs.Add(CreateHeaderText($"3. Người liên hệ khẩn cấp"));
-            page.Paragraphs.Add(CreateText($"Họ và tên người liên hệ: {patient.EmergencyContactName}"));
-            page.Paragraphs.Add(CreateText($"Số điện thoại người liên hệ: {patient.EmergencyContactPhone}"));
-
-            page.Paragraphs.Add(CreateText(string.Empty));
-
-            page.Paragraphs.Add(CreateHeaderText($"4. Lịch sử khám"));
-            foreach (var record in records)
+            // Generate PDF
+            var pdfBytes = Document.Create(container =>
             {
-                page.Paragraphs.Add(CreateText(string.Empty));
+                container.Page(page =>
+                {
+                    // Page settings
+                    page.Size(PageSizes.A4);
+                    page.Margin(2, Unit.Centimetre);
+                    page.DefaultTextStyle(x => x.FontSize(12).FontFamily("Roboto"));
 
-                page.Paragraphs.Add(CreateText($"Ngày khám: {record.CreatedAt}"));
-                page.Paragraphs.Add(CreateText($"Bác sĩ phụ trách: {record.Appointment.Doctor.User.FullName}"));
-                page.Paragraphs.Add(CreateText($"Lý do khám & Triệu chứng: {record.ChiefComplaint}"));
-                page.Paragraphs.Add(CreateText($"Chẩn đoán: {record.Diagnosis}"));
-                page.Paragraphs.Add(CreateText($"Kế hoạch điều trị: {record.TreatmentPlan}"));
+                    // Content
+                    page.Content().Column(column =>
+                    {
+                        column.Spacing(5);
 
-                page.Paragraphs.Add(CreateText(string.Empty));
-            }
+                        // Title
+                        column.Item().AlignCenter().Text("Hồ sơ y tế")
+                            .FontSize(20)
+                            .Bold();
 
-            using var stream = new MemoryStream();
-            await document.SaveAsync(stream, cancellationToken);
+                        column.Item().PaddingTop(10);
+
+                        // Section 1: Personal Information
+                        column.Item().Text("1. Thông tin cá nhân")
+                            .FontSize(14)
+                            .Bold();
+
+                        column.Item().Text($"Họ và tên: {user.FullName}");
+                        column.Item().Text($"Số CCCD: {user.IdentificationNumber}");
+                        column.Item().Text($"Địa chỉ liên lạc: {user.Address}");
+                        column.Item().Text($"Email: {user.Email}");
+                        column.Item().Text($"Số điện thoại: {user.PhoneNumber}");
+
+                        column.Item().PaddingTop(10);
+
+                        // Section 2: Medical Information
+                        column.Item().Text("2. Thông tin y tế")
+                            .FontSize(14)
+                            .Bold();
+
+                        column.Item().Text($"Mã số EMR: {patient.MedicalRecordNumber}");
+                        column.Item().Text($"Ngày sinh: {user.DateOfBirth!.Value:dd/MM/yyyy}");
+                        column.Item().Text($"Giới tính: {user.GenderCodeNavigation!.DisplayName}");
+                        column.Item().Text($"Nhóm máu: {patient.BloodTypeCode}");
+                        column.Item().Text($"Dị ứng: {patient.Allergies}");
+
+                        column.Item().PaddingTop(10);
+
+                        // Section 3: Emergency Contact
+                        column.Item().Text("3. Người liên hệ khẩn cấp")
+                            .FontSize(14)
+                            .Bold();
+
+                        column.Item().Text($"Họ và tên người liên hệ: {patient.EmergencyContactName}");
+                        column.Item().Text($"Số điện thoại người liên hệ: {patient.EmergencyContactPhone}");
+
+                        column.Item().PaddingTop(10);
+
+                        // Section 4: Medical History
+                        column.Item().Text("4. Lịch sử khám")
+                            .FontSize(14)
+                            .Bold();
+
+                        foreach (var record in records)
+                        {
+                            column.Item().PaddingTop(10);
+                            column.Item().Text($"Ngày khám: {record.CreatedAt:dd/MM/yyyy HH:mm}");
+                            column.Item().Text($"Bác sĩ phụ trách: {record.Appointment.Doctor.User.FullName}");
+                            column.Item().Text($"Lý do khám & Triệu chứng: {record.ChiefComplaint}");
+                            column.Item().Text($"Chẩn đoán: {record.Diagnosis}");
+                            column.Item().Text($"Kế hoạch điều trị: {record.TreatmentPlan}");
+                        }
+                    });
+                });
+            }).GeneratePdf();
+
             return new MedicalRecordPdfDto
             {
-                Data = stream.ToArray(),
+                Data = pdfBytes,
                 FileName = $"{user.FullName}_EMR",
             };
         }
 
-        private TextFragment CreateTitleText(string text)
+        private void RegisterVietnameseFont()
         {
-            var textFragment = new TextFragment(text);
-            //textFragment.TextState.Font = FontRepository.FindFont("Liberation Sans");
-            textFragment.TextState.FontSize = 20;
-            textFragment.TextState.FontStyle = FontStyles.Bold;
-            textFragment.HorizontalAlignment = HorizontalAlignment.Center;
+            // Download Roboto font and place in your project's Assets/Fonts folder
+            // Or use system fonts on Linux
+            var fontPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Fonts");
 
-            return textFragment;
-        }
-
-        private TextFragment CreateHeaderText(string text)
-        {
-            var textFragment = new TextFragment(text);
-            //textFragment.TextState.Font = FontRepository.FindFont("Liberation Sans");
-            textFragment.TextState.FontSize = 14;
-            textFragment.TextState.FontStyle = FontStyles.Bold;
-
-            return textFragment;
-        }
-
-        private TextFragment CreateText(string text) {
-            var textFragment = new TextFragment(text);
-            //textFragment.TextState.Font = FontRepository.FindFont("Liberation Sans");
-            textFragment.TextState.FontSize = 12;
-
-            return textFragment;
+            if (File.Exists(Path.Combine(fontPath, "Roboto-Regular.ttf")))
+            {
+                FontManager.RegisterFont(File.OpenRead(Path.Combine(fontPath, "Roboto-Regular.ttf")));
+                FontManager.RegisterFont(File.OpenRead(Path.Combine(fontPath, "Roboto-Bold.ttf")));
+            }
         }
 
     }

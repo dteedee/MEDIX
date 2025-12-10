@@ -353,16 +353,22 @@ namespace Medix.API.Business.Services.Classification
                     {
                         var tables = await GetAllTablesAsync(connection, databaseName);
                         
-                        await writer.WriteLineAsync("EXEC sp_MSForEachTable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
+                        await writer.WriteLineAsync($"USE master;");
+                        await writer.WriteLineAsync("GO");
+                        await writer.WriteLineAsync($"IF DB_ID('{databaseName}') IS NOT NULL");
+                        await writer.WriteLineAsync("BEGIN");
+                        await writer.WriteLineAsync($"    ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;");
+                        await writer.WriteLineAsync($"    DROP DATABASE [{databaseName}];");
+                        await writer.WriteLineAsync("END;");
+                        await writer.WriteLineAsync("GO");
+                        await writer.WriteLineAsync($"CREATE DATABASE [{databaseName}];");
+                        await writer.WriteLineAsync("GO");
+                        await writer.WriteLineAsync($"USE [{databaseName}];");
                         await writer.WriteLineAsync("GO");
                         await writer.WriteLineAsync();
                         
                         foreach (var table in tables)
                         {
-                            await writer.WriteLineAsync($"IF OBJECT_ID('[{table}]', 'U') IS NOT NULL");
-                            await writer.WriteLineAsync($"DROP TABLE [{table}];");
-                            await writer.WriteLineAsync("GO");
-                            
                             var createTableScript = await GetCreateTableScriptAsync(connection, databaseName, table);
                             if (!string.IsNullOrEmpty(createTableScript))
                             {
@@ -380,10 +386,6 @@ namespace Medix.API.Business.Services.Classification
                             
                             await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] OFF;");
                         }
-                        
-                        await writer.WriteLineAsync();
-                        await writer.WriteLineAsync("EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'");
-                        await writer.WriteLineAsync("GO");
                         
                         await writer.FlushAsync();
                     }

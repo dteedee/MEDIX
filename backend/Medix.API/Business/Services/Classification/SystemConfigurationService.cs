@@ -353,6 +353,16 @@ namespace Medix.API.Business.Services.Classification
                     {
                         var tables = await GetAllTablesAsync(connection, databaseName);
                         
+                        var tableScripts = new Dictionary<string, string>();
+                        foreach (var table in tables)
+                        {
+                            var createTableScript = await GetCreateTableScriptAsync(connection, databaseName, table);
+                            if (!string.IsNullOrEmpty(createTableScript))
+                            {
+                                tableScripts[table] = createTableScript;
+                            }
+                        }
+                        
                         await writer.WriteLineAsync($"USE master;");
                         await writer.WriteLineAsync("GO");
                         await writer.WriteLineAsync($"IF DB_ID('{databaseName}') IS NOT NULL");
@@ -369,8 +379,7 @@ namespace Medix.API.Business.Services.Classification
                         
                         foreach (var table in tables)
                         {
-                            var createTableScript = await GetCreateTableScriptAsync(connection, databaseName, table);
-                            if (!string.IsNullOrEmpty(createTableScript))
+                            if (tableScripts.TryGetValue(table, out var createTableScript))
                             {
                                 await writer.WriteLineAsync(createTableScript);
                                 await writer.WriteLineAsync("GO");

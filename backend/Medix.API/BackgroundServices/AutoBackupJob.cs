@@ -7,6 +7,8 @@ namespace Medix.API.BackgroundServices
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<AutoBackupJob> _logger;
+        private static readonly object _lockObject = new object();
+        private static DateTime _lastBackupTime = DateTime.MinValue;
 
         public AutoBackupJob(
             IServiceProvider serviceProvider,
@@ -39,6 +41,8 @@ namespace Medix.API.BackgroundServices
                         if (runImmediately)
                         {
                             _logger.LogInformation("Thực hiện backup ngay khi khởi động ứng dụng trước khi vào lịch.");
+                            await RunBackupPipelineAsync(backupService, retentionDays);
+                            runImmediately = false;
                         }
                         else
                         {
@@ -58,10 +62,20 @@ namespace Medix.API.BackgroundServices
                             {
                                 await Task.Delay(delay, stoppingToken);
                             }
-                        }
 
-                        await RunBackupPipelineAsync(backupService, retentionDays);
-                        runImmediately = false;
+                            lock (_lockObject)
+                            {
+                                var timeSinceLastBackup = DateTime.UtcNow - _lastBackupTime;
+                                if (timeSinceLastBackup.TotalMinutes < 1)
+                                {
+                                    _logger.LogInformation("Backup was executed by another instance recently. Skipping this run.");
+                                    continue;
+                                }
+                                _lastBackupTime = DateTime.UtcNow;
+                            }
+
+                            await RunBackupPipelineAsync(backupService, retentionDays);
+                        }
                     }
                     else
                     {

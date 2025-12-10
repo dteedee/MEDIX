@@ -353,6 +353,10 @@ namespace Medix.API.Business.Services.Classification
                     {
                         var tables = await GetAllTablesAsync(connection, databaseName);
                         
+                        await writer.WriteLineAsync("EXEC sp_MSForEachTable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
+                        await writer.WriteLineAsync("GO");
+                        await writer.WriteLineAsync();
+                        
                         foreach (var table in tables)
                         {
                             await writer.WriteLineAsync($"IF OBJECT_ID('[{table}]', 'U') IS NOT NULL");
@@ -377,6 +381,10 @@ namespace Medix.API.Business.Services.Classification
                             await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] OFF;");
                         }
                         
+                        await writer.WriteLineAsync();
+                        await writer.WriteLineAsync("EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'");
+                        await writer.WriteLineAsync("GO");
+                        
                         await writer.FlushAsync();
                     }
                 }
@@ -399,6 +407,7 @@ namespace Medix.API.Business.Services.Classification
                 SELECT TABLE_NAME 
                 FROM INFORMATION_SCHEMA.TABLES 
                 WHERE TABLE_TYPE = 'BASE TABLE' 
+                AND TABLE_NAME NOT IN ('AggregatedCounter')
                 ORDER BY TABLE_NAME";
 
             using (var command = new SqlCommand(query, connection))

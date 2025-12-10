@@ -359,41 +359,16 @@ namespace Medix.API.Business.Services.Classification
                             }
                         }
                         
-                        await writer.WriteLineAsync($"USE master;");
-                        await writer.WriteLineAsync("GO");
-                        await writer.WriteLineAsync($"IF DB_ID('{databaseName}') IS NOT NULL");
-                        await writer.WriteLineAsync("BEGIN");
-                        await writer.WriteLineAsync($"    ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;");
-                        await writer.WriteLineAsync($"    DROP DATABASE [{databaseName}];");
-                        await writer.WriteLineAsync("END;");
-                        await writer.WriteLineAsync("GO");
-                        await writer.WriteLineAsync($"CREATE DATABASE [{databaseName}];");
-                        await writer.WriteLineAsync("GO");
-                        await writer.WriteLineAsync($"USE [{databaseName}];");
-                        await writer.WriteLineAsync("GO");
-                        await writer.WriteLineAsync();
-                        
                         await writer.WriteLineAsync("-- ========================================");
-                        await writer.WriteLineAsync("-- CREATE ALL TABLES");
+                        await writer.WriteLineAsync("-- 1. DISABLE ALL FOREIGN KEY CONSTRAINTS");
                         await writer.WriteLineAsync("-- ========================================");
-                        foreach (var table in tables)
-                        {
-                            if (tableScripts.TryGetValue(table, out var createTableScript))
-                            {
-                                await writer.WriteLineAsync(createTableScript);
-                                await writer.WriteLineAsync("GO");
-                                await writer.WriteLineAsync();
-                            }
-                        }
-                        
-                        await writer.WriteLineAsync("-- ========================================");
-                        await writer.WriteLineAsync("-- INSERT ALL DATA");
-                        await writer.WriteLineAsync("-- ========================================");
-                        
-                        // Disable foreign key constraints trước insert data
                         await writer.WriteLineAsync("EXEC sp_MSForEachTable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL';");
                         await writer.WriteLineAsync("GO");
                         await writer.WriteLineAsync();
+                        
+                        await writer.WriteLineAsync("-- ========================================");
+                        await writer.WriteLineAsync("-- 2. INSERT ALL DATA");
+                        await writer.WriteLineAsync("-- ========================================");
                         
                         foreach (var table in tables)
                         {
@@ -405,7 +380,10 @@ namespace Medix.API.Business.Services.Classification
                             await writer.WriteLineAsync("GO");
                         }
                         
-                        // Re-enable foreign key constraints sau insert xong
+                        await writer.WriteLineAsync();
+                        await writer.WriteLineAsync("-- ========================================");
+                        await writer.WriteLineAsync("-- 3. RE-ENABLE ALL FOREIGN KEY CONSTRAINTS");
+                        await writer.WriteLineAsync("-- ========================================");
                         await writer.WriteLineAsync("EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL';");
                         await writer.WriteLineAsync("GO");
                         await writer.WriteLineAsync();

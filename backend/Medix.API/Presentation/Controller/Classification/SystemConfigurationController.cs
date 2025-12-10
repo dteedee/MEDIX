@@ -61,14 +61,40 @@ namespace Medix.API.Presentation.Controller.Classification
             {
                 var filePath = await _service.BackupDatabaseAsync(request?.BackupName);
                 
-                if (!System.IO.File.Exists(filePath))
+                // Verify file exists
+                if (string.IsNullOrWhiteSpace(filePath))
                 {
-                    return StatusCode(500, new { message = "Backup file was created but could not be verified", error = "File not found" });
+                    return StatusCode(500, new { message = "Backup failed", error = "File path is null or empty" });
                 }
 
-                var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                var fileName = Path.GetFileName(filePath);
-                return File(stream, "application/octet-stream", fileName);
+                if (!System.IO.File.Exists(filePath))
+                {
+                    return StatusCode(500, new { message = "Backup file creation failed", error = $"File not found at {filePath}" });
+                }
+
+                // Check file size - if 0 bytes, something went wrong
+                var fileInfo = new System.IO.FileInfo(filePath);
+                if (fileInfo.Length == 0)
+                {
+                    return StatusCode(500, new { message = "Backup file is empty", error = "File size is 0 bytes" });
+                }
+
+                // Open file stream with proper handling
+                try
+                {
+                    var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
+                    var fileName = Path.GetFileName(filePath);
+                    
+                    // Return file with proper content type and headers
+                    Response.Headers.Add("Content-Disposition", $"attachment; filename=\"{fileName}\"");
+                    Response.Headers.Add("Content-Length", fileInfo.Length.ToString());
+                    
+                    return File(stream, "application/octet-stream", fileName);
+                }
+                catch (IOException ioEx)
+                {
+                    return StatusCode(500, new { message = "Cannot read backup file", error = ioEx.Message });
+                }
             }
             catch (InvalidOperationException ex)
             {
@@ -104,6 +130,38 @@ namespace Medix.API.Presentation.Controller.Classification
         {
             var policy = await _service.GetPasswordPolicyAsync();
             return Ok(policy);
+        }
+
+        [HttpGet("backup-debug")]
+        public async Task<IActionResult> GetBackupDebugInfo()
+        {
+            try
+            {
+                var backups = await _service.GetDatabaseBackupFilesAsync();
+                
+                // Get backup folder info
+                var backupFolderInfo = new DirectoryInfo(_service.GetBackupFolderPath());
+                
+                return Ok(new
+                {
+                    message = "Backup debug info",
+                    backupFolder = _service.GetBackupFolderPath(),
+                    folderExists = backupFolderInfo.Exists,
+                    backupFiles = backups.Select(b => new 
+                    { 
+                        b.FileName,
+                        b.FilePath,
+                        b.FileSize,
+                        b.FileSizeFormatted,
+                        b.CreatedAt
+                    }).ToList(),
+                    totalBackups = backups.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error getting backup debug info", error = ex.Message });
+            }
         }
 
         [HttpGet("email/server")]

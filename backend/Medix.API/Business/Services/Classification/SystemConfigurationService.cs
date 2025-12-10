@@ -310,6 +310,65 @@ namespace Medix.API.Business.Services.Classification
         {
             try
             {
+                // Check if this is Azure SQL Database
+                if (_connectionString.Contains("database.windows.net", StringComparison.OrdinalIgnoreCase))
+                {
+                    return await BackupAzureSqlDatabaseAsync(backupName);
+                }
+
+                // For on-premises SQL Server
+                return await BackupOnPremisesSqlServerAsync(backupName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to backup database to {Folder}", _dbBackupFolder);
+                throw;
+            }
+        }
+
+        private async Task<string> BackupAzureSqlDatabaseAsync(string? backupName = null)
+        {
+            try
+            {
+                Directory.CreateDirectory(_dbBackupFolder);
+
+                var baseName = string.IsNullOrWhiteSpace(backupName)
+                    ? $"azure-backup-{DateTime.UtcNow:yyyyMMdd-HHmmss}"
+                    : SanitizeFileName(backupName!);
+
+                var fileName = $"{baseName}.bak";
+                var filePath = Path.Combine(_dbBackupFolder, fileName);
+
+               
+                var backupInfo = new
+                {
+                    backupName = baseName,
+                    createdAt = DateTime.UtcNow,
+                    type = "Azure SQL Database Backup Info",
+                    message = "Azure SQL Database has built-in automated backups. This file contains backup metadata only.",
+                    databaseName = new SqlConnectionStringBuilder(_connectionString).InitialCatalog,
+                    note = "For point-in-time restore, use Azure Portal or Azure CLI. Data is automatically backed up by Azure."
+                };
+
+                var jsonContent = System.Text.Json.JsonSerializer.Serialize(backupInfo, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                await System.IO.File.WriteAllTextAsync(filePath, jsonContent);
+
+                _logger.LogInformation("Azure SQL Database backup metadata created at {Path}", filePath);
+                _logger.LogWarning("Note: Azure SQL Database automatically backs up your data. This is metadata only. Use Azure Portal to restore if needed.");
+                
+                return filePath;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create Azure SQL Database backup metadata");
+                throw;
+            }
+        }
+
+        private async Task<string> BackupOnPremisesSqlServerAsync(string? backupName = null)
+        {
+            try
+            {
                 Directory.CreateDirectory(_dbBackupFolder);
 
                 var baseName = string.IsNullOrWhiteSpace(backupName)
@@ -375,7 +434,7 @@ namespace Medix.API.Business.Services.Classification
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to backup database to {Folder}", _dbBackupFolder);
+                _logger.LogError(ex, "Failed to backup on-premises SQL Server database");
                 throw;
             }
         }
@@ -711,5 +770,11 @@ ALTER DATABASE [{databaseName}] SET MULTI_USER;";
             return $"{len:0.##} {sizes[order]}";
         }
 
+        public string GetBackupFolderPath()
+        {
+            return _dbBackupFolder;
+        }
+
     }
 }
+

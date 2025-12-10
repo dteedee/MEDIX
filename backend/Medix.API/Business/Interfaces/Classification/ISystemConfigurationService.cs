@@ -24,5 +24,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<List<EmailTemplateDto>> GetEmailTemplatesAsync();
         Task<EmailTemplateDto?> GetEmailTemplateAsync(string templateKey);
         Task UpdateEmailTemplateAsync(string templateKey, UpdateEmailTemplateRequest request, string updatedBy);
+        string GetBackupFolderPath();
     }
 }
+

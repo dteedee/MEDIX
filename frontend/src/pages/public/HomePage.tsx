@@ -244,17 +244,29 @@ function HomePage() {
                         <h1>{t('hero.title')}<br />{t('hero.subtitle')}</h1>
                         <p>{t('hero.description')}</p>
                         <div className={styles["features-box"]}>
-                            <div className={styles["feature-item"]}>
+                            <div 
+                                className={styles["feature-item"]}
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => navigate('/ai-chat')}
+                            >
                                 <div className={styles["icon"]}>🤖</div>
                                 <strong>{t('hero.ai-diagnosis')}</strong>
                                 <small>{t('hero.ai-diagnosis.desc')}</small>
                             </div>
-                            <div className={styles["feature-item"]}>
+                            <div 
+                                className={styles["feature-item"]}
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => navigate('/doctors')}
+                            >
                                 <div className={styles["icon"]}>📅</div>
                                 <strong>{t('hero.appointment')}</strong>
                                 <small>{t('hero.appointment.desc')}</small>
                             </div>
-                            <div className={styles["feature-item"]}>
+                            <div 
+                                className={styles["feature-item"]}
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => navigate('/doctors')}
+                            >
                                 <div className={styles["icon"]}>👨‍⚕️</div>
                                 <strong>{t('hero.find-doctor')}</strong>
                                 <small>{t('hero.find-doctor.desc')}</small>

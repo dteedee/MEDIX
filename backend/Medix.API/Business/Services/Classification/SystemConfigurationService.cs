@@ -355,6 +355,21 @@ namespace Medix.API.Business.Services.Classification
                         
                         foreach (var table in tables)
                         {
+                            await writer.WriteLineAsync($"IF OBJECT_ID('[{table}]', 'U') IS NOT NULL");
+                            await writer.WriteLineAsync($"DROP TABLE [{table}];");
+                            await writer.WriteLineAsync("GO");
+                            
+                            var createTableScript = await GetCreateTableScriptAsync(connection, databaseName, table);
+                            if (!string.IsNullOrEmpty(createTableScript))
+                            {
+                                await writer.WriteLineAsync(createTableScript);
+                                await writer.WriteLineAsync("GO");
+                                await writer.WriteLineAsync();
+                            }
+                        }
+                        
+                        foreach (var table in tables)
+                        {
                             await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] ON;");
                             
                             var rowCount = await ExportTableDataAsync(connection, table, writer);
@@ -398,6 +413,26 @@ namespace Medix.API.Business.Services.Classification
             }
 
             return tables;
+        }
+
+        private async Task<string> GetCreateTableScriptAsync(SqlConnection connection, string databaseName, string tableName)
+        {
+            try
+            {
+                var query = $@"
+                    SELECT OBJECT_DEFINITION(OBJECT_ID('{tableName}'))";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    var result = await command.ExecuteScalarAsync();
+                    return result?.ToString() ?? string.Empty;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not get CREATE TABLE script for {Table}", tableName);
+                return string.Empty;
+            }
         }
 
         private async Task<int> ExportTableDataAsync(SqlConnection connection, string tableName, System.IO.StreamWriter writer)

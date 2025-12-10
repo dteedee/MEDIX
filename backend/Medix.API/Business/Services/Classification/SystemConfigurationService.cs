@@ -311,7 +311,7 @@ namespace Medix.API.Business.Services.Classification
             {
                 if (_connectionString.Contains("database.windows.net", StringComparison.OrdinalIgnoreCase))
                 {
-                    return await ExportAzureSqlDatabaseAsync(backupName);
+                    return await CreateAzureSqlScriptBackupAsync(backupName);
                 }
 
                 return await BackupOnPremisesSqlServerAsync(backupName);
@@ -323,7 +323,7 @@ namespace Medix.API.Business.Services.Classification
             }
         }
 
-        private async Task<string> ExportAzureSqlDatabaseAsync(string? backupName = null)
+        private async Task<string> CreateAzureSqlScriptBackupAsync(string? backupName = null)
         {
             try
             {
@@ -440,7 +440,7 @@ namespace Medix.API.Business.Services.Classification
                                         }
                                         else if (value is Guid)
                                         {
-                                            values.Add($"'{((Guid)value).ToString().ToUpper())}'");
+                                            values.Add($"'{((Guid)value).ToString().ToUpper()}'");
                                         }
                                         else if (value is bool)
                                         {

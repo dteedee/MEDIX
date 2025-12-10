@@ -310,19 +310,173 @@ namespace Medix.API.Business.Services.Classification
         {
             try
             {
-                // Check if this is Azure SQL Database
                 if (_connectionString.Contains("database.windows.net", StringComparison.OrdinalIgnoreCase))
                 {
-                    return await BackupAzureSqlDatabaseAsync(backupName);
+                    return await ExportAzureSqlDatabaseAsync(backupName);
                 }
 
-                // For on-premises SQL Server
                 return await BackupOnPremisesSqlServerAsync(backupName);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to backup database to {Folder}", _dbBackupFolder);
                 throw;
+            }
+        }
+
+        private async Task<string> ExportAzureSqlDatabaseAsync(string? backupName = null)
+        {
+            try
+            {
+                Directory.CreateDirectory(_dbBackupFolder);
+
+                var baseName = string.IsNullOrWhiteSpace(backupName)
+                    ? $"azure-export-{DateTime.UtcNow:yyyyMMdd-HHmmss}"
+                    : SanitizeFileName(backupName!);
+
+                var fileName = $"{baseName}.bak";
+                var filePath = Path.Combine(_dbBackupFolder, fileName);
+
+                _logger.LogInformation("Starting Azure SQL Database data export to {Path}", filePath);
+
+                await using var connection = new SqlConnection(_connectionString);
+                await connection.OpenAsync();
+
+                var databaseName = connection.Database;
+                if (string.IsNullOrWhiteSpace(databaseName))
+                {
+                    throw new InvalidOperationException("Could not determine database name from connection string");
+                }
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                {
+                    using (var writer = new System.IO.StreamWriter(fileStream))
+                    {
+                        await writer.WriteLineAsync("-- Azure SQL Database Backup Export");
+                        await writer.WriteLineAsync($"-- Database: {databaseName}");
+                        await writer.WriteLineAsync($"-- Created: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
+                        await writer.WriteLineAsync($"-- Backup Name: {baseName}");
+                        await writer.WriteLineAsync("-- ============================================");
+                        await writer.WriteLineAsync();
+
+                        var tables = await GetAllTablesAsync(connection, databaseName);
+                        
+                        foreach (var table in tables)
+                        {
+                            await writer.WriteLineAsync($"-- Table: {table}");
+                            await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] ON;");
+                            
+                            var rowCount = await ExportTableDataAsync(connection, table, writer);
+                            
+                            await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] OFF;");
+                            await writer.WriteLineAsync($"-- Total rows exported: {rowCount}");
+                            await writer.WriteLineAsync();
+                        }
+
+                        await writer.WriteLineAsync("-- ============================================");
+                        await writer.WriteLineAsync("-- Backup export completed successfully");
+                    }
+                }
+
+                var fileInfo = new FileInfo(filePath);
+                _logger.LogInformation("Azure SQL Database export completed at {Path}, size: {Size} bytes", filePath, fileInfo.Length);
+                return filePath;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to export Azure SQL Database");
+                throw;
+            }
+        }
+
+        private async Task<List<string>> GetAllTablesAsync(SqlConnection connection, string databaseName)
+        {
+            var tables = new List<string>();
+            var query = @"
+                SELECT TABLE_NAME 
+                FROM INFORMATION_SCHEMA.TABLES 
+                WHERE TABLE_TYPE = 'BASE TABLE' 
+                ORDER BY TABLE_NAME";
+
+            using (var command = new SqlCommand(query, connection))
+            {
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        tables.Add(reader.GetString(0));
+                    }
+                }
+            }
+
+            return tables;
+        }
+
+        private async Task<int> ExportTableDataAsync(SqlConnection connection, string tableName, System.IO.StreamWriter writer)
+        {
+            try
+            {
+                var query = $"SELECT * FROM [{tableName}]";
+                var rowCount = 0;
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.CommandTimeout = 300;
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        var columnNames = new List<string>();
+                        for (int i = 0; i < reader.FieldCount; i++)
+                        {
+                            columnNames.Add($"[{reader.GetName(i)}]");
+                        }
+
+                        while (await reader.ReadAsync())
+                        {
+                            var values = new List<string>();
+                            for (int i = 0; i < reader.FieldCount; i++)
+                            {
+                                if (reader.IsDBNull(i))
+                                {
+                                    values.Add("NULL");
+                                }
+                                else
+                                {
+                                    var value = reader.GetValue(i);
+                                    if (value is string)
+                                    {
+                                        values.Add($"'{((string)value).Replace("'", "''")}'");
+                                    }
+                                    else if (value is DateTime)
+                                    {
+                                        values.Add($"'{((DateTime)value):yyyy-MM-dd HH:mm:ss.fff}'");
+                                    }
+                                    else
+                                    {
+                                        values.Add(value.ToString());
+                                    }
+                                }
+                            }
+
+                            var insertStatement = $"INSERT INTO [{tableName}] ({string.Join(", ", columnNames)}) VALUES ({string.Join(", ", values)});";
+                            await writer.WriteLineAsync(insertStatement);
+                            rowCount++;
+
+                            // Limit output to prevent huge files
+                            if (rowCount >= 100000)
+                            {
+                                _logger.LogWarning("Export limited to 100000 rows for table {Table} to prevent huge files", tableName);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                return rowCount;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not export table {Table}, skipping", tableName);
+                return 0;
             }
         }
 

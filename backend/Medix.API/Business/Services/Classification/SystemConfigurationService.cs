@@ -442,7 +442,8 @@ namespace Medix.API.Business.Services.Classification
                                         }
                                         else if (valueType == typeof(DateTime))
                                         {
-                                            values.Add($"'{((DateTime)value):yyyy-MM-dd HH:mm:ss.fff}'");
+                                            var dateValue = ((DateTime)value).ToString("yyyy-MM-dd HH:mm:ss.fff");
+                                            values.Add($"'{dateValue}'");
                                         }
                                         else if (valueType == typeof(string))
                                         {

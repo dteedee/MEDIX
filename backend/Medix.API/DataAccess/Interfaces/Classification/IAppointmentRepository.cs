@@ -22,5 +22,6 @@ namespace Medix.API.DataAccess.Interfaces.Classification
         Task<int> CountStatus(Guid id, string Status);
 
         Task<List<MonthlyAppointmentTrendDto>> GetMonthlyAppointmentAndRevenueAsync(Guid? doctorId, int year);
+        Task<(int Total, int Completed, int Successful)> GetDoctorAppointmentStatsAsync(Guid doctorId);
     }
 }

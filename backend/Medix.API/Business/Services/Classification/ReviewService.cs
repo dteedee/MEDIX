@@ -26,16 +26,34 @@ namespace Medix.API.Business.Services.Classification
         public async Task<List<TopDoctorDto>> GetTopDoctorsByRatingAsync(int count = 3)
         {
             var topDoctors = await _reviewRepo.GetTopDoctorsByRatingAsync(count);
+            var topDoctorsFull = await _reviewRepo.GetTopDoctorsFullAsync(count);
 
-            return topDoctors.Select(d => new TopDoctorDto
+            var result = new List<TopDoctorDto>();
+
+            foreach (var d in topDoctors)
             {
-                DoctorId = d.DoctorId,
-                DoctorName = d.DoctorName,
-                Specialization = d.Specialization,
-                AverageRating = Math.Round(d.AverageRating, 1),
-                ReviewCount = d.ReviewCount,
-                ImageUrl = d.ImageUrl
-            }).ToList();
+                var doctorFull = topDoctorsFull.FirstOrDefault(df => df.Id == d.DoctorId);
+                var (total, completed, successful) = await _appointmentRepo.GetDoctorAppointmentStatsAsync(d.DoctorId);
+                var successRate = completed > 0 ? ((double)successful / completed) * 100 : 0;
+
+                result.Add(new TopDoctorDto
+                {
+                    DoctorId = d.DoctorId,
+                    DoctorName = d.DoctorName,
+                    Specialization = d.Specialization,
+                    AverageRating = Math.Round(d.AverageRating, 1),
+                    ReviewCount = d.ReviewCount,
+                    ImageUrl = d.ImageUrl,
+                    CompletedAppointments = completed,
+                    SuccessfulAppointments = successful,
+                    TotalAppointments = total,
+                    SuccessRate = Math.Round(successRate, 1),
+                    Degree = doctorFull?.Education,
+                    ExperienceYears = doctorFull?.YearsOfExperience
+                });
+            }
+
+            return result;
         }
         public async Task<ReviewDoctorDto?> GetByAppointmentIdAsync(Guid appointmentId)
         {

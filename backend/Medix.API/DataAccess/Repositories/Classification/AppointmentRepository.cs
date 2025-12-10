@@ -283,5 +283,19 @@ namespace Medix.API.DataAccess.Repositories.Classification
         {
             return await _context.Appointments.Where(d => d.DoctorId == id && d.StatusCode == Status).CountAsync();
         }
+
+        public async Task<(int Total, int Completed, int Successful)> GetDoctorAppointmentStatsAsync(Guid doctorId)
+        {
+            var appointments = await _context.Appointments
+                .AsNoTracking()
+                .Where(a => a.DoctorId == doctorId)
+                .ToListAsync();
+
+            var total = appointments.Count;
+            var completed = appointments.Count(a => a.StatusCode == "Completed");
+            var successful = appointments.Count(a => a.StatusCode == "Completed");
+
+            return (total, completed, successful);
+        }
     }
 }

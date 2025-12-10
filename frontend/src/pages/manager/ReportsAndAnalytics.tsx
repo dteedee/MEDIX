@@ -699,20 +699,19 @@ export default function ReportsAndAnalytics() {
                       </div>
                     </div>
 
-                    {/* Thông tin số ca đã thực hiện và thành công - Compact design */}
                     <div className={styles.doctorStatsCompact}>
                       <div className={styles.statCompactItem}>
                         <div className={styles.statCompactIcon}>
                           <i className="bi bi-clipboard-check"></i>
                         </div>
                         <div className={styles.statCompactValue}>
-                          {doctor.completedAppointments !== undefined 
-                            ? doctor.completedAppointments.toLocaleString('vi-VN')
-                            : doctor.totalAppointments !== undefined
+                          {doctor.totalAppointments !== undefined 
                             ? doctor.totalAppointments.toLocaleString('vi-VN')
+                            : doctor.completedAppointments !== undefined
+                            ? doctor.completedAppointments.toLocaleString('vi-VN')
                             : '0'}
                         </div>
-                        <div className={styles.statCompactLabel}>Ca thực hiện</div>
+                        <div className={styles.statCompactLabel}>Tổng các ca khám</div>
                       </div>
                       <div className={styles.statCompactItem}>
                         <div className={styles.statCompactIcon}>

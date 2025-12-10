@@ -16,6 +16,7 @@ namespace Medix.API.DataAccess.Interfaces.Classification
 
         Task<List<Review>> GetByAppointmentIdsAsync(IEnumerable<Guid> appointmentIds);
         Task<List<(Guid DoctorId, string DoctorName, string Specialization, double AverageRating, int ReviewCount, string? ImageUrl)>> GetTopDoctorsByRatingAsync(int count = 3);
+        Task<List<Doctor>> GetTopDoctorsFullAsync(int count = 3);
 
 
     }

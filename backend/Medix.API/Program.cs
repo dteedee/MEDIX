@@ -153,6 +153,11 @@ builder.Services.AddSingleton(provider =>
     return new Client(apiKey: apiKey);
 });
 
+var fontDir = Path.Combine(AppContext.BaseDirectory, "Fonts");
+Aspose.Pdf.Text.FontRepository.Sources.Add(
+    new Aspose.Pdf.Text.FolderFontSource(fontDir)
+);
+
 builder.Services.AddSingleton(sp =>
 {
     var logger = sp.GetRequiredService<ILogger<PredictionServiceClient>>();

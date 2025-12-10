@@ -351,7 +351,7 @@ namespace Medix.API.Business.Services.Classification
         private TextFragment CreateTitleText(string text)
         {
             var textFragment = new TextFragment(text);
-            textFragment.TextState.Font = FontRepository.FindFont("Arial");
+            textFragment.TextState.Font = FontRepository.FindFont("Liberation Sans");
             textFragment.TextState.FontSize = 20;
             textFragment.TextState.FontStyle = FontStyles.Bold;
             textFragment.HorizontalAlignment = HorizontalAlignment.Center;
@@ -362,7 +362,7 @@ namespace Medix.API.Business.Services.Classification
         private TextFragment CreateHeaderText(string text)
         {
             var textFragment = new TextFragment(text);
-            textFragment.TextState.Font = FontRepository.FindFont("Arial");
+            textFragment.TextState.Font = FontRepository.FindFont("Liberation Sans");
             textFragment.TextState.FontSize = 14;
             textFragment.TextState.FontStyle = FontStyles.Bold;
 
@@ -371,7 +371,7 @@ namespace Medix.API.Business.Services.Classification
 
         private TextFragment CreateText(string text) {
             var textFragment = new TextFragment(text);
-            textFragment.TextState.Font = FontRepository.FindFont("Arial");
+            textFragment.TextState.Font = FontRepository.FindFont("Liberation Sans");
             textFragment.TextState.FontSize = 12;
 
             return textFragment;

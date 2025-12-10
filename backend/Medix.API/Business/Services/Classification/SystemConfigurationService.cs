@@ -350,12 +350,20 @@ namespace Medix.API.Business.Services.Classification
                         var tables = await GetAllTablesAsync(connection, databaseName);
                         
                         var tableScripts = new Dictionary<string, string>();
+                        var tablesWithIdentity = new HashSet<string>();
+                        
                         foreach (var table in tables)
                         {
                             var createTableScript = await GetCreateTableScriptAsync(connection, databaseName, table);
                             if (!string.IsNullOrEmpty(createTableScript))
                             {
                                 tableScripts[table] = createTableScript;
+                            }
+                            
+                            // Check if table has IDENTITY column
+                            if (await TableHasIdentityAsync(connection, table))
+                            {
+                                tablesWithIdentity.Add(table);
                             }
                         }
                         
@@ -372,11 +380,18 @@ namespace Medix.API.Business.Services.Classification
                         
                         foreach (var table in tables)
                         {
-                            await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] ON;");
+                            // Only set IDENTITY_INSERT for tables that have IDENTITY columns
+                            if (tablesWithIdentity.Contains(table))
+                            {
+                                await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] ON;");
+                            }
                             
                             var rowCount = await ExportTableDataAsync(connection, table, writer);
                             
-                            await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] OFF;");
+                            if (tablesWithIdentity.Contains(table))
+                            {
+                                await writer.WriteLineAsync($"SET IDENTITY_INSERT [{table}] OFF;");
+                            }
                             await writer.WriteLineAsync("GO");
                         }
                         
@@ -410,7 +425,7 @@ namespace Medix.API.Business.Services.Classification
                 SELECT TABLE_NAME 
                 FROM INFORMATION_SCHEMA.TABLES 
                 WHERE TABLE_TYPE = 'BASE TABLE' 
-                AND TABLE_NAME NOT IN ('AggregatedCounter')
+                AND TABLE_NAME NOT IN ('AggregatedCounter', 'AuditLog', 'AuditLogs')
                 ORDER BY TABLE_NAME";
 
             using (var command = new SqlCommand(query, connection))
@@ -425,6 +440,29 @@ namespace Medix.API.Business.Services.Classification
             }
 
             return tables;
+        }
+
+        private async Task<bool> TableHasIdentityAsync(SqlConnection connection, string tableName)
+        {
+            try
+            {
+                var query = $@"
+                    SELECT COUNT(*) 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = '{tableName}' 
+                    AND COLUMNPROPERTY(OBJECT_ID(TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    var result = await command.ExecuteScalarAsync();
+                    return result != null && (int)result > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not check IDENTITY for table {Table}", tableName);
+                return false;
+            }
         }
 
         private async Task<string> GetCreateTableScriptAsync(SqlConnection connection, string databaseName, string tableName)

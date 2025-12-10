@@ -148,5 +148,25 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Select(d => (d.DoctorId, d.DoctorName, d.Specialization, d.AverageRating, d.ReviewCount, d.ImageUrl))
                 .ToList();
         }
+
+        public async Task<List<Doctor>> GetTopDoctorsFullAsync(int count = 3)
+        {
+            var topDoctorIds = await _context.Reviews
+                .Include(r => r.Appointment)
+                    .ThenInclude(a => a.Doctor)
+                .Where(r => r.Appointment.Doctor != null)
+                .GroupBy(r => r.Appointment.DoctorId)
+                .OrderByDescending(g => g.Average(r => r.Rating))
+                .ThenByDescending(g => g.Count())
+                .Take(count)
+                .Select(g => g.Key)
+                .ToListAsync();
+
+            var doctors = await _context.Doctors
+                .Where(d => topDoctorIds.Contains(d.Id))
+                .ToListAsync();
+
+            return doctors;
+        }
     }
 }

@@ -26,6 +26,12 @@
         public int ReviewCount { get; set; }
         public string? ImageUrl { get; set; } = string.Empty;
         public string FormattedRating => $"{AverageRating:F1}";
+        public int? CompletedAppointments { get; set; }
+        public int? SuccessfulAppointments { get; set; }
+        public int? TotalAppointments { get; set; }
+        public double? SuccessRate { get; set; }
+        public string? Degree { get; set; }
+        public int? ExperienceYears { get; set; }
     }
 
     public class TopDoctorPerformanceDto

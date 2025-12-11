@@ -296,6 +296,10 @@ export const PatientAppointments: React.FC = () => {
 
   const handleCancelAppointment = async () => {
     if (!selectedAppointment) return;
+    if (!canCancelAppointment(selectedAppointment)) {
+      showToast('Không thể hủy trong vòng 2 giờ trước giờ khám.', 'warning');
+      return;
+    }
 
     try {
       setIsCancelling(true);
@@ -385,6 +389,16 @@ export const PatientAppointments: React.FC = () => {
       style: 'currency',
       currency: 'VND'
     }).format(amount);
+  };
+
+  const canCancelAppointment = (appointment?: Appointment | null) => {
+    if (!appointment || appointment.statusCode !== 'BeforeAppoiment' || !appointment.appointmentStartTime) {
+      return false;
+    }
+    const now = new Date().getTime();
+    const start = new Date(appointment.appointmentStartTime).getTime();
+    const diffHours = (start - now) / (1000 * 60 * 60);
+    return diffHours > 2;
   };
 
   const getStatusConfig = (statusCode: string) => {
@@ -771,7 +785,12 @@ export const PatientAppointments: React.FC = () => {
               </button>
               <button 
                         className={styles.cancelBtn}
+                        disabled={!canCancelAppointment(appointmentWithInfo)}
                         onClick={() => {
+                          if (!canCancelAppointment(appointmentWithInfo)) {
+                            showToast('Không thể hủy trong vòng 2 giờ trước giờ khám.', 'warning');
+                            return;
+                          }
                           setSelectedAppointment(appointmentWithInfo);
                           setShowCancelDialog(true);
                         }}
@@ -926,7 +945,12 @@ export const PatientAppointments: React.FC = () => {
               {selectedAppointment.statusCode === 'BeforeAppoiment' && (
                 <button 
                   className={styles.modalCancelBtn}
+                  disabled={!canCancelAppointment(selectedAppointment)}
                   onClick={() => {
+                    if (!canCancelAppointment(selectedAppointment)) {
+                      showToast('Không thể hủy trong vòng 2 giờ trước giờ khám.', 'warning');
+                      return;
+                    }
                     setShowDetailModal(false);
                     setShowCancelDialog(true);
                   }}
@@ -1000,17 +1024,17 @@ export const PatientAppointments: React.FC = () => {
             </div>
 
             <div className={styles.cancelModalFooter}>
-            <button 
+              <button 
                 className={styles.keepBtn}
                 onClick={() => setShowCancelDialog(false)}
                 disabled={isCancelling}
-            >
+              >
                 Giữ lịch hẹn
-            </button>
+              </button>
               <button 
                 className={styles.confirmCancelBtn}
                 onClick={handleCancelAppointment}
-                disabled={isCancelling}
+                disabled={isCancelling || !canCancelAppointment(selectedAppointment)}
               >
                 {isCancelling ? (
                   <>

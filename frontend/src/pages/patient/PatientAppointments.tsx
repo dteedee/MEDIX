@@ -785,7 +785,6 @@ export const PatientAppointments: React.FC = () => {
               </button>
               <button 
                         className={styles.cancelBtn}
-                        disabled={!canCancelAppointment(appointmentWithInfo)}
                         onClick={() => {
                           if (!canCancelAppointment(appointmentWithInfo)) {
                             showToast('Không thể hủy trong vòng 2 giờ trước giờ khám.', 'warning');
@@ -945,7 +944,6 @@ export const PatientAppointments: React.FC = () => {
               {selectedAppointment.statusCode === 'BeforeAppoiment' && (
                 <button 
                   className={styles.modalCancelBtn}
-                  disabled={!canCancelAppointment(selectedAppointment)}
                   onClick={() => {
                     if (!canCancelAppointment(selectedAppointment)) {
                       showToast('Không thể hủy trong vòng 2 giờ trước giờ khám.', 'warning');
@@ -1034,7 +1032,7 @@ export const PatientAppointments: React.FC = () => {
               <button 
                 className={styles.confirmCancelBtn}
                 onClick={handleCancelAppointment}
-                disabled={isCancelling || !canCancelAppointment(selectedAppointment)}
+                disabled={isCancelling}
               >
                 {isCancelling ? (
                   <>

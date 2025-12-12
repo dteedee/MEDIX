@@ -1058,109 +1058,14 @@ export default function EMRTimeline() {
                                     <div ref={recordContentRef}>
                                         <div className="pdf-exclude" style={{ display: 'flex', gap: '8px', marginBottom: '16px', justifyContent: 'flex-end' }}>
                                             <button
-                                                className={styles.modalActionButton}
-                                                onClick={() => {
-                                                    if (!recordContentRef.current) return;
-                                                    const excludedElements = recordContentRef.current.querySelectorAll('.pdf-exclude');
-                                                    excludedElements.forEach(el => (el as HTMLElement).style.display = 'none');
-                                                    const opt = {
-                                                        margin: 0.5,
-                                                        filename: `EMR_${recordDetails.date}_${recordDetails.doctor?.replace(/\s+/g, '_') || 'record'}.pdf`,
-                                                        image: { type: 'jpeg', quality: 0.98 },
-                                                        html2canvas: { scale: 2 },
-                                                        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-                                                    };
-                                                    html2pdf().set(opt).from(recordContentRef.current).save().then(() => {
-                                                        excludedElements.forEach(el => (el as HTMLElement).style.display = '');
-                                                    });
-                                                }}
-                                            >
-                                                <i className="bi bi-download"></i>
-                                                Tải PDF
-                                            </button>
-                                            <button
-                                                className={styles.modalActionButton}
-                                                onClick={() => {
-                                                    const printWindow = window.open('', '_blank');
-                                                    if (printWindow && recordDetails) {
-                                                        printWindow.document.write(`
-                                                            <html>
-                                                                <head>
-                                                                    <title>Hồ sơ khám bệnh - ${recordDetails.date}</title>
-                                                                    <style>
-                                                                        body { font-family: Arial, sans-serif; padding: 20px; }
-                                                                        h2 { text-align: center; color: #333; margin-bottom: 20px; }
-                                                                        .info-row { margin-bottom: 15px; }
-                                                                        .label { font-weight: bold; color: #475569; }
-                                                                        .section-group { border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
-                                                                        .section-group-title { background: #f1f5f9; padding: 12px 16px; font-weight: bold; color: #1e40af; font-size: 14px; border-bottom: 1px solid #e2e8f0; }
-                                                                        .section-row { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; }
-                                                                        .section-row:last-child { border-bottom: none; }
-                                                                        .section-row.two-col { display: flex; gap: 20px; }
-                                                                        .section-row.two-col .section-item { flex: 1; }
-                                                                        .section-item { margin-bottom: 8px; }
-                                                                        .section-item:last-child { margin-bottom: 0; }
-                                                                    </style>
-                                                                </head>
-                                                                <body>
-                                                                    <h2>Hồ sơ khám bệnh</h2>
-                                                                    <div class="info-row"><span class="label">Ngày khám:</span> ${recordDetails.date}</div>
-                                                                    <div class="info-row"><span class="label">Bác sĩ phụ trách:</span> ${recordDetails.doctor || 'N/A'}</div>
-                                                                    
-                                                                    <div class="section-group">
-                                                                        <div class="section-group-title">I. LÝ DO VÀO VIỆN VÀ BỆNH SỬ</div>
-                                                                        <div class="section-row">
-                                                                            <div class="section-item"><span class="label">Lý do khám:</span> ${recordDetails.chiefComplaint || 'N/A'}</div>
-                                                                        </div>
-                                                                        <div class="section-row">
-                                                                            <div class="section-item"><span class="label">Quá trình bệnh lý và diễn biến (Khám lâm sàng):</span> ${recordDetails.physicalExamination || 'N/A'}</div>
-                                                                        </div>
-                                                                    </div>
-                                                                    
-                                                                    <div class="section-group">
-                                                                        <div class="section-group-title">II. CHẨN ĐOÁN VÀ ĐIỀU TRỊ</div>
-                                                                        <div class="section-row two-col">
-                                                                            <div class="section-item"><span class="label">Chẩn đoán chính:</span> ${recordDetails.diagnosis || 'N/A'}</div>
-                                                                            <div class="section-item"><span class="label">Ghi chú đánh giá:</span> ${recordDetails.assessmentNotes || 'N/A'}</div>
-                                                                        </div>
-                                                                        <div class="section-row">
-                                                                            <div class="section-item"><span class="label">Kế hoạch điều trị:</span> ${recordDetails.treatmentPlan || 'N/A'}</div>
-                                                                        </div>
-                                                                        <div class="section-row two-col">
-                                                                            <div class="section-item"><span class="label">Ghi chú của bác sĩ:</span> ${recordDetails.doctorNotes || 'N/A'}</div>
-                                                                            <div class="section-item"><span class="label">Hướng dẫn tái khám:</span> ${recordDetails.followUpInstructions || 'N/A'}</div>
-                                                                        </div>
-                                                                    </div>
-                                                                    
-                                                                    <div class="section-group">
-                                                                        <div class="section-group-title">I. ĐƠN THUỐC</div>
-                                                                        ${recordDetails.prescription && recordDetails.prescription.length > 0 ? `
-                                                                            <div class="info-row">
-                                                                                <ul style="margin-top: 10px; padding-left: 20px;">
-                                                                                    ${recordDetails.prescription.map(p => `
-                                                                                        <li style="margin-bottom: 10px;">
-                                                                                            <strong>${p.medicationName}</strong><br/>
-                                                                                            Hướng dẫn: ${p.instructions || 'N/A'}<br/>
-                                                                                            ${p.frequency ? `Tần suất: ${p.frequency}<br/>` : ''}
-                                                                                            ${p.duration ? `Thời gian: ${p.duration}` : ''}
-                                                                                        </li>
-                                                                                    `).join('')}
-                                                                                </ul>
-                                                                            </div>
-                                                                        ` : '<div class="info-row">N/A</div>'}
-                                                                    </div>
-                                                                    
-                                                                </body>
-                                                            </html>
-                                                        `);
-                                                        printWindow.document.close();
-                                                        printWindow.print();
-                                                    }
-                                                }}
+                                                className={`${styles.actionButton} ${styles.printButton} pdf-exclude`}
+                                                onClick={() => handlePrintRecord(recordDetails)}
+                                                title="In hồ sơ này"
+                                                aria-label="In hồ sơ này"
                                             >
                                                 <i className="bi bi-printer"></i>
-                                                In
                                             </button>
+                                           
                                         </div>
                                         <div className={styles.modalRecordCard}>
                                             <div className={styles.modalRecordHeader}>
@@ -1183,7 +1088,7 @@ export default function EMRTimeline() {
                                                 <div className={styles.recordSectionGroup}>
                                                     <h4 className={styles.sectionGroupTitle}>
                                                         <i className="bi bi-file-text"></i>
-                                                        II. LÝ DO VÀO VIỆN VÀ BỆNH SỬ
+                                                        I. LÝ DO VÀO VIỆN VÀ BỆNH SỬ
                                                     </h4>
                                                     <div className={styles.sectionGroupContent}>
                                                         <div className={styles.recordSection}>
@@ -1209,7 +1114,7 @@ export default function EMRTimeline() {
                                                 <div className={styles.recordSectionGroup}>
                                                     <h4 className={styles.sectionGroupTitle}>
                                                         <i className="bi bi-clipboard2-pulse"></i>
-                                                        III. CHẨN ĐOÁN VÀ ĐIỀU TRỊ
+                                                        II. CHẨN ĐOÁN VÀ ĐIỀU TRỊ
                                                     </h4>
                                                     <div className={styles.sectionGroupContent}>
                                                         <div className={styles.recordSectionRow}>
@@ -1263,7 +1168,7 @@ export default function EMRTimeline() {
                                                 <div className={styles.recordSectionGroup}>
                                                     <h4 className={styles.sectionGroupTitle}>
                                                         <i className="bi bi-capsule"></i>
-                                                        IV. ĐƠN THUỐC
+                                                        III. ĐƠN THUỐC
                                                     </h4>
                                                     <div className={styles.sectionGroupContent}>
                                                         {recordDetails.prescription && recordDetails.prescription.length > 0 ? (

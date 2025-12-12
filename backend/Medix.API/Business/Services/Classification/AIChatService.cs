@@ -1,34 +1,71 @@
-﻿using Medix.API.Business.Interfaces.Classification;
+﻿using Medix.API.Business.Helper;
+using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.UserManagement;
 using Medix.API.Models.DTOs.AIChat;
 using Medix.API.Models.Entities;
 using Medix.API.Models.Enums;
 using System.Text;
+using System.Text.Json;
 using Constant = Medix.API.Business.Helper.RequestTypeConstants;
 
 namespace Medix.API.Business.Services.Classification
 {
     public class AIChatService(
         ILogger<AIChatService> logger,
-        ILLMService llmService,
-        IOCRService ocrService,
-        IRAGService ragService,
+
+        ISystemConfigurationRepository configurationRepository,
         IPatientRepository patientRepository,
+        IDoctorRepository doctorRepository,
         IAISymptomAnalysisRepository aiSymptomAnalysisRepository,
         IHealthArticleRepository articleRepository,
-        IDoctorRepository doctorRepository,
-        ISystemConfigurationRepository configurationRepository) : IAIChatService
+
+        ILLMService llmService,
+        IRAGService ragService,
+        IOCRService ocrService
+        ) : IAIChatService
     {
         private readonly ILogger<AIChatService> _logger = logger;
-        private readonly ILLMService _llmService = llmService;
-        private readonly IOCRService _ocrService = ocrService;
-        private readonly IRAGService _ragService = ragService;
-        private readonly IPatientRepository _patientRepository = patientRepository;
-        private readonly IAISymptomAnalysisRepository _aiSymptomAnalysisRepository = aiSymptomAnalysisRepository;
-        private readonly IDoctorRepository _doctorRepository = doctorRepository;
+
         private readonly ISystemConfigurationRepository _configurationRepository = configurationRepository;
+        private readonly IPatientRepository _patientRepository = patientRepository;
+        private readonly IDoctorRepository _doctorRepository = doctorRepository;
+        private readonly IAISymptomAnalysisRepository _aiSymptomAnalysisRepository = aiSymptomAnalysisRepository;
         private readonly IHealthArticleRepository _articleRepository = articleRepository;
+        private readonly IOCRService _ocrService = ocrService;
+
+        private readonly ILLMService _llmService = llmService;
+        private readonly IRAGService _ragService = ragService;
+
+        public async Task<ChatResponseDto> AnalyzeEMRAsync(IFormFile file, List<AIChatMessageDto> conversationHistory, string? userIdClaim = null)
+        {
+            if (await IsDailyLimitReached(conversationHistory))
+            {
+                return new ChatResponseDto
+                {
+                    Text = "Bạn đã đạt đến giới hạn truy cập hàng ngày cho dịch vụ AI. Vui lòng thử lại sau 24 giờ.",
+                    Type = "limit_reached"
+                };
+            }
+
+            var ocrText = await _ocrService.ExtractTextAsync(file) ?? throw new Exception("OCR extraction failed.");
+
+            string? context = null;
+            if (_llmService.IsHealthRelatedQueryAsync(ocrText))
+            {
+                context = await _ragService.GetSymptomAnalysisContextAsync(ocrText);
+            }
+
+            var responseText = await _llmService.GetEMRAnalysisAsync(ocrText, conversationHistory, context);
+            var diagnosisModel = JsonSerializer.Deserialize<DiagnosisModel>(responseText);
+
+            if (diagnosisModel == null)
+            {
+                throw new NullReferenceException("Failed to deserialize return text");
+            }
+
+            return await GetResponseAsync(diagnosisModel, userIdClaim);
+        }
 
         public async Task<ChatResponseDto> SendMessageAsync(string prompt, List<AIChatMessageDto> conversationHistory, string? userIdClaim = null)
         {
@@ -41,13 +78,13 @@ namespace Medix.API.Business.Services.Classification
                 };
             }
 
-            var requestType = await _llmService.GetRequestTypeAsync(prompt);
-            _logger.LogInformation("Determined request type: {RequestType}", requestType);
-            return requestType switch
+            var requestTypeString = await _llmService.GetRequestTypeAsync(prompt, conversationHistory);
+            var requestType = JsonSerializer.Deserialize<PromptRequestType>(requestTypeString);
+            return requestType?.RequestType switch
             {
                 Constant.SymptomAnalysis => await AnalyzeSymptomAsync(prompt, conversationHistory, userIdClaim),
                 Constant.DoctorsQuery => await GetRecommendedDoctorsByPromptAsync(prompt, conversationHistory),
-                Constant.ArticlesQuery => await GetRecommendedArticlesAsync(prompt),
+                Constant.ArticlesQuery => await GetRecommendedArticlesAsync(prompt, conversationHistory),
                 Constant.NotHealthRelated => new ChatResponseDto
                 {
                     Text = "Xin chào! Tôi là MEDIX AI, chuyên tư vấn về sức khỏe và y tế. " +
@@ -63,31 +100,16 @@ namespace Medix.API.Business.Services.Classification
             };
         }
 
-        public async Task<ChatResponseDto> AnalyzeEMRAsync(IFormFile file, List<AIChatMessageDto> conversationHistory, string? userIdClaim = null)
+        private async Task<bool> IsDailyLimitReached(List<AIChatMessageDto> history)
         {
-            if (await IsDailyLimitReached(conversationHistory))
+            var config = await _configurationRepository.GetByKeyAsync("AI_DAILY_ACCESS_LIMIT");
+            if (config != null && int.TryParse(config.ConfigValue, out int dailyLimit))
             {
-                return new ChatResponseDto
-                {
-                    Text = "Bạn đã đạt đến giới hạn truy cập hàng ngày cho dịch vụ AI. Vui lòng thử lại sau 24 giờ.",
-                    Type = "limit_reached"
-                };
+                var todayCount = history.Where(h => h.Role == "assistant").Count();
+                return todayCount >= dailyLimit;
             }
 
-            var ocrText = await _ocrService.ExtractTextAsync(file);
-            if (ocrText == null)
-            {
-                throw new Exception("OCR extraction failed.");
-            }
-
-            string? context = null;
-            if (_llmService.IsHealthRelatedQueryAsync(ocrText))
-            {
-                context = await _ragService.GetSymptomAnalysisContextAsync(ocrText);
-            }
-
-            var diagnosisModel = await _llmService.GetEMRAnalysisAsync(ocrText, context, conversationHistory);
-            return await GetResponseAsync(diagnosisModel, userIdClaim);
+            throw new Exception("AI daily access limit configuration is missing or invalid.");
         }
 
         private async Task<ChatResponseDto> AnalyzeSymptomAsync(string prompt, List<AIChatMessageDto> conversationHistory, string? userIdClaim)
@@ -99,8 +121,89 @@ namespace Medix.API.Business.Services.Classification
                 context = await _ragService.GetSymptomAnalysisContextAsync(prompt);
             }
 
-            var diagnosisModel = await _llmService.GetSymptomAnalysisAsync(prompt, context, conversationHistory);
+            var diagnosisModelString = await _llmService.GetSymptomAnalysisAsync(prompt, conversationHistory, context);
+            var diagnosisModel = JsonSerializer.Deserialize<DiagnosisModel>(diagnosisModelString);
+
+            if (diagnosisModel == null)
+            {
+                throw new JsonException("Deserialized diagnosis model object is null");
+            }
             return await GetResponseAsync(diagnosisModel, userIdClaim);
+        }
+
+        private async Task<ChatResponseDto> GetRecommendedDoctorsByPromptAsync(string prompt, List<AIChatMessageDto> conversationHistory)
+        {
+            var doctorListString = await GetDoctorListString();
+            var idListString = await _llmService.GetRecommendedDoctorIdListByPromptAsync(prompt, conversationHistory, doctorListString);
+            var idList = JsonSerializer.Deserialize<RecommenedDoctorIdList>(idListString);
+
+            var recommendedDoctors = await GetRecommendedDoctorsAsync(idList?.IdList ?? []);
+            if (recommendedDoctors.Count == 0)
+            {
+                return new ChatResponseDto
+                {
+                    Text = "Rất tiếc, không tìm thấy bác sĩ phù hợp với yêu cầu của bạn.",
+                    Type = "recommended_doctors",
+                    Data = null
+                };
+            }
+
+            return new ChatResponseDto
+            {
+                Text = "Dưới đây là danh sách các bác sĩ được đề xuất dựa trên yêu cầu của bạn:",
+                Type = "recommended_doctors",
+                Data = recommendedDoctors
+            };
+        }
+
+        private async Task<ChatResponseDto> GetRecommendedArticlesAsync(string prompt, List<AIChatMessageDto> conversationHistory)
+        {
+            var articleListStringBuilder = new StringBuilder();
+            var articleList = await _articleRepository.GetPublishedArticlesAsync();
+            foreach (var article in articleList)
+            {
+                articleListStringBuilder.AppendLine($"- Id: {article.Id}, Tiêu đề: {article.Title}");
+            }
+            var articleListString = articleListStringBuilder.ToString();
+
+            var idListString = await _llmService.GetRecommendedArticleIdListAsync(prompt, conversationHistory, articleListString);
+            var idListObj = JsonSerializer.Deserialize<RecommendedArticleIdList>(idListString);
+            var idList = idListObj?.IdList ?? [];
+
+            if (idList.Count == 0)
+            {
+                return new ChatResponseDto
+                {
+                    Text = "Rất tiếc, không tìm thấy bài viết phù hợp với yêu cầu của bạn.",
+                    Type = "recommended_articles",
+                    Data = null
+                };
+            }
+
+            var recommendedArticles = new List<RecommendedArticleDto>();
+            foreach (var id in idList)
+            {
+                if (Guid.TryParse(id, out Guid articleId))
+                {
+                    var article = await _articleRepository.GetByIdWithDetailsAsync(articleId);
+                    if (article != null)
+                    {
+                        recommendedArticles.Add(new RecommendedArticleDto
+                        {
+                            Id = article.Id,
+                            Title = article.Title!,
+                            Summary = article.Summary!,
+                            Slug = article.Slug!
+                        });
+                    }
+                }
+            }
+            return new ChatResponseDto
+            {
+                Text = "Dưới đây là danh sách các bài viết được đề xuất dựa trên yêu cầu của bạn:",
+                Type = "recommended_articles",
+                Data = recommendedArticles
+            };
         }
 
         private async Task<ChatResponseDto> GetResponseAsync(DiagnosisModel diagnosisModel, string? userIdClaim)
@@ -119,9 +222,6 @@ namespace Medix.API.Business.Services.Classification
                     Type = "out_of_scope"
                 };
             }
-
-            _logger.LogInformation($"Severity: {diagnosisModel.SeverityCode}");
-            _logger.LogInformation($"conclusion: {diagnosisModel.IsConclusionReached}");
 
             if (!diagnosisModel.IsConclusionReached)
             {
@@ -145,7 +245,10 @@ namespace Medix.API.Business.Services.Classification
 
             if (diagnosisModel.SeverityCode!.ToLower() == "mild")
             {
-                symptompAnalysisResponse.Medicines = await _llmService.GetRecommendedMedicinesAsync(diagnosisModel.PossibleConditions);
+                var recommendedMedicinesString = await _llmService.GetRecommendedMedicineAsync(diagnosisModel.UserResponseText);
+                var recommendedMedicines = JsonSerializer.Deserialize<RecommendedMedicineList>(recommendedMedicinesString);
+                symptompAnalysisResponse.Medicines = recommendedMedicines?.List ?? [];
+
                 symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Nghỉ ngơi tại nhà và theo dõi các triệu chứng.";
 
                 return new ChatResponseDto
@@ -158,8 +261,10 @@ namespace Medix.API.Business.Services.Classification
 
             symptompAnalysisResponse.RecommendedAction = diagnosisModel.RecommendedAction ?? "Hãy đặt lịch hẹn với bác sĩ chuyên khoa để được tư vấn thêm.";
 
-            var idList = await _llmService.GetRecommendedDoctorIdsByDiagnosisAsync(diagnosisModel.UserResponseText, 3, await GetDoctorListString());
-            symptompAnalysisResponse.RecommendedDoctors = await GetRecommendedDoctorsAsync(idList);
+
+            var idListString = await _llmService.GetRecommendedDoctorIdListByDiagnosisAsync(diagnosisModel.UserResponseText, await GetDoctorListString());
+            var idList = JsonSerializer.Deserialize<RecommenedDoctorIdList>(idListString);
+            symptompAnalysisResponse.RecommendedDoctors = await GetRecommendedDoctorsAsync(idList?.IdList ?? []);
 
             return new ChatResponseDto
 
@@ -220,8 +325,6 @@ namespace Medix.API.Business.Services.Classification
             if (doctorIds == null || doctorIds.Count == 0)
                 return recommendedDoctors;
 
-            // Avoid concurrent DB calls on the same DbContext instance.
-            // Execute lookups sequentially to prevent "A second operation was started on this context instance" exceptions.
             foreach (var id in doctorIds)
             {
                 if (!Guid.TryParse(id, out var guid))
@@ -249,87 +352,6 @@ namespace Medix.API.Business.Services.Classification
             }
 
             return recommendedDoctors;
-        }
-
-        private async Task<bool> IsDailyLimitReached(List<AIChatMessageDto> history)
-        {
-            var config = await _configurationRepository.GetByKeyAsync("AI_DAILY_ACCESS_LIMIT");
-            if (config != null && int.TryParse(config.ConfigValue, out int dailyLimit))
-            {
-                var todayCount = history.Where(h => h.Role == "assistant").Count();
-                return todayCount >= dailyLimit;
-            }
-
-            throw new Exception("AI daily access limit configuration is missing or invalid.");
-        }
-
-        private async Task<ChatResponseDto> GetRecommendedDoctorsByPromptAsync(string prompt, List<AIChatMessageDto> conversationHistory)
-        {
-            var doctorListString = await GetDoctorListString();
-            var idList = await _llmService.GetRecommendedDoctorIdsByPromptAsync(prompt, 3, doctorListString, conversationHistory);
-            var recommendedDoctors = await GetRecommendedDoctorsAsync(idList);
-            if (recommendedDoctors.Count == 0)
-            {
-                return new ChatResponseDto
-                {
-                    Text = "Rất tiếc, không tìm thấy bác sĩ phù hợp với yêu cầu của bạn.",
-                    Type = "recommended_doctors",
-                    Data = null
-                };
-            }
-
-            return new ChatResponseDto
-            {
-                Text = "Dưới đây là danh sách các bác sĩ được đề xuất dựa trên yêu cầu của bạn:",
-                Type = "recommended_doctors",
-                Data = recommendedDoctors
-            };
-        }
-
-        private async Task<ChatResponseDto> GetRecommendedArticlesAsync(string prompt)
-        {
-            var articleListStringBuilder = new StringBuilder();
-            var articleList = await _articleRepository.GetPublishedArticlesAsync();
-            foreach (var article in articleList)
-            {
-                articleListStringBuilder.AppendLine($"- Id: {article.Id}, Tiêu đề: {article.Title}");
-            }
-
-            var idList = await _llmService.GetRecommendedArticleIdListAsync(prompt, articleListStringBuilder.ToString(), 3);
-            if (idList.Count == 0)
-            {
-                return new ChatResponseDto
-                {
-                    Text = "Rất tiếc, không tìm thấy bài viết phù hợp với yêu cầu của bạn.",
-                    Type = "recommended_articles",
-                    Data = null
-                };
-            }
-
-            var recommendedArticles = new List<RecommendedArticleDto>();
-            foreach (var id in idList)
-            {
-                if (Guid.TryParse(id, out Guid articleId))
-                {
-                    var article = await _articleRepository.GetByIdWithDetailsAsync(articleId);
-                    if (article != null)
-                    {
-                        recommendedArticles.Add(new RecommendedArticleDto
-                        {
-                            Id = article.Id,
-                            Title = article.Title!,
-                            Summary = article.Summary!,
-                            Slug = article.Slug!
-                        });
-                    }
-                }
-            }
-            return new ChatResponseDto
-            {
-                Text = "Dưới đây là danh sách các bài viết được đề xuất dựa trên yêu cầu của bạn:",
-                Type = "recommended_articles",
-                Data = recommendedArticles
-            };
         }
     }
 }

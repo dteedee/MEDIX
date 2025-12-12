@@ -135,7 +135,7 @@ export const AIChatBot: React.FC = () => {
         const response = await aiChatService.uploadAndAnalyzeEMR({
           file, messages: getChatHistory(),
         });
-        response.timestamp = new Date(response.timestamp);
+        response.timestamp = new Date();
         response.sender = 'ai';
         setMessages(prev => [...prev, response]);
         addToMessageHistory({

@@ -211,60 +211,187 @@ export default function EMRTimeline() {
         });
     };
 
-    const handlePrintRecord = (record: MedicalRecordDto) => {
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            const prescriptionHtml = record.prescription && record.prescription.length > 0
+    const handlePrintRecord = async (record: MedicalRecordDto) => {
+        try {
+            // Gọi API để lấy chi tiết đầy đủ của hồ sơ bệnh án
+            const details = await medicalRecordService.getMedicalRecordDetails(record.id);
+            
+            // Tạo element tạm thời để render PDF
+            const tempDiv = document.createElement('div');
+            tempDiv.style.padding = '30px';
+            tempDiv.style.background = 'white';
+            tempDiv.style.fontFamily = "'Times New Roman', Times, serif";
+            tempDiv.style.lineHeight = '1.6';
+            tempDiv.style.color = '#1e293b';
+
+            const prescriptionHtml = details.prescription && details.prescription.length > 0
                 ? `
-                    <div class="info-row">
-                        <span class="label">Đơn thuốc:</span>
-                        <ul style="margin-top: 10px; padding-left: 20px;">
-                            ${record.prescription.map(p => `
-                                <li style="margin-bottom: 10px;">
-                                    <strong>${p.medicationName}</strong><br/>
-                                    Hướng dẫn: ${p.instructions || 'N/A'}<br/>
-                                    ${p.frequency ? `Tần suất: ${p.frequency}<br/>` : ''}
-                                    ${p.duration ? `Thời gian: ${p.duration}` : ''}
-                                </li>
-                            `).join('')}
-                        </ul>
+                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px; overflow: hidden;">
+                        <div style="background: #1e40af; color: white; padding: 12px 16px; font-weight: bold; font-size: 14px;">
+                            IV. ĐƠN THUỐC
+                        </div>
+                        <div style="padding: 16px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                <thead>
+                                    <tr style="background: #f1f5f9;">
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e2e8f0; font-weight: bold;">STT</th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e2e8f0; font-weight: bold;">Tên thuốc</th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e2e8f0; font-weight: bold;">Hướng dẫn</th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e2e8f0; font-weight: bold;">Tần suất</th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e2e8f0; font-weight: bold;">Thời gian</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${details.prescription.map((p, index) => `
+                                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                                            <td style="padding: 10px;">${index + 1}</td>
+                                            <td style="padding: 10px; font-weight: 600; color: #1e40af;">${p.medicationName}</td>
+                                            <td style="padding: 10px;">${p.instructions || 'N/A'}</td>
+                                            <td style="padding: 10px;">${p.frequency || 'N/A'}</td>
+                                            <td style="padding: 10px;">${p.duration || 'N/A'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 `
                 : '';
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Hồ sơ khám bệnh - ${record.date}</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; padding: 20px; }
-                            h2 { text-align: center; color: #333; }
-                            .info-row { margin-bottom: 15px; }
-                            .label { font-weight: bold; }
-                        </style>
-                    </head>
-                    <body>
-                        <h2>Hồ sơ khám bệnh</h2>
-                        <div class="info-row">
-                            <span class="label">Ngày khám:</span> ${record.date}
+
+            const attachmentsHtml = details.attatchments && details.attatchments.length > 0
+                ? `
+                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px; overflow: hidden;">
+                        <div style="background: #1e40af; color: white; padding: 12px 16px; font-weight: bold; font-size: 14px;">
+                            V. KẾT QUẢ CẬN LÂM SÀNG
                         </div>
-                        <div class="info-row">
-                            <span class="label">Bác sĩ phụ trách:</span> ${record.doctor || 'N/A'}
+                        <div style="padding: 16px;">
+                            <ul style="margin: 0; padding-left: 20px;">
+                                ${details.attatchments.map(a => `
+                                    <li style="margin-bottom: 8px; color: #1e40af;">
+                                        ${a.fileName}
+                                    </li>
+                                `).join('')}
+                            </ul>
                         </div>
-                        <div class="info-row">
-                            <span class="label">Lý do khám & Triệu chứng:</span> ${record.chiefComplaint || 'N/A'}
+                    </div>
+                `
+                : '';
+
+            tempDiv.innerHTML = `
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 style="color: #1e40af; margin: 0 0 10px 0; font-size: 24px; text-transform: uppercase;">
+                        HỒ SƠ KHÁM BỆNH
+                    </h2>
+                    <p style="color: #64748b; margin: 0; font-size: 14px;">MEDIX - Hệ thống Quản lý Y tế</p>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <div>
+                        <span style="font-weight: bold; color: #475569;">Bác sĩ phụ trách:</span>
+                        <span style="color: #1e293b; margin-left: 8px;">${details.doctor || 'N/A'}</span>
+                    </div>
+                    <div>
+                        <span style="font-weight: bold; color: #475569;">Ngày khám:</span>
+                        <span style="color: #1e293b; margin-left: 8px;">${details.date || 'N/A'}</span>
+                    </div>
+                </div>
+                
+                <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px; overflow: hidden;">
+                    <div style="background: #1e40af; color: white; padding: 12px 16px; font-weight: bold; font-size: 14px;">
+                        I. LÝ DO VÀO VIỆN VÀ BỆNH SỬ
+                    </div>
+                    <div style="padding: 16px;">
+                        <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
+                            <span style="font-weight: bold; color: #475569; display: inline-block; min-width: 180px;">Lý do khám:</span>
+                            <span>${details.chiefComplaint || 'N/A'}</span>
                         </div>
-                        <div class="info-row">
-                            <span class="label">Chẩn đoán:</span> ${record.diagnosis || 'N/A'}
+                        <div>
+                            <span style="font-weight: bold; color: #475569; display: inline-block; min-width: 180px;">Khám lâm sàng:</span>
+                            <span>${details.physicalExamination || 'N/A'}</span>
                         </div>
-                        <div class="info-row">
-                            <span class="label">Kế hoạch điều trị:</span> ${record.treatmentPlan || 'N/A'}
+                    </div>
+                </div>
+                
+                <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px; overflow: hidden;">
+                    <div style="background: #1e40af; color: white; padding: 12px 16px; font-weight: bold; font-size: 14px;">
+                        II. CHẨN ĐOÁN
+                    </div>
+                    <div style="padding: 16px;">
+                        <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
+                            <span style="font-weight: bold; color: #475569; display: inline-block; min-width: 180px;">Chẩn đoán chính:</span>
+                            <span style="color: #dc2626; font-weight: 600;">${details.diagnosis || 'N/A'}</span>
                         </div>
-                        ${prescriptionHtml}
-                    </body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
+                        <div>
+                            <span style="font-weight: bold; color: #475569; display: inline-block; min-width: 180px;">Ghi chú đánh giá:</span>
+                            <span>${details.assessmentNotes || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px; overflow: hidden;">
+                    <div style="background: #1e40af; color: white; padding: 12px 16px; font-weight: bold; font-size: 14px;">
+                        III. KẾ HOẠCH ĐIỀU TRỊ
+                    </div>
+                    <div style="padding: 16px;">
+                        <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
+                            <span style="font-weight: bold; color: #475569; display: inline-block; min-width: 180px;">Kế hoạch điều trị:</span>
+                            <span>${details.treatmentPlan || 'N/A'}</span>
+                        </div>
+                        <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
+                            <span style="font-weight: bold; color: #475569; display: inline-block; min-width: 180px;">Ghi chú của bác sĩ:</span>
+                            <span>${details.doctorNotes || 'N/A'}</span>
+                        </div>
+                        <div>
+                            <span style="font-weight: bold; color: #475569; display: inline-block; min-width: 180px;">Hướng dẫn tái khám:</span>
+                            <span>${details.followUpInstructions || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                ${prescriptionHtml}
+                ${attachmentsHtml}
+                
+                <div style="margin-top: 40px; text-align: center; color: #64748b; font-size: 12px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                    <p style="margin: 0 0 5px 0;">--- Hết ---</p>
+                    <p style="margin: 0;">Tài liệu được xuất từ hệ thống MEDIX - ${new Date().toLocaleDateString('vi-VN')}</p>
+                </div>
+            `;
+
+            document.body.appendChild(tempDiv);
+
+            // Cấu hình html2pdf
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: `HoSoKhamBenh_${details.date?.replace(/\//g, '-')}_${details.doctor?.replace(/\s+/g, '_') || 'record'}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    letterRendering: true
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait' 
+                },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            // Tạo và tải PDF
+            await html2pdf().set(opt).from(tempDiv).save();
+            
+            // Xóa element tạm
+            document.body.removeChild(tempDiv);
+            
+            showToast('Tải PDF thành công!', 'success');
+        } catch (error: any) {
+            if (error.response?.status === 403) {
+                showToast('Bạn không có quyền truy cập hồ sơ này.', 'error');
+            } else if (error.response?.status === 404) {
+                showToast('Không tìm thấy hồ sơ bệnh án.', 'error');
+            } else {
+                showToast('Không thể tạo PDF. Vui lòng thử lại sau.', 'error');
+            }
         }
     };
 
@@ -342,7 +469,7 @@ export default function EMRTimeline() {
             const url = window.URL.createObjectURL(new Blob([blob]));
             const link = document.createElement("a");
             link.href = url;
-            link.download = "HelloWorld.pdf"; // filename for download
+            link.download = `EMR_${basicInfo?.medicalRecordNumber || 'record'}.pdf`; // filename for download
             document.body.appendChild(link);
             link.click();
 
@@ -454,6 +581,10 @@ export default function EMRTimeline() {
                                         <div className={styles.infoItem}>
                                             <span className={styles.infoLabel}>Dị ứng</span>
                                             <span className={styles.infoValue}>{basicInfo?.allergies || 'Không có'}</span>
+                                        </div>
+                                        <div className={styles.infoItem}>
+                                            <span className={styles.infoLabel}>Tiền sử bệnh</span>
+                                            <span className={styles.infoValue}>{basicInfo?.medicalHistory || 'Không có'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -736,7 +867,7 @@ export default function EMRTimeline() {
                                                 <div className={styles.recordSection}>
                                                     <div className={styles.recordSectionHeader}>
                                                         <i className="bi bi-chat-left-text"></i>
-                                                        <span>Lý do khám & Triệu chứng</span>
+                                                        <span>Lý do khám </span>
                                                     </div>
                                                     <div className={styles.recordSectionContent}>
                                                         {item.chiefComplaint || 'N/A'}
@@ -825,13 +956,7 @@ export default function EMRTimeline() {
                                                         <i className="bi bi-eye"></i>
                                                         Xem chi tiết
                                                     </button>
-                                                    <button
-                                                        className={`${styles.actionButton} ${styles.downloadButton} pdf-exclude`}
-                                                        onClick={() => handleDownloadRecord(item)}
-                                                        title="Tải xuống PDF"
-                                                    >
-                                                        <i className="bi bi-download"></i>
-                                                    </button>
+                                           
                                                     <button
                                                         className={`${styles.actionButton} ${styles.printButton} pdf-exclude`}
                                                         onClick={() => handlePrintRecord(item)}
@@ -964,33 +1089,67 @@ export default function EMRTimeline() {
                                                                     <title>Hồ sơ khám bệnh - ${recordDetails.date}</title>
                                                                     <style>
                                                                         body { font-family: Arial, sans-serif; padding: 20px; }
-                                                                        h2 { text-align: center; color: #333; }
+                                                                        h2 { text-align: center; color: #333; margin-bottom: 20px; }
                                                                         .info-row { margin-bottom: 15px; }
-                                                                        .label { font-weight: bold; }
+                                                                        .label { font-weight: bold; color: #475569; }
+                                                                        .section-group { border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
+                                                                        .section-group-title { background: #f1f5f9; padding: 12px 16px; font-weight: bold; color: #1e40af; font-size: 14px; border-bottom: 1px solid #e2e8f0; }
+                                                                        .section-row { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; }
+                                                                        .section-row:last-child { border-bottom: none; }
+                                                                        .section-row.two-col { display: flex; gap: 20px; }
+                                                                        .section-row.two-col .section-item { flex: 1; }
+                                                                        .section-item { margin-bottom: 8px; }
+                                                                        .section-item:last-child { margin-bottom: 0; }
                                                                     </style>
                                                                 </head>
                                                                 <body>
                                                                     <h2>Hồ sơ khám bệnh</h2>
                                                                     <div class="info-row"><span class="label">Ngày khám:</span> ${recordDetails.date}</div>
                                                                     <div class="info-row"><span class="label">Bác sĩ phụ trách:</span> ${recordDetails.doctor || 'N/A'}</div>
-                                                                    <div class="info-row"><span class="label">Lý do khám & Triệu chứng:</span> ${recordDetails.chiefComplaint || 'N/A'}</div>
-                                                                    <div class="info-row"><span class="label">Chẩn đoán:</span> ${recordDetails.diagnosis || 'N/A'}</div>
-                                                                    <div class="info-row"><span class="label">Kế hoạch điều trị:</span> ${recordDetails.treatmentPlan || 'N/A'}</div>
-                                                                    ${recordDetails.prescription && recordDetails.prescription.length > 0 ? `
-                                                                        <div class="info-row">
-                                                                            <span class="label">Đơn thuốc:</span>
-                                                                            <ul style="margin-top: 10px; padding-left: 20px;">
-                                                                                ${recordDetails.prescription.map(p => `
-                                                                                    <li style="margin-bottom: 10px;">
-                                                                                        <strong>${p.medicationName}</strong><br/>
-                                                                                        Hướng dẫn: ${p.instructions || 'N/A'}<br/>
-                                                                                        ${p.frequency ? `Tần suất: ${p.frequency}<br/>` : ''}
-                                                                                        ${p.duration ? `Thời gian: ${p.duration}` : ''}
-                                                                                    </li>
-                                                                                `).join('')}
-                                                                            </ul>
+                                                                    
+                                                                    <div class="section-group">
+                                                                        <div class="section-group-title">I. LÝ DO VÀO VIỆN VÀ BỆNH SỬ</div>
+                                                                        <div class="section-row">
+                                                                            <div class="section-item"><span class="label">Lý do khám:</span> ${recordDetails.chiefComplaint || 'N/A'}</div>
                                                                         </div>
-                                                                    ` : ''}
+                                                                        <div class="section-row">
+                                                                            <div class="section-item"><span class="label">Quá trình bệnh lý và diễn biến (Khám lâm sàng):</span> ${recordDetails.physicalExamination || 'N/A'}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    <div class="section-group">
+                                                                        <div class="section-group-title">II. CHẨN ĐOÁN VÀ ĐIỀU TRỊ</div>
+                                                                        <div class="section-row two-col">
+                                                                            <div class="section-item"><span class="label">Chẩn đoán chính:</span> ${recordDetails.diagnosis || 'N/A'}</div>
+                                                                            <div class="section-item"><span class="label">Ghi chú đánh giá:</span> ${recordDetails.assessmentNotes || 'N/A'}</div>
+                                                                        </div>
+                                                                        <div class="section-row">
+                                                                            <div class="section-item"><span class="label">Kế hoạch điều trị:</span> ${recordDetails.treatmentPlan || 'N/A'}</div>
+                                                                        </div>
+                                                                        <div class="section-row two-col">
+                                                                            <div class="section-item"><span class="label">Ghi chú của bác sĩ:</span> ${recordDetails.doctorNotes || 'N/A'}</div>
+                                                                            <div class="section-item"><span class="label">Hướng dẫn tái khám:</span> ${recordDetails.followUpInstructions || 'N/A'}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    <div class="section-group">
+                                                                        <div class="section-group-title">I. ĐƠN THUỐC</div>
+                                                                        ${recordDetails.prescription && recordDetails.prescription.length > 0 ? `
+                                                                            <div class="info-row">
+                                                                                <ul style="margin-top: 10px; padding-left: 20px;">
+                                                                                    ${recordDetails.prescription.map(p => `
+                                                                                        <li style="margin-bottom: 10px;">
+                                                                                            <strong>${p.medicationName}</strong><br/>
+                                                                                            Hướng dẫn: ${p.instructions || 'N/A'}<br/>
+                                                                                            ${p.frequency ? `Tần suất: ${p.frequency}<br/>` : ''}
+                                                                                            ${p.duration ? `Thời gian: ${p.duration}` : ''}
+                                                                                        </li>
+                                                                                    `).join('')}
+                                                                                </ul>
+                                                                            </div>
+                                                                        ` : '<div class="info-row">N/A</div>'}
+                                                                    </div>
+                                                                    
                                                                 </body>
                                                             </html>
                                                         `);
@@ -1020,88 +1179,125 @@ export default function EMRTimeline() {
                                                 </div>
                                             </div>
                                             <div className={styles.modalRecordBody}>
-                                                <div className={styles.recordSection}>
-                                                    <div className={styles.recordSectionHeader}>
-                                                        <i className="bi bi-chat-left-text"></i>
-                                                        <span>Lý do khám & Triệu chứng</span>
-                                                    </div>
-                                                    <div className={styles.recordSectionContent}>
-                                                        {recordDetails.chiefComplaint || 'N/A'}
-                                                    </div>
-                                                </div>
-                                                <div className={styles.recordSection}>
-                                                    <div className={styles.recordSectionHeader}>
-                                                        <i className="bi bi-clipboard-check"></i>
-                                                        <span>Chẩn đoán</span>
-                                                    </div>
-                                                    <div className={`${styles.recordSectionContent} ${styles.diagnosisContent}`}>
-                                                        {recordDetails.diagnosis || 'N/A'}
-                                                    </div>
-                                                </div>
-                                                <div className={styles.recordSection}>
-                                                    <div className={styles.recordSectionHeader}>
-                                                        <i className="bi bi-file-medical"></i>
-                                                        <span>Kế hoạch điều trị</span>
-                                                    </div>
-                                                    <div className={styles.recordSectionContent}>
-                                                        {recordDetails.treatmentPlan || 'N/A'}
-                                                    </div>
-                                                </div>
-                                                {recordDetails.prescription && recordDetails.prescription.length > 0 && (
-                                                    <div className={styles.recordSection}>
-                                                        <div className={styles.recordSectionHeader}>
-                                                            <i className="bi bi-capsule"></i>
-                                                            <span>Đơn thuốc</span>
+                                                {/* II. LÝ DO VÀO VIỆN VÀ BỆNH SỬ */}
+                                                <div className={styles.recordSectionGroup}>
+                                                    <h4 className={styles.sectionGroupTitle}>
+                                                        <i className="bi bi-file-text"></i>
+                                                        II. LÝ DO VÀO VIỆN VÀ BỆNH SỬ
+                                                    </h4>
+                                                    <div className={styles.sectionGroupContent}>
+                                                        <div className={styles.recordSection}>
+                                                            <div className={styles.recordSectionHeader}>
+                                                                <span>Lý do khám</span>
+                                                            </div>
+                                                            <div className={styles.recordSectionContent}>
+                                                                {recordDetails.chiefComplaint || 'N/A'}
+                                                            </div>
                                                         </div>
-                                                        <div className={styles.prescriptionList}>
-                                                            {recordDetails.prescription.map((medication) => (
-                                                                <div key={medication.id} className={styles.prescriptionItem}>
-                                                                    <div className={styles.prescriptionName}>
-                                                                        <i className="bi bi-capsule-pill"></i>
-                                                                        <strong>{medication.medicationName}</strong>
-                                                                    </div>
-                                                                    <div className={styles.prescriptionDetails}>
-                                                                        <div className={styles.prescriptionInstructions}>
-                                                                            <span className={styles.prescriptionLabel}>Hướng dẫn:</span> {medication.instructions}
-                                                                        </div>
-                                                                        {medication.frequency && (
-                                                                            <div className={styles.prescriptionMeta}>
-                                                                                <span className={styles.prescriptionLabel}>Tần suất:</span> {medication.frequency}
-                                                                            </div>
-                                                                        )}
-                                                                        {medication.duration && (
-                                                                            <div className={styles.prescriptionMeta}>
-                                                                                <span className={styles.prescriptionLabel}>Thời gian:</span> {medication.duration}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
+                                                        <div className={styles.recordSection}>
+                                                            <div className={styles.recordSectionHeader}>
+                                                                <span>Quá trình bệnh lý và diễn biến (Khám lâm sàng)</span>
+                                                            </div>
+                                                            <div className={styles.recordSectionContent}>
+                                                                {recordDetails.physicalExamination || 'N/A'}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* III. CHẨN ĐOÁN VÀ ĐIỀU TRỊ */}
+                                                <div className={styles.recordSectionGroup}>
+                                                    <h4 className={styles.sectionGroupTitle}>
+                                                        <i className="bi bi-clipboard2-pulse"></i>
+                                                        III. CHẨN ĐOÁN VÀ ĐIỀU TRỊ
+                                                    </h4>
+                                                    <div className={styles.sectionGroupContent}>
+                                                        <div className={styles.recordSectionRow}>
+                                                            <div className={styles.recordSection}>
+                                                                <div className={styles.recordSectionHeader}>
+                                                                    <span>Chẩn đoán chính</span>
                                                                 </div>
-                                                            ))}
+                                                                <div className={`${styles.recordSectionContent} ${styles.diagnosisContent}`}>
+                                                                    {recordDetails.diagnosis || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div className={styles.recordSection}>
+                                                                <div className={styles.recordSectionHeader}>
+                                                                    <span>Ghi chú đánh giá</span>
+                                                                </div>
+                                                                <div className={styles.recordSectionContent}>
+                                                                    {recordDetails.assessmentNotes || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className={styles.recordSection}>
+                                                            <div className={styles.recordSectionHeader}>
+                                                                <span>Kế hoạch điều trị</span>
+                                                            </div>
+                                                            <div className={styles.recordSectionContent}>
+                                                                {recordDetails.treatmentPlan || 'N/A'}
+                                                            </div>
+                                                        </div>
+                                                        <div className={styles.recordSectionRow}>
+                                                            <div className={styles.recordSection}>
+                                                                <div className={styles.recordSectionHeader}>
+                                                                    <span>Ghi chú của bác sĩ</span>
+                                                                </div>
+                                                                <div className={styles.recordSectionContent}>
+                                                                    {recordDetails.doctorNotes || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div className={styles.recordSection}>
+                                                                <div className={styles.recordSectionHeader}>
+                                                                    <span>Hướng dẫn tái khám</span>
+                                                                </div>
+                                                                <div className={styles.recordSectionContent}>
+                                                                    {recordDetails.followUpInstructions || 'N/A'}
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                )}
-                                                {recordDetails.attatchments && recordDetails.attatchments.length > 0 && (
-                                                    <div className={styles.recordSection}>
-                                                        <div className={styles.recordSectionHeader}>
-                                                            <i className="bi bi-paperclip"></i>
-                                                            <span>Kết quả cận lâm sàng</span>
-                                                        </div>
-                                                        <div className={styles.attachmentLinks}>
-                                                            {recordDetails.attatchments.map((attatchment) => (
-                                                                <a
-                                                                    key={attatchment.id}
-                                                                    href={attatchment.fileUrl}
-                                                                    className={styles.attachmentLink}
-                                                                    rel="noopener noreferrer"
-                                                                    target="_blank"
-                                                                >
-                                                                    <i className="bi bi-file-earmark-pdf"></i>
-                                                                    {attatchment.fileName}
-                                                                </a>
-                                                            ))}
-                                                        </div>
+                                                </div>
+
+                                                {/* IV. ĐƠN THUỐC */}
+                                                <div className={styles.recordSectionGroup}>
+                                                    <h4 className={styles.sectionGroupTitle}>
+                                                        <i className="bi bi-capsule"></i>
+                                                        IV. ĐƠN THUỐC
+                                                    </h4>
+                                                    <div className={styles.sectionGroupContent}>
+                                                        {recordDetails.prescription && recordDetails.prescription.length > 0 ? (
+                                                            <div className={styles.prescriptionList}>
+                                                                {recordDetails.prescription.map((medication) => (
+                                                                    <div key={medication.id} className={styles.prescriptionItem}>
+                                                                        <div className={styles.prescriptionName}>
+                                                                            <i className="bi bi-capsule-pill"></i>
+                                                                            <strong>{medication.medicationName}</strong>
+                                                                        </div>
+                                                                        <div className={styles.prescriptionDetails}>
+                                                                            <div className={styles.prescriptionInstructions}>
+                                                                                <span className={styles.prescriptionLabel}>Hướng dẫn:</span> {medication.instructions}
+                                                                            </div>
+                                                                            {medication.frequency && (
+                                                                                <div className={styles.prescriptionMeta}>
+                                                                                    <span className={styles.prescriptionLabel}>Tần suất:</span> {medication.frequency}
+                                                                                </div>
+                                                                            )}
+                                                                            {medication.duration && (
+                                                                                <div className={styles.prescriptionMeta}>
+                                                                                    <span className={styles.prescriptionLabel}>Thời gian:</span> {medication.duration}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <div className={styles.recordSectionContent}>N/A</div>
+                                                        )}
                                                     </div>
-                                                )}
+                                                </div>
+
                                             </div>
                                         </div>
                                     </div>

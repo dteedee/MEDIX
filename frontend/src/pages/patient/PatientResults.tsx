@@ -116,127 +116,142 @@ const ResultDetailModal: React.FC<ResultDetailModalProps> = ({ result, isOpen, o
                 </div>
               </div>
 
-              {/* Chief Complaint */}
-              {medicalRecord.chiefComplaint && (
-                <div className={styles.modalSection}>
-                  <div className={styles.modalSectionHeader}>
-                    <i className="bi bi-chat-left-text"></i>
-                    <h3>Lý do khám</h3>
+              {/* I. LÝ DO VÀO VIỆN VÀ BỆNH SỬ */}
+              <div className={styles.modalSectionGroup}>
+                <h4 className={styles.sectionGroupTitle}>
+                  <i className="bi bi-file-text"></i>
+                  I. LÝ DO VÀO VIỆN VÀ BỆNH SỬ
+                </h4>
+                <div className={styles.sectionGroupContent}>
+                  <div className={styles.modalSection}>
+                    <div className={styles.modalSectionHeader}>
+                      <i className="bi bi-chat-left-text"></i>
+                      <h3>Lý do khám</h3>
+                    </div>
+                    <div className={styles.modalSectionContent}>
+                      <p>{medicalRecord.chiefComplaint || 'N/A'}</p>
+                    </div>
                   </div>
-                  <div className={styles.modalSectionContent}>
-                    <p>{medicalRecord.chiefComplaint}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Physical Examination */}
-              {medicalRecord.physicalExamination && (
-                <div className={styles.modalSection}>
-                  <div className={styles.modalSectionHeader}>
-                    <i className="bi bi-heart-pulse"></i>
-                    <h3>Khám lâm sàng</h3>
-                  </div>
-                  <div className={styles.modalSectionContent}>
-                    <p>{medicalRecord.physicalExamination}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Diagnosis */}
-              {medicalRecord.diagnosis && (
-                <div className={styles.modalSection}>
-                  <div className={styles.modalSectionHeader}>
-                    <i className="bi bi-clipboard-check"></i>
-                    <h3>Chẩn đoán</h3>
-                  </div>
-                  <div className={styles.modalSectionContent}>
-                    <div className={styles.diagnosisBox}>
-                      <p>{medicalRecord.diagnosis}</p>
+                  <div className={styles.modalSection}>
+                    <div className={styles.modalSectionHeader}>
+                      <i className="bi bi-activity"></i>
+                      <h3>Quá trình bệnh lý và diễn biến (Khám lâm sàng)</h3>
+                    </div>
+                    <div className={styles.modalSectionContent}>
+                      <p>{medicalRecord.physicalExamination || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* Treatment Plan */}
-              {medicalRecord.treatmentPlan && (
-                <div className={styles.modalSection}>
-                  <div className={styles.modalSectionHeader}>
-                    <i className="bi bi-file-medical"></i>
-                    <h3>Kế hoạch điều trị</h3>
-                  </div>
-                  <div className={styles.modalSectionContent}>
-                    <p>{medicalRecord.treatmentPlan}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Prescriptions */}
-              {medicalRecord.prescriptions && medicalRecord.prescriptions.length > 0 && (
-                <div className={styles.modalSection}>
-                  <div className={styles.modalSectionHeader}>
-                    <i className="bi bi-capsule"></i>
-                    <h3>Đơn thuốc</h3>
-                  </div>
-                  <div className={styles.prescriptionsList}>
-                    {medicalRecord.prescriptions.map((prescription, index) => (
-                      <div key={prescription.id || index} className={styles.prescriptionItem}>
-                        <div className={styles.prescriptionHeader}>
-                          <h4>{prescription.medicationName}</h4>
-                          {prescription.genericName && (
-                            <span className={styles.genericName}>({prescription.genericName})</span>
-                          )}
-                        </div>
-                        <div className={styles.prescriptionDetails}>
-                          <div className={styles.prescriptionDetailItem}>
-                            <i className="bi bi-droplet"></i>
-                            <span><strong>Liều lượng:</strong> {prescription.dosage}</span>
-                          </div>
-                          <div className={styles.prescriptionDetailItem}>
-                            <i className="bi bi-arrow-repeat"></i>
-                            <span><strong>Tần suất:</strong> {prescription.frequency}</span>
-                          </div>
-                          <div className={styles.prescriptionDetailItem}>
-                            <i className="bi bi-calendar-range"></i>
-                            <span><strong>Thời gian:</strong> {prescription.duration}</span>
-                          </div>
-                          {prescription.instructions && (
-                            <div className={styles.prescriptionInstructions}>
-                              <i className="bi bi-info-circle"></i>
-                              <span>{prescription.instructions}</span>
-                            </div>
-                          )}
+              {/* II. CHẨN ĐOÁN VÀ ĐIỀU TRỊ */}
+              <div className={styles.modalSectionGroup}>
+                <h4 className={styles.sectionGroupTitle}>
+                  <i className="bi bi-clipboard2-pulse"></i>
+                  II. CHẨN ĐOÁN VÀ ĐIỀU TRỊ
+                </h4>
+                <div className={styles.sectionGroupContent}>
+                  <div className={styles.sectionRow}>
+                    <div className={styles.modalSection}>
+                      <div className={styles.modalSectionHeader}>
+                        <i className="bi bi-clipboard-check"></i>
+                        <h3>Chẩn đoán chính</h3>
+                      </div>
+                      <div className={styles.modalSectionContent}>
+                        <div className={styles.diagnosisBox}>
+                          <p>{medicalRecord.diagnosis || 'N/A'}</p>
                         </div>
                       </div>
-                    ))}
+                    </div>
+                    <div className={styles.modalSection}>
+                      <div className={styles.modalSectionHeader}>
+                        <i className="bi bi-journal-text"></i>
+                        <h3>Ghi chú đánh giá</h3>
+                      </div>
+                      <div className={styles.modalSectionContent}>
+                        <p>{medicalRecord.assessmentNotes || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.modalSection}>
+                    <div className={styles.modalSectionHeader}>
+                      <i className="bi bi-file-medical"></i>
+                      <h3>Kế hoạch điều trị</h3>
+                    </div>
+                    <div className={styles.modalSectionContent}>
+                      <p>{medicalRecord.treatmentPlan || 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className={styles.sectionRow}>
+                    <div className={styles.modalSection}>
+                      <div className={styles.modalSectionHeader}>
+                        <i className="bi bi-pencil-square"></i>
+                        <h3>Ghi chú của bác sĩ</h3>
+                      </div>
+                      <div className={styles.modalSectionContent}>
+                        <p>{medicalRecord.doctorNotes || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className={styles.modalSection}>
+                      <div className={styles.modalSectionHeader}>
+                        <i className="bi bi-calendar-check"></i>
+                        <h3>Hướng dẫn tái khám</h3>
+                      </div>
+                      <div className={styles.modalSectionContent}>
+                        <p>{medicalRecord.followUpInstructions || 'N/A'}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* Follow-up Instructions */}
-              {medicalRecord.followUpInstructions && (
-                <div className={styles.modalSection}>
-                  <div className={styles.modalSectionHeader}>
-                    <i className="bi bi-arrow-repeat"></i>
-                    <h3>Hướng dẫn tái khám</h3>
-                  </div>
-                  <div className={styles.modalSectionContent}>
-                    <p>{medicalRecord.followUpInstructions}</p>
-                  </div>
+              {/* III. ĐƠN THUỐC */}
+              <div className={styles.modalSectionGroup}>
+                <h4 className={styles.sectionGroupTitle}>
+                  <i className="bi bi-capsule"></i>
+                  III. ĐƠN THUỐC
+                </h4>
+                <div className={styles.sectionGroupContent}>
+                  {medicalRecord.prescriptions && medicalRecord.prescriptions.length > 0 ? (
+                    <div className={styles.prescriptionsList}>
+                      {medicalRecord.prescriptions.map((prescription, index) => (
+                        <div key={prescription.id || index} className={styles.prescriptionItem}>
+                          <div className={styles.prescriptionHeader}>
+                            <h4>{prescription.medicationName}</h4>
+                            {prescription.genericName && (
+                              <span className={styles.genericName}>({prescription.genericName})</span>
+                            )}
+                          </div>
+                          <div className={styles.prescriptionDetails}>
+                            <div className={styles.prescriptionDetailItem}>
+                              <i className="bi bi-droplet"></i>
+                              <span><strong>Liều lượng:</strong> {prescription.dosage}</span>
+                            </div>
+                            <div className={styles.prescriptionDetailItem}>
+                              <i className="bi bi-arrow-repeat"></i>
+                              <span><strong>Tần suất:</strong> {prescription.frequency}</span>
+                            </div>
+                            <div className={styles.prescriptionDetailItem}>
+                              <i className="bi bi-calendar-range"></i>
+                              <span><strong>Thời gian:</strong> {prescription.duration}</span>
+                            </div>
+                            {prescription.instructions && (
+                              <div className={styles.prescriptionInstructions}>
+                                <i className="bi bi-info-circle"></i>
+                                <span>{prescription.instructions}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.modalSectionContent}>
+                      <p>N/A</p>
+                    </div>
+                  )}
                 </div>
-              )}
-
-              {/* Doctor Notes */}
-              {medicalRecord.doctorNotes && (
-                <div className={styles.modalSection}>
-                  <div className={styles.modalSectionHeader}>
-                    <i className="bi bi-sticky"></i>
-                    <h3>Ghi chú của bác sĩ</h3>
-                  </div>
-                  <div className={styles.modalSectionContent}>
-                    <p>{medicalRecord.doctorNotes}</p>
-                  </div>
-                </div>
-              )}
+              </div>
             </>
           ) : (
             <div className={styles.modalEmptyState}>

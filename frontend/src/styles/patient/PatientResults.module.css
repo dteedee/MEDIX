@@ -1020,6 +1020,67 @@
   background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
 }
 
+/* Section Group Styles */
+.modalSectionGroup {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.modalSectionGroup:last-child {
+  margin-bottom: 0;
+}
+
+.sectionGroupTitle {
+  margin: 0;
+  padding: 16px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e40af;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sectionGroupTitle i {
+  font-size: 18px;
+  color: #3b82f6;
+}
+
+.sectionGroupContent {
+  padding: 20px;
+}
+
+.sectionGroupContent .modalSection {
+  margin-bottom: 16px;
+}
+
+.sectionGroupContent .modalSection:last-child {
+  margin-bottom: 0;
+}
+
+.sectionRow {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.sectionRow:last-child {
+  margin-bottom: 0;
+}
+
+.sectionRow .modalSection {
+  flex: 1;
+  margin-bottom: 0;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .container {
@@ -1050,6 +1111,10 @@
 
   .infoGrid {
     grid-template-columns: 1fr;
+  }
+
+  .sectionRow {
+    flex-direction: column;
   }
 }
 

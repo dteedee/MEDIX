@@ -156,7 +156,8 @@ namespace Medix.API.Presentation.Controllers.Classification
                 {
                     record.Id,
                     Date = record.Appointment.AppointmentEndTime.ToString("dd/MM/yyyy"),
-                    Doctor = record.Appointment.Doctor.User.FullName,
+                    Doctor = record.Appointment.Doctor.User.FullName
+                  ,record.DoctorNotes,record.AssessmentNotes,record.PhysicalExamination,record.FollowUpInstructions,
                     record.ChiefComplaint,
                     record.Diagnosis,
                     record.TreatmentPlan,

@@ -20,11 +20,24 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<BackupRecordResponse> CreateBackupAsync(string? backupName = null, string? createdBy = null)
         {
+            _logger.LogInformation("[BackupService.CreateBackupAsync] START - backupName={Name}, createdBy={CreatedBy}", backupName, createdBy);
+            
             try
             {
+                _logger.LogInformation("[BackupService] Calling BackupDatabaseAsync...");
                 var backupPath = await _configService.BackupDatabaseAsync(backupName);
+                _logger.LogInformation("[BackupService] BackupDatabaseAsync returned: {Path}", backupPath);
+                
+                if (!File.Exists(backupPath))
+                {
+                    _logger.LogError("[BackupService] File does not exist after backup: {Path}", backupPath);
+                    throw new InvalidOperationException($"Backup file not found: {backupPath}");
+                }
+                
                 var fileInfo = new FileInfo(backupPath);
                 var createdAt = fileInfo.CreationTimeUtc;
+                
+                _logger.LogInformation("[BackupService] File info - Size: {Size} bytes, CreatedAt: {CreatedAt}", fileInfo.Length, createdAt);
 
                 var response = new BackupRecordResponse
                 {
@@ -40,12 +53,14 @@ namespace Medix.API.Business.Services.Classification
                     RecordCount = 0
                 };
 
-                _logger.LogInformation("Database backup created successfully at {FilePath}", fileInfo.FullName);
+                _logger.LogInformation("[BackupService.CreateBackupAsync] SUCCESS - Backup created at {FilePath}", fileInfo.FullName);
                 return response;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating backup");
+                _logger.LogError(ex, "[BackupService.CreateBackupAsync] ERROR - Exception during backup");
+                _logger.LogError("Exception Type: {Type}", ex.GetType().Name);
+                _logger.LogError("Message: {Message}", ex.Message);
                 throw;
             }
         }
@@ -161,28 +176,56 @@ namespace Medix.API.Business.Services.Classification
         {
             try
             {
-                var cutoffDate = DateTime.UtcNow.AddDays(-retentionDays);
                 var backupFiles = await _configService.GetDatabaseBackupFilesAsync();
                 int deletedCount = 0;
 
-                foreach (var backup in backupFiles.Where(b => b.CreatedAt < cutoffDate))
+                // If retentionDays is 0, keep only the latest backup (delete all others)
+                if (retentionDays == 0)
                 {
-                    try
+                    var sortedBackups = backupFiles.OrderByDescending(b => b.CreatedAt).ToList();
+                    
+                    // Keep the latest one, delete all others
+                    foreach (var backup in sortedBackups.Skip(1))
                     {
-                        if (File.Exists(backup.FilePath))
+                        try
                         {
-                            File.Delete(backup.FilePath);
-                            deletedCount++;
-                            _logger.LogInformation("Deleted old database backup: {FilePath}", backup.FilePath);
+                            if (File.Exists(backup.FilePath))
+                            {
+                                File.Delete(backup.FilePath);
+                                deletedCount++;
+                                _logger.LogInformation("Deleted old database backup: {FilePath}", backup.FilePath);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to delete backup file {FilePath}", backup.FilePath);
                         }
                     }
-                    catch (Exception ex)
+                }
+                else
+                {
+                    // Keep backups from the last N days
+                    var cutoffDate = DateTime.UtcNow.AddDays(-retentionDays);
+                    
+                    foreach (var backup in backupFiles.Where(b => b.CreatedAt < cutoffDate))
                     {
-                        _logger.LogWarning(ex, "Failed to delete backup file {FilePath}", backup.FilePath);
+                        try
+                        {
+                            if (File.Exists(backup.FilePath))
+                            {
+                                File.Delete(backup.FilePath);
+                                deletedCount++;
+                                _logger.LogInformation("Deleted old database backup: {FilePath}", backup.FilePath);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to delete backup file {FilePath}", backup.FilePath);
+                        }
                     }
                 }
 
-                _logger.LogInformation("Cleaned up {DeletedCount} old database backups", deletedCount);
+                _logger.LogInformation("Cleaned up {DeletedCount} old database backups (retentionDays: {RetentionDays})", deletedCount, retentionDays);
                 return deletedCount;
             }
             catch (Exception ex)

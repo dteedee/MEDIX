@@ -170,20 +170,6 @@ export default function ReportsAndAnalytics() {
 
   const formatCurrencyCompact = (value: number): string => {
     const amount = value || 0;
-    const abs = Math.abs(amount);
-
-    if (abs >= 1_000_000_000) {
-      const compact = amount / 1_000_000_000;
-      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
-      return `${text}B VND`;
-    }
-
-    if (abs >= 1_000_000) {
-      const compact = amount / 1_000_000;
-      const text = compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1);
-      return `${text}M VND`;
-    }
-
     return `${amount.toLocaleString('vi-VN')} VND`;
   };
 

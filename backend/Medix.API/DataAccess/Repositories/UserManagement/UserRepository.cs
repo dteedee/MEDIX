@@ -198,10 +198,10 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
             .AnyAsync(u => u.IdentificationNumber == identificationNumber);
 
         public async Task<ManagerDashboardSummaryDto> GetSummaryAsync(
-       DateTime startCurrentPeriodUtc,
-       DateTime endCurrentPeriodUtc,
-       DateTime startPreviousPeriodUtc,
-       DateTime endPreviousPeriodUtc)
+      DateTime startCurrentPeriodUtc,
+      DateTime endCurrentPeriodUtc,
+      DateTime startPreviousPeriodUtc,
+      DateTime endPreviousPeriodUtc)
         {
             var refundPercentageConfig = await _systemConfigurationService.GetValueAsync<decimal?>(PatientCancelRefundConfigKey);
 
@@ -238,13 +238,13 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
                 .Select(wt => (decimal?)wt.Amount)
                 .SumAsync()) ?? 0m;
 
-            // Apply appointment-based revenue rules for period calculations:
+            // Appointment-based revenue rules:
             // - "Completed" => TotalAmount * 0.3
             // - "MissedByPatient" => TotalAmount * 0.3
             // - "CancelledByPatient" => TotalAmount * (1 - refundPercentage)
             var consideredStatuses = new[] { "Completed", "MissedByPatient", "CancelledByPatient" };
 
-            var revenueCurrent = (await _context.Appointments.AsNoTracking()
+            var revenueCurrentAppointments = (await _context.Appointments.AsNoTracking()
                 .Where(a => a.CreatedAt >= startCurrentPeriodUtc && a.CreatedAt <= endCurrentPeriodUtc
                             && consideredStatuses.Contains(a.StatusCode))
                 .Select(a => (decimal?)
@@ -253,7 +253,7 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
                      : /* CancelledByPatient */ a.TotalAmount * (1 - refundPercentage)))
                 .SumAsync()) ?? 0m;
 
-            var revenuePrev = (await _context.Appointments.AsNoTracking()
+            var revenuePrevAppointments = (await _context.Appointments.AsNoTracking()
                 .Where(a => a.CreatedAt >= startPreviousPeriodUtc && a.CreatedAt <= endPreviousPeriodUtc
                             && consideredStatuses.Contains(a.StatusCode))
                 .Select(a => (decimal?)
@@ -261,6 +261,26 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
                      : a.StatusCode == "MissedByPatient" ? a.TotalAmount * 0.3m
                      : /* CancelledByPatient */ a.TotalAmount * (1 - refundPercentage)))
                 .SumAsync()) ?? 0m;
+
+            // System commission comes from wallet transactions; compute per-period commissions.
+            var commissionCurrent = (await _context.WalletTransactions.AsNoTracking()
+                .Where(wt => wt.TransactionTypeCode == "SystemCommission"
+                             && wt.Status == "Completed"
+                             && wt.TransactionDate >= startCurrentPeriodUtc
+                             && wt.TransactionDate <= endCurrentPeriodUtc)
+                .Select(wt => (decimal?)wt.Amount)
+                .SumAsync()) ?? 0m;
+
+            var commissionPrev = (await _context.WalletTransactions.AsNoTracking()
+                .Where(wt => wt.TransactionTypeCode == "SystemCommission"
+                             && wt.Status == "Completed"
+                             && wt.TransactionDate >= startPreviousPeriodUtc
+                             && wt.TransactionDate <= endPreviousPeriodUtc)
+                .Select(wt => (decimal?)wt.Amount)
+                .SumAsync()) ?? 0m;
+
+            var revenueCurrentTotal = revenueCurrentAppointments + commissionCurrent;
+            var revenuePrevTotal = revenuePrevAppointments + commissionPrev;
 
             var dto = new ManagerDashboardSummaryDto
             {
@@ -281,8 +301,8 @@ namespace Medix.API.DataAccess.Repositories.UserManagement
                 },
                 Revenue = new StatDto
                 {
-                    Total = (long)revenueCurrent,
-                    Growth = GrowthPercentage.CalculateGrowthPercentage(revenuePrev, revenueCurrent)
+                    Total = (long)revenueCurrentTotal,
+                    Growth = GrowthPercentage.CalculateGrowthPercentage(revenuePrevTotal, revenueCurrentTotal)
                 }
             };
 

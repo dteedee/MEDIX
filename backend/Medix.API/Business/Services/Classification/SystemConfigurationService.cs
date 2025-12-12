@@ -149,32 +149,19 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<List<SystemConfigurationResponse>> GetAllAsync()
         {
-            const string cacheKey = "SystemConfigs_All";
-
-            if (!_cache.TryGetValue(cacheKey, out List<SystemConfigurationResponse>? configs))
-            {
-                var data = await _repo.GetAllAsync();
-                configs = _mapper.Map<List<SystemConfigurationResponse>>(data);
-
-                _cache.Set(cacheKey, configs, _cacheDuration);
-            }
-
-            return configs!;
+            // Query DB mỗi lần - không cache
+            var data = await _repo.GetAllAsync();
+            var configs = _mapper.Map<List<SystemConfigurationResponse>>(data);
+            return configs;
         }
 
         public async Task<SystemConfigurationResponse?> GetByKeyAsync(string key)
         {
-            string cacheKey = $"SystemConfig_{key}";
+            // Query DB mỗi lần - không cache
+            var entity = await _repo.GetByKeyAsync(key);
+            if (entity == null) return null;
 
-            if (!_cache.TryGetValue(cacheKey, out SystemConfigurationResponse? config))
-            {
-                var entity = await _repo.GetByKeyAsync(key);
-                if (entity == null) return null;
-
-                config = _mapper.Map<SystemConfigurationResponse>(entity);
-                _cache.Set(cacheKey, config, _cacheDuration);
-            }
-
+            var config = _mapper.Map<SystemConfigurationResponse>(entity);
             return config;
         }
 

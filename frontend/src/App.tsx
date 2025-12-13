@@ -124,9 +124,9 @@ export function App() {
                 </Route>
 
                 <Route path="/ai-chat" element={
-                  <ProtectedRoute>
+               
                     <AIChatBot />
-                  </ProtectedRoute>
+                 
                 } />
 
                 <Route path="/unauthorize" element={<Unauthorized />} />

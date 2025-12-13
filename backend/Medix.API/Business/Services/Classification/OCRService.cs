@@ -54,9 +54,8 @@ namespace Medix.API.Business.Services.Classification
 
         private async Task<List<string>> GetTempImagesPathFromPdf(IFormFile file)
         {
-            // Ensure temp file has .pdf extension for cross-platform compatibility
-            var pdfFilePath = CreateTempFilePath(".pdf");
-            using (var stream = new FileStream(pdfFilePath, FileMode.Create, FileAccess.Write, FileShare.Read))
+            var pdfFilePath = Path.GetTempFileName();
+            using (var stream = File.Create(pdfFilePath))
             {
                 await file.CopyToAsync(stream);
             }
@@ -81,10 +80,15 @@ namespace Medix.API.Business.Services.Classification
             var tempImagePaths = new List<string>();
             for (int pageCount = 1; pageCount <= document.Pages.Count; pageCount++)
             {
-                var tempImagePath = CreateTempFilePath($".{ext}");
-                // Convert a particular page and save the image directly to file path (more portable)
-                imageDevice.Process(document.Pages[pageCount], tempImagePath);
-                tempImagePaths.Add(tempImagePath);
+                var tempImagePath = $"{Path.GetTempFileName()}.{ext}";
+                using (FileStream imageStream =
+                    new FileStream(tempImagePath,
+                    FileMode.Create))
+                {
+                    // Convert a particular page and save the image to stream
+                    imageDevice.Process(document.Pages[pageCount], imageStream);
+                    tempImagePaths.Add(tempImagePath);
+                }
             }
 
             return tempImagePaths;
@@ -100,38 +104,13 @@ namespace Medix.API.Business.Services.Classification
 
         private async Task<string> GetTempImagePath(IFormFile file)
         {
-            var extension = GetImageExtensionFromContentType(file.ContentType);
-            var filePath = CreateTempFilePath(extension);
-            using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read))
+            var filePath = Path.GetTempFileName();
+            using (var stream = File.Create(filePath))
             {
                 await file.CopyToAsync(stream);
             }
 
             return filePath;
-        }
-
-        private static string CreateTempFilePath(string? extension)
-        {
-            var ext = string.IsNullOrWhiteSpace(extension) ? string.Empty : extension.Trim();
-            if (!string.IsNullOrEmpty(ext) && !ext.StartsWith('.'))
-            {
-                ext = "." + ext;
-            }
-            var name = Guid.NewGuid().ToString("N") + ext;
-            return Path.Combine(Path.GetTempPath(), name);
-        }
-
-        private static string GetImageExtensionFromContentType(string? contentType)
-        {
-            return contentType?.ToLowerInvariant() switch
-            {
-                "image/png" => ".png",
-                "image/jpeg" or "image/jpg" => ".jpg",
-                "image/webp" => ".webp",
-                "image/tiff" or "image/tif" => ".tif",
-                "image/bmp" => ".bmp",
-                _ => ".img"
-            };
         }
 
         private async Task<string> ExtractTextWithGoogleVisionAsync(string filePath)

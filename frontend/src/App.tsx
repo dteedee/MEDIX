@@ -103,7 +103,11 @@ export function App() {
                   <Route path="/doctor/register" element={<PublicRoute><DoctorRegister /></PublicRoute>} />
                 </Route>
 
-                <Route path="/change-password" element={<ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} />} />
+                <Route path="/change-password" element={
+                  <ProtectedRoute>
+                    <ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} />
+                  </ProtectedRoute>
+                } />
 
                 <Route path="/doctor/details/:username" element={<DoctorDetails />} />
 
@@ -119,12 +123,15 @@ export function App() {
                   <Route path="/articles/:slug" element={<ArticleDetailPage />} />
                 </Route>
 
-                <Route path="/ai-chat" element={<AIChatBot />} />
+                <Route path="/ai-chat" element={
+                  <ProtectedRoute>
+                    <AIChatBot />
+                  </ProtectedRoute>
+                } />
 
                 <Route path="/unauthorize" element={<Unauthorized />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
 
-                <Route path="/change-password" element={<ProtectedRoute><ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} /></ProtectedRoute>} />
 
                 <Route path="/app" element={<MainLayout />}>
                   <Route path="dashboard" element={
@@ -133,7 +140,11 @@ export function App() {
                     </ProtectedRoute>
                   } />
 
-                  <Route path="admin/*" element={<AdminLayout />}>
+                  <Route path="admin/*" element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                      <AdminLayout />
+                    </ProtectedRoute>
+                  }>
                     <Route index element={<AdminDashboard />} />
                     <Route path="dashboard" element={<AdminDashboard />} />
                     <Route path="profile" element={<AdminProfile />} />
@@ -182,7 +193,9 @@ export function App() {
                   </Route>
 
                   <Route path="doctor/*" element={
+                    <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
                       <DoctorLayout />
+                    </ProtectedRoute>
                   }>
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard" element={<DoctorDashboard />} />
@@ -195,15 +208,6 @@ export function App() {
                     <Route path="feedback" element={<DoctorFeedback />} />
                     <Route path="medical-records/:appointmentId" element={<MedicalRecordDetails />} />
                   </Route>
-
-                <Route path="articles" element={<Navigate to="/articles" replace />} />
-                <Route path="articles/:slug" element={<ArticleDetailPage />} />
-
-                  <Route path="ai-chat" element={
-                    <ProtectedRoute>
-                      <AIChatBot />
-                    </ProtectedRoute>
-                  } />
 
                   <Route path="*" element={<NotFound />} />
                 </Route>

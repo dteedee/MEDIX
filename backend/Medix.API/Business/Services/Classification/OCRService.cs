@@ -1,18 +1,17 @@
-﻿using Google.Cloud.Vision.V1;
-using ImageMagick;
+﻿using Aspose.Pdf;
+using Aspose.Pdf.Devices;
+using Aspose.Pdf.Text;
+using Google.Cloud.Vision.V1;
 using Medix.API.Business.Interfaces.Classification;
-using Microsoft.Extensions.Logging;
 using System.Text;
-using Microsoft.Extensions.Configuration;
-using Microsoft.AspNetCore.Http;
-using System.IO;
-using System;
 using Image = Google.Cloud.Vision.V1.Image;
 
 namespace Medix.API.Business.Services.Classification
 {
     public class OCRService : IOCRService
     {
+        private static readonly string Credit = "Evaluation Only. Created with Aspose.PDF. Copyright 2002-2025 Aspose Pty Ltd.";
+
         private readonly ILogger<OCRService> _logger;
         private readonly IConfiguration _configuration;
 
@@ -28,12 +27,12 @@ namespace Medix.API.Business.Services.Classification
             {
                 if (file.ContentType == "application/pdf")
                 {
-                    var pdfText = await ExtractTextFromPdfFileAsync(file) ?? string.Empty;
-                    _logger.LogInformation("Extracted text from PDF file: {Length} chars", pdfText.Length);
+                    var pdfText = await ExtractTextFromPdfFileAsync(file);
+                    _logger.LogInformation("Extracted text from PDF file: {Text}", pdfText);
                     return pdfText;
-                }
+                };
 
-                return await ExtractTextFromImageAsync(file) ?? string.Empty;
+                return await ExtractTextFromImageAsync(file);
             }
             catch (Exception ex)
             {
@@ -44,96 +43,63 @@ namespace Medix.API.Business.Services.Classification
 
         private async Task<string> ExtractTextFromPdfFileAsync(IFormFile file)
         {
-            // 1) Try to extract embedded/searchable text
             var text = await ExtractFromTextPdf(file);
             if (!string.IsNullOrWhiteSpace(text))
             {
                 return text;
             }
 
-            // 2) Fallback to rasterize pages and run image OCR
-            return await ExtractFromPdfUsingImages(file) ?? string.Empty;
+            return await ExtractFromPdf(file);
         }
 
-        private async Task<string> ExtractFromTextPdf(IFormFile file)
-        {
-            if (file == null || file.Length == 0)
-                throw new ArgumentException("Invalid file");
-
-            using var memoryStream = new MemoryStream();
-            await file.CopyToAsync(memoryStream);
-            memoryStream.Position = 0;
-
-            // Embedded text extraction via Pdf library is not available in this build.
-            // Return empty to trigger image-based OCR fallback.
-            _logger.LogInformation("Pdf embedded text extraction is not enabled; falling back to image OCR.");
-            await Task.CompletedTask;
-            return string.Empty;
-        }
-
-        private async Task<string> ExtractFromPdfUsingImages(IFormFile file)
+        private async Task<List<string>> GetTempImagesPathFromPdf(IFormFile file)
         {
             var pdfFilePath = Path.GetTempFileName();
-            try
+            using (var stream = File.Create(pdfFilePath))
             {
-                // save uploaded file to disk for Magick to read
-                using (var fs = File.Create(pdfFilePath))
-                {
-                    await file.CopyToAsync(fs);
-                }
-
-                var resultSb = new StringBuilder();
-
-                // Render PDF pages to images with Magick.NET (Density = DPI)
-                var readSettings = new MagickReadSettings
-                {
-                    Density = new Density(300, 300)
-                };
-
-                using (var images = new MagickImageCollection())
-                {
-                    images.Read(pdfFilePath, readSettings);
-
-                    foreach (var pageImage in images)
-                    {
-                        var tempImagePath = $"{Path.GetTempFileName()}.png";
-                        try
-                        {
-                            pageImage.Format = MagickFormat.Png;
-                            pageImage.Write(tempImagePath);
-
-                            var extracted = await ExtractTextWithGoogleVisionAsync(tempImagePath);
-                            if (!string.IsNullOrWhiteSpace(extracted))
-                            {
-                                resultSb.AppendLine(extracted);
-                            }
-                        }
-                        finally
-                        {
-                            try { if (File.Exists(tempImagePath)) File.Delete(tempImagePath); } catch { }
-                        }
-                    }
-                }
-
-                return resultSb.ToString().Trim();
+                await file.CopyToAsync(stream);
             }
-            finally
+
+            var dataDir = pdfFilePath;    
+            var resolution = new Resolution(300);
+            var pngDevice = new PngDevice(resolution);
+
+            List<string> imagePaths = new List<string>();
+
+            using (var document = new Document(dataDir))
             {
-                try { if (File.Exists(pdfFilePath)) File.Delete(pdfFilePath); } catch { }
+                imagePaths = ConvertPDFtoImages(pngDevice, "png", document);
             }
+            File.Delete(pdfFilePath);
+            return imagePaths;
+        }
+
+        private static List<string> ConvertPDFtoImages(ImageDevice imageDevice,
+            string ext, Document document)
+        {
+            var tempImagePaths = new List<string>();
+            for (int pageCount = 1; pageCount <= document.Pages.Count; pageCount++)
+            {
+                var tempImagePath = $"{Path.GetTempFileName()}.{ext}";
+                using (FileStream imageStream =
+                    new FileStream(tempImagePath,
+                    FileMode.Create))
+                {
+                    // Convert a particular page and save the image to stream
+                    imageDevice.Process(document.Pages[pageCount], imageStream);
+                    tempImagePaths.Add(tempImagePath);
+                }
+            }
+
+            return tempImagePaths;
         }
 
         private async Task<string> ExtractTextFromImageAsync(IFormFile file)
         {
             var filePath = await GetTempImagePath(file);
-            try
-            {
-                return await ExtractTextWithGoogleVisionAsync(filePath);
-            }
-            finally
-            {
-                try { if (File.Exists(filePath)) File.Delete(filePath); } catch { }
-            }
+            var extractedText = await ExtractTextWithGoogleVisionAsync(filePath);
+            File.Delete(filePath); // Clean up temp file
+            return extractedText;
         }
 
         private async Task<string> GetTempImagePath(IFormFile file)
@@ -149,24 +115,60 @@ namespace Medix.API.Business.Services.Classification
 
         private async Task<string> ExtractTextWithGoogleVisionAsync(string filePath)
         {
-            return await DetectDocumentText(filePath, _configuration["GoogleCloud:ProjectId"] ?? string.Empty);
+            return await DetectDocumentText(filePath, _configuration["GoogleCloud:ProjectId"] ?? "scenic-outcome-423204-t3");
         }
 
         private async Task<string> DetectDocumentText(string imagePath, string projectId)
         {
-            var builder = new ImageAnnotatorClientBuilder();
-            if (!string.IsNullOrWhiteSpace(projectId))
+            ImageAnnotatorClient client = await new ImageAnnotatorClientBuilder
             {
-                builder.QuotaProject = projectId;
-            }
-
-            ImageAnnotatorClient client = await builder.BuildAsync();
+                QuotaProject = projectId
+            }.BuildAsync();
 
             Image image = await Image.FromFileAsync(imagePath);
 
             TextAnnotation response = await client.DetectDocumentTextAsync(image);
 
-            return response?.Text ?? string.Empty;
+            string extractedText = response.Text;
+            return extractedText;
+        }
+
+        private async Task<string> ExtractFromTextPdf(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                throw new ArgumentException("Invalid file");
+
+            using var memoryStream = new MemoryStream();
+            await file.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            // Load PDF from stream
+            var pdfDocument = new Document(memoryStream);
+
+            var textAbsorber = new TextAbsorber();
+            pdfDocument.Pages.Accept(textAbsorber);
+
+            return textAbsorber.Text; // Full text of the PDF
+        }
+
+        private async Task<string> ExtractFromPdf(IFormFile file)
+        {
+            var result = new StringBuilder();
+            var tempImagePaths = await GetTempImagesPathFromPdf(file);
+
+            foreach (var imagePath in tempImagePaths)
+            {
+                var extractedText = await ExtractTextWithGoogleVisionAsync(imagePath);
+                result.AppendLine(extractedText);
+                File.Delete(imagePath); // Clean up temp image file
+            }
+            var finalText = result.ToString();
+            if (finalText.Contains(Credit))
+            {
+                finalText = finalText.Replace(Credit, string.Empty).Trim();
+            }
+            return finalText;
         }
     }
 }
+

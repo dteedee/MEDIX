@@ -535,7 +535,7 @@ namespace Medix.API.Business.Services.Classification
                     var misses = doctor.TotalCaseMissPerWeek.GetValueOrDefault(0);
 
                 
-                    if (misses == 3)
+                    if (misses >= 4)
                     {
                         doctor.NextWeekMiss = 1;
                         updated = true;

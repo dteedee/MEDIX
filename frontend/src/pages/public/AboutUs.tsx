@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { apiClient } from '../../lib/apiClient';
 import styles from '../../styles/public/about.module.css';
@@ -95,158 +95,141 @@ const AboutUs: React.FC = () => {
       <nav className={homeStyles["navbar"]}>
         <ul className={homeStyles["nav-menu"]}>
           <li>
-            <a
-              onClick={() => navigate('/')}
-              className={`${homeStyles["nav-link"]} ${location.pathname === '/' ? homeStyles["active"] : ''}`}
-            >
+            <Link to="/" className={homeStyles["nav-link"]}>
               {t('nav.home')}
-            </a>
+            </Link>
           </li>
           <li><span>|</span></li>
           <li>
-            <a
-              onClick={() => navigate('/ai-chat')}
-              className={`${homeStyles["nav-link"]} ${location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}
-            >
+            <Link to="/ai-chat" className={homeStyles["nav-link"]}>
               {t('nav.ai-diagnosis')}
-            </a>
+            </Link>
           </li>
           <li><span>|</span></li>
           <li>
-            <a
-              onClick={() => navigate('/specialties')}
-              className={`${homeStyles["nav-link"]} ${location.pathname === '/specialties' ? homeStyles["active"] : ''}`}
-            >
+            <Link to="/specialties" className={homeStyles["nav-link"]}>
               {t('nav.specialties')}
-            </a>
+            </Link>
           </li>
           <li><span>|</span></li>
           <li>
-            <a
-              onClick={() => navigate('/doctors')}
-              className={`${homeStyles["nav-link"]} ${location.pathname === '/doctors' ? homeStyles["active"] : ''}`}
-            >
+            <Link to="/doctors" className={homeStyles["nav-link"]}>
               {t('nav.doctors')}
-            </a>
+            </Link>
           </li>
           <li><span>|</span></li>
           <li>
-            <a
-              onClick={() => navigate('/app/articles')}
-              className={`${homeStyles["nav-link"]} ${location.pathname === '/articles' ? homeStyles["active"] : ''}`}
-            >
+            <Link to="/articles" className={homeStyles["nav-link"]}>
               {t('nav.health-articles')}
-            </a>
+            </Link>
           </li>
           <li><span>|</span></li>
           <li>
-            <a
-              onClick={() => navigate('/about')}
-              className={`${homeStyles["nav-link"]} ${location.pathname === '/about' ? homeStyles["active"] : ''}`}
-            >
+            <Link to="/about" className={`${homeStyles["nav-link"]} ${homeStyles["active"]}`}>
               {t('nav.about')}
-            </a>
+            </Link>
           </li>
         </ul>
       </nav>
+
 
       <div className={styles["about-container"]}>
         <div className={styles["about-content"]}>
           <div className={styles["aboutContentInner"]}>
             <div className={styles["about-header"]}>
-            <h1>{t('about.heading')} {siteNameDisplay}</h1>
+              <h1>{t('about.heading')} {siteNameDisplay}</h1>
             </div>
 
             <div className={styles["about-body"]}>
-          <section className={styles["intro-section"]}>
-            <h2>{t('about.intro.title')}</h2>
-            <p>{loading ? '...' : t('about.intro.text', { siteName: resolvedSiteName })}</p>
-          </section>
+              <section className={styles["intro-section"]}>
+                <h2>{t('about.intro.title')}</h2>
+                <p>{loading ? '...' : t('about.intro.text', { siteName: resolvedSiteName })}</p>
+              </section>
 
-          <section className={styles["vision-section"]}>
-            <h2>{t('about.vision.title')}</h2>
-            <p>{loading ? '...' : t('about.vision.text', { siteName: resolvedSiteName })}</p>
-          </section>
+              <section className={styles["vision-section"]}>
+                <h2>{t('about.vision.title')}</h2>
+                <p>{loading ? '...' : t('about.vision.text', { siteName: resolvedSiteName })}</p>
+              </section>
 
-          <section className={styles["mission-section"]}>
-            <h2>{t('about.mission.title')}</h2>
-            <p className={styles["mission-text"]}>
-              {t('about.mission.prefix')} <strong>{t('about.mission.ai')}</strong>,{' '}
-              <strong>{t('about.mission.medical')}</strong> {t('common.and') || '&'}{' '}
-              <strong>{t('about.mission.empathy')}</strong>.
-            </p>
-          </section>
+              <section className={styles["mission-section"]}>
+                <h2>{t('about.mission.title')}</h2>
+                <p className={styles["mission-text"]}>
+                  {t('about.mission.prefix')} <strong>{t('about.mission.ai')}</strong>,{' '}
+                  <strong>{t('about.mission.medical')}</strong> {t('common.and') || '&'}{' '}
+                  <strong>{t('about.mission.empathy')}</strong>.
+                </p>
+              </section>
 
-          <section className={styles["values-section"]}>
-            <h2>{t('about.values.title')}</h2>
-            <div className={styles["values-grid"]}>
-              {values.map((value) => (
-                <div className={styles["value-card"]} key={value.title}>
-                  <div className={styles["value-icon"]}>{value.icon}</div>
-                  <h3>{t(value.title)}</h3>
-                  <p>{t(value.desc)}</p>
+              <section className={styles["values-section"]}>
+                <h2>{t('about.values.title')}</h2>
+                <div className={styles["values-grid"]}>
+                  {values.map((value) => (
+                    <div className={styles["value-card"]} key={value.title}>
+                      <div className={styles["value-icon"]}>{value.icon}</div>
+                      <h3>{t(value.title)}</h3>
+                      <p>{t(value.desc)}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
+              </section>
 
-          <section className={styles["capabilities-section"]}>
-            <h2>{t('about.capabilities.title')}</h2>
-            <div className={styles["capability-highlight"]}>
-              <div className={styles["capability-number"]}>95%</div>
-              <div className={styles["capability-label"]}>{t('about.capabilities.accuracy')}</div>
-            </div>
-
-            <div className={styles["stats-grid"]}>
-              {stats.map((stat) => (
-                <div className={styles["stat-item"]} key={stat.label}>
-                  <div className={styles["stat-number"]}>{stat.number}</div>
-                  <div className={styles["stat-label"]}>{t(stat.label)}</div>
+              <section className={styles["capabilities-section"]}>
+                <h2>{t('about.capabilities.title')}</h2>
+                <div className={styles["capability-highlight"]}>
+                  <div className={styles["capability-number"]}>95%</div>
+                  <div className={styles["capability-label"]}>{t('about.capabilities.accuracy')}</div>
                 </div>
-              ))}
-            </div>
-          </section>
 
-          <section className={styles["technology-section"]}>
-            <h2>{t('about.technology.title')}</h2>
-            <div className={styles["tech-grid"]}>
-              {technologies.map((tech) => (
-                <div className={styles["tech-card"]} key={tech.title}>
-                  <div className={styles["tech-icon"]}>{tech.icon}</div>
-                  <h3>{t(tech.title)}</h3>
-                  <p>{t(tech.desc)}</p>
+                <div className={styles["stats-grid"]}>
+                  {stats.map((stat) => (
+                    <div className={styles["stat-item"]} key={stat.label}>
+                      <div className={styles["stat-number"]}>{stat.number}</div>
+                      <div className={styles["stat-label"]}>{t(stat.label)}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
+              </section>
 
-          <section className={styles["team-section"]}>
-            <h2>{t('about.team.title')}</h2>
-            <div className={styles["team-grid"]}>
-              {teamMembers.map((member) => (
-                <div className={styles["team-card"]} key={member.title}>
-                  <div className={styles["team-icon"]}>{member.icon}</div>
-                  <h3>{t(member.title)}</h3>
-                  <p>{t(member.desc)}</p>
+              <section className={styles["technology-section"]}>
+                <h2>{t('about.technology.title')}</h2>
+                <div className={styles["tech-grid"]}>
+                  {technologies.map((tech) => (
+                    <div className={styles["tech-card"]} key={tech.title}>
+                      <div className={styles["tech-icon"]}>{tech.icon}</div>
+                      <h3>{t(tech.title)}</h3>
+                      <p>{t(tech.desc)}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
+              </section>
 
-          <section className={styles["contact-section"]}>
-            <h2>{t('about.contact.title')}</h2>
-            <div className={styles["contact-info"]}>
-              {contactItems.map((item) => (
-                <div className={styles["contact-item"]} key={item.label}>
-                  <div className={styles["contact-icon"]}>{item.icon}</div>
-                  <div>
-                    <h4>{t(item.label)}</h4>
-                    <p>{item.value}</p>
-                  </div>
+              <section className={styles["team-section"]}>
+                <h2>{t('about.team.title')}</h2>
+                <div className={styles["team-grid"]}>
+                  {teamMembers.map((member) => (
+                    <div className={styles["team-card"]} key={member.title}>
+                      <div className={styles["team-icon"]}>{member.icon}</div>
+                      <h3>{t(member.title)}</h3>
+                      <p>{t(member.desc)}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
+              </section>
+
+              <section className={styles["contact-section"]}>
+                <h2>{t('about.contact.title')}</h2>
+                <div className={styles["contact-info"]}>
+                  {contactItems.map((item) => (
+                    <div className={styles["contact-item"]} key={item.label}>
+                      <div className={styles["contact-icon"]}>{item.icon}</div>
+                      <div>
+                        <h4>{t(item.label)}</h4>
+                        <p>{item.value}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
             </div>
           </div>
         </div>

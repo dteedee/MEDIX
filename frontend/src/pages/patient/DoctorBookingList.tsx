@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import doctorService from '../../services/doctorService';
 import DoctorRegistrationFormService from '../../services/doctorRegistrationFormService';
@@ -34,27 +34,27 @@ interface Doctor {
 }
 
 const convertApiDoctorToDoctor = (
-  apiDoctor: DoctorInTier, 
-  tierName: string, 
+  apiDoctor: DoctorInTier,
+  tierName: string,
   avatarUrlMap?: Record<string, string>,
   statisticsMap?: Record<string, { totalCases: number; successRate: number; responseTime: string }>
 ): Doctor => {
   const rating = typeof apiDoctor.rating === 'number' ? apiDoctor.rating : parseFloat(String(apiDoctor.rating)) || 0;
   const experience = typeof apiDoctor.experience === 'number' ? apiDoctor.experience : parseInt(String(apiDoctor.experience)) || 0;
-  
+
   const imageUrl = (apiDoctor as any).avatarUrl || avatarUrlMap?.[apiDoctor.doctorId] || undefined;
-  
-  const stats = statisticsMap?.[apiDoctor.doctorId] || 
+
+  const stats = statisticsMap?.[apiDoctor.doctorId] ||
     (apiDoctor.totalCases !== undefined ? {
       totalCases: apiDoctor.totalCases,
-      successRate: apiDoctor.successRate || (apiDoctor.successfulCases && apiDoctor.totalCases > 0 
-        ? Math.round((apiDoctor.successfulCases / apiDoctor.totalCases) * 100) 
+      successRate: apiDoctor.successRate || (apiDoctor.successfulCases && apiDoctor.totalCases > 0
+        ? Math.round((apiDoctor.successfulCases / apiDoctor.totalCases) * 100)
         : 0),
-      responseTime: apiDoctor.averageResponseTime 
+      responseTime: apiDoctor.averageResponseTime
         ? (apiDoctor.averageResponseTime < 60 ? `${Math.round(apiDoctor.averageResponseTime)} phút` : '1 giờ')
         : 'N/A'
     } : undefined);
-  
+
   const totalCases = stats?.totalCases ?? 0;
   const successRate = stats?.successRate ?? 0;
   const responseTime = stats?.responseTime ?? 'N/A';
@@ -63,12 +63,12 @@ const convertApiDoctorToDoctor = (
   const totalAppointments = apiDoctor.totalAppointments ?? 0;
   const successPercentage = apiDoctor.successPercentage ?? 0;
   const totalReviews = apiDoctor.totalReviews ?? 0;
-  
+
   const safeTier =
     tierName === 'Basic' || tierName === 'Professional' || tierName === 'Premium' || tierName === 'VIP'
       ? tierName
       : 'Basic';
-  
+
   return {
     id: apiDoctor.doctorId,
     fullName: apiDoctor.doctorName,
@@ -99,9 +99,9 @@ const convertEducationDoctorToDoctor = (
 ): Doctor => {
   const rating = typeof apiDoctor.rating === 'number' ? apiDoctor.rating : parseFloat(String(apiDoctor.rating)) || 0;
   const experience = typeof apiDoctor.experience === 'number' ? apiDoctor.experience : parseInt(String(apiDoctor.experience)) || 0;
-  
+
   const imageUrl = apiDoctor.avatarUrl || avatarUrlMap?.[apiDoctor.doctorId] || undefined;
-  
+
   const stats = statisticsMap?.[apiDoctor.doctorId];
   const totalCases = stats?.totalCases ?? 0;
   const successRate = stats?.successRate ?? 0;
@@ -110,7 +110,7 @@ const convertEducationDoctorToDoctor = (
   const totalAppointments = apiDoctor.totalAppointments ?? 0;
   const successPercentage = apiDoctor.successPercentage ?? 0;
   const totalReviews = apiDoctor.totalReviews ?? 0;
-  
+
   return {
     id: apiDoctor.doctorId,
     fullName: apiDoctor.doctorName,
@@ -210,12 +210,12 @@ const DoctorBookingList: React.FC = () => {
     successRate: number;
     responseTime: string;
   }>>({});
-  
-  const [specializations, setSpecializations] = useState<{id: string, name: string}[]>([]);
+
+  const [specializations, setSpecializations] = useState<{ id: string, name: string }[]>([]);
   const [metadataLoading, setMetadataLoading] = useState(true);
   const [educationTypes, setEducationTypes] = useState<DoctorTypeDegreeDto[]>([]);
   const [educationLoading, setEducationLoading] = useState(true);
-  
+
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
 
@@ -284,14 +284,14 @@ const DoctorBookingList: React.FC = () => {
 
   const doctorMatchesSearch = useCallback((doctor: DoctorInTier, searchTerms: string[]): boolean => {
     if (!doctor || searchTerms.length === 0) return false;
-    
+
     const convertedDoctor = convertApiDoctorToDoctor(doctor, 'Basic', doctorAvatars, doctorStatistics);
     const nameNormalized = normalizeSearchText(convertedDoctor?.fullName);
     const specialtyNormalized = normalizeSearchText(convertedDoctor?.specialty);
     const degreeNormalized = normalizeSearchText(convertedDoctor?.degree);
     const bioNormalized = normalizeSearchText(convertedDoctor?.bio);
-    
-    return searchTerms.every(term => 
+
+    return searchTerms.every(term =>
       nameNormalized.includes(term) ||
       specialtyNormalized.includes(term) ||
       degreeNormalized.includes(term) ||
@@ -304,7 +304,7 @@ const DoctorBookingList: React.FC = () => {
 
     const searchNormalized = normalizeSearchText(debouncedSearch);
     if (!searchNormalized) return;
-    
+
     const searchTerms = searchNormalized.split(/\s+/).filter(term => term.length > 0);
     if (searchTerms.length === 0) return;
 
@@ -333,7 +333,7 @@ const DoctorBookingList: React.FC = () => {
       minPrice: priceRange[0],
       maxPrice: priceRange[1]
     };
-    
+
     const data = await doctorService.getDoctorsGroupedByEducation(queryParams);
     return data;
   }, [selectedSpecializationCode, priceRange]);
@@ -342,7 +342,7 @@ const DoctorBookingList: React.FC = () => {
     if (initialLoadDoneRef.current || isLoadingRef.current) {
       return;
     }
-    
+
     isLoadingRef.current = true;
     const currentRequestId = `${Date.now()}-${Math.random()}`;
     loadRequestIdRef.current = currentRequestId;
@@ -352,26 +352,26 @@ const DoctorBookingList: React.FC = () => {
         isLoadingRef.current = false;
         return;
       }
-      
+
       initialLoadDoneRef.current = true;
-      
+
       try {
         setLoading(true);
         setError(null);
-        
+
         const educationGroupsData = await loadEducationData();
 
         if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
           setEducationGroupsData(educationGroupsData);
-          
+
           const allDoctors = educationGroupsData.flatMap(group => group.doctors?.items || []);
-          const doctorsNeedingAvatar = allDoctors.filter(doctor => 
+          const doctorsNeedingAvatar = allDoctors.filter(doctor =>
             !doctor.avatarUrl && doctor.doctorId
           );
-          const doctorsNeedingStats = allDoctors.filter(doctor => 
+          const doctorsNeedingStats = allDoctors.filter(doctor =>
             doctor.doctorId && (doctor.totalCases === undefined || doctor.successRate === undefined || doctor.averageResponseTime === undefined)
           );
-          
+
           if (doctorsNeedingAvatar.length > 0) {
             Promise.all(
               doctorsNeedingAvatar.slice(0, 20).map(async (doctor) => {
@@ -406,10 +406,10 @@ const DoctorBookingList: React.FC = () => {
                   const successfulCases = stats.successfulCases || stats.completedCases || stats.completedAppointments || 0;
                   const successRate = totalCases > 0 ? Math.round((successfulCases / totalCases) * 100) : 0;
                   const responseTimeMinutes = stats.averageResponseTime || stats.responseTime || 0;
-                  const responseTime = responseTimeMinutes > 0 
+                  const responseTime = responseTimeMinutes > 0
                     ? (responseTimeMinutes < 60 ? `${Math.round(responseTimeMinutes)} phút` : '1 giờ')
                     : 'N/A';
-                  
+
                   return {
                     doctorId: doctor.doctorId,
                     totalCases,
@@ -436,7 +436,7 @@ const DoctorBookingList: React.FC = () => {
               }
             });
           }
-          
+
           setLoading(false);
           isLoadingRef.current = false;
           loadRequestIdRef.current = null;
@@ -452,7 +452,7 @@ const DoctorBookingList: React.FC = () => {
     };
 
     const timeoutId = setTimeout(loadData, 50);
-    
+
     return () => {
       clearTimeout(timeoutId);
       if (loadRequestIdRef.current === currentRequestId) {
@@ -466,7 +466,7 @@ const DoctorBookingList: React.FC = () => {
     if (!initialLoadDoneRef.current || isLoadingRef.current) {
       return;
     }
-    
+
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
       loadingTimeoutRef.current = null;
@@ -480,24 +480,24 @@ const DoctorBookingList: React.FC = () => {
       if (loadRequestIdRef.current !== currentRequestId || !mountedRef.current) {
         return;
       }
-      
+
       try {
         setLoading(true);
         setError(null);
-        
+
         const educationGroupsData = await loadEducationData();
 
         if (mountedRef.current && loadRequestIdRef.current === currentRequestId) {
           setEducationGroupsData(educationGroupsData);
-          
+
           const allDoctors = educationGroupsData.flatMap(group => group.doctors?.items || []);
-          const doctorsNeedingAvatar = allDoctors.filter(doctor => 
+          const doctorsNeedingAvatar = allDoctors.filter(doctor =>
             !doctor.avatarUrl && doctor.doctorId
           );
-          const doctorsNeedingStats = allDoctors.filter(doctor => 
+          const doctorsNeedingStats = allDoctors.filter(doctor =>
             doctor.doctorId && (doctor.totalCases === undefined || doctor.successRate === undefined || doctor.averageResponseTime === undefined)
           );
-          
+
           if (doctorsNeedingAvatar.length > 0) {
             Promise.all(
               doctorsNeedingAvatar.slice(0, 20).map(async (doctor) => {
@@ -532,10 +532,10 @@ const DoctorBookingList: React.FC = () => {
                   const successfulCases = stats.successfulCases || stats.completedCases || stats.completedAppointments || 0;
                   const successRate = totalCases > 0 ? Math.round((successfulCases / totalCases) * 100) : 0;
                   const responseTimeMinutes = stats.averageResponseTime || stats.responseTime || 0;
-                  const responseTime = responseTimeMinutes > 0 
+                  const responseTime = responseTimeMinutes > 0
                     ? (responseTimeMinutes < 60 ? `${Math.round(responseTimeMinutes)} phút` : '1 giờ')
                     : 'N/A';
-                  
+
                   return {
                     doctorId: doctor.doctorId,
                     totalCases,
@@ -562,7 +562,7 @@ const DoctorBookingList: React.FC = () => {
               }
             });
           }
-          
+
           setLoading(false);
           isLoadingRef.current = false;
           loadRequestIdRef.current = null;
@@ -591,27 +591,27 @@ const DoctorBookingList: React.FC = () => {
 
   const searchDoctorsAcrossAllDegrees = (searchTerm: string): { degree: DegreeTab; doctors: Doctor[] }[] => {
     if (!searchTerm.trim()) return [];
-    
+
     const searchNormalized = normalizeSearchText(searchTerm);
     const searchTerms = searchNormalized.split(/\s+/).filter(term => term.length > 0);
-    
+
     const allDoctors = tiersData.flatMap(t => t.doctors?.items || []);
     const converted = allDoctors.map(d => convertApiDoctorToDoctor(d, 'Basic', doctorAvatars, doctorStatistics));
 
     const filtered = converted.filter(doctor => {
-          if (doctor.isAcceptingAppointments === false) return false;
-          
-          const nameNormalized = normalizeSearchText(doctor.fullName);
-          const specialtyNormalized = normalizeSearchText(doctor.specialty);
-          const degreeNormalized = normalizeSearchText(doctor.degree);
-          const bioNormalized = normalizeSearchText(doctor.bio || '');
-          
-          return searchTerms.every(term => 
-            nameNormalized.includes(term) ||
-            specialtyNormalized.includes(term) ||
-            degreeNormalized.includes(term) ||
-            bioNormalized.includes(term)
-          );
+      if (doctor.isAcceptingAppointments === false) return false;
+
+      const nameNormalized = normalizeSearchText(doctor.fullName);
+      const specialtyNormalized = normalizeSearchText(doctor.specialty);
+      const degreeNormalized = normalizeSearchText(doctor.degree);
+      const bioNormalized = normalizeSearchText(doctor.bio || '');
+
+      return searchTerms.every(term =>
+        nameNormalized.includes(term) ||
+        specialtyNormalized.includes(term) ||
+        degreeNormalized.includes(term) ||
+        bioNormalized.includes(term)
+      );
     });
 
     const results: { degree: DegreeTab; doctors: Doctor[] }[] = [];
@@ -623,36 +623,36 @@ const DoctorBookingList: React.FC = () => {
   };
 
   const getDoctorsByDegree = useCallback((degree: DegreeTab): Doctor[] => {
-    const educationGroup = educationGroupsData.find(group => 
+    const educationGroup = educationGroupsData.find(group =>
       getDegreeFromEducationName(group.education) === degree
     );
-    
+
     if (!educationGroup || !educationGroup.doctors?.items) {
       return [];
     }
 
-    const allConverted = educationGroup.doctors.items.map(d => 
+    const allConverted = educationGroup.doctors.items.map(d =>
       convertEducationDoctorToDoctor(d, doctorAvatars, doctorStatistics)
     );
-    
+
     let doctors = allConverted.filter(doctor => doctor.isAcceptingAppointments !== false);
-    
+
     if (debouncedSearch && debouncedSearch.trim()) {
       const searchNormalized = normalizeSearchText(debouncedSearch);
       if (!searchNormalized) return doctors;
-      
+
       const searchTerms = searchNormalized.split(/\s+/).filter(term => term.length > 0);
-      
+
       if (searchTerms.length > 0) {
         doctors = doctors.filter(doctor => {
           if (!doctor) return false;
-          
+
           const nameNormalized = normalizeSearchText(doctor.fullName);
           const specialtyNormalized = normalizeSearchText(doctor.specialty);
           const degreeNormalized = normalizeSearchText(doctor.degree);
           const bioNormalized = normalizeSearchText(doctor.bio);
-          
-          return searchTerms.every(term => 
+
+          return searchTerms.every(term =>
             nameNormalized.includes(term) ||
             specialtyNormalized.includes(term) ||
             degreeNormalized.includes(term) ||
@@ -661,7 +661,7 @@ const DoctorBookingList: React.FC = () => {
         });
       }
     }
-    
+
     return doctors;
   }, [educationGroupsData, debouncedSearch, doctorAvatars, doctorStatistics, normalizeSearchText]);
 
@@ -774,8 +774,8 @@ const DoctorBookingList: React.FC = () => {
 
     const totalDone = doctor.totalDone || 0; // Số ca đã thực hiện
     const totalAppointments = doctor.totalAppointments || 0; // Tổng số lịch hẹn
-    const successPercentage = doctor.successPercentage 
-      ? Math.round(doctor.successPercentage) 
+    const successPercentage = doctor.successPercentage
+      ? Math.round(doctor.successPercentage)
       : (doctor.successRate || 0); // Fallback to successRate if successPercentage not available
     const totalReviews = doctor.totalReviews || 0; // Tổng số đánh giá
     const responseTime = doctor.responseTime || 'N/A';
@@ -919,9 +919,8 @@ const DoctorBookingList: React.FC = () => {
           <button
             key={page}
             onClick={() => handlePageChange(page)}
-            className={`${styles.paginationButton} ${
-              currentPagination.pageNumber === page ? styles.paginationActive : ''
-            }`}
+            className={`${styles.paginationButton} ${currentPagination.pageNumber === page ? styles.paginationActive : ''
+              }`}
           >
             {page}
           </button>
@@ -930,8 +929,8 @@ const DoctorBookingList: React.FC = () => {
         {endPage < currentPaginationInfo.totalPages && (
           <>
             {endPage < currentPaginationInfo.totalPages - 1 && <span className={styles.paginationEllipsis}>...</span>}
-            <button 
-              onClick={() => handlePageChange(currentPaginationInfo.totalPages)} 
+            <button
+              onClick={() => handlePageChange(currentPaginationInfo.totalPages)}
               className={styles.paginationButton}
             >
               {currentPaginationInfo.totalPages}
@@ -954,20 +953,44 @@ const DoctorBookingList: React.FC = () => {
     return (
       <div className={styles.pageContainer}>
         <nav className={homeStyles["navbar"]}>
-          <ul className={homeStyles["nav-menu"]}>
-            <li><a onClick={() => navigate('/')} className={`${homeStyles["nav-link"]} ${location.pathname === '/' ? homeStyles["active"] : ''}`}>{t('nav.home')}</a></li>
-            <li><span>|</span></li>
-            <li><a onClick={() => navigate('/ai-chat')} className={`${homeStyles["nav-link"]} ${location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}>{t('nav.ai-diagnosis')}</a></li>
-            <li><span>|</span></li>
-            <li><a onClick={() => navigate('/specialties')} className={`${homeStyles["nav-link"]} ${location.pathname === '/specialties' ? homeStyles["active"] : ''}`}>{t('nav.specialties')}</a></li>
-            <li><span>|</span></li>
-            <li><a onClick={() => navigate('/doctors')} className={`${homeStyles["nav-link"]} ${location.pathname === '/doctors' ? homeStyles["active"] : ''}`}>{t('nav.doctors')}</a></li>
-            <li><span>|</span></li>
-            <li><a onClick={() => navigate('/app/articles')} className={`${homeStyles["nav-link"]} ${location.pathname === '/app/articles' ? homeStyles["active"] : ''}`}>{t('nav.health-articles')}</a></li>
-            <li><span>|</span></li>
-            <li><a onClick={() => navigate('/about')} className={`${homeStyles["nav-link"]} ${location.pathname === '/about' ? homeStyles["active"] : ''}`}>{t('nav.about')}</a></li>
-          </ul>
-        </nav>
+        <ul className={homeStyles["nav-menu"]}>
+          <li>
+            <Link to="/" className={homeStyles["nav-link"]}>
+              {t('nav.home')}
+            </Link>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <Link to="/ai-chat" className={homeStyles["nav-link"]}>
+              {t('nav.ai-diagnosis')}
+            </Link>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <Link to="/specialties" className={homeStyles["nav-link"]}>
+              {t('nav.specialties')}
+            </Link>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <Link to="/doctors" className={`${homeStyles["nav-link"]} ${homeStyles["active"]}`}>
+              {t('nav.doctors')}
+            </Link>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <Link to="/articles" className={homeStyles["nav-link"]}>
+              {t('nav.health-articles')}
+            </Link>
+          </li>
+          <li><span>|</span></li>
+          <li>
+            <Link to="/about" className={homeStyles["nav-link"]}>
+              {t('nav.about')}
+            </Link>
+          </li>
+        </ul>
+      </nav>
         <div className={styles.loadingContainer}>
           <div className={styles.loadingSpinner}></div>
           <p>Đang tải danh sách bác sĩ...</p>
@@ -981,17 +1004,41 @@ const DoctorBookingList: React.FC = () => {
       <div className={styles.pageContainer}>
         <nav className={homeStyles["navbar"]}>
           <ul className={homeStyles["nav-menu"]}>
-            <li><a onClick={() => navigate('/')} className={`${homeStyles["nav-link"]} ${location.pathname === '/' ? homeStyles["active"] : ''}`}>{t('nav.home')}</a></li>
+            <li>
+              <Link to="/" className={homeStyles["nav-link"]}>
+                {t('nav.home')}
+              </Link>
+            </li>
             <li><span>|</span></li>
-            <li><a onClick={() => navigate('/ai-chat')} className={`${homeStyles["nav-link"]} ${location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}>{t('nav.ai-diagnosis')}</a></li>
+            <li>
+              <Link to="/ai-chat" className={homeStyles["nav-link"]}>
+                {t('nav.ai-diagnosis')}
+              </Link>
+            </li>
             <li><span>|</span></li>
-            <li><a onClick={() => navigate('/specialties')} className={`${homeStyles["nav-link"]} ${location.pathname === '/specialties' ? homeStyles["active"] : ''}`}>{t('nav.specialties')}</a></li>
+            <li>
+              <Link to="/specialties" className={homeStyles["nav-link"]}>
+                {t('nav.specialties')}
+              </Link>
+            </li>
             <li><span>|</span></li>
-            <li><a onClick={() => navigate('/doctors')} className={`${homeStyles["nav-link"]} ${location.pathname === '/doctors' ? homeStyles["active"] : ''}`}>{t('nav.doctors')}</a></li>
+            <li>
+              <Link to="/doctors" className={`${homeStyles["nav-link"]} ${homeStyles["active"]}`}>
+                {t('nav.doctors')}
+              </Link>
+            </li>
             <li><span>|</span></li>
-            <li><a onClick={() => navigate('/app/articles')} className={`${homeStyles["nav-link"]} ${location.pathname === '/app/articles' ? homeStyles["active"] : ''}`}>{t('nav.health-articles')}</a></li>
+            <li>
+              <Link to="/articles" className={homeStyles["nav-link"]}>
+                {t('nav.health-articles')}
+              </Link>
+            </li>
             <li><span>|</span></li>
-            <li><a onClick={() => navigate('/about')} className={`${homeStyles["nav-link"]} ${location.pathname === '/about' ? homeStyles["active"] : ''}`}>{t('nav.about')}</a></li>
+            <li>
+              <Link to="/about" className={homeStyles["nav-link"]}>
+                {t('nav.about')}
+              </Link>
+            </li>
           </ul>
         </nav>
         <div className={styles.errorContainer}>
@@ -1011,17 +1058,41 @@ const DoctorBookingList: React.FC = () => {
     <div className={styles.pageContainer}>
       <nav className={homeStyles["navbar"]}>
         <ul className={homeStyles["nav-menu"]}>
-          <li><a onClick={() => navigate('/')} className={`${homeStyles["nav-link"]} ${location.pathname === '/' ? homeStyles["active"] : ''}`}>{t('nav.home')}</a></li>
+          <li>
+            <Link to="/" className={homeStyles["nav-link"]}>
+              {t('nav.home')}
+            </Link>
+          </li>
           <li><span>|</span></li>
-          <li><a onClick={() => navigate('/ai-chat')} className={`${homeStyles["nav-link"]} ${location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}>{t('nav.ai-diagnosis')}</a></li>
+          <li>
+            <Link to="/ai-chat" className={homeStyles["nav-link"]}>
+              {t('nav.ai-diagnosis')}
+            </Link>
+          </li>
           <li><span>|</span></li>
-          <li><a onClick={() => navigate('/specialties')} className={`${homeStyles["nav-link"]} ${location.pathname === '/specialties' ? homeStyles["active"] : ''}`}>{t('nav.specialties')}</a></li>
+          <li>
+            <Link to="/specialties" className={homeStyles["nav-link"]}>
+              {t('nav.specialties')}
+            </Link>
+          </li>
           <li><span>|</span></li>
-          <li><a onClick={() => navigate('/doctors')} className={`${homeStyles["nav-link"]} ${location.pathname === '/doctors' ? homeStyles["active"] : ''}`}>{t('nav.doctors')}</a></li>
+          <li>
+            <Link to="/doctors" className={`${homeStyles["nav-link"]} ${homeStyles["active"]}`}>
+              {t('nav.doctors')}
+            </Link>
+          </li>
           <li><span>|</span></li>
-          <li><a onClick={() => navigate('/app/articles')} className={`${homeStyles["nav-link"]} ${location.pathname === '/app/articles' ? homeStyles["active"] : ''}`}>{t('nav.health-articles')}</a></li>
+          <li>
+            <Link to="/articles" className={homeStyles["nav-link"]}>
+              {t('nav.health-articles')}
+            </Link>
+          </li>
           <li><span>|</span></li>
-          <li><a onClick={() => navigate('/about')} className={`${homeStyles["nav-link"]} ${location.pathname === '/about' ? homeStyles["active"] : ''}`}>{t('nav.about')}</a></li>
+          <li>
+            <Link to="/about" className={homeStyles["nav-link"]}>
+              {t('nav.about')}
+            </Link>
+          </li>
         </ul>
       </nav>
 
@@ -1146,50 +1217,50 @@ const DoctorBookingList: React.FC = () => {
               </div>
             </div>
 
-      <div className={styles.tierTabs}>
-        {degreeTabs.map(tab => {
-          const count = getDoctorsByDegree(tab).length;
-          const scheme = degreeColorSchemes[tab];
-          const isActive = activeDegree === tab;
-          return (
-            <button
-              key={tab}
-              className={`${styles.tierTab} ${isActive ? styles.active : ''}`}
-              onClick={() => setActiveDegree(tab)}
-              aria-pressed={isActive}
-              title={`${tab} • ${count} bác sĩ`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                border: `1px solid ${isActive ? scheme.accent : '#e5e7eb'}`,
-                background: isActive ? scheme.light : 'white',
-                boxShadow: isActive ? `0 4px 14px ${scheme.light}` : 'none',
-                transform: isActive ? 'translateY(-1px)' : 'none',
-                transition: 'all 160ms ease-in-out',
-                whiteSpace: 'nowrap',
-                padding: '10px 14px'
-              }}
-            >
-              <i className={`bi ${degreeIcons[tab]}`} style={{ color: scheme.accent, fontSize: 18 }}></i>
-              <span style={{ color: isActive ? scheme.accent : '#111827', fontWeight: isActive ? 600 : 500 }}>{tab}</span>
-              <span
-                style={{
-                  marginLeft: 4,
-                  fontSize: 12,
-                  lineHeight: 1,
-                  background: scheme.light,
-                  color: scheme.accent,
-                  borderRadius: 9999,
-                  padding: '4px 8px',
-                }}
-              >
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+            <div className={styles.tierTabs}>
+              {degreeTabs.map(tab => {
+                const count = getDoctorsByDegree(tab).length;
+                const scheme = degreeColorSchemes[tab];
+                const isActive = activeDegree === tab;
+                return (
+                  <button
+                    key={tab}
+                    className={`${styles.tierTab} ${isActive ? styles.active : ''}`}
+                    onClick={() => setActiveDegree(tab)}
+                    aria-pressed={isActive}
+                    title={`${tab} • ${count} bác sĩ`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      border: `1px solid ${isActive ? scheme.accent : '#e5e7eb'}`,
+                      background: isActive ? scheme.light : 'white',
+                      boxShadow: isActive ? `0 4px 14px ${scheme.light}` : 'none',
+                      transform: isActive ? 'translateY(-1px)' : 'none',
+                      transition: 'all 160ms ease-in-out',
+                      whiteSpace: 'nowrap',
+                      padding: '10px 14px'
+                    }}
+                  >
+                    <i className={`bi ${degreeIcons[tab]}`} style={{ color: scheme.accent, fontSize: 18 }}></i>
+                    <span style={{ color: isActive ? scheme.accent : '#111827', fontWeight: isActive ? 600 : 500 }}>{tab}</span>
+                    <span
+                      style={{
+                        marginLeft: 4,
+                        fontSize: 12,
+                        lineHeight: 1,
+                        background: scheme.light,
+                        color: scheme.accent,
+                        borderRadius: 9999,
+                        padding: '4px 8px',
+                      }}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
 
             {currentDoctors.length > 0 ? (
               <>
@@ -1201,7 +1272,7 @@ const DoctorBookingList: React.FC = () => {
                 <div className={styles.doctorsGrid}>
                   {currentDoctors.map((doctor) => renderDoctorCard(doctor))}
                 </div>
-                
+
                 {renderPagination()}
               </>
             ) : (

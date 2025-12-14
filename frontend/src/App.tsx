@@ -50,7 +50,7 @@ import { ManagerProfile } from './pages/manager/ManagerProfile';
 import { AdminProfile } from './pages/admin/AdminProfile';
 import DoctorDetails from './pages/doctor/DoctorDetails';
 import ScheduleManagement from './pages/doctor/ScheduleManagement';
-import MedicalRecordDetails from './pages/doctor/MedicalRecordDetails'; 
+import MedicalRecordDetails from './pages/doctor/MedicalRecordDetails';
 
 import ArticleManagement from './pages/manager/ArticleManagement';
 import BannerManagement from './pages/manager/BannerManagement';
@@ -122,12 +122,8 @@ export function App() {
                   <Route path="/articles" element={<ArticleReaderPage />} />
                   <Route path="/articles/:slug" element={<ArticleDetailPage />} />
                 </Route>
-
-                <Route path="/ai-chat" element={
-               
-                    <AIChatBot />
-                 
-                } />
+                
+                <Route path="/ai-chat" element={<AIChatBot />} />
 
                 <Route path="/unauthorize" element={<Unauthorized />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
@@ -158,7 +154,7 @@ export function App() {
                   <Route path="manager/*" element={
                     <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
                       <ManagerLayout />
-                     </ProtectedRoute>
+                    </ProtectedRoute>
                   }>
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard" element={<ManageDashboard />} />
@@ -171,7 +167,7 @@ export function App() {
                     <Route path="commissions" element={<CommissionManagement />} />
                     <Route path="feedback" element={<FeedbackManagement />} />
                     <Route path="categories" element={<CategoryManagementPage />} />
-                    
+
                     <Route path="transfer-transactions" element={<TransferTransactions />} />
                     <Route path="promotions" element={<PromotionManagement />} />
                   </Route>
@@ -221,9 +217,9 @@ export function App() {
 }
 
 const DashboardRedirect: React.FC = () => {
-  const { user } = useAuth(); 
+  const { user } = useAuth();
 
-  switch (user?.role) { 
+  switch (user?.role) {
     case UserRole.ADMIN:
       return <Navigate to="/app/admin" replace />;
     case UserRole.MANAGER:

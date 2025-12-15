@@ -1,3 +1,6 @@
+using Medix.API.Business.Helper;
+using System.Text.Json.Serialization;
+
 namespace Medix.API.Models.DTOs.Manager
 {
 
@@ -75,8 +78,9 @@ namespace Medix.API.Models.DTOs.Manager
     {
         public Guid AppointmentId { get; set; }
         public string Status { get; set; } = null!;
-
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime StartTime { get; set; }
+        [JsonConverter(typeof(CustomDateTimeConverter))]
         public DateTime EndTime { get; set; }
 
         public decimal TotalAmount { get; set; }

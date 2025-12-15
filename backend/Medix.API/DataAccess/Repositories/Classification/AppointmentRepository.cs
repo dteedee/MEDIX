@@ -284,7 +284,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return await _context.Appointments.Where(d => d.DoctorId == id && d.StatusCode == Status).CountAsync();
         }
 
-        public async Task<(int Total, int Completed, int Successful)> GetDoctorAppointmentStatsAsync(Guid doctorId)
+        public async Task<(int Total, int Completed, int Cancelled)> GetDoctorAppointmentStatsAsync(Guid doctorId)
         {
             var appointments = await _context.Appointments
                 .AsNoTracking()
@@ -293,9 +293,9 @@ namespace Medix.API.DataAccess.Repositories.Classification
 
             var total = appointments.Count;
             var completed = appointments.Count(a => a.StatusCode == "Completed");
-            var successful = appointments.Count(a => a.StatusCode == "Completed");
+            var cancelled = appointments.Count(a => (a.StatusCode == "CancelledByDoctor" || a.StatusCode == "CancelledByPatient" || a.StatusCode == "MissedByDoctor"||a.StatusCode== "MissedByPatient"));
 
-            return (total, completed, successful);
+            return (total, completed, cancelled);
         }
     }
 }

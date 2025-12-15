@@ -84,7 +84,7 @@ const SpecialtyListPage: React.FC = () => {
           </li>
           <li><span>|</span></li>
           <li>
-            <Link to="/app/articles" className={homeStyles["nav-link"]}>
+            <Link to="/articles" className={homeStyles["nav-link"]}>
               {t('nav.health-articles')}
             </Link>
           </li>

@@ -512,7 +512,7 @@ const MedicalRecordDetails: React.FC = () => {
         <h3 className="section-title">II. LÝ DO VÀO VIỆN VÀ BỆNH SỬ</h3>
         <div className="section-grid">
           <div className="form-column">
-            <label className="form-label">*Lý do khám</label>
+            <label className="form-label">Lý do khám</label>
             <textarea
               name="chiefComplaint"
               className={`form-textarea ${fieldErrors.chiefComplaint ? 'input-error' : ''}`}

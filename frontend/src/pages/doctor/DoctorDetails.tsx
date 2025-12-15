@@ -165,6 +165,10 @@ function DoctorDetails() {
             showToast("Vui lòng nhập lý do khám trước khi đặt lịch hẹn.", 'warning');
             return;
         }
+        if (!historyOfPresentIllness || !historyOfPresentIllness.trim()) {
+            showToast("Vui lòng nhập quá trình bệnh lý diễn biến trước khi đặt lịch hẹn.", 'warning');
+            return;
+        }
         
         if (!checkUserLogin()) {
             showToast("Bạn cần đăng nhập để đặt lịch hẹn với bác sĩ. Vui lòng đăng nhập để tiếp tục.", 'warning');
@@ -192,6 +196,11 @@ function DoctorDetails() {
         
         if (!chiefComplaint || !chiefComplaint.trim()) {
             showToast("Vui lòng nhập lý do khám trước khi đặt lịch hẹn.", 'warning');
+            setShowConfirmModal(false);
+            return;
+        }
+        if (!historyOfPresentIllness || !historyOfPresentIllness.trim()) {
+            showToast("Vui lòng nhập quá trình bệnh lý diễn biến trước khi đặt lịch hẹn.", 'warning');
             setShowConfirmModal(false);
             return;
         }
@@ -247,7 +256,7 @@ function DoctorDetails() {
                 discountAmount: discountAmount,
                 totalAmount: totalAmount,
                 chiefComplaint: chiefComplaint.trim(),
-                historyOfPresentIllness: historyOfPresentIllness.trim() ? historyOfPresentIllness.trim() : undefined,
+                historyOfPresentIllness: historyOfPresentIllness.trim(),
                 userPromotionID: appliedUserPromotion?.id,
                 promotionCode: appliedUserPromotion ? undefined : (appliedPromotion ? promotionCode : undefined),
             };
@@ -901,7 +910,7 @@ function DoctorDetails() {
                     </li>
                     <li><span>|</span></li>
                     <li>
-                        <Link to="/app/articles" className={`${homeStyles["nav-link"]} ${location.pathname === '/app/articles' ? homeStyles["active"] : ''}`}>
+                        <Link to="/articles" className={`${homeStyles["nav-link"]} ${location.pathname === '/articles' ? homeStyles["active"] : ''}`}>
                             {t('nav.health-articles')}
                         </Link>
                     </li>

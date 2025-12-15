@@ -3,8 +3,13 @@
 ---
 🎯 Tổng Quan:
 ---
-MEDIX là nền tảng y tế thông minh kết hợp trí tuệ nhân tạo (AI) để cung cấp dịch vụ chăm sóc sức khỏe toàn diện. Hệ thống được thiết kế như một "hệ sinh thái y tế thông minh" kết nối đa chiều giữa bệnh nhân, bác sĩ, và nhà quản lý thông qua các tính năng tiên tiến như chẩn đoán AI, quản lý hồ sơ bệnh án điện tử (EMR), và đặt lịch hẹn thông minh.
+MEDIX là hệ sinh thái y tế số hoá toàn diện, được thiết kế để kết nối bệnh nhân, bác sĩ và nhà quản lý trên một nền tảng duy nhất. Với sự kết hợp giữa AI Triage, hồ sơ bệnh án điện tử (EMR), đặt lịch khám thông minh, và hệ thống thanh toán tích hợp, MEDIX mang đến trải nghiệm chăm sóc sức khỏe hiện đại, nhanh chóng và chính xác hơn bao giờ hết.
 
+MEDIX hoạt động như một “Trợ lý y tế thông minh”, hỗ trợ người dùng từ bước kiểm tra triệu chứng, chọn bác sĩ phù hợp, theo dõi quá trình điều trị đến quản lý tài chính y tế. Toàn bộ quy trình được tự động hóa và vận hành theo chuẩn công nghệ mới nhất: .NET 8 Web API, React, AI NLP, OCR, và SQL Server, giúp đảm bảo hiệu năng cao, bảo mật và khả năng mở rộng linh hoạt.
+
+Nhờ công nghệ AI tiên tiến, MEDIX có thể phân tích triệu chứng, đọc EMR, đánh giá mức độ nghiêm trọng và đề xuất hướng xử lý phù hợp chỉ trong vài giây. Người bệnh được hỗ trợ ra quyết định nhanh hơn, bác sĩ tối ưu hóa thời gian khám, còn nhà quản lý dễ dàng vận hành và theo dõi chất lượng dịch vụ.
+
+MEDIX không chỉ là một ứng dụng y tế—đó là một hệ sinh thái thông minh giúp nâng cao chất lượng chăm sóc sức khỏe, giảm tải cho cơ sở y tế, và mở ra một tiêu chuẩn mới cho dịch vụ khám chữa bệnh trong thời đại số.
 
 ✨ Tính Năng Nổi Bật
 ---
@@ -24,13 +29,13 @@ MEDIX là nền tảng y tế thông minh kết hợp trí tuệ nhân tạo (AI
 
     Lịch trình thời gian thực của bác sĩ
 
-    Nhắc hẹn tự động và hủy lịch với hoàn tiền 80%
+    Nhắc hẹn tự động và hủy lịch với hoàn tiền tới 80%
 
-    Phòng khám ảo tích hợp sẵn
+    Quản lý lịch hẹn và xem lịch sử cuộc hẹn dễ dàng
 
 💳 Hệ Thống Thanh Toán Toàn Diện
 
-    Ví MEDIX tích hợp nạp tiền
+    Ví MEDIX tích hợp nạp tiền, rút tiền
 
     Đa dạng phương thức thanh toán (Ví điện tử, Thẻ ngân hàng)
 
@@ -46,7 +51,7 @@ MEDIX là nền tảng y tế thông minh kết hợp trí tuệ nhân tạo (AI
 
     Quản lý đơn thuốc và kế hoạch điều trị
 
-    Lưu trữ file y tế (X-quang, Xét nghiệm...)
+    XUất hồ sơ EMR thành PDF tiện lợi
 
 👥 Đối Tượng Người Dùng
 ---
@@ -72,11 +77,11 @@ MEDIX là nền tảng y tế thông minh kết hợp trí tuệ nhân tạo (AI
 
 👨‍💼 Quản Lý (Manager)
 
-    Duyệt hồ sơ bác sĩ mới
+    Duyệt hồ sơ bác sĩ mới, đánh giá hiệu suất bác sĩ
 
     Giám sát chất lượng dịch vụ
 
-    Quản lý phản hồi và khiếu nại
+    Quản lý landing pages
 
     Phân tích báo cáo kinh doanh
 
@@ -98,9 +103,9 @@ Yêu cầu hệ thống
 
     Backend: .NET 8 Web API
 
-    Database: SQL Server
+    Database: SQL Server, Azure SQL
 
-    AI & Data Science: OpenAI cho model ML
+    AI & Data Science: VertextAI, Google Cloud Vision, Gemini
 
     NLP xử lý ngôn ngữ tự nhiên
 
@@ -110,15 +115,15 @@ Yêu cầu hệ thống
 ---
 Luồng bệnh nhân:
 
-    Guest → Đăng ký → AI Triage → Kết quả → Đề xuất bác sĩ → Đặt lịch → Thanh toán → Khám bệnh → Cập nhật EMR → Đánh giá
+    Guest → Đăng ký → AI Triage → Kết quả → Đề xuất bác sĩ → Đặt lịch → Thanh toán → Quản lý lịch hẹn → Xem kết quả EMR → Đánh giá
 
 Luồng bác sĩ:
 
-    Đăng ký → Xét duyệt → Thiết lập lịch → Nhận lịch hẹn → Chuẩn bị EMR → Khám bệnh → Cập nhật EMR → Nhận thu nhập
+    Đăng ký → Xét duyệt → Thiết lập lịch → Xem lịch hẹn → Chuẩn bị EMR → Cập nhật EMR → Xem đánh giá -> Nhận thu nhập
 
 Luồng Manager:
 
-    Dashboard → Duyệt bác sĩ → Quản lý phản hồi → Phân tích báo cáo → Quản lý kinh doanh -> Quản lý CMS
+    Dashboard → Duyệt bác sĩ → Quản lý bác sĩ → Quản lý hiệu suất bác sĩ → Phân tích báo cáo → Quản lý kinh doanh -> Quản lý CMS
 
 Luồng Admin: 
 
@@ -126,88 +131,147 @@ Luồng Admin:
 
 👥 Tổng Quan Use Case
 ---
-Hệ thống MEDIX bao gồm 111 use case được phân bổ cho 6 vai trò người dùng:
+Hệ thống MEDIX bao gồm 128 use case được phân bổ cho 5 vai trò người dùng:
 
-    Guest: 9
-    Bệnh nhân: 29
-    Bác sĩ: 22
-    Manager: 29
-    Admin: 22
-    All-Auth: 6
+    Guest: 11
+    Bệnh nhân: 27
+    Bác sĩ: 26
+    Manager: 43
+    Admin: 15
 
 🎯 Các Nhóm Chức Năng Chính
 ---
 Authentication & Authorization (6 use cases):
 
-    Đăng ký, đăng nhập, quên mật khẩu
+    Đăng ký tài khoản (Guest → Patient / Doctor signup)
+    
     Xác thực email
-    Quản lý phiên và token
+    
+    Đăng nhập
+    
+    Quên mật khẩu
+
+    Thay đổi mật khẩu
+    
+    Quản lý phiên và token/Đăng xuất
 
 AI Triage & Diagnosis (8 use cases)
 
     Chatbot triệu chứng thông minh
 
-    Upload và phân tích EMR
+    Upload EMR (PDF / JPG / PNG)
 
-    Phân loại mức độ khẩn cấp
+    OCR & phân tích nội dung EMR
 
-    Đề xuất bác sĩ phù hợp
+    Phân loại mức độ nghiêm trọng (Severe / Moderate / Mild / Emergency)
+
+    Đề xuất chuyên khoa phù hợp
+
+    Đề xuất bác sĩ phù hợp theo AI scoring
+
+    Lưu & xem lại kết quả triage (bản Patient)
 
 Appointment Management (12 use cases)
 
     Tìm kiếm và đặt lịch bác sĩ
 
-    Quản lý lịch trình
+    Xem lịch trống của bác sĩ
 
-    Hủy và hoàn tiền lịch hẹn
+    Đặt lịch khám
 
-    Thông báo và nhắc nhở
+    Thanh toán buổi khám
+
+    Nhận xác nhận lịch hẹn
+
+    Xem danh sách lịch hẹn
+
+    Hủy lịch bởi bệnh nhân
+
+    Hoàn tiền tự động tới 80%
+
+    Thông báo lịch hẹn (push/email)
+
+    Nhắc nhở trước buổi khám
 
 Medical Records (EMR) (9 use cases)
 
-    Timeline lịch sử khám bệnh
+    Xem timeline bệnh án
 
-    Quản lý đơn thuốc điện tử
+    Xem chi tiết từng lần khám
 
-    Lưu trữ file y tế
+    Xem đơn thuốc điện tử
+    
+    Cập nhật EMR sau buổi khám
 
-    Cập nhật hồ sơ sau khám
+    Lưu đơn thuốc số
 
-Payment & Financial (8 use cases)
+    Tải xuống hồ sơ
 
-    Ví MEDIX và nạp/rút tiền
+Payment & Financial Services (8 use cases)
 
-    Đa phương thức thanh toán
+    Ví MEDIX
 
-    Quản lý hoàn tiền
+    Nạp tiền vào ví
 
-    Mã giảm giá và khuyến mãi
+    Thanh toán buổi khám
+
+    Theo dõi lịch sử giao dịch
+
+    Hoàn tiền lịch khám
+
+    Rút/hoàn tiền về ví
+
+    Mã giảm giá
 
 Doctor Management (15 use cases)
 
     Đăng ký và xét duyệt bác sĩ
 
+    Upload chứng chỉ & hồ sơ chuyên môn
+
     Quản lý lịch làm việc
+
+    Tạo – chỉnh sửa – xoá schedule
+
+    Xem danh sách lịch hẹn
+
+    Chuẩn bị hồ sơ bệnh án
+
+    Hoàn thành buổi khám
 
     Gói dịch vụ và quảng cáo
 
     Phân tích thu nhập
 
+    Xem báo cáo hiệu suất
+
 Content & CMS (7 use cases)
+
+    Quản lý danh mục bài viết
 
     Quản lý bài viết sức khỏe
 
-    Banner và landing page
+    Quản lý chuyên khoa
 
-    Chiến dịch marketing
+    Banner quảng cáo
+
+    Landing page content
+
+    Chi tiết hiển thị bài viết / chuyên khoa
 
 Reporting & Analytics (8 use cases)
 
     Báo cáo doanh thu
 
-    Phân tích hiệu suất
+    Báo cáo lịch hẹn
 
-    Thống kê người dùng
+    Phân tích hiệu suất bác sĩ
+
+    Thống kê người dùng mới
+
+    Báo cáo giao dịch tài chính
+
+    Dashboard phân tích tổng hợp
 
     Xuất báo cáo Excel
 

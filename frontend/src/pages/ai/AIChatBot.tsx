@@ -135,7 +135,7 @@ export const AIChatBot: React.FC = () => {
         const response = await aiChatService.uploadAndAnalyzeEMR({
           file, messages: getChatHistory(),
         });
-        response.timestamp = new Date(response.timestamp);
+        response.timestamp = new Date();
         response.sender = 'ai';
         setMessages(prev => [...prev, response]);
         addToMessageHistory({
@@ -210,9 +210,10 @@ export const AIChatBot: React.FC = () => {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+      e.stopPropagation();
       handleSendMessage();
     }
   };
@@ -486,7 +487,7 @@ export const AIChatBot: React.FC = () => {
         <textarea
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyDown}
           placeholder="Hãy đặt câu hỏi với Medix..."
           className={styles.textInput}
           rows={1}

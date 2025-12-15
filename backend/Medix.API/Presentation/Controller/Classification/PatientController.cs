@@ -51,6 +51,7 @@ namespace Medix.API.Presentation.Controller.Classification
                     patient.EmergencyContactName,
                     patient.EmergencyContactPhone,
                     patient.MedicalRecordNumber,
+                    patient.MedicalHistory,
           
                     Dob = patient.User.DateOfBirth?.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
                  

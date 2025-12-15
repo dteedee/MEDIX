@@ -129,7 +129,8 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
         const response = await aiChatService.uploadAndAnalyzeEMR({
           file, messages: getChatHistory(),
         });
-        response.timestamp = new Date(response.timestamp);
+        response.timestamp = new Date();
+        response.sender = 'ai';
         setMessages(prev => [...prev, response]);
         addToMessageHistory({
           id: new Date().toString(),
@@ -172,6 +173,7 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
 
       const response = await aiChatService.sendMessage(promptRequest);
       response.timestamp = new Date();
+      response.sender = 'ai';
       setMessages(prev => [...prev, response]);
 
       addToMessageHistory({
@@ -202,9 +204,10 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+      e.stopPropagation();
       handleSendMessage();
     }
   };
@@ -492,7 +495,7 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ isOpen, onClose }) => {
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             placeholder="Hãy đặt câu hỏi với Medix"
             className={styles.textInput}
             rows={1}

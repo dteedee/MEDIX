@@ -50,7 +50,7 @@ import { ManagerProfile } from './pages/manager/ManagerProfile';
 import { AdminProfile } from './pages/admin/AdminProfile';
 import DoctorDetails from './pages/doctor/DoctorDetails';
 import ScheduleManagement from './pages/doctor/ScheduleManagement';
-import MedicalRecordDetails from './pages/doctor/MedicalRecordDetails'; 
+import MedicalRecordDetails from './pages/doctor/MedicalRecordDetails';
 
 import ArticleManagement from './pages/manager/ArticleManagement';
 import BannerManagement from './pages/manager/BannerManagement';
@@ -103,7 +103,11 @@ export function App() {
                   <Route path="/doctor/register" element={<PublicRoute><DoctorRegister /></PublicRoute>} />
                 </Route>
 
-                <Route path="/change-password" element={<ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} />} />
+                <Route path="/change-password" element={
+                  <ProtectedRoute>
+                    <ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} />
+                  </ProtectedRoute>
+                } />
 
                 <Route path="/doctor/details/:username" element={<DoctorDetails />} />
 
@@ -118,13 +122,12 @@ export function App() {
                   <Route path="/articles" element={<ArticleReaderPage />} />
                   <Route path="/articles/:slug" element={<ArticleDetailPage />} />
                 </Route>
-
+                
                 <Route path="/ai-chat" element={<AIChatBot />} />
 
                 <Route path="/unauthorize" element={<Unauthorized />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
 
-                <Route path="/change-password" element={<ProtectedRoute><ChangePasswordModal isOpen={true} onClose={() => window.location.href = '/'} /></ProtectedRoute>} />
 
                 <Route path="/app" element={<MainLayout />}>
                   <Route path="dashboard" element={
@@ -133,7 +136,11 @@ export function App() {
                     </ProtectedRoute>
                   } />
 
-                  <Route path="admin/*" element={<AdminLayout />}>
+                  <Route path="admin/*" element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                      <AdminLayout />
+                    </ProtectedRoute>
+                  }>
                     <Route index element={<AdminDashboard />} />
                     <Route path="dashboard" element={<AdminDashboard />} />
                     <Route path="profile" element={<AdminProfile />} />
@@ -147,7 +154,7 @@ export function App() {
                   <Route path="manager/*" element={
                     <ProtectedRoute requiredRoles={[UserRole.MANAGER, UserRole.ADMIN]}>
                       <ManagerLayout />
-                     </ProtectedRoute>
+                    </ProtectedRoute>
                   }>
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard" element={<ManageDashboard />} />
@@ -160,7 +167,7 @@ export function App() {
                     <Route path="commissions" element={<CommissionManagement />} />
                     <Route path="feedback" element={<FeedbackManagement />} />
                     <Route path="categories" element={<CategoryManagementPage />} />
-                    
+
                     <Route path="transfer-transactions" element={<TransferTransactions />} />
                     <Route path="promotions" element={<PromotionManagement />} />
                   </Route>
@@ -182,7 +189,9 @@ export function App() {
                   </Route>
 
                   <Route path="doctor/*" element={
+                    <ProtectedRoute requiredRoles={[UserRole.DOCTOR]}>
                       <DoctorLayout />
+                    </ProtectedRoute>
                   }>
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard" element={<DoctorDashboard />} />
@@ -196,15 +205,6 @@ export function App() {
                     <Route path="medical-records/:appointmentId" element={<MedicalRecordDetails />} />
                   </Route>
 
-                <Route path="articles" element={<Navigate to="/articles" replace />} />
-                <Route path="articles/:slug" element={<ArticleDetailPage />} />
-
-                  <Route path="ai-chat" element={
-                    <ProtectedRoute>
-                      <AIChatBot />
-                    </ProtectedRoute>
-                  } />
-
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Routes>
@@ -217,9 +217,9 @@ export function App() {
 }
 
 const DashboardRedirect: React.FC = () => {
-  const { user } = useAuth(); 
+  const { user } = useAuth();
 
-  switch (user?.role) { 
+  switch (user?.role) {
     case UserRole.ADMIN:
       return <Navigate to="/app/admin" replace />;
     case UserRole.MANAGER:

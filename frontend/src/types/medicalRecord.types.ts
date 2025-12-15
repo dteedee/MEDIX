@@ -80,8 +80,15 @@ export interface MedicalRecordDetail {
   date: string;
   doctor: string;
   chiefComplaint: string;
+  physicalExamination: string;
   diagnosis: string;
+  assessmentNotes: string;
   treatmentPlan: string;
+  doctorNotes: string;
+  followUpInstructions: string;
+  medicalHistory?: string;
+  allergies?: string;
+  diseaseHistory?: string;
   prescription: PrescriptionDto[];
   attatchments: AttatchmentDto[];
 }

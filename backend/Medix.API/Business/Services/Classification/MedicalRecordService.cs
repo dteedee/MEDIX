@@ -341,10 +341,17 @@ namespace Medix.API.Business.Services.Classification
                         column.Item().Text("2. Thông tin y tế")
                             .FontSize(14)
                             .Bold();
+                        var gender ="";
 
-                        column.Item().Text($"Mã số EMR: {patient.MedicalRecordNumber}");
+                     if(user.GenderCodeNavigation!.Code == "Male") { gender = "Nam"; }
+                        else if (user.GenderCodeNavigation!.Code == "Female")
+                        {
+                            gender = "Nữ";
+                        } else { gender = "Khác"; }
+
+                            column.Item().Text($"Mã số EMR: {patient.MedicalRecordNumber}");
                         column.Item().Text($"Ngày sinh: {user.DateOfBirth!.Value:dd/MM/yyyy}");
-                        column.Item().Text($"Giới tính: {user.GenderCodeNavigation!.DisplayName}");
+                        column.Item().Text($"Giới tính: {gender}");
                         column.Item().Text($"Nhóm máu: {patient.BloodTypeCode}");
                         column.Item().Text($"Dị ứng: {patient.Allergies}");
 

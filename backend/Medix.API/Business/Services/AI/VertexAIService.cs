@@ -1,343 +1,13 @@
 ﻿using Google.Cloud.AIPlatform.V1;
 using Google.Protobuf.WellKnownTypes;
-using Medix.API.Business.Helper;
 using Medix.API.Business.Interfaces.AI;
 using Medix.API.Models.DTOs.AIChat;
-using System.Text;
-using System.Text.Json;
 using Value = Google.Protobuf.WellKnownTypes.Value;
-using Constant = Medix.API.Business.Helper.RequestTypeConstants;
 
 namespace Medix.API.Business.Services.AI
 {
     public class VertexAIService : IVertexAIService
     {
-        private static readonly Struct SymptomAnalysisStruct = new Struct
-        {
-            Fields =
-            {
-                { "UserResponseText", Value.ForStruct(new Struct
-                    {
-                        Fields =
-                        {
-                            { "type", Value.ForString("string") },
-                            { "description", Value.ForString("Đưa ra phản hồi tự nhiên, bao gồm chẩn đoán/câu hỏi tiếp theo. " +
-                                "Phản hồi phải đi kèm với 3 tình trạng có khả năng xảy ra cao nhất và tỉ lệ phần trăm tương ứng, " +
-                                "mỗi khả năng nằm trên 1 dòng.") }
-                        }
-                    })
-                },
-                { "SessionId", Value.ForStruct(new Struct
-                    {
-                        Fields =
-                        {
-                            { "type", Value.ForString("string") },
-                            { "description", Value.ForString("Một chuỗi định danh duy nhất cho phiên phân tích triệu chứng hiện tại.") }
-                        }
-                    })
-                },
-                { "SymptomsProvided", Value.ForStruct(new Struct
-                    {
-                        Fields =
-                        {
-                            { "type", Value.ForString("array") },
-                            { "description", Value.ForString("Mảng các triệu chứng mà người dùng đã cung cấp để phân tích.") },
-                            { "items", Value.ForStruct(new Struct
-                                {
-                                    Fields =
-                                    {
-                                        { "type", Value.ForString("string") }
-                                    }
-                                })
-                            }
-                        }
-                    })
-                },
-                { "SeverityLevelCode", Value.ForStruct(new Struct
-                    {
-                        Fields =
-                        {
-                            { "type", Value.ForString("string") },
-                            { "description", Value.ForString("Mức độ nghiêm trọng của các triệu chứng được cung cấp bởi người dùng.") },
-                            { "enum", Value.ForList(
-                                        Value.ForString("Mild"),
-                                        Value.ForString("Moderate"),
-                                        Value.ForString("Severe"))
-                            }
-                        }
-                    })
-                },
-                { "PossibleConditions", Value.ForStruct(new Struct
-                    {
-                        Fields =
-                        {
-                            { "type", Value.ForString("string") },
-                            { "description", Value.ForString("Các tình trạng y tế có thể xảy ra dựa trên các triệu chứng được cung cấp hoặc 'CHƯA KẾT LUẬN' hoặc 'TỪ CHỐI'.") },
-                        }
-                    })
-                },
-                { "RecommendedAction", Value.ForStruct(new Struct
-                    {
-                        Fields =
-                        {
-                            { "type", Value.ForString("string") },
-                            { "description", Value.ForString("Hành động được đề xuất cho người dùng dựa trên phân tích triệu chứng.") },
-                        }
-                    })
-                },
-                { "ConfidenceScore", Value.ForStruct(new Struct
-                    {
-                        Fields =
-                        {
-                            { "type", Value.ForString("number") },
-                            { "description", Value.ForString("Điểm số độ tin cậy từ 0 đến 1 cho phân tích triệu chứng được cung cấp.") },
-                        }
-                    })
-                },
-                { "IsConclusionReached", Value.ForStruct(new Struct
-                    {
-                        Fields =
-                        {
-                            { "type", Value.ForString("boolean") },
-                            { "description", Value.ForString("true khi ConfidenceScore >=80% hoặc có 1 loại bệnh có khả năng xảy ra trên 80%.") },
-                        }
-                    })
-                },
-                { "IsRequestRejected", Value.ForStruct(new Struct
-                    {
-                        Fields =
-                        {
-                            { "type", Value.ForString("boolean") },
-                            { "description", Value.ForString("Cờ boolean cho biết liệu yêu cầu có bị từ chối vì không liên quan đến sức khỏe hay không.") },
-                        }
-                    })
-                }
-            }
-        };
-
-        private static readonly Value SymptomAnalysisJsonSchema = Value.ForStruct(new Struct
-        {
-            Fields =
-            {
-                { "type", Value.ForString("object") },
-                { "properties", Value.ForStruct(SymptomAnalysisStruct)},
-                { "required", Value.ForList(
-                        Value.ForString("UserResponseText"),
-                        Value.ForString("SessionId"),
-                        Value.ForString("SymptomsProvided"),
-                        Value.ForString("SeverityLevelCode"),
-                        Value.ForString("PossibleConditions"),
-                        Value.ForString("RecommendedAction"),
-                        Value.ForString("ConfidenceScore"),
-                        Value.ForString("IsConclusionReached"),
-                        Value.ForString("IsRequestRejected")
-                    )
-                }
-            }
-        });
-
-        private static readonly Struct MedicineStruct = new Struct
-        {
-            Fields =
-            {
-                { "List", Value.ForStruct(new Struct
-                    {
-                        Fields =
-                        {
-                            { "type", Value.ForString("array") },
-                            { "description", Value.ForString("Danh sách các loại thuốc được đề xuất.") },
-                            { "items", Value.ForStruct(new Struct
-                                {
-                                    Fields =
-                                    {
-                                        { "type", Value.ForString("object") },
-                                        { "properties", Value.ForStruct(new Struct
-                                            {
-                                                Fields =
-                                                {
-                                                    { "Name", Value.ForStruct(new Struct
-                                                        {
-                                                            Fields =
-                                                            {
-                                                                { "type", Value.ForString("string") },
-                                                                { "description", Value.ForString("Tên của loại thuốc được đề xuất.") }
-                                                            }
-                                                        })
-                                                    },
-                                                    { "Instructions", Value.ForStruct(new Struct
-                                                        {
-                                                            Fields =
-                                                            {
-                                                                { "type", Value.ForString("string") },
-                                                                { "description", Value.ForString("Hướng dẫn sử dụng cho loại thuốc được đề xuất.") }
-                                                            }
-                                                        })
-                                                    }
-                                                }
-                                            })
-                                        }
-                                    }
-                                })
-                            }
-                        }
-                    })
-                }
-            }
-        };
-
-        private static readonly Value MedicineJsonSchema = Value.ForStruct(new Struct
-        {
-            Fields =
-            {
-                { "type", Value.ForString("object") },
-                { "properties", Value.ForStruct(MedicineStruct)},
-                { "required", Value.ForList(
-                        Value.ForString("List")
-                    )
-                }
-            }
-        });
-
-        private static readonly Struct DoctorsStruct = new Struct
-        {
-            Fields =
-            {
-                { "IdList", Value.ForStruct(new Struct
-                    {
-                        Fields =
-                        {
-                            { "type", Value.ForString("array") },
-                            { "description", Value.ForString("Danh sách ID của các bác sĩ được đề xuất.") },
-                            { "items", Value.ForStruct(new Struct
-                                {
-                                    Fields =
-                                    {
-                                        { "type", Value.ForString("string") },
-                                        { "description", Value.ForString("ID của bác sĩ được đề xuất.") }
-                                    }
-                                })
-                            }
-                        }
-                    })
-                },
-            }
-        };
-
-        private static readonly Value DoctorsJsonSchema = Value.ForStruct(new Struct
-        {
-            Fields =
-            {
-                { "type", Value.ForString("object") },
-                { "properties", Value.ForStruct(DoctorsStruct)},
-                { "required", Value.ForList(
-                        Value.ForString("IdList")
-                    )
-                }
-            }
-        });
-
-        private static readonly Struct RequestTypeStruct = new Struct
-        {
-            Fields =
-            {
-                { "RequestType", Value.ForStruct(new Struct
-                    {
-                        Fields =
-                        {
-                            { "type", Value.ForString("string") },
-                            { "description", Value.ForString($"Loại yêu cầu : " +
-                                $"'{Constant.SymptomAnalysis}', " +
-                                $"'{Constant.DoctorsQuery}', " +
-                                $"'{Constant.ArticlesQuery}', " +
-                                $"' {Constant.NotHealthRelated} ', ") },
-                            { "enum", Value.ForList(
-                                        Value.ForString($"{Constant.SymptomAnalysis}"),
-                                        Value.ForString($"{Constant.DoctorsQuery}"),
-                                        Value.ForString($"{Constant.ArticlesQuery}"),
-                                        Value.ForString($"{Constant.NotHealthRelated}"))
-                            }
-                        }
-                    })
-                }
-            }
-        };
-
-        private static readonly Value RequestTypeJsonSchema = Value.ForStruct(new Struct
-        {
-            Fields =
-            {
-                { "type", Value.ForString("object") },
-                { "properties", Value.ForStruct(RequestTypeStruct)},
-                { "required", Value.ForList(
-                        Value.ForString("RequestType")
-                    )
-                }
-            }
-        });
-
-        private static readonly Struct ArticlesStruct = new Struct
-        {
-            Fields =
-            {
-                { "IdList", Value.ForStruct(new Struct
-                    {
-                        Fields =
-                        {
-                            { "type", Value.ForString("array") },
-                            { "description", Value.ForString("Danh sách ID của các bài viết được đề xuất.") },
-                            { "items", Value.ForStruct(new Struct
-                                {
-                                    Fields =
-                                    {
-                                        { "type", Value.ForString("string") },
-                                        { "description", Value.ForString("ID của bài viết được đề xuất.") }
-                                    }
-                                })
-                            }
-                        }
-                    })
-                },
-            }
-        };
-
-        private static readonly Value ArticlesJsonSchema = Value.ForStruct(new Struct
-        {
-            Fields =
-            {
-                { "type", Value.ForString("object") },
-                { "properties", Value.ForStruct(ArticlesStruct)},
-                { "required", Value.ForList(
-                        Value.ForString("IdList")
-                    )
-                }
-            }
-        });
-
-        private static readonly string SymptomAnalsysisInstructionText =
-            "Bạn là trợ lý hỗ trợ sức khỏe chuyên biệt. MỤC ĐÍCH DUY NHẤT của bạn là đưa ra chẩn đoán phân biệt hoặc trả lời các câu hỏi liên quan đến triệu chứng, " +
-                "bệnh tật và các khái niệm sức khỏe dựa trên dữ liệu đào tạo chuyên môn của bạn." +
-            "Cung cấp hành động được đề xuất và điểm số độ tin cậy cho phân tích của bạn. " +
-            "Nếu các triệu chứng không liên quan đến sức khỏe, hãy từ chối yêu cầu một cách lịch sự. " +
-            "Trả lời chỉ với một đối tượng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
-
-        private static readonly string EMRAnalysisInstructionText =
-            "Bạn là một chuyên gia y tế ảo được thiết kế để giúp người dùng phân tích hồ sơ bệnh án điện tử (EMR) bằng Tiếng Việt. " +
-            "Dựa trên nội dung của hồ sơ bệnh án, hãy đánh giá các triệu chứng được mô tả, xác định mức độ nghiêm trọng và đưa ra các tình trạng y tế có thể xảy ra. " +
-            "Cung cấp hành động được đề xuất và điểm số độ tin cậy cho phân tích của bạn. " +
-            "Nếu hồ sơ bệnh án không liên quan đến sức khỏe, hãy từ chối yêu cầu một cách lịch sự. " +
-            "Trả lời chỉ với một đối tượng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
-
-        private static readonly string MedicineRecommendationInstructionText =
-            "Bạn là một chuyên gia y tế ảo được thiết kế để giúp người dùng bằng cách đề xuất các loại thuốc phù hợp dựa trên các triệu chứng sức khỏe của họ bằng Tiếng Việt. " +
-            "Dựa trên các triệu chứng được cung cấp, hãy đề xuất các loại thuốc phù hợp cùng với hướng dẫn sử dụng. " +
-            "Trả lời chỉ với một mảng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
-
-        private static readonly string RequestTypeInstructionText =
-            "Bạn là một trợ lý hỗ trợ sức khỏe chuyên biệt. MỤC ĐÍCH DUY NHẤT của bạn là phân loại các yêu cầu của người dùng thành một trong các loại sau: " +
-            "'SymptomAnalysis', 'DoctorQuery', 'ArticlesQuery', 'NotHealthRelated'. " +
-            "Nếu yêu cầu không liên quan đến sức khỏe, hãy phân loại nó là 'NotHealthRelated'. " +
-            "Trả lời chỉ với một đối tượng JSON tuân theo định dạng đã cho, không có văn bản bổ sung nào khác.";
-
         private readonly PredictionServiceClient _client;
         private readonly IConfiguration _configuration;
 
@@ -357,8 +27,24 @@ namespace Medix.API.Business.Services.AI
             ModelResourceName = $"projects/{project}/locations/{location}/publishers/google/models/{model}";
         }
 
-        private async Task<string> GetResponseAsync(List<Content> contents, Value jsonSchema, string? systemInstruction = null)
+        public async Task<string> GetResponseAsync
+            (string prompt, List<AIChatMessageDto> conversationHistory, ResponseSchema responseSchema, string? systemInstruction = null)
         {
+            var contents = GetContents(conversationHistory);
+            var jsonSchema = GetResponseSchema(responseSchema);
+
+            contents.Add(new()
+            {
+                Role = "user",
+                Parts =
+                    {
+                        new Part
+                        {
+                            Text = prompt
+                        }
+                    }
+            });
+
             var request = new GenerateContentRequest
             {
                 Model = ModelResourceName,
@@ -390,157 +76,15 @@ namespace Medix.API.Business.Services.AI
             return generatedText;
         }
 
-        public async Task<string> GetRequestTypeAsync(string prompt)
+        private List<Content> GetContents(List<AIChatMessageDto> history)
         {
-            var contents = new List<Content> {
-                new() {
-                    Role = "user",
-                    Parts =
-                    {
-                        new Part
-                        {
-                            Text = prompt
-                        }
-                    }
-                }
-            };
-            var responseText = await GetResponseAsync(contents, RequestTypeJsonSchema, RequestTypeInstructionText);
-            var requestTypeObj = JsonSerializer.Deserialize<PromptRequestType>(responseText);
-            return requestTypeObj?.RequestType ?? "NotHealthRelated";
-        }
+            var contents = new List<Content>();
 
-        public async Task<DiagnosisModel> GetSymptompAnalysisAsync(string prompt, string? context, List<AIChatMessageDto> history)
-        {
-            var systemInstruction = GetSymptomInstruction(context);
-            var contents = GetConversationHistory(history);
-            contents.Add(new Content
-            {
-                Role = "user",
-                Parts =
-                {
-                    new Part
-                    {
-                        Text = prompt
-                    }
-                }
-            });
-
-            var responseText = await GetResponseAsync(contents, SymptomAnalysisJsonSchema, systemInstruction);
-            return AIResponseParser.ParseJson(responseText);
-        }
-
-        public async Task<DiagnosisModel> GetEMRAnalysisAsync(string emrText, string? context, List<AIChatMessageDto> history)
-        {
-            var systemInstruction = GetEMRAnalysisInstruction(context);
-            var contents = GetConversationHistory(history);
-            contents.Add(new Content
-            {
-                Role = "user",
-                Parts =
-                {
-                    new Part
-                    {
-                        Text = emrText
-                    }
-                }
-            });
-
-            var responseText = await GetResponseAsync(contents, SymptomAnalysisJsonSchema, systemInstruction);
-            return AIResponseParser.ParseJson(responseText);
-        }
-
-        public async Task<List<MedicineDto>> GetRecommendedMedicinesAsync(string possibleConditions)
-        {
-            var contents = new List<Content> {
-                new() {
-                    Role = "user",
-                    Parts =
-                    {
-                        new Part
-                        {
-                            Text = possibleConditions
-                        }
-                    }
-                }
-            };
-
-            var responseText = await GetResponseAsync(contents, MedicineJsonSchema, MedicineRecommendationInstructionText);
-            var medicines = JsonSerializer.Deserialize<RecommendedMedicineList>(responseText);
-            return medicines?.List ?? [];
-        }
-
-        public async Task<List<string>> GetRecommendedDoctorIdsByDiagnosisAsync
-            (string diagnosis, int count, string doctorListString)
-        {
-            var prompt = "Dựa trên danh sách bác sĩ sau đây:\n" +
-                         $"{doctorListString}\n" +
-                         $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân với chẩn đoán bệnh: '{diagnosis}'. ";
-            return await GetRecommendedDoctorIdsAsync(prompt, [], null);
-        }
-
-        public async Task<List<string>> GetRecommendedDoctorIdsByPromptAsync
-            (string userPrompt, int count, string doctorListString, List<AIChatMessageDto> conversationHistory)
-        {
-            var systemInstruction = "Danh sách bác sĩ:\n" +
-                         $"{doctorListString}\n" +
-                         $"Hãy đề xuất {count} bác sĩ phù hợp nhất cho bệnh nhân dựa trên cuộc trò chuyện.";
-            return await GetRecommendedDoctorIdsAsync(userPrompt, GetConversationHistory(conversationHistory), systemInstruction);
-        }
-
-        private async Task<List<string>> GetRecommendedDoctorIdsAsync
-            (string prompt, List<Content> contents, string? systemInstruction = null)
-        {
-            contents.Add(
-                new Content
-                {
-                    Role = "user",
-                    Parts =
-                    {
-                        new Part
-                        {
-                            Text = prompt
-                        }
-                    }
-                }
-            );
-
-            var responseText = await GetResponseAsync(contents, DoctorsJsonSchema, systemInstruction);
-            var doctorIds = JsonSerializer.Deserialize<RecommenedDoctorIdList>(responseText);
-            return doctorIds?.IdList ?? [];
-        }
-
-        public async Task<List<string>> GetRecommendedArticleIdListAsync(string userPrompt, string articleListString, int count)
-        {
-            var systemInstruction = "Danh sách bài viết:\n" +
-                         $"{articleListString}\n" +
-                         $"Hãy đề xuất {count} bài viết phù hợp nhất cho bệnh nhân. ";
-            var contents = new List<Content>
-            {
-                new Content
-                {
-                    Role = "user",
-                    Parts =
-                    {
-                        new Part
-                        {
-                            Text = userPrompt
-                        }
-                    }
-                }
-            };
-            var responseText = await GetResponseAsync(contents, ArticlesJsonSchema, systemInstruction);
-            var articleIds = JsonSerializer.Deserialize<RecommendedArticleIdList>(responseText);
-            return articleIds?.IdList ?? [];
-        }
-
-        private List<Content> GetConversationHistory(List<AIChatMessageDto> history)
-        {
-            var conversationHistory = new List<Content>();
             foreach (var item in history)
             {
                 var content = new Content
                 {
-                    Role = item.Role,
+                    Role = item.Role == "user" ? "user" : "assistant",
                     Parts = {
                         new Part
                         {
@@ -548,32 +92,190 @@ namespace Medix.API.Business.Services.AI
                         },
                     }
                 };
-                conversationHistory.Add(content);
+                contents.Add(content);
             }
 
-            return conversationHistory;
+            return contents;
         }
 
-        private string GetSymptomInstruction(string? context)
+        private Value GetResponseSchema(ResponseSchema jsonSchema)
         {
-            var prompt = new StringBuilder();
-            prompt.AppendLine(SymptomAnalsysisInstructionText);
-            if (!string.IsNullOrEmpty(context))
+            var schemaStruct = new Struct();
+            foreach (var property in jsonSchema.Properties)
             {
-                prompt.AppendLine($"\nNgữ cảnh bổ sung: {context}");
+                var field = GetField(property);
+                schemaStruct.Fields.Add(field);
             }
-            return prompt.ToString();
+
+            return Value.ForStruct(new Struct
+            {
+                Fields =
+                {
+                    { "type", Value.ForString("object") },
+                    { "properties", Value.ForStruct(schemaStruct)},
+                    { "required", Value.ForList(jsonSchema.Properties.Select(p => Value.ForString(p.Name)).ToArray()) }
+                }
+            });
         }
 
-        private string GetEMRAnalysisInstruction(string? context)
+        private Dictionary<string, Value> GetField(SchemaProperty property)
         {
-            var prompt = new StringBuilder();
-            prompt.AppendLine(EMRAnalysisInstructionText);
-            if (!string.IsNullOrEmpty(context))
+            var value = GetPropertyAsValue(property);
+
+            return new Dictionary<string, Value> {
+                { property.Name, value }
+            };
+        }
+
+        private Value GetPropertyAsValue(SchemaProperty property)
+        {
+            return property.Type switch
             {
-                prompt.AppendLine($"\nNgữ cảnh bổ sung: {context}");
+                SchemaPropertyType.String => GetStringPropertyAsValue(property),
+                SchemaPropertyType.Array => GetArrayPropertyAsValue(property),
+                SchemaPropertyType.Enum => GetEnumPropertyAsValue(property),
+                SchemaPropertyType.Number => GetNumberPropertyAsValue(property),
+                SchemaPropertyType.Boolean => GetBooleanPropertyAsValue(property),
+                SchemaPropertyType.Object => GetObjectPropertyAsValue(property),
+                _ => new Value(),
+            };
+        }
+
+        private Value GetStringPropertyAsValue(SchemaProperty property)
+        {
+            return Value.ForStruct(new Struct
+            {
+                Fields =
+                    {
+                        { "type", Value.ForString("string") },
+                        { "description", Value.ForString(property.Description) }
+                    }
+            });
+        }
+
+        private Value GetArrayPropertyAsValue(SchemaProperty property)
+        {
+            var arrayItem = property.Value as SchemaProperty;
+
+            return Value.ForStruct(new Struct
+            {
+                Fields =
+                    {
+                        { "type", Value.ForString("array") },
+                        { "description", Value.ForString(property.Description) },
+                        { "items", GetPropertyAsValue(arrayItem!) },
+                    }
+            });
+        }
+
+        private Value GetEnumPropertyAsValue(SchemaProperty property)
+        {
+            var propertyStruct = new Struct();
+            propertyStruct.Fields.Add(new Dictionary<string, Value>
+            {
+                { "description", Value.ForString(property.Description) },
+            });
+
+            var enumValue = property.Value as EnumPropertyValue;
+            var enumItems = enumValue?.Type switch
+            {
+                EnumPropertyType.String => GetStringEnumValues(enumValue),
+                EnumPropertyType.Number => GetNumberEnumValues(enumValue),
+                EnumPropertyType.Boolean => GetBooleanEnumValues(enumValue),
+                _ => [],
+            };
+
+            propertyStruct.Fields.Add(enumItems);
+            return Value.ForStruct(propertyStruct);
+        }
+
+        private Value GetNumberPropertyAsValue(SchemaProperty property)
+        {
+            return Value.ForStruct(new Struct
+            {
+                Fields =
+                    {
+                        { "type", Value.ForString("number") },
+                        { "description", Value.ForString(property.Description) }
+                    }
+            });
+        }
+
+        private Value GetBooleanPropertyAsValue(SchemaProperty property)
+        {
+            return Value.ForStruct(new Struct
+            {
+                Fields =
+                    {
+                        { "type", Value.ForString("boolean") },
+                        { "description", Value.ForString(property.Description) }
+                    }
+            });
+        }
+
+        private Value GetObjectPropertyAsValue(SchemaProperty property)
+        {
+            var objectFields = (property.Value as SchemaProperty[]) ?? [];
+            var propertyStruct = new Struct();
+            var propertyFieldStruct = new Struct();
+
+            propertyStruct.Fields.Add(new Dictionary<string, Value>
+            {
+                { "types", Value.ForString("object") },
+                { "description", Value.ForString(property.Description) },
+            });
+
+            foreach (var field in objectFields)
+            {
+                var fieldValue = GetPropertyAsValue(field);
+                propertyFieldStruct.Fields.Add(new Dictionary<string, Value>
+                {
+                    { field.Name, fieldValue },
+                });
             }
-            return prompt.ToString();
+
+            propertyStruct.Fields.Add(new Dictionary<string, Value>
+            {
+                { "properties", Value.ForStruct(propertyFieldStruct)},
+            });
+
+            return Value.ForStruct(propertyStruct);
+        }
+
+        private Dictionary<string, Value> GetStringEnumValues(EnumPropertyValue property)
+        {
+            var values = property.Values as string[];
+            values ??= [];
+
+            return new Dictionary<string, Value>
+            {
+                { "type", Value.ForString("string") },
+                { "enum", Value.ForList(values.Select(v => Value.ForString(v)).ToArray()) },
+            };
+        }
+
+        private Dictionary<string, Value> GetNumberEnumValues(EnumPropertyValue property)
+        {
+            var values = property.Values as double[];
+            values ??= [];
+
+            return new Dictionary<string, Value>
+            {
+                { "type", Value.ForString("string") },
+                { "enum", Value.ForList(values.Select(v => Value.ForNumber(v)).ToArray()) },
+            };
+        }
+
+        private Dictionary<string, Value> GetBooleanEnumValues(EnumPropertyValue property)
+        {
+            var values = property.Values as bool[];
+            values ??= [];
+
+            return new Dictionary<string, Value>
+            {
+                { "type", Value.ForString("string") },
+                { "enum", Value.ForList(values.Select(v => Value.ForBool(v)).ToArray()) },
+            };
         }
     }
 }

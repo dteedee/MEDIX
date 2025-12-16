@@ -1656,7 +1656,7 @@ function DoctorDetails() {
                                                         <div className={styles.formGroup}>
                                                             <label htmlFor="historyOfPresentIllness" className={styles.formLabel}>
                                                                 <i className="bi bi-clock-history"></i>
-                                                                Quá trình bệnh lý diễn biến *
+                                                                Quá trình bệnh lý diễn biến <span className={styles.required}>*</span>
                                                             </label>
                                                             <textarea
                                                                 id="historyOfPresentIllness"

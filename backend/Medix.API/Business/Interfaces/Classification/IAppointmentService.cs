@@ -18,6 +18,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<IEnumerable<AppointmentDto>> GetByDoctorUserAndDateAsync(Guid userId, DateTime date);
         Task<IEnumerable<AppointmentDto>> GetByDoctorUserAndDateRangeAsync(Guid userId, DateTime startDate, DateTime endDate);
         Task<bool> IsDoctorBusyAsync(Guid doctorId, DateTime appointmentStartTime, DateTime appointmentEndTime);
+        Task<bool> IsPatientBusyAsync(Guid patientId, DateTime appointmentStartTime, DateTime appointmentEndTime);
 
         Task CheckisAppointmentCompleted(Guid id);
         Task<AppointmentTrendsDto> GetAppointmentTrendsAsync(Guid? doctorId, int year);

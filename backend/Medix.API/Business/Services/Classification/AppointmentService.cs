@@ -298,6 +298,32 @@ namespace Medix.API.Business.Services.Classification
 
             return _mapper.Map<List<AppointmentDto>>(conflictingAppointments);
         }
+
+
+        public async Task<bool> IsPatientBusyAsync(Guid doctorId, DateTime appointmentStartTime, DateTime appointmentEndTime)
+        {
+            var conflictingAppointments = await GetConflictingAppointmentsAsync(doctorId, appointmentStartTime, appointmentEndTime);
+
+            return conflictingAppointments.Any();
+        }
+
+        public async Task<List<AppointmentDto>> GetConflictingAppointmentsPatientAsync(
+Guid patientId,
+DateTime appointmentStartTime,
+DateTime appointmentEndTime)
+        {
+            var allAppointments = await _repository.GetByPatientAsync(patientId);
+
+            var conflictingAppointments = allAppointments.Where(a =>
+
+             (a.StatusCode == "BeforeAppoiment" || a.StatusCode == "OnProgressing") &&
+
+  appointmentStartTime < a.AppointmentEndTime &&
+        appointmentEndTime > a.AppointmentStartTime
+).ToList();
+
+            return _mapper.Map<List<AppointmentDto>>(conflictingAppointments);
+        }
         public async Task CheckisAppointmentCompleted(Guid id)
         {
             var appointment = await _repository.GetByIdAsync(id);

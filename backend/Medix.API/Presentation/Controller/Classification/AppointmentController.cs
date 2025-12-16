@@ -114,6 +114,19 @@ namespace Medix.API.Presentation.Controllers
             }
 
             var patient = await _patientService.GetByUserIdAsync(userId);
+
+            var isPatientBusy = await _service.IsPatientBusyAsync(
+                patient.Id,
+                dto.AppointmentStartTime.Value,
+                dto.AppointmentEndTime.Value
+            );
+            if (isPatientBusy)
+            {
+                return BadRequest(new
+                {
+                    message = "Quý khách đã có lịch hẹn trong khoảng thời gian này",
+                });
+            }
             var wallet = await _walletService.GetWalletByUserIdAsync(userId);
 
             if (wallet != null && wallet.Balance < dto.TotalAmount)

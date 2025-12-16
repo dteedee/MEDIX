@@ -910,7 +910,7 @@ function DoctorDetails() {
                     </li>
                     <li><span>|</span></li>
                     <li>
-                        <Link to="/app/articles" className={`${homeStyles["nav-link"]} ${location.pathname === '/app/articles' ? homeStyles["active"] : ''}`}>
+                        <Link to="/articles" className={`${homeStyles["nav-link"]} ${location.pathname === '/articles' ? homeStyles["active"] : ''}`}>
                             {t('nav.health-articles')}
                         </Link>
                     </li>

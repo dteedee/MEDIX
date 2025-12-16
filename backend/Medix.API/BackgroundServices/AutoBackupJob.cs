@@ -37,44 +37,57 @@ namespace Medix.API.BackgroundServices
                         var frequency = await configService.GetValueAsync<string>("AUTO_BACKUP_FREQUENCY") ?? "daily";
                         var backupTime = await configService.GetValueAsync<string>("AUTO_BACKUP_TIME") ?? "02:00";
                         var retentionDays = await configService.GetIntValueAsync("BACKUP_RETENTION_DAYS") ?? 30;
+                        var timezoneName = await configService.GetValueAsync<string>("BACKUP_TIMEZONE") ?? "SE Asia Standard Time";
+
+                        TimeSpan delayBeforeRun = TimeSpan.Zero;
 
                         if (runImmediately)
                         {
-                            _logger.LogInformation("Thực hiện backup ngay khi khởi động ứng dụng trước khi vào lịch.");
-                            await RunBackupPipelineAsync(backupService, retentionDays);
+                            _logger.LogInformation("Thực hiện backup ngay khi khởi động ứng dụng.");
                             runImmediately = false;
                         }
                         else
                         {
-                            var nextRun = CalculateNextRunTime(frequency, backupTime);
-                            var delay = nextRun - DateTime.UtcNow;
-
-                            if (delay.TotalMilliseconds < 0)
-                            {
-                                delay = TimeSpan.Zero;
-                            }
+                            // Tính toán thời gian chạy tiếp theo
+                            var nextRun = CalculateNextRunTime(frequency, backupTime, timezoneName);
+                            delayBeforeRun = nextRun - DateTime.UtcNow;
 
                             _logger.LogInformation(
-                                "AutoBackupJob sẽ chạy vào: {nextRun} (UTC). Đợi {hours} giờ {minutes} phút",
-                                nextRun, delay.Hours, delay.Minutes);
+                                "AutoBackupJob sẽ chạy vào: {nextRun} (UTC). Đợi {delayTotal:N0}ms ({hours}h {minutes}m {seconds}s)",
+                                nextRun, delayBeforeRun.TotalMilliseconds, delayBeforeRun.Hours, delayBeforeRun.Minutes, delayBeforeRun.Seconds);
 
-                            if (delay.TotalMilliseconds > 0)
+                            // Chờ cho đến khi đến giờ backup (nếu chưa đến)
+                            if (delayBeforeRun.TotalMilliseconds > 0)
                             {
-                                await Task.Delay(delay, stoppingToken);
+                                await Task.Delay(delayBeforeRun, stoppingToken);
                             }
-
-                            lock (_lockObject)
+                            else
                             {
-                                var timeSinceLastBackup = DateTime.UtcNow - _lastBackupTime;
-                                if (timeSinceLastBackup.TotalMinutes < 1)
-                                {
-                                    _logger.LogInformation("Backup was executed by another instance recently. Skipping this run.");
-                                    continue;
-                                }
+                                _logger.LogInformation("Backup time đã qua, chạy ngay bây giờ");
+                            }
+                        }
+
+                        // Thực thi backup
+                        lock (_lockObject)
+                        {
+                            var timeSinceLastBackup = DateTime.UtcNow - _lastBackupTime;
+                            if (timeSinceLastBackup.TotalMinutes < 1)
+                            {
+                                _logger.LogInformation("Backup was executed by another instance recently. Skipping this run.");
+                            }
+                            else
+                            {
                                 _lastBackupTime = DateTime.UtcNow;
+                                try
+                                {
+                                    // Chạy backup pipeline (có thể async nhưng không chặn)
+                                    _ = Task.Run(async () => await RunBackupPipelineAsync(backupService, retentionDays), stoppingToken);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex, "Lỗi khi bắt đầu backup pipeline");
+                                }
                             }
-
-                            await RunBackupPipelineAsync(backupService, retentionDays);
                         }
                     }
                     else
@@ -91,12 +104,12 @@ namespace Medix.API.BackgroundServices
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Lỗi trong AutoBackupJob");
-                    await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+                    await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
                 }
             }
         }
 
-        private DateTime CalculateNextRunTime(string frequency, string backupTime)
+        private DateTime CalculateNextRunTime(string frequency, string backupTime, string timezoneName = "SE Asia Standard Time")
         {
             var timeParts = backupTime.Split(':');
             if (timeParts.Length != 2 ||
@@ -107,44 +120,85 @@ namespace Medix.API.BackgroundServices
                 minute = 0;
             }
 
-            var now = DateTime.UtcNow;
-            var todayBackupTime = new DateTime(now.Year, now.Month, now.Day, hour, minute, 0);
-
-            switch (frequency.ToLower())
+            // Convert local time to UTC
+            try
             {
-                case "daily":
-                    if (now < todayBackupTime)
-                    {
-                        return todayBackupTime;
-                    }
-                    return todayBackupTime.AddDays(1);
+                var timezone = TimeZoneInfo.FindSystemTimeZoneById(timezoneName);
+                var now = DateTime.UtcNow;
+                var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(now, timezone);
+                
+                // Create backup time in local timezone for TODAY, then convert to UTC
+                var localBackupTimeToday = new DateTime(nowLocal.Year, nowLocal.Month, nowLocal.Day, hour, minute, 0);
+                var utcBackupTimeToday = TimeZoneInfo.ConvertTimeToUtc(localBackupTimeToday, timezone);
 
-                case "weekly":
-                    var daysUntilMonday = ((int)DayOfWeek.Monday - (int)now.DayOfWeek + 7) % 7;
-                    if (daysUntilMonday == 0 && now < todayBackupTime)
-                    {
-                        return todayBackupTime;
-                    }
-                    if (daysUntilMonday == 0)
-                    {
-                        daysUntilMonday = 7;
-                    }
-                    return todayBackupTime.AddDays(daysUntilMonday);
+                _logger.LogInformation(
+                    "CalculateNextRunTime - Now UTC: {Now:yyyy-MM-dd HH:mm:ss}, Now Local: {NowLocal:yyyy-MM-dd HH:mm:ss}, LocalBackupTime: {LocalBackup:yyyy-MM-dd HH:mm:ss}, UTCBackupTime: {UTCBackup:yyyy-MM-dd HH:mm:ss}, Timezone: {TZ}, Frequency: {Frequency}",
+                    now, nowLocal, localBackupTimeToday, utcBackupTimeToday, timezoneName, frequency);
 
-                case "monthly":
-                    var firstOfMonth = new DateTime(now.Year, now.Month, 1, hour, minute, 0);
-                    if (now < firstOfMonth)
-                    {
-                        return firstOfMonth;
-                    }
-                    return firstOfMonth.AddMonths(1);
+                switch (frequency.ToLower())
+                {
+                    case "daily":
+                        if (now < utcBackupTimeToday)
+                        {
+                            _logger.LogInformation("Daily: Backup time not reached today, next run: {NextRun:yyyy-MM-dd HH:mm:ss} UTC", utcBackupTimeToday);
+                            return utcBackupTimeToday;
+                        }
+                        var nextDay = utcBackupTimeToday.AddDays(1);
+                        _logger.LogInformation("Daily: Backup time passed, next run tomorrow: {NextRun:yyyy-MM-dd HH:mm:ss} UTC", nextDay);
+                        return nextDay;
 
-                default:
-                    if (now < todayBackupTime)
-                    {
-                        return todayBackupTime;
-                    }
-                    return todayBackupTime.AddDays(1);
+                    case "weekly":
+                        var currentDayOfWeek = nowLocal.DayOfWeek;
+                        var daysUntilMonday = ((int)DayOfWeek.Monday - (int)currentDayOfWeek + 7) % 7;
+                        
+                        if (daysUntilMonday == 0)
+                        {
+                            if (now < utcBackupTimeToday)
+                            {
+                                _logger.LogInformation("Weekly: Monday, time not reached, next run: {NextRun:yyyy-MM-dd HH:mm:ss} UTC", utcBackupTimeToday);
+                                return utcBackupTimeToday;
+                            }
+                            var nextMonday = utcBackupTimeToday.AddDays(7);
+                            _logger.LogInformation("Weekly: Monday, time passed, next run: {NextRun:yyyy-MM-dd HH:mm:ss} UTC", nextMonday);
+                            return nextMonday;
+                        }
+                        
+                        var localMondayThisWeek = new DateTime(nowLocal.Year, nowLocal.Month, nowLocal.Day, hour, minute, 0).AddDays(daysUntilMonday);
+                        var mondayThisWeek = TimeZoneInfo.ConvertTimeToUtc(localMondayThisWeek, timezone);
+                        _logger.LogInformation("Weekly: Next Monday: {NextRun:yyyy-MM-dd HH:mm:ss} UTC", mondayThisWeek);
+                        return mondayThisWeek;
+
+                    case "monthly":
+                        var firstOfMonthLocal = new DateTime(nowLocal.Year, nowLocal.Month, 1, hour, minute, 0);
+                        var utcFirstOfMonth = TimeZoneInfo.ConvertTimeToUtc(firstOfMonthLocal, timezone);
+                        
+                        if (now < utcFirstOfMonth)
+                        {
+                            _logger.LogInformation("Monthly: First of month not reached, next run: {NextRun:yyyy-MM-dd HH:mm:ss} UTC", utcFirstOfMonth);
+                            return utcFirstOfMonth;
+                        }
+                        var nextMonth = utcFirstOfMonth.AddMonths(1);
+                        _logger.LogInformation("Monthly: First of month passed, next run: {NextRun:yyyy-MM-dd HH:mm:ss} UTC", nextMonth);
+                        return nextMonth;
+
+                    default:
+                        if (now < utcBackupTimeToday)
+                        {
+                            return utcBackupTimeToday;
+                        }
+                        return utcBackupTimeToday.AddDays(1);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error with timezone {TZ}, falling back to UTC", timezoneName);
+                // Fallback to UTC if timezone not found
+                var now = DateTime.UtcNow;
+                var todayBackupTime = new DateTime(now.Year, now.Month, now.Day, hour, minute, 0);
+                
+                if (now < todayBackupTime)
+                    return todayBackupTime;
+                return todayBackupTime.AddDays(1);
             }
         }
 
@@ -152,31 +206,45 @@ namespace Medix.API.BackgroundServices
             IBackupService backupService,
             int retentionDays)
         {
+            _logger.LogInformation("=== START RunBackupPipelineAsync ===");
+            _logger.LogInformation("Current UTC time: {UtcNow}", DateTime.UtcNow);
+            
             try
             {
-                _logger.LogInformation("Bắt đầu tạo backup toàn bộ database (.bak)...");
-                var backupLabel = $"auto-backup-{DateTime.UtcNow:yyyyMMdd_HHmmss}";
+                _logger.LogInformation("[1/3] Bắt đầu tạo backup toàn bộ database (.bak)...");
+                var backupLabel = $"db-backup-{DateTime.UtcNow:yyyyMMdd_HHmmss}";
+                _logger.LogInformation("Backup label: {BackupLabel}", backupLabel);
+                
                 var backup = await backupService.CreateBackupAsync(backupLabel, "system");
-                _logger.LogInformation("Đã tạo backup database tại: {Path}", backup.FilePath);
+                
+                _logger.LogInformation("[1/3] SUCCESS - Đã tạo backup database");
+                _logger.LogInformation("  - Path: {Path}", backup.FilePath);
+                _logger.LogInformation("  - Size: {Size} bytes", backup.FileSize);
+                _logger.LogInformation("  - Created: {CreatedAt}", backup.CreatedAt);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Không thể tạo backup database");
+                _logger.LogError(ex, "[1/3] FAILED - Không thể tạo backup database");
+                _logger.LogError("Exception Type: {ExceptionType}", ex.GetType().FullName);
+                _logger.LogError("Exception Message: {Message}", ex.Message);
+                _logger.LogError("Stack Trace: {StackTrace}", ex.StackTrace);
                 return;
             }
 
+            // Xóa tất cả backup cũ, chỉ giữ bản mới nhất
             try
             {
-                var deletedCount = await backupService.CleanupOldBackupsAsync(retentionDays);
-                if (deletedCount > 0)
-                {
-                    _logger.LogInformation("Đã xóa {DeletedCount} bản backup cũ", deletedCount);
-                }
+                _logger.LogInformation("[2/3] Dọn dẹp backup cũ - chỉ giữ bản mới nhất...");
+                var deletedCount = await backupService.CleanupOldBackupsAsync(0); // 0 = keep only latest
+                _logger.LogInformation("[2/3] SUCCESS - Đã xóa {DeletedCount} bản backup cũ", deletedCount);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Lỗi khi dọn dẹp backup cũ");
+                _logger.LogWarning(ex, "[2/3] FAILED - Lỗi khi dọn dẹp backup cũ");
+                _logger.LogWarning("Exception: {Message}", ex.Message);
             }
+            
+            _logger.LogInformation("=== END RunBackupPipelineAsync ===");
         }
     }
 }

@@ -37,19 +37,19 @@ function HomePage() {
         const fetchBanners = async () => {
             try {
                 const allBanners = await bannerService.getAll({ page: 1, pageSize: 9999 });
-                
+
                 const today = new Date();
-                today.setHours(0, 0, 0, 0); 
+                today.setHours(0, 0, 0, 0);
 
                 const validBanners = (allBanners || []).filter(banner => {
-                    if (!banner.endDate) return false; 
+                    if (!banner.endDate) return false;
                     const endDate = new Date(banner.endDate);
-                    return endDate >= today; 
+                    return endDate >= today;
                 });
 
                 const sortedBanners = validBanners
                     .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
-                    .slice(0, 7); 
+                    .slice(0, 7);
 
                 setBanners(sortedBanners);
             } catch (error) {
@@ -58,7 +58,7 @@ function HomePage() {
 
         const fetchArticles = async () => {
             try {
-                const articles = await articleService.getHomepageArticles(5); 
+                const articles = await articleService.getHomepageArticles(5);
                 setFeaturedArticles(articles);
             } catch (error) {
             }
@@ -175,7 +175,7 @@ function HomePage() {
         }
         return result;
     };
-    
+
     return (
         <div>
             <nav className={styles["navbar"]}>
@@ -205,7 +205,7 @@ function HomePage() {
                     </li>
                     <li><span>|</span></li>
                     <li>
-                        <Link to="/app/articles" className={`${styles["nav-link"]} ${location.pathname === '/articles' ? styles["active"] : ''}`}>
+                        <Link to="/articles" className={`${styles["nav-link"]} ${location.pathname === '/articles' ? styles["active"] : ''}`}>
                             {t('nav.health-articles')}
                         </Link>
                     </li>
@@ -244,7 +244,7 @@ function HomePage() {
                         <h1>{t('hero.title')}<br />{t('hero.subtitle')}</h1>
                         <p>{t('hero.description')}</p>
                         <div className={styles["features-box"]}>
-                            <div 
+                            <div
                                 className={styles["feature-item"]}
                                 style={{ cursor: 'pointer' }}
                                 onClick={() => navigate('/ai-chat')}
@@ -253,7 +253,7 @@ function HomePage() {
                                 <strong>{t('hero.ai-diagnosis')}</strong>
                                 <small>{t('hero.ai-diagnosis.desc')}</small>
                             </div>
-                            <div 
+                            <div
                                 className={styles["feature-item"]}
                                 style={{ cursor: 'pointer' }}
                                 onClick={() => navigate('/doctors')}
@@ -262,7 +262,7 @@ function HomePage() {
                                 <strong>{t('hero.appointment')}</strong>
                                 <small>{t('hero.appointment.desc')}</small>
                             </div>
-                            <div 
+                            <div
                                 className={styles["feature-item"]}
                                 style={{ cursor: 'pointer' }}
                                 onClick={() => navigate('/doctors')}
@@ -381,35 +381,35 @@ function HomePage() {
             </section>
             {/* Steps Section */}
             <section className={styles["steps"]}>
-            <h2>{t('steps.title')}</h2>
-            <div className={styles["steps-container"]}>
-                <div className={styles["step"]}>
-                <div className={styles["step-circle"]}>01</div>
-                <div className={styles["step-icon"]}>
-                    <i className="bi bi-robot"></i>
-                </div>
-                <h3>{t('steps.step1.title')}</h3>
-                <p>{t('steps.step1.desc')}</p>
-                </div>
+                <h2>{t('steps.title')}</h2>
+                <div className={styles["steps-container"]}>
+                    <div className={styles["step"]}>
+                        <div className={styles["step-circle"]}>01</div>
+                        <div className={styles["step-icon"]}>
+                            <i className="bi bi-robot"></i>
+                        </div>
+                        <h3>{t('steps.step1.title')}</h3>
+                        <p>{t('steps.step1.desc')}</p>
+                    </div>
 
-                <div className={styles["step"]}>
-                <div className={styles["step-circle"]}>02</div>
-                <div className={styles["step-icon"]}>
-                    <i className="bi bi-person-vcard"></i>
-                </div>
-                <h3>{t('steps.step2.title')}</h3>
-                <p>{t('steps.step2.desc')}</p>
-                </div>
+                    <div className={styles["step"]}>
+                        <div className={styles["step-circle"]}>02</div>
+                        <div className={styles["step-icon"]}>
+                            <i className="bi bi-person-vcard"></i>
+                        </div>
+                        <h3>{t('steps.step2.title')}</h3>
+                        <p>{t('steps.step2.desc')}</p>
+                    </div>
 
-                <div className={styles["step"]}>
-                <div className={styles["step-circle"]}>03</div>
-                <div className={styles["step-icon"]}>
-                    <i className="bi bi-calendar-heart"></i>
+                    <div className={styles["step"]}>
+                        <div className={styles["step-circle"]}>03</div>
+                        <div className={styles["step-icon"]}>
+                            <i className="bi bi-calendar-heart"></i>
+                        </div>
+                        <h3>{t('steps.step3.title')}</h3>
+                        <p>{t('steps.step3.desc')}</p>
+                    </div>
                 </div>
-                <h3>{t('steps.step3.title')}</h3>
-                <p>{t('steps.step3.desc')}</p>
-                </div>
-            </div>
             </section>
             {/* Doctors Section */}
             <section className={styles["doctors"]}>
@@ -425,11 +425,11 @@ function HomePage() {
                                     <h3>{doctor.fullName}</h3>
                                     <div className={styles["doctor-details"]}>
                                         <p className={styles["specialty"]}>
-                                            <i className="bi bi-mortarboard" style={{marginRight: '6px'}}></i>
+                                            <i className="bi bi-mortarboard" style={{ marginRight: '6px' }}></i>
                                             {(doctorEducationMap[doctor.id] || '—')} - {doctor.specializationName}
                                         </p>
                                         <p className={styles["experience"]}>
-                                            <i className="bi bi-clock-history" style={{marginRight: '6px'}}></i>
+                                            <i className="bi bi-clock-history" style={{ marginRight: '6px' }}></i>
                                             {doctor.yearsOfExperience} {t('common.years-experience')}
                                         </p>
                                     </div>
@@ -445,7 +445,7 @@ function HomePage() {
                     </div>
                 </div>
                 <div className={styles["view-all"]}>
-                    <button 
+                    <button
                         className={styles["btn-view-all"]}
                         onClick={() => navigate('/doctors')}
                     >
@@ -459,7 +459,7 @@ function HomePage() {
                 <h2>{t('knowledge.title')}</h2>
                 <div className={styles["knowledge-carousel-container"]}>
                     <div className={styles["knowledge-scroll-wrapper"]}>
-                        <div 
+                        <div
                             className={styles["knowledge-track"]}
                             ref={knowledgeTrackRef}
                         >
@@ -500,8 +500,8 @@ function HomePage() {
 
             <BackToTopButton />
             <ChatbotBubble />
-    </div>
-  );
+        </div>
+    );
 }
 
 export default HomePage;

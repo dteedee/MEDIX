@@ -191,57 +191,39 @@ export default function ArticleReaderPage() {
       <nav className={homeStyles["navbar"]}>
         <ul className={homeStyles["nav-menu"]}>
           <li>
-            <a
-              onClick={() => { scrollToTop(); navigate('/'); }}
-              className={`${homeStyles["nav-link"]} ${window.location.pathname === '/' ? homeStyles["active"] : ''}`}
-            >
+            <Link to="/" className={homeStyles["nav-link"]}>
               {t('nav.home')}
-            </a>
+            </Link>
           </li>
           <li><span>|</span></li>
           <li>
-            <a
-              onClick={() => { scrollToTop(); navigate('/ai-chat'); }}
-              className={`${homeStyles["nav-link"]} ${window.location.pathname === '/ai-chat' ? homeStyles["active"] : ''}`}
-            >
+            <Link to="/ai-chat" className={homeStyles["nav-link"]}>
               {t('nav.ai-diagnosis')}
-            </a>
+            </Link>
           </li>
           <li><span>|</span></li>
           <li>
-            <a
-              onClick={() => { scrollToTop(); navigate('/specialties'); }}
-              className={`${homeStyles["nav-link"]} ${window.location.pathname === '/specialties' ? homeStyles["active"] : ''}`}
-            >
+            <Link to="/specialties" className={homeStyles["nav-link"]}>
               {t('nav.specialties')}
-            </a>
+            </Link>
           </li>
           <li><span>|</span></li>
           <li>
-            <a
-              onClick={() => { scrollToTop(); navigate('/doctors'); }}
-              className={`${homeStyles["nav-link"]} ${window.location.pathname === '/doctors' ? homeStyles["active"] : ''}`}
-            >
+            <Link to="/doctors" className={homeStyles["nav-link"]}>
               {t('nav.doctors')}
-            </a>
+            </Link>
           </li>
           <li><span>|</span></li>
           <li>
-            <a
-              onClick={() => { scrollToTop(); navigate('/articles'); }}
-              className={`${homeStyles["nav-link"]} ${window.location.pathname === '/articles' ? homeStyles["active"] : ''}`}
-            >
+            <Link to="/articles" className={`${homeStyles["nav-link"]} ${homeStyles["active"]}`}>
               {t('nav.health-articles')}
-            </a>
+            </Link>
           </li>
           <li><span>|</span></li>
           <li>
-            <a
-              onClick={() => { scrollToTop(); navigate('/about'); }}
-              className={`${homeStyles["nav-link"]} ${window.location.pathname === '/about' ? homeStyles["active"] : ''}`}
-            >
+            <Link to="/about" className={homeStyles["nav-link"]}>
               {t('nav.about')}
-            </a>
+            </Link>
           </li>
         </ul>
       </nav>

@@ -1,4 +1,4 @@
-﻿﻿using AutoMapper;
+﻿using AutoMapper;
 using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.Doctor;
@@ -23,38 +23,56 @@ namespace Medix.API.Business.Services.Classification
             _mapper = mapper;
         }
 
-        public async Task<List<TopDoctorDto>> GetTopDoctorsByRatingAsync(int count = 3)
-        {
-            var topDoctors = await _reviewRepo.GetTopDoctorsByRatingAsync(count);
-            var topDoctorsFull = await _reviewRepo.GetTopDoctorsFullAsync(count);
-
-            var result = new List<TopDoctorDto>();
-
-            foreach (var d in topDoctors)
-            {
-                var doctorFull = topDoctorsFull.FirstOrDefault(df => df.Id == d.DoctorId);
-                var (total, completed, successful) = await _appointmentRepo.GetDoctorAppointmentStatsAsync(d.DoctorId);
-                var successRate = completed > 0 ? ((double)successful / completed) * 100 : 0;
-
-                result.Add(new TopDoctorDto
+                public async Task<List<TopDoctorDto>> GetTopDoctorsByRatingAsync(int count = 3)
                 {
-                    DoctorId = d.DoctorId,
-                    DoctorName = d.DoctorName,
-                    Specialization = d.Specialization,
-                    AverageRating = Math.Round(d.AverageRating, 1),
-                    ReviewCount = d.ReviewCount,
-                    ImageUrl = d.ImageUrl,
-                    CompletedAppointments = completed,
-                    SuccessfulAppointments = successful,
-                    TotalAppointments = total,
-                    SuccessRate = Math.Round(successRate, 1),
-                    Degree = doctorFull?.Education,
-                    ExperienceYears = doctorFull?.YearsOfExperience
-                });
-            }
+                    var topDoctors = await _reviewRepo.GetTopDoctorsByRatingAsync(count);
+                    var topDoctorsFull = await _reviewRepo.GetTopDoctorsFullAsync(count);
 
-            return result;
-        }
+                    var resultWithRates = new List<(TopDoctorDto Dto, double SuccessRate, double CancelRate)>();
+
+                    // Run repository calls sequentially to avoid concurrent DbContext usage
+                    foreach (var d in topDoctors)
+                    {
+                        var doctorFull = topDoctorsFull.FirstOrDefault(df => df.Id == d.DoctorId);
+
+                        var (total, completed, cancelled) = await _appointmentRepo.GetDoctorAppointmentStatsAsync(d.DoctorId);
+
+                        //  In current repository contract, "successful" is not provided. We treat completed as successful.
+                        var successful = completed;
+
+                        var successRate = total > 0 ? ((double)successful / total) * 100.0 : 0.0;
+                        var cancelRate = total > 0 ? ((double)cancelled / total) * 100.0 : 0.0;
+
+                        var dto = new TopDoctorDto
+                        {
+                            DoctorId = d.DoctorId,
+                            DoctorName = d.DoctorName,
+                            Specialization = d.Specialization,
+                            AverageRating = Math.Round(d.AverageRating, 1),
+                            ReviewCount = d.ReviewCount,
+                            ImageUrl = d.ImageUrl,
+                            CompletedAppointments = completed,
+                            SuccessfulAppointments = successful,
+                            TotalAppointments = total,
+                            SuccessRate = Math.Round(successRate, 1),
+                            Degree = doctorFull?.Education,
+                            ExperienceYears = doctorFull?.YearsOfExperience
+                        };
+
+                        resultWithRates.Add((dto, successRate, cancelRate));
+                    }
+
+                    // Order: rating desc, then success rate desc (rounded), then cancel rate asc
+                    var ordered = resultWithRates
+                        .OrderByDescending(x => x.Dto.AverageRating)
+                        .ThenByDescending(x => Math.Round(x.SuccessRate, 1))
+                        .ThenBy(x => x.CancelRate)
+                        .Take(count)
+                        .Select(x => x.Dto)
+                        .ToList();
+
+                    return ordered;
+                }
         public async Task<ReviewDoctorDto?> GetByAppointmentIdAsync(Guid appointmentId)
         {
             var review = await _reviewRepo.GetByAppointmentIdAsync(appointmentId);

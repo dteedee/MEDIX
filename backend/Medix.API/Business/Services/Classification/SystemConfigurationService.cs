@@ -149,32 +149,19 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<List<SystemConfigurationResponse>> GetAllAsync()
         {
-            const string cacheKey = "SystemConfigs_All";
-
-            if (!_cache.TryGetValue(cacheKey, out List<SystemConfigurationResponse>? configs))
-            {
-                var data = await _repo.GetAllAsync();
-                configs = _mapper.Map<List<SystemConfigurationResponse>>(data);
-
-                _cache.Set(cacheKey, configs, _cacheDuration);
-            }
-
-            return configs!;
+            // Query DB mỗi lần - không cache
+            var data = await _repo.GetAllAsync();
+            var configs = _mapper.Map<List<SystemConfigurationResponse>>(data);
+            return configs;
         }
 
         public async Task<SystemConfigurationResponse?> GetByKeyAsync(string key)
         {
-            string cacheKey = $"SystemConfig_{key}";
+            // Query DB mỗi lần - không cache
+            var entity = await _repo.GetByKeyAsync(key);
+            if (entity == null) return null;
 
-            if (!_cache.TryGetValue(cacheKey, out SystemConfigurationResponse? config))
-            {
-                var entity = await _repo.GetByKeyAsync(key);
-                if (entity == null) return null;
-
-                config = _mapper.Map<SystemConfigurationResponse>(entity);
-                _cache.Set(cacheKey, config, _cacheDuration);
-            }
-
+            var config = _mapper.Map<SystemConfigurationResponse>(entity);
             return config;
         }
 
@@ -309,12 +296,96 @@ namespace Medix.API.Business.Services.Classification
         {
             try
             {
-                // For both Azure and On-Premises, use SQL script backup for consistency
-                return await CreateSqlScriptBackupAsync(backupName);
+                // Detect if using Azure SQL or On-Premises
+                if (_connectionString.Contains("database.windows.net", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogInformation("Detected Azure SQL Database, using SQL script backup");
+                    return await CreateSqlScriptBackupAsync(backupName);
+                }
+                else
+                {
+                    _logger.LogInformation("Detected On-Premises SQL Server, using native BACKUP DATABASE");
+                    return await CreateNativeBackupAsync(backupName);
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to backup database to {Folder}", _dbBackupFolder);
+                throw;
+            }
+        }
+
+        private async Task<string> CreateNativeBackupAsync(string? backupName = null)
+        {
+            _logger.LogInformation("[CreateNativeBackupAsync] START");
+            _logger.LogInformation("Backup folder: {Folder}", _dbBackupFolder);
+            
+            try
+            {
+                if (!Directory.Exists(_dbBackupFolder))
+                {
+                    _logger.LogInformation("Creating directory: {Folder}", _dbBackupFolder);
+                    Directory.CreateDirectory(_dbBackupFolder);
+                }
+
+                var baseName = string.IsNullOrWhiteSpace(backupName)
+                    ? $"db-backup-{DateTime.UtcNow:yyyyMMdd-HHmmss}"
+                    : SanitizeFileName(backupName!);
+
+                var fileName = $"{baseName}.bak";
+                var filePath = Path.Combine(_dbBackupFolder, fileName);
+                
+                _logger.LogInformation("Target file path: {FilePath}", filePath);
+
+                await using var connection = new SqlConnection(_connectionString);
+                _logger.LogInformation("Opening SQL connection...");
+                await connection.OpenAsync();
+                _logger.LogInformation("SQL connection opened successfully");
+
+                var databaseName = connection.Database;
+                if (string.IsNullOrWhiteSpace(databaseName))
+                {
+                    throw new InvalidOperationException("Could not determine database name from connection string");
+                }
+                
+                _logger.LogInformation("Database name: {DatabaseName}", databaseName);
+
+                var escapedPath = filePath.Replace("'", "''");
+                // COMPRESSION not supported in Express Edition, use basic options
+                var backupCommand = $"BACKUP DATABASE [{databaseName}] TO DISK = '{escapedPath}' WITH INIT, STATS = 5";
+
+                _logger.LogInformation("[CreateNativeBackupAsync] Executing SQL backup command");
+                _logger.LogInformation("Command: {Command}", backupCommand);
+
+                await using var command = new SqlCommand(backupCommand, connection)
+                {
+                    CommandTimeout = 0
+                };
+
+                _logger.LogInformation("ExecuteNonQueryAsync started...");
+                await command.ExecuteNonQueryAsync();
+                _logger.LogInformation("ExecuteNonQueryAsync completed");
+
+                _logger.LogInformation("Checking if file exists: {FilePath}", filePath);
+                if (!File.Exists(filePath))
+                {
+                    _logger.LogError("File not found at: {FilePath}", filePath);
+                    throw new InvalidOperationException($"Backup file was not created at {filePath}");
+                }
+
+                var fileInfo = new FileInfo(filePath);
+                _logger.LogInformation(
+                    "[CreateNativeBackupAsync] SUCCESS - Native backup created at {Path}, size: {Size} bytes",
+                    filePath, fileInfo.Length);
+
+                return filePath;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CreateNativeBackupAsync] FAILED - Exception occurred");
+                _logger.LogError("Exception Type: {Type}", ex.GetType().FullName);
+                _logger.LogError("Message: {Message}", ex.Message);
+                _logger.LogError("Stack Trace: {StackTrace}", ex.StackTrace);
                 throw;
             }
         }

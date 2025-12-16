@@ -711,7 +711,7 @@ export const PatientDashboard: React.FC = () => {
                       <p>{record.doctor}</p>
                       <span className={styles.recordDate}>
                         <i className="bi bi-calendar3"></i>
-                        {formatDate(record.date)}
+                        {record.date}
                       </span>
                     </div>
                     <i className="bi bi-chevron-right"></i>

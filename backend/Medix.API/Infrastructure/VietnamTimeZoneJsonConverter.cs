@@ -57,24 +57,32 @@ namespace Medix.API.Infrastructure
 
         public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
         {
+            if (value == DateTime.MinValue)
+            {
+                writer.WriteStringValue(value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"));
+                return;
+            }
+
             DateTime vietnamTime;
-            
+
             if (value.Kind == DateTimeKind.Utc)
             {
                 vietnamTime = TimeZoneInfo.ConvertTimeFromUtc(value, VietnamTimeZone);
             }
             else if (value.Kind == DateTimeKind.Local)
             {
-                vietnamTime = TimeZoneInfo.ConvertTime(value, VietnamTimeZone);
+                vietnamTime = TimeZoneInfo.ConvertTime(value, TimeZoneInfo.Local, VietnamTimeZone);
             }
-            else
+            else 
             {
-                vietnamTime = TimeZoneInfo.ConvertTimeFromUtc(value, VietnamTimeZone);
+                vietnamTime = value;
             }
 
             var offset = VietnamTimeZone.GetUtcOffset(vietnamTime);
+
+           
             var dateTimeOffset = new DateTimeOffset(vietnamTime, offset);
-            
+
             writer.WriteStringValue(dateTimeOffset.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz"));
         }
     }

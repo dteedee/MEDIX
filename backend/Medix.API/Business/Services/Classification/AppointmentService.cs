@@ -302,7 +302,7 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<bool> IsPatientBusyAsync(Guid doctorId, DateTime appointmentStartTime, DateTime appointmentEndTime)
         {
-            var conflictingAppointments = await GetConflictingAppointmentsAsync(doctorId, appointmentStartTime, appointmentEndTime);
+            var conflictingAppointments = await GetConflictingAppointmentsPatientAsync(doctorId, appointmentStartTime, appointmentEndTime);
 
             return conflictingAppointments.Any();
         }

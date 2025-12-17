@@ -23,11 +23,11 @@ interface Doctor {
   tier: 'Basic' | 'Professional' | 'Premium' | 'VIP';
   bio: string;
   imageUrl?: string;
-  isAcceptingAppointments?: boolean; // Bác sĩ có nhận lịch hẹn không
-  totalDone?: number; // Số ca đã thực hiện
-  totalAppointments?: number; // Tổng số lịch hẹn
-  successPercentage?: number; // Tỷ lệ thành công (%)
-  totalReviews?: number; // Tổng số đánh giá
+  isAcceptingAppointments?: boolean; 
+  totalDone?: number; 
+  totalAppointments?: number; 
+  successPercentage?: number; 
+  totalReviews?: number; 
   totalCases?: number;
   successRate?: number;
   responseTime?: string;
@@ -635,37 +635,37 @@ const DoctorBookingList: React.FC = () => {
       convertEducationDoctorToDoctor(d, doctorAvatars, doctorStatistics)
     );
 
-    let doctors = allConverted.filter(doctor => doctor.isAcceptingAppointments !== false);
-
-    if (debouncedSearch && debouncedSearch.trim()) {
-      const searchNormalized = normalizeSearchText(debouncedSearch);
-      if (!searchNormalized) return doctors;
-
-      const searchTerms = searchNormalized.split(/\s+/).filter(term => term.length > 0);
-
-      if (searchTerms.length > 0) {
-        doctors = doctors.filter(doctor => {
-          if (!doctor) return false;
-
-          const nameNormalized = normalizeSearchText(doctor.fullName);
-          const specialtyNormalized = normalizeSearchText(doctor.specialty);
-          const degreeNormalized = normalizeSearchText(doctor.degree);
-          const bioNormalized = normalizeSearchText(doctor.bio);
-
-          return searchTerms.every(term =>
-            nameNormalized.includes(term) ||
-            specialtyNormalized.includes(term) ||
-            degreeNormalized.includes(term) ||
-            bioNormalized.includes(term)
+          let doctors = allConverted.filter(doctor => doctor.isAcceptingAppointments !== false);
+    
+        return doctors;
+        }, [educationGroupsData, doctorAvatars, doctorStatistics]);
+      
+        const getAllDoctors = useCallback((): Doctor[] => {
+          if (!educationGroupsData) return [];
+          const allDoctorsFromGroups = educationGroupsData.flatMap(group => group.doctors?.items || []);
+          const convertedDoctors = allDoctorsFromGroups.map(d =>
+            convertEducationDoctorToDoctor(d, doctorAvatars, doctorStatistics)
           );
-        });
-      }
-    }
-
-    return doctors;
-  }, [educationGroupsData, debouncedSearch, doctorAvatars, doctorStatistics, normalizeSearchText]);
-
-  const getDegreePaginationInfo = (degree: DegreeTab) => {
+          return convertedDoctors.filter(doctor => doctor.isAcceptingAppointments !== false);
+        }, [educationGroupsData, doctorAvatars, doctorStatistics]);
+      
+        const searchResults = useMemo(() => {
+          const trimmedSearch = debouncedSearch.trim();
+          if (!trimmedSearch) return [];
+      
+          const allDocs = getAllDoctors();
+          const searchNormalized = normalizeSearchText(trimmedSearch);
+          const searchTerms = searchNormalized.split(/\s+/).filter(term => term.length > 0);
+      
+          if (searchTerms.length === 0) return [];
+      
+          return allDocs.filter(doctor => {
+            const nameNormalized = normalizeSearchText(doctor.fullName);
+            return searchTerms.every(term => nameNormalized.includes(term));
+          });
+        }, [debouncedSearch, getAllDoctors, normalizeSearchText]);
+      
+        const getDegreePaginationInfo = (degree: DegreeTab) => {
     const doctors = getDoctorsByDegree(degree);
     const pageSize = 9;
     const totalCount = doctors.length;
@@ -1204,7 +1204,7 @@ const DoctorBookingList: React.FC = () => {
                 <i className="bi bi-search"></i>
                 <input
                   type="text"
-                  placeholder="Tìm kiếm bác sĩ theo tên, chuyên khoa..."
+                  placeholder="Tìm kiếm bác sĩ theo tên..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className={styles.searchInput}
@@ -1217,73 +1217,99 @@ const DoctorBookingList: React.FC = () => {
               </div>
             </div>
 
-            <div className={styles.tierTabs}>
-              {degreeTabs.map(tab => {
-                const count = getDoctorsByDegree(tab).length;
-                const scheme = degreeColorSchemes[tab];
-                const isActive = activeDegree === tab;
-                return (
-                  <button
-                    key={tab}
-                    className={`${styles.tierTab} ${isActive ? styles.active : ''}`}
-                    onClick={() => setActiveDegree(tab)}
-                    aria-pressed={isActive}
-                    title={`${tab} • ${count} bác sĩ`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      border: `1px solid ${isActive ? scheme.accent : '#e5e7eb'}`,
-                      background: isActive ? scheme.light : 'white',
-                      boxShadow: isActive ? `0 4px 14px ${scheme.light}` : 'none',
-                      transform: isActive ? 'translateY(-1px)' : 'none',
-                      transition: 'all 160ms ease-in-out',
-                      whiteSpace: 'nowrap',
-                      padding: '10px 14px'
-                    }}
-                  >
-                    <i className={`bi ${degreeIcons[tab]}`} style={{ color: scheme.accent, fontSize: 18 }}></i>
-                    <span style={{ color: isActive ? scheme.accent : '#111827', fontWeight: isActive ? 600 : 500 }}>{tab}</span>
-                    <span
-                      style={{
-                        marginLeft: 4,
-                        fontSize: 12,
-                        lineHeight: 1,
-                        background: scheme.light,
-                        color: scheme.accent,
-                        borderRadius: 9999,
-                        padding: '4px 8px',
-                      }}
-                    >
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {currentDoctors.length > 0 ? (
+            {debouncedSearch.trim().length > 0 ? (
+              // Search results view
               <>
-                <div className={styles.resultsInfo}>
-                  <i className="bi bi-people-fill"></i>
-                  Tìm thấy <strong>{currentPaginationInfo.totalCount}</strong> bác sĩ cho {activeDegree}
-                </div>
-
-                <div className={styles.doctorsGrid}>
-                  {currentDoctors.map((doctor) => renderDoctorCard(doctor))}
-                </div>
-
-                {renderPagination()}
+                {searchResults.length > 0 ? (
+                  <>
+                    <div className={styles.resultsInfo}>
+                      <i className="bi bi-search"></i>
+                      Tìm thấy <strong>{searchResults.length}</strong> bác sĩ với từ khóa "<strong>{debouncedSearch}</strong>"
+                    </div>
+                    <div className={styles.doctorsGrid}>
+                      {searchResults.map((doctor) => renderDoctorCard(doctor))}
+                    </div>
+                    {/* Optional: Add pagination for search results if needed in the future */}
+                  </>
+                ) : (
+                  <div className={styles.emptyState}>
+                    <i className="bi bi-search"></i>
+                    <h3>Không tìm thấy bác sĩ</h3>
+                    <p>Không có bác sĩ nào có tên phù hợp với từ khóa "<strong>{debouncedSearch}</strong>"</p>
+                  </div>
+                )}
               </>
             ) : (
-              <div className={styles.emptyState}>
-                <i className="bi bi-search"></i>
-                <h3>Không tìm thấy bác sĩ</h3>
-                <p>Không có bác sĩ nào phù hợp với tiêu chí tìm kiếm</p>
-                <button onClick={resetFilters} className={styles.resetButton}>
-                  Đặt lại bộ lọc
-                </button>
-              </div>
+              <>
+                <div className={styles.tierTabs}>
+                  {degreeTabs.map(tab => {
+                    const count = getDoctorsByDegree(tab).length;
+                    const scheme = degreeColorSchemes[tab];
+                    const isActive = activeDegree === tab;
+                    return (
+                      <button
+                        key={tab}
+                        className={`${styles.tierTab} ${isActive ? styles.active : ''}`}
+                        onClick={() => setActiveDegree(tab)}
+                        aria-pressed={isActive}
+                        title={`${tab} • ${count} bác sĩ`}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          border: `1px solid ${isActive ? scheme.accent : '#e5e7eb'}`,
+                          background: isActive ? scheme.light : 'white',
+                          boxShadow: isActive ? `0 4px 14px ${scheme.light}` : 'none',
+                          transform: isActive ? 'translateY(-1px)' : 'none',
+                          transition: 'all 160ms ease-in-out',
+                          whiteSpace: 'nowrap',
+                          padding: '10px 14px'
+                        }}
+                      >
+                        <i className={`bi ${degreeIcons[tab]}`} style={{ color: scheme.accent, fontSize: 18 }}></i>
+                        <span style={{ color: isActive ? scheme.accent : '#111827', fontWeight: isActive ? 600 : 500 }}>{tab}</span>
+                        <span
+                          style={{
+                            marginLeft: 4,
+                            fontSize: 12,
+                            lineHeight: 1,
+                            background: scheme.light,
+                            color: scheme.accent,
+                            borderRadius: 9999,
+                            padding: '4px 8px',
+                          }}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {currentDoctors.length > 0 ? (
+                  <>
+                    <div className={styles.resultsInfo}>
+                      <i className="bi bi-people-fill"></i>
+                      Tìm thấy <strong>{currentPaginationInfo.totalCount}</strong> bác sĩ cho {activeDegree}
+                    </div>
+
+                    <div className={styles.doctorsGrid}>
+                      {currentDoctors.map((doctor) => renderDoctorCard(doctor))}
+                    </div>
+
+                    {renderPagination()}
+                  </>
+                ) : (
+                  <div className={styles.emptyState}>
+                    <i className="bi bi-search"></i>
+                    <h3>Không tìm thấy bác sĩ</h3>
+                    <p>Không có bác sĩ nào phù hợp với tiêu chí tìm kiếm</p>
+                    <button onClick={resetFilters} className={styles.resetButton}>
+                      Đặt lại bộ lọc
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

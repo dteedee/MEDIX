@@ -797,7 +797,7 @@ export const PatientDashboard: React.FC = () => {
 
               <button 
                 className={styles.actionCard}
-                onClick={() => navigate('/app/patient/ai-checkup')}
+                onClick={() => navigate('/ai-chat')}
               >
                 <div className={styles.actionIcon} style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
                   <i className="bi bi-robot"></i>

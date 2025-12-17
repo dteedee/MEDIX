@@ -1,4 +1,5 @@
-﻿using Medix.API.Business.Interfaces.Classification;
+﻿using Medix.API.Business.Helper;
+using Medix.API.Business.Interfaces.Classification;
 using Medix.API.DataAccess.Interfaces.Classification;
 using Medix.API.Models.DTOs.Doctor;
 using Microsoft.EntityFrameworkCore;
@@ -31,10 +32,10 @@ namespace Medix.API.DataAccess.Repositories.Classification
                 .Where(a => a.DoctorId == doctorId && a.AppointmentStartTime.Date == today)
                 .ToListAsync();
 
-            var todayRevenue = todayAppointments.Where(a => (a.StatusCode == "Completed" || a.StatusCode == "MissedByPatient")).Sum(a => a.TotalAmount) *0.7m;
+            var todayRevenue = todayAppointments.Where(a => (a.StatusCode == "Completed" || a.StatusCode == "MissedByPatient")).Sum(a => a.TotalAmount) * ((decimal)Constants.DoctorSalaryShare);
             var monthRevenue = await _context.Appointments
                 .Where(a => a.DoctorId == doctorId && a.AppointmentStartTime >= monthStart&& (a.StatusCode == "Completed" || a.StatusCode == "MissedByPatient"))
-                .SumAsync(a => a.TotalAmount);
+                .SumAsync(a => a.TotalAmount) * ((decimal)Constants.DoctorSalaryShare);
 
             var totalRevenue = await _context.Appointments
                 .Where(a => a.DoctorId == doctorId)

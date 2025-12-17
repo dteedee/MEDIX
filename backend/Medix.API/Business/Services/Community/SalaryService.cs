@@ -50,11 +50,16 @@ namespace Medix.API.Business.Services.Community
                         var salary = doctor.Appointments.Where(p=>p.StatusCode=="Completed" || p.StatusCode == "CancelledByPatient")
                             .Select(a => a.TotalAmount)
                             .Sum();
-                        var netSalary = salary * ((decimal)Constants.DoctorSalaryShare);
+                        var netSalary = salary * ((decimal)Constants.DoctorSalaryShare) ;
 
                        if((bool)doctor.isSalaryDeduction)
                         {
-                            netSalary = salary * ((decimal)Constants.DoctorSalaryShare) * 0.8m;
+                            var commission = salary * (1-(decimal)Constants.DoctorSalaryShare);
+                            var deduction = salary * 0.2m;
+
+                            netSalary = salary - commission - deduction;
+                            doctor.isSalaryDeduction = false;
+                            await _doctorRepository.UpdateDoctorAsync(doctor);
                         }// số thực về tài khoản bác sĩ
                         else
                         {

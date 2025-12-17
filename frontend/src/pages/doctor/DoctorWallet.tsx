@@ -471,7 +471,7 @@ export const DoctorWallet: React.FC = () => {
     const isDebit = isDebitTransaction(typeCode, transaction);
     const sign = isDebit ? '-' : '+';
     const absAmount = Math.abs(amount);
-    return `${sign}${formatCurrencyCompact(absAmount)}`;
+    return `${sign}${absAmount.toLocaleString('vi-VN')} VND`;
   };
 
   const getTransactionColor = (typeCode: string | undefined, transaction?: WalletTransactionDto): string => {

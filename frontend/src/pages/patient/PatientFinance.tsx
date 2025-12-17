@@ -361,7 +361,7 @@ export const PatientFinance: React.FC = () => {
     const isDebit = isDebitTransaction(typeCode);
     const sign = isDebit ? '-' : '+';
     const absAmount = Math.abs(amount);
-    return `${sign}${formatBalance(absAmount, 'VND')}`;
+    return `${sign}${absAmount.toLocaleString('vi-VN')} VND`;
   };
 
   const getTransactionColor = (typeCode: string | undefined): string => {

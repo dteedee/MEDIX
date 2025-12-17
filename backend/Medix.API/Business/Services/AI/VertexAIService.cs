@@ -10,15 +10,18 @@ namespace Medix.API.Business.Services.AI
     {
         private readonly PredictionServiceClient _client;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<VertexAIService> _logger;
 
         private readonly string ModelResourceName;
 
         public VertexAIService(
             PredictionServiceClient client,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<VertexAIService> logger)
         {
             _client = client;
             _configuration = configuration;
+            _logger = logger;
 
             var project = _configuration["GoogleCloud:ProjectId"];
             var location = _configuration["GoogleCloud:VertexAILocation"] ?? "us-central1";
@@ -215,13 +218,13 @@ namespace Medix.API.Business.Services.AI
 
         private Value GetObjectPropertyAsValue(SchemaProperty property)
         {
-            var objectFields = (property.Value as SchemaProperty[]) ?? [];
+            var objectFields = (property.Value as List<SchemaProperty>) ?? [];
             var propertyStruct = new Struct();
             var propertyFieldStruct = new Struct();
 
             propertyStruct.Fields.Add(new Dictionary<string, Value>
             {
-                { "types", Value.ForString("object") },
+                { "type", Value.ForString("object") },
                 { "description", Value.ForString(property.Description) },
             });
 

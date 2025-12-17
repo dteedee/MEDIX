@@ -207,7 +207,7 @@ namespace Medix.API.Business.Services.AI
 
         private Schema GetObjectPropertyAsSchema(SchemaProperty schemaProperty)
         {
-            var fields = schemaProperty.Value as SchemaProperty[] ?? [];
+            var fields = schemaProperty.Value as List<SchemaProperty> ?? [];
 
             var responseProperties = new Dictionary<string, Schema>();
 

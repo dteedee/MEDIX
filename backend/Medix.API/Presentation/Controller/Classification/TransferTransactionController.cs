@@ -54,7 +54,7 @@ namespace Medix.API.Presentation.Controller.Classification
            if (request.Amount < 5000)
             {
 
-                return BadRequest(new { message = "Minimum transfer amount is 5000" });
+                return BadRequest(new { message = "Số tiền chuyển cần phải lớn hơn hoặc bằng 5000" });
             }
 
             if (wallet == null)

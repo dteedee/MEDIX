@@ -198,6 +198,7 @@ namespace Medix.API.DataAccess.Repositories.Classification
             return await _context.Appointments
                 .Include(a => a.Patient).ThenInclude(p => p.User)
                 .Include(a => a.Doctor).ThenInclude(d => d.User)
+                .Include(a=>a.MedicalRecord)
                 .Where(a => a.PatientId == patientId && a.TransactionId != null)
                 .OrderByDescending(a => a.AppointmentStartTime)
                 .ToListAsync();

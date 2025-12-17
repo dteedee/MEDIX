@@ -47,6 +47,7 @@ export interface Appointment {
   aiSymptomAnalysisId?: string;
   patientReview?: string;
   patientRating?: string;
+  chiefComplaint?: string;
   createdAt: string;
   updatedAt: string;
 }

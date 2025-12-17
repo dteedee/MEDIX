@@ -43,6 +43,8 @@ namespace Medix.API.Models.DTOs.ApointmentDTO
 
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public string? ChiefComplaint { get; set; }
+       
 
         public string? PatientReview { get; set; }
         public string? PatientRating { get; set; }

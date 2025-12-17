@@ -30,6 +30,7 @@ interface Appointment {
   medicalInfo?: string;
   patientReview?: string;
   patientRating?: string;
+  chiefComplaint?: string;
 }
 
 interface FilterOptions {
@@ -123,6 +124,7 @@ export const PatientAppointments: React.FC = () => {
           medicalInfo: apt.medicalInfo,
           patientReview: apt.patientReview,
           patientRating: apt.patientRating,
+          chiefComplaint: apt.chiefComplaint,
         };
       });
       
@@ -288,8 +290,6 @@ export const PatientAppointments: React.FC = () => {
         return true;
       });
     }
-
-    filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     setFilteredAppointments(filtered);
   }, [filters, appointmentsWithDoctorInfo, dateFrom, dateTo]);
@@ -906,6 +906,18 @@ export const PatientAppointments: React.FC = () => {
                   )}
                 </div>
               </div>
+
+              {selectedAppointment.chiefComplaint && (
+                <div className={styles.detailSection}>
+                  <h4 className={styles.sectionTitle}>
+                    <i className="bi bi-clipboard2-pulse"></i>
+                    Lý do khám
+                  </h4>
+                  <div className={styles.chiefComplaintBox}>
+                    <p>{selectedAppointment.chiefComplaint}</p>
+                  </div>
+                </div>
+              )}
 
               <div className={styles.detailSection}>
                 <h4 className={styles.sectionTitle}>

@@ -899,6 +899,22 @@
   font-size: 16px;
 }
 
+.chiefComplaintBox {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #bae6fd;
+  border-left: 4px solid #0ea5e9;
+}
+
+.chiefComplaintBox p {
+  margin: 0;
+  font-size: 14px;
+  color: #0c4a6e;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
 .cardFooter {
   padding: 16px 24px;
   display: flex;

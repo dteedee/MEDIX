@@ -180,9 +180,24 @@ namespace Medix.API.Business.Services.Classification
 
         public async Task<IEnumerable<AppointmentDto>> GetByPatientAsync(Guid patientId)
         {
-            var list = await _repository.GetByPatientAsync(patientId);
+            var list = (await _repository.GetByPatientAsync(patientId)).ToList();
             var dtos = _mapper.Map<List<AppointmentDto>>(list);
 
+            // Map ChiefComplaint from included MedicalRecord
+            for (int i = 0; i < dtos.Count && i < list.Count; i++)
+            {
+                var appointment = list[i];
+                var dto = dtos[i];
+
+                if (appointment.MedicalRecord != null)
+                {
+                    dto.ChiefComplaint = appointment.MedicalRecord.ChiefComplaint;
+                    // Optionally map full record:
+                    // dto.MedicalRecord = _mapper.Map<MedicalRecordDto>(appointment.MedicalRecord);
+                }
+            }
+
+            // Existing review mapping...
             var completedAppointmentIds = list
                 .Where(a => string.Equals(a.StatusCode, "Completed", StringComparison.OrdinalIgnoreCase))
                 .Select(a => a.Id)
@@ -191,7 +206,6 @@ namespace Medix.API.Business.Services.Classification
             if (completedAppointmentIds.Any())
             {
                 var reviews = await reviewRepository.GetByAppointmentIdsAsync(completedAppointmentIds);
-
                 var reviewByAppointment = reviews.ToDictionary(r => r.AppointmentId, r => r);
 
                 foreach (var dto in dtos.Where(d => string.Equals(d.StatusCode, "Completed", StringComparison.OrdinalIgnoreCase)))
@@ -204,7 +218,18 @@ namespace Medix.API.Business.Services.Classification
                 }
             }
 
-            return dtos;
+            static int GetPriority(string? status) =>
+                string.Equals(status, "BeforeAppoiment", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(status, "OnProgressing", StringComparison.OrdinalIgnoreCase)
+                    ? 0 : 1;
+
+            // Sort: prioritized statuses first, then by start time (newest first)
+            var ordered = dtos
+                .OrderBy(d => GetPriority(d.StatusCode))
+                .ThenByDescending(d => d.AppointmentStartTime)
+                .ToList();
+
+            return ordered;
         }
 
         public async Task<IEnumerable<AppointmentDto>> GetByDateAsync(DateTime date)

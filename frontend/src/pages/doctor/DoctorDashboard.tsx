@@ -35,7 +35,7 @@ interface ScheduleOverride {
   startTime: string
   endTime: string
   isAvailable: boolean
-  overrideType: boolean 
+  overrideType: boolean
   reason: string
 }
 
@@ -186,11 +186,11 @@ const DoctorDashboard: React.FC = () => {
 
   const upcomingAppointments = useMemo(() => {
     return appointments.filter(apt => apt.statusCode === 'BeforeAppoiment')
-      .sort((a, b) => 
+      .sort((a, b) =>
         new Date(a.appointmentStartTime).getTime() - new Date(b.appointmentStartTime).getTime()
       )
   }, [appointments])
-  
+
   const todayAppointments = useMemo(() => {
     return upcomingAppointments.filter(apt => {
       const aptDate = new Date(apt.appointmentStartTime)
@@ -282,13 +282,13 @@ const DoctorDashboard: React.FC = () => {
     if (!startTime) return ''
     const start = new Date(startTime)
     const startFormatted = start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-    
+
     if (endTime) {
       const end = new Date(endTime)
       const endFormatted = end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
       return `${startFormatted} - ${endFormatted}`
     }
-    
+
     return startFormatted
   }
 
@@ -298,7 +298,7 @@ const DoctorDashboard: React.FC = () => {
     const diff = targetDate.getTime() - now.getTime()
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(hours / 24)
-    
+
     if (diff > 0) {
       if (days > 0) return `${days} ngày nữa`;
       if (hours > 0) return `${hours} giờ nữa`;
@@ -310,8 +310,8 @@ const DoctorDashboard: React.FC = () => {
     if (apt.statusCode === 'Completed') {
       return 'completed'
     } else if (
-      apt.statusCode === 'CancelledByPatient' || 
-      apt.statusCode === 'CancelledByDoctor' || 
+      apt.statusCode === 'CancelledByPatient' ||
+      apt.statusCode === 'CancelledByDoctor' ||
       apt.statusCode === 'NoShow'
     ) {
       return 'cancelled'
@@ -325,16 +325,16 @@ const DoctorDashboard: React.FC = () => {
     const appointmentEndTime = endTime ? new Date(endTime) : null
 
     if (status === 'completed') {
-      return { 
-        label: 'Hoàn thành', 
+      return {
+        label: 'Hoàn thành',
         icon: 'bi-check-circle-fill',
         color: '#10b981'
       }
     }
-    
+
     if (status === 'cancelled') {
-      return { 
-        label: 'Đã hủy', 
+      return {
+        label: 'Đã hủy',
         icon: 'bi-x-circle-fill',
         color: '#ef4444'
       }
@@ -342,23 +342,23 @@ const DoctorDashboard: React.FC = () => {
 
     if (appointmentStartTime && appointmentEndTime) {
       if (currentTime >= appointmentStartTime && currentTime <= appointmentEndTime) {
-        return { 
-          label: 'Đang diễn ra', 
+        return {
+          label: 'Đang diễn ra',
           icon: 'bi-clock-history',
           color: '#3b82f6'
         }
       }
       if (currentTime < appointmentStartTime) {
-        return { 
-          label: 'Sắp diễn ra', 
+        return {
+          label: 'Sắp diễn ra',
           icon: 'bi-clock-history',
           color: '#f59e0b'
         }
       }
     }
 
-    return { 
-      label: 'Sắp diễn ra', 
+    return {
+      label: 'Sắp diễn ra',
       icon: 'bi-clock-history',
       color: '#f59e0b'
     }
@@ -375,13 +375,13 @@ const DoctorDashboard: React.FC = () => {
       'Refunded': 'Đã hoàn tiền',
       'Cancelled': 'Đã hủy'
     }
-    
+
     return statusMap[statusCode] || statusCode
   }
 
   const getPaymentStatusIcon = (statusCode?: string): string => {
     if (!statusCode) return 'bi-x-circle'
-    
+
     const iconMap: { [key: string]: string } = {
       'Paid': 'bi-check-circle-fill',
       'Unpaid': 'bi-x-circle',
@@ -390,7 +390,7 @@ const DoctorDashboard: React.FC = () => {
       'Refunded': 'bi-arrow-counterclockwise',
       'Cancelled': 'bi-x-circle-fill'
     }
-    
+
     return iconMap[statusCode] || 'bi-info-circle'
   }
 
@@ -438,6 +438,53 @@ const DoctorDashboard: React.FC = () => {
     return colorMap[type] || colorMap['default']
   }
 
+  const translateFeature = (feature: string): string => {
+    const featureMap: { [key: string]: string } = {
+      'Basic Listing': 'Hiển thị danh sách cơ bản',
+      'basic listing': 'Hiển thị danh sách cơ bản',
+      'Standard Search': 'Tìm kiếm tiêu chuẩn',
+      'standard search': 'Tìm kiếm tiêu chuẩn',
+
+      'Priority Listing': 'Hiển thị ưu tiên trong danh sách',
+      'priority listing': 'Hiển thị ưu tiên trong danh sách',
+      'Search Boost': 'Tối ưu hóa tìm kiếm',
+      'search boost': 'Tối ưu hóa tìm kiếm',
+      'Profile Highlight': 'Làm nổi bật hồ sơ bác sĩ',
+      'profile highlight': 'Làm nổi bật hồ sơ bác sĩ',
+
+      'Homepage Spotlight': 'Vị trí nổi bật trên trang chủ',
+      'homepage spotlight': 'Vị trí nổi bật trên trang chủ',
+      'Top Category': 'Vị trí đầu danh mục chuyên khoa',
+      'top category': 'Vị trí đầu danh mục chuyên khoa',
+      'Premium Badge': 'Nhãn xác thực Premium',
+      'premium badge': 'Nhãn xác thực Premium',
+      'Priority Support': 'Dịch vụ hỗ trợ ưu tiên',
+      'priority support': 'Dịch vụ hỗ trợ ưu tiên',
+
+      'VIP Placement': 'Vị trí ưu tiên cao nhất',
+      'vip placement': 'Vị trí ưu tiên cao nhất',
+      'Maximum Visibility': 'Tối đa hóa khả năng hiển thị',
+      'maximum visibility': 'Tối đa hóa khả năng hiển thị',
+      'Dedicated Manager': 'Quản lý tài khoản chuyên biệt',
+      'dedicated manager': 'Quản lý tài khoản chuyên biệt',
+      'Custom Campaigns': 'Chiến dịch quảng bá cá nhân hóa',
+      'custom campaigns': 'Chiến dịch quảng bá cá nhân hóa',
+    };
+
+    if (featureMap[feature]) {
+      return featureMap[feature];
+    }
+
+    const lowerFeature = feature.toLowerCase();
+    for (const [key, value] of Object.entries(featureMap)) {
+      if (key.toLowerCase() === lowerFeature) {
+        return value;
+      }
+    }
+
+    return feature;
+  };
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       setIsDashboardLoading(true)
@@ -478,7 +525,7 @@ const DoctorDashboard: React.FC = () => {
           setTiersData(tiersResult.value)
         } else {
         }
-        
+
         if (notificationsResult.status === "fulfilled") {
           const readKeys = getReadNotificationKeys()
           const list = notificationsResult.value.notifications || []
@@ -580,14 +627,14 @@ const DoctorDashboard: React.FC = () => {
 
     return {
       hasSchedule: true,
-        hasRemainingShift,
+      hasRemainingShift,
       totalShifts,
       overtimeShifts,
       firstStart,
       lastEnd,
       nextShift,
-        totalWorkingMinutes,
-        remainingShifts,
+      totalWorkingMinutes,
+      remainingShifts,
     }
   }, [todaySchedule, currentTime])
 
@@ -672,83 +719,83 @@ const DoctorDashboard: React.FC = () => {
           <div className={`${styles.statCard} ${styles.errorCard}`}>{dashboardError}</div>
         ) : (
           <>
-          {dashboardData ? (
-            <>
-              <div className={styles.statCard} onClick={() => navigate('/app/doctor/appointments')}>
-                <div className={styles.statIconWrapper}>
-                  <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-                    <i className="bi bi-calendar-check"></i>
+            {dashboardData ? (
+              <>
+                <div className={styles.statCard} onClick={() => navigate('/app/doctor/appointments')}>
+                  <div className={styles.statIconWrapper}>
+                    <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                      <i className="bi bi-calendar-check"></i>
+                    </div>
+                  </div>
+                  <div className={styles.statInfo}>
+                    <span className={styles.statLabel}>Lịch hẹn sắp tới</span>
+                    <div className={styles.statValueRow}>
+                      <span className={styles.statValue}>{upcomingAppointments.length}</span>
+                      {todayAppointments.length > 0 && (
+                        <span className={styles.statBadge}>
+                          <i className="bi bi-clock"></i>
+                          {todayAppointments.length} hôm nay
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className={styles.statInfo}>
-                  <span className={styles.statLabel}>Lịch hẹn sắp tới</span>
-                  <div className={styles.statValueRow}>
-                    <span className={styles.statValue}>{upcomingAppointments.length}</span>
-                    {todayAppointments.length > 0 && (
-                      <span className={styles.statBadge}>
-                        <i className="bi bi-clock"></i>
-                        {todayAppointments.length} hôm nay
+
+                <div className={styles.statCard} onClick={() => navigate('/app/doctor/appointments')}>
+                  <div className={styles.statIconWrapper}>
+                    <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+                      <i className="bi bi-check-circle"></i>
+                    </div>
+                  </div>
+                  <div className={styles.statInfo}>
+                    <span className={styles.statLabel}>Đã hoàn thành</span>
+                    <div className={styles.statValueRow}>
+                      <span className={styles.statValue}>{completedAppointments.length}</span>
+                      <span className={styles.statSubtext}>lịch khám</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.statCard} onClick={() => navigate('/app/doctor/wallet')}>
+                  <div className={styles.statIconWrapper}>
+                    <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+                      <i className="bi bi-cash-coin"></i>
+                    </div>
+                  </div>
+                  <div className={styles.statInfo}>
+                    <span className={styles.statLabel}>Lợi nhuận hôm nay</span>
+                    <div className={styles.statValueRow}>
+                      <span className={styles.statValue}>
+                        {formatCurrencyCompact(dashboardData.summary.todayRevenue)}
                       </span>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className={styles.statCard} onClick={() => navigate('/app/doctor/appointments')}>
-                <div className={styles.statIconWrapper}>
-                  <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
-                    <i className="bi bi-check-circle"></i>
+                <div className={styles.statCard} onClick={() => navigate('/app/doctor/wallet')}>
+                  <div className={styles.statIconWrapper}>
+                    <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+                      <i className="bi bi-wallet2"></i>
+                    </div>
+                  </div>
+                  <div className={styles.statInfo}>
+                    <span className={styles.statLabel}>Lợi nhuận tháng</span>
+                    <div className={styles.statValueRow}>
+                      <span className={styles.statValue}>
+                        {formatCurrencyCompact(dashboardData.summary.monthRevenue)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div className={styles.statInfo}>
-                  <span className={styles.statLabel}>Đã hoàn thành</span>
-                  <div className={styles.statValueRow}>
-                    <span className={styles.statValue}>{completedAppointments.length}</span>
-                    <span className={styles.statSubtext}>lịch khám</span>
-                  </div>
+              </>
+            ) : (
+              Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className={`${styles.statCard} ${styles.loadingCard}`}>
+                  <div className={styles.skeleton} style={{ width: "80%", height: "20px" }}></div>
+                  <div className={styles.skeleton} style={{ width: "50%", height: "24px", marginTop: "8px" }}></div>
                 </div>
-              </div>
-
-              <div className={styles.statCard} onClick={() => navigate('/app/doctor/wallet')}>
-                <div className={styles.statIconWrapper}>
-                  <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
-                    <i className="bi bi-cash-coin"></i>
-                  </div>
-                </div>
-                <div className={styles.statInfo}>
-                  <span className={styles.statLabel}>Lợi nhuận hôm nay</span>
-                  <div className={styles.statValueRow}>
-                    <span className={styles.statValue}>
-                      {formatCurrencyCompact(dashboardData.summary.todayRevenue)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.statCard} onClick={() => navigate('/app/doctor/wallet')}>
-                <div className={styles.statIconWrapper}>
-                  <div className={styles.statIconBg} style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
-                    <i className="bi bi-wallet2"></i>
-                  </div>
-                </div>
-                <div className={styles.statInfo}>
-                  <span className={styles.statLabel}>Lợi nhuận tháng</span>
-                  <div className={styles.statValueRow}>
-                    <span className={styles.statValue}>
-                      {formatCurrencyCompact(dashboardData.summary.monthRevenue)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className={`${styles.statCard} ${styles.loadingCard}`}>
-                <div className={styles.skeleton} style={{ width: "80%", height: "20px" }}></div>
-                <div className={styles.skeleton} style={{ width: "50%", height: "24px", marginTop: "8px" }}></div>
-              </div>
-            ))
-          )}
+              ))
+            )}
           </>
         )}
       </div>
@@ -761,7 +808,7 @@ const DoctorDashboard: React.FC = () => {
                 <i className="bi bi-calendar-week"></i>
                 <h2>Tổng quan lịch làm việc hôm nay</h2>
               </div>
-              <button 
+              <button
                 className={styles.viewAllLink}
                 onClick={() => navigate('/app/doctor/schedule')}
               >
@@ -769,7 +816,7 @@ const DoctorDashboard: React.FC = () => {
                 <i className="bi bi-arrow-right"></i>
               </button>
             </div>
-            
+
             {todayScheduleSummary.hasSchedule ? (
               <>
                 <div className={styles.scheduleOverview}>
@@ -836,7 +883,7 @@ const DoctorDashboard: React.FC = () => {
                         .
                       </span>
                     </span>
-                      </div>
+                  </div>
                 </div>
 
                 {todayScheduleSummary.nextShift && todayScheduleSummary.hasRemainingShift && (
@@ -862,11 +909,10 @@ const DoctorDashboard: React.FC = () => {
                         </span>
                         {todayScheduleSummary.nextShift.type === "override" && (
                           <span
-                            className={`${styles.scheduleStatus} ${
-                              todayScheduleSummary.nextShift.overrideType
-                                ? styles.statusOvertime
-                                : styles.statusOff
-                            }`}
+                            className={`${styles.scheduleStatus} ${todayScheduleSummary.nextShift.overrideType
+                              ? styles.statusOvertime
+                              : styles.statusOff
+                              }`}
                           >
                             {todayScheduleSummary.nextShift.overrideType ? "Tăng ca" : "Nghỉ"}
                           </span>
@@ -885,7 +931,7 @@ const DoctorDashboard: React.FC = () => {
                           </p>
                         )}
                     </div>
-              </div>
+                  </div>
                 )}
               </>
             ) : (
@@ -904,7 +950,7 @@ const DoctorDashboard: React.FC = () => {
                 <i className="bi bi-calendar-heart"></i>
                 <h2>Lịch hẹn sắp tới</h2>
               </div>
-              <button 
+              <button
                 className={styles.viewAllLink}
                 onClick={() => navigate('/app/doctor/appointments')}
               >
@@ -912,7 +958,7 @@ const DoctorDashboard: React.FC = () => {
                 <i className="bi bi-arrow-right"></i>
               </button>
             </div>
-            
+
             {isAppointmentsLoading ? (
               <div className={styles.loadingState}>
                 <div className={styles.loadingSpinner}></div>
@@ -931,8 +977,8 @@ const DoctorDashboard: React.FC = () => {
                   const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.patientName)}&background=667eea&color=fff`
 
                   return (
-                    <div 
-                      key={apt.id} 
+                    <div
+                      key={apt.id}
                       className={styles.appointmentItem}
                       style={{ animationDelay: `${index * 0.1}s` }}
                       onClick={() => {
@@ -942,7 +988,7 @@ const DoctorDashboard: React.FC = () => {
                     >
                       <div className={styles.appointmentLeft}>
                         <div className={styles.doctorAvatarLarge}>
-                          <img 
+                          <img
                             src={avatarUrl}
                             alt={apt.patientName}
                             onError={(e) => {
@@ -972,7 +1018,7 @@ const DoctorDashboard: React.FC = () => {
                           <i className="bi bi-hourglass-split"></i>
                           {getTimeUntil(apt.appointmentStartTime)}
                         </div>
-                        <button 
+                        <button
                           className={styles.viewDetailsBtn}
                           onClick={(e) => {
                             e.stopPropagation()
@@ -1005,7 +1051,7 @@ const DoctorDashboard: React.FC = () => {
                 <i className="bi bi-clock-history"></i>
                 <h2>Đánh giá gần đây</h2>
               </div>
-              <button 
+              <button
                 className={styles.viewAllLink}
                 onClick={() => navigate('/app/doctor/feedback')}
               >
@@ -1013,12 +1059,12 @@ const DoctorDashboard: React.FC = () => {
                 <i className="bi bi-arrow-right"></i>
               </button>
             </div>
-            
+
             {dashboardData && dashboardData.reviews.recent.length > 0 ? (
               <div className={styles.recordsList}>
                 {dashboardData.reviews.recent.slice(0, 4).map((review, index) => (
-                  <div 
-                    key={index} 
+                  <div
+                    key={index}
                     className={styles.recordItem}
                     style={{ animationDelay: `${index * 0.1}s` }}
                     onClick={() => navigate('/app/doctor/feedback')}
@@ -1066,12 +1112,12 @@ const DoctorDashboard: React.FC = () => {
                     Đánh dấu tất cả đã đọc
                   </button>
                 )}
-              {dashboardUnreadCount > 0 && (
-                <span className={styles.notificationBadge}></span>
-              )}
+                {dashboardUnreadCount > 0 && (
+                  <span className={styles.notificationBadge}></span>
+                )}
               </div>
             </div>
-            
+
             {isNotificationsLoading ? (
               <div className={styles.loadingState}>
                 <div className={styles.loadingSpinner}></div>
@@ -1080,13 +1126,13 @@ const DoctorDashboard: React.FC = () => {
             ) : notificationList.length > 0 ? (
               <div className={styles.notificationsList}>
                 {notificationList.slice(0, 5).map((notification, index) => (
-                  <div 
-                    key={index} 
+                  <div
+                    key={index}
                     className={styles.notificationItem}
                     style={{ animationDelay: `${index * 0.1}s` }}
                     onClick={() => handleNotificationClick(index)}
                   >
-                    <div 
+                    <div
                       className={styles.notificationIcon}
                       style={{ color: getNotificationTypeColor(notification.type) }}
                     >
@@ -1150,43 +1196,43 @@ const DoctorDashboard: React.FC = () => {
 
                 const themeClass = currentTierIndex !== -1 ? getPackageTheme(currentTierIndex) : 'themeBlue'
 
-                const isActive = tiersData.currentSubscriptionActive;
-                
+                const isActive = currentTier.monthlyPrice == 0 ? true : tiersData.currentSubscriptionActive;
+
                 return (
-              <div 
-                className={`${styles.subscriptionInfo} ${styles[themeClass]}`}
-                onClick={() => navigate('/app/doctor/packages')}
-              >
-                <div className={styles.subscriptionHeader}>
-                  <div className={`${styles.subscriptionIcon} ${styles[`${themeClass}Icon`]}`}>
-                    <i className="bi bi-star-fill"></i>
+                  <div
+                    className={`${styles.subscriptionInfo} ${styles[themeClass]}`}
+                    onClick={() => navigate('/app/doctor/packages')}
+                  >
+                    <div className={styles.subscriptionHeader}>
+                      <div className={`${styles.subscriptionIcon} ${styles[`${themeClass}Icon`]}`}>
+                        <i className="bi bi-star-fill"></i>
+                      </div>
+                      <div className={styles.subscriptionDetails}>
+                        <h4 className={`${styles.subscriptionName} ${styles[`${themeClass}Name`]}`}>
+                          Gói {currentTier.name}
+                        </h4>
+                        <span className={`${styles.subscriptionStatus} ${isActive ? styles.statusActive : styles.statusCancelled}`}>
+                          {isActive ? 'Đang hoạt động' : 'Đã hủy'}
+                        </span>
+                      </div>
+                    </div>
+                    <ul className={styles.featuresList}>
+                      {((): string[] => {
+                        try {
+                          if (!currentTier.features) return [];
+                          const features = JSON.parse(currentTier.features || '[]');
+                          return Array.isArray(features) ? features.slice(0, 3) : [];
+                        } catch {
+                          return [];
+                        }
+                      })().map((feature, index) => (
+                        <li key={index}>
+                          <i className="bi bi-check-circle-fill"></i>
+                          {translateFeature(feature)}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <div className={styles.subscriptionDetails}>
-                    <h4 className={`${styles.subscriptionName} ${styles[`${themeClass}Name`]}`}>
-                      Gói {currentTier.name}
-                    </h4>
-                    <span className={`${styles.subscriptionStatus} ${isActive ? styles.statusActive : styles.statusCancelled}`}>
-                      {isActive ? 'Đang hoạt động' : 'Đã hủy'}
-                    </span>
-                  </div>
-                </div>
-                <ul className={styles.featuresList}>
-                  {((): string[] => {
-                    try {
-                      if (!currentTier.features) return [];
-                      const features = JSON.parse(currentTier.features || '[]');
-                      return Array.isArray(features) ? features.slice(0, 3) : [];
-                    } catch {
-                      return [];
-                    }
-                  })().map((feature, index) => (
-                    <li key={index}>
-                      <i className="bi bi-check-circle-fill"></i>
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
                 )
               })()
             ) : (
@@ -1208,9 +1254,9 @@ const DoctorDashboard: React.FC = () => {
                 <h2>Thao tác nhanh</h2>
               </div>
             </div>
-            
+
             <div className={styles.quickActions}>
-              <button 
+              <button
                 className={styles.actionCard}
                 onClick={() => navigate('/app/doctor/appointments')}
               >
@@ -1220,7 +1266,7 @@ const DoctorDashboard: React.FC = () => {
                 <span>Lịch hẹn</span>
               </button>
 
-              <button 
+              <button
                 className={styles.actionCard}
                 onClick={() => navigate('/app/doctor/patients')}
               >
@@ -1230,7 +1276,7 @@ const DoctorDashboard: React.FC = () => {
                 <span>Bệnh nhân</span>
               </button>
 
-              <button 
+              <button
                 className={styles.actionCard}
                 onClick={() => navigate('/app/doctor/wallet')}
               >
@@ -1240,7 +1286,7 @@ const DoctorDashboard: React.FC = () => {
                 <span>Doanh thu</span>
               </button>
 
-              <button 
+              <button
                 className={styles.actionCard}
                 onClick={() => navigate('/app/doctor/profile')}
               >
@@ -1284,8 +1330,8 @@ const DoctorDashboard: React.FC = () => {
               <div className={modalStyles.modalHeader}>
                 <div className={modalStyles.modalDoctorInfo}>
                   <div className={modalStyles.modalAvatarWrapper}>
-                    <img 
-                      src={avatarUrl} 
+                    <img
+                      src={avatarUrl}
                       alt={selectedAppointment.patientName}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement
@@ -1366,7 +1412,7 @@ const DoctorDashboard: React.FC = () => {
 
               <div className={modalStyles.modalFooter}>
                 {selectedAppointment.statusCode !== 'CancelledByPatient' && selectedAppointment.statusCode !== 'CancelledByDoctor' && selectedAppointment.statusCode !== 'NoShow' && (
-                  <button 
+                  <button
                     className={modalStyles.modalEmrBtn}
                     onClick={() => {
                       setShowDetailModal(false)

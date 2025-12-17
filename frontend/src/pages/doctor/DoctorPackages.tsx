@@ -112,17 +112,17 @@ const DoctorPackages: React.FC = () => {
     return [...data.list].sort((a, b) => {
       const priceA = a.monthlyPrice || 0;
       const priceB = b.monthlyPrice || 0;
-      
+
       if (priceA === 0 && priceB > 0) return 1;
       if (priceB === 0 && priceA > 0) return -1;
-      
+
       return priceA - priceB;
     });
   }, [data?.list]);
 
   const getPackageTheme = (price: number, name: string) => {
     if (price === 0) return { theme: 'themeFree', icon: <Package size={24} />, name: 'Miễn phí' };
-    
+
     const nameLower = name.toLowerCase();
     if (nameLower.includes('professional') || nameLower.includes('chuyên nghiệp')) {
       return { theme: 'themeBasic', icon: <Zap size={24} />, name: 'Professional' };
@@ -133,7 +133,7 @@ const DoctorPackages: React.FC = () => {
     if (nameLower.includes('vip')) {
       return { theme: 'themeVip', icon: <Crown size={24} />, name: 'VIP' };
     }
-    
+
     if (price < 1000000) return { theme: 'themeBasic', icon: <Zap size={24} />, name: 'Professional' };
     if (price < 3000000) return { theme: 'themePremium', icon: <Sparkles size={24} />, name: 'Premium' };
     return { theme: 'themeVip', icon: <Crown size={24} />, name: 'VIP' };
@@ -168,14 +168,14 @@ const DoctorPackages: React.FC = () => {
       'basic listing': 'Hiển thị danh sách cơ bản',
       'Standard Search': 'Tìm kiếm tiêu chuẩn',
       'standard search': 'Tìm kiếm tiêu chuẩn',
-      
+
       'Priority Listing': 'Hiển thị ưu tiên trong danh sách',
       'priority listing': 'Hiển thị ưu tiên trong danh sách',
       'Search Boost': 'Tối ưu hóa tìm kiếm',
       'search boost': 'Tối ưu hóa tìm kiếm',
       'Profile Highlight': 'Làm nổi bật hồ sơ bác sĩ',
       'profile highlight': 'Làm nổi bật hồ sơ bác sĩ',
-      
+
       'Homepage Spotlight': 'Vị trí nổi bật trên trang chủ',
       'homepage spotlight': 'Vị trí nổi bật trên trang chủ',
       'Top Category': 'Vị trí đầu danh mục chuyên khoa',
@@ -184,7 +184,7 @@ const DoctorPackages: React.FC = () => {
       'premium badge': 'Nhãn xác thực Premium',
       'Priority Support': 'Dịch vụ hỗ trợ ưu tiên',
       'priority support': 'Dịch vụ hỗ trợ ưu tiên',
-      
+
       'VIP Placement': 'Vị trí ưu tiên cao nhất',
       'vip placement': 'Vị trí ưu tiên cao nhất',
       'Maximum Visibility': 'Tối đa hóa khả năng hiển thị',
@@ -234,11 +234,11 @@ const DoctorPackages: React.FC = () => {
               <Calendar size={20} className={styles.dateIcon} />
             </div>
             <div className={styles.dateContent}>
-              <span className={styles.dateText}>{new Date().toLocaleDateString('vi-VN', { 
-                weekday: 'long', 
-                day: 'numeric', 
-                month: 'long', 
-                year: 'numeric' 
+              <span className={styles.dateText}>{new Date().toLocaleDateString('vi-VN', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
               })}</span>
               <div className={styles.dateGlow}></div>
             </div>
@@ -262,35 +262,44 @@ const DoctorPackages: React.FC = () => {
           const isCurrentTier = data?.currentTierId === item.id;
           const features = JSON.parse(item.features || '[]');
           const packageTheme = getPackageTheme(item.monthlyPrice || 0, item.name);
-          
+
           return (
-            <div 
-              key={item.id} 
+            <div
+              key={item.id}
               className={`${styles.packageCard} ${styles[packageTheme.theme]} ${isCurrentTier ? styles.currentTier : ''}`}
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               {isCurrentTier && (
-                <div className={`${styles.badge} ${!data?.currentSubscriptionActive ? styles.cancelledBadgeTop : ''}`}>
-                  {data?.currentSubscriptionActive ? (
-                    <>
+                item.monthlyPrice == 0 ? (
+                  <>
+                    <div className={`${styles.badge}`}>
                       <CheckCircle2 size={14} />
-                      {data.expiredAt ? (
-                        <>
-                          Đang sở hữu • Còn {getTimeLeftLabel(data.expiredAt)}
-                        </>
-                      ) : (
-                        'Đang sở hữu'
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <i className="bi bi-x-circle"></i>
-                      Đã hủy
-                    </>
-                  )}
-                </div>
+                      <>Đang sở hữu</>
+                    </div>
+                  </>
+                ) : (
+                  <div className={`${styles.badge} ${!data?.currentSubscriptionActive ? styles.cancelledBadgeTop : ''}`}>
+                    {data?.currentSubscriptionActive ? (
+                      <>
+                        <CheckCircle2 size={14} />
+                        {data.expiredAt ? (
+                          <>
+                            Đang sở hữu • Còn {getTimeLeftLabel(data.expiredAt)}
+                          </>
+                        ) : (
+                          'Đang sở hữu'
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-x-circle"></i>
+                        Đã hủy
+                      </>
+                    )}
+                  </div>
+                )
               )}
-              
+
               <div className={styles.packageHeader}>
                 <div className={`${styles.packageIcon} ${styles[`${packageTheme.theme}Icon`]}`}>
                   {packageTheme.icon}
@@ -339,8 +348,8 @@ const DoctorPackages: React.FC = () => {
                         ) : (
                           <button
                             onClick={() => handleShowConfirmation(
-                              item.name, 
-                              item.id, 
+                              item.name,
+                              item.id,
                               "Nếu bạn tiếp tục đăng ký, hệ thống sẽ trừ số dư trong ví của bạn để gia hạn gói dịch vụ cho kỳ tiếp theo. Vui lòng xác nhận nếu bạn muốn tiếp tục đăng ký."
                             )}
                             className={`${styles.actionButton} ${styles[`${packageTheme.theme}Button`]}`}
@@ -355,7 +364,7 @@ const DoctorPackages: React.FC = () => {
                 ) : (
                   <button
                     onClick={() => handleShowConfirmation(
-                      item.name, 
+                      item.name,
                       item.id,
                       "Gói sẽ được làm mới mỗi tháng và sẽ sử dụng số tiền trong ví của bạn để thanh toán."
                     )}

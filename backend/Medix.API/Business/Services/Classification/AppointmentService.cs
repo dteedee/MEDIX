@@ -356,8 +356,11 @@ DateTime appointmentEndTime)
 
             var doctor = await doctorRepository.GetDoctorByIdAsync(appointment.DoctorId);
             if (doctor == null) return;
+            if (appointment.StatusCode == "CancelledByDoctor" || appointment.StatusCode == "CancelledByPatient" || appointment.StatusCode== "MissedByPatient")
+            {
+                return;
+            }
 
-      
 
             var medicalRecord = await medicalRecordService.GetByAppointmentIdAsync(appointment.Id);
 

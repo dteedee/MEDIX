@@ -370,6 +370,8 @@ namespace Medix.API.Business.Services.Classification
                 AvatarUrl = doctor.User.AvatarUrl,
                 NumberOfReviews = reviews.Count,
                 RatingByStar = ratingByStar,
+                startDateBan=doctor.StartDateBanned,endDateban=doctor.EndDateBanned
+                ,IsAcceptingAppointments=doctor.IsAcceptingAppointments,
 
                 Experiece = doctor.YearsOfExperience
             };
@@ -538,7 +540,7 @@ namespace Medix.API.Business.Services.Classification
 
                 var doctors = await doctorsQuery
                     .Skip((queryParams.PageNumber - 1) * queryParams.PageSize)
-                    .Take(queryParams.PageSize).Where(x => x.IsAcceptingAppointments == true && x.User.LockoutEnabled == false)
+                    .Take(queryParams.PageSize).Where(x => x.User.LockoutEnabled == false)
                     .Select(d => new DoctorBookinDto
                     {
                         userId = d.UserId,
@@ -707,8 +709,8 @@ namespace Medix.API.Business.Services.Classification
                     }
 
                     doctor.NextWeekMiss = 0;
-                    doctor.StartDateBanned = DateTime.MinValue;
-                    doctor.EndDateBanned = DateTime.MinValue;
+                    doctor.StartDateBanned = null;
+                    doctor.EndDateBanned = null;
                     doctor.IsAcceptingAppointments = true;
                     doctor.UpdatedAt = DateTime.UtcNow;
 

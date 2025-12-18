@@ -28,6 +28,7 @@ namespace Medix.API.Business.Interfaces.Classification
         Task<bool> UpdateDoctorEducationAndFeeAsync(Guid doctorId, string? education, decimal? consultationFee);
         Task<List<TopDoctorPerformanceDto>> GetTopDoctorsByPerformanceAsync( double ratingWeight = 0.6, double successWeight = 0.4);
         Task<DoctorBusinessStatsDto?> GetDoctorBusinessStatsAsync(Guid doctorId, DateTime? startDate = null, DateTime? endDate = null);
+        Task<bool> UpdateDoctorCommissionRateAsync(Guid doctorId, decimal? consultationFee, decimal? commissionRate);
     }
 
 }

@@ -104,6 +104,37 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
+        [HttpPut("{doctorId}/commission-fee")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> UpdateDoctorCommissionRate(Guid doctorId, [FromBody] DoctorCommissionFeeUpdateRequest req)
+        {
+            try
+            {
+                if (req == null)
+                    return BadRequest(new { Message = "Request body is required." });
+
+                if (req.ConsultationFee.HasValue && req.ConsultationFee.Value < 0)
+                    return BadRequest(new { Message = "Consultation fee must be non-negative." });
+
+                if (req.CommissionRate.HasValue && (req.CommissionRate.Value < 0 || req.CommissionRate.Value > 1))
+                    return BadRequest(new { Message = "Commission rate must be between 0 and 1 (0% to 100%)." });
+
+                var success = await _doctorService.UpdateDoctorCommissionRateAsync(doctorId, req.ConsultationFee, req.CommissionRate);
+                if (!success)
+                    return NotFound(new { Message = "Doctor not found" });
+
+                return Ok(new { Message = "Doctor consultation fee and commission rate updated successfully" });
+            }
+            catch (ArgumentException aex)
+            {
+                return BadRequest(new { Message = aex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while updating doctor's commission rate and fee.");
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
 
         [HttpGet("top/performance")]
         [AllowAnonymous]
@@ -111,7 +142,7 @@ namespace Medix.API.Presentation.Controller.Classification
         {
             try
             {
-              
+
                 var result = await _doctorService.GetTopDoctorsByPerformanceAsync(ratingWeight, successWeight);
                 return Ok(result);
             }
@@ -392,7 +423,7 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
         [HttpGet("{doctorId}/business-stats")]
-        [Authorize(Roles ="Manager")] 
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> GetDoctorBusinessStats(Guid doctorId, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null)
         {
             try
@@ -422,8 +453,8 @@ namespace Medix.API.Presentation.Controller.Classification
             }
         }
 
-            [HttpGet("{id}/statistics")]
-     
+        [HttpGet("{id}/statistics")]
+
         public async Task<IActionResult> GetStatistic(Guid id)
         {
             try

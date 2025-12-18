@@ -73,8 +73,75 @@ namespace Medix.API.Business.Services.Classification
             }
 
             if (!updated)
-                return true; 
+                return true;
 
+            doctor.UpdatedAt = DateTime.UtcNow;
+
+            var result = await _doctorRepository.UpdateDoctorAsync(doctor);
+            return result != null;
+        }
+
+        public async Task<bool> UpdateDoctorCommissionRateAsync(Guid doctorId, decimal? consultationFee, decimal? commissionRate)
+        {
+            var doctor = await _doctorRepository.GetDoctorByIdAsync(doctorId);
+            if (doctor == null)
+                return false;
+
+            var now = DateTime.UtcNow;
+            var currentMonth = new DateTime(now.Year, now.Month, 1);
+
+            // Check if already updated this month
+            if (doctor.LastCommissionUpdateMonth.HasValue)
+            {
+                var lastUpdateMonth = new DateTime(
+                    doctor.LastCommissionUpdateMonth.Value.Year,
+                    doctor.LastCommissionUpdateMonth.Value.Month,
+                    1);
+
+                if (lastUpdateMonth == currentMonth)
+                {
+                    throw new InvalidOperationException(
+                        "Đã chỉnh sửa giá khám và % hoa hồng trong tháng này. Vui lòng đợi đến tháng sau để chỉnh sửa tiếp.");
+                }
+            }
+
+            var hasChanges = false;
+
+            // Validate consultation fee
+            if (consultationFee.HasValue)
+            {
+                if (consultationFee.Value < 0)
+                    throw new ArgumentException("Consultation fee must be non-negative", nameof(consultationFee));
+
+                // Store in NextMonthConsultationFee (will be applied next month)
+                if (consultationFee.Value != doctor.ConsultationFee)
+                {
+                    doctor.NextMonthConsultationFee = consultationFee.Value;
+                    hasChanges = true;
+                }
+            }
+
+            // Validate commission rate
+            if (commissionRate.HasValue)
+            {
+                // Validate commission rate is between 0 and 1 (0% to 100%)
+                if (commissionRate.Value < 0 || commissionRate.Value > 1)
+                    throw new ArgumentException("Commission rate must be between 0 and 1 (0% to 100%)", nameof(commissionRate));
+
+                // Store in NextMonthCommissionRate (will be applied next month)
+                var currentRate = doctor.CommissionRate ?? (decimal)Constants.DoctorSalaryShare;
+                if (commissionRate.Value != currentRate)
+                {
+                    doctor.NextMonthCommissionRate = commissionRate.Value;
+                    hasChanges = true;
+                }
+            }
+
+            if (!hasChanges)
+                return true;
+
+            // Mark that we've updated this month
+            doctor.LastCommissionUpdateMonth = currentMonth;
             doctor.UpdatedAt = DateTime.UtcNow;
 
             var result = await _doctorRepository.UpdateDoctorAsync(doctor);
@@ -152,7 +219,7 @@ namespace Medix.API.Business.Services.Classification
             }
 
             var dto = new DoctorBusinessStatsDto
-            {      
+            {
                 TotalBookings = totalBookings,
                 SuccessfulBookings = successfulBookings,
                 TotalCases = totalCases,
@@ -233,9 +300,9 @@ namespace Medix.API.Business.Services.Classification
             {
                 var (doctors, totalCount) = await _doctorRepository.GetPaginatedDoctorsByTierIdAsync(
                     tier.Id,
-                    queryParams); 
+                    queryParams);
 
-                var doctorDtos = doctors.Where(x=>x.IsAcceptingAppointments==true).Select(doc => new DoctorBookinDto
+                var doctorDtos = doctors.Where(x => x.IsAcceptingAppointments == true).Select(doc => new DoctorBookinDto
                 {
                     userId = doc.User.Id,
                     DoctorId = doc.Id,
@@ -301,9 +368,6 @@ namespace Medix.API.Business.Services.Classification
                 Biography = doctor.Bio,
                 Education = DoctorDegree.GetDescription(doctor.Education),
                 AvatarUrl = doctor.User.AvatarUrl,
-                IsAcceptingAppointments = doctor.IsAcceptingAppointments,
-                endDateban =doctor.StartDateBanned,
-                startDateBan = doctor.EndDateBanned,
                 NumberOfReviews = reviews.Count,
                 RatingByStar = ratingByStar,
 
@@ -349,7 +413,7 @@ namespace Medix.API.Business.Services.Classification
 
             }).ToList();
 
-            profileDto.appointmentBookedDtos = appoint.Where(x =>x.StatusCode== "CancelledByDoctor"||x.StatusCode== "MissedByDoctor"||x.StatusCode== "MissedByPatient" || x.StatusCode== "BeforeAppoiment" || x.StatusCode == "OnProgressing" || x.StatusCode == "Completed" || x.StatusCode == "NoShow" || x.StatusCode == "Confirmed").Select(a => new AppointmentBookedDto
+            profileDto.appointmentBookedDtos = appoint.Where(x => x.StatusCode == "CancelledByDoctor" || x.StatusCode == "MissedByDoctor" || x.StatusCode == "MissedByPatient" || x.StatusCode == "BeforeAppoiment" || x.StatusCode == "OnProgressing" || x.StatusCode == "Completed" || x.StatusCode == "NoShow" || x.StatusCode == "Confirmed").Select(a => new AppointmentBookedDto
             {
 
                 StartTime = a.AppointmentStartTime,
@@ -459,7 +523,7 @@ namespace Medix.API.Business.Services.Classification
                     doctorsQuery = doctorsQuery.Where(d => d.Specialization.Id == Guid.Parse(queryParams.SpecializationCode));
                 }
 
-          
+
                 if (queryParams.MinPrice.HasValue)
                 {
                     doctorsQuery = doctorsQuery.Where(d => d.ConsultationFee >= queryParams.MinPrice.Value);
@@ -472,15 +536,9 @@ namespace Medix.API.Business.Services.Classification
 
                 var totalCount = await doctorsQuery.CountAsync();
 
-                var now = GetVietnamNow();
                 var doctors = await doctorsQuery
                     .Skip((queryParams.PageNumber - 1) * queryParams.PageSize)
-                    .Take(queryParams.PageSize)
-                    .Where(x => x.User.LockoutEnabled == false)
-                    // Exclude doctors currently banned within [StartDateBanned, EndDateBanned]
-                    .Where(x =>
-                        (x.StartDateBanned == null || x.StartDateBanned == DateTime.MinValue || x.StartDateBanned > now) ||
-                        (x.EndDateBanned == null || x.EndDateBanned == DateTime.MinValue || x.EndDateBanned < now))
+                    .Take(queryParams.PageSize).Where(x => x.IsAcceptingAppointments == true && x.User.LockoutEnabled == false)
                     .Select(d => new DoctorBookinDto
                     {
                         userId = d.UserId,
@@ -497,8 +555,7 @@ namespace Medix.API.Business.Services.Classification
                         rating = d.AverageRating,
                         TotalDone = _context.Appointments.Count(a => a.DoctorId == d.Id && a.StatusCode == "Completed" && a.PaymentStatusCode == "Paid"),
                         TotalAppointments = _context.Appointments.Count(a => a.DoctorId == d.Id),
-                        startbandate = d.StartDateBanned,
-                        endbandadate = d.EndDateBanned,
+
                         TotalReviews = _context.Reviews.Count(r => r.Appointment.DoctorId == d.Id)
                     })
                     .ToListAsync();
@@ -544,14 +601,14 @@ namespace Medix.API.Business.Services.Classification
                     bool updated = false;
                     var misses = doctor.TotalCaseMissPerWeek.GetValueOrDefault(0);
 
-                
-                    if (misses >= 4)
+
+                    if (misses == 3)
                     {
                         doctor.NextWeekMiss = 1;
                         updated = true;
                     }
 
-                  
+
                     if (misses == 2 && !doctor.isSalaryDeduction.GetValueOrDefault(false))
                     {
                         doctor.isSalaryDeduction = true;
@@ -562,7 +619,7 @@ namespace Medix.API.Business.Services.Classification
                     if (misses >= 3)
                     {
                         var nextMonday = GetNextMonday(DateTime.UtcNow);
-                   
+
                         var nextSundayEnd = nextMonday.AddDays(6).Date.AddHours(23).AddMinutes(59).AddSeconds(59);
 
                         doctor.StartDateBanned = nextMonday;
@@ -570,7 +627,7 @@ namespace Medix.API.Business.Services.Classification
                         bannedCount++;
                         updated = true;
 
-                       
+
                         if (doctor.TotalBanned >= 2)
                         {
                             doctor.EndDateBanned = DateTime.UtcNow.AddYears(100);
@@ -589,21 +646,21 @@ namespace Medix.API.Business.Services.Classification
                         doctor.UpdatedAt = DateTime.UtcNow;
                     }
 
-               
+
                     doctor.TotalCaseMissPerWeek = 0;
 
-                 
+
                     await _doctorRepository.UpdateDoctorAsync(doctor);
-               
+
                     await _context.SaveChangesAsync();
 
                     await transaction.CommitAsync();
                 }
                 catch
                 {
-                
+
                     await transaction.RollbackAsync();
-                   
+
                 }
             }
 
@@ -620,29 +677,6 @@ namespace Medix.API.Business.Services.Classification
 
             var nextMonday = now.Date.AddDays(daysUntilNextMonday);
             return nextMonday;
-        }
-
-        private static DateTime GetVietnamNow()
-        {
-            // Cross-platform TZ resolution: Windows and Linux/macOS
-            TimeZoneInfo? tzi = null;
-            try
-            {
-                tzi = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
-            }
-            catch
-            {
-                try
-                {
-                    tzi = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
-                }
-                catch
-                {
-                    tzi = TimeZoneInfo.Local; // Fallback
-                }
-            }
-            var utcNow = DateTime.UtcNow;
-            return TimeZoneInfo.ConvertTimeFromUtc(utcNow, tzi);
         }
 
         public async Task CheckAndUnbanDoctors()
@@ -669,7 +703,7 @@ namespace Medix.API.Business.Services.Classification
 
                     if (doctor.NextWeekMiss.GetValueOrDefault() > 0)
                     {
-                        doctor.TotalCaseMissPerWeek = 1; 
+                        doctor.TotalCaseMissPerWeek = 1;
                     }
 
                     doctor.NextWeekMiss = 0;
@@ -678,7 +712,7 @@ namespace Medix.API.Business.Services.Classification
                     doctor.IsAcceptingAppointments = true;
                     doctor.UpdatedAt = DateTime.UtcNow;
 
-                 
+
                     await _doctorRepository.UpdateDoctorAsync(doctor);
                 }
 
@@ -693,7 +727,7 @@ namespace Medix.API.Business.Services.Classification
         }
 
         // Updated: evaluate ALL doctors in DB (if count <= 0 return all; otherwise return top 'count')
-        public async Task<List<TopDoctorPerformanceDto>> GetTopDoctorsByPerformanceAsync( double ratingWeight = 0.6, double successWeight = 0.4)
+        public async Task<List<TopDoctorPerformanceDto>> GetTopDoctorsByPerformanceAsync(double ratingWeight = 0.6, double successWeight = 0.4)
         {
             var weightSum = ratingWeight + successWeight;
             if (weightSum <= 0)
@@ -748,6 +782,48 @@ namespace Medix.API.Business.Services.Classification
 
                 var composite = (ratingWeight * normRating) + (successWeight * successRate);
 
+                // Calculate performance score as percentage (0-100)
+                var performanceScore = composite * 100.0;
+
+                // Determine performance tier
+                string performanceTier;
+                bool canEditFee = false;
+                bool canEditCommission = false;
+                decimal? suggestedCommissionRate = null;
+
+                // Check additional conditions for high performance tier
+                bool meetsHighPerformanceCriteria = performanceScore >= 80
+                    && reviewCount >= 20
+                    && avgRating > 4.0
+                    && successRate > 0.75;
+
+                if (performanceScore >= 80)
+                {
+                    performanceTier = "High";
+                    // High performance: can edit fee and commission if meets all criteria
+                    // If meets all criteria (score >= 80, reviews >= 20, rating > 4, success > 75%): can edit fee, education, and commission
+                    // If only score >= 80: can edit fee and commission
+                    canEditFee = true;
+                    canEditCommission = true;
+                }
+                else if (performanceScore >= 61 && performanceScore < 80)
+                {
+                    performanceTier = "Medium";
+                    // Medium performance: no changes needed
+                    canEditFee = false;
+                    canEditCommission = false;
+                }
+                else
+                {
+                    performanceTier = "Low";
+                    // Low performance: can edit fee and commission (to reduce)
+                    canEditFee = true;
+                    canEditCommission = true;
+                }
+
+                // Get current commission rate (default to 0.7 if not set)
+                var currentCommissionRate = doc.CommissionRate ?? 0.7m;
+
                 results.Add(new TopDoctorPerformanceDto
                 {
                     DoctorId = did,
@@ -760,20 +836,62 @@ namespace Medix.API.Business.Services.Classification
                     SuccessRate = Math.Round(successRate, 4),
                     CompositeScore = Math.Round(composite, 4),
                     ImageUrl = doc.User?.AvatarUrl,
-                    ConsultationFee = doc.ConsultationFee
-
+                    ConsultationFee = doc.ConsultationFee,
+                    PerformanceScore = Math.Round(performanceScore, 2),
+                    PerformanceTier = performanceTier,
+                    CanEditFee = canEditFee,
+                    CanEditCommission = canEditCommission,
+                    CurrentCommissionRate = currentCommissionRate
                 });
             }
 
-       
+            // Order by performance score
             var ordered = results
-                .OrderByDescending(r => r.CompositeScore)
-                .ThenByDescending(r => r.ReviewCount);
+                .OrderByDescending(r => r.PerformanceScore)
+                .ThenByDescending(r => r.ReviewCount)
+                .ToList();
 
-        
-           
+            // Assign ranks and suggest commission rates for top 3 high performers
+            var highPerformers = ordered
+                .Where(r => r.PerformanceTier == "High")
+                .Take(3)
+                .Select(r => r.DoctorId)
+                .ToList();
 
-            return ordered.ToList();
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                ordered[i].Rank = i + 1;
+
+                var doctor = doctors.FirstOrDefault(d => d.Id == ordered[i].DoctorId);
+                if (doctor == null) continue;
+
+                // Suggest commission rates for top 3 high performers
+                if (ordered[i].PerformanceTier == "High" && highPerformers.Contains(ordered[i].DoctorId))
+                {
+                    int topRank = highPerformers.IndexOf(ordered[i].DoctorId) + 1;
+                    if (topRank == 1)
+                    {
+                        ordered[i].SuggestedCommissionRate = 0.80m; // 80%
+                    }
+                    else if (topRank == 2)
+                    {
+                        ordered[i].SuggestedCommissionRate = 0.75m; // 75%
+                    }
+                    else if (topRank == 3)
+                    {
+                        ordered[i].SuggestedCommissionRate = 0.73m; // 73%
+                    }
+                }
+                // For low performers, suggest reducing commission (e.g., reduce by 10-15%)
+                else if (ordered[i].PerformanceTier == "Low")
+                {
+                    // Suggest reducing commission rate (minimum 0.5 or 50%)
+                    var suggestedRate = Math.Max(0.5m, (decimal)(ordered[i].CurrentCommissionRate ?? 0.7m) - 0.10m);
+                    ordered[i].SuggestedCommissionRate = Math.Round(suggestedRate, 2);
+                }
+            }
+
+            return ordered;
         }
 
     }

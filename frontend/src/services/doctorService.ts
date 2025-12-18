@@ -119,6 +119,19 @@ class DoctorService {
         }
     }
 
+    async updateDoctorCommissionRate(doctorId: string, data: { consultationFee?: number, commissionRate?: number }): Promise<any> {
+        try {
+            const requestBody = {
+                consultationFee: data.consultationFee || null,
+                commissionRate: data.commissionRate || null
+            };
+            const response = await apiClient.put(`/doctor/${doctorId}/commission-fee`, requestBody);
+            return response.data;
+        } catch (error: any) {
+            throw this.handleApiError(error);
+        }
+    }
+
     private handleApiError(error: any): Error {
         if (error.response?.data) {
             const apiError = error.response.data;

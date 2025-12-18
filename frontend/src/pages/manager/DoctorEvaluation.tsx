@@ -39,6 +39,10 @@ export default function DoctorEvaluation({
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [editingFee, setEditingFee] = useState(false);
+  const [editingCommission, setEditingCommission] = useState(false);
+  const [newConsultationFee, setNewConsultationFee] = useState<number | null>(null);
+  const [newCommissionRate, setNewCommissionRate] = useState<number | null>(null);
   const { showToast } = useToast();
 
   const formatCurrencyCompact = (value: number): string => {
@@ -89,11 +93,14 @@ export default function DoctorEvaluation({
     return performanceData.map(perfData => {
       const doctor = doctors.find(d => d.id === perfData.doctorId) || {};
       
-      const performanceScore = Math.round(perfData.compositeScore * 100);
+      const performanceScore = perfData.performanceScore ?? Math.round(perfData.compositeScore * 100);
       
       let recommendation = '';
       let recommendationType: 'salary' | 'education' | 'both' | 'none' = 'none';
       
+      const performanceTier = perfData.performanceTier || 
+        (performanceScore >= 80 ? 'High' : performanceScore >= 61 ? 'Medium' : 'Low');
+
       if (
         performanceScore >= 80 &&
         perfData.reviewCount >= 20 &&
@@ -139,7 +146,13 @@ export default function DoctorEvaluation({
         consultationFee: perfData.consultationFee || 0,
         performanceScore,
         recommendation,
-        recommendationType
+        recommendationType,
+        performanceTier: performanceTier,
+        canEditFee: perfData.canEditFee ?? false,
+        canEditCommission: perfData.canEditCommission ?? false,
+        suggestedCommissionRate: perfData.suggestedCommissionRate,
+        currentCommissionRate: perfData.currentCommissionRate ?? 0.7,
+        rank: perfData.rank ?? 0
       };
     });
   }, [performanceData, doctors]);
@@ -793,14 +806,26 @@ export default function DoctorEvaluation({
 
       {/* Modal chi tiết */}
       {selectedDoctor && (
-        <div className={styles.modal} onClick={() => setSelectedDoctor(null)}>
+        <div className={styles.modal} onClick={() => {
+          setSelectedDoctor(null);
+          setEditingFee(false);
+          setEditingCommission(false);
+          setNewConsultationFee(null);
+          setNewCommissionRate(null);
+        }}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h2>
                 <i className="bi bi-clipboard-data"></i>
                 Đánh giá chi tiết
               </h2>
-              <button onClick={() => setSelectedDoctor(null)} className={styles.closeBtn}>
+              <button onClick={() => {
+                setSelectedDoctor(null);
+                setEditingFee(false);
+                setEditingCommission(false);
+                setNewConsultationFee(null);
+                setNewCommissionRate(null);
+              }} className={styles.closeBtn}>
                 <i className="bi bi-x-lg"></i>
               </button>
             </div>
@@ -916,7 +941,191 @@ export default function DoctorEvaluation({
                   <p>{selectedDoctor.recommendation}</p>
                 </div>
               </div>
+                    {(selectedDoctor.canEditFee || selectedDoctor.canEditCommission) && (
+                <div className={styles.editSection}>
+                  <h4>
+                    <i className="bi bi-pencil-square"></i>
+                    Điều chỉnh giá khám và % hoa hồng
+                  </h4>
+                  
+                  {selectedDoctor.canEditFee && (
+                    <div className={styles.editField}>
+                      <label>
+                        <i className="bi bi-currency-dollar"></i>
+                        Giá khám hiện tại (VND)
+                      </label>
+                      {!editingFee ? (
+                        <div className={styles.valueDisplay}>
+                          <span>{selectedDoctor.consultationFee?.toLocaleString('vi-VN') || 0} ₫</span>
+                          <button 
+                            className={styles.editBtn}
+                            onClick={() => {
+                              setEditingFee(true);
+                              setNewConsultationFee(selectedDoctor.consultationFee || 0);
+                            }}
+                          >
+                            <i className="bi bi-pencil"></i> Chỉnh sửa
+                          </button>
+                        </div>
+                      ) : (
+                        <div className={styles.editInputGroup}>
+                          <input
+                            type="number"
+                            value={newConsultationFee || ''}
+                            onChange={(e) => setNewConsultationFee(Number(e.target.value))}
+                            min="0"
+                            className={styles.editInput}
+                            placeholder="Nhập giá khám mới"
+                          />
+                          <button
+                            className={styles.saveBtn}
+                            onClick={async () => {
+                              try {
+                                await DoctorService.updateDoctorCommissionRate(selectedDoctor.id, {
+                                  consultationFee: newConsultationFee || undefined
+                                });
+                                showToast('Cập nhật giá khám thành công!', 'success');
+                                setEditingFee(false);
+                                await loadPerformanceData();
+                                if (onRefresh) onRefresh();
+                              } catch (error: any) {
+                                showToast(error.message || 'Không thể cập nhật giá khám', 'error');
+                              }
+                            }}
+                          >
+                            <i className="bi bi-check"></i> Lưu
+                          </button>
+                          <button
+                            className={styles.cancelBtn}
+                            onClick={() => {
+                              setEditingFee(false);
+                              setNewConsultationFee(null);
+                            }}
+                          >
+                            <i className="bi bi-x"></i> Hủy
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
+                  {selectedDoctor.canEditCommission && (
+                    <div className={styles.editField}>
+                      <label>
+                        <i className="bi bi-percent"></i>
+                        Hoa hồng                                                                
+                      </label>
+                      {!editingCommission ? (
+                        <div className={styles.valueDisplay}>
+                          <span>{((selectedDoctor.currentCommissionRate || 0.7) * 100).toFixed(0)}%</span>
+                          {selectedDoctor.suggestedCommissionRate !== null && (
+                            <span className={styles.suggestionHint}>
+                              (Đề xuất: {(selectedDoctor.suggestedCommissionRate * 100).toFixed(0)}%)
+                            </span>
+                          )}
+                          <button 
+                            className={styles.editBtn}
+                            onClick={() => {
+                              setEditingCommission(true);
+                              setNewCommissionRate(selectedDoctor.suggestedCommissionRate || selectedDoctor.currentCommissionRate || 0.7);
+                            }}
+                          >
+                            <i className="bi bi-pencil"></i> Chỉnh sửa
+                          </button>
+                        </div>
+                      ) : (
+                        <div className={styles.editInputGroup}>
+                          <input
+                            type="number"
+                            value={newCommissionRate !== null ? (newCommissionRate * 100) : ''}
+                            onChange={(e) => {
+                              const value = Number(e.target.value);
+                              if (value >= 0 && value <= 100) {
+                                setNewCommissionRate(value / 100);
+                              }
+                            }}
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            className={styles.editInput}
+                            placeholder="Nhập % hoa hồng (0-100)"
+                          />
+                          <span className={styles.inputHint}>%</span>
+                          <button
+                            className={styles.saveBtn}
+                            onClick={async () => {
+                              try {
+                                if (newCommissionRate === null || newCommissionRate < 0 || newCommissionRate > 1) {
+                                  showToast('% hoa hồng phải từ 0% đến 100%', 'error');
+                                  return;
+                                }
+                                await DoctorService.updateDoctorCommissionRate(selectedDoctor.id, {
+                                  commissionRate: newCommissionRate
+                                });
+                                showToast('Cập nhật % hoa hồng thành công!', 'success');
+                                setEditingCommission(false);
+                                setNewCommissionRate(null);
+                                await loadPerformanceData();
+                                if (onRefresh) onRefresh();
+                              } catch (error: any) {
+                                showToast(error.message || 'Không thể cập nhật % hoa hồng', 'error');
+                              }
+                            }}
+                          >
+                            <i className="bi bi-check"></i> Lưu
+                          </button>
+                          <button
+                            className={styles.cancelBtn}
+                            onClick={() => {
+                              setEditingCommission(false);
+                              setNewCommissionRate(null);
+                            }}
+                          >
+                            <i className="bi bi-x"></i> Hủy
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {selectedDoctor.canEditFee && selectedDoctor.canEditCommission && (
+                    <div className={styles.editField}>
+                      <button
+                        className={styles.saveBothBtn}
+                        onClick={async () => {
+                          try {
+                            if (newConsultationFee === null && newCommissionRate === null) {
+                              showToast('Vui lòng nhập giá khám hoặc % hoa hồng', 'error');
+                              return;
+                            }
+                            if (newCommissionRate !== null && (newCommissionRate < 0 || newCommissionRate > 1)) {
+                              showToast('% hoa hồng phải từ 0% đến 100%', 'error');
+                              return;
+                            }
+                            await DoctorService.updateDoctorCommissionRate(selectedDoctor.id, {
+                              consultationFee: newConsultationFee || undefined,
+                              commissionRate: newCommissionRate || undefined
+                            });
+                            showToast('Cập nhật thành công!', 'success');
+                            setEditingFee(false);
+                            setEditingCommission(false);
+                            setNewConsultationFee(null);
+                            setNewCommissionRate(null);
+                            await loadPerformanceData();
+                            if (onRefresh) onRefresh();
+                          } catch (error: any) {
+                            showToast(error.message || 'Không thể cập nhật', 'error');
+                          }
+                        }}
+                        disabled={newConsultationFee === null && newCommissionRate === null}
+                      >
+                        <i className="bi bi-check-circle"></i>
+                        Lưu tất cả thay đổi
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               {selectedDoctor.recommendationType === 'both' && (
                 <div className={styles.actionSection}>
                   <button 

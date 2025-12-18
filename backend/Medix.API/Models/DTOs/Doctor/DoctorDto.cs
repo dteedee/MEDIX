@@ -45,9 +45,19 @@
 
         public int SuccessfulCases { get; set; } = 0;
         public int TotalCases { get; set; } = 0;
-        public double SuccessRate { get; set; } = 0.0; 
+        public double SuccessRate { get; set; } = 0.0;
 
         public double CompositeScore { get; set; } = 0.0;
+        public double PerformanceScore { get; set; }
+        public string PerformanceTier { get; set; } = string.Empty;
+
+        public bool CanEditFee { get; set; }
+        public bool CanEditCommission { get; set; }
+
+        public decimal? CurrentCommissionRate { get; set; }
+        public decimal? SuggestedCommissionRate { get; set; }
+
+        public int Rank { get; set; }
 
         public string? ImageUrl { get; set; }
 
@@ -64,6 +74,11 @@
         public decimal? ConsultationFee { get; set; }
     }
 
+    public class DoctorCommissionFeeUpdateRequest
+    {
+        public decimal? ConsultationFee { get; set; }
+        public decimal? CommissionRate { get; set; }
+    }
 
     public class DoctorSalaryDto
     {
@@ -80,19 +95,19 @@
 
     public class DoctorBusinessStatsDto
     {
-     
 
-       
-        public int TotalBookings { get; set; }            
-        public int SuccessfulBookings { get; set; }       
-        public int TotalCases { get; set; }               
-        public int SuccessfulCases { get; set; }          
-        public decimal Revenue { get; set; }              
+
+
+        public int TotalBookings { get; set; }
+        public int SuccessfulBookings { get; set; }
+        public int TotalCases { get; set; }
+        public int SuccessfulCases { get; set; }
+        public decimal Revenue { get; set; }
 
         public decimal TotalSalary { get; set; }
-     
 
-        public double AverageRating { get; set; }         
+
+        public double AverageRating { get; set; }
         public int TotalReviews { get; set; }
 
     }

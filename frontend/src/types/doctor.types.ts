@@ -309,4 +309,11 @@ export interface DoctorPerformanceDto {
   formattedRating: string;
   formattedSuccessRate: string;
   consultationFee: number | null;
+    performanceScore: number; // Score as percentage (0-100)
+  performanceTier: string; // "High", "Medium", "Low"
+  canEditFee: boolean;
+  canEditCommission: boolean;
+  suggestedCommissionRate: number | null; // Suggested commission rate (0-1, e.g., 0.80 = 80%)
+  currentCommissionRate: number | null; // Current commission rate (0-1)
+  rank: number; // Rank among all doctors
 }

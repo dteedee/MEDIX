@@ -1092,12 +1092,16 @@
 }
 
 .performanceSection,
-.recommendationSection {
+.recommendationSection,
+.commissionSection,
+.editSection {
   margin-bottom: 32px;
 }
 
 .performanceSection h4,
-.recommendationSection h4 {
+.recommendationSection h4,
+.commissionSection h4,
+.editSection h4 {
   margin: 0 0 16px 0;
   font-size: 18px;
   color: #1f2937;
@@ -1221,6 +1225,205 @@
 .bothBtn:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Commission Section */
+.commissionInfo {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.commissionItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.commissionLabel {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.commissionValue {
+  font-size: 16px;
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.commissionValueSuggested {
+  font-size: 16px;
+  color: #10b981;
+  font-weight: 700;
+}
+
+/* Edit Section */
+.editSection {
+  background: #f9fafb;
+  border-radius: 14px;
+  padding: 24px;
+  border: 1px solid #e5e7eb;
+}
+
+.editField {
+  margin-bottom: 24px;
+}
+
+.editField:last-child {
+  margin-bottom: 0;
+}
+
+.editField label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.valueDisplay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.valueDisplay span {
+  font-size: 16px;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.suggestionHint {
+  font-size: 13px;
+  color: #10b981;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+.editBtn {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.editBtn:hover {
+  background: #5568d3;
+  transform: translateY(-1px);
+}
+
+.editInputGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editInput {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.2s ease;
+}
+
+.editInput:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.inputHint {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+  min-width: 30px;
+}
+
+.saveBtn,
+.cancelBtn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.saveBtn {
+  background: #10b981;
+  color: white;
+}
+
+.saveBtn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.cancelBtn {
+  background: #ef4444;
+  color: white;
+}
+
+.cancelBtn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.saveBothBtn {
+  width: 100%;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  margin-top: 16px;
+}
+
+.saveBothBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.saveBothBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Responsive Design */

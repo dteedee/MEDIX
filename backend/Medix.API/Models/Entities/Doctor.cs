@@ -25,6 +25,14 @@ public partial class Doctor
 
     public decimal ConsultationFee { get; set; }
 
+    public decimal? CommissionRate { get; set; }
+
+    public decimal? NextMonthConsultationFee { get; set; }
+
+    public decimal? NextMonthCommissionRate { get; set; }
+
+    public DateTime? LastCommissionUpdateMonth { get; set; }
+
     public decimal AverageRating { get; set; }
 
     public int TotalReviews { get; set; }

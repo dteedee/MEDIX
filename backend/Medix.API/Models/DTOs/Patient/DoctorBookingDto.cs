@@ -1,4 +1,7 @@
-﻿namespace Medix.API.Models.DTOs.Patient
+﻿using Medix.API.Business.Helper;
+using System.Text.Json.Serialization;
+
+namespace Medix.API.Models.DTOs.Patient
 {
     public class PaginationParams
     {
@@ -55,6 +58,10 @@
         public decimal? rating { get; set; }
 
         public bool? IsAcceptingAppointments { get; set; }
+        [JsonConverter(typeof(CustomDateTimeConverter))]
+        public DateTime? startbandate;
+        [JsonConverter(typeof(CustomDateTimeConverter))]
+        public DateTime? endbandadate;
         public int? TotalDone { get; set; }
 
         public int TotalAppointments { get; set; }  

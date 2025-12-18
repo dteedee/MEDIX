@@ -89,7 +89,10 @@ export interface DoctorProfileDto {
   education?: string;
   schedules: DoctorScheduleDto[];
   scheduleOverride?: DoctorScheduleOverrideDto[]; 
-  appointmentBookedDtos?: AppointmentBookedDto[]; 
+  appointmentBookedDtos?: AppointmentBookedDto[];
+  isAcceptingAppointments?: boolean;
+  startDateBan?: string;
+  endDateBan?: string;
 }
 
 export interface DoctorProfileUpdateRequest{

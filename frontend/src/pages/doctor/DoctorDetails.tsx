@@ -57,7 +57,7 @@ function DoctorDetails() {
         today.setHours(0, 0, 0, 0);
         const dayOfWeek = convertDayOfWeek(today.getDay());
         const isSunday = dayOfWeek === 7;
-        const isFriday = dayOfWeek === 5;
+        const isFriday = dayOfWeek === 4;
         const isSaturday = dayOfWeek === 6;
         const dates: Date[] = [];
         if (isSunday) {
@@ -514,6 +514,24 @@ function DoctorDetails() {
         endTime: string;
     }> => {
         if (!profileData?.schedules) return [];
+        
+        // Verificar se o médico está aceitando agendamentos
+        if (profileData.isAcceptingAppointments === false) {
+            return [];
+        }
+        
+        // Verificar se a data está no intervalo de banimento
+        if (profileData.startDateBan && profileData.endDateBan) {
+            const dateString = formatDateString(date);
+            const normalizedStartBan = normalizeDateString(profileData.startDateBan);
+            const normalizedEndBan = normalizeDateString(profileData.endDateBan);
+            
+            // Se a data estiver entre startDateBan e endDateBan, não mostrar horários
+            if (dateString >= normalizedStartBan && dateString <= normalizedEndBan) {
+                return [];
+            }
+        }
+        
         const backendDayOfWeek = convertDayOfWeek(date.getDay());
         const dateString = formatDateString(date);
         const now = new Date();

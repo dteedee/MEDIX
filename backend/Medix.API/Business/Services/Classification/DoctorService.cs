@@ -301,6 +301,9 @@ namespace Medix.API.Business.Services.Classification
                 Biography = doctor.Bio,
                 Education = DoctorDegree.GetDescription(doctor.Education),
                 AvatarUrl = doctor.User.AvatarUrl,
+                IsAcceptingAppointments = doctor.IsAcceptingAppointments,
+                endDateban =doctor.StartDateBanned,
+                startDateBan = doctor.EndDateBanned,
                 NumberOfReviews = reviews.Count,
                 RatingByStar = ratingByStar,
 
@@ -469,9 +472,15 @@ namespace Medix.API.Business.Services.Classification
 
                 var totalCount = await doctorsQuery.CountAsync();
 
+                var now = GetVietnamNow();
                 var doctors = await doctorsQuery
                     .Skip((queryParams.PageNumber - 1) * queryParams.PageSize)
-                    .Take(queryParams.PageSize).Where(x=>x.IsAcceptingAppointments==true&&x.User.LockoutEnabled==false)
+                    .Take(queryParams.PageSize)
+                    .Where(x => x.User.LockoutEnabled == false)
+                    // Exclude doctors currently banned within [StartDateBanned, EndDateBanned]
+                    .Where(x =>
+                        (x.StartDateBanned == null || x.StartDateBanned == DateTime.MinValue || x.StartDateBanned > now) ||
+                        (x.EndDateBanned == null || x.EndDateBanned == DateTime.MinValue || x.EndDateBanned < now))
                     .Select(d => new DoctorBookinDto
                     {
                         userId = d.UserId,
@@ -488,7 +497,8 @@ namespace Medix.API.Business.Services.Classification
                         rating = d.AverageRating,
                         TotalDone = _context.Appointments.Count(a => a.DoctorId == d.Id && a.StatusCode == "Completed" && a.PaymentStatusCode == "Paid"),
                         TotalAppointments = _context.Appointments.Count(a => a.DoctorId == d.Id),
-
+                        startbandate = d.StartDateBanned,
+                        endbandadate = d.EndDateBanned,
                         TotalReviews = _context.Reviews.Count(r => r.Appointment.DoctorId == d.Id)
                     })
                     .ToListAsync();
@@ -610,6 +620,29 @@ namespace Medix.API.Business.Services.Classification
 
             var nextMonday = now.Date.AddDays(daysUntilNextMonday);
             return nextMonday;
+        }
+
+        private static DateTime GetVietnamNow()
+        {
+            // Cross-platform TZ resolution: Windows and Linux/macOS
+            TimeZoneInfo? tzi = null;
+            try
+            {
+                tzi = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
+            }
+            catch
+            {
+                try
+                {
+                    tzi = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                }
+                catch
+                {
+                    tzi = TimeZoneInfo.Local; // Fallback
+                }
+            }
+            var utcNow = DateTime.UtcNow;
+            return TimeZoneInfo.ConvertTimeFromUtc(utcNow, tzi);
         }
 
         public async Task CheckAndUnbanDoctors()

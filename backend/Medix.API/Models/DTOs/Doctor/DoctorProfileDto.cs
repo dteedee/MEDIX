@@ -17,7 +17,12 @@ namespace Medix.API.Models.DTOs.Doctor
         public string? Biography { get; set; }
         public int[] RatingByStar { get; set; }
         public int Experiece { get; set; }
-        public string? Education { get; set; }
+        public bool? IsAcceptingAppointments { get; set; }
+        [JsonConverter(typeof(CustomDateTimeConverter))]
+        public DateTime? startDateBan { get; set; }
+        [JsonConverter(typeof(CustomDateTimeConverter))]
+        public DateTime? endDateban { get; set; }
+        public string? Education { get; set; } 
         public List<ReviewDto>? Reviews { get; set; }
         public List<DoctorScheduleDto>? Schedules { get; set; }
         public List<DoctorScheduleOverrideDto>? ScheduleOverride { get; set; }

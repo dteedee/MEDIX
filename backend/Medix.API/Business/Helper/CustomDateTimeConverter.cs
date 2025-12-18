@@ -16,7 +16,7 @@ namespace Medix.API.Business.Helper
 
         public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
         {
-            var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+            var vnTimeZone = GetVietnamTimeZone();
 
             var vietnamTime = value.Kind == DateTimeKind.Utc
                 ? TimeZoneInfo.ConvertTimeFromUtc(value, vnTimeZone)
@@ -26,5 +26,24 @@ namespace Medix.API.Business.Helper
             writer.WriteStringValue(formatted);
         }
 
+        private static TimeZoneInfo GetVietnamTimeZone()
+        {
+            // Linux/macOS id: "Asia/Ho_Chi_Minh"; Windows id: "SE Asia Standard Time"
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
+            }
+            catch
+            {
+                try
+                {
+                    return TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                }
+                catch
+                {
+                    return TimeZoneInfo.CreateCustomTimeZone("VN(+07)", TimeSpan.FromHours(7), "Vietnam Time", "Vietnam Time");
+                }
+            }
+        }
     }
 }

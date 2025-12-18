@@ -8,6 +8,11 @@ export interface WalletDto {
   updatedAt: string;
 }
 
+export interface DoctorFeeCommissionDto {
+  consultationFee: number;
+  commissionRate: number;
+}
+
 export interface WalletTransactionDto {
   id?: string;
   walletId?: string;

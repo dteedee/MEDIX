@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { walletService } from '../../services/walletService';
-import { WalletDto, OrderCreateRequest, WalletTransactionDto, BankInfo, WithdrawalRequest, TransferTransactionCreateRequest } from '../../types/wallet.types';
+import { WalletDto, OrderCreateRequest, WalletTransactionDto, BankInfo, WithdrawalRequest, TransferTransactionCreateRequest, DoctorFeeCommissionDto } from '../../types/wallet.types';
 import styles from '../../styles/doctor/DoctorWallet.module.css';
 import { Wallet2, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, PlusCircle, Clock, Calendar } from 'lucide-react';
 import { PageLoader } from '../../components/ui';
@@ -68,6 +68,7 @@ export const DoctorWallet: React.FC = () => {
   const [showWithdrawalConfirm, setShowWithdrawalConfirm] = useState<boolean>(false);
   const [bankSearchTerm, setBankSearchTerm] = useState<string>('');
   const [banksWithLogos, setBanksWithLogos] = useState<BankInfo[]>(BANKS);
+  const [doctorFeeInfo, setDoctorFeeInfo] = useState<DoctorFeeCommissionDto | null>(null);
   const accountNumberInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -107,6 +108,15 @@ export const DoctorWallet: React.FC = () => {
         setError(null);
         const walletData = await walletService.getWalletByUserId().catch(() => null);
         setWallet(walletData);
+        
+        // Fetch doctor fee and commission
+        try {
+          const feeData = await walletService.getDoctorFeeAndCommission();
+          setDoctorFeeInfo(feeData);
+        } catch (feeError) {
+          console.error('Failed to fetch doctor fee info:', feeError);
+        }
+        
         await fetchTransactions();
       } catch (err: any) {
         setError(err.message || 'Không thể tải thông tin ví');
@@ -688,6 +698,15 @@ export const DoctorWallet: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      {/* Doctor Fee and Commission Info */}
+      <div className={styles.feeCommissionBox} style={{marginBottom: 16, padding: 16, background: '#f7fafc', borderRadius: 8, display: 'flex', gap: 32, alignItems: 'center', justifyContent: 'flex-start'}}>
+        <div style={{fontWeight: 500, fontSize: 16}}>
+          Phí khám: <span style={{color: '#3182ce', fontWeight: 600}}>{doctorFeeInfo?.consultationFee != null ? doctorFeeInfo.consultationFee.toLocaleString('vi-VN') + ' VND' : 'Đang tải...'}</span>
+        </div>
+        <div style={{fontWeight: 500, fontSize: 16}}>
+          Phần trăm nhận: <span style={{color: '#38a169', fontWeight: 600}}>{doctorFeeInfo?.commissionRate != null ? doctorFeeInfo.commissionRate + '%' : 'Đang tải...'}</span>
+        </div>
+      </div>
       {/* Header Section */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>

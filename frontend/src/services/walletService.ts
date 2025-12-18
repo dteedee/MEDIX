@@ -77,6 +77,18 @@ class WalletService {
       );
     }
   }
+
+  async getDoctorFeeAndCommission(): Promise<{ consultationFee: number; commissionRate: number }> {
+    try {
+      const response = await apiClient.get<{ consultationFee: number; commissionRate: number }>('/wallet/doctor-fee');
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || 
+        'Không thể lấy thông tin phí và hoa hồng. Vui lòng thử lại.'
+      );
+    }
+  }
 }
 
 export const walletService = new WalletService();

@@ -699,14 +699,7 @@ export const DoctorWallet: React.FC = () => {
   return (
     <div className={styles.container}>
       {/* Doctor Fee and Commission Info */}
-      <div className={styles.feeCommissionBox} style={{marginBottom: 16, padding: 16, background: '#f7fafc', borderRadius: 8, display: 'flex', gap: 32, alignItems: 'center', justifyContent: 'flex-start'}}>
-        <div style={{fontWeight: 500, fontSize: 16}}>
-          Phí khám: <span style={{color: '#3182ce', fontWeight: 600}}>{doctorFeeInfo?.consultationFee != null ? doctorFeeInfo.consultationFee.toLocaleString('vi-VN') + ' VND' : 'Đang tải...'}</span>
-        </div>
-        <div style={{fontWeight: 500, fontSize: 16}}>
-          Phần trăm nhận: <span style={{color: '#38a169', fontWeight: 600}}>{doctorFeeInfo?.commissionRate != null ? doctorFeeInfo.commissionRate + '%' : 'Đang tải...'}</span>
-        </div>
-      </div>
+      
       {/* Header Section */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
@@ -900,7 +893,14 @@ export const DoctorWallet: React.FC = () => {
           </div>
         </div>
       </div>
-
+      <div className={styles.feeCommissionBox} style={{marginBottom: 16, padding: 16, background: '#f7fafc', borderRadius: 8, display: 'flex', gap: 32, alignItems: 'center', justifyContent: 'flex-start'}}>
+        <div style={{fontWeight: 500, fontSize: 16}}>
+          Phí khám: <span style={{color: '#3182ce', fontWeight: 600}}>{doctorFeeInfo?.consultationFee != null ? doctorFeeInfo.consultationFee.toLocaleString('vi-VN') + ' VND' : 'Đang tải...'}</span>
+        </div>
+        <div style={{fontWeight: 500, fontSize: 16}}>
+          Phần trăm nhận: <span style={{color: '#38a169', fontWeight: 600}}>{doctorFeeInfo?.commissionRate != null ? doctorFeeInfo.commissionRate + '%' : 'Đang tải...'}</span>
+        </div>
+      </div>
       {/* Transactions Card */}
       <div className={styles.transactionsCard}>
         <div className={styles.transactionsHeader}>

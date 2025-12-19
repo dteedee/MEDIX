@@ -96,7 +96,11 @@ namespace Medix.API.Business.Services.Community
 
                         if ((bool)doctor.isSalaryDeduction)
                         {
-                            netSalary = salary * commissionRate * 0.8m;
+                            var commission = salary * (1 - commissionRate);
+                            var deduction = salary * 0.2m;
+                            netSalary = salary - commission - deduction;
+                            doctor.isSalaryDeduction = false;
+                            await _doctorRepository.UpdateDoctorAsync(doctor);
                         }// số thực về tài khoản bác sĩ
                         else
                         {
